@@ -394,6 +394,8 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     );
   }, [metrics, metricEntries]);
 
+  const backgroundImageUrl = (selectedPlan as any)?.backgroundImageUrl;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -401,7 +403,22 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <AnimatedSection>
+      {/* Background image section */}
+      {backgroundImageUrl && (
+        <AnimatedSection>
+          <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-6">
+            <img
+              src={backgroundImageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+          </div>
+        </AnimatedSection>
+      )}
+
+      <AnimatedSection delay={backgroundImageUrl ? 0.1 : 0}>
         <div className="flex flex-row items-start justify-start gap-2 mb-8">
         <span className="text-5xl">{selectedPlan.emoji}</span>
         <div className="flex flex-col gap-2 justify-start">
@@ -447,7 +464,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       </AnimatedSection>
 
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
-        <AnimatedSection delay={0.1}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.15 : 0.1}>
           <div className="mb-8">
             <MilestoneOverview
               milestones={selectedPlan.milestones}
@@ -463,7 +480,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       {/* 1. Current Week Card */}
       {currentWeekData && (
-        <AnimatedSection delay={0.15}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
           <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -492,7 +509,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       {/* 2. Coach Overview (no card) */}
       {isPlanCoached(selectedPlan) && (
-        <AnimatedSection delay={0.2}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
           <div className="mb-6">
           <CoachOverviewCard
             selectedPlan={selectedPlan}
@@ -513,7 +530,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       )}
 
       {/* 3. Activities Overview Grid Card */}
-      <AnimatedSection delay={0.25}>
+      <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
         <div className="rounded-2xl bg-card border border-border p-4 mb-6">
         {selectedPlan.outlineType === "SPECIFIC" && (
           <div className="flex flex-row justify-end items-center gap-2 mb-4">
@@ -547,7 +564,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       {/* 4. Metrics Insights for Plan Activities */}
       {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
-        <AnimatedSection delay={0.3}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.35 : 0.3}>
           <div className="mb-12">
           <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -585,7 +602,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       {/* 5. Plan Group Progress */}
       {selectedPlan.planGroupId && (
-        <AnimatedSection delay={0.35}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.4 : 0.35}>
           <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Group Progress</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -695,7 +712,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         )
       )} */}
 
-      <AnimatedSection delay={0.4}>
+      <AnimatedSection delay={backgroundImageUrl ? 0.45 : 0.4}>
         <Link to="/add">
           <Button
           variant="outline"

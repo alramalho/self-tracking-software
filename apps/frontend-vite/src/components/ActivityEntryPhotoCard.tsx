@@ -129,12 +129,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const lifestyleAchieved = userPlansProgressData?.some(
     (plan) => plan.lifestyleAchievement.isAchieved
   );
-  const totalLoggedActivities = useMemo(
-    () => ownerUser?.activityEntries?.length || 0,
-    [ownerUser]
-  );
-
-  const accountLevel = useAccountLevel(totalLoggedActivities);
+  const accountLevel = useAccountLevel(user.username || undefined);
 
   const [showAllComments, setShowAllComments] = useState(false);
   const {

@@ -14,6 +14,7 @@ import {
   modifyManualMilestone,
   updatePlans,
   upgradeCoachSuggestedSessionsToPlanSessions,
+  uploadPlanBackgroundImage,
 } from "./service";
 import {
   PlansContext,
@@ -209,6 +210,17 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const uploadPlanBackgroundImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      return await uploadPlanBackgroundImage(api, file);
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to upload background image`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   // Safety check: Remove coaching flags from all plans if user is on FREE plan
   useEffect(() => {
     // Only run once when plans are loaded and user data is available
@@ -264,6 +276,8 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     isLeavingPlanGroup: leavePlanGroupMutation.isPending,
     deletePlan: deletePlanMutation.mutateAsync,
     isDeletingPlan: deletePlanMutation.isPending,
+    uploadPlanBackgroundImage: uploadPlanBackgroundImageMutation.mutateAsync,
+    isUploadingPlanBackgroundImage: uploadPlanBackgroundImageMutation.isPending,
   };
 
   return (

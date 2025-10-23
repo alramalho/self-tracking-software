@@ -29,8 +29,7 @@ export class S3Service {
   async upload(
     buffer: Buffer,
     key: string,
-    contentType?: string,
-    isPublic: boolean = false
+    contentType?: string
   ): Promise<string> {
     try {
       const command = new PutObjectCommand({
@@ -42,7 +41,7 @@ export class S3Service {
       });
 
       await this.s3Client.send(command);
-      logger.info(`Successfully uploaded file to S3: ${key} (public: ${isPublic})`);
+      logger.info(`Successfully uploaded file to S3: ${key}`);
 
       return key;
     } catch (error) {

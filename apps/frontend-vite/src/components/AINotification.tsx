@@ -144,7 +144,7 @@ const AINotification: React.FC<AINotificationProps> = ({
           className="absolute top-1 right-1 p-[3px] rounded-full bg-muted-foreground"
           aria-label="Dismiss"
         >
-          <X size={15} className="text-white" />
+          <X size={15} className="text-foreground" />
         </motion.button>
       )}
     </motion.div>

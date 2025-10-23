@@ -156,18 +156,12 @@ function ProfilePage() {
     (p) => !isPlanExpired({ finishingDate: p.finishingDate })
   );
 
-  console.log({profileActivePlans})
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
   >(undefined);
-  const userInformalName = profileData?.name?.includes(" ")
-    ? profileData.name.split(" ")[0]
-    : profileData?.username;
 
   const planIds = profileActivePlans?.map((plan) => plan.id) || [];
   const [endDate, setEndDate] = useState(new Date());
-  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
-  const profilePaidPlanType = profileData?.planType;
   const redirectTo = searchParams?.redirectTo;
   const [progressExplainerOpen, setProgressExplainerOpen] = useState(false);
   const [badgeExplainer, setBadgeExplainer] = useState<{
@@ -247,10 +241,8 @@ function ProfilePage() {
     return friends?.some((friend) => friend.id === currentUser?.id);
   }, [friends, currentUser?.id, isOwnProfile]);
 
-  // Calculate total activities logged (hardcoded if you don't know where they come from)
-  const totalActivitiesLogged = activityEntries?.length || 0; // Fallback to hardcoded value
-
-  const accountLevel = useAccountLevel(totalActivitiesLogged);
+  // Calculate account level (handles all data internally)
+  const accountLevel = useAccountLevel(username);
 
   if (isProfileDataLoading) {
     return (
@@ -401,7 +393,7 @@ function ProfilePage() {
 
             <div className="text-center">
               <p className="text-xl font-bold text-foreground">
-                {totalActivitiesLogged}
+                {profileData?.activityEntries?.length || 0}
               </p>
               <p className="text-sm text-muted-foreground">Entries</p>
             </div>
@@ -577,7 +569,7 @@ function ProfilePage() {
                   profileActivePlans.map((plan) => (
                     <ProfilePlanCard
                       key={plan.id}
-                      plan={plan}
+                      plan={plan as any}
                       activities={activities}
                       activityEntries={activityEntries}
                       isOwnProfile={isOwnProfile}

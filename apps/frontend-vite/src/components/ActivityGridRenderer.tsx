@@ -120,7 +120,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   return (
     <div className="space-y-4">
       <div className="bg-card p-6 rounded-2xl border-2 overflow-x-auto">
-        <div className="flex items-center space-x-3 mb-4">
+        <div className="flex flex-col items-center space-x-3 mb-4 gap-2">
             <span className="text-lg font-semibold text-foreground">
               Non-plan activities
             </span>

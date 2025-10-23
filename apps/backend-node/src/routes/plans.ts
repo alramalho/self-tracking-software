@@ -2,15 +2,34 @@ import { TZDate } from "@date-fns/tz";
 import { Activity, Plan, PlanGroup, PlanState, Prisma } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { Response, Router } from "express";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
+import { s3Service } from "../services/s3Service";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept images only
+    if (!file.mimetype.startsWith("image/")) {
+      cb(new Error("Only image files are allowed"));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 const PlanBulkUpdateSchema = z.object({
   updates: z.array(
@@ -68,6 +87,7 @@ const PlanUpsertSchema = z.object({
   coachSuggestedTimesPerWeek: z.number().positive().nullable().optional(),
   deletedAt: z.iso.datetime().nullable().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "FRIENDS"]).optional(),
+  backgroundImageUrl: z.string().url().nullable().optional(),
 });
 
 /**
@@ -191,6 +211,45 @@ router.get(
     } catch (error) {
       logger.error("Error fetching plans:", error);
       res.status(500).json({ error: "Failed to fetch plans" });
+    }
+  }
+);
+
+// Upload plan background image
+router.post(
+  "/upload-background-image",
+  requireAuth,
+  upload.single("image"),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          error: "No image file provided",
+        });
+        return;
+      }
+
+      // Generate unique file key
+      const fileExtension = req.file.mimetype.split("/")[1];
+      const key = `/users/${req.user!.id}/plan-backgrounds/${uuidv4()}.${fileExtension}`;
+
+      // Upload to S3 (public access controlled by bucket policy)
+      await s3Service.upload(req.file.buffer, key, req.file.mimetype);
+
+      // Get public URL
+      const publicUrl = s3Service.getPublicUrl(key);
+
+      res.json({
+        success: true,
+        url: publicUrl,
+      });
+    } catch (error) {
+      logger.error("Failed to upload plan background image:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to upload background image",
+      });
     }
   }
 );
@@ -1297,6 +1356,7 @@ router.post(
               outlineType: planData.outlineType || "SPECIFIC",
               timesPerWeek: planData.timesPerWeek,
               isCoached: planData.isCoached || false,
+              backgroundImageUrl: planData.backgroundImageUrl,
 
               // Connect activities directly - handle both activities array and activityIds array
               ...(planData.activities && {

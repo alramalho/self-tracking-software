@@ -268,3 +268,19 @@ export async function getPlanGroupProgress(
     throw error;
   }
 }
+
+export async function uploadPlanBackgroundImage(
+  api: AxiosInstance,
+  file: File
+): Promise<string> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  // Don't set Content-Type header - let the browser set it with the correct boundary
+  const response = await api.post<{ success: boolean; url: string }>(
+    "/plans/upload-background-image",
+    formData
+  );
+
+  return response.data.url;
+}
