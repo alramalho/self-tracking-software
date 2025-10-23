@@ -293,7 +293,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       <div className="relative flex max-w-full overflow-x-scroll">
         {/* Fixed weekday labels - outside scroll container */}
         <div
-          className={`sticky left-0 z-20 flex flex-col gap-[6px] pt-[30px] pr-2 pl-4 ml-0 bg-card`}
+          className={`sticky left-0 z-20 flex flex-col gap-[6px] pt-[30px] pr-2 pl-4 ml-0`}
         >
           {weekdays.map((day, index) => (
             <div
