@@ -148,7 +148,7 @@ export function MetricInsightsCard({
   const correlations = hardcodedCorrelations || calculatedCorrelations;
 
   return (
-    <Card ref={cardRef} className="p-6">
+    <Card ref={cardRef} className="p-6 rounded-2xl">
       <div className="space-y-6">
         <div className="flex justify-between items-start">
           <div className="flex flex-row items-center gap-2">

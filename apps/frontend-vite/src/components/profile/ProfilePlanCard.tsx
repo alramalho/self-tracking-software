@@ -36,15 +36,27 @@ export function ProfilePlanCard({
   const lifestyleAchieved =
     plan.progress?.lifestyleAchievement?.isAchieved ?? false;
 
-  // Determine shine color based on achievement
+  // Determine shine color and gradient based on achievement
   const shineColor = lifestyleAchieved
     ? "#f59e0b" // amber-500
     : habitAchieved
     ? "#84cc16" // lime-500
     : null;
 
+  const gradientClass = lifestyleAchieved
+    ? "bg-gradient-to-br from-amber-50/80 via-amber-100/60 to-amber-50/80 dark:from-amber-900/10 dark:via-amber-800/20 dark:to-amber-900/60"
+    : habitAchieved
+    ? "bg-gradient-to-br from-lime-50/80 via-lime-100/60 to-green-50/80 dark:from-lime-900/40 dark:via-lime-800/20 dark:to-lime-900/60"
+    : "bg-card";
+
+  const shadowClass = lifestyleAchieved
+    ? "shadow-lg shadow-amber-200/50 dark:shadow-amber-900/30"
+    : habitAchieved
+    ? "shadow-lg shadow-lime-200/50 dark:shadow-lime-900/30"
+    : "";
+
   return (
-    <div className={cn("relative rounded-2xl bg-card border border-border p-4")}>
+    <div className={cn("relative rounded-2xl border border-border p-4", gradientClass, shadowClass)}>
       {/* Shine border for achievements */}
       {shineColor && (
         <ShineBorder

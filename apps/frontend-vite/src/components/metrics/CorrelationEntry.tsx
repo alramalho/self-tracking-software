@@ -1,4 +1,5 @@
 import { Progress } from "@/components/ui/progress";
+import { CircleDashed, Info, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface CorrelationEntryProps {
@@ -23,22 +24,22 @@ const strengthConfig = {
   impossible: {
     dot: "bg-gray-300",
     label: "Insufficient",
-    labelColor: "text-gray-500"
+    labelColor: "text-gray-700 dark:text-gray-200 "
   },
   weak: {
     dot: "bg-orange-400",
     label: "Weak",
-    labelColor: "text-orange-600"
+    labelColor: "text-orange-400 dark:text-orange-600 "
   },
   medium: {
     dot: "bg-blue-400",
     label: "Medium",
-    labelColor: "text-blue-600"
+    labelColor: "text-blue-400 dark:text-blue-600 "
   },
   strong: {
     dot: "bg-purple-500",
     label: "Confident",
-    labelColor: "text-purple-600"
+    labelColor: "text-purple-400 dark:text-purple-600 "
   },
 };
 
@@ -76,25 +77,25 @@ export function CorrelationEntry({
   }, [isVisible, targetPercentage, animationDelay]);
 
   return (
-    <div className={`space-y-2 ${isInsufficient ? "opacity-40" : ""}`}>
+    <div className={`space-y-2`}>
       <div className="flex justify-between items-center text-sm gap-3">
         <div className="flex items-center gap-2 flex-1">
-          <span>{title}</span>
+          <span className={`${isInsufficient ? "opacity-40" : ""}`}>{title}</span>
           <button
             onClick={onReliabilityClick}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-accent/50 transition-colors cursor-pointer"
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-accent/50 transition-colors cursor-pointer ${isInsufficient ? "opacity-40" : ""}`}
           >
-            <div className={`w-2 h-2 rounded-full ${strengthStyle.dot}`} />
-            <span className={`text-xs font-medium ${strengthStyle.labelColor}`}>
+            {isInsufficient ? <CircleDashed className="w-3 h-3" /> : <div className={`w-2 h-2 rounded-full ${strengthStyle.dot}`} />}
+            <span className={`text-xs font-medium ${strengthStyle.labelColor} `}>
               {strengthStyle.label}
             </span>
           </button>
         </div>
-        <span className={`font-medium ${isWeak ? "text-gray-400" : (isPositive ? "text-green-500" : "text-red-500")}`}>
+        <span className={`font-medium ${isInsufficient ? "opacity-40" : ""} ${isWeak ? "text-gray-400" : (isPositive ? "text-green-500" : "text-red-500")}`}>
           {sign}{targetPercentage.toFixed(0)}%
         </span>
       </div>
-      <Progress value={animatedValue} indicatorColor={color} />
+      <Progress value={animatedValue} indicatorColor={color} className={`${isInsufficient ? "opacity-40" : ""}`}/>
     </div>
   );
 }
