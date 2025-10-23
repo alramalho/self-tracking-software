@@ -418,6 +418,14 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 <span className="text-sm text-muted-foreground">Coached</span>
               </div>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-red-400 hover:text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-6 w-6" />
+            </Button>
             <InviteButton
               planId={selectedPlan.id!}
               onInviteSuccess={() => {}}
@@ -431,15 +439,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               onClick={() => setShowEditModal(true)}
               className="text-muted-foreground hover:text-foreground"
             >
-              <Pencil className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-400 hover:text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="h-5 w-5" />
+              <Pencil className="h-6 w-6" />
             </Button>
           </div>
         </div>
