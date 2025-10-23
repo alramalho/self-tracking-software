@@ -1,5 +1,6 @@
 import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
+import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,8 @@ import { useAI } from "@/contexts/ai";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Send, Target, Loader2, Home, Plus, Menu, X, Pencil } from "lucide-react";
+import { Send, Target, Loader2, Home, Plus, Menu, X, Pencil, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import { usePlans } from "@/contexts/plans";
 
 export const Route = createFileRoute("/ai")({
   component: AICoachPage,
@@ -36,13 +35,20 @@ function AICoachPage() {
     isUpdatingChatTitle,
     submitFeedback,
     isSubmittingFeedback,
+    acceptMetric,
+    isAcceptingMetric,
+    rejectMetric,
+    isRejectingMetric,
+    submitAISatisfaction,
+    isSubmittingAISatisfaction,
   } = useAI();
   const [inputValue, setInputValue] = useState("");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
+  const [userMessageTimestamps, setUserMessageTimestamps] = useState<number[]>([]);
+  const [showSatisfactionPopover, setShowSatisfactionPopover] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-const { plans } = usePlans();
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
@@ -54,6 +60,17 @@ const { plans } = usePlans();
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const shouldShowSatisfactionPopover = () => {
+    // Check if user has already responded
+    if (localStorage.getItem('ai-satisfaction-responded')) return false;
+
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000);
+    const recentMessages = userMessageTimestamps.filter(ts => ts > oneHourAgo);
+
+    return recentMessages.length >= 4;
+  };
 
   const handleNewChat = async () => {
     try {
@@ -83,6 +100,15 @@ const { plans } = usePlans();
     try {
       await sendMessage({ message: messageToSend, chatId: currentChatId });
       console.log("Message sent successfully");
+
+      // Track user message timestamp
+      const newTimestamps = [...userMessageTimestamps, Date.now()];
+      setUserMessageTimestamps(newTimestamps);
+
+      // Check if we should show satisfaction popover
+      if (shouldShowSatisfactionPopover()) {
+        setShowSatisfactionPopover(true);
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       // The error toast is already shown by the context
@@ -116,6 +142,37 @@ const { plans } = usePlans();
   const handleCancelEdit = () => {
     setEditingChatId(null);
     setEditTitleValue("");
+  };
+
+  const handleAcceptMetric = async (messageId: string, metricId: string, rating: number) => {
+    try {
+      await acceptMetric({ messageId });
+    } catch (error) {
+      console.error("Failed to accept metric:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectMetric = async (messageId: string) => {
+    try {
+      await rejectMetric(messageId);
+    } catch (error) {
+      console.error("Failed to reject metric:", error);
+      throw error;
+    }
+  };
+
+  const handleSatisfactionResponse = async (liked: boolean) => {
+    try {
+      await submitAISatisfaction({ liked });
+      localStorage.setItem('ai-satisfaction-responded', 'true');
+      setShowSatisfactionPopover(false);
+    } catch (error) {
+      console.error('Failed to submit AI satisfaction:', error);
+      // Still close the popover and mark as responded to avoid repeated prompts
+      localStorage.setItem('ai-satisfaction-responded', 'true');
+      setShowSatisfactionPopover(false);
+    }
   };
 
   return (
@@ -299,112 +356,124 @@ const { plans } = usePlans();
                   </div>
                 </div>
               ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${
-                      message.role === "USER" ? "flex-row-reverse" : "flex-row"
-                    }`}
-                  >
-                    {/* {message.role === "COACH" && (
-                      <Avatar className="w-10 h-10 flex-shrink-0">
-                        <AvatarImage src={coachIcon} alt="Coach Oli" />
-                        <AvatarFallback>CO</AvatarFallback>
-                      </Avatar>
-                    )} */}
-                    {/* {message.role === "USER" && (
-                      <Avatar className="w-10 h-10 flex-shrink-0 self-end">
-                        <AvatarImage
-                          src={currentUser?.picture || ""}
-                          alt={currentUser?.name || ""}
-                        />
-                        <AvatarFallback>
-                          {(currentUser?.name || "U")[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    )} */}
-                    <div className="flex flex-col gap-1">
-                      <MessageBubble
-                        direction={message.role === "USER" ? "right" : "left"}
-                        className={
-                          message.role === "USER"
-                            ? `bg-muted`
-                            : "bg-transparent px-1"
+                messages.map((message: any) => {
+                  // Render content with inline plan links and metric suggestions
+                  const renderContentWithReplacements = () => {
+                    let content = message.content;
+                    const parts: (string | JSX.Element)[] = [];
+                    const replacements: Array<{
+                      index: number;
+                      length: number;
+                      component: JSX.Element;
+                    }> = [];
+
+                    // Only show metric replacement OR plan replacements (not both to avoid overwhelming)
+                    if (message.metricReplacement) {
+                      // If we have a metric suggestion, only show that
+                      const index = content.indexOf(message.metricReplacement.textToReplace);
+                      if (index !== -1) {
+                        replacements.push({
+                          index,
+                          length: message.metricReplacement.textToReplace.length,
+                          component: (
+                            <MetricSuggestion
+                              key="metric"
+                              messageId={message.id}
+                              metricId={message.metricReplacement.metric.id}
+                              metricTitle={message.metricReplacement.metric.title}
+                              rating={message.metricReplacement.rating}
+                              displayText={message.metricReplacement.textToReplace}
+                              emoji={message.metricReplacement.metric.emoji}
+                              status={message.metricReplacement.status}
+                              onAccept={handleAcceptMetric}
+                              onReject={handleRejectMetric}
+                            />
+                          ),
+                        });
+                      }
+                    } else if (message.planReplacements) {
+                      // Only show plan links if there's no metric suggestion
+                      message.planReplacements.forEach((replacement: any, idx: number) => {
+                        const index = content.indexOf(replacement.textToReplace);
+                        if (index !== -1) {
+                          replacements.push({
+                            index,
+                            length: replacement.textToReplace.length,
+                            component: (
+                              <PlanLink
+                                key={`plan-${idx}`}
+                                planId={replacement.plan.id}
+                                displayText={replacement.textToReplace}
+                                emoji={replacement.plan.emoji || undefined}
+                              />
+                            ),
+                          });
                         }
-                      >
-                        {message.role === "COACH" ? (
-                          <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                a: ({ node, href, children, ...props }) => {
+                      });
+                    }
 
-                                  // Check if this is a plan reference: [text](plan://goal-with-hyphens)
-                                  if (href?.startsWith("plan-goal-")) {
-                                    const displayText =
-                                      typeof children === "string"
-                                        ? children
-                                        : Array.isArray(children)
-                                          ? children.join("")
-                                          : "";
+                    // Sort replacements by index
+                    replacements.sort((a, b) => a.index - b.index);
 
-                                    // Extract the goal from the href and convert hyphens back to spaces
-                                    const hyphenatedGoal = href.replace("plan-goal-", "").trim();
-                                    const planGoal = hyphenatedGoal.replace(/-/g, " ");
+                    // Build parts array with text and components
+                    let lastIndex = 0;
+                    replacements.forEach((replacement) => {
+                      // Add text before replacement
+                      if (replacement.index > lastIndex) {
+                        parts.push(content.substring(lastIndex, replacement.index));
+                      }
+                      // Add replacement component
+                      parts.push(replacement.component);
+                      lastIndex = replacement.index + replacement.length;
+                    });
 
-                                    // Find exact plan match (case-insensitive)
-                                    const plan = plans?.find(
-                                      (p) => p.goal.toLowerCase() === planGoal.toLowerCase()
-                                    );
+                    // Add remaining text
+                    if (lastIndex < content.length) {
+                      parts.push(content.substring(lastIndex));
+                    }
 
-                                    if (!plan) {
-                                      return <span>{displayText}</span>;
-                                    }
+                    return <>{parts.map((part, idx) => (typeof part === 'string' ? <span key={idx}>{part}</span> : part))}</>;
+                  };
 
-                                    return (
-                                      <PlanLink
-                                        planId={plan.id}
-                                        displayText={displayText}
-                                        emoji={plan.emoji || undefined}
-                                      />
-                                    );
-                                  }
-                                  return (
-                                    <a href={href} {...props}>
-                                      {children}
-                                    </a>
-                                  );
-                                },
-                                p: ({ children }) => (
-                                  <p className="mb-0">{children}</p>
-                                ),
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
-                          </div>
-                        ) : (
-                          <p className="text-sm whitespace-pre-wrap">
-                            {message.content}
-                          </p>
-                        )}
-                      </MessageBubble>
-                      {message.role === "COACH" && (
-                        <MessageFeedback
-                          messageId={message.id}
-                          existingFeedback={
-                            message.feedback && message.feedback.length > 0
-                              ? message.feedback[0]
-                              : null
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 ${
+                        message.role === "USER" ? "flex-row-reverse" : "flex-row"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <MessageBubble
+                          direction={message.role === "USER" ? "right" : "left"}
+                          className={
+                            message.role === "USER"
+                              ? `bg-muted`
+                              : "bg-transparent px-1"
                           }
-                          onSubmitFeedback={async (data) => {
-                            await submitFeedback(data);
-                          }}
-                          isSubmitting={isSubmittingFeedback}
-                        />
-                      )}
+                        >
+                          <div className="text-sm whitespace-pre-wrap">
+                            {message.role === "COACH" ? renderContentWithReplacements() : message.content}
+                          </div>
+                        </MessageBubble>
+
+                        {message.role === "COACH" && (
+                          <MessageFeedback
+                            messageId={message.id}
+                            existingFeedback={
+                              message.feedback && message.feedback.length > 0
+                                ? message.feedback[0]
+                                : null
+                            }
+                            onSubmitFeedback={async (data) => {
+                              await submitFeedback(data);
+                            }}
+                            isSubmitting={isSubmittingFeedback}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               {isSendingMessage && (
                 <div className="flex gap-3">
@@ -498,6 +567,55 @@ const { plans } = usePlans();
               ) : (
                 "Save"
               )}
+            </Button>
+          </div>
+        </div>
+      </AppleLikePopover>
+
+      {/* Satisfaction Popover */}
+      <AppleLikePopover
+        open={showSatisfactionPopover}
+        onClose={() => {
+          localStorage.setItem('ai-satisfaction-responded', 'true');
+          setShowSatisfactionPopover(false);
+        }}
+        title="Quick Feedback"
+      >
+        <div className="space-y-6 pt-4 text-center">
+          <div className="flex justify-center">
+            <ThumbsUp size={48} className="text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Are you liking the AI?</h2>
+            <p className="text-sm text-muted-foreground">
+              Your feedback helps us improve Coach Oli
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => handleSatisfactionResponse(false)}
+              disabled={isSubmittingAISatisfaction}
+            >
+              {isSubmittingAISatisfaction ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <ThumbsDown size={18} className="mr-2" />
+              )}
+              Not Really
+            </Button>
+            <Button
+              className={`${themeColors.button.solid} flex-1`}
+              onClick={() => handleSatisfactionResponse(true)}
+              disabled={isSubmittingAISatisfaction}
+            >
+              {isSubmittingAISatisfaction ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <ThumbsUp size={18} className="mr-2" />
+              )}
+              Yes, I Like It!
             </Button>
           </div>
         </div>

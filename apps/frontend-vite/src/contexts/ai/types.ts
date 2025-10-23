@@ -33,7 +33,10 @@ export interface AIContextType {
   setCurrentChatId: (chatId: string | null) => void;
   messages: Message[] | undefined;
   isLoadingMessages: boolean;
-  createChat: (data: { title?: string | null }) => Promise<Chat>;
+  createChat: (data: {
+    title?: string | null;
+    initialCoachMessage?: string;
+  }) => Promise<Chat>;
   isCreatingChat: boolean;
   sendMessage: (data: { message: string; chatId: string }) => Promise<Message>;
   isSendingMessage: boolean;
@@ -46,6 +49,12 @@ export interface AIContextType {
     additionalComments?: string;
   }) => Promise<MessageFeedback>;
   isSubmittingFeedback: boolean;
+  acceptMetric: (data: { messageId: string; date?: string }) => Promise<void>;
+  isAcceptingMetric: boolean;
+  rejectMetric: (messageId: string) => Promise<void>;
+  isRejectingMetric: boolean;
+  submitAISatisfaction: (data: { liked: boolean; content?: string }) => Promise<void>;
+  isSubmittingAISatisfaction: boolean;
   isUserAIWhitelisted: boolean;
 }
 

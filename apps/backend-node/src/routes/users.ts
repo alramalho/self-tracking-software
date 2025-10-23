@@ -1090,7 +1090,15 @@ usersRouter.post(
     try {
       // Try to get authenticated user (optional)
       const authReq = req as AuthenticatedRequest;
-      const user = authReq.user;
+      let user: any = authReq.user;
+
+      if (!user) {
+        user = await prisma.user.findFirst({
+          where: {
+            email: req.body.email,
+          },
+        });
+      }
 
       const feedback = FeedbackSchema.parse(req.body);
       const files = req.files as Express.Multer.File[] | undefined;
@@ -1199,6 +1207,30 @@ Timestamp: ${new Date().toISOString()}</small></p>
           logger.error("Failed to create Linear ticket:", linearError);
         }
         // }
+      }
+
+      // Store feedback in database
+      if (user) {
+        const feedbackCategory =
+          feedback.type === "bug_report"
+            ? "BUG"
+            : feedback.type === "feature_request"
+              ? "FEATURE_REQUEST"
+              : "QUESTION";
+
+        await prisma.feedback.create({
+          data: {
+            userId: user.id,
+            category: feedbackCategory,
+            content: feedback.text,
+            imageUrls: imageUrls,
+            metadata: {
+              email: feedback.email,
+              type: feedback.type,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        });
       }
 
       logger.info("Feedback received:", {
@@ -1315,6 +1347,21 @@ Timestamp: ${new Date().toISOString()}</small></p>
           telegramError
         );
       }
+
+      // Store testimonial feedback in database
+      await prisma.feedback.create({
+        data: {
+          userId: user.id,
+          category: "TESTIMONIAL",
+          content: feedback.message,
+          metadata: {
+            sentiment: feedback.sentiment,
+            sentimentLabel: sentimentLabel,
+            wasRewritten: feedback.wasRewritten,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
 
       logger.info("Testimonial feedback received:", {
         userId: user.id,
