@@ -79,9 +79,14 @@ export class RecurringJobService {
 
       // Check if current hour is within the 2-hour interval
       // e.g., if preferredStartHour is 6, check if userHour is 6 or 7
-      return userHour >= preferredStartHour && userHour < preferredStartHour + 2;
+      return (
+        userHour >= preferredStartHour && userHour < preferredStartHour + 2
+      );
     } catch (error) {
-      logger.error(`Error checking coaching time for user ${user.username}:`, error);
+      logger.error(
+        `Error checking coaching time for user ${user.username}:`,
+        error
+      );
       return false;
     }
   }
@@ -92,7 +97,9 @@ export class RecurringJobService {
    * @param userId - User ID to check
    * @returns true if a coaching notification was sent recently
    */
-  private async hasRecentCoachingNotification(userId: string): Promise<boolean> {
+  private async hasRecentCoachingNotification(
+    userId: string
+  ): Promise<boolean> {
     try {
       const twelveHoursAgo = new Date();
       twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
@@ -112,7 +119,10 @@ export class RecurringJobService {
 
       return recentNotification !== null;
     } catch (error) {
-      logger.error(`Error checking recent coaching notifications for user ${userId}:`, error);
+      logger.error(
+        `Error checking recent coaching notifications for user ${userId}:`,
+        error
+      );
       // If there's an error checking, assume no recent notification to avoid blocking
       return false;
     }
@@ -319,7 +329,9 @@ export class RecurringJobService {
     for (const user of usersToCoach) {
       try {
         // Check if user received a coaching notification recently
-        const hasRecentNotification = await this.hasRecentCoachingNotification(user.id);
+        const hasRecentNotification = await this.hasRecentCoachingNotification(
+          user.id
+        );
         if (hasRecentNotification) {
           logger.info(
             `User ${user.username} received a coaching notification in the last 12 hours - skipping`
@@ -329,9 +341,11 @@ export class RecurringJobService {
 
         // Get the user's coached plan, or the newest plan as fallback
         const coachedPlan = (user.plans as any[]).find((p: any) => p.isCoached);
-        const firstPlan = coachedPlan || user.plans.sort((a, b) => {
-          return b.createdAt.getTime() - a.createdAt.getTime();
-        })[0];
+        const firstPlan =
+          coachedPlan ||
+          user.plans.sort((a, b) => {
+            return b.createdAt.getTime() - a.createdAt.getTime();
+          })[0];
 
         if (!firstPlan) {
           logger.warn(`User ${user.username} has no plans to coach`);
@@ -455,7 +469,7 @@ export class RecurringJobService {
   private async sendDailyJobReport(result: DailyJobResult): Promise<void> {
     const currentDate = new Date().toISOString().split("T")[0];
     const environment = process.env.NODE_ENV || "development";
-    const reportEmail = process.env.ADMIN_EMAIL || "admin@tracking.so";
+    const reportEmail = process.env.ADMIN_EMAIL || "alex@tracking.so";
 
     await sesService.sendEmail({
       to: reportEmail,

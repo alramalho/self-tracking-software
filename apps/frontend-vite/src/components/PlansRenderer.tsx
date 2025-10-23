@@ -29,9 +29,14 @@ export const isPlanExpired = (plan: {
   return isBefore(plan.finishingDate, new Date());
 };
 
-// Function to sort plans by creation date (newest first)
+// Function to sort plans: coached first, then by creation date (newest first)
 const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
+    // Coached plans always come first
+    if (a.isCoached && !b.isCoached) return -1;
+    if (!a.isCoached && b.isCoached) return 1;
+
+    // If both are coached or both are not coached, sort by creation date
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };

@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/contexts/theme/useTheme";
-import { useCurrentUser } from "@/contexts/users";
 import { useAI } from "@/contexts/ai";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import AppleLikePopover from "@/components/AppleLikePopover";
@@ -13,7 +12,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Send, Target, Loader2, Home, Plus, Menu, X, Pencil } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { PlansContext } from "@/contexts/plans/types";
 import { usePlans } from "@/contexts/plans";
 
 export const Route = createFileRoute("/ai")({
@@ -22,12 +20,10 @@ export const Route = createFileRoute("/ai")({
 
 function AICoachPage() {
   const navigate = useNavigate();
-  const { currentUser } = useCurrentUser();
   const { isDarkMode } = useTheme();
   const themeColors = useThemeColors();
   const {
     chats,
-    isLoadingChats,
     currentChatId,
     setCurrentChatId,
     messages,

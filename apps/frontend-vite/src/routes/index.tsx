@@ -4,6 +4,7 @@ import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
+import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { FloatingCoachWidget } from "@/components/FloatingCoachWidget";
 import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
 import Notifications from "@/components/Notifications";
@@ -99,6 +100,7 @@ function HomePage() {
   );
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
+  const { activityEntries } = useActivities();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -112,6 +114,7 @@ function HomePage() {
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
   const { isUserAIWhitelisted } = useAI();
+  const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const unopenedNotifications =
     notifications?.filter((n) => {
       // Exclude engagement notifications
@@ -132,6 +135,26 @@ function HomePage() {
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
   };
+
+  const handleTestimonialSubmit = async (data: {
+    sentiment: number;
+    message: string;
+    wasRewritten: boolean;
+  }) => {
+    setIsSubmittingTestimonial(true);
+    try {
+      const api = (await import("@/lib/api")).default;
+      await api.post("/users/submit-testimonial-feedback", data);
+    } catch (error) {
+      console.error("Failed to submit testimonial feedback:", error);
+      throw error;
+    } finally {
+      setIsSubmittingTestimonial(false);
+    }
+  };
+
+  // Check if user has more than 50 activities
+  const shouldShowTestimonialPopover = activityEntries && activityEntries.length > 50;
 
   // Show loader for unauthenticated users (prevents flash before redirect)
   if (!isLoaded || !isSignedIn) {
@@ -452,6 +475,17 @@ function HomePage() {
         actionLabel="Try it out →"
         onAction={() => navigate({ to: "/plans" })}
       />
+
+      {/* Testimonial Feedback Popover */}
+      {shouldShowTestimonialPopover && currentUser && (
+        <FeedbackAnnouncementPopover
+          open={shouldShowTestimonialPopover}
+          userName={currentUser.name || currentUser.username || "User"}
+          userPicture={currentUser.picture}
+          activityEntryCount={activityEntries?.length || 0}
+          onSubmit={handleTestimonialSubmit}
+        />
+      )}
 
       {/* Floating Coach Widget */}
       <FloatingCoachWidget />

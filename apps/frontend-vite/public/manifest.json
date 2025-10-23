@@ -2,21 +2,21 @@
   "id": "2",
   "name": "Tracking Software",
   "short_name": "tracking.software",
-  "description": "Know yourself better.",
+  "description": "The all-in-one free habit and lifestyle tracker.",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/dark/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/dark/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
-  "theme_color": "#FFFFFF",
-  "background_color": "#FFFFFF",
+  "theme_color": "#424242",
+  "background_color": "#424242",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

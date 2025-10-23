@@ -566,22 +566,31 @@ function ProfilePage() {
               <div className="space-y-4 mt-4">
                 {profileActivePlans &&
                   profileActivePlans.length > 0 &&
-                  profileActivePlans.map((plan) => (
-                    <ProfilePlanCard
-                      key={plan.id}
-                      plan={plan as any}
-                      activities={activities}
-                      activityEntries={activityEntries}
-                      isOwnProfile={isOwnProfile}
-                      onBadgeClick={(badgeType) =>
-                        setBadgeExplainer({
-                          open: true,
-                          planIds: [plan.id],
-                          badgeType,
-                        })
-                      }
-                    />
-                  ))}
+                  [...profileActivePlans]
+                    .sort((a, b) => {
+                      // Coached plans always come first
+                      if (a.isCoached && !b.isCoached) return -1;
+                      if (!a.isCoached && b.isCoached) return 1;
+
+                      // If both are coached or both are not coached, sort by creation date
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    })
+                    .map((plan) => (
+                      <ProfilePlanCard
+                        key={plan.id}
+                        plan={plan as any}
+                        activities={activities}
+                        activityEntries={activityEntries}
+                        isOwnProfile={isOwnProfile}
+                        onBadgeClick={(badgeType) =>
+                          setBadgeExplainer({
+                            open: true,
+                            planIds: [plan.id],
+                            badgeType,
+                          })
+                        }
+                      />
+                    ))}
                 {(!profileActivePlans || profileActivePlans.length === 0) && (
                   <div className="text-center text-muted-foreground py-8">
                     {isOwnProfile

@@ -15,6 +15,7 @@ import {
   DailyCheckinSettingsSchema,
   FeedbackSchema,
   FriendRequestSchema,
+  TestimonialFeedbackSchema,
   ThemeUpdateSchema,
   TimezoneUpdateSchema,
 } from "../types/user";
@@ -1214,6 +1215,121 @@ Timestamp: ${new Date().toISOString()}</small></p>
       res.status(500).json({
         success: false,
         error: { message: "Failed to send feedback" },
+      });
+    }
+  }
+);
+
+// Submit testimonial feedback
+usersRouter.post(
+  "/submit-testimonial-feedback",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const user = authReq.user;
+
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: { message: "User not authenticated" },
+        });
+        return;
+      }
+
+      const feedback = TestimonialFeedbackSchema.parse(req.body);
+
+      const sentimentEmojis = ["😭", "😞", "🙂", "🤩"];
+      const sentimentLabels = [
+        "Very unhappy",
+        "Unhappy",
+        "Happy",
+        "Very happy",
+      ];
+
+      // Send email notification to admin
+      const adminEmail = process.env.ADMIN_EMAIL!;
+      const sentimentEmoji = sentimentEmojis[feedback.sentiment - 1];
+      const sentimentLabel = sentimentLabels[feedback.sentiment - 1];
+
+      const rewriteNote = feedback.wasRewritten
+        ? "\n(AI-rewritten)"
+        : "\n(Original)";
+
+      try {
+        await sesService.sendEmail({
+          to: [adminEmail],
+          subject: `New Testimonial Feedback from ${user.username}`,
+          textBody: `
+Testimonial feedback received from: ${user.name} (@${user.username})
+Email: ${user.email}
+
+Sentiment: ${sentimentEmoji} ${sentimentLabel}
+
+TESTIMONIAL MESSAGE:${rewriteNote}
+"${feedback.message}"
+
+User ID: ${user.id}
+Activity Count: Check in dashboard
+Timestamp: ${new Date().toISOString()}
+          `,
+          htmlBody: `
+<h2>New Testimonial Feedback</h2>
+<p><strong>From:</strong> ${user.name} (@${user.username})</p>
+<p><strong>Email:</strong> ${user.email}</p>
+
+<h3>Sentiment: ${sentimentEmoji} ${sentimentLabel}</h3>
+
+<div style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+  <p style="margin: 0; font-style: italic;">"${feedback.message}"</p>
+  <p style="margin: 8px 0 0 0; font-size: 12px; color: #666;">${feedback.wasRewritten ? "✨ AI-rewritten" : "📝 Original"}</p>
+</div>
+
+<hr>
+<p><small>User ID: ${user.id}<br>
+Timestamp: ${new Date().toISOString()}</small></p>
+          `,
+        });
+        logger.info("Testimonial feedback email sent successfully");
+      } catch (emailError) {
+        logger.error("Failed to send testimonial feedback email:", emailError);
+      }
+
+      // Send Telegram notification
+      const telegramRewriteFlag = feedback.wasRewritten
+        ? " ✨ (AI-rewritten)"
+        : " 📝 (Original message)";
+      const telegramMessage =
+        `✨ **New Testimonial Feedback**\n\n` +
+        `**From:** ${user.name} (@${user.username})\n` +
+        `**Sentiment:** ${sentimentEmoji} ${sentimentLabel}\n\n` +
+        `**Testimonial:**${telegramRewriteFlag}\n"${feedback.message}"\n\n` +
+        `**UTC Time:** ${new Date().toISOString()}`;
+
+      try {
+        await telegramService.sendMessage(telegramMessage);
+        logger.info("Testimonial feedback Telegram notification sent");
+      } catch (telegramError) {
+        logger.error(
+          "Failed to send testimonial feedback Telegram notification:",
+          telegramError
+        );
+      }
+
+      logger.info("Testimonial feedback received:", {
+        userId: user.id,
+        username: user.username,
+        sentiment: feedback.sentiment,
+        message: feedback.message,
+        wasRewritten: feedback.wasRewritten,
+      });
+
+      res.json({ status: "success" });
+    } catch (error) {
+      logger.error("Failed to submit testimonial feedback:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to submit testimonial feedback" },
       });
     }
   }
