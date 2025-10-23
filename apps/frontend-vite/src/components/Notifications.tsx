@@ -88,11 +88,21 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-blue-500" />
       )}
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+        {/* Always show coach avatar for COACH notifications */}
+        {notification.type === "COACH" && (
+          <Avatar>
+            <AvatarImage
+              src="/images/jarvis_logo_transparent.png"
+              alt="Coach"
+            />
+            <AvatarFallback>C</AvatarFallback>
+          </Avatar>
+        )}
+        {/* Show user avatars for other notification types */}
         {[
           "FRIEND_REQUEST",
           "PLAN_INVITATION",
           "INFO",
-          "COACH",
         ].includes(notification.type) &&
           hasPictureData(notification) && navigationProps && (
             <Link {...navigationProps} onClick={onClose}>

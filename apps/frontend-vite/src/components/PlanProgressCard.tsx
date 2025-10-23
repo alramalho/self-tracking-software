@@ -389,7 +389,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                   maxValue={lifestyleMaxValue}
                   goal={<Rocket size={19} className="text-amber-400" />}
                   className={cn("w-full")}
-                  color={variants.bg}
+                  color={"bg-amber-400"}
                   celebration={
                     lifestyleIsAchieved ? (
                       <span className="flex items-center gap-1">

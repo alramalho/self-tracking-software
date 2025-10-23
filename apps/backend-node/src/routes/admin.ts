@@ -12,6 +12,7 @@ import { sesService } from "../services/sesService";
 import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { aiService } from "@/services/aiService";
 
 const telegramService = new TelegramService();
 interface AdminRequest extends Request {
@@ -713,6 +714,59 @@ router.get(
     } catch (error) {
       logger.error("Error debugging plan similarity:", error);
       res.status(500).json({ error: "Failed to debug plan similarity" });
+    }
+  }
+);
+
+// Generate coach message endpoint
+router.post(
+  "/generate-coach-message",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { username } = req.body;
+
+      const user = await prisma.user.findUnique({
+        where: { username },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get user's first plan
+      const userPlan = await plansService.getUserFirstPlan(user.id);
+      if (!userPlan) {
+        return res.status(401).json({ error: "User has no no plans." });
+      }
+
+      logger.info(`Coach message generation requested for user ${user.id}`);
+
+      // Recalculate current week state for the plan
+      await plansService.recalculateCurrentWeekState(userPlan, user);
+
+      // Generate coaching message using AI
+      const message = await aiService.generateCoachMessage(user, userPlan);
+
+      // Create a notification for the user
+      await notificationService.createAndProcessNotification(
+        {
+          userId: user.id,
+          message: message.message,
+          title: message.title,
+          type: "COACH",
+          relatedData: {
+            picture:
+              "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+          },
+        },
+        false
+      ); // Don't push notify as per Python implementation
+
+      res.json({ message });
+    } catch (error) {
+      logger.error("Error generating coach message:", error);
+      res.status(500).json({ error: "Failed to generate coach message" });
     }
   }
 );

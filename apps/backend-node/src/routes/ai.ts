@@ -469,58 +469,6 @@ router.post(
   }
 );
 
-// Generate coach message endpoint
-router.post(
-  "/generate-coach-message",
-  requireAuth,
-  async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<Response | void> => {
-    try {
-      const user = req.user!;
-
-      if (user.planType !== "PLUS") {
-        return res.status(401).json({ error: "You're on free plan." });
-      }
-
-      // Get user's first plan
-      const userPlan = await plansService.getUserFirstPlan(user.id);
-      if (!userPlan) {
-        return res.status(401).json({ error: "You have no plans." });
-      }
-
-      logger.info(`Coach message generation requested for user ${user.id}`);
-
-      // Recalculate current week state for the plan
-      await plansService.recalculateCurrentWeekState(userPlan, user);
-
-      // Generate coaching message using AI
-      const message = await aiService.generateCoachMessage(user, userPlan);
-
-      // Create a notification for the user
-      await notificationService.createAndProcessNotification(
-        {
-          userId: user.id,
-          message: message.message,
-          title: message.title,
-          type: "COACH",
-          relatedData: {
-            picture:
-              "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
-          },
-        },
-        false
-      ); // Don't push notify as per Python implementation
-
-      res.json({ message });
-    } catch (error) {
-      logger.error("Error generating coach message:", error);
-      res.status(500).json({ error: "Failed to generate coach message" });
-    }
-  }
-);
-
 // Dynamic UI logging endpoints
 router.post(
   "/log-dynamic-ui-attempt-error",
@@ -586,6 +534,66 @@ router.post(
     } catch (error) {
       logger.error("Error logging dynamic UI skip:", error);
       res.status(500).json({ error: "Failed to log skip" });
+    }
+  }
+);
+
+// Rewrite testimonial message with AI
+router.post(
+  "/rewrite-testimonial",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { sentiment, message } = req.body;
+
+      if (!sentiment || !message || typeof message !== "string") {
+        return res
+          .status(400)
+          .json({ error: "sentiment and message are required" });
+      }
+
+      // Map sentiment to descriptive label
+      const sentimentLabels = [
+        "very unhappy",
+        "unhappy",
+        "happy",
+        "very happy",
+      ];
+      const sentimentLabel = sentimentLabels[sentiment - 1];
+
+      const systemPrompt = `You are a testimonial editor for tracking.so, a habit tracking app. Your job is to rewrite user testimonials to make them more polished and compelling while preserving their authentic voice and sentiment. Keep testimonials concise (1-3 sentences, ~30-60 words) and in first person.`;
+
+      const prompt = `Rewrite this testimonial for tracking.so:
+
+Original: "${message}"
+User sentiment: ${sentimentLabel}
+
+Make it more polished and compelling while keeping the user's authentic voice and sentiment. Keep it concise and natural.`;
+
+      const rewrittenMessage = await aiService.generateText(
+        prompt,
+        systemPrompt,
+        {
+          model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+          temperature: 0.7,
+        }
+      );
+
+      // Remove leading and trailing quotes if present
+      const cleanedMessage = rewrittenMessage
+        .trim()
+        .replace(/^["']|["']$/g, "");
+
+      logger.info(`Rewrote testimonial for user ${user.username}`);
+
+      res.json({ message: cleanedMessage });
+    } catch (error) {
+      logger.error("Error rewriting testimonial:", error);
+      res.status(500).json({ error: "Failed to rewrite testimonial" });
     }
   }
 );

@@ -23,11 +23,18 @@ export const FriendRequestSchema = z.object({
   message: z.string().optional(),
 });
 
+export const TestimonialFeedbackSchema = z.object({
+  sentiment: z.number().min(1).max(4),
+  message: z.string().min(1),
+  wasRewritten: z.boolean().optional(),
+});
+
 export type TimezoneUpdate = z.infer<typeof TimezoneUpdateSchema>;
 export type ThemeUpdate = z.infer<typeof ThemeUpdateSchema>;
 export type DailyCheckinSettings = z.infer<typeof DailyCheckinSettingsSchema>;
 export type Feedback = z.infer<typeof FeedbackSchema>;
 export type FriendRequestData = z.infer<typeof FriendRequestSchema>;
+export type TestimonialFeedback = z.infer<typeof TestimonialFeedbackSchema>;
 
 export interface UserSearchResult {
   userId: string;

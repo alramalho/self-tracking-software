@@ -15,7 +15,7 @@ export const FloatingCoachWidget: React.FC = () => {
   const { isUserFree } = usePaidPlan();
   const {currentUser} = useCurrentUser();
   const navigate = useNavigate();
-  const {isUserAIWhitelisted} = useAI();
+  const {isUserAIWhitelisted, createChat, sendMessage} = useAI();
   const [isOpen, setIsOpen] = useState(false);
 
   // Get the most recent unread coach notification
@@ -32,8 +32,26 @@ export const FloatingCoachWidget: React.FC = () => {
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
 
-  const handleReply = () => {
-    navigate({ to: "/ai" });
+  const handleReply = async () => {
+    if (!latestCoachNotification) return;
+
+    try {
+      // Create new chat
+      const newChat = await createChat({ title: null });
+
+      // Send the notification message as the initial message
+      await sendMessage({
+        message: latestCoachNotification.message,
+        chatId: newChat.id
+      });
+
+      // Navigate to AI page (chat will already be selected and message sent)
+      navigate({ to: "/ai" });
+    } catch (error) {
+      console.error("Failed to start chat with notification message:", error);
+      // Fallback: just navigate to AI page
+      navigate({ to: "/ai" });
+    }
   };
 
   const handleClose = async () => {

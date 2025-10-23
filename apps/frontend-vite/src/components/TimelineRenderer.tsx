@@ -62,14 +62,19 @@ const TimelineRenderer: React.FC<{
 
             setTimeout(() => {
               setHighlightedEntryId(null);
-            }, 3000);
+              navigate({ to: "/", search: {} });
+              processedEntryIdRef.current = null;
+            }, 2000);
           }
         }, 100);
       } else {
         toast("ℹ️ This activity is no longer visible in your timeline");
+        // Clear the search param even if entry doesn't exist
+        navigate({ to: "/", search: {} });
+        processedEntryIdRef.current = null;
       }
     }
-  }, [highlightActivityEntryId, timelineData]);
+  }, [highlightActivityEntryId, timelineData, navigate]);
 
   const friends = useMemo(() => {
     return [
