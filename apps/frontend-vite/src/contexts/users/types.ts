@@ -23,6 +23,7 @@ export interface UsersContextType {
 
   // Auth helpers
   handleAuthError: (err: unknown) => void;
+  isAdmin: boolean;
   // Actions
   updateUser: (data: {
     updates: Prisma.UserUpdateInput;
