@@ -352,8 +352,8 @@ usersRouter.post(
       const fileExtension = req.file.mimetype.split("/")[1];
       const key = `profile-images/${req.user!.id}-${Date.now()}.${fileExtension}`;
 
-      // Upload to S3 with public access
-      await s3Service.upload(req.file.buffer, key, req.file.mimetype, true);
+      // Upload to S3 (public access controlled by bucket policy)
+      await s3Service.upload(req.file.buffer, key, req.file.mimetype);
 
       // Get public URL
       const publicUrl = s3Service.getPublicUrl(key);
@@ -1101,7 +1101,7 @@ usersRouter.post(
           const fileExtension = file.mimetype.split("/")[1];
           const key = `feedback-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
-          await s3Service.upload(file.buffer, key, file.mimetype, false);
+          await s3Service.upload(file.buffer, key, file.mimetype);
           // Use public URL since bucket policy allows public read for feedback-images/*
           const publicUrl = s3Service.getPublicUrl(key);
           imageUrls.push(publicUrl);

@@ -1,5 +1,5 @@
 import { type Activity, type PlanSession, Prisma } from "@tsw/prisma";
-import { type PlanMilestone } from "@tsw/prisma/types";
+import { type PlanMilestone, type PlanProgressData } from "@tsw/prisma/types";
 import { createContext } from "react";
 import { type PlanWithRelations } from "./service";
 
@@ -8,7 +8,7 @@ export type CompletePlan = PlanWithRelations & {
 };
 
 export interface PlansContextType {
-  plans: CompletePlan[] | undefined;
+  plans: (CompletePlan & { progress: PlanProgressData })[] | undefined;
   isLoadingPlans: boolean;
   updatePlans: (data: {
     updates: Array<{ planId: string; updates: Prisma.PlanUpdateInput }>;
@@ -40,6 +40,8 @@ export interface PlansContextType {
   isLeavingPlanGroup: boolean;
   deletePlan: (planId: string) => Promise<void>;
   isDeletingPlan: boolean;
+  uploadPlanBackgroundImage: (file: File) => Promise<string>;
+  isUploadingPlanBackgroundImage: boolean;
 }
 
 export const PlansContext = createContext<PlansContextType | undefined>(

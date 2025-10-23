@@ -1,6 +1,10 @@
 import { useTheme } from "@/contexts/theme/useTheme";
 import { Crown, Gem, Medal, Star, Target } from "lucide-react";
 import React, { useMemo } from "react";
+import { useUnifiedProfileData } from "./useUnifiedProfileData";
+
+export const HABIT_BONUS_POINTS = 25;
+export const LIFESTYLE_BONUS_POINTS = 100;
 
 export type AccountLevel = {
   name: string;
@@ -84,10 +88,36 @@ export const getAccountLevels = (isDarkMode: boolean): AccountLevel[] => [
 // For theme-aware usage, use getAccountLevels(isDarkMode) or useAccountLevel hook
 export const ACCOUNT_LEVELS = getAccountLevels(false);
 
-export function useAccountLevel(totalActivitiesLogged: number) {
+/**
+ * Hook to calculate account level with bonus points from plans.
+ * Automatically fetches user data and calculates bonuses.
+ *
+ * @param username - Optional username to get account level for. If not provided, uses current user.
+ */
+export function useAccountLevel(username?: string) {
   const { isDarkMode } = useTheme();
+  const { profileData } = useUnifiedProfileData(username);
+
   return useMemo(() => {
     const ACCOUNT_LEVELS = getAccountLevels(isDarkMode);
+
+    // Calculate total activities logged
+    const totalActivitiesLogged = profileData?.activityEntries?.length || 0;
+
+    // Calculate bonus points from plans
+    const activePlans =
+      profileData?.plans?.filter((plan) => !plan.deletedAt) || [];
+    const habitCount = activePlans.filter(
+      (plan) => plan.progress.habitAchievement.isAchieved
+    ).length;
+    const lifestyleCount = activePlans.filter(
+      (plan) => plan.progress.lifestyleAchievement.isAchieved
+    ).length;
+    const habitBonus = habitCount * HABIT_BONUS_POINTS;
+    const lifestyleBonus = lifestyleCount * LIFESTYLE_BONUS_POINTS;
+    const bonusPoints = habitBonus + lifestyleBonus;
+
+    const totalPoints = totalActivitiesLogged + bonusPoints;
 
     // Find current level
     let currentLevel: AccountLevel | null = null;
@@ -95,7 +125,7 @@ export function useAccountLevel(totalActivitiesLogged: number) {
 
     for (let i = 0; i < ACCOUNT_LEVELS.length; i++) {
       const level = ACCOUNT_LEVELS[i];
-      if (totalActivitiesLogged >= level.threshold) {
+      if (totalPoints >= level.threshold) {
         currentLevel = level;
       } else {
         nextLevel = level;
@@ -115,9 +145,9 @@ export function useAccountLevel(totalActivitiesLogged: number) {
     if (nextLevel) {
       const previousThreshold = currentLevel?.threshold || 0;
       const range = nextLevel.threshold - previousThreshold;
-      const progress = totalActivitiesLogged - previousThreshold;
+      const progress = totalPoints - previousThreshold;
       percentage = Math.min((progress / range) * 100, 100);
-      activitiesForNextLevel = nextLevel.threshold - totalActivitiesLogged;
+      activitiesForNextLevel = nextLevel.threshold - totalPoints;
     } else {
       // Max level reached
       percentage = 100;
@@ -126,12 +156,18 @@ export function useAccountLevel(totalActivitiesLogged: number) {
 
     return {
       totalActivitiesLogged,
+      bonusPoints,
+      totalPoints,
+      habitCount,
+      lifestyleCount,
+      habitBonus,
+      lifestyleBonus,
       currentLevel,
       nextLevel,
       percentage: Math.max(0, percentage),
       activitiesForNextLevel: Math.max(0, activitiesForNextLevel),
       isMaxLevel: !nextLevel,
-      atLeastBronze: totalActivitiesLogged >= ACCOUNT_LEVELS[1].threshold,
+      atLeastBronze: totalPoints >= ACCOUNT_LEVELS[1].threshold,
     };
-  }, [totalActivitiesLogged, isDarkMode]);
+  }, [profileData, isDarkMode]);
 }

@@ -127,9 +127,7 @@ function HomePage() {
     }) || [];
 
   const unopenedNotificationsCount = unopenedNotifications.length;
-  const { activityEntries } = useActivities();
-  const totalActivitiesLogged = activityEntries?.length || 0;
-  const accountLevel = useAccountLevel(totalActivitiesLogged);
+  const accountLevel = useAccountLevel();
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);

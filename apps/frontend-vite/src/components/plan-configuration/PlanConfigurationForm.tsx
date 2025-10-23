@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import Divider from "../Divider";
 import Step from "./Step";
 import ActivitiesStep from "./steps/ActivitiesStep";
+import BackgroundStep from "./steps/BackgroundStep";
 import CoachingStep from "./steps/CoachingStep";
 import DurationStep from "./steps/DurationStep";
 import EmojiStep from "./steps/EmojiStep";
@@ -44,7 +45,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 }) => {
   const { currentUser } = useCurrentUser();
   const { activities } = useActivities();
-  const { upsertPlan, isUpsertingPlan, plans } = usePlans();
+  const { upsertPlan, isUpsertingPlan, plans, uploadPlanBackgroundImage } = usePlans();
   const { isUserPremium } = usePaidPlan();
   // Initialize state from plan if editing, otherwise use defaults
   const [isCoached, setIsCoached] = useState<boolean>(plan?.isCoached || false);
@@ -75,6 +76,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [visibility, setVisibility] = useState<Visibility>(
     plan?.visibility || "PUBLIC"
   );
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>(
+    (plan as any)?.backgroundImageUrl || ""
+  );
+  const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
   const [outlineType, setOutlineType] = useState<PlanOutlineType>(
     plan?.outlineType || "SPECIFIC"
   );
@@ -107,7 +112,33 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       if (isUserPremium) {
         switch (step) {
           case 1:
+            return true; // Background is optional, always allow progression
+          case 2:
             return true; // Coaching choice is always valid
+          case 3:
+            return !!goal && goal.trim() !== "";
+          case 4:
+            return !!visibility;
+          case 5:
+            return true; // Finishing date is optional, always allow progression
+          case 6:
+            return !!selectedEmoji;
+          case 7:
+            return selectedActivities.length > 0;
+          case 8:
+            if (!outlineType) return false;
+            if (outlineType === "SPECIFIC") return !!generatedSessions;
+            if (outlineType === "TIMES_PER_WEEK")
+              return timesPerWeek && timesPerWeek > 0;
+            return false;
+          default:
+            return true;
+        }
+      } else {
+        // For free users without coaching step (steps 1-8 instead of 1-9)
+        switch (step) {
+          case 1:
+            return true; // Background is optional, always allow progression
           case 2:
             return !!goal && goal.trim() !== "";
           case 3:
@@ -119,28 +150,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           case 6:
             return selectedActivities.length > 0;
           case 7:
-            if (!outlineType) return false;
-            if (outlineType === "SPECIFIC") return !!generatedSessions;
-            if (outlineType === "TIMES_PER_WEEK")
-              return timesPerWeek && timesPerWeek > 0;
-            return false;
-          default:
-            return true;
-        }
-      } else {
-        // For free users without coaching step (steps 1-7 instead of 1-8)
-        switch (step) {
-          case 1:
-            return !!goal && goal.trim() !== "";
-          case 2:
-            return !!visibility;
-          case 3:
-            return true; // Finishing date is optional, always allow progression
-          case 4:
-            return !!selectedEmoji;
-          case 5:
-            return selectedActivities.length > 0;
-          case 6:
             if (!outlineType) return false;
             if (outlineType === "SPECIFIC") return !!generatedSessions;
             if (outlineType === "TIMES_PER_WEEK")
@@ -164,7 +173,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   );
 
   const handleStepChange = (direction: "next" | "back") => {
-    const maxStep = isUserPremium ? 8 : 7;
+    const maxStep = isUserPremium ? 9 : 8;
     if (currentStep === maxStep) {
       return; // Already at last step
     }
@@ -179,6 +188,18 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       scrollToStep(nextStep);
       return nextStep;
     });
+  };
+
+  const handleBackgroundImageSelect = (file: File) => {
+    setBackgroundImageFile(file);
+    // Create a preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setBackgroundImageUrl(previewUrl);
+  };
+
+  const handleBackgroundImageRemove = () => {
+    setBackgroundImageFile(null);
+    setBackgroundImageUrl("");
   };
 
   const handleGenerate = async () => {
@@ -214,6 +235,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       finishingDate: currentFinishingDate || null,
       notes: planNotes,
       visibility: visibility,
+      backgroundImageUrl: backgroundImageUrl || null,
       outlineType: outlineType,
       milestones: milestones,
       activities: selectedActivities,
@@ -243,6 +265,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     currentFinishingDate,
     planNotes,
     visibility,
+    backgroundImageUrl,
     outlineType,
     milestones,
     selectedActivities,
@@ -268,6 +291,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       planToBeSaved.emoji !== plan.emoji ||
       planToBeSaved.finishingDate !== plan.finishingDate ||
       planToBeSaved.visibility !== plan.visibility ||
+      planToBeSaved.backgroundImageUrl !== (plan as any).backgroundImageUrl ||
       planToBeSaved.outlineType !== plan.outlineType ||
       planToBeSaved.timesPerWeek !== plan.timesPerWeek ||
       planToBeSaved.isCoached !== plan.isCoached ||
@@ -309,7 +333,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (isEdit) {
       return hasMadeAnyChanges();
     }
-    const maxStep = isUserPremium ? 8 : 7;
+    const maxStep = isUserPremium ? 9 : 8;
     return currentStep === maxStep && isPlanComplete();
   }, [isEdit, hasMadeAnyChanges, isPlanComplete, currentStep, isUserPremium]);
 
@@ -354,7 +378,24 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       }
     }
 
-    const planToSave = createPlanToConfirm();
+    // Upload background image if a new file was selected
+    let finalBackgroundImageUrl = backgroundImageUrl;
+    if (backgroundImageFile) {
+      try {
+        const uploadedUrl = await uploadPlanBackgroundImage(backgroundImageFile);
+        finalBackgroundImageUrl = uploadedUrl;
+      } catch (error) {
+        console.error("Failed to upload background image:", error);
+        // Continue with the save even if image upload fails
+        // The error toast is already shown by the mutation
+      }
+    }
+
+    const planToSave = {
+      ...createPlanToConfirm(),
+      backgroundImageUrl: finalBackgroundImageUrl || null,
+    };
+
     upsertPlan({
       planId: plan?.id || "",
       updates: planToSave,
@@ -378,8 +419,24 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       });
     }
 
+    // Upload background image if a new file was selected
+    let finalBackgroundImageUrl = backgroundImageUrl;
+    if (backgroundImageFile) {
+      try {
+        const uploadedUrl = await uploadPlanBackgroundImage(backgroundImageFile);
+        finalBackgroundImageUrl = uploadedUrl;
+      } catch (error) {
+        console.error("Failed to upload background image:", error);
+        // Continue with the save even if image upload fails
+        // The error toast is already shown by the mutation
+      }
+    }
+
     // Save the new plan
-    const planToSave = createPlanToConfirm();
+    const planToSave = {
+      ...createPlanToConfirm(),
+      backgroundImageUrl: finalBackgroundImageUrl || null,
+    };
     await upsertPlan({
       planId: plan?.id || "",
       updates: planToSave,
@@ -400,6 +457,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     step6: useRef<HTMLDivElement>(null),
     step7: useRef<HTMLDivElement>(null),
     step8: useRef<HTMLDivElement>(null),
+    step9: useRef<HTMLDivElement>(null),
   };
 
   const scrollToStep = (stepNumber: number) => {
@@ -437,9 +495,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   useEffect(() => {
     if (scrollToMilestones && isEdit) {
-      stepRefs.step8.current?.scrollIntoView({ behavior: "smooth" });
+      const milestonesStep = isUserPremium ? stepRefs.step9 : stepRefs.step8;
+      milestonesStep.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [scrollToMilestones, isEdit]);
+  }, [scrollToMilestones, isEdit, isUserPremium]);
 
   // Notify parent of unsaved changes
   useEffect(() => {
@@ -454,6 +513,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     selectedEmoji,
     currentFinishingDate,
     visibility,
+    backgroundImageUrl,
     outlineType,
     timesPerWeek,
     isCoached,
@@ -468,15 +528,40 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       className="space-y-6 max-w-3xl mx-auto"
     >
       <div className="space-y-6 relative">
+        {/* Background Step */}
+        <Step
+          stepNumber={1}
+          isVisible={shouldShowStep(1)}
+          ref={stepRefs.step1}
+        >
+          <BackgroundStep
+            number={1}
+            backgroundImageUrl={backgroundImageUrl}
+            onFileSelect={handleBackgroundImageSelect}
+            onRemove={handleBackgroundImageRemove}
+          />
+          {!isEdit && (
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={() => handleStepChange("next")}
+                disabled={!canProgressToNextStep(1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </Step>
+
         {/* Coaching Step or Upgrade Banner */}
         {isUserPremium ? (
           <Step
-            stepNumber={1}
-            isVisible={shouldShowStep(1)}
-            ref={stepRefs.step1}
+            stepNumber={2}
+            isVisible={shouldShowStep(2)}
+            ref={stepRefs.step2}
           >
+            <Divider />
             <CoachingStep
-              number={1}
+              number={2}
               isCoached={isCoached}
               setIsCoached={setIsCoached}
             />
@@ -484,7 +569,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               <div className="flex justify-end mt-4">
                 <Button
                   onClick={() => handleStepChange("next")}
-                  disabled={!canProgressToNextStep(1)}
+                  disabled={!canProgressToNextStep(2)}
                 >
                   Next
                 </Button>
@@ -513,39 +598,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         )}
 
         <Step
-          stepNumber={isUserPremium ? 2 : 1}
-          isVisible={shouldShowStep(isUserPremium ? 2 : 1)}
-          ref={isUserPremium ? stepRefs.step2 : stepRefs.step1}
-        >
-          <Divider />
-          <GoalStep
-            number={isUserPremium ? 2 : 1}
-            goal={goal || ""}
-            setGoal={setGoal}
-            isEdit={isEdit}
-          />
-          {!isEdit && (
-            <div className="flex justify-end mt-4">
-              <Button
-                onClick={() => handleStepChange("next")}
-                disabled={!canProgressToNextStep(isUserPremium ? 2 : 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </Step>
-
-        <Step
           stepNumber={isUserPremium ? 3 : 2}
           isVisible={shouldShowStep(isUserPremium ? 3 : 2)}
           ref={isUserPremium ? stepRefs.step3 : stepRefs.step2}
         >
           <Divider />
-          <VisibilityStep
+          <GoalStep
             number={isUserPremium ? 3 : 2}
-            visibility={visibility}
-            setVisibility={setVisibility}
+            goal={goal || ""}
+            setGoal={setGoal}
+            isEdit={isEdit}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -565,10 +627,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           ref={isUserPremium ? stepRefs.step4 : stepRefs.step3}
         >
           <Divider />
-          <DurationStep
+          <VisibilityStep
             number={isUserPremium ? 4 : 3}
-            currentFinishingDate={currentFinishingDate || undefined}
-            setCurrentFinishingDate={setCurrentFinishingDate}
+            visibility={visibility}
+            setVisibility={setVisibility}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -588,10 +650,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           ref={isUserPremium ? stepRefs.step5 : stepRefs.step4}
         >
           <Divider />
-          <EmojiStep
+          <DurationStep
             number={isUserPremium ? 5 : 4}
-            selectedEmoji={selectedEmoji || ""}
-            setSelectedEmoji={setSelectedEmoji}
+            currentFinishingDate={currentFinishingDate || undefined}
+            setCurrentFinishingDate={setCurrentFinishingDate}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -611,10 +673,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           ref={isUserPremium ? stepRefs.step6 : stepRefs.step5}
         >
           <Divider />
-          <ActivitiesStep
+          <EmojiStep
             number={isUserPremium ? 6 : 5}
-            onActivitiesChange={setSelectedActivities}
-            initialActivities={selectedActivities}
+            selectedEmoji={selectedEmoji || ""}
+            setSelectedEmoji={setSelectedEmoji}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -634,20 +696,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           ref={isUserPremium ? stepRefs.step7 : stepRefs.step6}
         >
           <Divider />
-          <OutlineStep
+          <ActivitiesStep
             number={isUserPremium ? 7 : 6}
-            outlineType={outlineType}
-            setOutlineType={setOutlineType}
-            timesPerWeek={timesPerWeek || 0}
-            setTimesPerWeek={setTimesPerWeek}
-            title={title}
-            generatedSessions={generatedSessions}
-            canGenerate={canGeneratePlan}
-            onGenerate={handleGenerate}
-            activities={selectedActivities}
-            finishingDate={currentFinishingDate || undefined}
-            description={description || ""}
-            setDescription={setDescription}
+            onActivitiesChange={setSelectedActivities}
+            initialActivities={selectedActivities}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -667,13 +719,46 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           ref={isUserPremium ? stepRefs.step8 : stepRefs.step7}
         >
           <Divider />
-          <MilestonesStep
+          <OutlineStep
             number={isUserPremium ? 8 : 7}
+            outlineType={outlineType}
+            setOutlineType={setOutlineType}
+            timesPerWeek={timesPerWeek || 0}
+            setTimesPerWeek={setTimesPerWeek}
+            title={title}
+            generatedSessions={generatedSessions}
+            canGenerate={canGeneratePlan}
+            onGenerate={handleGenerate}
+            activities={selectedActivities}
+            finishingDate={currentFinishingDate || undefined}
+            description={description || ""}
+            setDescription={setDescription}
+          />
+          {!isEdit && (
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={() => handleStepChange("next")}
+                disabled={!canProgressToNextStep(isUserPremium ? 8 : 7)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </Step>
+
+        <Step
+          stepNumber={isUserPremium ? 9 : 8}
+          isVisible={shouldShowStep(isUserPremium ? 9 : 8)}
+          ref={isUserPremium ? stepRefs.step9 : stepRefs.step8}
+        >
+          <Divider />
+          <MilestonesStep
+            number={isUserPremium ? 9 : 8}
             activities={selectedActivities}
             milestones={milestones}
             setMilestones={setMilestones}
           />
-          {!isEdit && currentStep === (isUserPremium ? 8 : 7) && (
+          {!isEdit && currentStep === (isUserPremium ? 9 : 8) && (
             <div className="flex justify-end mt-4">
               <Button
                 onClick={handleConfirm}

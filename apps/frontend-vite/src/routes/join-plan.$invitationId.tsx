@@ -51,7 +51,7 @@ function JoinPlanPage() {
     try {
       await acceptPlanInvitation({
         planInvitationId: invitationId,
-        existingPlanId: existingPlanId
+        existingPlanId: existingPlanId,
       });
       navigate({ to: "/plans" });
     } catch (error) {
@@ -111,13 +111,18 @@ function JoinPlanPage() {
           <div className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={inviter.picture || ""} alt={inviter.name || ""} />
+                <AvatarImage
+                  src={inviter.picture || ""}
+                  alt={inviter.name || ""}
+                />
                 <AvatarFallback>{(inviter.name || "U")[0]}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm text-muted-foreground">Invited by</p>
                 <p className="font-semibold">{inviter.name}</p>
-                <p className="text-sm text-muted-foreground">@{inviter.username}</p>
+                <p className="text-sm text-muted-foreground">
+                  @{inviter.username}
+                </p>
               </div>
             </div>
           </div>
@@ -153,7 +158,9 @@ function JoinPlanPage() {
                     <span className="text-2xl">{activity.emoji}</span>
                     <div>
                       <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-muted-foreground">{activity.measure}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {activity.measure}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -220,7 +227,9 @@ function JoinPlanPage() {
                 {plans.map((existingPlan) => (
                   <Button
                     key={existingPlan.id}
-                    onClick={() => handleAcceptWithExistingPlan(existingPlan.id)}
+                    onClick={() =>
+                      handleAcceptWithExistingPlan(existingPlan.id)
+                    }
                     variant="outline"
                     className="w-full rounded-xl h-auto py-3"
                     disabled={isAcceptingPlanInvitation}
