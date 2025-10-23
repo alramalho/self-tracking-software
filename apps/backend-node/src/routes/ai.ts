@@ -1,5 +1,6 @@
 import { Response, Router } from "express";
 import multer from "multer";
+import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -53,11 +54,188 @@ router.get(
         orderBy: { createdAt: "asc" },
       });
 
+      // Get user's plans and metrics for parsing historical messages
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+        },
+      });
+
+      const metrics = await prisma.metric.findMany({
+        where: {
+          userId: user.id,
+        },
+      });
+
+      // Helper to strip emojis from text
+      const stripEmojis = (text: string) => {
+        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+      };
+
+      // Parse and structure messages
+      const structuredMessages = messages.map((msg) => {
+        if (msg.role === "COACH") {
+          // New format: metadata field contains structured data
+          if (msg.metadata && typeof msg.metadata === "object") {
+            const metadata = msg.metadata as any;
+
+            // Resolve plan goals to plan objects
+            const planReplacements =
+              metadata.planReplacements
+                ?.map((replacement: any) => {
+                  const plan = plans.find(
+                    (p: any) =>
+                      p.goal.toLowerCase() ===
+                      replacement.planGoal.toLowerCase()
+                  );
+                  return plan
+                    ? {
+                        textToReplace: replacement.textToReplace,
+                        plan: {
+                          id: plan.id,
+                          goal: plan.goal,
+                          emoji: plan.emoji,
+                        },
+                      }
+                    : null;
+                })
+                .filter(Boolean) || [];
+
+            // Resolve metric title to metric object
+            let metricReplacement = null;
+            if (metadata.metricReplacement) {
+              const aiMetricTitle = stripEmojis(metadata.metricReplacement.metricTitle).toLowerCase();
+              const metric = metrics.find(
+                (m: any) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+              );
+              if (metric) {
+                metricReplacement = {
+                  textToReplace: metadata.metricReplacement.textToReplace,
+                  rating: metadata.metricReplacement.rating,
+                  metric: {
+                    id: metric.id,
+                    title: metric.title,
+                    emoji: metric.emoji,
+                  },
+                  status: metadata.metricReplacement.status || null, // accepted, rejected, or null
+                };
+              }
+            }
+
+            return {
+              id: msg.id,
+              chatId: msg.chatId,
+              role: msg.role,
+              content: msg.content,
+              planReplacements,
+              metricReplacement,
+              createdAt: msg.createdAt,
+              feedback: msg.feedback,
+            };
+          }
+
+          // Old format: content is JSON string (backward compatibility)
+          try {
+            const parsed = JSON.parse(msg.content);
+
+            // Handle new format with planReplacements and metricReplacement
+            if (parsed.messageContent) {
+              // Resolve plan goals to plan objects
+              const planReplacements =
+                parsed.planReplacements
+                  ?.map((replacement: any) => {
+                    const plan = plans.find(
+                      (p: any) =>
+                        p.goal.toLowerCase() ===
+                        replacement.planGoal.toLowerCase()
+                    );
+                    return plan
+                      ? {
+                          textToReplace: replacement.textToReplace,
+                          plan: {
+                            id: plan.id,
+                            goal: plan.goal,
+                            emoji: plan.emoji,
+                          },
+                        }
+                      : null;
+                  })
+                  .filter(Boolean) || [];
+
+              // Resolve metric title to metric object
+              let metricReplacement = null;
+              if (parsed.metricReplacement) {
+                const aiMetricTitle = stripEmojis(parsed.metricReplacement.metricTitle).toLowerCase();
+                const metric = metrics.find(
+                  (m: any) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+                );
+                if (metric) {
+                  metricReplacement = {
+                    textToReplace: parsed.metricReplacement.textToReplace,
+                    rating: parsed.metricReplacement.rating,
+                    metric: {
+                      id: metric.id,
+                      title: metric.title,
+                      emoji: metric.emoji,
+                    },
+                  };
+                }
+              }
+
+              return {
+                id: msg.id,
+                chatId: msg.chatId,
+                role: msg.role,
+                content: parsed.messageContent,
+                planReplacements,
+                metricReplacement,
+                createdAt: msg.createdAt,
+                feedback: msg.feedback,
+              };
+            }
+
+            // Fallback for old format
+            return {
+              id: msg.id,
+              chatId: msg.chatId,
+              role: msg.role,
+              content: parsed.message || msg.content,
+              planReplacements: [],
+              metricReplacement: null,
+              createdAt: msg.createdAt,
+              feedback: msg.feedback,
+            };
+          } catch (e) {
+            // Fallback for very old messages
+            return {
+              id: msg.id,
+              chatId: msg.chatId,
+              role: msg.role,
+              content: msg.content,
+              planReplacements: [],
+              metricReplacement: null,
+              createdAt: msg.createdAt,
+              feedback: msg.feedback,
+            };
+          }
+        }
+        // USER messages
+        return {
+          id: msg.id,
+          chatId: msg.chatId,
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.createdAt,
+          feedback: msg.feedback,
+        };
+      });
+
       logger.info(
         `Fetched ${messages.length} messages for chat ${chatId}, user ${user.username}`
       );
 
-      res.json({ messages });
+      res.json({ messages: structuredMessages });
     } catch (error) {
       logger.error("Error fetching coach messages:", error);
       res.status(500).json({ error: "Failed to fetch coach messages" });
@@ -115,7 +293,13 @@ router.post(
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
-      const { title } = req.body;
+      const { title, initialCoachMessage } = req.body;
+
+      if (initialCoachMessage && typeof initialCoachMessage !== "string") {
+        return res
+          .status(400)
+          .json({ error: "initialCoachMessage must be a string" });
+      }
 
       // Get or create coach
       let coach = await prisma.coach.findFirst({
@@ -143,6 +327,16 @@ router.post(
           title: title || null,
         },
       });
+
+      if (initialCoachMessage) {
+        await prisma.message.create({
+          data: {
+            chatId: chat.id,
+            role: "COACH",
+            content: initialCoachMessage,
+          },
+        });
+      }
 
       logger.info(`Created new chat ${chat.id} for user ${user.username}`);
 
@@ -234,7 +428,7 @@ router.post(
         return res.status(404).json({ error: "Message not found" });
       }
 
-      // Create or update feedback
+      // Create or update feedback in MessageFeedback table
       const feedback = await prisma.messageFeedback.upsert({
         where: {
           messageId_userId: {
@@ -253,6 +447,21 @@ router.post(
           feedbackType: feedbackType,
           feedbackReasons: feedbackReasons || [],
           additionalComments: additionalComments || null,
+        },
+      });
+
+      // Also store in unified Feedback table
+      await prisma.feedback.create({
+        data: {
+          userId: user.id,
+          category: "AI_MESSAGE_FEEDBACK",
+          content: additionalComments || null,
+          metadata: {
+            messageId: messageId,
+            feedbackType: feedbackType,
+            feedbackReasons: feedbackReasons || [],
+            timestamp: new Date().toISOString(),
+          },
         },
       });
 
@@ -337,6 +546,14 @@ router.post(
         orderBy: [{ createdAt: "desc" }],
       });
 
+      // Get user's metrics for context
+      const metrics = await prisma.metric.findMany({
+        where: {
+          userId: user.id,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
       // Build context for AI
       let plansContext = "";
       if (plans.length > 0) {
@@ -345,9 +562,16 @@ router.post(
           plans
             .map((p) => {
               const activities = p.activities.map((a) => a.title).join(", ");
-              return `- Goal: "${p.goal}" / Activities: ${activities}`;
+              return `- Goal: "${p.goal}" (ID '${p.id}') / Activities: ${activities}`;
             })
             .join("\n");
+      }
+
+      let metricsContext = "";
+      if (metrics.length > 0) {
+        metricsContext =
+          "\n\nUser's tracked metrics:\n" +
+          metrics.map((m) => `- ${m.emoji} ${m.title}`).join("\n");
       }
 
       // Build conversation history
@@ -356,40 +580,116 @@ router.post(
         content: msg.content,
       }));
 
+      // Define response schema
+      const CoachResponseSchema = z.object({
+        messageContent: z
+          .string()
+          .describe(
+            "Natural conversational response to the user (2-3 sentences). Write this as you would normally speak, using natural language."
+          ),
+        planReplacements: z
+          .array(
+            z.object({
+              textToReplace: z
+                .string()
+                .describe(
+                  "EXACT substring from your messageContent that should be replaced with a clickable plan link. Must match exactly (case-sensitive)."
+                ),
+              planGoal: z
+                .string()
+                .describe(
+                  "The exact goal text of the plan you're referencing (case-insensitive match with the plans list above)."
+                ),
+            })
+          )
+          .describe(
+            "Optional array of text replacements to create inline plan links in your message. Only include if you naturally mention plans."
+          )
+          .optional(),
+        metricReplacement: z
+          .object({
+            textToReplace: z
+              .string()
+              .describe(
+                "EXACT substring from your messageContent that should be replaced with an interactive metric suggestion. Must match exactly (case-sensitive)."
+              ),
+            metricTitle: z
+              .string()
+              .describe(
+                "The exact title of the metric you're suggesting (case-insensitive match with the metrics list above)."
+              ),
+            rating: z
+              .number()
+              .min(1)
+              .max(5)
+              .describe("The suggested rating (1-5) for this metric."),
+          })
+          .optional()
+          .describe(
+            "Optional metric suggestion to inline in your message. Only include after sufficient conversation (not in first 1-2 messages) when discussing activities or emotions. Critically evaluate the user's tone, word choice, and use of emotional punctuation (emojis, exclamation marks, interjections) before suggesting a rating."
+          ),
+      });
+
       // System prompt for coach
       const systemPrompt =
-        `You are Coach Oli, a supportive personal AI coach helping users achieve their goals and stay on track with their plans.` +
+        `You are Coach Oli, a supportive personal AI coach.` +
         `${plansContext}` +
+        `${metricsContext}` +
+        `\n\n` +
+        `IMPORTANT - Response Format:` +
+        `\n1. Write messageContent as natural, conversational text (2-3 sentences). Never include IDs or technical details.` +
+        `\n2. To create inline plan links:` +
+        `\n   - Reference plans naturally in your message (e.g., "your chess practice" or "that training plan")` +
+        `\n   - Add each reference to planReplacements with:` +
+        `\n     * textToReplace: the EXACT text from your message (case-sensitive)` +
+        `\n     * planGoal: the exact goal from the plans list above (case-insensitive)` +
+        `\n   - Example: If you write "How's your chess practice going?", add:` +
+        `\n     {textToReplace: "chess practice", planGoal: "play a bit of chess every day"}` +
+        `\n3. To suggest a metric (only after sufficient conversation, not in first 1-2 messages):` +
+        `\n   - Critically evaluate the user's tone, word choice, and emotional punctuation (emojis, exclamation marks, interjections)` +
+        `\n   - Don't extrapolate high ratings from neutral responses like "thanks" or "ok"` +
+        `\n   - Mention it naturally (e.g., "sounds like you're feeling pretty energized")` +
+        `\n   - Add to metricReplacement:` +
+        `\n     * textToReplace: the EXACT text to highlight (e.g., "pretty energized")` +
+        `\n     * metricTitle: exact metric title from list above` +
+        `\n     * rating: your suggested rating (1-5) based on their actual expressed emotion` +
+        `\n   - Only suggest ONE metric per message` +
         `\n\n` +
         `Guidelines:` +
-        `\n- Keep responses concise (2-3 sentences)` +
-        `\n- When mentioning a plan, use this exact markdown format: [natural text](plan-goal-exact-goal-text)` +
-        `\n  - The text in brackets should flow naturally in the sentence` +
-        `\n  - Replace spaces with hyphens in the URL (e.g., "play a bit of chess" becomes "play-a-bit-of-chess")` +
-        `\n  - The goal text must match the EXACT goal from the list above (with spaces replaced by hyphens)` +
-        `\n  Examples: "your [chess practice](plan-goal-play-a-bit-of-chess-every-day)", "the [reading goal](plan-goal-read-12-books)"` +
+        `\n- Keep messages concise and natural` +
         `\n- Provide actionable advice` +
-        `\n- Copy user's tone over time, as conversation progresses`;
+        `\n- Match the user's tone over time`;
 
-      // Generate AI response
-      const aiResponse = await aiService.generateText(
+      // Generate AI response with structured output
+      const prompt =
         conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
-          "\nassistant:",
+        "\nassistant:";
+
+      const aiResponse = await aiService.generateStructuredResponse(
+        prompt,
+        CoachResponseSchema,
         systemPrompt,
-        { model: "x-ai/grok-4-fast", temperature: 0.5 }
+        {
+          model: "x-ai/grok-4-fast",
+          temperature: 0.3,
+        }
       );
 
-      // Save coach message (AI now handles the plan link format directly)
+      // Save coach message with content and metadata separated
       const coachMessage = await prisma.message.create({
         data: {
           chatId: chatId,
           role: "COACH",
-          content: aiResponse,
+          content: aiResponse.messageContent,
+          metadata: {
+            planReplacements: aiResponse.planReplacements || [],
+            metricReplacement: aiResponse.metricReplacement || null,
+          },
         },
       });
 
       logger.info(
-        `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Response: "${aiResponse.substring(0, 50)}..."`
+        `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Response: "${aiResponse.messageContent.substring(0, 50)}..."`
       );
 
       // Generate chat title if this is the first exchange (title is null)
@@ -397,7 +697,7 @@ router.post(
         // Do this async without blocking the response
         (async () => {
           try {
-            const titlePrompt = `User: ${message}\nCoach: ${aiResponse}`;
+            const titlePrompt = `User: ${message}\nCoach: ${aiResponse.messageContent}`;
             const titleSystemPrompt =
               "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
               "The title should be clear and concise. Only output the title, nothing else.";
@@ -423,7 +723,73 @@ router.post(
         })();
       }
 
-      res.json({ message: coachMessage });
+      // Build response with structured data for frontend
+      // Resolve plan goals to actual plan objects
+      const resolvedPlanReplacements =
+        aiResponse.planReplacements
+          ?.map((replacement) => {
+            const plan = plans.find(
+              (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+            );
+
+            if (!plan) {
+              logger.warn(`Plan not found for goal: ${replacement.planGoal}`);
+              return null;
+            }
+
+            return {
+              textToReplace: replacement.textToReplace,
+              plan: {
+                id: plan.id,
+                goal: plan.goal,
+                emoji: plan.emoji,
+              },
+            };
+          })
+          .filter(Boolean) || [];
+
+      // Helper to strip emojis from text
+      const stripEmojis = (text: string) => {
+        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+      };
+
+      // Resolve metric title to actual metric object
+      let resolvedMetricReplacement: any = null;
+      if (aiResponse.metricReplacement) {
+        const aiMetricTitle = stripEmojis(aiResponse.metricReplacement.metricTitle).toLowerCase();
+
+        const metric = metrics.find(
+          (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+        );
+
+        if (metric) {
+          resolvedMetricReplacement = {
+            textToReplace: aiResponse.metricReplacement.textToReplace,
+            rating: aiResponse.metricReplacement.rating,
+            metric: {
+              id: metric.id,
+              title: metric.title,
+              emoji: metric.emoji,
+            },
+          };
+        } else {
+          logger.warn(
+            `Metric not found for title: ${aiResponse.metricReplacement.metricTitle} (stripped: ${aiMetricTitle})`
+          );
+        }
+      }
+
+      const responseData = {
+        id: coachMessage.id,
+        chatId: coachMessage.chatId,
+        role: coachMessage.role,
+        content: aiResponse.messageContent,
+        planReplacements: resolvedPlanReplacements,
+        metricReplacement: resolvedMetricReplacement,
+        createdAt: coachMessage.createdAt,
+      };
+
+      res.json({ message: responseData });
     } catch (error) {
       logger.error("Error in coach chat:", error);
       res.status(500).json({ error: "Failed to process chat message" });
@@ -594,6 +960,232 @@ Make it more polished and compelling while keeping the user's authentic voice an
     } catch (error) {
       logger.error("Error rewriting testimonial:", error);
       res.status(500).json({ error: "Failed to rewrite testimonial" });
+    }
+  }
+);
+
+// Accept metric suggestion from AI coach
+router.post(
+  "/messages/:messageId/accept-metric",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { date } = req.body; // Optional date, defaults to today
+
+      // Fetch the message with metadata
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: {
+          chat: true,
+        },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      // Verify message belongs to user's chat
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      // Check if message has metric replacement in metadata
+      if (!message.metadata || typeof message.metadata !== "object") {
+        res.status(400).json({ error: "Message has no metadata" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (!metadata.metricReplacement) {
+        res.status(400).json({ error: "Message has no metric suggestion" });
+        return;
+      }
+
+      // Check if already accepted or rejected
+      if (metadata.metricReplacement.status) {
+        res.status(400).json({
+          error: `Metric suggestion already ${metadata.metricReplacement.status}`,
+        });
+        return;
+      }
+
+      // Helper to strip emojis from text
+      const stripEmojis = (text: string) => {
+        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+      };
+
+      // Find the metric by title (strip emojis and match)
+      const aiMetricTitle = stripEmojis(metadata.metricReplacement.metricTitle).toLowerCase();
+      const allMetrics = await prisma.metric.findMany({
+        where: { userId: user.id },
+      });
+      const metric = allMetrics.find(
+        (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+      );
+
+      if (!metric) {
+        res.status(404).json({ error: "Metric not found" });
+        return;
+      }
+
+      // Convert rating from 1-5 to 1-10 (DB scale)
+      const rating = metadata.metricReplacement.rating;
+      const dbRating = rating * 2;
+
+      // Log the metric entry
+      const entryDate = date
+        ? new Date(date)
+        : new Date(new Date().toISOString().split("T")[0]);
+
+      const existingEntry = await prisma.metricEntry.findFirst({
+        where: {
+          userId: user.id,
+          metricId: metric.id,
+          date: entryDate,
+        },
+      });
+
+      if (existingEntry) {
+        await prisma.metricEntry.update({
+          where: { id: existingEntry.id },
+          data: { rating: dbRating },
+        });
+      } else {
+        await prisma.metricEntry.create({
+          data: {
+            userId: user.id,
+            metricId: metric.id,
+            date: entryDate,
+            rating: dbRating,
+          },
+        });
+      }
+
+      // Update message metadata to mark as accepted
+      metadata.metricReplacement.status = "accepted";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} accepted metric suggestion: ${metric.title} with rating ${rating}/5`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error accepting metric suggestion:", error);
+      res.status(500).json({ error: "Failed to accept metric suggestion" });
+    }
+  }
+);
+
+// Reject metric suggestion from AI coach
+router.post(
+  "/messages/:messageId/reject-metric",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+
+      // Fetch the message with metadata
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: {
+          chat: true,
+        },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      // Verify message belongs to user's chat
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      // Check if message has metric replacement in metadata
+      if (!message.metadata || typeof message.metadata !== "object") {
+        res.status(400).json({ error: "Message has no metadata" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (!metadata.metricReplacement) {
+        res.status(400).json({ error: "Message has no metric suggestion" });
+        return;
+      }
+
+      // Check if already accepted or rejected
+      if (metadata.metricReplacement.status) {
+        res.status(400).json({
+          error: `Metric suggestion already ${metadata.metricReplacement.status}`,
+        });
+        return;
+      }
+
+      // Update message metadata to mark as rejected
+      metadata.metricReplacement.status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} rejected metric suggestion: ${metadata.metricReplacement.metricTitle}`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting metric suggestion:", error);
+      res.status(500).json({ error: "Failed to reject metric suggestion" });
+    }
+  }
+);
+
+// Submit AI overall satisfaction feedback
+router.post(
+  "/feedback/ai-satisfaction",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { liked, content } = req.body;
+
+      if (typeof liked !== "boolean") {
+        res.status(400).json({ error: "liked field is required (boolean)" });
+        return;
+      }
+
+      // Create feedback entry
+      const feedback = await prisma.feedback.create({
+        data: {
+          userId: user.id,
+          category: "AI_OVERALL_FEEDBACK",
+          content: content || null,
+          metadata: {
+            liked,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      logger.info(
+        `User ${user.username} submitted AI satisfaction feedback: ${liked ? "liked" : "disliked"}`
+      );
+
+      res.json({ success: true, feedback });
+    } catch (error) {
+      logger.error("Error submitting AI satisfaction feedback:", error);
+      res.status(500).json({ error: "Failed to submit feedback" });
     }
   }
 );

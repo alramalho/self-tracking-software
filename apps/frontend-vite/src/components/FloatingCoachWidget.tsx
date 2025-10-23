@@ -13,9 +13,8 @@ export const FloatingCoachWidget: React.FC = () => {
   const { notifications, concludeNotification } = useDataNotifications();
   const { isDarkMode } = useTheme();
   const { isUserFree } = usePaidPlan();
-  const {currentUser} = useCurrentUser();
   const navigate = useNavigate();
-  const {isUserAIWhitelisted, createChat, sendMessage} = useAI();
+  const {isUserAIWhitelisted, createChat} = useAI();
   const [isOpen, setIsOpen] = useState(false);
 
   // Get the most recent unread coach notification
@@ -37,13 +36,7 @@ export const FloatingCoachWidget: React.FC = () => {
 
     try {
       // Create new chat
-      const newChat = await createChat({ title: null });
-
-      // Send the notification message as the initial message
-      await sendMessage({
-        message: latestCoachNotification.message,
-        chatId: newChat.id
-      });
+      const newChat = await createChat({ title: null, initialCoachMessage: latestCoachNotification.message });
 
       // Navigate to AI page (chat will already be selected and message sent)
       navigate({ to: "/ai" });

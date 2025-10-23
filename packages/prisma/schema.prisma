@@ -78,6 +78,7 @@ model User {
   coaches                 Coach[]
   chats                   Chat[]
   messageFeedback         MessageFeedback[]
+  feedback                Feedback[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -432,6 +433,7 @@ model Message {
   planId    String?
   role      MessageRole
   content   String
+  metadata  Json?
   createdAt DateTime    @default(now())
 
   // Relations
@@ -479,6 +481,26 @@ model MessageFeedback {
   @@index([messageId])
   @@index([userId])
   @@map("message_feedback")
+  @@schema("public")
+}
+
+model Feedback {
+  id        String           @id @default(cuid())
+  userId    String
+  category  FeedbackCategory
+  content   String?
+  imageUrls String[]         @default([])
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+  @@map("feedback")
   @@schema("public")
 }
 
@@ -671,6 +693,17 @@ enum MessageRole {
 enum FeedbackType {
   POSITIVE
   NEGATIVE
+
+  @@schema("public")
+}
+
+enum FeedbackCategory {
+  BUG
+  FEATURE_REQUEST
+  QUESTION
+  AI_MESSAGE_FEEDBACK
+  AI_OVERALL_FEEDBACK
+  TESTIMONIAL
 
   @@schema("public")
 }

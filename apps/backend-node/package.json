@@ -7,6 +7,7 @@
     "build": "tsc && tsc-alias",
     "clean": "rm -rf dist && rm -rf node_modules",
     "dev": "dotenv -e .env -- tsx watch src/index.ts",
+    "dev --debug": "LOG_LEVEL=debug dotenv -e .env -- tsx watch src/index.ts",
     "dev:debug": "dotenv -e .env -- ts-node-dev --inspect=9229 --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
     "test": "dotenv -e .env -- vitest --bail=1",
     "test:ci": "vitest",

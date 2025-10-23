@@ -4,7 +4,7 @@ import { useLogError } from "@/hooks/useLogError";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
-import { createChat, getChats, getMessages, sendMessage, submitFeedback, updateChatTitle } from "./service";
+import { createChat, getChats, getMessages, sendMessage, submitFeedback, updateChatTitle, acceptMetric, rejectMetric, submitAISatisfaction } from "./service";
 import { AIContext, type AIContextType, type Chat, type Message } from "./types";
 import { useCurrentUser } from "@/contexts/users";
 import { useAI } from ".";
@@ -57,7 +57,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const createChatMutation = useMutation({
-    mutationFn: async (data: { title?: string | null }) => {
+    mutationFn: async (data: { title?: string | null; initialCoachMessage?: string }) => {
       return await createChat(api, data);
     },
     onSuccess: (newChat) => {
@@ -199,6 +199,50 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const acceptMetricMutation = useMutation({
+    mutationFn: async (data: { messageId: string; date?: string }) => {
+      return await acceptMetric(api, data);
+    },
+    onSuccess: (_, { messageId }) => {
+      // Refetch messages to get updated status
+      queryClient.invalidateQueries({ queryKey: ["ai-messages", currentChatId] });
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to accept metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const rejectMetricMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await rejectMetric(api, messageId);
+    },
+    onSuccess: (_, messageId) => {
+      // Refetch messages to get updated status
+      queryClient.invalidateQueries({ queryKey: ["ai-messages", currentChatId] });
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to reject metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const submitAISatisfactionMutation = useMutation({
+    mutationFn: async (data: { liked: boolean; content?: string }) => {
+      return await submitAISatisfaction(api, data);
+    },
+    onSuccess: () => {
+      toast.success("Thank you for your feedback!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to submit feedback`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   const context: AIContextType = {
     chats: chats.data,
     isLoadingChats: chats.isLoading,
@@ -214,6 +258,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isUpdatingChatTitle: updateChatTitleMutation.isPending,
     submitFeedback: submitFeedbackMutation.mutateAsync,
     isSubmittingFeedback: submitFeedbackMutation.isPending,
+    acceptMetric: acceptMetricMutation.mutateAsync,
+    isAcceptingMetric: acceptMetricMutation.isPending,
+    rejectMetric: rejectMetricMutation.mutateAsync,
+    isRejectingMetric: rejectMetricMutation.isPending,
+    submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
+    isSubmittingAISatisfaction: submitAISatisfactionMutation.isPending,
     isUserAIWhitelisted,
   };
 

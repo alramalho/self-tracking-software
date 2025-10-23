@@ -103,17 +103,22 @@ export class AIService {
   async generateStructuredResponse<T>(
     prompt: string,
     schema: z.ZodSchema<T>,
-    systemPrompt?: string
+    systemPrompt?: string,
+    options: { model: string; temperature: number } = {
+      model: this.model,
+      temperature: 0.3,
+    }
   ): Promise<T> {
     try {
       logger.debug("Generating structured response with model:", this.model);
+
       const openrouter = this.getOpenRouterWithUserId();
       const result = await generateObject({
-        model: openrouter.chat(this.model),
+        model: openrouter.chat(options.model),
         prompt,
         schema,
         system: systemPrompt,
-        temperature: 0.3,
+        temperature: options.temperature,
       });
 
       return result.object;
@@ -363,7 +368,10 @@ export class AIService {
 
     if (this.plansService) {
       try {
-        const progressData = await this.plansService.getPlanProgress(plan, user);
+        const progressData = await this.plansService.getPlanProgress(
+          plan,
+          user
+        );
         achievement = progressData.achievement;
         currentWeekStats = progressData.currentWeekStats;
       } catch (error) {
@@ -595,7 +603,9 @@ export class AIService {
     const userName = user.name || user.username || "there";
 
     // Find the activity details
-    const activity = plan.activities.find((a) => a.id === activityEntry.activityId);
+    const activity = plan.activities.find(
+      (a) => a.id === activityEntry.activityId
+    );
     if (!activity) {
       throw new Error(`Activity ${activityEntry.activityId} not found in plan`);
     }

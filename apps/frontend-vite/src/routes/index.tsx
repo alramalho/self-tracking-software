@@ -465,7 +465,7 @@ function HomePage() {
           })
         }
       /> */}
-
+{/* 
       <AnnouncementPopover
         id="new-plans-2025-october"
         title="New plans page!"
@@ -474,7 +474,7 @@ function HomePage() {
         imageSrcs={["/images/screenshots/new-plans.png", "/images/screenshots/new-plans-2.png", "/images/screenshots/new-plans-3.png"]}
         actionLabel="Try it out →"
         onAction={() => navigate({ to: "/plans" })}
-      />
+      /> */}
 
       {/* Testimonial Feedback Popover */}
       {shouldShowTestimonialPopover && currentUser && (
