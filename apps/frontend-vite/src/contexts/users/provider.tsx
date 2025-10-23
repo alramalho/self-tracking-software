@@ -260,6 +260,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     refetchCurrentUser,
     hasLoadedUserData: currentUserQuery.isSuccess && !!currentUserQuery.data,
     handleAuthError,
+    isAdmin: currentUserQuery.data?.username === 'liocas' || currentUserQuery.data?.username === 'alex',
     // Actions
     updateUser: updateUserMutation.mutateAsync,
     isUpdatingUser: updateUserMutation.isPending,

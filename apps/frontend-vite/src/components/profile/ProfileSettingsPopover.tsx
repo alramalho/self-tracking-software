@@ -17,9 +17,11 @@ import {
   CreditCard,
   LogOut,
   Moon,
+  MoveRight,
   Paintbrush,
   Pencil,
   Share2,
+  ShieldCheck,
   SquareArrowUp,
   Trash2,
   UserPen,
@@ -40,6 +42,7 @@ import {
   EditProfilePicturePopup,
 } from "./EditFieldPopups";
 import ThemeModeSwitcher from "./ThemeModeSwitcher";
+import { useNavigate } from "@tanstack/react-router";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -57,7 +60,8 @@ export type ActiveView =
   | "ai"
   | "color"
   | "themeMode"
-  | "editProfile";
+  | "editProfile"
+  | "admin";
 
 // Define view depths for animation direction
 const viewLevels: Record<ActiveView, number> = {
@@ -69,6 +73,7 @@ const viewLevels: Record<ActiveView, number> = {
   ai: 1,
   color: 1,
   themeMode: 1,
+  admin: 1,
 };
 
 const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
@@ -86,7 +91,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
   const { isUserFree, userPlanType } = usePaidPlan();
   const { signOut } = useAuth();
-  const { currentUser, updateUser, deleteAccount, isDeletingAccount } = useCurrentUser();
+  const { currentUser, updateUser, deleteAccount, isDeletingAccount, isAdmin } = useCurrentUser();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
@@ -102,6 +107,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const [showEditAge, setShowEditAge] = useState(false);
   const [showEditFullName, setShowEditFullName] = useState(false);
   const [showEditProfilePicture, setShowEditProfilePicture] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     signOut();
@@ -352,7 +359,14 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Invite Friends */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() =>
+                          shareOrCopyLink(
+                            `https://app.tracking.so/join/${currentUser?.username}`
+                          )
+                        }
+                      >
                         <div className="flex-1">
                           <p className="text-sm font-medium text-foreground">
                             Invite Friends
@@ -361,42 +375,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                             Share your profile with friends
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() =>
-                            shareOrCopyLink(
-                              `https://app.tracking.so/join/${currentUser?.username}`
-                            )
-                          }
-                        >
-                          <UserPlus size={20} />
-                        </Button>
-                      </div>
-
-                      {/* Share Profile Link */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            Share Profile Link
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Copy link to share your profile
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() =>
-                            shareOrCopyLink(
-                              `https://app.tracking.so/profile/${currentUser?.username}`
-                            )
-                          }
-                        >
-                          <Share2 size={20} />
-                        </Button>
+                        <UserPlus size={20} className="text-muted-foreground" />
                       </div>
 
                       {/* Delete Account */}
@@ -498,6 +477,41 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     />
                   </div>
                 );
+              case "admin":
+                return (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigateTo("main")}
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronLeft size={18} /> Back to Settings
+                    </Button>
+                    <h2 className="text-lg font-semibold mb-6">
+                      Admin Settings
+                    </h2>
+
+                    <div className="space-y-4">
+                      {/* Redirect to Onboarding */}
+                      <div
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => {
+                          navigate({ to: "/onboarding" });
+                        }}
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            Go to Onboarding
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Navigate to the onboarding flow
+                          </p>
+                        </div>
+                        <MoveRight size={20} className="text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                );
               case "main":
               default:
                 return (
@@ -582,6 +596,16 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Moon size={28} />
                         <span>Theme Mode</span>
                       </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          className="w-full flex items-center justify-start px-0 gap-2"
+                          onClick={() => navigateTo("admin")} // Navigate to admin view
+                        >
+                          <ShieldCheck size={28} />
+                          <span>Admin</span>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         onClick={() => setShowLogoutConfirm(true)}
