@@ -70,7 +70,12 @@ router.get(
 
       // Helper to strip emojis from text
       const stripEmojis = (text: string) => {
-        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+        return text
+          .replace(
+            /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
+            ""
+          )
+          .trim();
       };
 
       // Parse and structure messages
@@ -103,9 +108,11 @@ router.get(
                 .filter(Boolean) || [];
 
             // Resolve metric title to metric object
-            let metricReplacement = null;
+            let metricReplacement: any = null;
             if (metadata.metricReplacement) {
-              const aiMetricTitle = stripEmojis(metadata.metricReplacement.metricTitle).toLowerCase();
+              const aiMetricTitle = stripEmojis(
+                metadata.metricReplacement.metricTitle
+              ).toLowerCase();
               const metric = metrics.find(
                 (m: any) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
               );
@@ -164,11 +171,14 @@ router.get(
                   .filter(Boolean) || [];
 
               // Resolve metric title to metric object
-              let metricReplacement = null;
+              let metricReplacement: any = null;
               if (parsed.metricReplacement) {
-                const aiMetricTitle = stripEmojis(parsed.metricReplacement.metricTitle).toLowerCase();
+                const aiMetricTitle = stripEmojis(
+                  parsed.metricReplacement.metricTitle
+                ).toLowerCase();
                 const metric = metrics.find(
-                  (m: any) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+                  (m: any) =>
+                    stripEmojis(m.title).toLowerCase() === aiMetricTitle
                 );
                 if (metric) {
                   metricReplacement = {
@@ -750,13 +760,20 @@ router.post(
 
       // Helper to strip emojis from text
       const stripEmojis = (text: string) => {
-        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+        return text
+          .replace(
+            /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
+            ""
+          )
+          .trim();
       };
 
       // Resolve metric title to actual metric object
       let resolvedMetricReplacement: any = null;
       if (aiResponse.metricReplacement) {
-        const aiMetricTitle = stripEmojis(aiResponse.metricReplacement.metricTitle).toLowerCase();
+        const aiMetricTitle = stripEmojis(
+          aiResponse.metricReplacement.metricTitle
+        ).toLowerCase();
 
         const metric = metrics.find(
           (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
@@ -1015,11 +1032,18 @@ router.post(
 
       // Helper to strip emojis from text
       const stripEmojis = (text: string) => {
-        return text.replace(/[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu, '').trim();
+        return text
+          .replace(
+            /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
+            ""
+          )
+          .trim();
       };
 
       // Find the metric by title (strip emojis and match)
-      const aiMetricTitle = stripEmojis(metadata.metricReplacement.metricTitle).toLowerCase();
+      const aiMetricTitle = stripEmojis(
+        metadata.metricReplacement.metricTitle
+      ).toLowerCase();
       const allMetrics = await prisma.metric.findMany({
         where: { userId: user.id },
       });
