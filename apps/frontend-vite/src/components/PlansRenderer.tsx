@@ -14,6 +14,12 @@ import { AnimatePresence } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
+import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
+import { useCurrentUser } from "@/contexts/users";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
+import { capitalize } from "@/lib/utils";
+import { twMerge } from "tailwind-merge";
 
 // Helper function to check if a plan is expired
 export const isPlanExpired = (plan: {
@@ -95,6 +101,12 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   scrollTo,
 }) => {
   const { plans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
+  const { currentUser } = useCurrentUser();
+  const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
   );
@@ -103,6 +115,8 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const [expiredPlanPopover, setExpiredPlanPopover] = useState<CompletePlan | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+  const [showCreatePlanPopover, setShowCreatePlanPopover] = useState(false);
+  const [showPlanLimitPopover, setShowPlanLimitPopover] = useState(false);
 
   useEffect(() => {
     if (plans) {
@@ -136,18 +150,92 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     );
   }
 
+  const userPlanCount = plans?.length || 0;
+
+  const handleCreatePlanClick = () => {
+    if (userPlanCount >= maxPlans) {
+      setShowPlanLimitPopover(true);
+    } else {
+      setShowCreatePlanPopover(true);
+    }
+  };
+
+  const handleCreatePlanSuccess = () => {
+    setShowCreatePlanPopover(false);
+    toast.success("Plan created successfully!");
+  };
+
   if (plans && plans.length === 0) {
     return (
       <>
-        <Link to="/create-new-plan">
-          <Button
-            variant="outline"
-            className="bg-muted/50 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
-          >
-            <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
-            <span>Create new Plan</span>
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          className="bg-muted/50 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
+          onClick={handleCreatePlanClick}
+        >
+          <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
+          <span>Create new Plan</span>
+        </Button>
+
+        {/* Create Plan Popover */}
+        <AppleLikePopover
+          open={showCreatePlanPopover}
+          onClose={() => setShowCreatePlanPopover(false)}
+          title="Create New Plan"
+        >
+          <div className="text-center mb-6 mt-4">
+            <div className="text-6xl mb-3">
+              🎯
+            </div>
+            <h3 className="text-lg font-semibold">
+              Create Your New Plan
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Set up a new plan to track your goals and activities
+            </p>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <PlanConfigurationForm
+              onSuccess={handleCreatePlanSuccess}
+              onClose={() => setShowCreatePlanPopover(false)}
+              title={`${currentUser?.name}'s New Plan`}
+            />
+          </div>
+        </AppleLikePopover>
+
+        {/* Plan Limit Popover */}
+        <AppleLikePopover
+          open={showPlanLimitPopover}
+          onClose={() => setShowPlanLimitPopover(false)}
+        >
+          <div className="flex flex-col items-start justify-center p-4">
+            <h1 className="text-2xl font-bold mb-8 mt-2">Create New Plan</h1>
+            <span
+              className={twMerge(
+                "text-3xl font-cursive flex items-center gap-2 my-3",
+                userPaidPlanType === "FREE"
+                  ? "text-gray-500"
+                  : userPaidPlanType === "PLUS"
+                  ? "text-blue-500"
+                  : "text-indigo-500"
+              )}
+            >
+              On {capitalize(userPaidPlanType || "FREE")} Plan
+            </span>
+            <p className="mb-5">
+              You have reached the maximum number of plans for your account.
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => {
+                setShowPlanLimitPopover(false);
+                setShowUpgradePopover(true);
+              }}
+            >
+              Upgrade
+            </Button>
+          </div>
+        </AppleLikePopover>
       </>
     );
   }
@@ -221,14 +309,13 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
             isCoached={plan.isCoached}
           />
         ))}
-        <Link to="/create-new-plan">
-          <Button
-            variant="outline"
-            className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
-          >
-            <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
+          onClick={handleCreatePlanClick}
+        >
+          <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
+        </Button>
       </div>
 
       {hasExpiredPlans && !showOldPlans && (
@@ -330,6 +417,66 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         cancelText="Cancel"
         variant="destructive"
       />
+
+      {/* Create Plan Popover */}
+      <AppleLikePopover
+        open={showCreatePlanPopover}
+        onClose={() => setShowCreatePlanPopover(false)}
+        title="Create New Plan"
+      >
+        <div className="text-center mb-6 mt-4">
+          <div className="text-6xl mb-3">
+            🎯
+          </div>
+          <h3 className="text-lg font-semibold">
+            Create Your New Plan
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Set up a new plan to track your goals and activities
+          </p>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <PlanConfigurationForm
+            onSuccess={handleCreatePlanSuccess}
+            onClose={() => setShowCreatePlanPopover(false)}
+            title={`${currentUser?.name}'s New Plan`}
+          />
+        </div>
+      </AppleLikePopover>
+
+      {/* Plan Limit Popover */}
+      <AppleLikePopover
+        open={showPlanLimitPopover}
+        onClose={() => setShowPlanLimitPopover(false)}
+      >
+        <div className="flex flex-col items-start justify-center p-4">
+          <h1 className="text-2xl font-bold mb-8 mt-2">Create New Plan</h1>
+          <span
+            className={twMerge(
+              "text-3xl font-cursive flex items-center gap-2 my-3",
+              userPaidPlanType === "FREE"
+                ? "text-gray-500"
+                : userPaidPlanType === "PLUS"
+                ? "text-blue-500"
+                : "text-indigo-500"
+            )}
+          >
+            On {capitalize(userPaidPlanType || "FREE")} Plan
+          </span>
+          <p className="mb-5">
+            You have reached the maximum number of plans for your account.
+          </p>
+          <Button
+            className="w-full"
+            onClick={() => {
+              setShowPlanLimitPopover(false);
+              setShowUpgradePopover(true);
+            }}
+          >
+            Upgrade
+          </Button>
+        </div>
+      </AppleLikePopover>
     </div>
   );
 };

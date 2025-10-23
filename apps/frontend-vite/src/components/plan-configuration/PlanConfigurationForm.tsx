@@ -30,6 +30,7 @@ interface PlanConfigurationFormProps {
   isEdit?: boolean;
   plan?: CompletePlan;
   scrollToMilestones?: boolean;
+  onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
 }
 
 const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
@@ -39,6 +40,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   title,
   isEdit = false,
   scrollToMilestones = false,
+  onUnsavedChangesChange,
 }) => {
   const { currentUser } = useCurrentUser();
   const { activities } = useActivities();
@@ -438,6 +440,27 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       stepRefs.step8.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [scrollToMilestones, isEdit]);
+
+  // Notify parent of unsaved changes
+  useEffect(() => {
+    if (isEdit && onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasMadeAnyChanges());
+    }
+  }, [
+    isEdit,
+    hasMadeAnyChanges,
+    onUnsavedChangesChange,
+    goal,
+    selectedEmoji,
+    currentFinishingDate,
+    visibility,
+    outlineType,
+    timesPerWeek,
+    isCoached,
+    milestones,
+    generatedSessions,
+    selectedActivities,
+  ]);
 
   return (
     <div

@@ -6,11 +6,10 @@ import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import Divider from "@/components/Divider";
 import { FireAnimation } from "@/components/FireBadge";
 import MedalExplainerPopover from "@/components/MedalExplainerPopover";
-import NeonCard from "@/components/NeonGradientCard";
-import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import ProfileSettingsPopover, {
   type ActiveView,
 } from "@/components/profile/ProfileSettingsPopover";
+import { ProfilePlanCard } from "@/components/profile/ProfilePlanCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ import {
   Flame,
   History,
   Loader2,
-  Medal,
   Rocket,
   Sprout,
   UserPlus,
@@ -68,7 +66,7 @@ export const isPlanExpired = (plan: {
   finishingDate: Date | null;
 }): boolean => {
   if (!plan.finishingDate) return false;
-  return plan.finishingDate < new Date();
+  return new Date(plan.finishingDate) < new Date();
 };
 
 function userifyPlansProgress(plansProgress: PlanProgressData[]): {
@@ -157,6 +155,8 @@ function ProfilePage() {
   const profileActivePlans = profileData?.plans?.filter(
     (p) => !isPlanExpired({ finishingDate: p.finishingDate })
   );
+
+  console.log({profileActivePlans})
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
   >(undefined);
@@ -574,91 +574,22 @@ function ProfilePage() {
               <div className="space-y-4 mt-4">
                 {profileActivePlans &&
                   profileActivePlans.length > 0 &&
-                  profileActivePlans.map((plan) => {
-                    // Check achievements from inline progress data
-                    const habitAchieved =
-                      plan.progress?.habitAchievement?.isAchieved ?? false;
-                    const lifestyleAchieved =
-                      plan.progress?.lifestyleAchievement?.isAchieved ?? false;
-
-                    return (
-                      <NeonCard
-                        key={plan.id}
-                        color={
-                          lifestyleAchieved
-                            ? "amber"
-                            : habitAchieved
-                            ? "lime"
-                            : "none"
-                        }
-                        className="p-4"
-                      >
-                        <div className="flex flex-row items-center gap-2 mb-2">
-                          <span className="text-4xl">{plan.emoji}</span>
-                          <div className="flex flex-col gap-0">
-                            <div className="flex flex-row items-center gap-2">
-                              <h3 className="text-lg font-semibold">
-                                {plan.goal}
-                              </h3>
-                              {plan.visibility === "PRIVATE" && isOwnProfile && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
-                                  Private
-                                </span>
-                              )}
-                            </div>
-                            {plan.outlineType == "TIMES_PER_WEEK" && (
-                              <span className="text-sm text-muted-foreground">
-                                {plan.timesPerWeek} times per week
-                              </span>
-                            )}
-                            {plan.outlineType == "SPECIFIC" && (
-                              <span className="text-sm text-muted-foreground">
-                                Custom plan
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Achievement displays */}
-                        <div
-                          className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2"
-                          onClick={() =>
-                            setBadgeExplainer({
-                              open: true,
-                              planIds: [plan.id],
-                              badgeType: lifestyleAchieved
-                                ? "lifestyles"
-                                : habitAchieved
-                                ? "habits"
-                                : null,
-                            })
-                          }
-                        >
-                          {habitAchieved && (
-                            <div className="flex flex-row items-center gap-2">
-                              <Sprout
-                                size={42}
-                                className="text-lime-500 animate-pulse"
-                              />
-                            </div>
-                          )}
-                          {lifestyleAchieved && (
-                            <div className="flex flex-row items-center gap-2">
-                              <Medal
-                                size={42}
-                                className="text-amber-500 animate-pulse"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <PlanActivityEntriesRenderer
-                          plan={plan as any}
-                          activities={activities}
-                          activityEntries={activityEntries}
-                        />
-                      </NeonCard>
-                    );
-                  })}
+                  profileActivePlans.map((plan) => (
+                    <ProfilePlanCard
+                      key={plan.id}
+                      plan={plan}
+                      activities={activities}
+                      activityEntries={activityEntries}
+                      isOwnProfile={isOwnProfile}
+                      onBadgeClick={(badgeType) =>
+                        setBadgeExplainer({
+                          open: true,
+                          planIds: [plan.id],
+                          badgeType,
+                        })
+                      }
+                    />
+                  ))}
                 {(!profileActivePlans || profileActivePlans.length === 0) && (
                   <div className="text-center text-muted-foreground py-8">
                     {isOwnProfile
