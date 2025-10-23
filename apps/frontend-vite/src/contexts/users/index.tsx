@@ -63,7 +63,9 @@ export const useUsers = (
   if (query.error) {
     const customErrorMessage = `Failed to get users ${queryKey.join(",")}`;
     handleQueryError(query.error, customErrorMessage);
-    toast.error(customErrorMessage);
+    toast.error(customErrorMessage, {
+      id: `users-error-${queryKey.join(",")}`,
+    });
   }
 
   return query;
@@ -112,7 +114,9 @@ export const useUser = (
   if (query.error) {
     const customErrorMessage = `Failed to get user ${identifier}`;
     handleQueryError(query.error, customErrorMessage);
-    toast.error(customErrorMessage);
+    toast.error(customErrorMessage, {
+      id: `user-error-${identifier}`,
+    });
   }
 
   return query;

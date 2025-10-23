@@ -326,29 +326,28 @@ function ProfilePage() {
       <div className="w-full max-w-md">
         {/* TikTok-style Header */}
         <AnimatedSection>
-          <div className="flex flex-col items-center py-6">
-            {/* Top bar */}
-            <div className="flex justify-between items-center w-full mb-2">
-            {!isOwnProfile ? (
-              <button
-                className="p-2 rounded-full hover:bg-muted/50"
-                onClick={() => window.history.back()}
-              >
-                <ChevronLeft size={20} />
-              </button>
-            ) : (
-              <div className="w-8"></div>
-            )}
-
+          <div className="flex flex-col items-center py-6 relative">
+            {/* Settings button - absolutely positioned */}
             {isOwnProfile && (
               <button
-                className="p-2 pr-4 rounded-full hover:bg-muted/50"
+                className="absolute top-2 right-2 p-2 pr-4 rounded-full hover:bg-muted/50 z-10"
                 onClick={() => setShowUserProfile(true)}
               >
                 <EllipsisVertical size={26} />
               </button>
             )}
-            </div>
+
+            {/* Back button for non-own profiles */}
+            {!isOwnProfile && (
+              <div className="absolute top-2 left-2 z-10">
+                <button
+                  className="p-2 rounded-full hover:bg-muted/50"
+                  onClick={() => window.history.back()}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              </div>
+            )}
           </div>
         </AnimatedSection>
 

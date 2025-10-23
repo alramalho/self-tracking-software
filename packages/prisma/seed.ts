@@ -268,27 +268,13 @@ async function generateDummyData() {
       });
     }
 
-    // Create plan groups with members
+    // Create plan groups
     const marathonPlanGroup = await prisma.planGroup.create({
-      data: {
-        members: {
-          connect: { id: users[0].id },
-        },
-        plans: {
-          connect: { id: marathonPlan.id },
-        },
-      },
+      data: {},
     });
 
     const meditationPlanGroup = await prisma.planGroup.create({
-      data: {
-        members: {
-          connect: { id: users[1].id },
-        },
-        plans: {
-          connect: { id: meditationPlan.id },
-        },
-      },
+      data: {},
     });
 
     // Update plans with plan group IDs
@@ -302,20 +288,47 @@ async function generateDummyData() {
       data: { planGroupId: meditationPlanGroup.id },
     });
 
-    // Create plan invitations
-    const planInvitation1 = await prisma.planInvitation.create({
+    // Create plan group members (owners with ACTIVE status)
+    const marathonOwnerMember = await prisma.planGroupMember.create({
       data: {
+        planGroupId: marathonPlanGroup.id,
+        userId: users[0].id, // Alex
         planId: marathonPlan.id,
-        senderId: users[0].id,
-        recipientId: users[1].id,
+        role: "OWNER",
+        status: "ACTIVE",
+        joinedAt: now,
       },
     });
 
-    const planInvitation2 = await prisma.planInvitation.create({
+    const meditationOwnerMember = await prisma.planGroupMember.create({
       data: {
+        planGroupId: meditationPlanGroup.id,
+        userId: users[1].id, // Alice
         planId: meditationPlan.id,
-        senderId: users[1].id,
-        recipientId: users[2].id,
+        role: "OWNER",
+        status: "ACTIVE",
+        joinedAt: now,
+      },
+    });
+
+    // Create plan group invitations (members with INVITED status)
+    const marathonInvitation = await prisma.planGroupMember.create({
+      data: {
+        planGroupId: marathonPlanGroup.id,
+        userId: users[1].id, // Alice invited to Alex's marathon plan
+        role: "MEMBER",
+        status: "INVITED",
+        invitedById: users[0].id, // Invited by Alex
+      },
+    });
+
+    const meditationInvitation = await prisma.planGroupMember.create({
+      data: {
+        planGroupId: meditationPlanGroup.id,
+        userId: users[2].id, // E2E invited to Alice's meditation plan
+        role: "MEMBER",
+        status: "INVITED",
+        invitedById: users[1].id, // Invited by Alice
       },
     });
 
@@ -373,10 +386,10 @@ async function generateDummyData() {
     // Create notifications for plan invitations
     await prisma.notification.create({
       data: {
-        userId: planInvitation1.recipientId,
+        userId: users[1].id, // Alice
         message: `${users[0].name} invited you to join the plan: ${marathonPlan.goal}`,
         type: "PLAN_INVITATION",
-        relatedId: planInvitation1.id,
+        relatedId: marathonInvitation.id,
         relatedData: {
           id: users[0].id,
           name: users[0].name,
@@ -388,10 +401,10 @@ async function generateDummyData() {
 
     await prisma.notification.create({
       data: {
-        userId: planInvitation2.recipientId,
+        userId: users[2].id, // E2E
         message: `${users[1].name} invited you to join the plan: ${meditationPlan.goal}`,
         type: "PLAN_INVITATION",
-        relatedId: planInvitation2.id,
+        relatedId: meditationInvitation.id,
         relatedData: {
           id: users[1].id,
           name: users[1].name,
