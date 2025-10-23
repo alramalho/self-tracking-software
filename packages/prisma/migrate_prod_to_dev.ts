@@ -139,14 +139,18 @@ async function clearTargetDatabase() {
 
   // Clear in reverse dependency order to avoid foreign key constraints
   const tables = [
+    "message_feedback",
     "message_emotions",
     "recommendations",
     "notifications",
     "messages",
-    "plan_invitations",
+    "chats",
+    "plan_invite_links",
+    "plan_group_members",
     "plan_milestones",
     "plan_sessions",
     "plans",
+    "coaches",
     "connections",
     "comments",
     "reactions",
@@ -156,6 +160,7 @@ async function clearTargetDatabase() {
     "metrics",
     "users",
     "plan_groups",
+    "job_runs",
   ];
 
   for (const table of tables) {
@@ -227,26 +232,18 @@ async function migrateData() {
 
     // Step 3: Migrate PlanGroups
     console.info("Migrating plan groups...");
-    const planGroups = await sourcePrisma.planGroup.findMany({
-      include: { members: true },
-    });
+    const planGroups = await sourcePrisma.planGroup.findMany();
 
     for (const planGroup of planGroups) {
-      const { id, members, ...planGroupData } = planGroup;
+      const { id, ...planGroupData } = planGroup;
       await targetPrisma.planGroup.upsert({
         where: { id },
         create: {
           id,
           ...planGroupData,
-          members: {
-            connect: members.map((member) => ({ id: member.id })),
-          },
         },
         update: {
           ...planGroupData,
-          members: {
-            set: members.map((member) => ({ id: member.id })),
-          },
         },
       });
     }
@@ -289,6 +286,27 @@ async function migrateData() {
       });
     }
     console.info(`Migrated ${metrics.length} metrics`);
+
+    // Step 5b: Migrate Coaches
+    console.info("Migrating coaches...");
+    const coaches = await sourcePrisma.coach.findMany();
+
+    for (const coach of coaches) {
+      const { id, ...coachData } = coach;
+      await targetPrisma.coach.upsert({
+        where: { id },
+        create: {
+          id,
+          ...coachData,
+          details: coach.details as any, // Handle JsonValue type
+        },
+        update: {
+          ...coachData,
+          details: coach.details as any, // Handle JsonValue type
+        },
+      });
+    }
+    console.info(`Migrated ${coaches.length} coaches`);
 
     // Step 6: Migrate Plans
     console.info("Migrating plans...");
@@ -420,24 +438,43 @@ async function migrateData() {
     }
     console.info(`Migrated ${connections.length} connections`);
 
-    // Step 12: Migrate Plan Invitations
-    console.info("Migrating plan invitations...");
-    const planInvitations = await sourcePrisma.planInvitation.findMany();
+    // Step 12: Migrate Plan Group Members
+    console.info("Migrating plan group members...");
+    const planGroupMembers = await sourcePrisma.planGroupMember.findMany();
 
-    for (const invitation of planInvitations) {
-      const { id, ...invitationData } = invitation;
-      await targetPrisma.planInvitation.upsert({
+    for (const member of planGroupMembers) {
+      const { id, ...memberData } = member;
+      await targetPrisma.planGroupMember.upsert({
         where: { id },
         create: {
           id,
-          ...invitationData,
+          ...memberData,
         },
         update: {
-          ...invitationData,
+          ...memberData,
         },
       });
     }
-    console.info(`Migrated ${planInvitations.length} plan invitations`);
+    console.info(`Migrated ${planGroupMembers.length} plan group members`);
+
+    // Step 12b: Migrate Plan Invite Links
+    console.info("Migrating plan invite links...");
+    const planInviteLinks = await sourcePrisma.planInviteLink.findMany();
+
+    for (const inviteLink of planInviteLinks) {
+      const { id, ...inviteLinkData } = inviteLink;
+      await targetPrisma.planInviteLink.upsert({
+        where: { id },
+        create: {
+          id,
+          ...inviteLinkData,
+        },
+        update: {
+          ...inviteLinkData,
+        },
+      });
+    }
+    console.info(`Migrated ${planInviteLinks.length} plan invite links`);
 
     // Step 13: Migrate Reactions
     console.info("Migrating reactions...");
@@ -489,6 +526,25 @@ async function migrateData() {
     console.info(
       `Migrated ${migratedComments} comments, skipped ${skippedComments} due to constraint violations`
     );
+
+    // Step 14b: Migrate Chats
+    console.info("Migrating chats...");
+    const chats = await sourcePrisma.chat.findMany();
+
+    for (const chat of chats) {
+      const { id, ...chatData } = chat;
+      await targetPrisma.chat.upsert({
+        where: { id },
+        create: {
+          id,
+          ...chatData,
+        },
+        update: {
+          ...chatData,
+        },
+      });
+    }
+    console.info(`Migrated ${chats.length} chats`);
 
     // Step 15: Migrate Messages
     console.info("Migrating messages...");
@@ -570,37 +626,89 @@ async function migrateData() {
     }
     console.info(`Migrated ${recommendations.length} recommendations`);
 
-    // Post-processing: Update specified user with specific Clerk ID
+    // Step 18: Migrate Message Feedback
+    console.info("Migrating message feedback...");
+    const messageFeedback = await sourcePrisma.messageFeedback.findMany();
+
+    for (const feedback of messageFeedback) {
+      const { id, ...feedbackData } = feedback;
+      await targetPrisma.messageFeedback.upsert({
+        where: { id },
+        create: {
+          id,
+          ...feedbackData,
+        },
+        update: {
+          ...feedbackData,
+        },
+      });
+    }
+    console.info(`Migrated ${messageFeedback.length} message feedback entries`);
+
+    // Step 19: Migrate Job Runs
+    console.info("Migrating job runs...");
+    const jobRuns = await sourcePrisma.jobRun.findMany();
+
+    for (const jobRun of jobRuns) {
+      const { id, ...jobRunData } = jobRun;
+      await targetPrisma.jobRun.upsert({
+        where: { id },
+        create: {
+          id,
+          ...jobRunData,
+          input: jobRun.input as any, // Handle JsonValue type
+          output: jobRun.output as any, // Handle JsonValue type
+        },
+        update: {
+          ...jobRunData,
+          input: jobRun.input as any, // Handle JsonValue type
+          output: jobRun.output as any, // Handle JsonValue type
+        },
+      });
+    }
+    console.info(`Migrated ${jobRuns.length} job runs`);
+
+    // Post-processing: Impersonate user by swapping supabaseAuthId
     const { impersonateUser } = parseArgs();
     console.info(
-      `Post-processing: Updating ${impersonateUser} user with Clerk ID...`
+      `Post-processing: Setting up impersonation for ${impersonateUser}...`
     );
-    const alexUser = await targetPrisma.user.findUnique({
-      where: { username: "alex" },
+
+    // Find your user (the one you'll log in as)
+    const myUser = await targetPrisma.user.findUnique({
+      where: { email: "alexandre.ramalho.1998@gmail.com" },
     });
+
+    // Find the target user to impersonate
     const targetUser = await targetPrisma.user.findUnique({
       where: { username: impersonateUser },
     });
 
-    if (targetUser && alexUser) {
+    if (targetUser && myUser) {
+      const myOriginalAuthId = myUser.supabaseAuthId;
+      const targetOriginalAuthId = targetUser.supabaseAuthId;
+
+      // Swap the supabaseAuthId values
+      // Your user gets a placeholder auth ID
       await targetPrisma.user.update({
-        where: { id: alexUser.id },
+        where: { id: myUser.id },
         data: {
-          clerkId: `--impersonating-${impersonateUser}--`,
           supabaseAuthId: `--impersonating-${impersonateUser}--`,
         },
       });
+
+      // Target user gets your auth ID (so when you log in, you become them)
       await targetPrisma.user.update({
         where: { id: targetUser.id },
         data: {
-          clerkId: "user_30bDMTLDj4WYYD4h7VpYoQm9gAD",
-          supabaseAuthId: "30e57a1b-2913-4d13-836f-a2b7c5b74bb7",
+          supabaseAuthId: myOriginalAuthId,
         },
       });
-      console.info(`✅ Impersonated ${impersonateUser} user.`);
+
+      console.info(`✅ Impersonation set up: logging in with alexandre.ramalho.1998@gmail.com will impersonate ${impersonateUser}`);
     } else {
       console.warn(
-        `⚠️  User with username 'alex' or '${impersonateUser}' not found, could not impersonate.`
+        `⚠️  User with email 'alexandre.ramalho.1998@gmail.com' or username '${impersonateUser}' not found, could not set up impersonation.`
       );
     }
 

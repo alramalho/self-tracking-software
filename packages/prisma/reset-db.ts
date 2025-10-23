@@ -30,7 +30,6 @@ async function deleteAllData() {
     await prisma.planMilestone.deleteMany({});
 
     await prisma.planSession.deleteMany({});
-    await prisma.planInvitation.deleteMany({});
 
     await prisma.planGroup.deleteMany({});
     await prisma.plan.deleteMany({});
