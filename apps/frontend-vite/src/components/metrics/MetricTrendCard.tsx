@@ -48,7 +48,7 @@ export function MetricTrendCard({
   });
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 rounded-2xl">
       <div className="space-y-4">
         <div className="flex flex-row justify-between items-center gap-2 w-full">
           <span className="text-4xl">{metric.emoji}</span>
