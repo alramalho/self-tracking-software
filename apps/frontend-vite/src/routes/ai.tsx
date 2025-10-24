@@ -2,6 +2,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
+import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,7 +175,7 @@ function AICoachPage() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background max-w-screen">
       {/* Side Menu */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out ${
@@ -267,9 +268,9 @@ function AICoachPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex flex-col flex-1 h-screen">
+      <div className="flex flex-col flex-1 min-h-0 max-w-screen">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-lg border-b border-border">
+        <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-b border-border">
           <div className="container mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -299,7 +300,7 @@ function AICoachPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {!currentChatId ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
               <img
@@ -334,7 +335,7 @@ function AICoachPage() {
               </Button>
             </div>
           ) : (
-            <div className="container mx-auto max-w-3xl px-4 py-6 space-y-4">
+            <div className="container mx-auto max-w-3xl px-4 py-6 space-y-4 overflow-visible">
               {isLoadingMessages ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -355,7 +356,6 @@ function AICoachPage() {
                 </div>
               ) : (
                 messages.map((message: any) => {
-                  // Render content with inline plan links and metric suggestions
                   const renderContentWithReplacements = () => {
                     const content = message.content;
                     const parts: (string | JSX.Element)[] = [];
@@ -365,9 +365,7 @@ function AICoachPage() {
                       component: JSX.Element;
                     }> = [];
 
-                    // Only show metric replacement OR plan replacements (not both to avoid overwhelming)
                     if (message.metricReplacement) {
-                      // If we have a metric suggestion, only show that
                       const index = content.indexOf(message.metricReplacement.textToReplace);
                       if (index !== -1) {
                         replacements.push({
@@ -390,7 +388,6 @@ function AICoachPage() {
                         });
                       }
                     } else if (message.planReplacements) {
-                      // Only show plan links if there's no metric suggestion
                       message.planReplacements.forEach((replacement: any, idx: number) => {
                         const index = content.indexOf(replacement.textToReplace);
                         if (index !== -1) {
@@ -410,22 +407,17 @@ function AICoachPage() {
                       });
                     }
 
-                    // Sort replacements by index
                     replacements.sort((a, b) => a.index - b.index);
 
-                    // Build parts array with text and components
                     let lastIndex = 0;
                     replacements.forEach((replacement) => {
-                      // Add text before replacement
                       if (replacement.index > lastIndex) {
                         parts.push(content.substring(lastIndex, replacement.index));
                       }
-                      // Add replacement component
                       parts.push(replacement.component);
                       lastIndex = replacement.index + replacement.length;
                     });
 
-                    // Add remaining text
                     if (lastIndex < content.length) {
                       parts.push(content.substring(lastIndex));
                     }
@@ -436,11 +428,11 @@ function AICoachPage() {
                   return (
                     <div
                       key={message.id}
-                      className={`flex gap-3 ${
+                      className={`flex gap-3 max-w-full overflow-visible ${
                         message.role === "USER" ? "flex-row-reverse" : "flex-row"
                       }`}
                     >
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 max-w-full overflow-visible">
                         <MessageBubble
                           direction={message.role === "USER" ? "right" : "left"}
                           className={
@@ -453,6 +445,12 @@ function AICoachPage() {
                             {message.role === "COACH" ? renderContentWithReplacements() : message.content}
                           </div>
                         </MessageBubble>
+
+                        {message.role === "COACH" && message.userRecommendations && (
+                          <UserRecommendationCards
+                            recommendations={message.userRecommendations}
+                          />
+                        )}
 
                         {message.role === "COACH" && (
                           <MessageFeedback
@@ -504,7 +502,7 @@ function AICoachPage() {
 
         {/* Input - Only show when chat is selected */}
         {currentChatId && (
-          <div className="sticky bottom-0 bg-card/80 backdrop-blur-lg border-t border-border">
+          <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-t border-border">
             <div className="container mx-auto max-w-3xl px-4 py-4">
               <div className="flex gap-2">
                 <Input
