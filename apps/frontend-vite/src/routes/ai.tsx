@@ -36,9 +36,7 @@ function AICoachPage() {
     submitFeedback,
     isSubmittingFeedback,
     acceptMetric,
-    isAcceptingMetric,
     rejectMetric,
-    isRejectingMetric,
     submitAISatisfaction,
     isSubmittingAISatisfaction,
   } = useAI();
@@ -359,7 +357,7 @@ function AICoachPage() {
                 messages.map((message: any) => {
                   // Render content with inline plan links and metric suggestions
                   const renderContentWithReplacements = () => {
-                    let content = message.content;
+                    const content = message.content;
                     const parts: (string | JSX.Element)[] = [];
                     const replacements: Array<{
                       index: number;
