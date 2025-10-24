@@ -4,12 +4,26 @@ import {
 } from "@openrouter/ai-sdk-provider";
 import { Activity, Plan, PlanOutlineType, User } from "@tsw/prisma";
 import { generateObject, generateText } from "ai";
+import dedent from "dedent";
 import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
 import type { PlansService } from "./plansService";
 const DEFAULT_WEEKS = 8;
+
+// Base prompt template for coach conversations
+// Variables: {{plansContext}}, {{metricsContext}}, {{responseFormat}}
+const BASE_COACH_PROMPT = dedent`
+  You are Coach Oli, a supportive personal AI coach.{{plansContext}}{{metricsContext}}
+
+  {{responseFormat}}
+
+  Guidelines:
+  - Keep messages concise and natural
+  - Provide actionable advice
+  - Match the user's tone over time
+`;
 
 // note to self 2:
 // after note to self 1, we were amidst fully testing locally, as date changes broke things in unexpected ways
@@ -71,6 +85,444 @@ export class AIService {
         return fetch(url, options);
       },
     });
+  }
+
+  /**
+   * Replace template variables in prompt
+   */
+  private replacePromptVariables(
+    template: string,
+    variables: Record<string, string>
+  ): string {
+    let result = template;
+    for (const [key, value] of Object.entries(variables)) {
+      result = result.replace(
+        new RegExp(`\\{\\{${key}\\}\\}`, "g"),
+        value || ""
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Build plans context string for prompts
+   */
+  private buildPlansContextString(plans: any[]): string {
+    if (plans.length === 0) return "";
+
+    return (
+      "\n\nUser's current plans:\n" +
+      plans
+        .map((p) => {
+          const activities =
+            p.activities?.map((a: any) => a.title).join(", ") || "";
+          return `- Goal: "${p.goal}" (ID '${p.id}') / Activities: ${activities}`;
+        })
+        .join("\n")
+    );
+  }
+
+  /**
+   * Build metrics context string for prompts
+   */
+  private buildMetricsContextString(metrics: any[]): string {
+    if (metrics.length === 0) return "";
+
+    return (
+      "\n\nUser's tracked metrics:\n" +
+      metrics.map((m) => `- ${m.emoji} ${m.title}`).join("\n")
+    );
+  }
+
+  /**
+   * Step 1: Check if we should recommend users for accountability partnerships
+   * Returns user recommendations if conditions are met
+   */
+  async generateUserRecommendationMessage(
+    user: User,
+    conversationHistory: Array<{ role: string; content: string }>,
+    plans: any[],
+    metrics: any[]
+  ): Promise<{
+    shouldRecommendUsers: boolean;
+    response?: {
+      messageContent: string;
+      userRecommendations: Array<{
+        userId: string;
+        username: string;
+        name: string | null;
+        picture: string | null;
+        planGoal: string | null;
+        planEmoji: string | null;
+        score: number;
+        matchReasons: string[];
+      }>;
+    };
+  }> {
+    try {
+      // 1. Check if user has accepted connections (friends)
+      const { prisma } = await import("../utils/prisma");
+      const connections = await prisma.connection.count({
+        where: {
+          OR: [
+            { fromId: user.id, status: "ACCEPTED" },
+            { toId: user.id, status: "ACCEPTED" },
+          ],
+        },
+      });
+
+      const hasFriends = connections > 0;
+      const threshold = hasFriends ? 0.2 : 0.2;
+
+      // 2. Get recommendations above threshold
+      const { recommendationsService } = await import(
+        "./recommendationsService"
+      );
+      const recommendationsData =
+        await recommendationsService.getRecommendedUsers(user.id);
+
+      const topRecommendations = recommendationsData.recommendations
+        .filter((r) => r.score >= threshold)
+        .slice(0, 3);
+
+      if (topRecommendations.length === 0) {
+        return { shouldRecommendUsers: false };
+      }
+
+      // 3. Build context about recommended users with match reasons
+      const usersContextArray = topRecommendations.map((rec, i) => {
+        const recUser = recommendationsData.users.find(
+          (u) => u.id === rec.recommendationObjectId
+        );
+        const recPlans = recommendationsData.plans.filter(
+          (p) => p.userId === rec.recommendationObjectId
+        );
+
+        const metadata = rec.metadata as any;
+        const matchReasons: string[] = [];
+
+        if (metadata?.planSimScore && metadata.planSimScore > 0.5) {
+          matchReasons.push(
+            `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`
+          );
+        }
+        if (metadata?.geoSimScore && metadata.geoSimScore > 0.7) {
+          matchReasons.push(`Same timezone/region`);
+        }
+        if (metadata?.ageSimScore && metadata.ageSimScore > 0.7) {
+          matchReasons.push(`Similar age`);
+        }
+
+        return {
+          index: i + 1,
+          userId: rec.recommendationObjectId, // Include user ID for AI to select
+          username: recUser?.username || "Unknown",
+          name: recUser?.name,
+          plans: recPlans.map((p) => p.goal).join(", "),
+          score: Math.round(rec.score * 100),
+          matchReasons: matchReasons.join(", ") || "Overall compatibility",
+        };
+      });
+
+      const usersContext = usersContextArray
+        .map(
+          (u) =>
+            `User ${u.index} (ID: ${u.userId}): @${u.username}${u.name ? ` (${u.name})` : ""}\n` +
+            `  - Match score: ${u.score}%\n` +
+            `  - Plans: ${u.plans}\n` +
+            `  - Why good match: ${u.matchReasons}`
+        )
+        .join("\n\n");
+
+      // 4. Define response schema - AI only generates message and identifies users
+      const UserRecommendationSchema = z.object({
+        messageContent: z
+          .string()
+          .describe(
+            "Natural conversational message (2-3 sentences) explaining that accountability partners can increase success rates by up to 95% and that you've found some people with similar goals who might be great matches. Be warm and encouraging. DO NOT mention specific usernames or technical details - these will be displayed separately."
+          ),
+        recommendedUserIds: z
+          .array(z.string())
+          .describe(
+            "Array of user IDs to recommend (select from the provided list)"
+          ),
+      });
+
+      // 5. Build system prompt using BASE_PROMPT
+      const plansContext = this.buildPlansContextString(plans);
+      const metricsContext = this.buildMetricsContextString(metrics);
+      const responseFormatContext = dedent`
+        IMPORTANT - Response Format:
+        1. Write messageContent as natural, conversational text (2-3 sentences).
+        2. Explain that research shows accountability partners increase success rates by up to 95%.
+        3. Naturally mention that you've found some people with similar goals who might be great matches.
+        4. In recommendedUserIds, return an array of user IDs from the list provided (select the best matches).
+        5. DO NOT mention specific usernames or technical details in the messageContent - these will be displayed separately in card format.
+      `;
+
+      const systemPrompt = this.replacePromptVariables(BASE_COACH_PROMPT, {
+        plansContext,
+        metricsContext,
+        responseFormat: responseFormatContext,
+      });
+
+      // 6. Generate response
+      const conversationPrompt =
+        conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
+        "\nassistant:";
+
+      const prompt =
+        `${conversationPrompt}\n\n` +
+        `Context: Here are some recommended users for accountability partnerships:\n${usersContext}`;
+
+      const aiResponse = await this.generateStructuredResponse(
+        prompt,
+        UserRecommendationSchema,
+        systemPrompt,
+        {
+          model: "x-ai/grok-4-fast",
+          temperature: 0.3,
+        }
+      );
+
+      // Map AI-selected user IDs to actual recommendation objects with full metadata
+      const userRecommendations = aiResponse.recommendedUserIds
+        .map((userId) => {
+          const recommendation = topRecommendations.find(
+            (r) => r.recommendationObjectId === userId
+          );
+          if (!recommendation) return null;
+
+          const recUser = recommendationsData.users.find(
+            (u) => u.id === userId
+          );
+          const recPlans = recommendationsData.plans.filter(
+            (p) => p.userId === userId
+          );
+          const primaryPlan = recPlans[0]; // Get first plan
+
+          const metadata = recommendation.metadata as any;
+          const matchReasons: string[] = [];
+
+          // Build match reasons from metadata
+          if (metadata?.planSimScore && metadata.planSimScore > 0.5) {
+            matchReasons.push(
+              `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`
+            );
+          }
+          if (metadata?.geoSimScore && metadata.geoSimScore > 0.7) {
+            matchReasons.push(`Same timezone/region`);
+          }
+          if (metadata?.ageSimScore && metadata.ageSimScore > 0.7) {
+            matchReasons.push(`Similar age`);
+          }
+
+          // If no specific reasons, add a generic one
+          if (matchReasons.length === 0) {
+            matchReasons.push("Overall compatibility");
+          }
+
+          return {
+            userId: recUser?.id || userId,
+            username: recUser?.username || "Unknown",
+            name: recUser?.name || null,
+            picture: recUser?.picture || null,
+            planGoal: primaryPlan?.goal || null,
+            planEmoji: primaryPlan?.emoji || null,
+            score: recommendation.score,
+            matchReasons,
+            metadata: metadata
+              ? {
+                  planSimScore: metadata.planSimScore,
+                  planSimWeight: metadata.planSimWeight || 0.6,
+                  geoSimScore: metadata.geoSimScore,
+                  geoSimWeight: metadata.geoSimWeight || 0.2,
+                  ageSimScore: metadata.ageSimScore,
+                  ageSimWeight: metadata.ageSimWeight || 0.2,
+                }
+              : undefined,
+          };
+        })
+        .filter((r) => r !== null);
+
+      logger.info(
+        `Generated user recommendation message for user ${user.username}: ${userRecommendations.length} recommendations`
+      );
+
+      return {
+        shouldRecommendUsers: true,
+        response: {
+          messageContent: aiResponse.messageContent,
+          userRecommendations,
+        },
+      };
+    } catch (error) {
+      logger.error("Error generating user recommendation message:", error);
+      return { shouldRecommendUsers: false };
+    }
+  }
+
+  /**
+   * Step 2: Generate plan/metric recommendation message (current behavior)
+   */
+  async generatePlanMetricRecommendationMessage(
+    conversationHistory: Array<{ role: string; content: string }>,
+    plans: any[],
+    metrics: any[]
+  ): Promise<{
+    messageContent: string;
+    planReplacements?: any[];
+    metricReplacement?: any;
+  }> {
+    // Define response schema (from current ai.ts lines 594-641)
+    const CoachResponseSchema = z.object({
+      messageContent: z
+        .string()
+        .describe(
+          "Natural conversational response to the user (2-3 sentences). Write this as you would normally speak, using natural language."
+        ),
+      planReplacements: z
+        .array(
+          z.object({
+            textToReplace: z
+              .string()
+              .describe(
+                "EXACT substring from your messageContent that should be replaced with a clickable plan link. Must match exactly (case-sensitive)."
+              ),
+            planGoal: z
+              .string()
+              .describe(
+                "The exact goal text of the plan you're referencing (case-insensitive match with the plans list above)."
+              ),
+          })
+        )
+        .describe(
+          "Optional array of text replacements to create inline plan links in your message. Only include if you naturally mention plans."
+        )
+        .optional(),
+      metricReplacement: z
+        .object({
+          textToReplace: z
+            .string()
+            .describe(
+              "EXACT substring from your messageContent that should be replaced with an interactive metric suggestion. Must match exactly (case-sensitive)."
+            ),
+          metricTitle: z
+            .string()
+            .describe(
+              "The exact title of the metric you're suggesting (case-insensitive match with the metrics list above)."
+            ),
+          rating: z
+            .number()
+            .min(1)
+            .max(5)
+            .describe("The suggested rating (1-5) for this metric."),
+        })
+        .optional()
+        .describe(
+          "Optional metric suggestion to inline in your message. Only include after sufficient conversation (not in first 1-2 messages) when discussing activities or emotions. Critically evaluate the user's tone, word choice, and use of emotional punctuation (emojis, exclamation marks, interjections) before suggesting a rating."
+        ),
+    });
+
+    // Build system prompt using BASE_PROMPT
+    const plansContext = this.buildPlansContextString(plans);
+    const metricsContext = this.buildMetricsContextString(metrics);
+    const responseFormatContext = dedent`
+      IMPORTANT - Response Format:
+      1. Write messageContent as natural, conversational text (2-3 sentences). Never include IDs or technical details.
+      2. To create inline plan links:
+         - Reference plans naturally in your message (e.g., "your chess practice" or "that training plan")
+         - Add each reference to planReplacements with:
+           * textToReplace: the EXACT text from your message (case-sensitive)
+           * planGoal: the exact goal from the plans list above (case-insensitive)
+         - Example: If you write "How's your chess practice going?", add:
+           {textToReplace: "chess practice", planGoal: "play a bit of chess every day"}
+      3. To suggest a metric (only after sufficient conversation, not in first 1-2 messages):
+         - Critically evaluate the user's tone, word choice, and emotional punctuation (emojis, exclamation marks, interjections)
+         - Don't extrapolate high ratings from neutral responses like "thanks" or "ok"
+         - Mention it naturally (e.g., "sounds like you're feeling pretty energized")
+         - Add to metricReplacement:
+           * textToReplace: the EXACT text to highlight (e.g., "pretty energized")
+           * metricTitle: exact metric title from list above
+           * rating: your suggested rating (1-5) based on their actual expressed emotion
+         - Only suggest ONE metric per message
+    `;
+
+    const systemPrompt = this.replacePromptVariables(BASE_COACH_PROMPT, {
+      plansContext,
+      metricsContext,
+      responseFormat: responseFormatContext,
+    });
+
+    // Generate AI response
+    const conversationPrompt =
+      conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
+      "\nassistant:";
+
+    const aiResponse = await this.generateStructuredResponse(
+      conversationPrompt,
+      CoachResponseSchema,
+      systemPrompt,
+      {
+        model: "x-ai/grok-2-vision-1212",
+        temperature: 0.3,
+      }
+    );
+
+    return aiResponse;
+  }
+
+  /**
+   * Main method: Generate coach chat response with 2-step recommendation logic
+   */
+  async generateCoachChatResponse(params: {
+    user: User;
+    message: string;
+    chatId: string;
+    conversationHistory: Array<{ role: string; content: string }>;
+    plans: any[];
+    metrics: any[];
+  }): Promise<{
+    messageContent: string;
+    planReplacements?: any[];
+    metricReplacement?: any;
+    userRecommendations?: Array<{
+      userId: string;
+      username: string;
+      name: string | null;
+      picture: string | null;
+      planGoal: string | null;
+      planEmoji: string | null;
+      score: number;
+      matchReasons: string[];
+    }>;
+  }> {
+    const { user, conversationHistory, plans, metrics } = params;
+
+    // Step 1: Try user recommendations first
+    const userRecResult = await this.generateUserRecommendationMessage(
+      user,
+      conversationHistory,
+      plans,
+      metrics
+    );
+
+    if (userRecResult.shouldRecommendUsers && userRecResult.response) {
+      logger.info(
+        `User ${user.username} receiving user recommendations: ${userRecResult.response.userRecommendations.length} users`
+      );
+      return userRecResult.response;
+    }
+
+    // Step 2: Fall back to plan/metric recommendations
+    logger.info(
+      `User ${user.username} receiving plan/metric recommendations (no user recommendations available)`
+    );
+    return await this.generatePlanMetricRecommendationMessage(
+      conversationHistory,
+      plans,
+      metrics
+    );
   }
 
   async generateText(

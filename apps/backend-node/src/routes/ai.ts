@@ -137,6 +137,7 @@ router.get(
               content: msg.content,
               planReplacements,
               metricReplacement,
+              userRecommendations: metadata.userRecommendations || null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };
@@ -200,6 +201,7 @@ router.get(
                 content: parsed.messageContent,
                 planReplacements,
                 metricReplacement,
+                userRecommendations: parsed.userRecommendations || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };
@@ -590,100 +592,15 @@ router.post(
         content: msg.content,
       }));
 
-      // Define response schema
-      const CoachResponseSchema = z.object({
-        messageContent: z
-          .string()
-          .describe(
-            "Natural conversational response to the user (2-3 sentences). Write this as you would normally speak, using natural language."
-          ),
-        planReplacements: z
-          .array(
-            z.object({
-              textToReplace: z
-                .string()
-                .describe(
-                  "EXACT substring from your messageContent that should be replaced with a clickable plan link. Must match exactly (case-sensitive)."
-                ),
-              planGoal: z
-                .string()
-                .describe(
-                  "The exact goal text of the plan you're referencing (case-insensitive match with the plans list above)."
-                ),
-            })
-          )
-          .describe(
-            "Optional array of text replacements to create inline plan links in your message. Only include if you naturally mention plans."
-          )
-          .optional(),
-        metricReplacement: z
-          .object({
-            textToReplace: z
-              .string()
-              .describe(
-                "EXACT substring from your messageContent that should be replaced with an interactive metric suggestion. Must match exactly (case-sensitive)."
-              ),
-            metricTitle: z
-              .string()
-              .describe(
-                "The exact title of the metric you're suggesting (case-insensitive match with the metrics list above)."
-              ),
-            rating: z
-              .number()
-              .min(1)
-              .max(5)
-              .describe("The suggested rating (1-5) for this metric."),
-          })
-          .optional()
-          .describe(
-            "Optional metric suggestion to inline in your message. Only include after sufficient conversation (not in first 1-2 messages) when discussing activities or emotions. Critically evaluate the user's tone, word choice, and use of emotional punctuation (emojis, exclamation marks, interjections) before suggesting a rating."
-          ),
+      // Generate AI response using the new 2-step recommendation service
+      const aiResponse = await aiService.generateCoachChatResponse({
+        user: user,
+        message: message,
+        chatId: chatId,
+        conversationHistory: conversationHistory,
+        plans: plans,
+        metrics: metrics,
       });
-
-      // System prompt for coach
-      const systemPrompt =
-        `You are Coach Oli, a supportive personal AI coach.` +
-        `${plansContext}` +
-        `${metricsContext}` +
-        `\n\n` +
-        `IMPORTANT - Response Format:` +
-        `\n1. Write messageContent as natural, conversational text (2-3 sentences). Never include IDs or technical details.` +
-        `\n2. To create inline plan links:` +
-        `\n   - Reference plans naturally in your message (e.g., "your chess practice" or "that training plan")` +
-        `\n   - Add each reference to planReplacements with:` +
-        `\n     * textToReplace: the EXACT text from your message (case-sensitive)` +
-        `\n     * planGoal: the exact goal from the plans list above (case-insensitive)` +
-        `\n   - Example: If you write "How's your chess practice going?", add:` +
-        `\n     {textToReplace: "chess practice", planGoal: "play a bit of chess every day"}` +
-        `\n3. To suggest a metric (only after sufficient conversation, not in first 1-2 messages):` +
-        `\n   - Critically evaluate the user's tone, word choice, and emotional punctuation (emojis, exclamation marks, interjections)` +
-        `\n   - Don't extrapolate high ratings from neutral responses like "thanks" or "ok"` +
-        `\n   - Mention it naturally (e.g., "sounds like you're feeling pretty energized")` +
-        `\n   - Add to metricReplacement:` +
-        `\n     * textToReplace: the EXACT text to highlight (e.g., "pretty energized")` +
-        `\n     * metricTitle: exact metric title from list above` +
-        `\n     * rating: your suggested rating (1-5) based on their actual expressed emotion` +
-        `\n   - Only suggest ONE metric per message` +
-        `\n\n` +
-        `Guidelines:` +
-        `\n- Keep messages concise and natural` +
-        `\n- Provide actionable advice` +
-        `\n- Match the user's tone over time`;
-
-      // Generate AI response with structured output
-      const prompt =
-        conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
-        "\nassistant:";
-
-      const aiResponse = await aiService.generateStructuredResponse(
-        prompt,
-        CoachResponseSchema,
-        systemPrompt,
-        {
-          model: "x-ai/grok-4-fast",
-          temperature: 0.3,
-        }
-      );
 
       // Save coach message with content and metadata separated
       const coachMessage = await prisma.message.create({
@@ -694,6 +611,7 @@ router.post(
           metadata: {
             planReplacements: aiResponse.planReplacements || [],
             metricReplacement: aiResponse.metricReplacement || null,
+            userRecommendations: aiResponse.userRecommendations || null,
           },
         },
       });
@@ -803,6 +721,7 @@ router.post(
         content: aiResponse.messageContent,
         planReplacements: resolvedPlanReplacements,
         metricReplacement: resolvedMetricReplacement,
+        userRecommendations: aiResponse.userRecommendations || null,
         createdAt: coachMessage.createdAt,
       };
 

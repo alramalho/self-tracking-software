@@ -305,3 +305,21 @@ body {
 .animate-shine {
   animation: shine 2s ease-in-out infinite;
 }
+
+/* Horizontal scrollbar for user recommendation cards */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-muted));
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--color-muted-foreground) / 0.5);
+}

@@ -221,7 +221,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                     }}
                     className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
                       score >= 0.5
-                        ? "bg-green-100 dark:bg-green-950 text-green-800 hover:bg-green-200"
+                        ? "bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-500 hover:bg-green-200"
                         : score >= 0.25
                         ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-800 hover:bg-yellow-200 dark:text-yellow-400 dark:hover:bg-yellow-800"
                         : "bg-red-100 dark:bg-red-950 text-red-800 hover:bg-red-200 dark:text-red-400 dark:hover:bg-red-800"
