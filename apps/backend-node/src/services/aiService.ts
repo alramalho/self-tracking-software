@@ -12,26 +12,6 @@ import { getCurrentUser } from "../utils/requestContext";
 import type { PlansService } from "./plansService";
 const DEFAULT_WEEKS = 8;
 
-// Base prompt template for coach conversations
-// Variables: {{plansContext}}, {{metricsContext}}, {{responseFormat}}
-const BASE_COACH_PROMPT = dedent`
-  You are Coach Oli, a supportive personal AI coach.{{plansContext}}{{metricsContext}}
-
-  {{responseFormat}}
-
-  Guidelines:
-  - Keep messages concise and natural
-  - Provide actionable advice
-  - Match the user's tone over time
-`;
-
-// note to self 2:
-// after note to self 1, we were amidst fully testing locally, as date changes broke things in unexpected ways
-// specifiaclly, we were migrating to openrouter as we were facing some issues with models
-// not being able to properly generate on first attempt the desired schema
-// after that, we resume the dreadful work of making the app work
-// fully remotely (we were also facing weird cloudfront 429, but we should fully clean up
-// app before that as rn its probably making a shit ton of req, which it shouldn't anyway)
 export class AIService {
   private model: string;
   // private openai;
@@ -105,21 +85,66 @@ export class AIService {
   }
 
   /**
-   * Build plans context string for prompts
+   * Build simplified plans context with current week progress (one line per plan)
    */
-  private buildPlansContextString(plans: any[]): string {
+  private async buildSimplifiedPlansContext(
+    plans: any[],
+    user: User
+  ): Promise<string> {
     if (plans.length === 0) return "";
 
-    return (
-      "\n\nUser's current plans:\n" +
-      plans
-        .map((p) => {
-          const activities =
-            p.activities?.map((a: any) => a.title).join(", ") || "";
-          return `- Goal: "${p.goal}" (ID '${p.id}') / Activities: ${activities}`;
-        })
-        .join("\n")
+    const planContexts = await Promise.all(
+      plans.map(async (plan) => {
+        const activities =
+          plan.activities?.map((a: any) => a.title).join(", ") || "";
+        let baseContext = `- "${plan.goal}" (Activities: ${activities})`;
+
+        // Add current week progress if plansService is available
+        if (this.plansService) {
+          try {
+            const progressData = await this.plansService.getPlanProgress(
+              plan,
+              user
+            );
+            const { currentWeekStats } = progressData;
+
+            if (currentWeekStats) {
+              const { daysCompletedThisWeek, numActiveDaysInTheWeek } =
+                currentWeekStats;
+              const daysNeeded = numActiveDaysInTheWeek - daysCompletedThisWeek;
+
+              const now = new Date();
+              const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 });
+              const daysLeft = Math.ceil(
+                (endOfWeekDate.getTime() - now.getTime()) /
+                  (1000 * 60 * 60 * 24)
+              );
+
+              // Determine week status
+              let weekStatus: "COMPLETED" | "FAILED" | "AT_RISK" | "ON_TRACK";
+              if (daysNeeded === 0) {
+                weekStatus = "COMPLETED";
+              } else if (daysNeeded > daysLeft) {
+                weekStatus = "FAILED";
+              } else if (daysNeeded === daysLeft) {
+                weekStatus = "AT_RISK";
+              } else {
+                weekStatus = "ON_TRACK";
+              }
+
+              baseContext += ` | This week: ${daysCompletedThisWeek}/${numActiveDaysInTheWeek}, Need: ${daysNeeded} more, Days left: ${daysLeft}, Status: ${weekStatus}`;
+            }
+          } catch (error) {
+            logger.error(`Could not get progress for plan ${plan.id}:`, error);
+            // Continue without progress info if it fails
+          }
+        }
+
+        return baseContext;
+      })
     );
+
+    return "\n\nUser's current plans:\n" + planContexts.join("\n");
   }
 
   /**
@@ -135,30 +160,22 @@ export class AIService {
   }
 
   /**
-   * Step 1: Check if we should recommend users for accountability partnerships
-   * Returns user recommendations if conditions are met
+   * Helper: Build context about available user recommendations for the prompt
    */
-  async generateUserRecommendationMessage(
-    user: User,
-    conversationHistory: Array<{ role: string; content: string }>,
-    plans: any[],
-    metrics: any[]
-  ): Promise<{
-    shouldRecommendUsers: boolean;
-    response?: {
-      messageContent: string;
-      userRecommendations: Array<{
-        userId: string;
-        username: string;
-        name: string | null;
-        picture: string | null;
-        planGoal: string | null;
-        planEmoji: string | null;
-        score: number;
-        matchReasons: string[];
-        relativeToPlan: { id: string; goal: string; emoji: string | null } | null;
-      }>;
-    };
+  private async buildRecommendationsContext(userId: string): Promise<{
+    contextString: string;
+    availableRecommendations: Array<{
+      userId: string;
+      username: string;
+      name: string | null;
+      picture: string | null;
+      planGoal: string | null;
+      planEmoji: string | null;
+      score: number;
+      matchReasons: string[];
+      relativeToPlan: { id: string; goal: string; emoji: string | null } | null;
+      metadata?: any;
+    }>;
   }> {
     try {
       // 1. Check if user has accepted connections (friends)
@@ -166,8 +183,8 @@ export class AIService {
       const connections = await prisma.connection.count({
         where: {
           OR: [
-            { fromId: user.id, status: "ACCEPTED" },
-            { toId: user.id, status: "ACCEPTED" },
+            { fromId: userId, status: "ACCEPTED" },
+            { toId: userId, status: "ACCEPTED" },
           ],
         },
       });
@@ -180,132 +197,33 @@ export class AIService {
         "./recommendationsService"
       );
       const recommendationsData =
-        await recommendationsService.getRecommendedUsers(user.id);
+        await recommendationsService.getRecommendedUsers(userId);
 
       const topRecommendations = recommendationsData.recommendations
         .filter((r) => r.score >= threshold)
         .slice(0, 3);
 
       if (topRecommendations.length === 0) {
-        return { shouldRecommendUsers: false };
+        return {
+          contextString: "No user recommendations available at this time.",
+          availableRecommendations: [],
+        };
       }
 
-      // 3. Build context about recommended users with match reasons
-      const usersContextArray = topRecommendations.map((rec, i) => {
-        const recUser = recommendationsData.users.find(
-          (u) => u.id === rec.recommendationObjectId
-        );
-        const recPlans = recommendationsData.plans.filter(
-          (p) => p.userId === rec.recommendationObjectId
-        );
-
-        const metadata = rec.metadata as any;
-        const matchReasons: string[] = [];
-
-        if (metadata?.planSimScore && metadata.planSimScore > 0.5) {
-          matchReasons.push(
-            `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`
-          );
-        }
-        if (metadata?.geoSimScore && metadata.geoSimScore > 0.7) {
-          matchReasons.push(`Same timezone/region`);
-        }
-        if (metadata?.ageSimScore && metadata.ageSimScore > 0.7) {
-          matchReasons.push(`Similar age`);
-        }
-
-        return {
-          index: i + 1,
-          userId: rec.recommendationObjectId, // Include user ID for AI to select
-          username: recUser?.username || "Unknown",
-          name: recUser?.name,
-          plans: recPlans.map((p) => p.goal).join(", "),
-          score: Math.round(rec.score * 100),
-          matchReasons: matchReasons.join(", ") || "Overall compatibility",
-        };
-      });
-
-      const usersContext = usersContextArray
-        .map(
-          (u) =>
-            `User ${u.index} (ID: ${u.userId}): @${u.username}${u.name ? ` (${u.name})` : ""}\n` +
-            `  - Match score: ${u.score}%\n` +
-            `  - Plans: ${u.plans}\n` +
-            `  - Why good match: ${u.matchReasons}`
-        )
-        .join("\n\n");
-
-      // 4. Define response schema - AI only generates message and identifies users
-      const UserRecommendationSchema = z.object({
-        messageContent: z
-          .string()
-          .describe(
-            "Natural conversational message (2-3 sentences) explaining that accountability partners can increase success rates by up to 95% and that you've found some people with similar goals who might be great matches. Be warm and encouraging. DO NOT mention specific usernames or technical details - these will be displayed separately."
-          ),
-        recommendedUserIds: z
-          .array(z.string())
-          .describe(
-            "Array of user IDs to recommend (select from the provided list)"
-          ),
-      });
-
-      // 5. Build system prompt using BASE_PROMPT
-      const plansContext = this.buildPlansContextString(plans);
-      const metricsContext = this.buildMetricsContextString(metrics);
-      const responseFormatContext = dedent`
-        IMPORTANT - Response Format:
-        1. Write messageContent as natural, conversational text (2-3 sentences).
-        2. Explain that research shows accountability partners increase success rates by up to 95%.
-        3. Naturally mention that you've found some people with similar goals who might be great matches.
-        4. In recommendedUserIds, return an array of user IDs from the list provided (select the best matches).
-        5. DO NOT mention specific usernames or technical details in the messageContent - these will be displayed separately in card format.
-      `;
-
-      const systemPrompt = this.replacePromptVariables(BASE_COACH_PROMPT, {
-        plansContext,
-        metricsContext,
-        responseFormat: responseFormatContext,
-      });
-
-      // 6. Generate response
-      const conversationPrompt =
-        conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
-        "\nassistant:";
-
-      const prompt =
-        `${conversationPrompt}\n\n` +
-        `Context: Here are some recommended users for accountability partnerships:\n${usersContext}`;
-
-      const aiResponse = await this.generateStructuredResponse(
-        prompt,
-        UserRecommendationSchema,
-        systemPrompt,
-        {
-          model: "x-ai/grok-4-fast",
-          temperature: 0.3,
-        }
-      );
-
-      // Map AI-selected user IDs to actual recommendation objects with full metadata
-      const userRecommendations = await Promise.all(
-        aiResponse.recommendedUserIds.map(async (userId) => {
-          const recommendation = topRecommendations.find(
-            (r) => r.recommendationObjectId === userId
-          );
-          if (!recommendation) return null;
-
+      // 3. Build enriched recommendation objects with metadata
+      const availableRecommendations = await Promise.all(
+        topRecommendations.map(async (rec) => {
           const recUser = recommendationsData.users.find(
-            (u) => u.id === userId
+            (u) => u.id === rec.recommendationObjectId
           );
           const recPlans = recommendationsData.plans.filter(
-            (p) => p.userId === userId
+            (p) => p.userId === rec.recommendationObjectId
           );
-          const primaryPlan = recPlans[0]; // Get first plan
+          const primaryPlan = recPlans[0];
 
-          const metadata = recommendation.metadata as any;
+          const metadata = rec.metadata as any;
           const matchReasons: string[] = [];
 
-          // Build match reasons from metadata
           if (metadata?.planSimScore && metadata.planSimScore > 0.5) {
             matchReasons.push(
               `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`
@@ -318,13 +236,16 @@ export class AIService {
             matchReasons.push(`Similar age`);
           }
 
-          // If no specific reasons, add a generic one
           if (matchReasons.length === 0) {
             matchReasons.push("Overall compatibility");
           }
 
           // Get the current user's plan that triggered this recommendation
-          let relativeToPlan: { id: string; goal: string; emoji: string | null } | null = null;
+          let relativeToPlan: {
+            id: string;
+            goal: string;
+            emoji: string | null;
+          } | null = null;
           if (metadata?.relativeToPlanId) {
             const { prisma } = await import("../utils/prisma");
             const userPlan = await prisma.plan.findUnique({
@@ -337,13 +258,13 @@ export class AIService {
           }
 
           return {
-            userId: recUser?.id || userId,
+            userId: rec.recommendationObjectId,
             username: recUser?.username || "Unknown",
             name: recUser?.name || null,
             picture: recUser?.picture || null,
             planGoal: primaryPlan?.goal || null,
             planEmoji: primaryPlan?.emoji || null,
-            score: recommendation.score,
+            score: rec.score,
             matchReasons,
             relativeToPlan,
             metadata: metadata
@@ -358,148 +279,40 @@ export class AIService {
               : undefined,
           };
         })
-      ).then((results) => results.filter((r) => r !== null));
-
-      logger.info(
-        `Generated user recommendation message for user ${user.username}: ${userRecommendations.length} recommendations`
       );
 
+      // 4. Build context string for prompt
+      const contextString = availableRecommendations
+        .map((rec, i) => {
+          const plans = recommendationsData.plans
+            .filter((p) => p.userId === rec.userId)
+            .map((p) => p.goal)
+            .join(", ");
+          return (
+            `User ${i + 1} (ID: ${rec.userId}): @${rec.username}${rec.name ? ` (${rec.name})` : ""}\n` +
+            `  - Match score: ${Math.round(rec.score * 100)}%\n` +
+            `  - Plans: ${plans}\n` +
+            `  - Why good match: ${rec.matchReasons.join(", ")}`
+          );
+        })
+        .join("\n\n");
+
       return {
-        shouldRecommendUsers: true,
-        response: {
-          messageContent: aiResponse.messageContent,
-          userRecommendations,
-        },
+        contextString,
+        availableRecommendations,
       };
     } catch (error) {
-      logger.error("Error generating user recommendation message:", error);
-      return { shouldRecommendUsers: false };
+      logger.error("Error building recommendations context:", error);
+      return {
+        contextString: "No user recommendations available at this time.",
+        availableRecommendations: [],
+      };
     }
   }
 
   /**
-   * Step 2: Generate plan/metric recommendation message (current behavior)
-   */
-  async generatePlanMetricRecommendationMessage(
-    conversationHistory: Array<{ role: string; content: string }>,
-    plans: any[],
-    metrics: any[],
-    allowMetricExtraction: boolean = true
-  ): Promise<{
-    messageContent: string;
-    planReplacements?: any[];
-    metricReplacement?: any;
-  }> {
-    // Define response schema (conditionally include metric extraction)
-    const schemaFields: any = {
-      messageContent: z
-        .string()
-        .describe(
-          "Natural conversational response to the user (2-3 sentences). Write this as you would normally speak, using natural language."
-        ),
-      planReplacements: z
-        .array(
-          z.object({
-            textToReplace: z
-              .string()
-              .describe(
-                "EXACT substring from your messageContent that should be replaced with a clickable plan link. Must match exactly (case-sensitive)."
-              ),
-            planGoal: z
-              .string()
-              .describe(
-                "The exact goal text of the plan you're referencing (case-insensitive match with the plans list above)."
-              ),
-          })
-        )
-        .describe(
-          "Optional array of text replacements to create inline plan links in your message. Only include if you naturally mention plans."
-        )
-        .optional(),
-    };
-
-    // Only include metricReplacement if metrics are loggable
-    if (allowMetricExtraction) {
-      schemaFields.metricReplacement = z
-        .object({
-          textToReplace: z
-            .string()
-            .describe(
-              "EXACT substring from your messageContent that should be replaced with an interactive metric suggestion. Must match exactly (case-sensitive)."
-            ),
-          metricTitle: z
-            .string()
-            .describe(
-              "The exact title of the metric you're suggesting (case-insensitive match with the metrics list above)."
-            ),
-          rating: z
-            .number()
-            .min(1)
-            .max(5)
-            .describe("The suggested rating (1-5) for this metric."),
-        })
-        .optional()
-        .describe(
-          "Optional metric suggestion to inline in your message. Only include after sufficient conversation (not in first 1-2 messages) when discussing activities or emotions. Critically evaluate the user's tone, word choice, and use of emotional punctuation (emojis, exclamation marks, interjections) before suggesting a rating."
-        );
-    }
-
-    const CoachResponseSchema = z.object(schemaFields);
-
-    // Build system prompt using BASE_PROMPT
-    const plansContext = this.buildPlansContextString(plans);
-    const metricsContext = this.buildMetricsContextString(metrics);
-    const responseFormatContext = dedent`
-      IMPORTANT - Response Format:
-      1. Write messageContent as natural, conversational text (2-3 sentences). Never include IDs or technical details.
-      2. To create inline plan links:
-         - Reference plans naturally in your message (e.g., "your chess practice" or "that training plan")
-         - Add each reference to planReplacements with:
-           * textToReplace: the EXACT text from your message (case-sensitive)
-           * planGoal: the exact goal from the plans list above (case-insensitive)
-         - Example: If you write "How's your chess practice going?", add:
-           {textToReplace: "chess practice", planGoal: "play a bit of chess every day"}
-      3. To suggest a metric (only after sufficient conversation, not in first 1-2 messages):
-         - Critically evaluate the user's tone, word choice, and emotional punctuation (emojis, exclamation marks, interjections)
-         - Don't extrapolate high ratings from neutral responses like "thanks" or "ok"
-         - Mention it naturally (e.g., "sounds like you're feeling pretty energized")
-         - Add to metricReplacement:
-           * textToReplace: the EXACT text to highlight (e.g., "pretty energized")
-           * metricTitle: exact metric title from list above
-           * rating: your suggested rating (1-5) based on their actual expressed emotion
-         - Only suggest ONE metric per message
-    `;
-
-    const systemPrompt = this.replacePromptVariables(BASE_COACH_PROMPT, {
-      plansContext,
-      metricsContext,
-      responseFormat: responseFormatContext,
-    });
-
-    // Generate AI response
-    const conversationPrompt =
-      conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
-      "\nassistant:";
-
-    const aiResponse = (await this.generateStructuredResponse(
-      conversationPrompt,
-      CoachResponseSchema,
-      systemPrompt,
-      {
-        model: "x-ai/grok-2-vision-1212",
-        temperature: 0.3,
-      }
-    )) as {
-      messageContent: string;
-      planReplacements?: any[];
-      metricReplacement?: any;
-    };
-
-    return aiResponse;
-  }
-
-  /**
-   * Main method: Generate coach chat response with 2-step recommendation logic
+   * Main method: Generate coach chat response with unified AI call
+   * Supports all capabilities: user recommendations, plan links, and metric suggestions
    */
   async generateCoachChatResponse(params: {
     user: User;
@@ -533,52 +346,326 @@ export class AIService {
       allowMetricExtraction = true,
     } = params;
 
-    // Step 1: Try user recommendations first
-    const userRecResult = await this.generateUserRecommendationMessage(
-      user,
-      conversationHistory,
-      plans,
-      metrics
-    );
+    // 1. Fetch available recommendations context
+    const { contextString: recommendationsContext, availableRecommendations } =
+      await this.buildRecommendationsContext(user.id);
 
-    if (userRecResult.shouldRecommendUsers && userRecResult.response) {
-      logger.info(
-        `User ${user.username} receiving user recommendations: ${userRecResult.response.userRecommendations.length} users`
-      );
-      return userRecResult.response;
+    // 2. Build all contexts (plans context is now async with progress info)
+    const plansContext = await this.buildSimplifiedPlansContext(plans, user);
+    const metricsContext = this.buildMetricsContextString(metrics);
+
+    // 3. Define unified response schema with all capabilities
+    // Each field definition includes both schema and prompt details
+    const schemaFieldDefinitions = [
+      {
+        name: "messageContent",
+        number: 1,
+        label: "messageContent (required)",
+        description: "Your conversational text (2-3 sentences)",
+        details: [
+          "Start with genuine conversation, not structured enhancements",
+        ],
+        schema: z
+          .string()
+          .describe(
+            "Your conversational response text (2-3 sentences). Start with genuine conversation, not structured enhancements."
+          ),
+        optional: false,
+      },
+      {
+        name: "planReplacements",
+        number: 2,
+        label: "planReplacements (optional)",
+        description: "Inline plan links in your message",
+        details: [
+          "Use when naturally referencing the user's plans",
+          "Provide textToReplace and planGoal",
+        ],
+        schema: z
+          .array(
+            z.object({
+              textToReplace: z
+                .string()
+                .describe(
+                  "EXACT substring from messageContent to replace with plan link"
+                ),
+              planGoal: z
+                .string()
+                .describe("Exact plan goal from user's plans list"),
+            })
+          )
+          .optional()
+          .describe(
+            "Populate when you naturally reference the user's plans in messageContent. Creates inline clickable plan links."
+          ),
+        optional: true,
+      },
+      {
+        name: "metricReplacement",
+        number: 3,
+        label: "metricReplacement (optional)",
+        description: "Inline metric suggestion in your message",
+        details: [
+          "Use only after sufficient conversation about activities/emotions",
+          "Provide textToReplace, metricTitle, and rating (1-5)",
+          "Only ONE metric per response",
+        ],
+        schema: z
+          .object({
+            textToReplace: z
+              .string()
+              .describe(
+                "EXACT substring from messageContent to replace with metric suggestion"
+              ),
+            metricTitle: z
+              .string()
+              .describe("Exact metric title from user's metrics list"),
+            rating: z
+              .number()
+              .min(1)
+              .max(5)
+              .describe("Suggested rating (1-5) based on expressed emotion"),
+          })
+          .optional()
+          .describe(
+            "Populate only after sufficient conversation (5+ messages) when discussing specific activities/emotions with clear sentiment. Critically evaluate tone and emotional punctuation."
+          ),
+        optional: true,
+        includeIf: allowMetricExtraction,
+      },
+      {
+        name: "userRecommendations",
+        number: 4,
+        label: "userRecommendations (optional)",
+        description: "User IDs to recommend as accountability partners",
+        details: [
+          "Use only after naturally discussing accountability and its benefits",
+          "Research shows accountability partners increase success rates by up to 95%",
+          "Mention this benefit in your messageContent BEFORE populating this field",
+        ],
+        schema: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Array of user IDs to recommend. Populate only after you've discussed accountability benefits in messageContent. Select from available recommendations list."
+          ),
+        optional: true,
+      },
+    ];
+
+    // Build schema fields object, conditionally including fields
+    const activeFieldDefinitions = schemaFieldDefinitions.filter(
+      (field) => field.includeIf === undefined || field.includeIf === true
+    );
+    const schemaFields: any = {};
+    activeFieldDefinitions.forEach((field) => {
+      schemaFields[field.name] = field.schema;
+    });
+
+    const UnifiedCoachResponseSchema = z.object(schemaFields);
+
+    // Build capabilities section from schema definitions
+    const capabilitiesSection = activeFieldDefinitions
+      .map((field) => {
+        const details = field.details
+          .map((detail) => `         - ${detail}`)
+          .join("\n");
+        return `      ${field.number}. ${field.label}: ${field.description}\n${details}`;
+      })
+      .join("\n\n");
+
+    // 4. Build unified system prompt with structured guidance
+    const systemPrompt = dedent`
+      GOAL:
+      You are Coach Oli, a supportive AI coach helping users achieve their goals through natural, progressive conversation.
+      You run inside the tracking.so app, the all-in-one habit tracker with social features and plan management.
+
+      CAPABILITIES - Response Structure:
+      Your response includes these optional fields you can populate:
+
+      ${capabilitiesSection}
+
+      CONTEXT:
+
+      Available users for recommendations:
+      ${recommendationsContext}
+
+      User's current plans:
+      ${plansContext}
+
+      User's tracked metrics:
+      ${metricsContext}
+
+      Current conversation: ${conversationHistory.length} messages
+
+      REQUIREMENTS:
+
+      1. Conversation Progression:
+         - Messages 1-2: Build rapport, understand situation, ask about goals
+           → messageContent only, no other fields
+
+         - Messages 3-4: Provide advice, discuss their plans
+           → messageContent + optionally planReplacements
+
+         - Messages 5+: Based on conversation context, consider:
+           → metricReplacement (if discussing specific activities/emotions)
+           → userRecommendations (if you've discussed accountability benefits)
+
+      2. Field Population Logic:
+         - planReplacements: Use whenever you reference their plans naturally
+         - metricReplacement: Only when clear emotional sentiment is expressed
+         - userRecommendations: Only after seeding accountability concept in earlier messages
+
+      3. Natural Flow:
+         - Always start with genuine messageContent
+         - Don't populate optional fields just because data is available
+         - Let conversation context determine when each field is appropriate
+         - Be progressive: understand → advise → offer structured enhancements
+
+      EXAMPLES:
+
+      Example 1 - Early Conversation (Message 2-3):
+      User: "I've been struggling to stay consistent with my workouts"
+      >> messageContent: "I hear you. Consistency can be tough. What's been getting in the way of your running plan?"
+      >> planReplacements: "running plan" → "run 5k in under 30 minutes"
+      ✓ Natural plan reference
+      ✗ NO metrics (no emotional sentiment expressed)
+      ✗ NO recommendations (too early, hasn't discussed accountability)
+
+      Example 2 - Appropriate Metric (Message 6+):
+      User: "Just finished my run and wow, I feel absolutely amazing! Best workout in weeks 🔥"
+      >> messageContent: "That's fantastic! Love seeing you this energized after a run."
+      >> planReplacements: "run" → "run 5k in under 30 minutes"
+      >> metricReplacement: "this energized" → Energy (5/5)
+      ✓ Clear positive emotion (enthusiastic language + emoji)
+      ✓ Natural to log this feeling
+      ✗ NO recommendations (hasn't discussed accountability yet)
+
+      Example 3 - Appropriate User Recommendations (Message 5+, after seeding):
+      [Previous message seeded: "Research shows accountability partners increase success rates by 95%"]
+      User: "That sounds helpful! I definitely need that motivation"
+      >> messageContent: "I've found some great people with similar goals who could be perfect accountability partners to team up with!"
+      >> userRecommendations: [user123, user456, user789]
+      ✓ User expressed interest in accountability concept
+      ✓ Naturally following up after seeding in earlier message
+      ✗ NEVER do this in first 3-4 messages or without discussing accountability first
+
+      NOTES:
+      - Empty optional fields are better than premature ones
+      - Focus on conversation quality first, structured outputs second
+      - When in doubt, leave optional fields empty
+    `;
+
+    // 5. Generate AI response with unified schema using messages format
+    const aiResponse = (await this.generateStructuredResponse({
+      messages: conversationHistory as Array<{
+        role: "user" | "assistant" | "system";
+        content: string;
+      }>,
+      schema: UnifiedCoachResponseSchema,
+      systemPrompt,
+      options: {
+        model: "x-ai/grok-4-fast",
+        temperature: 0.3,
+      },
+    })) as {
+      messageContent: string;
+      planReplacements?: any[];
+      metricReplacement?: any;
+      userRecommendations?: string[];
+    };
+
+    // 6. Resolve user IDs to full recommendation objects (if provided)
+    let resolvedUserRecommendations:
+      | Array<{
+          userId: string;
+          username: string;
+          name: string | null;
+          picture: string | null;
+          planGoal: string | null;
+          planEmoji: string | null;
+          score: number;
+          matchReasons: string[];
+          relativeToPlan: {
+            id: string;
+            goal: string;
+            emoji: string | null;
+          } | null;
+        }>
+      | undefined;
+
+    if (
+      aiResponse.userRecommendations &&
+      aiResponse.userRecommendations.length > 0
+    ) {
+      resolvedUserRecommendations = aiResponse.userRecommendations
+        .map((userId) => {
+          const recommendation = availableRecommendations.find(
+            (rec) => rec.userId === userId
+          );
+          return recommendation || null;
+        })
+        .filter((rec) => rec !== null) as any;
     }
 
-    // Step 2: Fall back to plan/metric recommendations
     logger.info(
-      `User ${user.username} receiving plan/metric recommendations (no user recommendations available, metric extraction: ${allowMetricExtraction})`
+      `Generated coach response for ${user.username}: ${aiResponse.messageContent.substring(0, 50)}... ` +
+        `(plans: ${aiResponse.planReplacements?.length || 0}, ` +
+        `metrics: ${aiResponse.metricReplacement ? 1 : 0}, ` +
+        `recommendations: ${resolvedUserRecommendations?.length || 0})`
     );
-    return await this.generatePlanMetricRecommendationMessage(
-      conversationHistory,
-      plans,
-      metrics,
-      allowMetricExtraction
-    );
+
+    return {
+      messageContent: aiResponse.messageContent,
+      planReplacements: aiResponse.planReplacements,
+      metricReplacement: aiResponse.metricReplacement,
+      userRecommendations: resolvedUserRecommendations,
+    };
   }
 
-  async generateText(
-    prompt: string,
-    systemPrompt?: string,
-    options: { model: string; temperature: number } = {
-      model: this.model,
-      temperature: 0.7,
-    }
-  ): Promise<string> {
+  async generateText(params: {
+    prompt?: string;
+    messages?: Array<{
+      role: "user" | "assistant" | "system";
+      content: string;
+    }>;
+    systemPrompt?: string;
+    options?: { model: string; temperature: number };
+  }): Promise<string> {
+    const {
+      prompt,
+      messages,
+      systemPrompt,
+      options = { model: this.model, temperature: 0.7 },
+    } = params;
+
     try {
       console.log("Generating text with model:", options.model);
       console.log("Prompt:", prompt);
+      console.log("Messages:", messages);
       console.log("System prompt:", systemPrompt);
+
       const openrouter = this.getOpenRouterWithUserId();
-      const result = await generateText({
+
+      // Use either messages or prompt (messages takes precedence)
+      const generateParams: any = {
         model: openrouter.chat(options.model),
-        prompt,
-        system: systemPrompt,
         temperature: options.temperature,
-      });
+      };
+
+      if (systemPrompt) {
+        generateParams.system = systemPrompt;
+      }
+
+      if (messages) {
+        generateParams.messages = messages;
+      } else if (prompt) {
+        generateParams.prompt = prompt;
+      } else {
+        throw new Error("Either prompt or messages must be provided");
+      }
+
+      const result = await generateText(generateParams);
 
       return result.text;
     } catch (error) {
@@ -587,28 +674,51 @@ export class AIService {
     }
   }
 
-  async generateStructuredResponse<T>(
-    prompt: string,
-    schema: z.ZodSchema<T>,
-    systemPrompt?: string,
-    options: { model: string; temperature: number } = {
-      model: this.model,
-      temperature: 0.3,
-    }
-  ): Promise<T> {
+  async generateStructuredResponse<T>(params: {
+    prompt?: string;
+    messages?: Array<{
+      role: "user" | "assistant" | "system";
+      content: string;
+    }>;
+    schema: z.ZodSchema<T>;
+    systemPrompt?: string;
+    options?: { model: string; temperature: number };
+  }): Promise<T> {
+    const {
+      prompt,
+      messages,
+      schema,
+      systemPrompt,
+      options = { model: this.model, temperature: 0.3 },
+    } = params;
+
     try {
       logger.debug("Generating structured response with model:", this.model);
 
       const openrouter = this.getOpenRouterWithUserId();
-      const result = await generateObject({
-        model: openrouter.chat(options.model),
-        prompt,
-        schema,
-        system: systemPrompt,
-        temperature: options.temperature,
-      });
 
-      return result.object;
+      // Use either messages or prompt (messages takes precedence)
+      const generateParams: any = {
+        model: openrouter.chat(options.model),
+        schema,
+        temperature: options.temperature,
+      };
+
+      if (systemPrompt) {
+        generateParams.system = systemPrompt;
+      }
+
+      if (messages) {
+        generateParams.messages = messages;
+      } else if (prompt) {
+        generateParams.prompt = prompt;
+      } else {
+        throw new Error("Either prompt or messages must be provided");
+      }
+
+      const result = await generateObject(generateParams);
+
+      return result.object as T;
     } catch (error) {
       logger.error("Error generating structured response:", error);
       throw new Error(`Structured response generation failed: ${error}`);
@@ -655,7 +765,11 @@ export class AIService {
       `- Use today's date if no date is mentioned` +
       `- Set confidence based on clarity of the information`;
 
-    return this.generateStructuredResponse(message, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt: message,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Metrics extraction from text
@@ -696,7 +810,11 @@ export class AIService {
       `- Common metrics: mood, energy, sleep, stress, focus, productivity` +
       `- Set confidence based on clarity of the sentiment`;
 
-    return this.generateStructuredResponse(message, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt: message,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Plan creation from user goals with AI response
@@ -755,7 +873,11 @@ export class AIService {
       `- Generate an encouraging AI response that references the specific plan you created` +
       `- Make the response personal and motivating`;
 
-    return this.generateStructuredResponse(goals, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt: goals,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Plan creation from user goals (separate method for backwards compatibility)
@@ -810,7 +932,11 @@ export class AIService {
       `- Focus on sustainable habits` +
       `- Duration should be appropriate for the goal complexity`;
 
-    return this.generateStructuredResponse(goals, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt: goals,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Generate motivational messages
@@ -833,7 +959,10 @@ export class AIService {
       `` +
       `Generate a motivational message for this user.`;
 
-    return this.generateText(prompt, systemPrompt);
+    return this.generateText({
+      prompt,
+      systemPrompt,
+    });
   }
 
   // Method to inject plansService after initialization to avoid circular dependency
@@ -955,7 +1084,11 @@ export class AIService {
       `- 'Reading' measured in 'pages' or 'minutes'\n` +
       `- 'Running' measured in 'kilometers' or 'minutes'\n` +
       `- 'Gym' measured in 'minutes' or 'sessions'\n`;
-    return this.generateStructuredResponse(message, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt: message,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Check if conversation answers specific questions
@@ -1002,7 +1135,11 @@ export class AIService {
       `` +
       `Analyze whether the conversation contains information to answer each question.`;
 
-    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt,
+      schema,
+      systemPrompt,
+    });
   }
 
   // Paraphrase user goal with emoji
@@ -1027,7 +1164,11 @@ export class AIService {
 
     const prompt = `Paraphrase my goal: '${goal}'`;
 
-    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt,
+      schema,
+      systemPrompt,
+    });
   }
 
   async generateCoachMessage(
@@ -1075,7 +1216,11 @@ export class AIService {
 
     const prompt = `Generate a coaching notification for this user based on their current progress:\n\n${context}`;
 
-    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt,
+      schema,
+      systemPrompt,
+    });
   }
 
   /**
@@ -1128,7 +1273,11 @@ export class AIService {
 
     const prompt = `Generate a celebration message for this user who just completed an activity:\n\n${activityContext}`;
 
-    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+    return this.generateStructuredResponse({
+      prompt,
+      schema,
+      systemPrompt,
+    });
   }
 
   async generatePlanSessions(params: {
@@ -1303,11 +1452,11 @@ export class AIService {
       });
 
       // Use AI service to generate structured response
-      const response = await this.generateStructuredResponse(
-        userPrompt,
-        GenerateSessionsResponse,
-        systemPrompt
-      );
+      const response = await this.generateStructuredResponse({
+        prompt: userPrompt,
+        schema: GenerateSessionsResponse,
+        systemPrompt,
+      });
 
       logger.info("Generated sessions:", response);
 
