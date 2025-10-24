@@ -38,7 +38,6 @@ export const UserRecommendationCards: React.FC<
   const navigate = useNavigate();
   const { sendFriendRequest, isSendingFriendRequest, currentUser } =
     useCurrentUser();
-  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [selectedExplainer, setSelectedExplainer] = useState<string | null>(
     null
   );
@@ -64,7 +63,6 @@ export const UserRecommendationCards: React.FC<
   const handleSendFriendRequest = async (userId: string) => {
     try {
       await sendFriendRequest(userId);
-      setSentRequests((prev) => new Set(prev).add(userId));
     } catch (error) {
       console.error("Failed to send friend request:", error);
     }
@@ -81,10 +79,8 @@ export const UserRecommendationCards: React.FC<
       <div className="flex gap-3 pb-2 scrollbar-thin mt-3 overflow-x-auto -mx-4 px-4">
         {recommendations.map((rec) => {
           const connectionStatus = getConnectionStatus(rec.userId);
-          const hasSentRequest = sentRequests.has(rec.userId);
           const isDisabled =
             isSendingFriendRequest ||
-            hasSentRequest ||
             connectionStatus === "PENDING" ||
             connectionStatus === "ACCEPTED";
 
@@ -187,15 +183,14 @@ export const UserRecommendationCards: React.FC<
                   disabled={isDisabled}
                   className="p-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title={
-                    hasSentRequest || connectionStatus === "PENDING"
+                    connectionStatus === "PENDING"
                       ? "Request Sent"
                       : connectionStatus === "ACCEPTED"
                       ? "Friends"
                       : "Add Friend"
                   }
                 >
-                  {hasSentRequest ||
-                  connectionStatus === "PENDING" ||
+                  {connectionStatus === "PENDING" ||
                   connectionStatus === "ACCEPTED" ? (
                     <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
                   ) : (
