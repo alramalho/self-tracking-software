@@ -1,4 +1,5 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { CircleDashed } from "lucide-react";
 
 interface ReliabilityHelpPopoverProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export function ReliabilityHelpPopover({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-300" />
+            <CircleDashed className="w-3 h-3 text-gray-400" />
             <div className="flex-1">
               <div className="text-sm font-medium text-gray-500">Insufficient</div>
               <div className="text-xs text-muted-foreground">&lt;5 data points - not enough data</div>

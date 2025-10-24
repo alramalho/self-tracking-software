@@ -26,7 +26,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
       className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 aspect-square cursor-pointer transition-colors ${
         isSelected
           ? twMerge(variants.card.selected.border, variants.card.selected.bg)
-          : "border-border hover:bg-muted/50"
+          : "border-border bg-input hover:bg-input/50"
       } ${className}`}
     >
       <div className="relative w-full h-full flex flex-col items-start justify-center">

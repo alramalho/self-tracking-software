@@ -58,7 +58,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
           ))}
           <button
             onClick={() => setShowActivityEditor(true)}
-            className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-border aspect-square hover:bg-muted/50"
+            className="flex flex-col bg-input items-center justify-center p-4 rounded-lg border-2 border-dashed border-border aspect-square hover:bg-input/50"
           >
             <Plus className="h-8 w-8 text-muted-foreground mb-2" />
             <span className="text-sm font-medium text-muted-foreground">Add New</span>

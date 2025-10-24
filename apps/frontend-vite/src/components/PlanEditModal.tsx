@@ -1,7 +1,7 @@
 import { type CompletePlan } from "@/contexts/plans";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
-import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
+import ThreeOptionsDialogOrPopover from "./ThreeOptionsDialogOrPopover";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 
 interface PlanEditModalProps {
@@ -23,6 +23,8 @@ export function PlanEditModal({
 }: PlanEditModalProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const formRef = useRef<{ handleConfirm: () => Promise<void> }>(null);
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
@@ -40,13 +42,26 @@ export function PlanEditModal({
 
   const handleSuccess = () => {
     setHasUnsavedChanges(false);
+    setIsSaving(false);
     onSuccess?.();
+  };
+
+  const handleSaveAndClose = async () => {
+    setIsSaving(true);
+    try {
+      await formRef.current?.handleConfirm();
+      // handleSuccess will be called by the form's onSuccess callback
+      setShowUnsavedChangesConfirm(false);
+      onClose();
+    } catch (error) {
+      console.error("Failed to save:", error);
+      setIsSaving(false);
+    }
   };
 
   return (
     <>
       <AppleLikePopover
-        className={"bg-muted"}
         open={isOpen}
         onClose={handleClose}
         title="Edit Plan"
@@ -63,6 +78,7 @@ export function PlanEditModal({
           </p>
         </div>
         <PlanConfigurationForm
+          ref={formRef}
           isEdit={true}
           plan={plan}
           title={plan.goal}
@@ -74,15 +90,17 @@ export function PlanEditModal({
         />
       </AppleLikePopover>
 
-      <ConfirmDialogOrPopover
+      <ThreeOptionsDialogOrPopover
         isOpen={showUnsavedChangesConfirm}
         onClose={() => setShowUnsavedChangesConfirm(false)}
-        onConfirm={handleConfirmClose}
+        onDiscard={handleConfirmClose}
+        onSave={handleSaveAndClose}
         title="Unsaved Changes"
-        description="You have unsaved changes. Are you sure you want to close without saving? Your changes will be lost."
-        confirmText="Discard Changes"
+        description="You have unsaved changes. What would you like to do?"
+        saveText="Save Changes"
+        discardText="Discard Changes"
         cancelText="Keep Editing"
-        variant="destructive"
+        isSaving={isSaving}
       />
     </>
   );

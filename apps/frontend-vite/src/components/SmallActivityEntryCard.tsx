@@ -60,8 +60,8 @@ export const SmallActivityEntryCard = ({
       <div
         key={`${entry.date}-${entry.activityId}`}
         className={cn(
-          `relative flex flex-col items-center justify-center rounded-lg bg-muted p-2 transition-all duration-200 ${
-            onClick ? "cursor-pointer bg-muted hover:bg-muted/80" : ""
+          `relative flex flex-col items-center justify-center rounded-lg bg-input p-2 transition-all duration-200 ${
+            onClick ? "cursor-pointer bg-input hover:bg-input/80" : ""
           } ${selected ? "ring-2 ring-border ring-offset-2" : ""}`,
           className
         )}

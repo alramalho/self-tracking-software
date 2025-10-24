@@ -96,7 +96,7 @@ function LogPage() {
             ))}
             <button
               onClick={handleAddActivity}
-              className="flex flex-col items-left bg-muted justify-center p-6 rounded-lg border-2 border-dashed border-border aspect-square hover:bg-muted/80"
+              className="flex flex-col items-left bg-input justify-center p-6 rounded-lg border-2 border-dashed border-border aspect-square hover:bg-input/80"
             >
               <Plus className="h-8 w-8 text-muted-foreground mb-2" />
               <span className="text-xl font-medium text-left text-muted-foreground">

@@ -7,7 +7,7 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { type Activity, PlanOutlineType, Visibility } from "@tsw/prisma";
 import { type PlanMilestone } from "@tsw/prisma/types";
 import { ArrowRight, Lock, Loader2, MoveRight, Target } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Divider from "../Divider";
 import Step from "./Step";
@@ -34,7 +34,11 @@ interface PlanConfigurationFormProps {
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
 }
 
-const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
+export interface PlanConfigurationFormRef {
+  handleConfirm: () => Promise<void>;
+}
+
+const PlanConfigurationForm = forwardRef<PlanConfigurationFormRef, PlanConfigurationFormProps>(({
   plan,
   onSuccess,
   onClose,
@@ -42,7 +46,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   isEdit = false,
   scrollToMilestones = false,
   onUnsavedChangesChange,
-}) => {
+}, ref) => {
   const { currentUser } = useCurrentUser();
   const { activities } = useActivities();
   const { upsertPlan, isUpsertingPlan, plans, uploadPlanBackgroundImage } = usePlans();
@@ -493,6 +497,13 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     return true;
   }, [visibility, goal, selectedEmoji, selectedActivities.length, outlineType]);
 
+  // Expose handleConfirm method to parent via ref
+  useImperativeHandle(ref, () => ({
+    handleConfirm: async () => {
+      await handleConfirm();
+    }
+  }), [handleConfirm]);
+
   useEffect(() => {
     if (scrollToMilestones && isEdit) {
       const milestonesStep = isUserPremium ? stepRefs.step9 : stepRefs.step8;
@@ -816,6 +827,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       />
     </div>
   );
-};
+});
+
+PlanConfigurationForm.displayName = "PlanConfigurationForm";
 
 export default PlanConfigurationForm;

@@ -38,7 +38,7 @@ export function DatePicker({
       min={minDate}
       max={maxDate}
       className={cn(
-        "w-full p-2 border rounded-md",
+        "w-full p-2 border rounded-md bg-input ",
         className
       )}
     />

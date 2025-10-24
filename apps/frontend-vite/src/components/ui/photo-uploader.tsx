@@ -138,12 +138,12 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     : currentImageUrl;
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className} bg-input`}>
       <div
         className={`border-2 border-dashed border-muted-foreground rounded-lg text-center w-full min-h-32 ${
           isProcessing || disabled
             ? "opacity-50 cursor-not-allowed"
-            : "cursor-pointer hover:bg-muted/50"
+            : "cursor-pointer hover:bg-input/50"
         } flex items-center justify-center overflow-hidden`}
         onClick={() =>
           !isProcessing &&
