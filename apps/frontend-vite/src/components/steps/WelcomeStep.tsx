@@ -166,7 +166,7 @@ const WelcomeStep = () => {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-1">
           <img
-            src="/icons/icon-transparent.png"
+            src="/icons/target-icon-transparent.png"
             alt="Tracking Software Logo"
             className="w-32 h-32 mx-auto"
           />

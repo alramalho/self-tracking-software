@@ -4,10 +4,11 @@ import { type CompletePlan } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import useConfetti from "@/hooks/useConfetti";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity } from "@tsw/prisma";
 import { usePostHog } from "posthog-js/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
 import { OnboardingContext, type OnboardingContextValue, type OnboardingState, type OnboardingStep } from "./types";
@@ -25,6 +26,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 }) => {
   const { updateUser, refetchCurrentUser } = useCurrentUser();
   const { sideCannons } = useConfetti();
+  const { isPushGranted } = useNotifications();
   const [onboardingState, setOnboardingState] = useLocalStorage<OnboardingState>(
     "onboarding-state",
     {
@@ -40,6 +42,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planId: uuidv4(),
       partnerType: null as "human" | "ai" | null,
       planTimesPerWeek: 3 as number,
+      isPushGranted: false,
     }
   );
   const {
@@ -58,6 +61,16 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   } = onboardingState;
 
   const navigate = useNavigate();
+
+  // Sync isPushGranted from useNotifications hook to onboarding state
+  useEffect(() => {
+    if (onboardingState.isPushGranted !== isPushGranted) {
+      setOnboardingState((prevState) => ({
+        ...prevState,
+        isPushGranted,
+      }));
+    }
+  }, [isPushGranted]);
 
   const setCurrentStep = (stepId: string) => {
     setOnboardingState({ ...onboardingState, currentStep: stepId });
@@ -103,19 +116,31 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   const progress =
     totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
 
+  const resolveStepNavigation = useCallback((navigation: string | ((state: OnboardingState) => string | undefined) | undefined): string | undefined => {
+    if (typeof navigation === 'function') {
+      return navigation(onboardingState);
+    }
+    return navigation;
+  }, [onboardingState]);
+
   const hasNextStep = useMemo(() => {
     const currentStepData = steps.find((step) => step.id === currentStep);
+    const resolvedNext = resolveStepNavigation(currentStepData?.next);
     return (
-      currentStepData?.next != undefined || currentStepIndex < totalSteps - 1
+      resolvedNext != undefined || currentStepIndex < totalSteps - 1
     );
-  }, [currentStepIndex, totalSteps]);
+  }, [currentStepIndex, totalSteps, currentStep, steps, resolveStepNavigation]);
+
   const nextStep = useCallback(() => {
     const currentStepData = steps.find((step) => step.id === currentStep);
 
     // Check if current step has a custom next step defined
     if (currentStepData?.next) {
-      setCurrentStep(currentStepData.next);
-      return;
+      const resolvedNext = resolveStepNavigation(currentStepData.next);
+      if (resolvedNext) {
+        setCurrentStep(resolvedNext);
+        return;
+      }
     }
 
     // Default behavior: go to next sequential step
@@ -126,7 +151,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         setCurrentStep(nextStepId);
       }
     }
-  }, [currentStep, totalSteps, steps]);
+  }, [currentStep, totalSteps, steps, resolveStepNavigation]);
 
   const prevStep = useCallback(() => {
     const currentStepData = steps.find((step) => step.id === currentStep);
@@ -138,8 +163,11 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
     // Check if current step has a custom previous step defined
     if (currentStepData?.previous) {
-      setCurrentStep(currentStepData.previous);
-      return;
+      const resolvedPrevious = resolveStepNavigation(currentStepData.previous);
+      if (resolvedPrevious) {
+        setCurrentStep(resolvedPrevious);
+        return;
+      }
     }
 
     // Default behavior: go to previous sequential step
@@ -153,7 +181,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         setCurrentStep(prevStepId);
       }
     }
-  }, [currentStep, steps]);
+  }, [currentStep, steps, resolveStepNavigation]);
 
   const goToStep = useCallback(
     (stepId: string) => {
@@ -209,7 +237,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
           // Priority 2: Check if the completed step has a custom next step defined
           const completedStepData = steps.find((step) => step.id === stepId);
           if (completedStepData?.next) {
-            newState.currentStep = completedStepData.next;
+            const resolvedNext = typeof completedStepData.next === 'function'
+              ? completedStepData.next(newState)
+              : completedStepData.next;
+            if (resolvedNext) {
+              newState.currentStep = resolvedNext;
+            }
           } else {
             // Priority 3: Default behavior - go to next sequential step
             const currentStepIndex = steps.findIndex(

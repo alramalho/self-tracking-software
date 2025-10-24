@@ -11,16 +11,96 @@ import PlanProgressInitiator from "@/components/steps/PlanProgressInitiator";
 import { PlanTypeSelector } from "@/components/steps/PlanTypeSelector";
 import WelcomeStep from "@/components/steps/WelcomeStep";
 import { OnboardingProvider } from "@/contexts/onboarding/provider";
-import { type OnboardingStep } from "@/contexts/onboarding/types";
+import { type OnboardingStep, type OnboardingState } from "@/contexts/onboarding/types";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
-import { useNotifications } from "@/hooks/useNotifications";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
+
+/**
+ * Defines the onboarding step flow with dynamic navigation based on state.
+ * ALL navigation logic is centralized here - components should only call completeStep
+ * with state updates, and this function determines the next/previous steps.
+ */
+const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
+  {
+    id: "welcome",
+    component: WelcomeStep,
+  },
+  {
+    id: "plan-goal-setter",
+    component: PlanGoalSetter,
+  },
+  {
+    id: "plan-type-selector",
+    component: PlanTypeSelector,
+  },
+  {
+    id: "plan-activity-selector",
+    component: PlanActivitySetter,
+  },
+  {
+    id: "plan-progress-initiator",
+    component: PlanProgressInitiator,
+    next: (state) => {
+      if (state.planType === "TIMES_PER_WEEK") return "partner-selection";
+      return "plan-generator";
+    },
+  },
+  {
+    id: "plan-generator",
+    component: PlanGenerator,
+    next: "partner-selection",
+  },
+  {
+    id: "partner-selection",
+    component: PartnerTypeSelector,
+    next: (state) => {
+      // If notifications already granted, skip notifications step
+      if (state.isPushGranted) {
+        if (state.partnerType === "human") return "human-partner-finder";
+        if (state.partnerType === "ai") return "ai-partner-finder";
+      }
+      // Otherwise, go to notifications first
+      return "notifications-selector";
+    },
+    previous: (state) => {
+      if (state.planType === "TIMES_PER_WEEK") return "plan-progress-initiator";
+      return "plan-generator";
+    },
+  },
+  {
+    id: "notifications-selector",
+    component: NotificationsSelector,
+    next: (state) => {
+      if (state.partnerType === "human") return "human-partner-finder";
+      if (state.partnerType === "ai") return "ai-partner-finder";
+      return undefined;
+    },
+    previous: "partner-selection",
+  },
+  {
+    id: "human-partner-finder",
+    component: HumanPartnerFinder,
+    previous: (state) => {
+      // Go back to notifications if we came through that path
+      if (!state.isPushGranted) return "notifications-selector";
+      return "partner-selection";
+    },
+  },
+  {
+    id: "ai-partner-finder",
+    component: AIPartnerFinder,
+    previous: (state) => {
+      if (!state.isPushGranted) return "notifications-selector";
+      return "partner-selection";
+    },
+  },
+];
 
 const OnboardingStepRenderer = () => {
   const {
@@ -59,57 +139,25 @@ const OnboardingStepRenderer = () => {
 
 // Main onboarding page
 function OnboardingPage() {
-  const { isPushGranted } = useNotifications();
-
-  // Define your onboarding steps
-  const onboardingSteps: OnboardingStep[] = [
-    {
-      id: "welcome",
-      component: WelcomeStep,
-    },
-    {
-      id: "plan-goal-setter",
-      component: PlanGoalSetter,
-    },
-    {
-      id: "plan-type-selector",
-      component: PlanTypeSelector,
-    },
-    {
-      id: "plan-activity-selector",
-      component: PlanActivitySetter,
-    },
-    {
-      id: "plan-progress-initiator",
-      component: PlanProgressInitiator,
-    },
-    {
-      id: "plan-generator",
-      component: PlanGenerator,
-    },
-    {
-      id: "partner-selection",
-      component: PartnerTypeSelector,
-      previous: "plan-progress-initiator",
-    },
-    {
-      id: "notifications-selector",
-      component: NotificationsSelector,
-    },
-    {
-      id: "human-partner-finder",
-      component: HumanPartnerFinder,
-      previous: "partner-selection",
-    },
-    {
-      id: "ai-partner-finder",
-      component: AIPartnerFinder,
-      previous: "partner-selection",
-    },
-  ];
+  // Initialize with empty state - steps will be generated dynamically by the provider
+  const initialSteps = getOnboardingSteps({
+    currentStep: "welcome",
+    completedSteps: [],
+    plans: null,
+    selectedPlan: null,
+    planGoal: null,
+    planEmoji: null,
+    planActivities: [],
+    planProgress: null,
+    planType: null,
+    planId: "",
+    partnerType: null,
+    planTimesPerWeek: 3,
+    isPushGranted: false,
+  });
 
   return (
-    <OnboardingProvider steps={onboardingSteps}>
+    <OnboardingProvider steps={initialSteps}>
       <OnboardingStepRenderer />
     </OnboardingProvider>
   );
