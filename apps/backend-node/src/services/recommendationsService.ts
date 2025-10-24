@@ -210,7 +210,12 @@ export class RecommendationsService {
       logger.info(`Computing recommendations for user ${currentUserId}`);
 
       // Delete existing recommendations for this user
-      await this.deleteAllRecommendationsForUser(currentUserId);
+      // If specificPlan is provided, only delete recommendations for that plan
+      if (specificPlan) {
+        await this.deleteRecommendationsForPlan(currentUserId, specificPlan.id);
+      } else {
+        await this.deleteAllRecommendationsForUser(currentUserId);
+      }
 
       // Get current user
       const currentUser = await userService.getUserById(currentUserId);
@@ -548,6 +553,27 @@ export class RecommendationsService {
       logger.info(`Deleted all recommendations for user ${userId}`);
     } catch (error) {
       logger.error(`Error deleting recommendations for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete recommendations for a specific plan
+   */
+  async deleteRecommendationsForPlan(userId: string, planId: string): Promise<void> {
+    try {
+      await prisma.recommendation.deleteMany({
+        where: {
+          userId,
+          metadata: {
+            path: ["relativeToPlanId"],
+            equals: planId,
+          },
+        },
+      });
+      logger.info(`Deleted recommendations for user ${userId} relative to plan ${planId}`);
+    } catch (error) {
+      logger.error(`Error deleting recommendations for user ${userId} and plan ${planId}:`, error);
       throw error;
     }
   }
