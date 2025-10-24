@@ -267,13 +267,21 @@ async function extractGuidelinesAndEmoji(
       emoji: z.string(),
     });
 
-    const result = await aiService.generateStructuredResponse(
+    const result = await aiService.generateStructuredResponse({
       prompt,
       schema,
-      systemPrompt
-    );
+      systemPrompt,
+    });
     logger.debug("Guidelines and emoji:", result);
-    return result;
+    return result as {
+      guidelines: string;
+      timeframes: {
+        weeks: number;
+        sessions_per_week: string;
+        intensity: "relaxed" | "intense";
+      }[];
+      emoji: string;
+    };
   } catch (error) {
     logger.error("Error extracting guidelines and emoji:", error);
     // Fallback to defaults if AI fails

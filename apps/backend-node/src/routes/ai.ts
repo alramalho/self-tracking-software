@@ -564,27 +564,6 @@ router.post(
         orderBy: [{ createdAt: "desc" }],
       });
 
-      // Build context for AI
-      let plansContext = "";
-      if (plans.length > 0) {
-        plansContext =
-          "\n\nUser's current plans:\n" +
-          plans
-            .map((p) => {
-              const activities = p.activities.map((a) => a.title).join(", ");
-              return `- Goal: "${p.goal}" (ID '${p.id}') / Activities: ${activities}`;
-            })
-            .join("\n");
-      }
-
-      let metricsContext = "";
-      if (metrics.length > 0) {
-        metricsContext =
-          "\n\nUser's tracked metrics:\n" +
-          metrics.map((m) => `- ${m.emoji} ${m.title}`).join("\n");
-      }
-
-      // Build conversation history
       const conversationHistory = history.map((msg) => ({
         role: msg.role === "USER" ? "user" : "assistant",
         content: msg.content,
@@ -634,10 +613,10 @@ router.post(
               "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
               "The title should be clear and concise. Only output the title, nothing else.";
 
-            const generatedTitle = await aiService.generateText(
-              titlePrompt,
-              titleSystemPrompt
-            );
+            const generatedTitle = await aiService.generateText({
+              prompt: titlePrompt,
+              systemPrompt: titleSystemPrompt,
+            });
 
             // Update chat with the generated title
             await prisma.chat.update({
@@ -880,14 +859,14 @@ User sentiment: ${sentimentLabel}
 
 Make it more polished and compelling while keeping the user's authentic voice and sentiment. Keep it concise and natural.`;
 
-      const rewrittenMessage = await aiService.generateText(
+      const rewrittenMessage = await aiService.generateText({
         prompt,
         systemPrompt,
-        {
+        options: {
           model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
           temperature: 0.7,
-        }
-      );
+        },
+      });
 
       // Remove leading and trailing quotes if present
       const cleanedMessage = rewrittenMessage
