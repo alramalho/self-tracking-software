@@ -29,7 +29,6 @@ const PlanProgressInitiator = () => {
   const [text, setText] = useState<string>(planProgress ?? "");
 
   const handleComplete = async (progress: string) => {
-    let nextStep;
     if (planType === "TIMES_PER_WEEK") {
       await Promise.all(
         planActivities.map((activity) =>
@@ -52,17 +51,11 @@ const PlanProgressInitiator = () => {
           timesPerWeek: planTimesPerWeek,
         },
       });
-      nextStep = "partner-selection";
     }
-    completeStep(
-      "plan-progress-initiator",
-      {
-        planProgress: progress,
-      },
-      {
-        nextStep: nextStep,
-      }
-    );
+    // Navigation logic is handled by getOnboardingSteps in onboarding.tsx
+    completeStep("plan-progress-initiator", {
+      planProgress: progress,
+    });
   };
 
   return (

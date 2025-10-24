@@ -26,8 +26,9 @@ const NotificationsSelector = () => {
     }, 100);
 
     // Complete the step after 2 seconds
+    // Navigation logic is handled by getOnboardingSteps in onboarding.tsx
     setTimeout(() => {
-      completeStep("notifications-selector", {}, {nextStep: `${partnerType}-partner-finder`});
+      completeStep("notifications-selector");
     }, 2000);
   };
 

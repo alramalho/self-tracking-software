@@ -5,8 +5,8 @@ import type { CompletePlan } from "../plans";
 export interface OnboardingStep {
   id: string;
   component: React.ComponentType;
-  next?: string;
-  previous?: string;
+  next?: string | ((state: OnboardingState) => string | undefined);
+  previous?: string | ((state: OnboardingState) => string | undefined);
 }
 
 export interface OnboardingContextValue {
@@ -63,4 +63,5 @@ export interface OnboardingState {
   planId: string;
   partnerType: "human" | "ai" | null;
   planTimesPerWeek: number;
+  isPushGranted: boolean;
 }

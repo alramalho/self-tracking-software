@@ -61,15 +61,11 @@ const OptionCard = ({
 
 const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
-  const { isPushGranted } = useNotifications();
   const { isDarkMode } = useTheme();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
-    completeStep(
-      "partner-selection",
-      { partnerType: selectedType },
-      { nextStep: isPushGranted ? `${selectedType}-partner-finder` : "notifications-selector" }
-    );
+    // Navigation logic is handled by getOnboardingSteps in onboarding.tsx
+    completeStep("partner-selection", { partnerType: selectedType });
   };
 
   return (
