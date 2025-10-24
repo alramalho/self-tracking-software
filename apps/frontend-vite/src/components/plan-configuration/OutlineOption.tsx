@@ -26,7 +26,7 @@ export const OutlineOption = ({
         "relative p-4 rounded-lg border-2 transition-all w-full text-left",
         selected
           ? cn(variants.card.selected.border, variants.card.selected.bg)
-          : "border-border bg-card"
+          : "border-border bg-input"
       )}
     >
       <h3 className="font-medium">{title}</h3>

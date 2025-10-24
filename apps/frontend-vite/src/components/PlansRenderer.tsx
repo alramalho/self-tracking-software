@@ -10,7 +10,7 @@ import { addMonths, isBefore } from "date-fns";
 import { BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -304,16 +304,31 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
-        {displayedPlans.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            isSelected={selectedPlanId === plan.id}
-            onSelect={handlePlanSelect}
-            onExpiredPlanClick={handleExpiredPlanClick}
-            isCoached={plan.isCoached}
-          />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {displayedPlans.map((plan, index) => (
+            <motion.div
+              key={plan.id}
+              layout
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{
+                layout: { type: "spring", stiffness: 350, damping: 25 },
+                opacity: { duration: 0.2 },
+                scale: { duration: 0.2 },
+                delay: isPlanExpired(plan) && !showOldPlans ? 0 : index * 0.03
+              }}
+            >
+              <PlanCard
+                plan={plan}
+                isSelected={selectedPlanId === plan.id}
+                onSelect={handlePlanSelect}
+                onExpiredPlanClick={handleExpiredPlanClick}
+                isCoached={plan.isCoached}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
         <Button
           variant="outline"
           className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"

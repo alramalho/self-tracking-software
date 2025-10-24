@@ -17,10 +17,11 @@
   /* Colors */
   --color-border: hsl(240 5.9% 90%);
   --color-input: hsl(240 5.9% 90%);
+  --color-input-border: hsl(240 5.9% 87%);
   --color-ring: hsl(240 10% 3.9%);
   --color-background: hsl(0 0% 95%);
   --color-foreground: hsl(240 10% 3.9%);
-  --color-card: hsl(0 0% 100%);
+  --color-card: hsl(0 0% 96%);
   --color-card-foreground: hsl(240 10% 3.9%);
   --color-popover: hsl(0 0% 100%);
   --color-popover-foreground: hsl(240 10% 3.9%);
@@ -120,7 +121,8 @@
   --color-destructive: hsl(0 62.8% 30.6%);
   --color-destructive-foreground: hsl(0 0% 98%);
   --color-border: hsl(0 0% 10.29%);
-  --color-input: hsl(240 3.7% 15.9%);
+  --color-input: hsl(240 3.7% 15.9%); 
+  --color-input-border: hsl(240 3.7% 18.9%);
   --color-ring: hsl(240 4.9% 83.9%);
   --color-chart-1: hsl(220 70% 50%);
   --color-chart-2: hsl(160 60% 45%);

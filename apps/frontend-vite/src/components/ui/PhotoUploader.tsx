@@ -138,7 +138,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`border-2 border-dashed border-border rounded-lg text-center w-full min-h-32 ${
+        className={`border-2 border-dashed border-border bg-input rounded-lg text-center w-full min-h-32 ${
           isProcessing || disabled
             ? "opacity-50 cursor-not-allowed"
             : "cursor-pointer hover:bg-muted/50"

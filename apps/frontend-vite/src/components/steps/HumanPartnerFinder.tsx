@@ -37,14 +37,14 @@ const OptionCard = ({
       onClick={onClick}
       className={`w-full p-5 rounded-xl border-2 transition-all duration-200 text-left ${
         isSelected
-          ? "border-blue-500 bg-blue-50 shadow-md"
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md"
           : "border-border bg-card hover:bg-muted/50"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-            isSelected ? "bg-blue-100" : "bg-muted"
+            isSelected ? "bg-blue-100 dark:bg-blue-800" : "bg-muted"
           }`}
         >
           {icon}
@@ -52,14 +52,14 @@ const OptionCard = ({
         <div className="flex-1">
           <h3
             className={`text-md font-semibold ${
-              isSelected ? "text-blue-900" : "text-foreground"
+              isSelected ? "text-blue-900 dark:text-blue-100" : "text-foreground"
             }`}
           >
             {title}
           </h3>
           <p
             className={`text-xs mt-1 ${
-              isSelected ? "text-blue-700" : "text-muted-foreground"
+              isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
             }`}
           >
             {description}

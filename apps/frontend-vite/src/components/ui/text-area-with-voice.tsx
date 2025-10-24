@@ -97,7 +97,7 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   };
 
   return (
-    <div className="space-y-2 bg-card">
+    <div className="space-y-2">
       {label && (
         <label className="text-sm font-medium text-foreground">
           <span>{label}</span>

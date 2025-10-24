@@ -25,7 +25,7 @@ const VisibilityOption = ({
   <button
     type="button"
     onClick={onSelect}
-    className={`p-4 rounded-lg border-2 transition-all text-left ${
+    className={`bg-input p-4 rounded-lg border-2 transition-all text-left ${
       isSelected
         ? "border-primary bg-primary/5"
         : "border-border hover:border-primary/50"
