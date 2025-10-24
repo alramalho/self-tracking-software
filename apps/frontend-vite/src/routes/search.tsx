@@ -133,7 +133,7 @@ function SearchPage() {
         }
         className="!h-fit"
       >
-        <div className="container mx-auto py-4 px-4 max-w-3xl space-y-6">
+        <div className="container mx-auto pt-4 px-4 max-w-3xl">
           {/* Search Section */}
           <UserSearch onUserClick={handleUserClick} />
 
@@ -184,9 +184,7 @@ function SearchPage() {
               </div>
             </div>
           ) : (
-            <div className="mt-4">
-              <CollapsibleSelfUserCard />
-            </div>
+            <></>
           )}
         </div>
       </PullToRefresh>

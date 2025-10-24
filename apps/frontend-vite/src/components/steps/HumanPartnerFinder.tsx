@@ -231,7 +231,6 @@ const HumanPartnerFinder = () => {
           </div>
         ) : (
           <div className="space-y-6 mt-4">
-            <CollapsibleSelfUserCard />
             <RecommendedUsers selectedPlanId={planId} />
           </div>
         )}

@@ -156,6 +156,7 @@ export class AIService {
         planEmoji: string | null;
         score: number;
         matchReasons: string[];
+        relativeToPlan: { id: string; goal: string; emoji: string | null } | null;
       }>;
     };
   }> {
@@ -286,8 +287,8 @@ export class AIService {
       );
 
       // Map AI-selected user IDs to actual recommendation objects with full metadata
-      const userRecommendations = aiResponse.recommendedUserIds
-        .map((userId) => {
+      const userRecommendations = await Promise.all(
+        aiResponse.recommendedUserIds.map(async (userId) => {
           const recommendation = topRecommendations.find(
             (r) => r.recommendationObjectId === userId
           );
@@ -322,6 +323,19 @@ export class AIService {
             matchReasons.push("Overall compatibility");
           }
 
+          // Get the current user's plan that triggered this recommendation
+          let relativeToPlan: { id: string; goal: string; emoji: string | null } | null = null;
+          if (metadata?.relativeToPlanId) {
+            const { prisma } = await import("../utils/prisma");
+            const userPlan = await prisma.plan.findUnique({
+              where: { id: metadata.relativeToPlanId },
+              select: { id: true, goal: true, emoji: true },
+            });
+            if (userPlan) {
+              relativeToPlan = userPlan;
+            }
+          }
+
           return {
             userId: recUser?.id || userId,
             username: recUser?.username || "Unknown",
@@ -331,6 +345,7 @@ export class AIService {
             planEmoji: primaryPlan?.emoji || null,
             score: recommendation.score,
             matchReasons,
+            relativeToPlan,
             metadata: metadata
               ? {
                   planSimScore: metadata.planSimScore,
@@ -343,7 +358,7 @@ export class AIService {
               : undefined,
           };
         })
-        .filter((r) => r !== null);
+      ).then((results) => results.filter((r) => r !== null));
 
       logger.info(
         `Generated user recommendation message for user ${user.username}: ${userRecommendations.length} recommendations`
@@ -368,14 +383,15 @@ export class AIService {
   async generatePlanMetricRecommendationMessage(
     conversationHistory: Array<{ role: string; content: string }>,
     plans: any[],
-    metrics: any[]
+    metrics: any[],
+    allowMetricExtraction: boolean = true
   ): Promise<{
     messageContent: string;
     planReplacements?: any[];
     metricReplacement?: any;
   }> {
-    // Define response schema (from current ai.ts lines 594-641)
-    const CoachResponseSchema = z.object({
+    // Define response schema (conditionally include metric extraction)
+    const schemaFields: any = {
       messageContent: z
         .string()
         .describe(
@@ -400,7 +416,11 @@ export class AIService {
           "Optional array of text replacements to create inline plan links in your message. Only include if you naturally mention plans."
         )
         .optional(),
-      metricReplacement: z
+    };
+
+    // Only include metricReplacement if metrics are loggable
+    if (allowMetricExtraction) {
+      schemaFields.metricReplacement = z
         .object({
           textToReplace: z
             .string()
@@ -421,8 +441,10 @@ export class AIService {
         .optional()
         .describe(
           "Optional metric suggestion to inline in your message. Only include after sufficient conversation (not in first 1-2 messages) when discussing activities or emotions. Critically evaluate the user's tone, word choice, and use of emotional punctuation (emojis, exclamation marks, interjections) before suggesting a rating."
-        ),
-    });
+        );
+    }
+
+    const CoachResponseSchema = z.object(schemaFields);
 
     // Build system prompt using BASE_PROMPT
     const plansContext = this.buildPlansContextString(plans);
@@ -459,7 +481,7 @@ export class AIService {
       conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
       "\nassistant:";
 
-    const aiResponse = await this.generateStructuredResponse(
+    const aiResponse = (await this.generateStructuredResponse(
       conversationPrompt,
       CoachResponseSchema,
       systemPrompt,
@@ -467,7 +489,11 @@ export class AIService {
         model: "x-ai/grok-2-vision-1212",
         temperature: 0.3,
       }
-    );
+    )) as {
+      messageContent: string;
+      planReplacements?: any[];
+      metricReplacement?: any;
+    };
 
     return aiResponse;
   }
@@ -482,6 +508,7 @@ export class AIService {
     conversationHistory: Array<{ role: string; content: string }>;
     plans: any[];
     metrics: any[];
+    allowMetricExtraction?: boolean;
   }): Promise<{
     messageContent: string;
     planReplacements?: any[];
@@ -495,9 +522,16 @@ export class AIService {
       planEmoji: string | null;
       score: number;
       matchReasons: string[];
+      relativeToPlan: { id: string; goal: string; emoji: string | null } | null;
     }>;
   }> {
-    const { user, conversationHistory, plans, metrics } = params;
+    const {
+      user,
+      conversationHistory,
+      plans,
+      metrics,
+      allowMetricExtraction = true,
+    } = params;
 
     // Step 1: Try user recommendations first
     const userRecResult = await this.generateUserRecommendationMessage(
@@ -516,12 +550,13 @@ export class AIService {
 
     // Step 2: Fall back to plan/metric recommendations
     logger.info(
-      `User ${user.username} receiving plan/metric recommendations (no user recommendations available)`
+      `User ${user.username} receiving plan/metric recommendations (no user recommendations available, metric extraction: ${allowMetricExtraction})`
     );
     return await this.generatePlanMetricRecommendationMessage(
       conversationHistory,
       plans,
-      metrics
+      metrics,
+      allowMetricExtraction
     );
   }
 
