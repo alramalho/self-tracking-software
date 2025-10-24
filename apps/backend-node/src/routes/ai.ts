@@ -438,36 +438,14 @@ router.post(
         return res.status(404).json({ error: "Message not found" });
       }
 
-      // Create or update feedback in MessageFeedback table
-      const feedback = await prisma.messageFeedback.upsert({
-        where: {
-          messageId_userId: {
-            messageId: messageId,
-            userId: user.id,
-          },
-        },
-        create: {
-          messageId: messageId,
-          userId: user.id,
-          feedbackType: feedbackType,
-          feedbackReasons: feedbackReasons || [],
-          additionalComments: additionalComments || null,
-        },
-        update: {
-          feedbackType: feedbackType,
-          feedbackReasons: feedbackReasons || [],
-          additionalComments: additionalComments || null,
-        },
-      });
-
-      // Also store in unified Feedback table
-      await prisma.feedback.create({
+      // Create feedback in unified Feedback table
+      const feedback = await prisma.feedback.create({
         data: {
           userId: user.id,
+          messageId: messageId,
           category: "AI_MESSAGE_FEEDBACK",
           content: additionalComments || null,
           metadata: {
-            messageId: messageId,
             feedbackType: feedbackType,
             feedbackReasons: feedbackReasons || [],
             timestamp: new Date().toISOString(),

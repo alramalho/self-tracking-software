@@ -7,9 +7,11 @@ import { useState } from "react";
 interface MessageFeedbackProps {
   messageId: string;
   existingFeedback?: {
-    feedbackType: "POSITIVE" | "NEGATIVE";
-    feedbackReasons: string[];
-    additionalComments: string | null;
+    content: string | null; // additionalComments
+    metadata: {
+      feedbackType: "POSITIVE" | "NEGATIVE";
+      feedbackReasons: string[];
+    } | null;
   } | null;
   onSubmitFeedback: (data: {
     messageId: string;
@@ -76,8 +78,8 @@ export const MessageFeedback: React.FC<MessageFeedbackProps> = ({
     }
   };
 
-  const hasPositiveFeedback = existingFeedback?.feedbackType === "POSITIVE";
-  const hasNegativeFeedback = existingFeedback?.feedbackType === "NEGATIVE";
+  const hasPositiveFeedback = existingFeedback?.metadata?.feedbackType === "POSITIVE";
+  const hasNegativeFeedback = existingFeedback?.metadata?.feedbackType === "NEGATIVE";
 
   return (
     <>

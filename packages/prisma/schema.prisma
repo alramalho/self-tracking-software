@@ -77,7 +77,6 @@ model User {
   commentsSent            Comment[]
   coaches                 Coach[]
   chats                   Chat[]
-  messageFeedback         MessageFeedback[]
   feedback                Feedback[]
 
   // Connection relationships (replaces friend system)
@@ -440,7 +439,7 @@ model Message {
   chat     Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
   plan     Plan?             @relation(fields: [planId], references: [id], onDelete: Cascade)
   emotions MessageEmotion[]
-  feedback MessageFeedback[]
+  feedback Feedback[]
 
   @@index([chatId])
   @@index([planId])
@@ -463,30 +462,10 @@ model MessageEmotion {
   @@schema("public")
 }
 
-model MessageFeedback {
-  id                 String       @id @default(cuid())
-  messageId          String
-  userId             String
-  feedbackType       FeedbackType
-  feedbackReasons    String[]     @default([])
-  additionalComments String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-
-  // Relations
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([messageId, userId])
-  @@index([messageId])
-  @@index([userId])
-  @@map("message_feedback")
-  @@schema("public")
-}
-
 model Feedback {
   id        String           @id @default(cuid())
   userId    String
+  messageId String?
   category  FeedbackCategory
   content   String?
   imageUrls String[]         @default([])
@@ -495,9 +474,11 @@ model Feedback {
   updatedAt DateTime         @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([messageId])
   @@index([category])
   @@index([createdAt])
   @@map("feedback")

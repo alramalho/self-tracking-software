@@ -4,9 +4,13 @@ export interface MessageFeedback {
   id: string;
   messageId: string;
   userId: string;
-  feedbackType: "POSITIVE" | "NEGATIVE";
-  feedbackReasons: string[];
-  additionalComments: string | null;
+  category: string; // "AI_MESSAGE_FEEDBACK"
+  content: string | null; // additionalComments
+  metadata: {
+    feedbackType: "POSITIVE" | "NEGATIVE";
+    feedbackReasons: string[];
+    timestamp?: string;
+  } | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
