@@ -37,6 +37,10 @@ export class SESService {
     try {
       const recipients = Array.isArray(data.to) ? data.to : [data.to];
 
+      let subject = data.subject;
+      if (process.env.NODE_ENV !== "production") {
+        subject = `[DEV] ${subject}`;
+      }
       const command = new SendEmailCommand({
         Source: data.from || this.defaultFromEmail,
         Destination: {
@@ -44,7 +48,7 @@ export class SESService {
         },
         Message: {
           Subject: {
-            Data: data.subject,
+            Data: subject,
             Charset: "UTF-8",
           },
           Body: {
