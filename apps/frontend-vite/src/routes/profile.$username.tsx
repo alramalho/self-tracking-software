@@ -40,7 +40,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { motion, useInView } from "framer-motion";
 
-
 export const Route = createFileRoute("/profile/$username")({
   component: ProfilePage,
 });
@@ -92,7 +91,13 @@ function userifyPlansProgress(plansProgress: PlanProgressData[]): {
 }
 
 // Animated section component that fades in when scrolled into view
-const AnimatedSection = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+const AnimatedSection = ({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
@@ -347,56 +352,80 @@ function ProfilePage() {
           <div className="flex flex-col items-center">
             {/* Avatar with progress ring */}
             <div className="relative mb-4">
-            <ProgressRing
-              size={112}
-              strokeWidth={5}
-              atLeastBronze={accountLevel.atLeastBronze}
-              percentage={accountLevel.percentage}
-              currentLevel={accountLevel.currentLevel}
-              onClick={() => setProgressExplainerOpen(true)}
-            >
-              <Avatar className="w-24 h-24">
-                <AvatarImage
-                  src={profileData?.picture || ""}
-                  alt={profileData?.name || ""}
-                />
-                <AvatarFallback className="text-2xl">
-                  {(profileData?.name || "U")[0]}
-                </AvatarFallback>
-              </Avatar>
-            </ProgressRing>
-          </div>
+              <ProgressRing
+                size={112}
+                strokeWidth={5}
+                atLeastBronze={accountLevel.atLeastBronze}
+                percentage={accountLevel.percentage}
+                currentLevel={accountLevel.currentLevel}
+                onClick={() => setProgressExplainerOpen(true)}
+              >
+                <Avatar className="w-24 h-24">
+                  <AvatarImage
+                    src={profileData?.picture || ""}
+                    alt={profileData?.name || ""}
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {(profileData?.name || "U")[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </ProgressRing>
+            </div>
 
             {/* Name and username */}
             <h2 className="text-xl font-bold text-foreground">
               {profileData?.name}
             </h2>
-            <p className="text-muted-foreground text-sm mb-3">@{profileData?.username}</p>
+            <p className="text-muted-foreground text-sm mb-3">
+              @{profileData?.username}
+            </p>
           </div>
         </AnimatedSection>
 
         <AnimatedSection delay={0.15}>
           <div className="flex flex-col items-center">
             {/* TikTok-style stats */}
-            <div className="flex justify-center space-x-8 mb-6">
-            <Link
-              to={`/friends/$username`}
-              params={{ username: profileData?.username || "" }}
-            >
-              <div className="text-center cursor-pointer">
-                <p className="text-xl font-bold text-foreground">
-                  {friends?.length || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Friends</p>
-              </div>
-            </Link>
+            <div className="flex items-center justify-center space-x-8 mb-6">
+              <Link
+                to={`/friends/$username`}
+                params={{ username: profileData?.username || "" }}
+              >
+                <div className="text-center cursor-pointer">
+                  <p className="text-xl font-bold text-foreground">
+                    {friends?.length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Friends</p>
+                </div>
+              </Link>
 
-            <div className="text-center">
-              <p className="text-xl font-bold text-foreground">
-                {profileData?.activityEntries?.length || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">Entries</p>
-            </div>
+              <div
+                className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setProgressExplainerOpen(true)}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xl font-bold text-foreground">
+                    {profileData?.activityEntries?.length || 0}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">Entries</p>
+              </div>
+
+              {accountLevel.currentLevel && (
+                <>
+                  <div className="flex flex-col items-center justify-center gap-1" onClick={() => setProgressExplainerOpen(true)}>
+                    {accountLevel.currentLevel.getIcon({
+                      size: 35,
+                      className: "drop-shadow-sm",
+                    })}
+                    <span
+                      className="text-sm px-1.5 py-0.5 rounded-full bg-transparentfont-semibold"
+                      style={{ color: accountLevel.currentLevel?.color }}
+                    >
+                      {accountLevel.currentLevel?.name}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </AnimatedSection>
@@ -405,70 +434,70 @@ function ProfilePage() {
           <div className="flex flex-col items-center">
             {/* Badges */}
             <div className="flex justify-center mb-6 gap-3">
-            <BadgeCard
-              count={totalStreaks}
-              width={70}
-              height={90}
-              onClick={() =>
-                setBadgeExplainer({
-                  open: true,
-                  planIds: planIds,
-                  badgeType: "streaks",
-                })
-              }
-            >
-              {isProfileDataLoading ? (
-                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-              ) : (
-                <>
-                  {totalStreaks == 0 ? (
-                    <Flame size={90} className="pb-2 text-red-500 mt-5" />
-                  ) : (
-                    <FireAnimation
-                      height={100}
-                      width={100}
-                      className="pb-2 w-full h-full"
-                    />
-                  )}
-                </>
-              )}
-            </BadgeCard>
-            <BadgeCard
-              count={totalHabits}
-              width={70}
-              height={90}
-              onClick={() =>
-                setBadgeExplainer({
-                  open: true,
-                  planIds: planIds,
-                  badgeType: "habits",
-                })
-              }
-            >
-              {isProfileDataLoading ? (
-                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-              ) : (
-                <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
-              )}
-            </BadgeCard>
-            <BadgeCard
-              count={totalLifestyles}
-              width={70}
-              height={90}
-              onClick={() =>
-                setBadgeExplainer({
-                  open: true,
-                  planIds: planIds,
-                  badgeType: "lifestyles",
-                })
-              }
-            >
-              {isProfileDataLoading ? (
-                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-              ) : (
-                <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
-              )}
-            </BadgeCard>
+              <BadgeCard
+                count={totalStreaks}
+                width={70}
+                height={90}
+                onClick={() =>
+                  setBadgeExplainer({
+                    open: true,
+                    planIds: planIds,
+                    badgeType: "streaks",
+                  })
+                }
+              >
+                {isProfileDataLoading ? (
+                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
+                ) : (
+                  <>
+                    {totalStreaks == 0 ? (
+                      <Flame size={90} className="pb-2 text-red-500 mt-5" />
+                    ) : (
+                      <FireAnimation
+                        height={100}
+                        width={100}
+                        className="pb-2 w-full h-full"
+                      />
+                    )}
+                  </>
+                )}
+              </BadgeCard>
+              <BadgeCard
+                count={totalHabits}
+                width={70}
+                height={90}
+                onClick={() =>
+                  setBadgeExplainer({
+                    open: true,
+                    planIds: planIds,
+                    badgeType: "habits",
+                  })
+                }
+              >
+                {isProfileDataLoading ? (
+                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
+                ) : (
+                  <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+                )}
+              </BadgeCard>
+              <BadgeCard
+                count={totalLifestyles}
+                width={70}
+                height={90}
+                onClick={() =>
+                  setBadgeExplainer({
+                    open: true,
+                    planIds: planIds,
+                    badgeType: "lifestyles",
+                  })
+                }
+              >
+                {isProfileDataLoading ? (
+                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
+                ) : (
+                  <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+                )}
+              </BadgeCard>
             </div>
           </div>
         </AnimatedSection>
@@ -477,57 +506,57 @@ function ProfilePage() {
           <div className="flex flex-col items-center">
             {/* Action buttons */}
             {!isOwnProfile && !isFriend && (
-            <>
-              {hasPendingReceivedConnectionRequest ? (
-                <div className="flex space-x-3 mb-6">
+              <>
+                {hasPendingReceivedConnectionRequest ? (
+                  <div className="flex space-x-3 mb-6">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-full"
+                      onClick={() =>
+                        acceptFriendRequest({
+                          id: profileData.id,
+                          username: profileData.username || "",
+                        })
+                      }
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="px-6 rounded-full"
+                      onClick={() =>
+                        rejectFriendRequest({
+                          id: profileData.id,
+                          username: profileData.username || "",
+                        })
+                      }
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Decline
+                    </Button>
+                  </div>
+                ) : (
                   <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-full"
-                    onClick={() =>
-                      acceptFriendRequest({
-                        id: profileData.id,
-                        username: profileData.username || "",
-                      })
-                    }
+                    className="mb-6 px-8 rounded-full bg-black text-white hover:bg-foreground/90"
+                    onClick={handleSendConnectionRequest}
+                    disabled={hasPendingSentConnectionRequest}
                   >
-                    <Check className="h-4 w-4 mr-1" />
-                    Accept
+                    {hasPendingSentConnectionRequest ? (
+                      <>
+                        <Check size={16} className="mr-2" />
+                        Request Sent
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={16} className="mr-2" />
+                        Add Friend
+                      </>
+                    )}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="px-6 rounded-full"
-                    onClick={() =>
-                      rejectFriendRequest({
-                        id: profileData.id,
-                        username: profileData.username || "",
-                      })
-                    }
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Decline
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  className="mb-6 px-8 rounded-full bg-black text-white hover:bg-foreground/90"
-                  onClick={handleSendConnectionRequest}
-                  disabled={hasPendingSentConnectionRequest}
-                >
-                  {hasPendingSentConnectionRequest ? (
-                    <>
-                      <Check size={16} className="mr-2" />
-                      Request Sent
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus size={16} className="mr-2" />
-                      Add Friend
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
+                )}
+              </>
             )}
           </div>
         </AnimatedSection>
@@ -535,138 +564,142 @@ function ProfilePage() {
         {/* Content */}
         <AnimatedSection delay={0.3}>
           <div className="p-4">
-          {/* Profile Settings Popover */}
-          {isOwnProfile && (
-            <ProfileSettingsPopover
-              open={showUserProfile}
-              onClose={() => setShowUserProfile(false)}
-              initialActiveView={initialActiveView as ActiveView | null}
-              redirectTo={redirectTo}
-            />
-          )}
+            {/* Profile Settings Popover */}
+            {isOwnProfile && (
+              <ProfileSettingsPopover
+                open={showUserProfile}
+                onClose={() => setShowUserProfile(false)}
+                initialActiveView={initialActiveView as ActiveView | null}
+                redirectTo={redirectTo}
+              />
+            )}
 
-          {/* Tabs */}
-          <Tabs defaultValue="plans" className="w-full mb-2">
-            <TabsList className="grid w-full h-13 grid-cols-2">
-              <TabsTrigger value="plans">
-                <div className="flex flex-row gap-2 py-[2px] items-center">
-                  <BarChart3 size={20} />
-                  <span>Plans</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <div className="flex flex-row gap-2 py-[2px] items-center">
-                  <History size={20} />
-                  <span>History</span>
-                </div>
-              </TabsTrigger>
-            </TabsList>
+            {/* Tabs */}
+            <Tabs defaultValue="plans" className="w-full mb-2">
+              <TabsList className="grid w-full h-13 grid-cols-2">
+                <TabsTrigger value="plans">
+                  <div className="flex flex-row gap-2 py-[2px] items-center">
+                    <BarChart3 size={20} />
+                    <span>Plans</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  <div className="flex flex-row gap-2 py-[2px] items-center">
+                    <History size={20} />
+                    <span>History</span>
+                  </div>
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="plans">
-              <div className="space-y-4 mt-4">
-                {profileActivePlans &&
-                  profileActivePlans.length > 0 &&
-                  [...profileActivePlans]
-                    .sort((a, b) => {
-                      // Coached plans always come first
-                      if (a.isCoached && !b.isCoached) return -1;
-                      if (!a.isCoached && b.isCoached) return 1;
+              <TabsContent value="plans">
+                <div className="space-y-4 mt-4">
+                  {profileActivePlans &&
+                    profileActivePlans.length > 0 &&
+                    [...profileActivePlans]
+                      .sort((a, b) => {
+                        // Coached plans always come first
+                        if (a.isCoached && !b.isCoached) return -1;
+                        if (!a.isCoached && b.isCoached) return 1;
 
-                      // If both are coached or both are not coached, sort by creation date
-                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    })
-                    .map((plan) => (
-                      <ProfilePlanCard
-                        key={plan.id}
-                        plan={plan as any}
-                        activities={activities}
-                        activityEntries={activityEntries}
-                        isOwnProfile={isOwnProfile}
-                        onBadgeClick={(badgeType) =>
-                          setBadgeExplainer({
-                            open: true,
-                            planIds: [plan.id],
-                            badgeType,
-                          })
-                        }
+                        // If both are coached or both are not coached, sort by creation date
+                        return (
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime()
+                        );
+                      })
+                      .map((plan) => (
+                        <ProfilePlanCard
+                          key={plan.id}
+                          plan={plan as any}
+                          activities={activities}
+                          activityEntries={activityEntries}
+                          isOwnProfile={isOwnProfile}
+                          onBadgeClick={(badgeType) =>
+                            setBadgeExplainer({
+                              open: true,
+                              planIds: [plan.id],
+                              badgeType,
+                            })
+                          }
+                        />
+                      ))}
+                  {(!profileActivePlans || profileActivePlans.length === 0) && (
+                    <div className="text-center text-muted-foreground py-8">
+                      {isOwnProfile
+                        ? "You haven't created any plans yet."
+                        : `${profileData?.name} hasn't got any public plans available.`}
+                    </div>
+                  )}
+                  {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (
+                    <>
+                      <Divider className="w-full" text="Activities 👇" />
+                      <ActivityGridRenderer
+                        activities={activitiesNotInPlans}
+                        activityEntries={activityEntries.filter((entry) =>
+                          activitiesNotInPlans
+                            .map((a) => a.id)
+                            .includes(entry.activityId)
+                        )}
+                        endDate={endDate}
                       />
-                    ))}
-                {(!profileActivePlans || profileActivePlans.length === 0) && (
+                    </>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="history">
+                {activityEntries?.length > 0 ? (
+                  <div className="space-y-4">
+                    {activityEntries
+                      .sort(
+                        (a, b) =>
+                          new Date(b.date).getTime() -
+                          new Date(a.date).getTime()
+                      )
+                      .map((entry) => {
+                        const activity = activities.find(
+                          (a) => a.id === entry.activityId
+                        );
+                        return (
+                          <ActivityEntryPhotoCard
+                            key={entry.id}
+                            activity={activity as any}
+                            activityEntry={entry as any}
+                            user={profileData as any}
+                            editable={isOwnProfile}
+                            onEditClick={() => {
+                              const activityToEdit = activityEntries.find(
+                                (e) => e.id === entry.id
+                              );
+                              if (activityToEdit) {
+                                setShowActivityToEdit(activityToEdit);
+                              } else {
+                                console.error(
+                                  `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
+                                );
+                                toast.error(
+                                  "Activity to edit not found! Please contact support"
+                                );
+                              }
+                            }}
+                            userPlansProgressData={profileData.plans.map(
+                              (plan) => plan.progress
+                            )}
+                          />
+                        );
+                      })}
+                  </div>
+                ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    {isOwnProfile
-                      ? "You haven't created any plans yet."
-                      : `${profileData?.name} hasn't got any public plans available.`}
+                    {activityEntries?.length === 0
+                      ? isOwnProfile
+                        ? "You haven't completed any activities yet."
+                        : `${profileData?.name} hasn't got any public activities.`
+                      : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
                   </div>
                 )}
-                {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (
-                  <>
-                    <Divider className="w-full" text="Activities 👇" />
-                    <ActivityGridRenderer
-                      activities={activitiesNotInPlans}
-                      activityEntries={activityEntries.filter((entry) =>
-                        activitiesNotInPlans
-                          .map((a) => a.id)
-                          .includes(entry.activityId)
-                      )}
-                      endDate={endDate}
-                    />
-                  </>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history">
-              {activityEntries?.length > 0 ? (
-                <div className="space-y-4">
-                  {activityEntries
-                    .sort(
-                      (a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
-                    )
-                    .map((entry) => {
-                      const activity = activities.find(
-                        (a) => a.id === entry.activityId
-                      );
-                      return (
-                        <ActivityEntryPhotoCard
-                          key={entry.id}
-                          activity={activity as any}
-                          activityEntry={entry as any}
-                          user={profileData as any}
-                          editable={isOwnProfile}
-                          onEditClick={() => {
-                            const activityToEdit = activityEntries.find(
-                              (e) => e.id === entry.id
-                            );
-                            if (activityToEdit) {
-                              setShowActivityToEdit(activityToEdit);
-                            } else {
-                              console.error(
-                                `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
-                              );
-                              toast.error(
-                                "Activity to edit not found! Please contact support"
-                              );
-                            }
-                          }}
-                          userPlansProgressData={profileData.plans.map(
-                            (plan) => plan.progress
-                          )}
-                        />
-                      );
-                    })}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  {activityEntries?.length === 0
-                    ? isOwnProfile
-                      ? "You haven't completed any activities yet."
-                      : `${profileData?.name} hasn't got any public activities.`
-                    : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
           </div>
         </AnimatedSection>
 
@@ -698,12 +731,11 @@ function ProfilePage() {
         }
       />
 
-      {isOwnProfile && (
-        <MedalExplainerPopover
-          open={progressExplainerOpen}
-          onClose={() => setProgressExplainerOpen(false)}
-        />
-      )}
+      <MedalExplainerPopover
+        open={progressExplainerOpen}
+        onClose={() => setProgressExplainerOpen(false)}
+        username={profileData?.username}
+      />
     </motion.div>
   );
 }

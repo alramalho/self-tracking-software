@@ -10,6 +10,8 @@ interface AuthContextType {
   isSignedIn: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   getToken: () => Promise<string | null>;
 }
@@ -83,6 +85,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      await authService.signInWithEmail(email, password);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      await authService.signUpWithEmail(email, password);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setIsLoading(true);
     try {
@@ -106,6 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isSignedIn: !!supabaseUser,
         signInWithGoogle,
         signInWithApple,
+        signInWithEmail,
+        signUpWithEmail,
         signOut,
         getToken,
       }}

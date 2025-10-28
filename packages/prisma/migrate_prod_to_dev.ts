@@ -50,7 +50,7 @@ async function getTableColumns(
     AND table_schema = 'public'
   `;
 
-  return new Set(columns.map(col => col.column_name));
+  return new Set(columns.map((col) => col.column_name));
 }
 
 /**
@@ -184,8 +184,8 @@ async function migrateData() {
     console.info("Migrating users...");
 
     // Get actual columns from both databases
-    const sourceUserColumns = await getTableColumns(sourcePrisma, 'users');
-    const targetUserColumns = await getTableColumns(targetPrisma, 'users');
+    const sourceUserColumns = await getTableColumns(sourcePrisma, "users");
+    const targetUserColumns = await getTableColumns(targetPrisma, "users");
 
     // Build select object to only fetch columns that exist in source database
     const sourceUserSelect = buildSelectForExistingColumns(sourceUserColumns);
@@ -199,7 +199,9 @@ async function migrateData() {
       const { id, referredById, ...userData } = user;
 
       // Filter userData to only include fields that exist in both source and target
-      const commonColumns = new Set([...sourceUserColumns].filter(col => targetUserColumns.has(col)));
+      const commonColumns = new Set(
+        [...sourceUserColumns].filter((col) => targetUserColumns.has(col))
+      );
       const filteredData = filterToExistingColumns(userData, commonColumns);
 
       await targetPrisma.user.upsert({
@@ -207,17 +209,17 @@ async function migrateData() {
         create: {
           id,
           ...filteredData,
-          ...(commonColumns.has('referredById') ? { referredById: null } : {}), // Will be updated in second pass
+          ...(commonColumns.has("referredById") ? { referredById: null } : {}), // Will be updated in second pass
         } as any,
         update: {
           ...filteredData,
-          ...(commonColumns.has('referredById') ? { referredById: null } : {}), // Will be updated in second pass
+          ...(commonColumns.has("referredById") ? { referredById: null } : {}), // Will be updated in second pass
         } as any,
       });
     }
 
     // Second pass: Update referral relationships (only if the field exists)
-    if (targetUserColumns.has('referredById')) {
+    if (targetUserColumns.has("referredById")) {
       for (const user of users) {
         if ((user as any).referredById) {
           await targetPrisma.user.update({
@@ -626,24 +628,25 @@ async function migrateData() {
     }
     console.info(`Migrated ${recommendations.length} recommendations`);
 
-    // Step 18: Migrate Message Feedback
-    console.info("Migrating message feedback...");
-    const messageFeedback = await sourcePrisma.messageFeedback.findMany();
+    console.info("Migrating feedback...");
+    const feedbacks = await sourcePrisma.feedback.findMany();
 
-    for (const feedback of messageFeedback) {
+    for (const feedback of feedbacks) {
       const { id, ...feedbackData } = feedback;
-      await targetPrisma.messageFeedback.upsert({
+      await targetPrisma.feedback.upsert({
         where: { id },
         create: {
           id,
           ...feedbackData,
+          metadata: feedback.metadata as any, // Handle JsonValue type
         },
         update: {
           ...feedbackData,
+          metadata: feedback.metadata as any, // Handle JsonValue type
         },
       });
     }
-    console.info(`Migrated ${messageFeedback.length} message feedback entries`);
+    console.info(`Migrated ${feedbacks.length} feedback entries`);
 
     // Step 19: Migrate Job Runs
     console.info("Migrating job runs...");
@@ -705,7 +708,9 @@ async function migrateData() {
         },
       });
 
-      console.info(`✅ Impersonation set up: logging in with alexandre.ramalho.1998@gmail.com will impersonate ${impersonateUser}`);
+      console.info(
+        `✅ Impersonation set up: logging in with alexandre.ramalho.1998@gmail.com will impersonate ${impersonateUser}`
+      );
     } else {
       console.warn(
         `⚠️  User with email 'alexandre.ramalho.1998@gmail.com' or username '${impersonateUser}' not found, could not set up impersonation.`

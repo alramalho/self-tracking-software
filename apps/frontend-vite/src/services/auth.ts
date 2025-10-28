@@ -252,6 +252,36 @@ export class AuthService {
     }
   }
 
+  async signInWithEmail(email: string, password: string) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Email sign-in error:", error);
+      throw error;
+    }
+  }
+
+  async signUpWithEmail(email: string, password: string) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Email sign-up error:", error);
+      throw error;
+    }
+  }
+
   async signOut() {
     // Clear Supabase session
     await supabase.auth.signOut();
