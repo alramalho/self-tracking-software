@@ -5,7 +5,7 @@ import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
-import { FloatingCoachWidget } from "@/components/FloatingCoachWidget";
+import { LastCoachMessageShower } from "@/components/LastCoachMessageShower";
 import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
@@ -23,9 +23,9 @@ import {
   MoveRight,
   RefreshCcw,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
 import supportAgentSvg from "../assets/icons/support-agent.svg";
 import jarvisLogoSvg from "../assets/icons/jarvis_logo_transparent.png";
@@ -92,6 +92,9 @@ function HomePage() {
   const { isLightMode, isDarkMode } = useTheme();
   const { activityEntryId } = Route.useSearch();
   const { notifications } = useDataNotifications();
+  const lastCoachNotification = useMemo(() => {
+    return notifications?.filter((n) => n.type === "COACH").sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  }, [notifications]);
   const { plans } = usePlans();
   const activePlans = plans?.filter(
     (plan) =>
@@ -115,6 +118,7 @@ function HomePage() {
   const { isLoaded, isSignedIn } = useSession();
   const { isUserAIWhitelisted } = useAI();
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
+  const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
   const unopenedNotifications =
     notifications?.filter((n) => {
       // Exclude engagement notifications
@@ -330,17 +334,33 @@ function HomePage() {
                 </button>
                 {isUserAIWhitelisted && (
                   <>
-                    <button
-                      onClick={() => navigate({ to: "/ai" })}
-                      className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                      title="Send Feedback"
-                    >
-                      <img
-                        src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
-                        alt="AI Coach"
-                        className="w-9 h-9"
-                      />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => navigate({ to: "/ai" })}
+                        className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                        title="AI Coach"
+                      >
+                        <img
+                          src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
+                          alt="AI Coach"
+                          className="w-9 h-9"
+                        />
+                        <AnimatePresence>
+                          {lastCoachNotification && hasFinishedLastCoachMessageAnimation && lastCoachNotification.status !== "CONCLUDED" && (
+                            <motion.span
+                              key="coach-badge"
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0 }}
+                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center z-1000"
+                            >
+                              1
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -487,8 +507,7 @@ function HomePage() {
         />
       )}
 
-      {/* Floating Coach Widget */}
-      <FloatingCoachWidget />
+      <LastCoachMessageShower onFinish={() => setHasFinishedLastCoachMessageAnimation(true)} />
     </div>
   );
 }
