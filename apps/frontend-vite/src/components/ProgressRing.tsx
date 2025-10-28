@@ -69,13 +69,13 @@ export function ProgressRing({
         {children}
       </div>
 
-      {currentLevel && badge && (
+      {/* {currentLevel && badge && (
         <div
           className="absolute -bottom-1 -right-1 w-8 h-8 p-0 rounded-full bg-transparent flex items-center justify-center"
         >
           {currentLevel.getIcon({ size: badgeSize || 45, className: "drop-shadow-sm" })}
         </div>
-      )}
+      )} */}
     </div>
   );
 }

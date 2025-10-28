@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { Capacitor } from "@capacitor/core";
@@ -20,11 +21,14 @@ interface SignInProps {
 }
 
 export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
-  const { signInWithGoogle, signInWithApple } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail } = useAuth();
   const { isLightMode } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHelpForm, setShowHelpForm] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const appleSignInSupported =
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios"; // web apple login is proving harduous, and will be deprecated anyway soon
 
@@ -53,6 +57,32 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
     } catch (err) {
       console.error("Sign in failed:", err);
       setError("Failed to sign in. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        await signUpWithEmail(email, password);
+      } else {
+        await signInWithEmail(email, password);
+      }
+      onSuccess?.();
+    } catch (err: any) {
+      console.error("Email auth failed:", err);
+      setError(err.message || `Failed to ${isSignUp ? 'sign up' : 'sign in'}. Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -116,6 +146,57 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
         {error && (
           <p className="text-sm text-destructive text-center">{error}</p>
         )}
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          <div className="space-y-2">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full"
+            size="lg"
+          >
+            {isLoading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
+          </Button>
+          <p className="text-xs text-center text-muted-foreground">
+            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="underline cursor-pointer"
+              disabled={isLoading}
+            >
+              {isSignUp ? "Sign in" : "Sign up"}
+            </button>
+          </p>
+        </form>
       </CardContent>
       <div className="p-4 border-t border-border flex justify-center items-center gap-2">
         <img

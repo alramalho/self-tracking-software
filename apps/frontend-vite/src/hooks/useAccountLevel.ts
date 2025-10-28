@@ -68,7 +68,7 @@ export const getAccountLevels = (isDarkMode: boolean): AccountLevel[] => [
   ),
   createLevel(
     "Platinum",
-    2048,
+    1024,
     isDarkMode ? "#94A3B8" : "#A8CADD",
     isDarkMode ? "#475569" : "#71717a",
     Star,
@@ -76,7 +76,7 @@ export const getAccountLevels = (isDarkMode: boolean): AccountLevel[] => [
   ),
   createLevel(
     "Diamond",
-    8192,
+    2048,
     isDarkMode ? "#06B6D4" : "#22d3ee",
     isDarkMode ? "#0E7490" : "#0891b2",
     Gem,

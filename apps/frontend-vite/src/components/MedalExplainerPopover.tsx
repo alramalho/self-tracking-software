@@ -3,13 +3,13 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/contexts/theme/useTheme";
-import { useCurrentUser } from "@/contexts/users";
 import {
   getAccountLevels,
   useAccountLevel,
   HABIT_BONUS_POINTS,
   LIFESTYLE_BONUS_POINTS,
 } from "@/hooks/useAccountLevel";
+import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import {
   Check,
   Medal,
@@ -25,16 +25,20 @@ import React, { useState, useEffect } from "react";
 interface MedalExplainerPopoverProps {
   open: boolean;
   onClose: () => void;
+  username?: string; // Optional: if provided, shows that user's level instead of current user
 }
 
 const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
   open,
   onClose,
+  username,
 }) => {
-  const { currentUser } = useCurrentUser();
   const { isDarkMode } = useTheme();
-  const accountLevel = useAccountLevel();
+  const accountLevel = useAccountLevel(username);
   const ACCOUNT_LEVELS = getAccountLevels(isDarkMode);
+
+  // Get profile data for displaying user info (name, picture, etc.)
+  const { profileData } = useUnifiedProfileData(username);
 
   // Animation state - trigger animations when popover opens
   const [showBaseProgress, setShowBaseProgress] = useState(false);
@@ -69,11 +73,11 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
           <div className="relative">
             <Avatar className="h-12 w-12">
               <AvatarImage
-                src={currentUser?.picture || ""}
-                alt={currentUser?.name || ""}
+                src={profileData?.picture || ""}
+                alt={profileData?.name || ""}
               />
               <AvatarFallback className="bg-muted">
-                {currentUser?.name?.[0] || "U"}
+                {profileData?.name?.[0] || "U"}
               </AvatarFallback>
             </Avatar>
             {accountLevel.currentLevel && accountLevel.atLeastBronze && (
@@ -84,7 +88,7 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-semibold text-foreground truncate">
-              {currentUser?.name}
+              {profileData?.name}
             </h2>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <span
@@ -142,7 +146,6 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
                 <span className="font-medium text-foreground">
                   {accountLevel.totalPoints} points
                 </span>{" "}
-                more points needed
               </p>
             </div>
             <div className="flex items-center gap-2 opacity-59 justify-center">
@@ -226,7 +229,7 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
                     <p className="text-xs text-muted-foreground">
                       {level.threshold === 0
                         ? "Starting level"
-                        : `${level.threshold} activities required`}
+                        : `${level.threshold} points required`}
                     </p>
                   </div>
                 </div>
