@@ -23,6 +23,8 @@ export type PlanProgressState = {
     completedWeeks: number;
     incompleteWeeks: number;
     totalWeeks: number;
+    achievedLastStreakAt?: Date | null;
+    celebratedStreakAt?: Date | null;
   };
   currentWeekStats: {
     numActiveDaysInTheWeek: number;
@@ -35,12 +37,16 @@ export type PlanProgressState = {
     maxValue: number;
     isAchieved: boolean;
     progressPercentage: number;
+    achievedAt?: Date | null;
+    celebratedAt?: Date | null;
   };
   lifestyleAchievement: {
     progressValue: number;
     maxValue: number;
     isAchieved: boolean;
     progressPercentage: number;
+    achievedAt?: Date | null;
+    celebratedAt?: Date | null;
   };
   weeks: Array<{
     startDate: Date;

@@ -1,6 +1,7 @@
 "use client";
 
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
+import { AchievementCelebrationPopover, type AchievementType } from "@/components/AchievementCelebrationPopover";
 import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
@@ -135,6 +136,115 @@ function HomePage() {
 
   const unopenedNotificationsCount = unopenedNotifications.length;
   const accountLevel = useAccountLevel();
+
+  // Achievement celebration state
+  const [celebrationToShow, setCelebrationToShow] = useState<{
+    planId: string;
+    planEmoji: string;
+    planGoal: string;
+    achievementType: AchievementType;
+    streakNumber?: number;
+  } | null>(null);
+
+  // Detect uncelebrated achievements
+  const { upsertPlan } = usePlans();
+  useMemo(() => {
+    if (!plans) return;
+
+    // Check all active plans for uncelebrated achievements
+    for (const plan of plans) {
+      if (!plan.progress) continue;
+
+      const progress = plan.progress;
+
+      console.log("progress", progress);
+
+      // Check streak achievement
+      if (
+        progress.achievement?.achievedLastStreakAt &&
+        (!progress.achievement?.celebratedStreakAt ||
+          new Date(progress.achievement.achievedLastStreakAt) > new Date(progress.achievement.celebratedStreakAt))
+      ) {
+        setCelebrationToShow({
+          planId: plan.id,
+          planEmoji: plan.emoji || "🎯",
+          planGoal: plan.goal,
+          achievementType: "streak",
+          streakNumber: progress.achievement.streak,
+        });
+        return;
+      }
+
+      // Check habit achievement
+      if (
+        progress.habitAchievement?.achievedAt &&
+        (!progress.habitAchievement?.celebratedAt ||
+          new Date(progress.habitAchievement.achievedAt) > new Date(progress.habitAchievement.celebratedAt))
+      ) {
+        setCelebrationToShow({
+          planId: plan.id,
+          planEmoji: plan.emoji || "🎯",
+          planGoal: plan.goal,
+          achievementType: "habit",
+        });
+        return;
+      }
+
+      // Check lifestyle achievement
+      if (
+        progress.lifestyleAchievement?.achievedAt &&
+        (!progress.lifestyleAchievement?.celebratedAt ||
+          new Date(progress.lifestyleAchievement.achievedAt) > new Date(progress.lifestyleAchievement.celebratedAt))
+      ) {
+        setCelebrationToShow({
+          planId: plan.id,
+          planEmoji: plan.emoji || "🎯",
+          planGoal: plan.goal,
+          achievementType: "lifestyle",
+        });
+        return;
+      }
+    }
+  }, [plans]);
+
+  const handleCelebrationClose = async () => {
+    if (!celebrationToShow) return;
+
+    const plan = plans?.find((p) => p.id === celebrationToShow.planId);
+    if (!plan?.progress) return;
+
+    // Update the appropriate celebratedAt field in progressState
+    const now = new Date();
+    const updatedProgressState = { ...plan.progress };
+
+    if (celebrationToShow.achievementType === "streak") {
+      updatedProgressState.achievement = {
+        ...updatedProgressState.achievement,
+        celebratedStreakAt: now,
+      };
+    } else if (celebrationToShow.achievementType === "habit") {
+      updatedProgressState.habitAchievement = {
+        ...updatedProgressState.habitAchievement,
+        celebratedAt: now,
+      };
+    } else if (celebrationToShow.achievementType === "lifestyle") {
+      updatedProgressState.lifestyleAchievement = {
+        ...updatedProgressState.lifestyleAchievement,
+        celebratedAt: now,
+      };
+    }
+
+    // Update the plan's progressState via the backend
+    await upsertPlan({
+      planId: celebrationToShow.planId,
+      updates: {
+        progressState: updatedProgressState as any,
+      },
+      muteNotifications: true,
+    });
+
+    setCelebrationToShow(null);
+  };
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
@@ -469,6 +579,18 @@ function HomePage() {
         isEmailEditable={!currentUser?.email}
         open={isFeedbackOpen}
       />
+
+      {/* Achievement Celebration Popover */}
+      {celebrationToShow && (
+        <AchievementCelebrationPopover
+          open={!!celebrationToShow}
+          onClose={handleCelebrationClose}
+          achievementType={celebrationToShow.achievementType}
+          planEmoji={celebrationToShow.planEmoji}
+          planGoal={celebrationToShow.planGoal}
+          streakNumber={celebrationToShow.streakNumber}
+        />
+      )}
 
       {/* <AnnouncementPopover
         id="night-mode-2025"

@@ -623,10 +623,22 @@ export class PlansService {
         id: plan.id,
         type: plan.outlineType,
       },
-      achievement: cachedState!.achievement,
+      achievement: {
+        ...cachedState!.achievement,
+        achievedLastStreakAt: cachedState!.achievement.achievedLastStreakAt ?? null,
+        celebratedStreakAt: cachedState!.achievement.celebratedStreakAt ?? null,
+      },
       currentWeekStats: cachedState!.currentWeekStats,
-      habitAchievement: cachedState!.habitAchievement,
-      lifestyleAchievement: cachedState!.lifestyleAchievement,
+      habitAchievement: {
+        ...cachedState!.habitAchievement,
+        achievedAt: cachedState!.habitAchievement.achievedAt ?? null,
+        celebratedAt: cachedState!.habitAchievement.celebratedAt ?? null,
+      },
+      lifestyleAchievement: {
+        ...cachedState!.lifestyleAchievement,
+        achievedAt: cachedState!.lifestyleAchievement.achievedAt ?? null,
+        celebratedAt: cachedState!.lifestyleAchievement.celebratedAt ?? null,
+      },
       weeks: cachedState!.weeks || [],
       currentWeekState: cachedState!.currentWeekState,
     };
@@ -638,12 +650,51 @@ export class PlansService {
   ): Promise<PlanProgressData> {
     const progressData = await this.getSinglePlanProgress(plan, user);
 
-    // Cache the computed progress
+    // Get old progress state to compare achievements
+    const oldProgressState = plan.progressState as any as PlanProgressState;
+
+    // Track streak achievement dates
+    const oldStreak = oldProgressState?.achievement?.streak ?? 0;
+    const newStreak = progressData.achievement.streak;
+    const achievedLastStreakAt = newStreak > oldStreak
+      ? new Date()
+      : oldProgressState?.achievement?.achievedLastStreakAt ?? null;
+    const celebratedStreakAt = oldProgressState?.achievement?.celebratedStreakAt ?? null;
+
+    // Track habit achievement dates
+    const wasHabitAchieved = oldProgressState?.habitAchievement?.isAchieved ?? false;
+    const isHabitAchieved = progressData.habitAchievement.isAchieved;
+    const habitAchievedAt = !wasHabitAchieved && isHabitAchieved
+      ? new Date()
+      : oldProgressState?.habitAchievement?.achievedAt ?? null;
+    const habitCelebratedAt = oldProgressState?.habitAchievement?.celebratedAt ?? null;
+
+    // Track lifestyle achievement dates
+    const wasLifestyleAchieved = oldProgressState?.lifestyleAchievement?.isAchieved ?? false;
+    const isLifestyleAchieved = progressData.lifestyleAchievement.isAchieved;
+    const lifestyleAchievedAt = !wasLifestyleAchieved && isLifestyleAchieved
+      ? new Date()
+      : oldProgressState?.lifestyleAchievement?.achievedAt ?? null;
+    const lifestyleCelebratedAt = oldProgressState?.lifestyleAchievement?.celebratedAt ?? null;
+
+    // Cache the computed progress with achievement dates
     const progressState: PlanProgressState = {
-      achievement: progressData.achievement,
+      achievement: {
+        ...progressData.achievement,
+        achievedLastStreakAt,
+        celebratedStreakAt,
+      },
       currentWeekStats: progressData.currentWeekStats,
-      habitAchievement: progressData.habitAchievement,
-      lifestyleAchievement: progressData.lifestyleAchievement,
+      habitAchievement: {
+        ...progressData.habitAchievement,
+        achievedAt: habitAchievedAt,
+        celebratedAt: habitCelebratedAt,
+      },
+      lifestyleAchievement: {
+        ...progressData.lifestyleAchievement,
+        achievedAt: lifestyleAchievedAt,
+        celebratedAt: lifestyleCelebratedAt,
+      },
       currentWeekState: plan.currentWeekState,
       weeks: progressData.weeks,
     };
