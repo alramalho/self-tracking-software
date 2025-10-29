@@ -323,7 +323,7 @@ function ProfilePage() {
       <div className="w-full max-w-md">
         {/* TikTok-style Header */}
         <AnimatedSection>
-          <div className="flex flex-col items-center py-6 relative">
+          <div className="flex flex-col items-center pb-6 pt-1 relative">
             {/* Settings button - absolutely positioned */}
             {isOwnProfile && (
               <button
@@ -351,7 +351,7 @@ function ProfilePage() {
         <AnimatedSection delay={0.1}>
           <div className="flex flex-col items-center">
             {/* Avatar with progress ring */}
-            <div className="relative mb-4">
+            <div className="relative mb-1">
               <ProgressRing
                 size={112}
                 strokeWidth={5}
@@ -376,7 +376,7 @@ function ProfilePage() {
             <h2 className="text-xl font-bold text-foreground">
               {profileData?.name}
             </h2>
-            <p className="text-muted-foreground text-sm mb-3">
+            <p className="text-muted-foreground text-sm mb-2">
               @{profileData?.username}
             </p>
           </div>
@@ -385,7 +385,7 @@ function ProfilePage() {
         <AnimatedSection delay={0.15}>
           <div className="flex flex-col items-center">
             {/* TikTok-style stats */}
-            <div className="flex items-center justify-center space-x-8 mb-6">
+            <div className="flex items-center justify-center space-x-8 mb-4">
               <Link
                 to={`/friends/$username`}
                 params={{ username: profileData?.username || "" }}
@@ -412,7 +412,7 @@ function ProfilePage() {
 
               {accountLevel.currentLevel && (
                 <>
-                  <div className="flex flex-col items-center justify-center gap-1" onClick={() => setProgressExplainerOpen(true)}>
+                  <div className="flex flex-col items-center justify-center gap-0" onClick={() => setProgressExplainerOpen(true)}>
                     {accountLevel.currentLevel.getIcon({
                       size: 35,
                       className: "drop-shadow-sm",
@@ -563,7 +563,7 @@ function ProfilePage() {
 
         {/* Content */}
         <AnimatedSection delay={0.3}>
-          <div className="p-4">
+          <div className="px-4">
             {/* Profile Settings Popover */}
             {isOwnProfile && (
               <ProfileSettingsPopover
