@@ -88,6 +88,7 @@ const PlanUpsertSchema = z.object({
   deletedAt: z.iso.datetime().nullable().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "FRIENDS"]).optional(),
   backgroundImageUrl: z.string().url().nullable().optional(),
+  progressState: z.any().nullable().optional(),
 });
 
 /**
