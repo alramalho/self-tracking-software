@@ -734,7 +734,7 @@ function ProfilePage() {
       <MedalExplainerPopover
         open={progressExplainerOpen}
         onClose={() => setProgressExplainerOpen(false)}
-        username={profileData?.username}
+        username={profileData?.username || undefined}
       />
     </motion.div>
   );

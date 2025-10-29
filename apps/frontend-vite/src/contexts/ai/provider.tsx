@@ -188,7 +188,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
           });
         }
       );
-      if (feedback.feedbackType === "POSITIVE") {
+      if (feedback.metadata?.feedbackType === "POSITIVE") {
         toast.success("Thanks for your feedback!");
       }
     },
