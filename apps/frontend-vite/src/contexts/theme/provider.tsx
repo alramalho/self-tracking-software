@@ -56,7 +56,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [themeMode]);
 
-  // Apply dark class to document root
+  // Apply dark class to document root and update theme-color meta tag
   useEffect(() => {
     const root = document.documentElement;
     if (effectiveThemeMode === "dark") {
@@ -64,6 +64,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     } else {
       root.classList.remove("dark");
     }
+
+    // Update theme-color meta tag to match current theme
+    const themeColor = effectiveThemeMode === "dark" ? "#1C1C1C" : "#F2F2F2";
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
+
+    if (!metaThemeColor) {
+      metaThemeColor = document.createElement("meta");
+      metaThemeColor.setAttribute("name", "theme-color");
+      document.head.appendChild(metaThemeColor);
+    }
+
+    metaThemeColor.setAttribute("content", themeColor);
   }, [effectiveThemeMode]);
 
   // Get the effective theme color (either user's choice or resolved random color)
