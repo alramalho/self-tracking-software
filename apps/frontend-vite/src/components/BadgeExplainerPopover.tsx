@@ -78,8 +78,8 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
               <div
                 className={`bg-gradient-to-br ${
                   badgeType === "lifestyles"
-                    ? "from-amber-50 to-amber-100"
-                    : "from-lime-50 to-lime-100"
+                    ? "from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800"
+                    : "from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800"
                 } rounded-lg p-6 text-center mb-6`}
               >
                 <div className="flex justify-center items-center mb-4">
