@@ -78,34 +78,34 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
               <div
                 className={`bg-gradient-to-br ${
                   badgeType === "lifestyles"
-                    ? "from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800"
-                    : "from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800"
+                    ? "from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/30"
+                    : "from-lime-50 to-lime-100 dark:from-lime-950/30 dark:to-lime-900/30"
                 } rounded-lg p-6 text-center mb-6`}
               >
                 <div className="flex justify-center items-center mb-4">
                   <Avatar
                     className={`h-16 w-16 border-4 ${
                       badgeType === "lifestyles"
-                        ? "border-amber-200"
-                        : "border-lime-200"
+                        ? "border-amber-200 dark:border-amber-800"
+                        : "border-lime-200 dark:border-lime-800"
                     }`}
                   >
                     <AvatarImage src={user?.picture || ""} />
                     <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
                   </Avatar>
                   {badgeType === "lifestyles" && (
-                    <Medal size={52} className="text-amber-500 animate-pulse" />
+                    <Medal size={52} className="text-amber-500 dark:text-amber-400 animate-pulse" />
                   )}
                   {badgeType === "habits" && (
-                    <Sprout size={52} className="text-lime-500 animate-pulse" />
+                    <Sprout size={52} className="text-lime-500 dark:text-lime-400 animate-pulse" />
                   )}
                 </div>
                 <div className="space-y-2">
                   <h3
                     className={`text-xl font-bold ${
                       badgeType === "lifestyles"
-                        ? "text-amber-900"
-                        : "text-lime-900"
+                        ? "text-amber-900 dark:text-amber-100"
+                        : "text-lime-900 dark:text-lime-100"
                     }`}
                   >
                     {user?.name} achieved{" "}
@@ -120,8 +120,8 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
                       <p
                         className={
                           badgeType === "lifestyles"
-                            ? "text-amber-800"
-                            : "text-lime-800"
+                            ? "text-amber-800 dark:text-amber-200"
+                            : "text-lime-800 dark:text-lime-200"
                         }
                       >
                         By maintaining a
@@ -143,8 +143,8 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
                     <p
                       className={
                         badgeType === "lifestyles"
-                          ? "text-amber-800"
-                          : "text-lime-800"
+                          ? "text-amber-800 dark:text-amber-200"
+                          : "text-lime-800 dark:text-lime-200"
                       }
                     >
                       Across {relevantAchievements.length} different plans!
@@ -209,7 +209,7 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
 
         <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
-            <Flame className="text-red-500 inline-block" size={24} /> Streaks:
+            <Flame className="text-red-500 dark:text-red-400 inline-block" size={24} /> Streaks:
           </h4>
           <ul className="text-sm text-muted-foreground space-y-2">
             <li>
@@ -233,7 +233,7 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
 
         <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
-            <Sprout className="text-lime-500 inline-block" size={24} /> Habit
+            <Sprout className="text-lime-500 dark:text-lime-400 inline-block" size={24} /> Habit
             badge:
           </h4>
           <ul className="text-sm text-muted-foreground space-y-2">
@@ -243,7 +243,7 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
 
         <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
-            <Medal className="text-yellow-500 inline-block" size={24} />{" "}
+            <Medal className="text-yellow-500 dark:text-yellow-400 inline-block" size={24} />{" "}
             Lifestyle badge:
           </h4>
           <ul className="text-sm text-muted-foreground space-y-2">
