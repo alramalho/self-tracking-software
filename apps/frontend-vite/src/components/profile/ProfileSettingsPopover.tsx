@@ -48,6 +48,7 @@ interface ProfileSettingsPopoverProps {
   open: boolean;
   onClose: () => void;
   initialActiveView?: ActiveView | null;
+  redirectTo?: string | null;
 }
 
 // Define possible views including sub-views
