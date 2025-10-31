@@ -250,7 +250,7 @@ function AICoachPage() {
           <div className="border-t border-border">
             <button
               onClick={() => navigate({ to: "/" })}
-              className="w-full p-4 text-left hover:bg-muted transition-colors flex items-center gap-2"
+              className="w-full p-4 text-left hover:bg-muted transition-colors flex items-center gap-2 mb-4"
             >
               <Home size={18} />
               <span>Back to Home</span>
