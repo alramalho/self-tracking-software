@@ -20,7 +20,6 @@ import {
   MoveRight,
   Paintbrush,
   Pencil,
-  Share2,
   ShieldCheck,
   SquareArrowUp,
   Trash2,
@@ -43,34 +42,28 @@ import {
 } from "./EditFieldPopups";
 import ThemeModeSwitcher from "./ThemeModeSwitcher";
 import { useNavigate } from "@tanstack/react-router";
+import { useDemoAchievement } from "@/contexts/demo-achievement/useDemoAchievement";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
   onClose: () => void;
   initialActiveView?: ActiveView | null;
-  redirectTo?: string | null;
 }
 
 // Define possible views including sub-views
 export type ActiveView =
   | "main"
   | "userSummary"
-  | "userProfile"
-  | "privacy"
-  | "ai"
+  | "editProfile"
   | "color"
   | "themeMode"
-  | "editProfile"
   | "admin";
 
 // Define view depths for animation direction
 const viewLevels: Record<ActiveView, number> = {
   main: 0,
   userSummary: 1,
-  userProfile: 2,
   editProfile: 2,
-  privacy: 1,
-  ai: 1,
   color: 1,
   themeMode: 1,
   admin: 1,
@@ -109,6 +102,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const [showEditProfilePicture, setShowEditProfilePicture] = useState(false);
 
   const navigate = useNavigate();
+  const { setDemoAchievementType } = useDemoAchievement();
 
   const handleLogout = () => {
     signOut();
@@ -196,9 +190,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
     const direction = currentLevel > previousLevel ? 1 : -1;
 
     return (
-      // Use AnimatePresence to handle mount/unmount animations
       <AnimatePresence initial={false} mode="wait" custom={direction}>
-        {/* Use activeView as key to trigger animation on change */}
         <motion.div
           key={activeView}
           custom={direction}
@@ -210,14 +202,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
             x: { type: "spring", stiffness: 300, damping: 30 },
             opacity: { duration: 0.2 },
           }}
-          className="w-full" // Ensure the motion div takes full width
+          className="w-full"
         >
           {(() => {
             switch (activeView) {
               case "userSummary":
                 return (
                   <div>
-                    {/* Back button goes to main settings */}
                     <Button
                       variant="ghost"
                       onClick={() => navigateTo("main")}
@@ -400,13 +391,12 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     </div>
                   </div>
                 );
-              case "editProfile": // New case for editing the profile
+              case "editProfile":
                 return (
                   <div>
-                    {/* Back button goes to user summary */}
                     <Button
                       variant="ghost"
-                      onClick={() => navigateTo("userSummary")} // Use navigateTo
+                      onClick={() => navigateTo("userSummary")}
                       className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
                       <ChevronLeft size={18} /> Back to User Settings
@@ -456,8 +446,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
                     <ColorPalettePickerPopup
-                      open={true} // Keep it open when this view is active
-                      onClose={() => navigateTo("main")} // Use navigateTo to navigate back
+                      open={true}
+                      onClose={() => navigateTo("main")}
                     />
                   </div>
                 );
@@ -472,8 +462,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
                     <ThemeModeSwitcher
-                      open={true} // Keep it open when this view is active
-                      onClose={() => navigateTo("main")} // Use navigateTo to navigate back
+                      open={true}
+                      onClose={() => navigateTo("main")}
                     />
                   </div>
                 );
@@ -508,6 +498,64 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           </p>
                         </div>
                         <MoveRight size={20} className="text-muted-foreground" />
+                      </div>
+
+                      {/* Demo Achievement Celebrations */}
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground px-3">
+                          Demo Achievements
+                        </p>
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => {
+                            navigate({ to: "/" });
+                            setTimeout(() => setDemoAchievementType("streak"), 300);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Demo Streak Achievement
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Preview 5-week streak celebration
+                            </p>
+                          </div>
+                          <span className="text-2xl">🔥</span>
+                        </div>
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => {
+                            navigate({ to: "/" });
+                            setTimeout(() => setDemoAchievementType("habit"), 300);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Demo Habit Achievement
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Preview habit formed celebration
+                            </p>
+                          </div>
+                          <span className="text-2xl">⭐</span>
+                        </div>
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => {
+                            navigate({ to: "/" });
+                            setTimeout(() => setDemoAchievementType("lifestyle"), 300);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Demo Lifestyle Achievement
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Preview lifestyle milestone celebration
+                            </p>
+                          </div>
+                          <span className="text-2xl">🏆</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -574,7 +622,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <Button
                         variant="ghost"
                         className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("userSummary")} // Navigate to userSummary
+                        onClick={() => navigateTo("userSummary")}
                       >
                         <UserPen size={28} />
                         <span>User Settings</span>
@@ -583,7 +631,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <Button
                         variant="ghost"
                         className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("color")} // Navigate to color view
+                        onClick={() => navigateTo("color")}
                       >
                         <Paintbrush size={28} />
                         <span>Color Palette</span>
@@ -591,7 +639,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <Button
                         variant="ghost"
                         className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("themeMode")} // Navigate to theme mode view
+                        onClick={() => navigateTo("themeMode")}
                       >
                         <Moon size={28} />
                         <span>Theme Mode</span>
@@ -600,7 +648,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Button
                           variant="ghost"
                           className="w-full flex items-center justify-start px-0 gap-2"
-                          onClick={() => navigateTo("admin")} // Navigate to admin view
+                          onClick={() => navigateTo("admin")}
                         >
                           <ShieldCheck size={28} />
                           <span>Admin</span>
@@ -627,12 +675,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   return (
     <>
       <AppleLikePopover open={open} onClose={onClose}>
-        {/* Render content based on activeView */}
         <div className="max-h-[80vh] overflow-y-auto mt-12 mb-12">
           {renderContent()}
         </div>
-
-        {/* Keep ConfirmDialog outside the main navigation flow */}
       </AppleLikePopover>
 
       <ConfirmDialogOrPopover

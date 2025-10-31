@@ -322,31 +322,29 @@ function ProfilePage() {
     >
       <div className="w-full max-w-md">
         {/* TikTok-style Header */}
-        <AnimatedSection>
-          <div className="flex flex-col items-center pb-6 pt-1 relative">
-            {/* Settings button - absolutely positioned */}
-            {isOwnProfile && (
-              <button
-                className="absolute top-2 right-2 p-2 pr-4 rounded-full hover:bg-muted/50 z-10"
-                onClick={() => setShowUserProfile(true)}
-              >
-                <EllipsisVertical size={26} />
-              </button>
-            )}
+        <div className="flex flex-col items-center pb-6 pt-1 relative">
+          {/* Settings button - absolutely positioned */}
+          {isOwnProfile && (
+            <button
+              className="absolute top-2 right-2 p-2 pr-4 rounded-full hover:bg-muted/50 z-10"
+              onClick={() => setShowUserProfile(true)}
+            >
+              <EllipsisVertical size={26} />
+            </button>
+          )}
 
-            {/* Back button for non-own profiles */}
-            {!isOwnProfile && (
-              <div className="absolute top-2 left-2 z-10">
-                <button
-                  className="p-2 rounded-full hover:bg-muted/50"
-                  onClick={() => window.history.back()}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-              </div>
-            )}
-          </div>
-        </AnimatedSection>
+          {/* Back button for non-own profiles */}
+          {!isOwnProfile && (
+            <div className="absolute top-2 left-2 z-10">
+              <button
+                className="p-2 rounded-full hover:bg-muted/50"
+                onClick={() => window.history.back()}
+              >
+                <ChevronLeft size={20} />
+              </button>
+            </div>
+          )}
+        </div>
 
         <AnimatedSection delay={0.1}>
           <div className="flex flex-col items-center">
