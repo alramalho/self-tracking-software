@@ -6,6 +6,7 @@ import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
 import { ThemeProvider } from "@/contexts/theme/provider";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { UpgradeProvider } from "@/contexts/upgrade/provider";
+import { DemoAchievementProvider } from "@/contexts/demo-achievement/provider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,6 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createRootRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Home, Squirrel } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
@@ -102,37 +102,39 @@ function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage }: { isSigned
 
   return (
     <UpgradeProvider>
-      <NotificationsProvider>
-        <main
-          className={cn(
-            "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
-            (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
-          )}
-        >
-          <GeneralInitializer>
-            <Outlet />
-          </GeneralInitializer>
-        </main>
-        <SonnerToaster
-          position="top-center"
-          theme={effectiveThemeMode}
-        />
-        <Toaster
-          position="top-center"
-          containerStyle={{
-            bottom: "5rem",
-            zIndex: 105,
-          }}
-          toastOptions={{
-            style: {
-              background: effectiveThemeMode === 'dark' ? '#000000' : '#ffffff',
-              color: effectiveThemeMode === 'dark' ? '#ffffff' : '#000000',
-              border: `1px solid hsl(var(--border))`,
-            },
-          }}
-        />
-        {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
-      </NotificationsProvider>
+      <DemoAchievementProvider>
+        <NotificationsProvider>
+          <main
+            className={cn(
+              "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
+              (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
+            )}
+          >
+            <GeneralInitializer>
+              <Outlet />
+            </GeneralInitializer>
+          </main>
+          <SonnerToaster
+            position="top-center"
+            theme={effectiveThemeMode}
+          />
+          <Toaster
+            position="top-center"
+            containerStyle={{
+              bottom: "5rem",
+              zIndex: 105,
+            }}
+            toastOptions={{
+              style: {
+                background: effectiveThemeMode === 'dark' ? '#000000' : '#ffffff',
+                color: effectiveThemeMode === 'dark' ? '#ffffff' : '#000000',
+                border: `1px solid hsl(var(--border))`,
+              },
+            }}
+          />
+          {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
+        </NotificationsProvider>
+      </DemoAchievementProvider>
     </UpgradeProvider>
   );
 }
