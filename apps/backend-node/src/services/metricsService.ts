@@ -21,7 +21,9 @@ export class MetricsService {
       });
 
       if (!user) {
-        logger.error(`User ${userId} not found when checking metric loggability`);
+        logger.error(
+          `User ${userId} not found when checking metric loggability`
+        );
         return false;
       }
 
@@ -32,12 +34,12 @@ export class MetricsService {
       const currentHour = userLocalTime.getHours();
 
       // Check if it's after 2PM (14:00) in user's timezone
-      if (currentHour < 14) {
-        logger.debug(
-          `User ${userId} local time is ${currentHour}:00 (${userTimezone}), before 2PM - metrics not loggable yet`
-        );
-        return false;
-      }
+      // if (currentHour > 14) {
+      //   logger.debug(
+      //     `User ${userId} local time is ${currentHour}:00 (${userTimezone}), before 2PM - metrics not loggable yet`
+      //   );
+      //   return false;
+      // }
 
       // Get all metrics for the user
       const metrics = await prisma.metric.findMany({

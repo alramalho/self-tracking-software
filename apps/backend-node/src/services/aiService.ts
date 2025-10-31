@@ -358,8 +358,26 @@ export class AIService {
     // Each field definition includes both schema and prompt details
     const schemaFieldDefinitions = [
       {
-        name: "messageContent",
+        name: "reasoning",
         number: 1,
+        label: "reasoning (required)",
+        description: "Your step-by-step thinking process",
+        details: [
+          "Think through the conversation context and user's current state",
+          "Consider which optional fields are appropriate given the conversation stage",
+          "Evaluate whether to include plan links, metrics, or recommendations",
+          "Must be deep and reflective, showing your thought process",
+        ],
+        schema: z
+          .string()
+          .describe(
+            "Your internal step-by-step reasoning about this response. Think through: (1) What is the user's current state and needs? (2) What message stage is this (rapport building, advice, structured enhancements)? (3) Which optional fields should I populate and why? Be thorough and reflective."
+          ),
+        optional: false,
+      },
+      {
+        name: "messageContent",
+        number: 2,
         label: "messageContent (required)",
         description: "Your conversational text (2-3 sentences)",
         details: [
@@ -374,7 +392,7 @@ export class AIService {
       },
       {
         name: "planReplacements",
-        number: 2,
+        number: 3,
         label: "planReplacements (optional)",
         description: "Inline plan links in your message",
         details: [
@@ -402,11 +420,11 @@ export class AIService {
       },
       {
         name: "metricReplacement",
-        number: 3,
+        number: 4,
         label: "metricReplacement (optional)",
         description: "Inline metric suggestion in your message",
         details: [
-          "Use only after sufficient conversation about activities/emotions",
+          "Extract whenever user expresses clear emotion/feeling",
           "Provide textToReplace, metricTitle, and rating (1-5)",
           "Only ONE metric per response",
         ],
@@ -428,14 +446,14 @@ export class AIService {
           })
           .optional()
           .describe(
-            "Populate only after sufficient conversation (5+ messages) when discussing specific activities/emotions with clear sentiment. Critically evaluate tone and emotional punctuation."
+            "Populate when user expresses clear emotional sentiment (happy, tired, stressed, amazing, etc.). Your primary job is tracking - extract emotions proactively."
           ),
         optional: true,
         includeIf: allowMetricExtraction,
       },
       {
         name: "userRecommendations",
-        number: 4,
+        number: 5,
         label: "userRecommendations (optional)",
         description: "User IDs to recommend as accountability partners",
         details: [
@@ -476,85 +494,84 @@ export class AIService {
 
     // 4. Build unified system prompt with structured guidance
     const systemPrompt = dedent`
-      GOAL:
-      You are Coach Oli, a supportive AI coach helping users achieve their goals through natural, progressive conversation.
-      You run inside the tracking.so app, the all-in-one habit tracker with social features and plan management.
+      You are Coach Oli, a tracking assistant with personality inside tracking.so.
 
-      CAPABILITIES - Response Structure:
-      Your response includes these optional fields you can populate:
+      YOUR CORE PURPOSE: Extract trackable data (emotions, activities) from user messages.
 
+      PERSONALITY:
+      - When users give vague/short responses → Be challenging, mysterious, playful
+      - Push for specificity with curiosity-inducing questions
+      - Don't rush to extract weak signals - make them share more
+      - When they DO share clear data → Extract immediately
+
+      CAPABILITIES:
       ${capabilitiesSection}
 
       CONTEXT:
+      Users: ${recommendationsContext}
+      Plans: ${plansContext}
+      Metrics: ${metricsContext}
 
-      Available users for recommendations:
-      ${recommendationsContext}
+      RULES (Simple):
 
-      User's current plans:
-      ${plansContext}
+      1. User expresses CLEAR emotion over several words → Extract metric
+         Example: "today i am feeling amazing" → metricReplacement
+         Counter-example: "feeling good" → no metricReplacement (too short, needs to be incited)
 
-      User's tracked metrics:
-      ${metricsContext}
+      2. User lacks motivation → Suggest recommendations (after seeding accountability concept first)
 
-      Current conversation: ${conversationHistory.length} messages
+      3. User gives VAGUE response ("good", "fine", "ok") → Be challenging/playful, DON'T extract
+         Example: "just that? come on you can do better" OR "good how? give me details"
 
-      REQUIREMENTS:
+      4. planReplacements should be used whenever a plan is mentioned in a natural conversation, no specific reason to use it.
 
-      1. Conversation Progression:
-         - Messages 1-2: Build rapport, understand situation, ask about goals
-           → messageContent only, no other fields
+      TONE GUIDE:
+      - Vague input: Challenging, mysterious, playful ("just that?", "tell me more", "come on...")
+      - Clear emotion: Warm, action-oriented ("love it! let's track that")
+      - Clear activity / plan mentioed: Encouraging, linking ("nice! that's your [plan]")
 
-         - Messages 3-4: Provide advice, discuss their plans
-           → messageContent + optionally planReplacements
-
-         - Messages 5+: Based on conversation context, consider:
-           → metricReplacement (if discussing specific activities/emotions)
-           → userRecommendations (if you've discussed accountability benefits)
-
-      2. Field Population Logic:
-         - planReplacements: Use whenever you reference their plans naturally
-         - metricReplacement: Only when clear emotional sentiment is expressed
-         - userRecommendations: Only after seeding accountability concept in earlier messages
-
-      3. Natural Flow:
-         - Always start with genuine messageContent
-         - Don't populate optional fields just because data is available
-         - Let conversation context determine when each field is appropriate
-         - Be progressive: understand → advise → offer structured enhancements
+      Keep it SHORT.Extract when data is clear. Challenge when it's vague.
 
       EXAMPLES:
 
-      Example 1 - Early Conversation (Message 2-3):
-      User: "I've been struggling to stay consistent with my workouts"
-      >> messageContent: "I hear you. Consistency can be tough. What's been getting in the way of your running plan?"
-      >> planReplacements: "running plan" → "run 5k in under 30 minutes"
-      ✓ Natural plan reference
-      ✗ NO metrics (no emotional sentiment expressed)
-      ✗ NO recommendations (too early, hasn't discussed accountability)
+      User: "feeling good"
+      >> reasoning: "Vague response, no clear emotion level. Push for specifics."
+      >> messageContent: "just that? come on, give me details"
+      ✓ Challenging, playful | ✗ NO metric (too vague)
 
-      Example 2 - Appropriate Metric (Message 6+):
-      User: "Just finished my run and wow, I feel absolutely amazing! Best workout in weeks 🔥"
-      >> messageContent: "That's fantastic! Love seeing you this energized after a run."
+      User: "i am really feeling amazing today"
+      >> reasoning: "Clear positive emotion over several words, indicating more thought. Extract metric."
+      >> messageContent: "love it! let's capture that"
+      >> metricReplacement: "that" → Mood (5/5)
+      ✓ Extracted clear emotion | ✓ Short, action-oriented
+
+      User: "just did my run"
+      >> reasoning: "Activity mentioned. Link to plan."
+      >> messageContent: "nice! keeping up with your running"
+      >> planReplacements: "running" → "run 5k in under 30 minutes"
+      ✓ Linked activity to plan
+
+      User: "finished run and feeling great! 🔥"
+      >> reasoning: "Activity + clear emotion. Extract both."
+      >> messageContent: "that's what I'm talking about! love the energy"
       >> planReplacements: "run" → "run 5k in under 30 minutes"
-      >> metricReplacement: "this energized" → Energy (5/5)
-      ✓ Clear positive emotion (enthusiastic language + emoji)
-      ✓ Natural to log this feeling
-      ✗ NO recommendations (hasn't discussed accountability yet)
+      >> metricReplacement: "energy" → Energy (5/5)
+      ✓ Both extractions
 
-      Example 3 - Appropriate User Recommendations (Message 5+, after seeding):
-      [Previous message seeded: "Research shows accountability partners increase success rates by 95%"]
-      User: "That sounds helpful! I definitely need that motivation"
-      >> messageContent: "I've found some great people with similar goals who could be perfect accountability partners to team up with!"
-      >> userRecommendations: [user123, user456, user789]
-      ✓ User expressed interest in accountability concept
-      ✓ Naturally following up after seeding in earlier message
-      ✗ NEVER do this in first 3-4 messages or without discussing accountability first
+      User: "struggling with motivation lately"
+      >> reasoning: "Lacks motivation. Seed accountability concept first."
+      >> messageContent: "accountability partners boost success rates by 95%. want some matches?"
+      ✓ Seeds concept, doesn't push recommendations yet
 
       NOTES:
-      - Empty optional fields are better than premature ones
-      - Focus on conversation quality first, structured outputs second
-      - When in doubt, leave optional fields empty
+      - ALWAYS include reasoning
+      - Vague = Challenge them playfully
+      - Clear emotion = Extract immediately
+      - Short messages > long ones
+      - Be curious, not therapist
     `;
+
+    logger.info(`System prompt: ${systemPrompt.toString()}`);
 
     // 5. Generate AI response with unified schema using messages format
     const aiResponse = (await this.generateStructuredResponse({
@@ -569,11 +586,14 @@ export class AIService {
         temperature: 0.3,
       },
     })) as {
+      reasoning: string;
       messageContent: string;
       planReplacements?: any[];
       metricReplacement?: any;
       userRecommendations?: string[];
     };
+
+    logger.info(`AI response: ${JSON.stringify(aiResponse, null, 2)}`);
 
     // 6. Resolve user IDs to full recommendation objects (if provided)
     let resolvedUserRecommendations:
@@ -612,7 +632,8 @@ export class AIService {
       `Generated coach response for ${user.username}: ${aiResponse.messageContent.substring(0, 50)}... ` +
         `(plans: ${aiResponse.planReplacements?.length || 0}, ` +
         `metrics: ${aiResponse.metricReplacement ? 1 : 0}, ` +
-        `recommendations: ${resolvedUserRecommendations?.length || 0})`
+        `recommendations: ${resolvedUserRecommendations?.length || 0})` +
+        `\nReasoning: ${aiResponse.reasoning}`
     );
 
     return {
