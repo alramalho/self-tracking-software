@@ -143,24 +143,61 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
     const member = chartData[payload.index];
     if (!member) return null;
 
+    const avatarSize = 32;
+    const avatarRadius = avatarSize / 2;
+
     return (
       <g transform={`translate(${x},${y})`}>
-        <foreignObject x={-20} y={0} width={40} height={40}>
-          <div className="flex items-center justify-center">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={member.picture || undefined} />
-              <AvatarFallback className="text-xs">
-                {member.name[0]?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </foreignObject>
+        {/* Avatar background circle */}
+        <circle
+          cx={0}
+          cy={avatarRadius}
+          r={avatarRadius}
+          fill={cssColors.muted}
+          stroke={cssColors.mutedForeground}
+          strokeWidth={1}
+          opacity={0.2}
+        />
+
+        {/* Avatar image or fallback */}
+        {member.picture ? (
+          <>
+            <defs>
+              <clipPath id={`avatar-clip-${member.userId}`}>
+                <circle cx={0} cy={avatarRadius} r={avatarRadius} />
+              </clipPath>
+            </defs>
+            <image
+              href={member.picture}
+              x={-avatarRadius}
+              y={0}
+              width={avatarSize}
+              height={avatarSize}
+              clipPath={`url(#avatar-clip-${member.userId})`}
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </>
+        ) : (
+          <text
+            x={0}
+            y={avatarRadius}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={cssColors.mutedForeground}
+            fontSize={12}
+            fontWeight="500"
+          >
+            {member.name[0]?.toUpperCase()}
+          </text>
+        )}
+
+        {/* Member name below avatar */}
         <text
           x={0}
-          y={48}
+          y={avatarSize + 16}
           textAnchor="middle"
           fill={cssColors.mutedForeground}
-          className="text-xs"
+          fontSize={12}
         >
           {member.name.split(" ")[0]}
         </text>
