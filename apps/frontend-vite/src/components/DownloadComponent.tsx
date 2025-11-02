@@ -36,7 +36,6 @@ const DownloadComponent = ({
     !/Chrome|Chromium|Edg|OPR/.test(navigator.userAgent);
   const isSupportedBrowser = isChrome || isSafari;
 
-
   // Desktop users: redirect to mobile
   if (isDesktop) {
     return (
@@ -56,7 +55,9 @@ const DownloadComponent = ({
             <>
               <Button
                 className="w-fit"
-                onClick={() => shareOrCopyLink(`https://app.tracking.so/download`)}
+                onClick={() =>
+                  shareOrCopyLink(`https://app.tracking.so/download`)
+                }
               >
                 Share link
               </Button>
@@ -87,20 +88,25 @@ const DownloadComponent = ({
       ? "Open in external browser"
       : "Open in browser";
     const SecondaryIcon = isInstagram ? ExternalLink : Compass;
-    const platformName = isInstagram ? "Instagram" : isTikTok ? "TikTok" : "this app";
+    const platformName = isInstagram
+      ? "Instagram"
+      : isTikTok
+      ? "TikTok"
+      : "this app";
 
     return (
-      <div className="flex flex-col gap-4 items-center text-center">
+      <div className="flex flex-col gap-4 items-center text-center mt-5">
+        <div className="text-muted-foreground mb-2 text-lg">
+          Current browser doesn&apos;t support app installation
+        </div>
         <div className="flex flex-row gap-2">
           <X className="w-16 h-16 mb-2 text-muted-foreground" />
           <MoveRight className="w-16 h-16 mb-2 text-muted-foreground" />
           <Smartphone className="w-16 h-16 mb-2 text-muted-foreground" />
         </div>
-        <div className="text-muted-foreground mb-2">
-          Current browser doesn&apos;t support app installation
-        </div>
         <div className="text-muted-foreground mb-4">
-          Follow these steps to continue in your main browser outside {platformName}
+          Follow these steps to continue in your main browser outside{" "}
+          {platformName}
         </div>
         <div className="bg-muted p-4 rounded-lg w-full max-w-md">
           <div className="space-y-3 text-left text-muted-foreground">
@@ -108,7 +114,9 @@ const DownloadComponent = ({
               <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
                 <Ellipsis className="w-6 h-6 text-foreground" />
               </div>
-              <span>Tap the menu button {(isInstagram || isTikTok) && "(top right)"}</span>
+              <span>
+                Tap the menu button {(isInstagram || isTikTok) && "(top right)"}
+              </span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
@@ -123,13 +131,13 @@ const DownloadComponent = ({
   }
   // Supported browser: show installation instructions
   return (
-    <div className="flex flex-col gap-4 items-center text-center">
-      <div className="flex flex-row gap-2">
+    <div className="flex flex-col gap-4 items-center text-center p-3">
+      <h2 className="text-2xl font-semibold mb-4 mt-4">Install iOS web app</h2>
+      {/* <div className="flex flex-row gap-2">
         <Check className="w-16 h-16 mb-2 text-muted-foreground" />
         <MoveRight className="w-16 h-16 mb-2 text-muted-foreground" />
         <Smartphone className="w-16 h-16 mb-2 text-muted-foreground" />
-      </div>
-      <h2 className="text-2xl font-semibold mb-4">Install the App</h2>
+      </div> */}
 
       <div className="bg-muted p-4 rounded-lg w-full max-w-md">
         <div className="space-y-3 text-left text-muted-foreground">
@@ -147,7 +155,8 @@ const DownloadComponent = ({
                 </div>
                 <span>
                   Scroll down and tap &quot;
-                  <span className="font-semibold">Add to Home Screen</span>&quot;
+                  <span className="font-semibold">Add to Home Screen</span>
+                  &quot;
                 </span>
               </div>
             </>
