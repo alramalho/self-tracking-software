@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import QRCode from "react-qr-code";
 
 type DownloadComponentProps = {
   isInstagram?: boolean;
@@ -39,15 +40,17 @@ const DownloadComponent = ({
   // Desktop users: redirect to mobile
   if (isDesktop) {
     return (
-      <div className="flex flex-col gap-2 items-center">
-        <div className="flex flex-row gap-2">
-          <MoveRight className="w-16 h-16 mb-6 text-muted-foreground" />
-          <Smartphone className="w-16 h-16 mb-6 text-muted-foreground" />
+      <div className="flex flex-col gap-6 items-center">
+        <div className="bg-white p-6 rounded-lg">
+          <QRCode
+            value="https://app.tracking.so/download"
+            size={200}
+          />
         </div>
         <h2 className="text-xl font-semibold text-center">
-          Open this website on your mobile phone
+          Scan to open on your mobile phone
         </h2>
-        <span className="text-xl text-center text-muted-foreground my-2 font-mono">
+        <span className="text-sm text-center text-muted-foreground font-mono">
           tracking.so/download
         </span>
         <div className="flex flex-row gap-2 items-center justify-center w-full">
