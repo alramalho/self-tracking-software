@@ -32,8 +32,11 @@ function PlanActivitySetter() {
     text: string
   ): Promise<PlanActivitySetterResponse> => {
     try {
+      if (!text) {
+        text = 'suggest me'
+      }
       const response = await api.post("/onboarding/generate-plan-activities", {
-        message: text,
+        message: text ,
         plan_goal: planGoal,
         question_checks: Object.keys(questionChecks),
       });
