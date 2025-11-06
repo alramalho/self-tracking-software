@@ -13,7 +13,6 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   isExpanded,
   className,
 }) => {
-  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { plans, isLoadingPlans } = usePlans();
   const activePlans = plans?.filter(p => !p.deletedAt) ?? [];
 

@@ -8,7 +8,7 @@ export type ReturnedActivityEntriesType = Awaited<
 export type ReturnedActivitiesType = Awaited<ReturnType<typeof getActivities>>;
 export interface ActivityLogData {
   activityId: string;
-  date: Date;
+  datetime: Date;
   quantity: number;
   description?: string;
   photo?: File;

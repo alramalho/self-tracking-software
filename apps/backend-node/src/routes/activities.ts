@@ -126,7 +126,7 @@ router.post(
         where: {
           activityId: activityId,
           userId: req.user!.id,
-          date: iso_date_string,
+          datetime: iso_date_string,
           deletedAt: null,
         },
       });
@@ -148,7 +148,7 @@ router.post(
             activityId: activityId,
             userId: req.user!.id,
             quantity: parseInt(quantity),
-            date: iso_date_string,
+            datetime: iso_date_string,
             description,
             timezone,
           },
@@ -337,7 +337,7 @@ router.get(
         activity_emoji: entry.activity.emoji,
         quantity: entry.quantity,
         measure: entry.activity.measure,
-        date: entry.date,
+        datetime: entry.datetime,
         createdAt: entry.createdAt,
       }));
 
@@ -420,7 +420,7 @@ router.put(
         where: { id: activityEntryId },
         data: {
           quantity: quantity !== undefined ? quantity : existingEntry.quantity,
-          date: date || existingEntry.date,
+          datetime: date || existingEntry.datetime,
           description:
             description !== undefined ? description : existingEntry.description,
         },

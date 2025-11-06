@@ -4,12 +4,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { type Activity } from "@tsw/prisma";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import Picker from "react-mobile-picker";
 
 interface ActivityLoggerPopoverProps {
   open: boolean;
   onClose: () => void;
   selectedActivity: Activity;
-  onSubmit: (data: { activityId: string; date: Date; quantity: number }) => void;
+  onSubmit: (data: { activityId: string; datetime: Date; quantity: number }) => void;
 }
 
 export function ActivityLoggerPopover({
@@ -18,10 +19,19 @@ export function ActivityLoggerPopover({
   selectedActivity,
   onSubmit,
 }: ActivityLoggerPopoverProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const now = new Date();
+  const [selectedDate, setSelectedDate] = useState<Date>(now);
   const [quantity, setQuantity] = useState<number>(0);
+  const [time, setTime] = useState({
+    hour: now.getHours().toString().padStart(2, '0'),
+    minute: now.getMinutes().toString().padStart(2, '0'),
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Generate hours and minutes options
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
   const handleQuantityChange = (amount: number) => {
     setQuantity(Math.max(0, quantity + amount));
@@ -44,10 +54,14 @@ export function ActivityLoggerPopover({
 
     setIsSubmitting(true);
     try {
-      console.log({ selectedDate });
+      // Combine selected date with selected time
+      const datetime = new Date(selectedDate);
+      datetime.setHours(parseInt(time.hour), parseInt(time.minute), 0, 0);
+
+      console.log({ datetime });
       onSubmit({
         activityId: selectedActivity.id,
-        date: selectedDate,
+        datetime,
         quantity,
       });
     } finally {
@@ -77,13 +91,44 @@ export function ActivityLoggerPopover({
             selected={selectedDate}
             onSelect={(date: Date | undefined) => {
               if (date) {
-                date.setHours(12, 0, 0, 0);
                 setSelectedDate(date);
               }
             }}
             className="rounded-md border mx-auto"
             disableFutureDates={true}
           />
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2 text-center">
+            Select Time
+          </h3>
+          <div className="max-w-xs mx-auto">
+            <div className="flex items-center justify-center gap-2 text-lg font-medium mb-2">
+              <span>{time.hour}:{time.minute}</span>
+            </div>
+            <Picker
+              value={time}
+              onChange={setTime}
+              wheelMode="normal"
+              height={180}
+            >
+              <Picker.Column name="hour">
+                {hours.map(hour => (
+                  <Picker.Item key={hour} value={hour}>
+                    {hour}
+                  </Picker.Item>
+                ))}
+              </Picker.Column>
+              <Picker.Column name="minute">
+                {minutes.map(minute => (
+                  <Picker.Item key={minute} value={minute}>
+                    {minute}
+                  </Picker.Item>
+                ))}
+              </Picker.Column>
+            </Picker>
+          </div>
         </div>
 
         <div>

@@ -57,7 +57,7 @@ async function calculateActivityConsistency(userId: string): Promise<number> {
         userId: userId,
         deletedAt: null,
       },
-      date: {
+      datetime: {
         gte: fifteenDaysAgo,
       },
       deletedAt: null,
@@ -282,7 +282,7 @@ export class RecommendationsService {
                     some: {
                       entries: {
                         some: {
-                          date: {
+                          datetime: {
                             gte: new Date(
                               Date.now() - 30 * 24 * 60 * 60 * 1000
                             ),
@@ -560,7 +560,10 @@ export class RecommendationsService {
   /**
    * Delete recommendations for a specific plan
    */
-  async deleteRecommendationsForPlan(userId: string, planId: string): Promise<void> {
+  async deleteRecommendationsForPlan(
+    userId: string,
+    planId: string
+  ): Promise<void> {
     try {
       await prisma.recommendation.deleteMany({
         where: {
@@ -571,9 +574,14 @@ export class RecommendationsService {
           },
         },
       });
-      logger.info(`Deleted recommendations for user ${userId} relative to plan ${planId}`);
+      logger.info(
+        `Deleted recommendations for user ${userId} relative to plan ${planId}`
+      );
     } catch (error) {
-      logger.error(`Error deleting recommendations for user ${userId} and plan ${planId}:`, error);
+      logger.error(
+        `Error deleting recommendations for user ${userId} and plan ${planId}:`,
+        error
+      );
       throw error;
     }
   }

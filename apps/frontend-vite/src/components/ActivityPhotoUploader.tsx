@@ -14,7 +14,7 @@ import AppleLikePopover from "./AppleLikePopover";
 interface ActivityPhotoUploaderProps {
   activityData: {
     activityId: string;
-    date: Date;
+    datetime: Date;
     quantity: number;
   };
   onClose: () => void;
@@ -38,7 +38,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     try {
       await submitActivity({
         activityId: activityData.activityId,
-        date: activityData.date,
+        datetime: activityData.datetime,
         quantity: activityData.quantity,
         description,
         photo: selectedFile || undefined,

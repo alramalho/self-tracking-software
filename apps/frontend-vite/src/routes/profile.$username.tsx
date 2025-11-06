@@ -651,8 +651,8 @@ function ProfilePage() {
                     {activityEntries
                       .sort(
                         (a, b) =>
-                          new Date(b.date).getTime() -
-                          new Date(a.date).getTime()
+                          new Date(b.datetime).getTime() -
+                          new Date(a.datetime).getTime()
                       )
                       .map((entry) => {
                         const activity = activities.find(
@@ -708,7 +708,7 @@ function ProfilePage() {
             activityEntry={{
               id: showEditActivityEntry.id,
               quantity: showEditActivityEntry.quantity,
-              date: showEditActivityEntry.date,
+              datetime: showEditActivityEntry.datetime,
               activityId: showEditActivityEntry.activityId,
               description: showEditActivityEntry.description || undefined,
             }}

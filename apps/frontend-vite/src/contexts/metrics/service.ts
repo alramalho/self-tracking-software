@@ -22,7 +22,7 @@ const deserializeMetric = (metric: MetricApiResponse): Metric =>
   normalizeApiResponse<Metric>(metric, ["createdAt", "updatedAt"]);
 
 const deserializeMetricEntry = (entry: MetricEntryApiResponse): MetricEntry =>
-  normalizeApiResponse<MetricEntry>(entry, ["date", "createdAt", "updatedAt"]);
+  normalizeApiResponse<MetricEntry>(entry, ["createdAt", "updatedAt"]);
 
 export async function getMetrics(api: AxiosInstance) {
   const response = await api.get<MetricApiResponse[]>("/metrics");

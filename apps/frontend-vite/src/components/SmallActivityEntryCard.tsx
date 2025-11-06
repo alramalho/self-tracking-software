@@ -11,7 +11,7 @@ import { Check } from "lucide-react";
 
 
 export interface Entry {
-  date: Date;
+  datetime: Date;
   activityId: string;
   quantity: number;
   description?: string;
@@ -58,14 +58,14 @@ export const SmallActivityEntryCard = ({
   return (
     <>
       <div
-        key={`${entry.date}-${entry.activityId}`}
+        key={`${entry.datetime}-${entry.activityId}`}
         className={cn(
           `relative flex flex-col items-center justify-center rounded-lg bg-input p-2 transition-all duration-200 ${
             onClick ? "cursor-pointer bg-input hover:bg-input/80" : ""
           } ${selected ? "ring-2 ring-border ring-offset-2" : ""}`,
           className
         )}
-        onClick={() => onClick?.(`${entry.date}-${entry.activityId}`)}
+        onClick={() => onClick?.(`${entry.datetime}-${entry.activityId}`)}
       >
         {completed && (
           <div className="absolute top-2 right-2">
@@ -76,7 +76,7 @@ export const SmallActivityEntryCard = ({
           <span className="text-2xl mb-2">{activity.emoji}</span>
         )}
         <span className="text-xs text-muted-foreground mt-1 text-center">
-          {dateInfoStr(entry.date)}
+          {dateInfoStr(entry.datetime)}
         </span>
         <span className="text-md font-medium text-center text-foreground">
           {activity?.title || "Unknown Activity"}
@@ -84,7 +84,7 @@ export const SmallActivityEntryCard = ({
         <span className="text-xs text-foreground text-center mb-3">
           {entry.quantity} {activity?.measure}
         </span>
-        {completedOn && !isSameDay(completedOn, entry.date) && (
+        {completedOn && !isSameDay(completedOn, entry.datetime) && (
           <span className="text-xs text-green-600 text-center">
             done {completedOnStr(completedOn)}
           </span>

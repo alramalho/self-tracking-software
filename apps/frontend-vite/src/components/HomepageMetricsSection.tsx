@@ -54,7 +54,7 @@ export const HomepageMetricsSection: React.FC = () => {
   const unloggedMetricsCount = metrics?.slice(0, 3).filter((metric) => {
     const todaysEntry = metricEntries?.find(
       (entry: MetricEntry) =>
-        entry.metricId === metric.id && isToday(entry.date)
+        entry.metricId === metric.id && isToday(entry.createdAt)
     );
     const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
     const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
@@ -115,7 +115,7 @@ export const HomepageMetricsSection: React.FC = () => {
               {metrics?.slice(0, 3).map((metric, index) => {
                 const todaysEntry = metricEntries?.find(
                   (entry: MetricEntry) =>
-                    entry.metricId === metric.id && isToday(entry.date)
+                    entry.metricId === metric.id && isToday(entry.createdAt)
                 );
                 const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
                 const isSkippedToday = !!todaysEntry && todaysEntry.skipped;

@@ -140,7 +140,7 @@ function LogPage() {
               open={true} // Visibility is controlled by showPhotoUploader
               activityData={{
                 activityId: selectedActivity!.id,
-                date: currentActivityLogData.date,
+                datetime: currentActivityLogData.datetime,
                 quantity: currentActivityLogData.quantity,
               }}
               onClose={() => {

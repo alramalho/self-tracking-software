@@ -141,7 +141,7 @@ router.post(
           userId: req.user!.id,
           metricId,
           rating: rating ?? 0,
-          date: entryDate,
+          createdAt: entryDate,
           description,
           skipped: skipped ?? false,
           descriptionSkipped: descriptionSkipped ?? false,
@@ -169,7 +169,7 @@ router.patch(
       const todaysEntries = await prisma.metricEntry.findMany({
         where: {
           userId: req.user!.id,
-          date: today,
+          createdAt: today,
         },
       });
 
@@ -189,7 +189,7 @@ router.patch(
       const result = await prisma.metricEntry.updateMany({
         where: {
           userId: req.user!.id,
-          date: today,
+          createdAt: today,
         },
         data,
       });

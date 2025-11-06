@@ -36,7 +36,7 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
 
   // Check if any activities were logged today
   const hasActivitiesToday = activityEntries?.some((entry) =>
-    isToday(entry.date)
+    isToday(entry.datetime)
   );
 
   return (

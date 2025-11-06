@@ -144,7 +144,7 @@ async function generateDummyData() {
             activityId: runningActivity.id,
             userId: users[0].id,
             quantity: 5,
-            date: currentDate,
+            datetime: currentDate,
           },
         });
         activityEntries.push(runEntry);
@@ -157,7 +157,7 @@ async function generateDummyData() {
             activityId: meditationActivity.id,
             userId: users[0].id,
             quantity: 15,
-            date: currentDate,
+            datetime: currentDate,
           },
         });
         activityEntries.push(meditationEntry);
@@ -187,7 +187,7 @@ async function generateDummyData() {
         activityId: workoutActivity.id,
         userId: users[1].id, // Alice
         quantity: 45,
-        date: twoDaysAgo,
+        datetime: twoDaysAgo,
         imageUrl:
           "https://plus.unsplash.com/premium_photo-1664299634542-7a76f829332c?q=80&w=1772&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         imageIsPublic: true,
@@ -500,7 +500,7 @@ async function generateDummyData() {
         console.info(`- ${activity.title}`);
         for (const entry of activity.entries) {
           console.info(
-            `  * ${entry.date}: ${entry.quantity} ${activity.measure}`
+            `  * ${entry.datetime}: ${entry.quantity} ${activity.measure}`
           );
         }
       }
