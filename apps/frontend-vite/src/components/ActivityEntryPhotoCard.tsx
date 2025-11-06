@@ -518,7 +518,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activity.title} – {activityEntry.quantity} {activity.measure}
               </span>
               <span className="text-xs text-muted-foreground">
-                {getFormattedDate(activityEntry.date)}{" "}
+                {getFormattedDate(activityEntry.datetime)}{" "}
                 {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}
               </span>
             </div>

@@ -29,7 +29,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
   // Check if any of today's entries already have descriptions or are skipped
   useEffect(() => {
     const todaysEntries = entries?.filter(
-      entry => isToday(entry.date)
+      entry => isToday(entry.createdAt)
     );
 
     // Check if any entry has a description

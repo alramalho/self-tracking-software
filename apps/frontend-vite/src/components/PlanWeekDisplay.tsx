@@ -67,7 +67,7 @@ export const PlanWeekDisplay = ({
 
   const uniqueDaysWithActivities = new Set(
     week?.completedActivities.map((entry) =>
-      format(new Date(entry.date), "yyyy-MM-dd")
+      format(new Date(entry.datetime), "yyyy-MM-dd")
     )
   );
 
@@ -222,12 +222,12 @@ export const PlanWeekDisplay = ({
                   (a) => a.id === session.activityId
                 );
                 // Check if session is completed by looking for activity entries on that date
-                const sessionEntries = (activityEntries || []).filter(entry => 
+                const sessionEntries = (activityEntries || []).filter(entry =>
                   entry.activityId === session.activityId &&
-                  isSameWeek(entry.date, session.date)
+                  isSameWeek(entry.datetime, session.date)
                 );
                 const completed = sessionEntries.length > 0;
-                const completedOn = sessionEntries[0]?.date;
+                const completedOn = sessionEntries[0]?.datetime;
                 if (!activity) return null;
 
                 const sessionId = `${session.date}-${session.activityId}`;
@@ -236,7 +236,7 @@ export const PlanWeekDisplay = ({
                     key={sessionId}
                     selected={selectedSession === sessionId}
                     entry={{
-                      date: new Date(session.date),
+                      datetime: new Date(session.date),
                       activityId: session.activityId,
                       quantity: session.quantity,
                       description: session.descriptiveGuide,

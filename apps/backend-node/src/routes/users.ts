@@ -758,7 +758,7 @@ usersRouter.get(
           activityId: { in: validActivityIds },
           deletedAt: null,
         },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ datetime: "desc" }, { createdAt: "desc" }],
         take: 50,
         include: {
           activity: true,

@@ -61,7 +61,7 @@ const activityHappenedWithinWindow = (
   windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
 
   return activityEntries.some((entry) => {
-    const entryDate = new Date(entry.date);
+    const entryDate = new Date(entry.datetime);
     const activityCreatedAt = new Date(entry.createdAt);
 
     // Check date window
@@ -122,14 +122,14 @@ export function MetricInsightsCard({
   const calculatedCorrelations = useMemo(() => {
     const filteredMetricEntries = metricEntries
       .filter((entry) => entry.metricId === metric.id)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     const calculatedCorrelations = activities
       .map((activity) => {
         const binaryActivityArray = filteredMetricEntries.map((entry) => {
           const didActivity = activityHappenedWithinWindow(
             activity.id,
-            new Date(entry.date),
+            new Date(entry.createdAt),
             activityEntries,
             new Date(entry.createdAt) // Pass metric entry's creation timestamp
           );

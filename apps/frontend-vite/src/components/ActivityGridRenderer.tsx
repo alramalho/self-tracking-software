@@ -22,7 +22,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
         activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
-        date: new Date(entry.date).toISOString().replaceAll("-", "/"),
+        date: new Date(entry.datetime).toISOString().replaceAll("-", "/"),
         count: entry.quantity,
       }));
     return result;
@@ -32,7 +32,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     const entriesOnDate = activityEntries.filter(
       (e: ActivityEntry) =>
         activities.map((a) => a.id).includes(e.activityId) &&
-        isSameDay(e.date, date)
+        isSameDay(e.datetime, date)
     );
 
     if (entriesOnDate.length === 0) return null;
@@ -77,7 +77,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     const entriesOnDate = activityEntries.filter(
       (entry) =>
         activities.map((a) => a.id).includes(entry.activityId) &&
-        isSameDay(entry.date, focusedDate)
+        isSameDay(entry.datetime, focusedDate)
     );
 
     return (

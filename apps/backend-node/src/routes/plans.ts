@@ -842,7 +842,7 @@ router.get(
             where: {
               userId: user.id,
               activityId: { in: activityIds },
-              date: {
+              datetime: {
                 gte: weekStart,
                 lte: weekEnd,
               },

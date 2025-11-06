@@ -59,7 +59,7 @@ export const normalizePlanProgress = (
 ): PlanProgressData => {
   const normalized = normalizeApiResponse<PlanProgressData>(payload, [
     "weeks.startDate",
-    "weeks.completedActivities.date",
+    "weeks.completedActivities.datetime",
     "weeks.completedActivities.createdAt",
     "weeks.completedActivities.updatedAt",
     "weeks.completedActivities.imageCreatedAt",

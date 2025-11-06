@@ -108,9 +108,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       : (currentWeek.plannedActivities as any[])?.length || 0;
 
   const uniqueDaysWithActivities = new Set(
-    currentWeek.completedActivities.map((entry: any) =>
-      format(new Date(entry.date), "yyyy-MM-dd")
-    )
+    currentWeek.completedActivities.map((entry: any) => {
+      return format(new Date(entry.datetime || entry.date), "yyyy-MM-dd");
+    })
   );
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
@@ -144,7 +144,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       : totalCompletedActivities === totalPlannedActivities;
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
-  const isCoached = plan.isCoached
+  const isCoached = plan.isCoached;
 
   // Calculate total number of animations that will run
   const totalProgressBars =
@@ -235,7 +235,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
           {/* Badges row - beneath the title */}
           <div className="flex items-center gap-2 flex-wrap">
             {isCoached && (
-              <div className={cn("flex items-center gap-1 px-3 py-1 rounded-full w-fit", variants.fadedBg)}>
+              <div
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1 rounded-full w-fit",
+                  variants.fadedBg
+                )}
+              >
                 <Sparkles size={18} className={variants.text} />
                 <span className={cn("text-[12px] font-medium", variants.text)}>
                   Coached

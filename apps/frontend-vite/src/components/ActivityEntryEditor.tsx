@@ -12,7 +12,7 @@ import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 interface ActivityEntry {
   id: string;
   quantity: number;
-  date: Date;
+  datetime: Date;
   activityId: string;
   description?: string;
 }
@@ -30,7 +30,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(activityEntry.quantity.toString());
   const [date, setDate] = useState(
-    format(new Date(activityEntry.date), "yyyy-MM-dd")
+    format(new Date(activityEntry.datetime), "yyyy-MM-dd")
   );
   const [description, setDescription] = useState(
     activityEntry.description || ""
@@ -82,7 +82,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
               entry: {
                 id: activityEntry.id,
                 quantity: Number(quantity),
-                date: toMidnightUTCDate(new Date(date)),
+                datetime: toMidnightUTCDate(new Date(date)),
                 description,
               },
             });

@@ -35,7 +35,7 @@ export function MetricTrendCard({
   const thisWeekData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
-    const entry = thisWeekEntries.find((e) => isSameDay(new Date(e.date), date));
+    const entry = thisWeekEntries.find((e) => isSameDay(new Date(e.createdAt), date));
     return entry ? entry.rating : 0;
   });
 
@@ -43,7 +43,7 @@ export function MetricTrendCard({
   const lastWeekData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (13 - i));
-    const entry = lastWeekEntries.find((e) => isSameDay(new Date(e.date), date));
+    const entry = lastWeekEntries.find((e) => isSameDay(new Date(e.createdAt), date));
     return entry ? entry.rating : 0;
   });
 

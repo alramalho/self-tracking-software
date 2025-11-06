@@ -673,6 +673,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.13)(react@19.1.1)
+      react-mobile-picker:
+        specifier: ^1.2.0
+        version: 1.2.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-qr-code:
         specifier: ^2.0.18
         version: 2.0.18(react@19.1.1)
@@ -7873,6 +7876,12 @@ packages:
     peerDependencies:
       '@types/react': '>=18'
       react: '>=18'
+
+  react-mobile-picker@1.2.0:
+    resolution: {integrity: sha512-utIgq/rqJfDw+qL3CA6j5e3JqlAoc1kHucJi2vNiwspjaa1XJurJN/FKWBSgui1wV0gzS0BYutd2CbwcyR2eDA==}
+    peerDependencies:
+      react: ^18 || ^19
+      react-dom: ^18 || ^19
 
   react-qr-code@2.0.18:
     resolution: {integrity: sha512-v1Jqz7urLMhkO6jkgJuBYhnqvXagzceg3qJUWayuCK/c6LTIonpWbwxR1f1APGd4xrW/QcQEovNrAojbUz65Tg==}
@@ -18402,6 +18411,11 @@ snapshots:
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
+
+  react-mobile-picker@1.2.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
 
   react-qr-code@2.0.18(react@19.1.1):
     dependencies:

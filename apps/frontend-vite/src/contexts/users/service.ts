@@ -136,7 +136,7 @@ function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
     "activities.createdAt",
     "activities.updatedAt",
     "activities.deletedAt",
-    "activityEntries.date",
+    "activityEntries.datetime",
     "activityEntries.createdAt",
     "activityEntries.updatedAt",
     "activityEntries.deletedAt",

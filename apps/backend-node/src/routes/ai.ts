@@ -942,7 +942,7 @@ router.post(
         where: {
           userId: user.id,
           metricId: metric.id,
-          date: entryDate,
+          createdAt: entryDate,
         },
       });
 
@@ -956,7 +956,7 @@ router.post(
           data: {
             userId: user.id,
             metricId: metric.id,
-            date: entryDate,
+            createdAt: entryDate,
             rating: dbRating,
           },
         });

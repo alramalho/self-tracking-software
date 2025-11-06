@@ -74,7 +74,7 @@ function normalizeActivityEntry(
   entry: TimelineActivityEntry
 ): TimelineActivityEntry {
   return normalizeApiResponse<TimelineActivityEntry>(entry, [
-    "date",
+    "datetime",
     "createdAt",
     "updatedAt",
     "deletedAt",

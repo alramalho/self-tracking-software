@@ -53,7 +53,7 @@ const activityHappenedWithinWindow = (
   return entries.some((entry) => {
     if (entry.activityId !== activityId) return false;
 
-    const entryDate = new Date(entry.date);
+    const entryDate = new Date(entry.datetime);
     const activityCreatedAt = new Date(entry.createdAt);
 
     // Check date window
@@ -80,7 +80,7 @@ const calculateMetricCorrelations = (
 ): MetricCorrelation[] => {
   const metricEntries = entries
     .filter((entry) => entry.metricId === metricId)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const correlations = activities
     .map((activity) => {
@@ -88,7 +88,7 @@ const calculateMetricCorrelations = (
         const didActivity = activityHappenedWithinWindow(
           activity.id,
           activityEntries,
-          entry.date,
+          entry.createdAt,
           new Date(entry.createdAt) // Pass metric entry's creation timestamp
         );
         return didActivity ? 1 : 0;
@@ -177,8 +177,8 @@ export const getMetricWeekData = (
 
   const metricEntries = entries
     .filter((entry) => entry.metricId === metricId)
-    .filter((entry) => new Date(entry.date) >= sevenDaysAgo)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((entry) => new Date(entry.createdAt) >= sevenDaysAgo)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   // Fill in missing days with 0
   const weekData: number[] = [];
@@ -187,7 +187,7 @@ export const getMetricWeekData = (
     date.setDate(date.getDate() - i);
 
     const entryForDay = metricEntries.find((entry) =>
-      isSameDay(entry.date, date)
+      isSameDay(entry.createdAt, date)
     );
 
     weekData.push(entryForDay ? entryForDay.rating : 0);

@@ -130,36 +130,31 @@ function InsightsDashboardPage() {
                     id: "demo1",
                     metricId: "demo",
                     rating: 5,
-                    date: new Date(new Date().setDate(new Date().getDate() - 1)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
                   },
                   {
                     id: "demo2",
                     metricId: "demo",
                     rating: 4,
-                    date: new Date(new Date().setDate(new Date().getDate() - 2)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
                   },
                   {
                     id: "demo3",
                     metricId: "demo",
                     rating: 4,
-                    date: new Date(new Date().setDate(new Date().getDate() - 3)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 3)),
                   },
                   {
                     id: "demo4",
                     metricId: "demo",
                     rating: 3,
-                    date: new Date(new Date().setDate(new Date().getDate() - 5)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 5)),
                   },
                   {
                     id: "demo5",
                     metricId: "demo",
                     rating: 4,
-                    date: new Date(new Date().setDate(new Date().getDate() - 6)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 6)),
                   },
                 ] as MetricEntry[]
               }
@@ -169,29 +164,25 @@ function InsightsDashboardPage() {
                     id: "demo6",
                     metricId: "demo",
                     rating: 3,
-                    date: new Date(new Date().setDate(new Date().getDate() - 8)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 8)),
                   },
                   {
                     id: "demo7",
                     metricId: "demo",
                     rating: 2,
-                    date: new Date(new Date().setDate(new Date().getDate() - 10)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 10)),
                   },
                   {
                     id: "demo8",
                     metricId: "demo",
                     rating: 4,
-                    date: new Date(new Date().setDate(new Date().getDate() - 11)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 11)),
                   },
                   {
                     id: "demo9",
                     metricId: "demo",
                     rating: 3,
-                    date: new Date(new Date().setDate(new Date().getDate() - 13)),
-                    createdAt: new Date(),
+                    createdAt: new Date(new Date().setDate(new Date().getDate() - 13)),
                   },
                 ] as MetricEntry[]
               }
@@ -364,8 +355,8 @@ function InsightsDashboardPage() {
 
     // Get entries from the last 14 days and sort them
     const recentEntries = metricEntries
-      .filter((entry) => new Date(entry.date) >= twoWeeksAgo)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     if (recentEntries.length < 2) return 0;
 
@@ -374,10 +365,10 @@ function InsightsDashboardPage() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     const thisWeekEntries = recentEntries.filter(
-      (entry) => new Date(entry.date) >= oneWeekAgo
+      (entry) => new Date(entry.createdAt) >= oneWeekAgo
     );
     const lastWeekEntries = recentEntries.filter(
-      (entry) => new Date(entry.date) < oneWeekAgo
+      (entry) => new Date(entry.createdAt) < oneWeekAgo
     );
 
     // Calculate averages
@@ -405,7 +396,7 @@ function InsightsDashboardPage() {
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
         <DailyCheckinViewer
           entries={entries?.map((entry) => ({
-            date: new Date(entry.date).toISOString(),
+            date: new Date(entry.createdAt).toISOString(),
           })) || []}
         />
       </div>
@@ -433,17 +424,17 @@ function InsightsDashboardPage() {
 
             const recentEntries = entries
               ?.filter((e) => e.metricId === metric.id)
-              .filter((entry) => new Date(entry.date) >= twoWeeksAgo)
+              .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
               .sort(
                 (a, b) =>
-                  new Date(a.date).getTime() - new Date(b.date).getTime()
+                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
               );
 
             const thisWeekEntries = recentEntries?.filter(
-              (entry) => new Date(entry.date) >= oneWeekAgo
+              (entry) => new Date(entry.createdAt) >= oneWeekAgo
             );
             const lastWeekEntries = recentEntries?.filter(
-              (entry) => new Date(entry.date) < oneWeekAgo
+              (entry) => new Date(entry.createdAt) < oneWeekAgo
             );
 
             const thisWeekAvg =

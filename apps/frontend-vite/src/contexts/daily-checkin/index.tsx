@@ -75,7 +75,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
     return metrics.every((metric) => {
       const todaysEntry = entries?.find(
-        (entry) => entry.metricId === metric.id && isToday(entry.date)
+        (entry) => entry.metricId === metric.id && isToday(entry.createdAt)
       );
 
       return todaysEntry && (todaysEntry.rating > 0 || todaysEntry.skipped);
@@ -86,13 +86,13 @@ export const DailyCheckinPopoverProvider: React.FC<{
     entries && entries.length > 0
       ? entries.reduce(
           (latest, current) =>
-            new Date(current.date) > new Date(latest.date) ? current : latest,
+            new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest,
           entries[0]
         )
       : undefined;
 
   const daysSinceLastEntry = latestEntry
-    ? differenceInCalendarDays(new Date(), new Date(latestEntry.date))
+    ? differenceInCalendarDays(new Date(), new Date(latestEntry.createdAt))
     : undefined;
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
       return;
     }
 
-    const lastCheckin = new Date(latestEntry.date);
+    const lastCheckin = new Date(latestEntry.createdAt);
     const today = new Date();
 
     const wasToday =

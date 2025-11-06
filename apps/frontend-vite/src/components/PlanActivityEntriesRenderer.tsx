@@ -29,10 +29,10 @@ const PlanActivityEntriesRenderer: React.FC<
   const beginingOfWeekOfFirstActivityEntry = useMemo(() => {
     if (planActivityEntries.length === 0) return new Date();
     const sortedPlanActivityEntries = planActivityEntries.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
     const firstActivityEntry = sortedPlanActivityEntries[0];
-    const beginingOfWeek = startOfWeek(firstActivityEntry.date);
+    const beginingOfWeek = startOfWeek(firstActivityEntry.datetime);
     return beginingOfWeek;
   }, [planActivityEntries]);
 
@@ -51,7 +51,7 @@ const PlanActivityEntriesRenderer: React.FC<
   const formatEntriesForHeatMap = () => {
     const formattedEntries = planActivityEntries.map((entry) => {
       return {
-        date: format(entry.date, "yyyy/MM/dd"),
+        date: format(entry.datetime, "yyyy/MM/dd"),
         count: entry.quantity,
       };
     });
@@ -70,7 +70,7 @@ const PlanActivityEntriesRenderer: React.FC<
 
   const getIntensityForDate = (dateStr: string) => {
     const entriesOnDate = planActivityEntries.filter(
-      (e) => format(e.date, "yyyy-MM-dd") === dateStr
+      (e) => format(e.datetime, "yyyy-MM-dd") === dateStr
     );
 
     if (entriesOnDate.length === 0) return null;
@@ -105,7 +105,7 @@ const PlanActivityEntriesRenderer: React.FC<
 
     const entriesOnDate = planActivityEntries.filter(
       (entry) =>
-        format(entry.date, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
+        format(entry.datetime, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
     );
 
     return (

@@ -1245,7 +1245,7 @@ export class AIService {
   async generatePostActivityMessage(
     user: User,
     plan: Plan & { activities: Activity[] },
-    activityEntry: { activityId: string; quantity: number; date: Date }
+    activityEntry: { activityId: string; quantity: number; datetime: Date }
   ): Promise<{ title: string; message: string }> {
     const userName = user.name || user.username || "there";
 

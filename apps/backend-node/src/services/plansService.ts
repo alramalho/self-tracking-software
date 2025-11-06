@@ -127,7 +127,7 @@ export class PlansService {
     // Extract stats from the current week data
     const daysCompletedThisWeek = new Set(
       currentWeek.completedActivities.map((activity) =>
-        format(new Date(activity.date), "yyyy-MM-dd")
+        format(new Date(activity.datetime), "yyyy-MM-dd")
       )
     ).size;
 
@@ -625,7 +625,8 @@ export class PlansService {
       },
       achievement: {
         ...cachedState!.achievement,
-        achievedLastStreakAt: cachedState!.achievement.achievedLastStreakAt ?? null,
+        achievedLastStreakAt:
+          cachedState!.achievement.achievedLastStreakAt ?? null,
         celebratedStreakAt: cachedState!.achievement.celebratedStreakAt ?? null,
       },
       currentWeekStats: cachedState!.currentWeekStats,
@@ -656,26 +657,34 @@ export class PlansService {
     // Track streak achievement dates
     const oldStreak = oldProgressState?.achievement?.streak ?? 0;
     const newStreak = progressData.achievement.streak;
-    const achievedLastStreakAt = newStreak > oldStreak
-      ? new Date()
-      : oldProgressState?.achievement?.achievedLastStreakAt ?? null;
-    const celebratedStreakAt = oldProgressState?.achievement?.celebratedStreakAt ?? null;
+    const achievedLastStreakAt =
+      newStreak > oldStreak
+        ? new Date()
+        : (oldProgressState?.achievement?.achievedLastStreakAt ?? null);
+    const celebratedStreakAt =
+      oldProgressState?.achievement?.celebratedStreakAt ?? null;
 
     // Track habit achievement dates
-    const wasHabitAchieved = oldProgressState?.habitAchievement?.isAchieved ?? false;
+    const wasHabitAchieved =
+      oldProgressState?.habitAchievement?.isAchieved ?? false;
     const isHabitAchieved = progressData.habitAchievement.isAchieved;
-    const habitAchievedAt = !wasHabitAchieved && isHabitAchieved
-      ? new Date()
-      : oldProgressState?.habitAchievement?.achievedAt ?? null;
-    const habitCelebratedAt = oldProgressState?.habitAchievement?.celebratedAt ?? null;
+    const habitAchievedAt =
+      !wasHabitAchieved && isHabitAchieved
+        ? new Date()
+        : (oldProgressState?.habitAchievement?.achievedAt ?? null);
+    const habitCelebratedAt =
+      oldProgressState?.habitAchievement?.celebratedAt ?? null;
 
     // Track lifestyle achievement dates
-    const wasLifestyleAchieved = oldProgressState?.lifestyleAchievement?.isAchieved ?? false;
+    const wasLifestyleAchieved =
+      oldProgressState?.lifestyleAchievement?.isAchieved ?? false;
     const isLifestyleAchieved = progressData.lifestyleAchievement.isAchieved;
-    const lifestyleAchievedAt = !wasLifestyleAchieved && isLifestyleAchieved
-      ? new Date()
-      : oldProgressState?.lifestyleAchievement?.achievedAt ?? null;
-    const lifestyleCelebratedAt = oldProgressState?.lifestyleAchievement?.celebratedAt ?? null;
+    const lifestyleAchievedAt =
+      !wasLifestyleAchieved && isLifestyleAchieved
+        ? new Date()
+        : (oldProgressState?.lifestyleAchievement?.achievedAt ?? null);
+    const lifestyleCelebratedAt =
+      oldProgressState?.lifestyleAchievement?.celebratedAt ?? null;
 
     // Cache the computed progress with achievement dates
     const progressState: PlanProgressState = {
@@ -814,7 +823,7 @@ export class PlansService {
     const planActivityEntriesThisWeek = await prisma.activityEntry.findMany({
       where: {
         activityId: { in: plan.activities.map((a) => a.id) },
-        date: {
+        datetime: {
           gte: weekStart,
           lte: weekEnd,
         },
@@ -827,7 +836,7 @@ export class PlansService {
     const numberOfDaysCompletedThisWeek = // must be completedActivites but as a set for .date as YYYY-MM-DD
       new Set(
         completedActivities.map((activity) =>
-          format(new Date(activity.date), "yyyy-MM-dd")
+          format(new Date(activity.datetime), "yyyy-MM-dd")
         )
       ).size;
 
@@ -916,7 +925,7 @@ export class PlansService {
         deletedAt: null,
       },
       orderBy: {
-        date: "asc",
+        datetime: "asc",
       },
       take: 1,
     });
@@ -926,7 +935,7 @@ export class PlansService {
     if (startDate) {
       actualStartDate = startDate;
     } else if (activityEntries.length > 0) {
-      actualStartDate = toMidnightUTCDate(activityEntries[0].date);
+      actualStartDate = toMidnightUTCDate(activityEntries[0].datetime);
     } else {
       // If no activity entries exist, start from current week
       actualStartDate = todaysLocalDate();
@@ -1210,7 +1219,7 @@ export class PlansService {
         {
           activityId: activityEntry.activityId,
           quantity: activityEntry.quantity,
-          date: activityEntry.date,
+          datetime: activityEntry.datetime,
         }
       );
 
@@ -1340,7 +1349,7 @@ export class PlansService {
         where: {
           userId: user.id,
           deletedAt: null,
-          date: {
+          datetime: {
             gte: fourteenDaysAgo,
           },
         },

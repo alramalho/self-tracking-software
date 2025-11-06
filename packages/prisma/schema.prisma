@@ -141,7 +141,7 @@ model ActivityEntry {
   activityId  String
   userId      String
   quantity    Int
-  date        DateTime  @db.Date
+  datetime    DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
   description String?
@@ -227,7 +227,6 @@ model MetricEntry {
   userId             String
   metricId           String
   rating             Int
-  date               DateTime @db.Date
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   description        String?
@@ -241,8 +240,8 @@ model MetricEntry {
   @@index([userId])
   @@index([metricId])
   @@index([createdAt])
-  @@index([userId, date])
-  @@index([metricId, date])
+  @@index([userId, createdAt])
+  @@index([metricId, createdAt])
   @@map("metric_entries")
   @@schema("public")
 }

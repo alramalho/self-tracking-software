@@ -129,7 +129,7 @@ function HomePage() {
   const unloggedMetricsCount = metrics?.filter((metric) => {
     const todaysEntry = metricEntries?.find(
       (entry: MetricEntry) =>
-        entry.metricId === metric.id && isToday(entry.date)
+        entry.metricId === metric.id && isToday(entry.createdAt)
     );
     const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
     const isSkippedToday = !!todaysEntry && todaysEntry.skipped;

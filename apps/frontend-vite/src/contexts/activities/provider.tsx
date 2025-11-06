@@ -54,7 +54,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     mutationFn: async (data: ActivityLogData) => {
       const formData = new FormData();
       formData.append("activityId", data.activityId);
-      formData.append("iso_date_string", data.date.toISOString());
+      formData.append("iso_date_string", data.datetime.toISOString());
       formData.append("quantity", data.quantity.toString());
       formData.append("description", data.description || "");
       formData.append(
@@ -142,7 +142,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     }) => {
       await api.put(`/activities/activity-entries/${data.entry.id}`, {
         quantity: Number(data.entry.quantity),
-        date: data.entry.date,
+        datetime: data.entry.datetime,
         description: data.entry.description || "",
       });
     },

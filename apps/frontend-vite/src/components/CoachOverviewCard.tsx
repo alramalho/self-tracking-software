@@ -239,7 +239,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                       <SmallActivityEntryCard
                         key={sessionId}
                         entry={{
-                          date: session.date,
+                          datetime: new Date(session.date),
                           activityId: session.activityId,
                           quantity: session.quantity,
                           description: session.descriptiveGuide,
