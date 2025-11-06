@@ -61,24 +61,7 @@ export const HomepageMetricsSection: React.FC = () => {
     return !isLoggedToday && !isSkippedToday;
   }).length;
 
-  const isAfter2PM = new Date().getHours() >= 14;
-  const canLogMetrics =
-    unloggedMetricsCount && unloggedMetricsCount > 0 && isAfter2PM;
-
-  if (!canLogMetrics) {
-    return (
-      <>
-        <h3 className="text-md font-semibold text-foreground">Your Metrics</h3>
-        <div className="bg-card/60 ring-1 ring-border rounded-xl p-2 border border-white/50 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Come back after 2PM to log your metrics
-            </span>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const canLogMetrics = unloggedMetricsCount && unloggedMetricsCount > 0;
 
   return (
     <div className="">

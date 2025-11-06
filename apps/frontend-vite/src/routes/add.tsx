@@ -2,9 +2,11 @@ import { ActivityCard } from "@/components/ActivityCard";
 import ActivityEditor from "@/components/ActivityEditor";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
+import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityLogData } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useMetrics } from "@/contexts/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 import type { Activity, ActivityEntry } from "@tsw/prisma";
 import { Plus } from "lucide-react";
@@ -16,6 +18,7 @@ export const Route = createFileRoute("/add")({
 
 function LogPage() {
   const { activities, activityEntries, isLoadingActivities } = useActivities();
+  const { metrics } = useMetrics();
 
   const sortedActivities = [...activities].sort((a, b) => {
     const aEntryCount = activityEntries.filter(
@@ -32,6 +35,7 @@ function LogPage() {
   >();
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [showMetricsPopover, setShowMetricsPopover] = useState(false);
   const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(
     undefined
@@ -69,8 +73,12 @@ function LogPage() {
 
   const handleActivityLoggedAndPhotoSkippedOrDone = () => {
     setShowPhotoUploader(false);
-    setSelectedActivity(undefined);
     setCurrentActivityLogData(null);
+
+    // Show metrics popover if user has metrics configured
+    if (metrics && metrics.length > 0) {
+      setShowMetricsPopover(true);
+    }
   };
 
   return (
@@ -143,6 +151,15 @@ function LogPage() {
           )}
         </>
       )}
+
+      {/* Metrics Popover - shown after activity is logged */}
+      <MetricsLogPopover
+        open={showMetricsPopover}
+        onClose={() => setShowMetricsPopover(false)}
+        title={`How are you feeling after ${selectedActivity?.title}?`}
+        description="This helps us identify patterns and correlations between your activities and how you feel throughout the day."
+        customIcon={<span className="text-6xl">{selectedActivity?.emoji}</span>}
+      />
     </div>
   );
 }

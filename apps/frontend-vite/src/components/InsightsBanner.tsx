@@ -3,7 +3,7 @@ import { MetricRaters } from "@/components/MetricRaters";
 import { Button } from "@/components/ui/button";
 import { useMetrics } from "@/contexts/metrics";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Clock } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import AppleLikePopover from "./AppleLikePopover";
 
 interface InsightsBannerProps {
@@ -21,32 +21,15 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const timeString = `${hours % 12 || 12}:${minutes
     .toString()
     .padStart(2, "0")}${hours >= 12 ? "pm" : "am"}`;
-  const canLogMetrics = true
-    // process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       {hasMetrics ? (
         <>
-          {canLogMetrics ? (
-            <>
-              <h2 className="text-xl font-semibold m-4 mt-6 text-center">
-                It&apos;s {timeString}, {hours < 19 ? "how's your day going?" : "how was your day?"} 😊
-              </h2>
-              <MetricRaters onAllRatingsSubmitted={onClose} />
-            </>
-          ) : (
-            <div className="text-center space-y-4 py-8">
-              <Clock className="w-12 h-12 mx-auto text-muted-foreground" />
-              <h2 className="text-xl font-semibold">
-                Metrics can be logged after 4 PM
-              </h2>
-              <p className="text-muted-foreground">
-                This helps you reflect on your entire day. Come back at 4 PM to
-                log your metrics!
-              </p>
-            </div>
-          )}
+          <h2 className="text-xl font-semibold m-4 mt-6 text-center">
+            It&apos;s {timeString}, {hours < 19 ? "how's your day going?" : "how was your day?"} 😊
+          </h2>
+          <MetricRaters onAllRatingsSubmitted={onClose} />
         </>
       ) : (
         <div className="space-y-8">

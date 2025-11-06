@@ -1,4 +1,3 @@
-import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useMetrics } from "@/contexts/metrics";
@@ -25,27 +24,27 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
   const [existingNote, setExistingNote] = useState<string>("");
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const api = useApiWithAuth();
-  const { skipTodaysNote, entries } = useMetrics()
+  const { logTodaysNote, skipTodaysNote, entries } = useMetrics()
 
   // Check if any of today's entries already have descriptions or are skipped
   useEffect(() => {
     const todaysEntries = entries?.filter(
       entry => isToday(entry.date)
     );
-    
+
     // Check if any entry has a description
-    const entryWithDescription = todaysEntries?.find(entry => 
+    const entryWithDescription = todaysEntries?.find(entry =>
       entry.description && entry.description.trim() !== ""
     );
-    
+
     // Check if any entry has description_skipped set to true
-    const entryWithSkippedDescription = todaysEntries?.find(entry => 
+    const entryWithSkippedDescription = todaysEntries?.find(entry =>
       entry.descriptionSkipped === true
     );
-    
+
     if (entryWithDescription && entryWithDescription.description) {
       setExistingNote(entryWithDescription.description);
+      setNote(entryWithDescription.description); // Prefill the textarea
       setIsSubmitted(true);
       setWasSkipped(false);
     } else if (entryWithSkippedDescription) {
@@ -54,6 +53,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
     } else {
       setIsSubmitted(false);
       setWasSkipped(false);
+      setNote(""); // Clear the textarea if no existing note
     }
   }, [entries]);
 
@@ -65,14 +65,11 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
 
     setIsSubmitting(true);
     try {
-      await api.post("/metrics/log-todays-note", {
-        note: note.trim(),
-      });
+      await logTodaysNote(note.trim());
 
       setExistingNote(note.trim());
       setIsSubmitted(true);
       setWasSkipped(false);
-      toast.success("Note added to today's entries!");
       onSubmitted?.();
     } catch (error) {
       console.error("Error submitting note:", error);

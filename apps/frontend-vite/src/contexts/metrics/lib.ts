@@ -33,11 +33,18 @@ const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
   return denominator === 0 ? 0 : numerator / denominator;
 };
 
+// Cutoff date for timestamp-based filtering (January 6, 2025)
+// Metric entries created after this date will only count activities logged before them
+const TIMESTAMP_FILTERING_CUTOFF = new Date('2025-01-06T00:00:00Z');
+
 // Check if activity happened within window
+// If metricCreatedAt is provided and after the cutoff date, only count activities
+// that were logged before the metric entry
 const activityHappenedWithinWindow = (
   activityId: string,
   entries: ActivityEntry[],
-  date: Date
+  date: Date,
+  metricCreatedAt?: Date
 ): boolean => {
   const targetDate = new Date(date);
   const windowStart = new Date(targetDate);
@@ -45,8 +52,22 @@ const activityHappenedWithinWindow = (
 
   return entries.some((entry) => {
     if (entry.activityId !== activityId) return false;
+
     const entryDate = new Date(entry.date);
-    return entryDate >= windowStart && entryDate <= targetDate;
+    const activityCreatedAt = new Date(entry.createdAt);
+
+    // Check date window
+    const inDateWindow = entryDate >= windowStart && entryDate <= targetDate;
+
+    if (!inDateWindow) return false;
+
+    // If metric was created after cutoff date, enforce timestamp filtering
+    if (metricCreatedAt && metricCreatedAt >= TIMESTAMP_FILTERING_CUTOFF) {
+      return activityCreatedAt < metricCreatedAt;
+    }
+
+    // For historical data (before cutoff), don't enforce timestamp filtering
+    return true;
   });
 };
 
@@ -67,7 +88,8 @@ const calculateMetricCorrelations = (
         const didActivity = activityHappenedWithinWindow(
           activity.id,
           activityEntries,
-          entry.date
+          entry.date,
+          new Date(entry.createdAt) // Pass metric entry's creation timestamp
         );
         return didActivity ? 1 : 0;
       });
