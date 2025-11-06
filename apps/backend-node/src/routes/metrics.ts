@@ -92,7 +92,7 @@ router.post(
   }
 );
 
-// Upsert metric entry for a specific date
+// Create a new metric entry (allows multiple entries per day)
 router.post(
   "/entries",
   requireAuth,
@@ -135,46 +135,23 @@ router.post(
         entryDate = toMidnightUTCDate(parsedDate);
       }
 
-      const existingEntry = await prisma.metricEntry.findFirst({
-        where: {
-          metricId,
+      // Always create a new entry (allow multiple per day)
+      const entry = await prisma.metricEntry.create({
+        data: {
           userId: req.user!.id,
+          metricId,
+          rating: rating ?? 0,
           date: entryDate,
+          description,
+          skipped: skipped ?? false,
+          descriptionSkipped: descriptionSkipped ?? false,
         },
       });
 
-      const updateData: Prisma.MetricEntryUpdateInput = {};
-      if (rating !== undefined) updateData.rating = rating;
-      if (description !== undefined) updateData.description = description;
-      if (skipped !== undefined) updateData.skipped = skipped;
-      if (descriptionSkipped !== undefined)
-        updateData.descriptionSkipped = descriptionSkipped;
-
-      let entry;
-
-      if (existingEntry) {
-        entry = await prisma.metricEntry.update({
-          where: { id: existingEntry.id },
-          data: updateData,
-        });
-      } else {
-        entry = await prisma.metricEntry.create({
-          data: {
-            userId: req.user!.id,
-            metricId,
-            rating: rating ?? 0,
-            date: entryDate,
-            description,
-            skipped: skipped ?? false,
-            descriptionSkipped: descriptionSkipped ?? false,
-          },
-        });
-      }
-
       res.json(entry);
     } catch (error) {
-      logger.error("Error upserting metric entry:", error);
-      res.status(500).json({ error: "Failed to upsert metric entry" });
+      logger.error("Error creating metric entry:", error);
+      res.status(500).json({ error: "Failed to create metric entry" });
     }
   }
 );

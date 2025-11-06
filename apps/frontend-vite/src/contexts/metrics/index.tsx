@@ -122,19 +122,8 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     onSuccess: (newEntries) => {
       queryClient.setQueryData(["metricsEntries"], (old: MetricEntry[]) => {
         if (!old) return queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
-        let updated = [...old];
-        newEntries.forEach(newEntry => {
-          const existingIndex = updated.findIndex(entry => 
-            entry.metricId === newEntry.metricId && 
-            isSameDay(entry.date, newEntry.date)
-          );
-          if (existingIndex >= 0) {
-            updated[existingIndex] = newEntry;
-          } else {
-            updated = [newEntry, ...updated];
-          }
-        });
-        return updated;
+        // Always add new entries (allow multiple per day)
+        return [...newEntries, ...old];
       });
       queryClient.refetchQueries({ queryKey: ["current-user"] });
     },

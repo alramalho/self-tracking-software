@@ -45,22 +45,40 @@ const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
   return den === 0 ? 0 : num / den;
 };
 
+// Metric entries created after this date will only count activities logged before them
+const TIMESTAMP_FILTERING_CUTOFF = new Date('2025-11-06T00:00:00Z');
+
 // Check if an activity happened within the configured window before a date
+// If metricCreatedAt is provided and after the cutoff date, only count activities
+// that were logged before the metric entry
 const activityHappenedWithinWindow = (
   activityId: string,
   targetDate: Date,
-  activityEntries: ActivityEntry[]
+  activityEntries: ActivityEntry[],
+  metricCreatedAt?: Date
 ): boolean => {
   const windowStart = new Date(targetDate);
   windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
 
   return activityEntries.some((entry) => {
     const entryDate = new Date(entry.date);
-    return (
+    const activityCreatedAt = new Date(entry.createdAt);
+
+    // Check date window
+    const inDateWindow =
       entry.activityId === activityId &&
       entryDate >= windowStart &&
-      entryDate <= targetDate
-    );
+      entryDate <= targetDate;
+
+    if (!inDateWindow) return false;
+
+    // If metric was created after cutoff date, enforce timestamp filtering
+    if (metricCreatedAt && metricCreatedAt >= TIMESTAMP_FILTERING_CUTOFF) {
+      return activityCreatedAt < metricCreatedAt;
+    }
+
+    // For historical data (before cutoff), don't enforce timestamp filtering
+    return true;
   });
 };
 
@@ -73,6 +91,7 @@ export function MetricInsightsCard({
   hardcodedCorrelations,
 }: MetricInsightsCardProps) {
   const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
+  const [selectedSampleSize, setSelectedSampleSize] = useState<number | undefined>(undefined);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -111,7 +130,8 @@ export function MetricInsightsCard({
           const didActivity = activityHappenedWithinWindow(
             activity.id,
             new Date(entry.date),
-            activityEntries
+            activityEntries,
+            new Date(entry.createdAt) // Pass metric entry's creation timestamp
           );
           return didActivity ? 1 : 0;
         });
@@ -172,7 +192,10 @@ export function MetricInsightsCard({
               title={`${correlation.activity.emoji || "📊"} ${correlation.activity.title}`}
               pearsonValue={correlation.correlation}
               sampleSize={correlation.sampleSize}
-              onReliabilityClick={() => setShowReliabilityHelp(true)}
+              onReliabilityClick={() => {
+                setSelectedSampleSize(correlation.sampleSize);
+                setShowReliabilityHelp(true);
+              }}
               isVisible={isVisible}
               animationDelay={index * 100} // Stagger animation by 100ms per bar
             />
@@ -182,7 +205,11 @@ export function MetricInsightsCard({
 
       <ReliabilityHelpPopover
         isOpen={showReliabilityHelp}
-        onClose={() => setShowReliabilityHelp(false)}
+        onClose={() => {
+          setShowReliabilityHelp(false);
+          setSelectedSampleSize(undefined);
+        }}
+        sampleSize={selectedSampleSize}
       />
     </Card>
   );

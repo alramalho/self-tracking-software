@@ -4,8 +4,6 @@ import { Card } from "@/components/ui/card";
 import { useMetrics } from "@/contexts/metrics";
 import { useCurrentUser } from "@/contexts/users";
 import { todaysLocalDate } from "@/lib/utils";
-import { type Metric } from "@tsw/prisma";
-import { isToday } from "date-fns";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { DynamicUISuggester } from "./DynamicUISuggester";
@@ -20,17 +18,9 @@ export function MetricRaters({
   onAllRatingsSubmitted: () => void;
 }) {
   const { currentUser } = useCurrentUser();
-  const { metrics, entries, logMetrics } = useMetrics();
+  const { metrics, logMetrics } = useMetrics();
   const user = currentUser;
   const [ratings, setRatings] = useState<Record<string, MetricRating>>({});
-
-  const metricLoggingDisabled = (metric: Metric) => {
-    const today = new Date().toISOString().split("T")[0];
-    return entries?.some(
-      (entry) =>
-        entry.metricId === metric.id && isToday(entry.date)
-    );
-  };
 
   const handleRatingSelected = (metricId: string, rating: number) => {
     setRatings((prev) => ({
@@ -49,7 +39,7 @@ export function MetricRaters({
       }));
 
       await logMetrics(ratingsToSubmit);
-      
+
       // Clear ratings after successful submission
       setRatings({});
       onAllRatingsSubmitted();
@@ -59,43 +49,24 @@ export function MetricRaters({
     }
   };
 
-  const hasUnloggedMetrics = metrics?.some(
-    (metric) => !metricLoggingDisabled(metric)
-  );
-  const unloggedMetrics = metrics?.filter(
-    (metric) => !metricLoggingDisabled(metric)
-  );
+  const hasMetrics = metrics && metrics.length > 0;
   const allMetricsRated =
-    hasUnloggedMetrics && unloggedMetrics?.every((metric) => ratings[metric.id]);
+    hasMetrics && metrics?.every((metric) => ratings[metric.id]);
 
   return (
     <div className="space-y-8">
-      {metrics?.map((metric) => {
-        const isDisabled = metricLoggingDisabled(metric);
-        return (
-          <Card
-            key={metric.id}
-            className={`p-8 ${
-              isDisabled ? "opacity-50 pointer-events-none" : ""
-            }`}
-          >
-            <MetricRater
-              metricId={metric.id}
-              metricTitle={metric.title}
-              metricEmoji={metric.emoji}
-              onRatingSelected={handleRatingSelected}
-            />
+      {metrics?.map((metric) => (
+        <Card key={metric.id} className="p-8">
+          <MetricRater
+            metricId={metric.id}
+            metricTitle={metric.title}
+            metricEmoji={metric.emoji}
+            onRatingSelected={handleRatingSelected}
+          />
+        </Card>
+      ))}
 
-            {isDisabled && (
-              <p className="text-sm text-foreground italic mt-4">
-                ✅ You have already logged your {metric.title} today.{" "}
-              </p>
-            )}
-          </Card>
-        );
-      })}
-
-      {hasUnloggedMetrics && (
+      {hasMetrics && (
         <>
           <Divider />
           <div

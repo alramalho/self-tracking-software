@@ -3,7 +3,6 @@ import multer from "multer";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
-import { metricsService } from "../services/metricsService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
@@ -547,11 +546,6 @@ router.post(
         content: msg.content,
       }));
 
-      // Check if metrics are loggable (has pending metrics for today and after 2PM)
-      const allowMetricExtraction = await metricsService.isMetricLoggableNow(
-        user.id
-      );
-
       // Generate AI response using the new 2-step recommendation service
       const aiResponse = await aiService.generateCoachChatResponse({
         user: user,
@@ -560,7 +554,6 @@ router.post(
         conversationHistory: conversationHistory,
         plans: plans,
         metrics: metrics,
-        allowMetricExtraction: allowMetricExtraction,
       });
 
       // Save coach message with content and metadata separated

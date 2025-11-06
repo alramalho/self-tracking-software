@@ -321,7 +321,6 @@ export class AIService {
     conversationHistory: Array<{ role: string; content: string }>;
     plans: any[];
     metrics: any[];
-    allowMetricExtraction?: boolean;
   }): Promise<{
     messageContent: string;
     planReplacements?: any[];
@@ -343,7 +342,6 @@ export class AIService {
       conversationHistory,
       plans,
       metrics,
-      allowMetricExtraction = true,
     } = params;
 
     // 1. Fetch available recommendations context
@@ -449,7 +447,6 @@ export class AIService {
             "Populate when user expresses clear emotional sentiment (happy, tired, stressed, amazing, etc.). Your primary job is tracking - extract emotions proactively."
           ),
         optional: true,
-        includeIf: allowMetricExtraction,
       },
       {
         name: "userRecommendations",
@@ -471,19 +468,16 @@ export class AIService {
       },
     ];
 
-    // Build schema fields object, conditionally including fields
-    const activeFieldDefinitions = schemaFieldDefinitions.filter(
-      (field) => field.includeIf === undefined || field.includeIf === true
-    );
+    // Build schema fields object
     const schemaFields: any = {};
-    activeFieldDefinitions.forEach((field) => {
+    schemaFieldDefinitions.forEach((field) => {
       schemaFields[field.name] = field.schema;
     });
 
     const UnifiedCoachResponseSchema = z.object(schemaFields);
 
     // Build capabilities section from schema definitions
-    const capabilitiesSection = activeFieldDefinitions
+    const capabilitiesSection = schemaFieldDefinitions
       .map((field) => {
         const details = field.details
           .map((detail) => `         - ${detail}`)

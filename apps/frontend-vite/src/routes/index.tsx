@@ -7,7 +7,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { LastCoachMessageShower } from "@/components/LastCoachMessageShower";
-import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
+import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
@@ -47,8 +47,10 @@ import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { isAfter, isFuture } from "date-fns";
+import { isAfter, isFuture, isToday } from "date-fns";
 import { useAI } from "@/contexts/ai";
+import { type MetricEntry } from "@tsw/prisma";
+import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -108,6 +110,7 @@ function HomePage() {
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isMetricsPopoverOpen, setIsMetricsPopoverOpen] = useState(false);
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
     "plans-section-collapsed",
     false
@@ -120,6 +123,18 @@ function HomePage() {
   const { isUserAIWhitelisted } = useAI();
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
+
+  // Calculate unlogged metrics count
+  const { entries: metricEntries } = useMetrics();
+  const unloggedMetricsCount = metrics?.filter((metric) => {
+    const todaysEntry = metricEntries?.find(
+      (entry: MetricEntry) =>
+        entry.metricId === metric.id && isToday(entry.date)
+    );
+    const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
+    const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
+    return !isLoggedToday && !isSkippedToday;
+  }).length || 0;
   const unopenedNotifications =
     notifications?.filter((n) => {
       // Exclude engagement notifications
@@ -530,7 +545,13 @@ function HomePage() {
 
       {metrics && metrics.length > 0 && !isUserOnFreePlan && (
         <AnimatedSection delay={0.15}>
-          <HomepageMetricsSection />
+          <Button
+            onClick={() => setIsMetricsPopoverOpen(true)}
+            className="w-full"
+            variant="outline"
+          >
+            Log metrics{unloggedMetricsCount > 0 ? ` (${unloggedMetricsCount} missing today)` : ''} {unloggedMetricsCount > 0 && <PulsatingCirclePill variant="yellow" size="md" className="ml-2" />}
+          </Button>
         </AnimatedSection>
       )}
 
@@ -551,6 +572,12 @@ function HomePage() {
       >
         <Notifications onClose={handleNotificationsClose} />
       </AppleLikePopover>
+
+      {/* Metrics Log Popover */}
+      <MetricsLogPopover
+        open={isMetricsPopoverOpen}
+        onClose={() => setIsMetricsPopoverOpen(false)}
+      />
 
       {/* AI Coach Popover */}
       <AppleLikePopover

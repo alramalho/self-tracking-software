@@ -4,18 +4,58 @@ import { CircleDashed } from "lucide-react";
 interface ReliabilityHelpPopoverProps {
   isOpen: boolean;
   onClose: () => void;
+  sampleSize?: number;
 }
+
+const getReliabilityLevel = (size: number) => {
+  if (size >= 30) return { level: "Confident", color: "purple", needed: 0 };
+  if (size >= 15) return { level: "Medium", color: "blue", needed: 30 - size };
+  if (size >= 5) return { level: "Weak", color: "orange", needed: 15 - size };
+  return { level: "Insufficient", color: "gray", needed: 5 - size };
+};
 
 export function ReliabilityHelpPopover({
   isOpen,
   onClose,
+  sampleSize,
 }: ReliabilityHelpPopoverProps) {
+  const reliability = sampleSize !== undefined ? getReliabilityLevel(sampleSize) : null;
+
   return (
     <AppleLikePopover open={isOpen} onClose={onClose} title="Data Reliability">
       <div className="p-6 space-y-4">
+        {sampleSize !== undefined && (
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Current Data Points:</span>
+              <span className="text-lg font-bold">{sampleSize}</span>
+            </div>
+            {reliability && reliability.needed > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Log {reliability.needed} more time{reliability.needed !== 1 ? 's' : ''} to reach {
+                  reliability.level === "Insufficient" ? "Weak" :
+                  reliability.level === "Weak" ? "Medium" :
+                  "Confident"
+                } reliability
+              </p>
+            )}
+            {reliability && reliability.needed === 0 && (
+              <p className="text-xs text-green-600 font-medium">
+                ✓ Maximum reliability achieved!
+              </p>
+            )}
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground">
           The reliability indicator shows how trustworthy each correlation is based on the amount of data available.
         </p>
+
+        <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-900 dark:text-blue-100">
+            <strong>Important:</strong> Only activities logged <em>before</em> a metric entry are counted. This ensures correlations reflect actual cause-and-effect relationships.
+          </p>
+        </div>
 
         <div className="space-y-3">
           <div className="flex items-center gap-3">
