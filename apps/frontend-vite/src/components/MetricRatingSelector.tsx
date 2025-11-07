@@ -47,7 +47,7 @@ export const MetricRatingSelector: React.FC<MetricRatingSelectorProps> = ({
           size="sm"
           onClick={() => handleRatingClick(rating)}
           disabled={disabled}
-          className={`aspect-square p-4 text-md font-medium ${
+          className={`aspect-square p-4 text-md font-medium w-full ${
             selectedRating === rating
               ? "bg-muted text-foreground border-foreground"
               : `hover:bg-muted ${ratingColors[rating as keyof typeof ratingColors]}`

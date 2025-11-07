@@ -112,7 +112,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
               initialRating={todaysRating}
             />
 
-            <Button
+            {/* <Button
               variant="ghost"
               size="sm"
               onClick={handleSkip}
@@ -124,7 +124,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
               ) : (
                 "Skip"
               )}
-            </Button>
+            </Button> */}
           </div>
         )}
       </div>
