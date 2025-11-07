@@ -246,7 +246,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     navigate({ to: `/profile/${username}` });
   };
 
-  const commentBg = hasImage ? variants.card.glassBg : "bg-muted/30";
+  const commentBg = hasImage ? variants.card.glassBg : "dark:bg-muted/30 bg-gray-200/30";
   const visibleComments = getVisibleComments();
   const hasHiddenComments = comments.length > 2 && !showAllComments;
 
