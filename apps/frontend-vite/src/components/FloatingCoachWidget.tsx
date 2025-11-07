@@ -78,7 +78,7 @@ export const FloatingCoachWidget: React.FC = () => {
           >
             <button
               onClick={() => setIsOpen(true)}
-              className="relative w-16 h-16 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+              className="relative w-16 h-16 rounded-fullhover:scale-105 transition-all duration-200"
             >
               <img
                 src={coachIcon}

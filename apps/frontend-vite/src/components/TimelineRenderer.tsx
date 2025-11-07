@@ -8,7 +8,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity, type PlanType } from "@tsw/prisma";
-import { Bell, RefreshCcw, Squirrel } from "lucide-react";
+import { Bell, Check, RefreshCcw, Squirrel } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
@@ -38,6 +38,54 @@ const TimelineRenderer: React.FC<{
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
   const processedEntryIdRef = useRef<string | null>(null);
+  const [collapsedEntries, setCollapsedEntries] = useState<Set<string>>(new Set());
+
+  // Track when user last viewed timeline
+  const [lastViewedTimelineAt, setLastViewedTimelineAt] = useLocalStorage<string | null>(
+    "last-viewed-timeline-at",
+    null
+  );
+
+  // Update last viewed timestamp when user views timeline
+  // Wait 3 seconds before updating to ensure they actually viewed content
+  useEffect(() => {
+    if (!timelineData?.recommendedActivityEntries?.length) return;
+
+    const timer = setTimeout(() => {
+      const newestEntry = timelineData.recommendedActivityEntries[0];
+      if (newestEntry?.datetime) {
+        const newestDatetime = new Date(newestEntry.datetime).toISOString();
+        console.log('[Timeline] Updating lastViewedTimelineAt to:', newestDatetime);
+        setLastViewedTimelineAt(newestDatetime);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [timelineData?.recommendedActivityEntries, setLastViewedTimelineAt]);
+
+  // Initialize collapsed state for entries without images
+  useEffect(() => {
+    if (timelineData?.recommendedActivityEntries) {
+      const entriesWithoutImages = new Set(
+        timelineData.recommendedActivityEntries
+          .filter((entry) => !entry.imageUrl || (entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date()))
+          .map((entry) => entry.id)
+      );
+      setCollapsedEntries(entriesWithoutImages);
+    }
+  }, [timelineData?.recommendedActivityEntries]);
+
+  const toggleEntryCollapse = (entryId: string) => {
+    setCollapsedEntries((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId);
+      } else {
+        newSet.add(entryId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (highlightActivityEntryId && timelineData?.recommendedActivityEntries) {
@@ -87,9 +135,67 @@ const TimelineRenderer: React.FC<{
     ];
   }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
+  // Reorder entries to prevent grid breaks on mount
+  // Group collapsed entries and full-width entries intelligently
+  // Only reorder once on mount, not when collapse state changes
+  const reorderedEntries = useMemo(() => {
+    if (!timelineData?.recommendedActivityEntries) return [];
+
+    const entries = timelineData.recommendedActivityEntries;
+    const result: typeof entries = [];
+    const collapsed: typeof entries = [];
+    const fullWidth: typeof entries = [];
+
+    // Separate entries by type (using initial state - entries without images)
+    entries.forEach((entry) => {
+      const hasImageExpired =
+        entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date();
+      const hasImage = entry.imageUrl && !hasImageExpired;
+
+      if (!hasImage) {
+        collapsed.push(entry);
+      } else {
+        fullWidth.push(entry);
+      }
+    });
+
+    // Build result array
+    // Add collapsed entries in groups of 3, then full-width entries
+    let collapsedIndex = 0;
+    let fullWidthIndex = 0;
+
+    while (collapsedIndex < collapsed.length || fullWidthIndex < fullWidth.length) {
+      // Add up to 3 collapsed entries
+      const batchSize = Math.min(3, collapsed.length - collapsedIndex);
+      for (let i = 0; i < batchSize; i++) {
+        result.push(collapsed[collapsedIndex++]);
+      }
+
+      // Add one full-width entry if available
+      if (fullWidthIndex < fullWidth.length) {
+        result.push(fullWidth[fullWidthIndex++]);
+      }
+    }
+
+    return result;
+  }, [timelineData?.recommendedActivityEntries]);
+
+  // Divider component - Instagram style
+  const AllCaughtUpDivider: React.FC = () => (
+    <div className="col-span-3 sm:col-span-6 flex items-center justify-center py-6">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+          <Check className="w-6 h-6 text-muted-foreground" strokeWidth={2.5} />
+        </div>
+        <span className="text-sm font-semibold text-foreground">You're all caught up</span>
+        <span className="text-xs text-muted-foreground">You've seen all new posts</span>
+      </div>
+    </div>
+  );
+
   if (isLoadingTimeline && !timelineData) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
@@ -174,9 +280,9 @@ const TimelineRenderer: React.FC<{
   }
 
   return (
-    <div ref={timelineRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div className="flex items-center justify-start mt-4">
-        <h2 className="mt-0 text-lg font-semibold">
+    <div ref={timelineRef} className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+      <div className="flex items-center justify-start mt-4 col-span-3 sm:col-span-6">
+        <h2 className="mt-0 text-lg font-semibold ">
           Friend&apos;s last activities
         </h2>
         {isLoadingTimeline && (
@@ -189,7 +295,16 @@ const TimelineRenderer: React.FC<{
       {!isLoadingTimeline &&
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
-        timelineData?.recommendedActivityEntries.map((entry) => {
+        (() => {
+          let dividerShown = false;
+          const lastViewed = lastViewedTimelineAt ? new Date(lastViewedTimelineAt) : null;
+
+          // Check if there are any new entries (newer than lastViewed)
+          const hasNewEntries = lastViewed && reorderedEntries.some(
+            (entry) => new Date(entry.datetime) > lastViewed
+          );
+
+          return reorderedEntries.map((entry, index) => {
           const allActivities = [
             ...(timelineData?.recommendedActivities || []),
             ...activities,
@@ -214,8 +329,27 @@ const TimelineRenderer: React.FC<{
               )
               .map((plan) => plan.progress) || [];
 
+          const hasImageExpired =
+            entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date();
+          const hasImage = entry.imageUrl && !hasImageExpired;
+          const isCollapsed = collapsedEntries.has(entry.id);
+
+          // Check if we should show the divider before this entry
+          // Only show if there are new entries AND this is the first old entry
+          const entryDatetime = new Date(entry.datetime);
+          const shouldShowDivider =
+            !dividerShown &&
+            hasNewEntries &&
+            lastViewed &&
+            entryDatetime <= lastViewed;
+
+          if (shouldShowDivider) {
+            dividerShown = true;
+          }
+
           return (
             <React.Fragment key={entry.id}>
+              {shouldShowDivider && <AllCaughtUpDivider />}
               <div
                 ref={(el) => {
                   if (el) {
@@ -228,6 +362,12 @@ const TimelineRenderer: React.FC<{
                   highlightedEntryId === entry.id
                     ? cn("ring-4 ring-opacity-50 rounded-2xl", variants.ring)
                     : ""
+                } ${
+                  hasImage
+                    ? "col-span-3 sm:col-span-6"
+                    : isCollapsed
+                    ? "col-span-1"
+                    : "col-span-3 sm:col-span-6"
                 }`}
               >
                 <ActivityEntryPhotoCard
@@ -243,6 +383,8 @@ const TimelineRenderer: React.FC<{
                     }
                   }
                   userPlansProgressData={userPlansProgress}
+                  isCollapsed={isCollapsed}
+                  onToggleCollapse={() => toggleEntryCollapse(entry.id)}
                   onAvatarClick={() => {
                     navigate({
                       to: `/profile/$username`,
@@ -259,7 +401,8 @@ const TimelineRenderer: React.FC<{
               </div>
             </React.Fragment>
           );
-        })}
+        });
+      })()}
     </div>
   );
 };
