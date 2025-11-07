@@ -18,6 +18,7 @@ interface MetricsLogPopoverProps {
   title?: string;
   description?: string;
   customIcon?: React.ReactNode;
+  showActivityWarning?: boolean;
 }
 
 export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
@@ -26,6 +27,7 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
   title = "Log Your Metrics",
   description,
   customIcon,
+  showActivityWarning = true,
 }) => {
   const navigate = useNavigate();
   const { metrics } = useMetrics();
@@ -40,7 +42,7 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
   );
 
   return (
-    <AppleLikePopover open={open} onClose={onClose} displayIcon={false}>
+    <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-6 p-6">
         {/* Icon */}
         {customIcon ? (
@@ -86,7 +88,7 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
         )}
 
         {/* Warning if no activities logged today */}
-        {!hasActivitiesToday && (
+        {showActivityWarning && !hasActivitiesToday && (
           <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />

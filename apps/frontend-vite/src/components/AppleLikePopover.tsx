@@ -57,7 +57,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
                   size="icon"
                   className="absolute top-4 right-4 z-[51]"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6 text-muted-foreground" />
                 </Button>
               </DrawerClose>
             )}
