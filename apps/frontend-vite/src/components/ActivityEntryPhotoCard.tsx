@@ -598,7 +598,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           {editable && onEditClick && (
             <button
               onClick={onEditClick}
-              className="absolute top-2 right-2 p-1 bg-card rounded-full shadow-md hover:bg-muted"
+              className="absolute top-2 right-2 p-1 bg-card/80 rounded-full shadow-md hover:bg-muted"
             >
               <Edit className="h-4 w-4 text-muted-foreground" />
             </button>

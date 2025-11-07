@@ -159,6 +159,7 @@ function LogPage() {
         title={`How are you feeling after ${selectedActivity?.title}?`}
         description="This helps us identify patterns and correlations between your activities and how you feel throughout the day."
         customIcon={<span className="text-6xl">{selectedActivity?.emoji}</span>}
+        showActivityWarning={false}
       />
     </div>
   );

@@ -77,7 +77,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
               key={index}
               className={cn(
                 "flex-1 h-2 rounded transition-all",
-                index < animatedValue ? color : "bg-muted",
+                index < animatedValue ? color : "bg-background",
                 isFullyDone ? "animate-pulse duration-1300" : "duration-300"
               )}
             />

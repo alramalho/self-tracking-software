@@ -5,6 +5,8 @@ import { type Activity } from "@tsw/prisma";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import Picker from "react-mobile-picker";
+import { motion, AnimatePresence } from "framer-motion";
+import { Pencil } from "lucide-react";
 
 interface ActivityLoggerPopoverProps {
   open: boolean;
@@ -27,6 +29,7 @@ export function ActivityLoggerPopover({
     minute: now.getMinutes().toString().padStart(2, '0'),
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
   const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Generate hours and minutes options
@@ -39,6 +42,16 @@ export function ActivityLoggerPopover({
 
   const handleQuickSelect = (value: number) => {
     setQuantity(value);
+  };
+
+  const formatTimeReadable = (hour: string, minute: string) => {
+    const hourNum = parseInt(hour);
+    const minuteNum = parseInt(minute);
+
+    if (minuteNum === 0) {
+      return `at ${hourNum} o'clock`;
+    }
+    return `at ${hourNum}:${minute}`;
   };
 
   const handleSubmit = () => {
@@ -83,9 +96,6 @@ export function ActivityLoggerPopover({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-center">
-            Select Date
-          </h3>
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -100,35 +110,58 @@ export function ActivityLoggerPopover({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-center">
-            Select Time
-          </h3>
-          <div className="max-w-xs mx-auto">
-            <div className="flex items-center justify-center gap-2 text-lg font-medium mb-2">
-              <span>{time.hour}:{time.minute}</span>
-            </div>
-            <Picker
-              value={time}
-              onChange={setTime}
-              wheelMode="normal"
-              height={180}
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">{formatTimeReadable(time.hour, time.minute)}</span>
+            <button
+              type="button"
+              onClick={() => setIsTimePickerExpanded(!isTimePickerExpanded)}
+              className="p-1 hover:bg-accent rounded-md transition-colors"
+              aria-label="Edit time"
             >
-              <Picker.Column name="hour">
-                {hours.map(hour => (
-                  <Picker.Item key={hour} value={hour}>
-                    {hour}
-                  </Picker.Item>
-                ))}
-              </Picker.Column>
-              <Picker.Column name="minute">
-                {minutes.map(minute => (
-                  <Picker.Item key={minute} value={minute}>
-                    {minute}
-                  </Picker.Item>
-                ))}
-              </Picker.Column>
-            </Picker>
+              <Pencil className="h-3 w-3 text-muted-foreground" />
+            </button>
           </div>
+
+          <AnimatePresence>
+            {isTimePickerExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-2 text-center">
+                    Select Time
+                  </h3>
+                  <div className="max-w-xs mx-auto">
+                    <Picker
+                      value={time}
+                      onChange={setTime}
+                      wheelMode="normal"
+                      height={180}
+                    >
+                      <Picker.Column name="hour">
+                        {hours.map(hour => (
+                          <Picker.Item key={hour} value={hour}>
+                            {hour}
+                          </Picker.Item>
+                        ))}
+                      </Picker.Column>
+                      <Picker.Column name="minute">
+                        {minutes.map(minute => (
+                          <Picker.Item key={minute} value={minute}>
+                            {minute}
+                          </Picker.Item>
+                        ))}
+                      </Picker.Column>
+                    </Picker>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div>

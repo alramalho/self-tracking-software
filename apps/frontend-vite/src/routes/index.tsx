@@ -31,7 +31,7 @@ import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
 import supportAgentSvg from "../assets/icons/support-agent.svg";
 import jarvisLogoSvg from "../assets/icons/jarvis_logo_transparent.png";
 import jarvisLogoWhiteSvg from "../assets/icons/jarvis_logo_white_transparent.png";
-
+import { FloatingCoachWidget } from "@/components/FloatingCoachWidget";
 import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -656,9 +656,7 @@ function HomePage() {
         />
       )}
 
-      <LastCoachMessageShower onFinish={() => setHasFinishedLastCoachMessageAnimation(true)} />
+      <FloatingCoachWidget />
     </div>
   );
 }
-
-export default HomePage;

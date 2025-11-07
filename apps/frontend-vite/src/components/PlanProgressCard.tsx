@@ -203,7 +203,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                   variants.ringBright,
                   "backdrop-blur-sm"
                 )
-              : "bg-card ring-border",
+              : "bg-card/90 ring-border",
             className
           )}
         >
