@@ -64,10 +64,65 @@ export type TimelineUser = Omit<TimelineUserBase, "plans"> & {
   >;
 };
 
+export type TimelineAchievementPost = Prisma.AchievementPostGetPayload<{
+  include: {
+    user: {
+      select: {
+        id: true;
+        username: true;
+        name: true;
+        picture: true;
+      };
+    };
+    plan: {
+      select: {
+        id: true;
+        goal: true;
+        emoji: true;
+      };
+    };
+    images: {
+      orderBy: {
+        sortOrder: "asc";
+      };
+    };
+    comments: {
+      where: {
+        deletedAt: null;
+      };
+      orderBy: {
+        createdAt: "asc";
+      };
+      include: {
+        user: {
+          select: {
+            id: true;
+            username: true;
+            picture: true;
+          };
+        };
+      };
+    };
+    reactions: {
+      include: {
+        user: {
+          select: {
+            id: true;
+            username: true;
+            picture: true;
+            planType: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
 export interface TimelineData {
   recommendedActivityEntries: TimelineActivityEntry[];
   recommendedActivities: Activity[];
   recommendedUsers: TimelineUser[];
+  achievementPosts: TimelineAchievementPost[];
 }
 
 function normalizeActivityEntry(
@@ -108,6 +163,20 @@ function normalizeUser(user: TimelineUser): TimelineUser {
   };
 }
 
+function normalizeAchievementPost(
+  post: TimelineAchievementPost
+): TimelineAchievementPost {
+  return normalizeApiResponse<TimelineAchievementPost>(post, [
+    "createdAt",
+    "deletedAt",
+    "images.createdAt",
+    "images.expiresAt",
+    "comments.createdAt",
+    "comments.deletedAt",
+    "reactions.createdAt",
+  ]);
+}
+
 export async function getTimelineData(
   api: AxiosInstance
 ): Promise<TimelineData> {
@@ -120,5 +189,6 @@ export async function getTimelineData(
     ),
     recommendedActivities: data.recommendedActivities.map(normalizeActivity),
     recommendedUsers: data.recommendedUsers.map(normalizeUser),
+    achievementPosts: (data.achievementPosts || []).map(normalizeAchievementPost),
   };
 }

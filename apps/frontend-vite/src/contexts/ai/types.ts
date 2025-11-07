@@ -17,17 +17,46 @@ export interface MessageFeedback {
 
 export interface Message {
   id: string;
-  role: "USER" | "COACH";
+  role: "USER" | "COACH" | "SYSTEM";
   content: string;
   createdAt: string | Date;
   feedback?: MessageFeedback[];
+  senderId?: string; // For DIRECT and GROUP chats
+  senderName?: string;
+  senderPicture?: string;
+}
+
+export type ChatType = "COACH" | "DIRECT" | "GROUP";
+
+export interface ChatParticipant {
+  id: string;
+  userId: string;
+  name?: string;
+  username?: string;
+  picture?: string;
+  joinedAt: string | Date;
+  leftAt?: string | Date | null;
 }
 
 export interface Chat {
   id: string;
+  type: ChatType;
   title: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
+  // For COACH chats
+  coachId?: string;
+  // For DIRECT chats
+  participants?: ChatParticipant[];
+  // For GROUP chats
+  planGroupId?: string;
+  planGroupName?: string;
+  // Latest message preview
+  lastMessage?: {
+    content: string;
+    senderName?: string;
+    createdAt: string | Date;
+  };
 }
 
 export interface AIContextType {

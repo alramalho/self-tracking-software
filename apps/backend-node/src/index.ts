@@ -15,10 +15,12 @@ import { logger, morganMiddleware } from "./utils/logger";
 import { prisma } from "./utils/prisma";
 
 // Import routes
+import { achievementsRouter } from "./routes/achievements";
 import { activitiesRouter } from "./routes/activities";
 import { adminRouter } from "./routes/admin";
 import { aiRouter } from "./routes/ai";
 import authRouter from "./routes/auth";
+import { chatsRouter } from "./routes/chats";
 import { clerkRouter } from "./routes/clerk";
 import { messagesRouter } from "./routes/messages";
 import { metricsRouter } from "./routes/metrics";
@@ -115,6 +117,7 @@ app.get("/400", (_req, _res) => {
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/activities", activitiesRouter);
+app.use("/achievements", achievementsRouter);
 app.use("/plans", plansRouter);
 app.use("/messages", messagesRouter);
 app.use("/metrics", metricsRouter);
@@ -123,6 +126,7 @@ app.use("/onboarding", onboardingRouter);
 app.use("/admin", adminRouter);
 app.use("/clerk", clerkRouter);
 app.use("/ai", aiRouter);
+app.use("/chats", chatsRouter);
 app.use("/stripe", stripeRouter);
 
 // Error handling middleware (must be last)

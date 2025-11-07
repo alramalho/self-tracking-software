@@ -11,6 +11,7 @@ export type AchievementType = "streak" | "habit" | "lifestyle";
 interface AchievementCelebrationPopoverProps {
   open: boolean;
   onClose: () => void;
+  onShare?: () => void;
   achievementType: AchievementType;
   planEmoji: string;
   planGoal: string;
@@ -49,7 +50,7 @@ const getAchievementText = (
 
 export const AchievementCelebrationPopover: React.FC<
   AchievementCelebrationPopoverProps
-> = ({ open, onClose, achievementType, planEmoji, planGoal, streakNumber }) => {
+> = ({ open, onClose, onShare, achievementType, planEmoji, planGoal, streakNumber }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const details = getAchievementText(achievementType, streakNumber);
@@ -186,17 +187,27 @@ export const AchievementCelebrationPopover: React.FC<
             {planGoal}
           </motion.p>
 
-          {/* Action button */}
+          {/* Action buttons */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
+            className="space-y-2"
           >
+            {onShare && (
+              <Button
+                onClick={onShare}
+                className={`w-full ${variants.button.solid} font-semibold`}
+              >
+                Share with Connections 🎉
+              </Button>
+            )}
             <Button
               onClick={onClose}
-              className={`w-full ${variants.button.solid} font-semibold`}
+              variant={onShare ? "ghost" : "default"}
+              className={onShare ? "w-full" : `w-full ${variants.button.solid} font-semibold`}
             >
-              Awesome!
+              {onShare ? "Maybe Later" : "Awesome!"}
             </Button>
           </motion.div>
         </div>

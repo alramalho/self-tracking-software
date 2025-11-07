@@ -7,7 +7,7 @@ import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import type { Activity } from "@tsw/prisma";
 import React from "react";
-import { getTimelineData, type TimelineActivityEntry, type TimelineUser } from "./service";
+import { getTimelineData, type TimelineAchievementPost, type TimelineActivityEntry, type TimelineUser } from "./service";
 import { TimelineContext, type TimelineContextType } from "./types";
 import { normalizePlanProgress } from "../plans-progress/service";
 
@@ -50,6 +50,13 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
           progress: normalizePlanProgress(plan.progress)
         }))
       })),
+      achievementPosts: data.achievementPosts.map(achievementPost =>
+        normalizeApiResponse<TimelineAchievementPost>(achievementPost, [
+          "createdAt",
+          "updatedAt",
+          "deletedAt",
+        ])
+      ),
     }),
     enabled: isLoaded && isSignedIn,
   });

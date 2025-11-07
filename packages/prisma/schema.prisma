@@ -77,6 +77,7 @@ model User {
   commentsSent            Comment[]
   coaches                 Coach[]
   chats                   Chat[]
+  chatParticipations      ChatParticipant[]
   feedback                Feedback[]
 
   // Connection relationships (replaces friend system)
@@ -87,6 +88,9 @@ model User {
   referredUsers User[]  @relation("UserReferrals")
   referredBy    User?   @relation("UserReferrals", fields: [referredById], references: [id])
   referredById  String?
+
+  // Achievement posts
+  achievementPosts AchievementPost[]
 
   @@map("users")
   @@schema("public")
@@ -170,37 +174,86 @@ model ActivityEntry {
 }
 
 model Reaction {
-  id              String   @id @default(cuid())
-  activityEntryId String
-  userId          String // user that added the reaction
-  emoji           String
-  createdAt       DateTime @default(now())
+  id                String   @id @default(cuid())
+  activityEntryId   String?
+  achievementPostId String?
+  userId            String // user that added the reaction
+  emoji             String
+  createdAt         DateTime @default(now())
 
   // Relations
-  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityEntry  ActivityEntry?  @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  achievementPost AchievementPost? @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([activityEntryId, userId, emoji])
+  @@unique([achievementPostId, userId, emoji])
   @@index([activityEntryId])
+  @@index([achievementPostId])
   @@map("reactions")
   @@schema("public")
 }
 
 model Comment {
-  id              String    @id @default(cuid())
-  activityEntryId String
+  id                String    @id @default(cuid())
+  activityEntryId   String?
+  achievementPostId String?
+  userId            String
+  text              String
+  createdAt         DateTime  @default(now())
+  deletedAt         DateTime?
+
+  // Relations
+  activityEntry  ActivityEntry?  @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  achievementPost AchievementPost? @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityEntryId, deletedAt])
+  @@index([achievementPostId, deletedAt])
+  @@index([createdAt])
+  @@map("comments")
+  @@schema("public")
+}
+
+model AchievementPost {
+  id              String          @id @default(cuid())
   userId          String
-  text            String
-  createdAt       DateTime  @default(now())
+  planId          String
+  achievementType AchievementType
+  streakNumber    Int? // For streak achievements (e.g., 3 for "3 Week Streak")
+  message         String? // User's custom message about the achievement
+  createdAt       DateTime        @default(now())
   deletedAt       DateTime?
 
   // Relations
-  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      Plan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+  images    AchievementImage[]
+  reactions Reaction[]
+  comments  Comment[]
 
-  @@index([activityEntryId, deletedAt])
+  @@index([userId, deletedAt])
+  @@index([planId])
   @@index([createdAt])
-  @@map("comments")
+  @@index([deletedAt, createdAt])
+  @@map("achievement_posts")
+  @@schema("public")
+}
+
+model AchievementImage {
+  id                String          @id @default(cuid())
+  achievementPostId String
+  s3Path            String
+  url               String?
+  expiresAt         DateTime?
+  sortOrder         Int             @default(0) // To maintain image order
+  createdAt         DateTime        @default(now())
+
+  // Relations
+  achievementPost AchievementPost @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
+
+  @@index([achievementPostId, sortOrder])
+  @@map("achievement_images")
   @@schema("public")
 }
 
@@ -286,6 +339,7 @@ model Plan {
   milestones        PlanMilestone[]
   planGroupMembers  PlanGroupMember[]
   messages          Message[]
+  achievementPosts  AchievementPost[]
 
   @@index([userId, deletedAt])
   @@index([userId, id])
@@ -337,9 +391,10 @@ model PlanGroup {
   createdAt DateTime @default(now())
 
   // Relations
-  members         PlanGroupMember[]
-  plans           Plan[]
-  inviteLinks     PlanInviteLink[]
+  members     PlanGroupMember[]
+  plans       Plan[]
+  inviteLinks PlanInviteLink[]
+  chats       Chat[]
 
   @@map("plan_groups")
   @@schema("public")
@@ -407,21 +462,45 @@ model Coach {
 }
 
 model Chat {
-  id        String   @id @default(cuid())
-  userId    String
-  coachId   String
-  title     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  type        ChatType @default(COACH)
+  userId      String?  // For COACH type chats
+  coachId     String?  // For COACH type chats
+  planGroupId String?  // For GROUP type chats
+  title       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  coach    Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  messages Message[]
+  user         User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coach        Coach?            @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  planGroup    PlanGroup?        @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages     Message[]
 
   @@index([userId])
   @@index([coachId])
+  @@index([planGroupId])
+  @@index([type])
   @@map("chats")
+  @@schema("public")
+}
+
+model ChatParticipant {
+  id       String    @id @default(cuid())
+  chatId   String
+  userId   String
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  // Relations
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId])
+  @@index([chatId])
+  @@map("chat_participants")
   @@schema("public")
 }
 
@@ -700,6 +779,22 @@ enum PlanGroupStatus {
   ACTIVE
   LEFT
   REJECTED
+
+  @@schema("public")
+}
+
+enum AchievementType {
+  STREAK
+  HABIT
+  LIFESTYLE
+
+  @@schema("public")
+}
+
+enum ChatType {
+  COACH  // User <-> Coach conversation
+  DIRECT // User <-> User conversation
+  GROUP  // Plan group chat
 
   @@schema("public")
 }

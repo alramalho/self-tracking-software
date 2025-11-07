@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import React from "react";
 import toast from "react-hot-toast";
+import { AchievementsProvider } from "./achievements";
 import { ActivitiesProvider } from "./activities/provider";
 import { AIProvider } from "./ai";
 import { DailyCheckinPopoverProvider } from "./daily-checkin";
@@ -78,13 +79,15 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
             <TimelineProvider>
               <PlansProvider>
                 <PlansProgressProvider>
-                  <ActivitiesProvider>
-                    <AIProvider>
-                      <RecommendationsProvider>
-                        <NotificationsProvider>{children}</NotificationsProvider>
-                      </RecommendationsProvider>
-                    </AIProvider>
-                  </ActivitiesProvider>
+                  <AchievementsProvider>
+                    <ActivitiesProvider>
+                      <AIProvider>
+                        <RecommendationsProvider>
+                          <NotificationsProvider>{children}</NotificationsProvider>
+                        </RecommendationsProvider>
+                      </AIProvider>
+                    </ActivitiesProvider>
+                  </AchievementsProvider>
                 </PlansProgressProvider>
               </PlansProvider>
             </TimelineProvider>
