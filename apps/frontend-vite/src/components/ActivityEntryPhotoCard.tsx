@@ -20,7 +20,7 @@ import {
   isToday,
   isYesterday,
 } from "date-fns";
-import { Edit, Rocket, Smile, Sprout } from "lucide-react";
+import { Edit, Maximize2, Rocket, Smile, Sprout } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -29,6 +29,7 @@ import React, {
   useState,
 } from "react";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
 import { ProgressRing } from "./ProgressRing";
@@ -65,6 +66,8 @@ interface ActivityEntryPhotoCardProps {
   onEditClick?: () => void;
   onAvatarClick?: () => void;
   onUsernameClick?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface ReactionCount {
@@ -90,6 +93,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEntry,
   user,
   userPlansProgressData,
+  isCollapsed = false,
+  onToggleCollapse,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -321,6 +326,54 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   if (!activity || !activityEntry) return null;
 
+  const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
+
+  // Collapsed minimal view for cards without images
+  const collapsedCardContent = (
+    <div className="relative h-28 bg-card/50 backdrop-blur-sm border rounded-2xl relative overflow-visible aspect-square flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center">
+        <div className="relative">
+          <span className="text-6xl leading-none">{activity.emoji}</span>
+        </div>
+        {/* <span className="text-lg font-semibold text-foreground">
+          {trimmedActivityTitle}
+        </span> */}
+      </div>
+      <div className="absolute top-2 right-2">
+        <Maximize2 className="w-4 h-4 text-muted-foreground opacity-30" />
+      </div>
+      <div className="absolute -bottom-0 left-1">
+        <div className="relative">
+          <ProgressRing
+            size={20}
+            strokeWidth={1}
+            percentage={accountLevel.percentage}
+            currentLevel={accountLevel.currentLevel}
+            atLeastBronze={accountLevel.atLeastBronze}
+            badge={false}
+            badgeSize={20}
+          >
+            <Avatar
+              className="w-8 h-8"
+              style={{
+                boxShadow: `0 0 0 2px ${
+                  isLightMode ? "white" : "black"
+                }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAvatarClick?.();
+              }}
+            >
+              <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+              <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+            </Avatar>
+          </ProgressRing>
+        </div>
+      </div>
+    </div>
+  );
+
   const cardContent = (
     <div
       className={
@@ -525,7 +578,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
         </div>
 
-        {!hasImage && activityEntry.description && (
+        {!hasImage && !isCollapsed && activityEntry.description && (
           <div
             className={`mt-3 ${!isExpanded && "max-h-[4.5em]"} ${
               shouldShowReadMore && !isExpanded && "overflow-hidden"
@@ -539,7 +592,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             )}
             {shouldShowReadMore && (
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
                 className="text-blue-500 text-xs font-medium mt-1 hover:text-blue-600"
               >
                 {isExpanded ? "Show less" : "Read more"}
@@ -548,7 +604,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
         )}
 
-        {!hasImage && (
+        {!hasImage && !isCollapsed && (
           <>
             <Separator className="my-2" />
             <div className="mt-3 w-full relative z-10">
@@ -627,8 +683,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     </div>
   );
   return (
-    <div className="relative rounded-2xl">
-      {cardContent}
+    <motion.div
+      layout
+      initial={false}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      onClick={() => !hasImage && onToggleCollapse?.()}
+      className={`relative rounded-2xl ${!hasImage ? "cursor-pointer" : ""}`}
+    >
+      {!hasImage && isCollapsed ? collapsedCardContent : cardContent}
       {shouldShowNeonEffect && (
         <BadgeExplainerPopover
           open={showBadgeExplainer}
@@ -639,7 +701,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           userPlansProgressData={userPlansProgressData}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 
