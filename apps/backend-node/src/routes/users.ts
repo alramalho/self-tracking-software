@@ -684,6 +684,7 @@ usersRouter.get(
           recommendedActivityEntries: [],
           recommendedActivities: [],
           recommendedUsers: [],
+          achievementPosts: [],
         });
         return;
       }
@@ -702,6 +703,7 @@ usersRouter.get(
           recommendedActivityEntries: [],
           recommendedActivities: [],
           recommendedUsers: [],
+          achievementPosts: [],
         });
         return;
       }
@@ -786,6 +788,65 @@ usersRouter.get(
         },
       });
 
+      // Get public plan IDs for connected users
+      const publicPlanIds = allUsers.flatMap(
+        (u) =>
+          u.plans?.filter((p) => p.visibility === "PUBLIC").map((p) => p.id) ||
+          []
+      );
+
+      // Fetch achievement posts for users with PUBLIC plans
+      const achievementPosts = await prisma.achievementPost.findMany({
+        where: {
+          userId: { in: userIds },
+          planId: { in: publicPlanIds },
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              picture: true,
+            },
+          },
+          plan: {
+            select: {
+              id: true,
+              goal: true,
+              emoji: true,
+            },
+          },
+          images: {
+            orderBy: { sortOrder: "asc" },
+          },
+          comments: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            include: {
+              user: {
+                select: { id: true, username: true, picture: true },
+              },
+            },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  picture: true,
+                  planType: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
       const activityIds = Array.from(
         new Set(filteredActivityEntries.map((entry) => entry.activityId))
       );
@@ -821,6 +882,7 @@ usersRouter.get(
         recommendedActivityEntries: filteredActivityEntries,
         recommendedActivities: activities,
         recommendedUsers: usersWithProgress,
+        achievementPosts: achievementPosts,
       });
     } catch (error) {
       logger.error("Failed to fetch timeline data:", error);

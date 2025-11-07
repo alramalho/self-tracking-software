@@ -47,6 +47,7 @@ export default function GeneralInitializer({
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
   const isAiPage = pathname.startsWith("/ai");
+  const isDmsPage = pathname.startsWith("/dms");
   const friends = useMemo(() => {
     return [
       ...(currentUser?.connectionsFrom
@@ -199,7 +200,7 @@ export default function GeneralInitializer({
 
   const isProfilePage = pathname.startsWith("/profile");
   const isHomePage = pathname == "/";
-  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage;
+  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage && !isDmsPage;
   return (
     <>
       {isOnboardingPage ? (

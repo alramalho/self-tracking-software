@@ -110,7 +110,10 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={() => {
-            deleteActivityEntry({ id: activityEntry.id });
+            deleteActivityEntry({
+              id: activityEntry.id,
+              activityId: activityEntry.activityId
+            });
             setShowDeleteConfirm(false);
             onClose?.();
           }}

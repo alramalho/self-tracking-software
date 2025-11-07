@@ -36,19 +36,19 @@ const deserializeFeedback = (
   ]);
 };
 
+// Get all chats (coach, direct, group) - uses new unified endpoint
 export async function getChats(api: AxiosInstance): Promise<Chat[]> {
-  const response = await api.get<{ chats: ChatApiResponse[] }>(
-    "/ai/coach/chats"
-  );
+  const response = await api.get<{ chats: ChatApiResponse[] }>("/chats");
   return response.data.chats.map(deserializeChat);
 }
 
+// Get messages for any chat type - uses new unified endpoint
 export async function getMessages(
   api: AxiosInstance,
   chatId: string
 ): Promise<Message[]> {
   const response = await api.get<{ messages: MessageApiResponse[] }>(
-    `/ai/coach/messages?chatId=${chatId}`
+    `/chats/${chatId}/messages`
   );
   return response.data.messages.map(deserializeMessage);
 }
@@ -67,13 +67,14 @@ export async function createChat(
   return deserializeChat(response.data.chat);
 }
 
+// Send message to any chat type (coach, direct, group) - uses new unified endpoint
 export async function sendMessage(
   api: AxiosInstance,
   data: { message: string; chatId: string }
 ): Promise<Message> {
   const response = await api.post<{ message: MessageApiResponse }>(
-    "/ai/coach/chat",
-    { message: data.message, chatId: data.chatId }
+    `/chats/${data.chatId}/messages`,
+    { message: data.message }
   );
   return deserializeMessage(response.data.message);
 }
@@ -133,4 +134,15 @@ export async function submitAISatisfaction(
   data: { liked: boolean; content?: string }
 ): Promise<void> {
   await api.post("/ai/feedback/ai-satisfaction", data);
+}
+
+// Create a direct message chat with another user
+export async function createDirectChat(
+  api: AxiosInstance,
+  userId: string
+): Promise<Chat> {
+  const response = await api.post<{ chat: ChatApiResponse }>("/chats/direct", {
+    userId,
+  });
+  return deserializeChat(response.data.chat);
 }

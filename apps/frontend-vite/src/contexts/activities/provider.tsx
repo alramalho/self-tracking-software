@@ -186,11 +186,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
   const deleteActivityEntryMutation = useMutation({
-    mutationFn: async (data: { id: string }) => {
+    mutationFn: async (data: { id: string; activityId: string }) => {
       await api.delete(`/activities/activity-entries/${data.id}`);
-      return data.id;
+      return data;
     },
-    onSuccess: (id) => {
+    onSuccess: ({ id, activityId }) => {
       queryClient.setQueryData(
         ["activity-entries"],
         (old: ReturnedActivityEntriesType) => {
@@ -210,6 +210,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           ),
         };
       });
+
+      computeProgressForUserPlans([activityId]);
+
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
@@ -384,6 +387,156 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  // Achievement post reactions
+  const modifyReactionsOnAchievementMutation = useMutation({
+    mutationFn: async (data: {
+      achievementPostId: string;
+      userUsername: string;
+      reactions: { emoji: string; operation: "add" | "remove" }[];
+    }) => {
+      const response = await api.post(
+        `/achievements/${data.achievementPostId}/modify-reactions`,
+        {
+          reactions: data.reactions,
+        }
+      );
+      return response.data.reactions;
+    },
+    onSuccess: (reactions, input) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
+        return {
+          ...old,
+          achievementPosts: old.achievementPosts?.map((post) => {
+            return post.id === input.achievementPostId
+              ? { ...post, reactions: reactions }
+              : post;
+          }),
+        };
+      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            achievementPosts: old.achievementPosts?.map((post) => {
+              return post.id === input.achievementPostId
+                ? { ...post, reactions: reactions }
+                : post;
+            }),
+          };
+        }
+      );
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to update reactions`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to update reactions. Please try again.");
+    },
+  });
+
+  // Achievement post comments
+  const addCommentToAchievementMutation = useMutation({
+    mutationFn: async (data: {
+      achievementPostId: string;
+      userUsername: string;
+      text: string;
+    }) => {
+      const response = await api.post(
+        `/achievements/${data.achievementPostId}/comments`,
+        { text: data.text }
+      );
+      return response.data.comments;
+    },
+    onSuccess: (comments, input) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
+        return {
+          ...old,
+          achievementPosts: old.achievementPosts?.map((post) => {
+            return post.id === input.achievementPostId
+              ? { ...post, comments: comments }
+              : post;
+          }),
+        };
+      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            achievementPosts: old.achievementPosts?.map((post) => {
+              return post.id === input.achievementPostId
+                ? { ...post, comments: comments }
+                : post;
+            }),
+          };
+        }
+      );
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to add comment`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to add comment. Please try again.");
+    },
+  });
+
+  const removeCommentFromAchievementMutation = useMutation({
+    mutationFn: async (data: {
+      achievementPostId: string;
+      userUsername: string;
+      commentId: string;
+    }) => {
+      const response = await api.delete(
+        `/achievements/${data.achievementPostId}/comments/${data.commentId}`
+      );
+      return response.data.comments;
+    },
+    onSuccess: (comments, input) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
+        return {
+          ...old,
+          achievementPosts: old.achievementPosts?.map((post) => {
+            return post.id === input.achievementPostId
+              ? { ...post, comments: comments }
+              : post;
+          }),
+        };
+      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            achievementPosts: old.achievementPosts?.map((post) => {
+              return post.id === input.achievementPostId
+                ? { ...post, comments: comments }
+                : post;
+            }),
+          };
+        }
+      );
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to remove comment`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to remove comment. Please try again.");
+    },
+  });
+
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
     activityEntries: activitiesEntriesQuery.data || [],
@@ -410,6 +563,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     removeComment: removeCommentMutation.mutateAsync,
     isAddingComment: addCommentMutation.isPending,
     isRemovingComment: removeCommentMutation.isPending,
+
+    modifyReactionsOnAchievement: modifyReactionsOnAchievementMutation.mutateAsync,
+    addCommentToAchievement: addCommentToAchievementMutation.mutateAsync,
+    removeCommentFromAchievement: removeCommentFromAchievementMutation.mutateAsync,
   };
 
   return (

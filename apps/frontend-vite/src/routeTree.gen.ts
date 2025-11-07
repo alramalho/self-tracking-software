@@ -16,6 +16,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as DmsRouteImport } from './routes/dms'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
@@ -58,6 +59,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DmsRoute = DmsRouteImport.update({
+  id: '/dms',
+  path: '/dms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiRoute = AiRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/dms'
     | '/download'
     | '/onboarding'
     | '/plans'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/dms'
     | '/download'
     | '/onboarding'
     | '/plans'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/dms'
     | '/download'
     | '/onboarding'
     | '/plans'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddRoute: typeof AddRoute
   AiRoute: typeof AiRoute
+  DmsRoute: typeof DmsRoute
   DownloadRoute: typeof DownloadRoute
   OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
@@ -276,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dms': {
+      id: '/dms'
+      path: '/dms'
+      fullPath: '/dms'
+      preLoaderRoute: typeof DmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai': {
       id: '/ai'
       path: '/ai'
@@ -339,6 +359,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
   AiRoute: AiRoute,
+  DmsRoute: DmsRoute,
   DownloadRoute: DownloadRoute,
   OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,

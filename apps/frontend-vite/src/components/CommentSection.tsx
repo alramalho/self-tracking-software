@@ -11,7 +11,8 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 
 interface CommentSectionProps {
-  activityEntryId: string;
+  activityEntryId?: string;
+  achievementPostId?: string;
   comments: (Comment & { user: { username: string; picture: string } })[];
   onAddComment: (text: string) => Promise<void>;
   onRemoveComment: (commentId: string) => Promise<void>;

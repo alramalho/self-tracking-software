@@ -35,7 +35,10 @@ export interface ActivitiesContextType {
   isUpsertingActivity: boolean;
 
   deleteActivity: (data: { id: string }) => Promise<string>;
-  deleteActivityEntry: (data: { id: string }) => Promise<string>;
+  deleteActivityEntry: (data: { id: string; activityId: string }) => Promise<{
+    id: string;
+    activityId: string;
+  }>;
   isDeletingActivity: boolean;
   isDeletingActivityEntry: boolean;
 
@@ -58,6 +61,23 @@ export interface ActivitiesContextType {
   }) => Promise<void>;
   isAddingComment: boolean;
   isRemovingComment: boolean;
+
+  // Achievement post reactions and comments
+  modifyReactionsOnAchievement: (data: {
+    achievementPostId: string;
+    userUsername: string;
+    reactions: { emoji: string; operation: "add" | "remove" }[];
+  }) => Promise<void>;
+  addCommentToAchievement: (data: {
+    achievementPostId: string;
+    userUsername: string;
+    text: string;
+  }) => Promise<void>;
+  removeCommentFromAchievement: (data: {
+    achievementPostId: string;
+    userUsername: string;
+    commentId: string;
+  }) => Promise<void>;
 }
 
 export const ActivitiesContext = createContext<

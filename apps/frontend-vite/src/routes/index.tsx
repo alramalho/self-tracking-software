@@ -2,6 +2,8 @@
 
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AchievementCelebrationPopover, type AchievementType } from "@/components/AchievementCelebrationPopover";
+import { AchievementShareDialog } from "@/components/AchievementShareDialog";
+import { useAchievements } from "@/contexts/achievements";
 import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
@@ -23,6 +25,7 @@ import {
   Moon,
   MoveRight,
   RefreshCcw,
+  Send,
 } from "lucide-react";
 import { useState, useRef, useMemo } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -90,7 +93,7 @@ const AnimatedSection = ({
 };
 
 function HomePage() {
-  const { currentUser, hasLoadedUserData } = useCurrentUser();
+  const { currentUser, hasLoadedUserData, isAdmin } = useCurrentUser();
   const navigate = useNavigate();
   const { isLightMode, isDarkMode } = useTheme();
   const { activityEntryId } = Route.useSearch();
@@ -120,7 +123,6 @@ function HomePage() {
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
-  const { isUserAIWhitelisted } = useAI();
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
 
@@ -152,8 +154,16 @@ function HomePage() {
   const unopenedNotificationsCount = unopenedNotifications.length;
   const accountLevel = useAccountLevel();
 
-  // Achievement celebration state
-  const [celebrationToShow, setCelebrationToShow] = useState<{
+  // Achievement celebration from context
+  const {
+    celebrationToShow,
+    handleCelebrationClose,
+    markAchievementAsCelebrated,
+    dismissCelebration,
+  } = useAchievements();
+
+  // Achievement share state (local UI concern)
+  const [shareDialogData, setShareDialogData] = useState<{
     planId: string;
     planEmoji: string;
     planGoal: string;
@@ -161,104 +171,17 @@ function HomePage() {
     streakNumber?: number;
   } | null>(null);
 
-  // Detect uncelebrated achievements
-  const { upsertPlan } = usePlans();
-  useMemo(() => {
-    if (!plans) return;
-
-    // Check all active plans for uncelebrated achievements
-    for (const plan of plans) {
-      if (!plan.progress) continue;
-
-      const progress = plan.progress;
-
-      console.log("progress", progress);
-
-      // Check streak achievement
-      if (
-        progress.achievement?.achievedLastStreakAt &&
-        (!progress.achievement?.celebratedStreakAt ||
-          new Date(progress.achievement.achievedLastStreakAt) > new Date(progress.achievement.celebratedStreakAt))
-      ) {
-        setCelebrationToShow({
-          planId: plan.id,
-          planEmoji: plan.emoji || "🎯",
-          planGoal: plan.goal,
-          achievementType: "streak",
-          streakNumber: progress.achievement.streak,
-        });
-        return;
-      }
-
-      // Check habit achievement
-      if (
-        progress.habitAchievement?.achievedAt &&
-        (!progress.habitAchievement?.celebratedAt ||
-          new Date(progress.habitAchievement.achievedAt) > new Date(progress.habitAchievement.celebratedAt))
-      ) {
-        setCelebrationToShow({
-          planId: plan.id,
-          planEmoji: plan.emoji || "🎯",
-          planGoal: plan.goal,
-          achievementType: "habit",
-        });
-        return;
-      }
-
-      // Check lifestyle achievement
-      if (
-        progress.lifestyleAchievement?.achievedAt &&
-        (!progress.lifestyleAchievement?.celebratedAt ||
-          new Date(progress.lifestyleAchievement.achievedAt) > new Date(progress.lifestyleAchievement.celebratedAt))
-      ) {
-        setCelebrationToShow({
-          planId: plan.id,
-          planEmoji: plan.emoji || "🎯",
-          planGoal: plan.goal,
-          achievementType: "lifestyle",
-        });
-        return;
-      }
-    }
-  }, [plans]);
-
-  const handleCelebrationClose = async () => {
+  const handleCelebrationShare = () => {
     if (!celebrationToShow) return;
+    // Transfer celebration data to share dialog
+    setShareDialogData(celebrationToShow);
+    dismissCelebration();
+  };
 
-    const plan = plans?.find((p) => p.id === celebrationToShow.planId);
-    if (!plan?.progress) return;
-
-    // Update the appropriate celebratedAt field in progressState
-    const now = new Date();
-    const updatedProgressState = { ...plan.progress };
-
-    if (celebrationToShow.achievementType === "streak") {
-      updatedProgressState.achievement = {
-        ...updatedProgressState.achievement,
-        celebratedStreakAt: now,
-      };
-    } else if (celebrationToShow.achievementType === "habit") {
-      updatedProgressState.habitAchievement = {
-        ...updatedProgressState.habitAchievement,
-        celebratedAt: now,
-      };
-    } else if (celebrationToShow.achievementType === "lifestyle") {
-      updatedProgressState.lifestyleAchievement = {
-        ...updatedProgressState.lifestyleAchievement,
-        celebratedAt: now,
-      };
-    }
-
-    // Update the plan's progressState via the backend
-    await upsertPlan({
-      planId: celebrationToShow.planId,
-      updates: {
-        progressState: updatedProgressState as any,
-      },
-      muteNotifications: true,
-    });
-
-    setCelebrationToShow(null);
+  const handleShareDialogClose = async () => {
+    if (!shareDialogData) return;
+    await markAchievementAsCelebrated(shareDialogData);
+    setShareDialogData(null);
   };
 
   const handleNotificationsClose = async () => {
@@ -457,18 +380,17 @@ function HomePage() {
                 >
                   <BarChartHorizontal size={24} />
                 </button>
-                {isUserAIWhitelisted && (
+                {isAdmin && (
                   <>
                     <div className="relative">
                       <button
-                        onClick={() => navigate({ to: "/ai" })}
-                        className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                        onClick={() => navigate({ to: "/dms" })}
+                        className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
                         title="AI Coach"
                       >
-                        <img
-                          src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
-                          alt="AI Coach"
-                          className="w-9 h-9"
+                        <Send 
+                          size={28}
+                          className="text-foreground"
                         />
                         <AnimatePresence>
                           {lastCoachNotification && hasFinishedLastCoachMessageAnimation && lastCoachNotification.status !== "CONCLUDED" && (
@@ -612,10 +534,24 @@ function HomePage() {
         <AchievementCelebrationPopover
           open={!!celebrationToShow}
           onClose={handleCelebrationClose}
+          onShare={handleCelebrationShare}
           achievementType={celebrationToShow.achievementType}
           planEmoji={celebrationToShow.planEmoji}
           planGoal={celebrationToShow.planGoal}
           streakNumber={celebrationToShow.streakNumber}
+        />
+      )}
+
+      {/* Achievement Share Dialog */}
+      {shareDialogData && (
+        <AchievementShareDialog
+          open={!!shareDialogData}
+          onClose={handleShareDialogClose}
+          planId={shareDialogData.planId}
+          planEmoji={shareDialogData.planEmoji}
+          planGoal={shareDialogData.planGoal}
+          achievementType={shareDialogData.achievementType}
+          streakNumber={shareDialogData.streakNumber}
         />
       )}
 

@@ -67,7 +67,7 @@ export const PlanWeekDisplay = ({
 
   const uniqueDaysWithActivities = new Set(
     week?.completedActivities.map((entry) =>
-      format(new Date(entry.datetime), "yyyy-MM-dd")
+      format(new Date(entry.datetime || entry.date), "yyyy-MM-dd")
     )
   );
 
