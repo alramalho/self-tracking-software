@@ -8,7 +8,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
-import { AchievementType } from "./AchievementCelebrationPopover";
+import { type AchievementType } from "./AchievementCelebrationPopover";
 
 interface AchievementShareDialogProps {
   open: boolean;

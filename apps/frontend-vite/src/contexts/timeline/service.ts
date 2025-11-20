@@ -79,6 +79,7 @@ export type TimelineAchievementPost = Prisma.AchievementPostGetPayload<{
         id: true;
         goal: true;
         emoji: true;
+        backgroundImageUrl: true;
       };
     };
     images: {

@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Chat } from "@/contexts/ai/types";
+import { type Chat } from "@/contexts/ai/types";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useNavigate } from "@tanstack/react-router";

@@ -4,11 +4,9 @@ import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AchievementCelebrationPopover, type AchievementType } from "@/components/AchievementCelebrationPopover";
 import { AchievementShareDialog } from "@/components/AchievementShareDialog";
 import { useAchievements } from "@/contexts/achievements";
-import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
-import { LastCoachMessageShower } from "@/components/LastCoachMessageShower";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
@@ -17,12 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  BarChart3,
   BarChartHorizontal,
   Bell,
   ChevronDown,
   ChevronRight,
-  Moon,
   MoveRight,
   RefreshCcw,
   Send,
@@ -32,8 +28,6 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 import { motion, AnimatePresence } from "framer-motion";
 import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
 import supportAgentSvg from "../assets/icons/support-agent.svg";
-import jarvisLogoSvg from "../assets/icons/jarvis_logo_transparent.png";
-import jarvisLogoWhiteSvg from "../assets/icons/jarvis_logo_white_transparent.png";
 import { FloatingCoachWidget } from "@/components/FloatingCoachWidget";
 import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
 import { ProgressRing } from "@/components/ProgressRing";

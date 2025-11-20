@@ -96,16 +96,64 @@ type FullUserApiResponseBase = Prisma.UserGetPayload<{
         };
       };
     };
+    achievementPosts: {
+      where: { deletedAt: null };
+      orderBy: { createdAt: "desc" };
+      include: {
+        user: {
+          select: {
+            id: true;
+            username: true;
+            name: true;
+            picture: true;
+          };
+        };
+        plan: {
+          select: {
+            id: true;
+            goal: true;
+            emoji: true;
+            backgroundImageUrl: true;
+          };
+        };
+        images: {
+          orderBy: { sortOrder: "asc" };
+        };
+        comments: {
+          where: { deletedAt: null };
+          orderBy: { createdAt: "asc" };
+          include: {
+            user: {
+              select: { id: true; username: true; picture: true };
+            };
+          };
+        };
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true;
+                username: true;
+                picture: true;
+                planType: true;
+              };
+            };
+          };
+        };
+      };
+    };
   };
 }>;
 
-type FullUserApiResponse = Omit<FullUserApiResponseBase, 'plans'> & {
-  plans: Array<FullUserApiResponseBase['plans'][number] & { progress: any }>;
+type FullUserApiResponse = Omit<FullUserApiResponseBase, "plans"> & {
+  plans: Array<FullUserApiResponseBase["plans"][number] & { progress: any }>;
 };
 
 export type HydratedCurrentUser = BasicUserApiResponse;
-export type HydratedUser = Omit<FullUserApiResponseBase, 'plans'> & {
-  plans: Array<FullUserApiResponseBase['plans'][number] & { progress: PlanProgressData }>;
+export type HydratedUser = Omit<FullUserApiResponseBase, "plans"> & {
+  plans: Array<
+    FullUserApiResponseBase["plans"][number] & { progress: PlanProgressData }
+  >;
 };
 
 function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
@@ -121,7 +169,7 @@ function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
 }
 
 function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
-  const normalized = normalizeApiResponse<Omit<HydratedUser, 'plans'>>(user, [
+  const normalized = normalizeApiResponse<Omit<HydratedUser, "plans">>(user, [
     "createdAt",
     "updatedAt",
     "lastActiveAt",
@@ -147,10 +195,10 @@ function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
 
   return {
     ...normalized,
-    plans: user.plans.map(plan => ({
+    plans: user.plans.map((plan) => ({
       ...plan,
-      progress: normalizePlanProgress(plan.progress)
-    }))
+      progress: normalizePlanProgress(plan.progress),
+    })),
   };
 }
 

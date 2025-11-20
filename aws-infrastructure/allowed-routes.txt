@@ -3,6 +3,7 @@
 # Run: npm run update-routes (from backend-node directory)
 
 /400
+/achievements/{any}
 /activities
 /activities/{any}
 /admin/compute-recommendations
@@ -20,6 +21,8 @@
 /admin/users
 /ai/{any}
 /auth/{any}
+/chats
+/chats/{any}
 /clerk/{any}
 /exception
 /health
