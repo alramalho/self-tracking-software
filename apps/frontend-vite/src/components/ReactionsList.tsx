@@ -30,9 +30,7 @@ const ReactionsList: React.FC<ReactionsListProps> = ({
 
   return (
     <div
-      className={`flex ${isOverlay ? "flex-col" : "flex-wrap"} ${
-        isOverlay ? "flex-nowrap items-start" : ""
-      } gap-2 ${isOverlay ? "" : "mb-3"}`}
+      className={`flex flex-wrap gap-2 ${isOverlay ? "justify-center" : ""} ${isOverlay ? "" : "mb-3"}`}
     >
       {Object.entries(reactions).map(([emoji, usernames]) => {
         const isSelected = usernames.includes(currentUsername || "");

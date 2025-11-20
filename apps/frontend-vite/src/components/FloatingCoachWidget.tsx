@@ -15,10 +15,10 @@ export const FloatingCoachWidget: React.FC = () => {
   const { isUserAIWhitelisted, createChat } = useAI();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Get the most recent unread coach notification
+  // Get the most recent coach notification (regardless of status)
   const latestCoachNotification = useMemo(() => {
     return notifications
-      ?.filter((n) => n.type === "COACH" && n.status !== "CONCLUDED")
+      ?.filter((n) => n.type === "COACH")
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -58,8 +58,13 @@ export const FloatingCoachWidget: React.FC = () => {
     }
   };
 
-  // Only show for paid users and when there's a coach notification
-  if (isUserFree || !isUserAIWhitelisted || !latestCoachNotification) {
+  // Only show for paid users and when there's a non-concluded coach notification
+  if (
+    isUserFree ||
+    !isUserAIWhitelisted ||
+    !latestCoachNotification ||
+    latestCoachNotification.status === "CONCLUDED"
+  ) {
     return null;
   }
 

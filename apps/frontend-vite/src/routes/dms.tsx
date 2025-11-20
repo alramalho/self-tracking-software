@@ -26,7 +26,7 @@ export const Route = createFileRoute("/dms")({
 });
 
 function DirectMessagesPage() {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, themeMode } = useTheme();
   const themeColors = useThemeColors();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
@@ -49,6 +49,7 @@ function DirectMessagesPage() {
   } = useAI();
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  console.log({isDarkMode, themeMode});
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
@@ -435,7 +436,7 @@ function DirectMessagesPage() {
                             direction={isUserMessage ? "right" : "left"}
                             className={
                               isUserMessage
-                                ? `bg-gray-200`
+                                ? `bg-muted`
                                 : isHumanMessage ? "" : "bg-transparent pl-0"
                             }
                           >

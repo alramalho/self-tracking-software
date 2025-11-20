@@ -113,8 +113,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     effectiveTheme,
     themeMode,
     effectiveThemeMode,
-    isLightMode: themeMode === "light",
-    isDarkMode: themeMode === "dark",
+    isLightMode: effectiveThemeMode === "light",
+    isDarkMode: effectiveThemeMode === "dark",
     updateTheme: async (color: LowerThemeColor) => {
       await updateUserTheme(updateUser, color);
     },
