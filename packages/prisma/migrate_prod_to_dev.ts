@@ -480,41 +480,75 @@ async function migrateData() {
 
     // Step 13: Migrate Reactions
     console.info("Migrating reactions...");
-    const reactions = await sourcePrisma.reaction.findMany();
+
+    // Get actual columns from both databases
+    const sourceReactionColumns = await getTableColumns(sourcePrisma, "reactions");
+    const targetReactionColumns = await getTableColumns(targetPrisma, "reactions");
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceReactionSelect = buildSelectForExistingColumns(sourceReactionColumns);
+
+    const reactions = await sourcePrisma.reaction.findMany({
+      select: sourceReactionSelect as any,
+    });
 
     for (const reaction of reactions) {
       const { id, ...reactionData } = reaction;
+
+      // Filter reactionData to only include fields that exist in both source and target
+      const commonColumns = new Set(
+        [...sourceReactionColumns].filter((col) => targetReactionColumns.has(col))
+      );
+      const filteredData = filterToExistingColumns(reactionData, commonColumns);
+
       await targetPrisma.reaction.upsert({
         where: { id },
         create: {
           id,
-          ...reactionData,
-        },
+          ...filteredData,
+        } as any,
         update: {
-          ...reactionData,
-        },
+          ...filteredData,
+        } as any,
       });
     }
     console.info(`Migrated ${reactions.length} reactions`);
 
     // Step 14: Migrate Comments
     console.info("Migrating comments...");
-    const comments = await sourcePrisma.comment.findMany();
+
+    // Get actual columns from both databases
+    const sourceCommentColumns = await getTableColumns(sourcePrisma, "comments");
+    const targetCommentColumns = await getTableColumns(targetPrisma, "comments");
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceCommentSelect = buildSelectForExistingColumns(sourceCommentColumns);
+
+    const comments = await sourcePrisma.comment.findMany({
+      select: sourceCommentSelect as any,
+    });
     let migratedComments = 0;
     let skippedComments = 0;
 
     for (const comment of comments) {
       try {
         const { id, ...commentData } = comment;
+
+        // Filter commentData to only include fields that exist in both source and target
+        const commonColumns = new Set(
+          [...sourceCommentColumns].filter((col) => targetCommentColumns.has(col))
+        );
+        const filteredData = filterToExistingColumns(commentData, commonColumns);
+
         await targetPrisma.comment.upsert({
           where: { id },
           create: {
             id,
-            ...commentData,
-          },
+            ...filteredData,
+          } as any,
           update: {
-            ...commentData,
-          },
+            ...filteredData,
+          } as any,
         });
         migratedComments++;
       } catch (error) {
@@ -531,19 +565,36 @@ async function migrateData() {
 
     // Step 14b: Migrate Chats
     console.info("Migrating chats...");
-    const chats = await sourcePrisma.chat.findMany();
+
+    // Get actual columns from both databases
+    const sourceChatColumns = await getTableColumns(sourcePrisma, "chats");
+    const targetChatColumns = await getTableColumns(targetPrisma, "chats");
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceChatSelect = buildSelectForExistingColumns(sourceChatColumns);
+
+    const chats = await sourcePrisma.chat.findMany({
+      select: sourceChatSelect as any,
+    });
 
     for (const chat of chats) {
       const { id, ...chatData } = chat;
+
+      // Filter chatData to only include fields that exist in both source and target
+      const commonColumns = new Set(
+        [...sourceChatColumns].filter((col) => targetChatColumns.has(col))
+      );
+      const filteredData = filterToExistingColumns(chatData, commonColumns);
+
       await targetPrisma.chat.upsert({
         where: { id },
         create: {
           id,
-          ...chatData,
-        },
+          ...filteredData,
+        } as any,
         update: {
-          ...chatData,
-        },
+          ...filteredData,
+        } as any,
       });
     }
     console.info(`Migrated ${chats.length} chats`);

@@ -5,7 +5,7 @@ import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
-import UserSearch, { UserSearchResult } from "@/components/UserSearch";
+import UserSearch, { type UserSearchResult } from "@/components/UserSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -400,7 +400,7 @@ function DirectMessagesPage() {
                   messages.map((message: any) => {
                     const isUserMessage = message.role === "USER" || message.senderId === currentUser?.id;
                     const isCoachMessage = message.role === "COACH";
-
+                    const isHumanMessage = message.role === "HUMAN";
                     return (
                       <div
                         key={message.id}
@@ -409,7 +409,7 @@ function DirectMessagesPage() {
                         }`}
                       >
                         {/* Avatar for non-user messages */}
-                        {!isUserMessage && (
+                        {/* {!isUserMessage && (
                           <Avatar className="w-10 h-10 flex-shrink-0">
                             {isCoachMessage ? (
                               <>
@@ -428,15 +428,15 @@ function DirectMessagesPage() {
                               </>
                             )}
                           </Avatar>
-                        )}
+                        )} */}
 
                         <div className="flex flex-col gap-1 max-w-full overflow-visible">
                           <MessageBubble
                             direction={isUserMessage ? "right" : "left"}
                             className={
                               isUserMessage
-                                ? `bg-muted`
-                                : "bg-transparent px-1"
+                                ? `bg-gray-200`
+                                : isHumanMessage ? "" : "bg-transparent pl-0"
                             }
                           >
                             <div className="text-sm whitespace-pre-wrap">

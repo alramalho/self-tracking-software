@@ -192,7 +192,7 @@ const TimelineRenderer: React.FC<{
   // Group collapsed entries and full-width entries intelligently
   // Only reorder once on mount, not when collapse state changes
   // const reorderedEntries = useMemo(() => {
-  //   if (!timelineData?.recommendedActivityEntries) return [];
+  //   if (!timelineData?.recommendedActivityEntries) return [];w-fit rounded-2xl p-3 px-4 max-w-full rounded-br-none bg-muted
 
   //   const entries = timelineData.recommendedActivityEntries;
   //   const result: typeof entries = [];

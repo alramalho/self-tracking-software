@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Chat, ChatType } from "@/contexts/ai/types";
+import { type Chat } from "@/contexts/ai/types";
 import { Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTheme } from "@/contexts/theme/useTheme";

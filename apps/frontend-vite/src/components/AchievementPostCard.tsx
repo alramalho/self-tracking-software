@@ -5,15 +5,12 @@ import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { ReactionBarSelector } from "@charkour/react-reactions";
-import { type PlanType } from "@tsw/prisma";
 import {
   differenceInCalendarDays,
   format,
   isToday,
   isYesterday,
 } from "date-fns";
-import { Smile } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -22,9 +19,13 @@ import React, {
 } from "react";
 import toast from "react-hot-toast";
 import { type TimelineAchievementPost } from "@/contexts/timeline/service";
+import { type Comment } from "@tsw/prisma";
 import CommentSection from "./CommentSection";
 import { ProgressRing } from "./ProgressRing";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ReactionsList from "./ReactionsList";
+import ReactionPicker from "./ReactionPicker";
+import ImageCarousel from "./ImageCarousel";
+import PlanDescription from "./PlanDescription";
 
 const getFormattedDate = (date: Date) => {
   const now = new Date();
@@ -49,16 +50,6 @@ const getFormattedDate = (date: Date) => {
 interface ReactionCount {
   [key: string]: string[];
 }
-
-const REACTION_EMOJI_MAPPING = {
-  fire: "🔥",
-  rocket: "🚀",
-  love: "♥️",
-  laugh: "😂",
-  oof: "😮‍💨",
-  peach: "🍑",
-  surprise: "😮",
-};
 
 const getAchievementTitle = (
   type: string,
@@ -102,7 +93,6 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -128,19 +118,25 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { isLightMode } = useTheme();
   const accountLevel = useAccountLevel(achievementPost.user.username || undefined);
-  const images = achievementPost.images || [];
-  const hasImages = images.length > 0;
+
+  // Use uploaded images if available, otherwise fall back to plan background
+  const userImages = achievementPost.images || [];
+  const effectiveImages = userImages.length > 0
+    ? userImages
+    : achievementPost.plan.backgroundImageUrl
+      ? [{ url: achievementPost.plan.backgroundImageUrl, sortOrder: 0 }]
+      : [];
+  const hasImages = effectiveImages.length > 0;
 
   const {
     modifyReactionsOnAchievement,
-    isModifyingReactions,
     addCommentToAchievement,
     removeCommentFromAchievement,
     isAddingComment,
     isRemovingComment,
   } = useActivities();
 
-  const comments = achievementPost.comments || [];
+  const comments = (achievementPost.comments || []) as (Comment & { user: { username: string; picture: string } })[];
 
   // Debounced reactions
   const pendingReactionsRef = useRef<{
@@ -241,25 +237,11 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
     setShowEmojiPicker(false);
   };
 
-  const formatUserList = (usernames: string[]) => {
-    if (usernames.length === 1) return usernames[0];
-    if (usernames.length === 2) return usernames.join(" and ");
-    return `${usernames.slice(0, -1).join(", ")}, and ${usernames[usernames.length - 1]}`;
-  };
-
   const achievementEmojis = getAchievementEmojis(achievementPost.achievementType);
   const achievementTitle = getAchievementTitle(
     achievementPost.achievementType,
     achievementPost.streakNumber
   );
-
-  const goToNextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const goToPrevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
 
   return (
     <div className={`${variants.veryFadedBg} backdrop-blur-sm border rounded-2xl relative overflow-hidden`}>
@@ -325,225 +307,74 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
         </div>
       </div>
 
-      {/* Images */}
-      {hasImages && (
-        <div className="relative">
-          <div className="relative rounded-2xl overflow-hidden mx-4 mb-2">
-            <img
-              src={images[currentImageIndex].url || ""}
-              alt={`Achievement ${currentImageIndex + 1}`}
-              className="w-full h-full max-h-[400px] object-cover rounded-2xl"
-            />
+      {/* Content area - images or inline content */}
+      <div className={hasImages ? "relative" : "px-4 pb-4"}>
+        {hasImages && (
+          <div className="relative mx-4 mb-2">
+            <div className="relative">
+              <ImageCarousel images={effectiveImages} />
 
-            {/* Description overlay on image */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 via-black/50 to-transparent backdrop-blur-md">
-              <p className="text-sm text-white font-medium text-center mb-1">
-                {achievementPost.plan.goal}
-              </p>
-              {achievementPost.message && (
-                <p className="text-xs text-white/90 text-center">
-                  {achievementPost.message}
-                </p>
-              )}
-            </div>
+              {/* Description overlay on image */}
+              <PlanDescription
+                goal={achievementPost.plan.goal}
+                message={achievementPost.message}
+                overlay={true}
+              />
 
-            {/* Image navigation */}
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={goToPrevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={goToNextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                  {images.map((_, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-2 h-2 rounded-full ${
-                        idx === currentImageIndex
-                          ? "bg-white"
-                          : "bg-white/50"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Reactions overlay */}
-            <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
-              {reactions &&
-                Object.entries(reactions).map(([emoji, usernames]) => {
-                  return (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReactionClick(emoji)}
-                      className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 ${
-                        usernames.includes(currentUserUsername || "")
-                          ? variants.card.selected.glassBg
-                          : variants.card.glassBg
-                      }`}
-                    >
-                      <span className="text-base">{emoji}</span>
-                      <span className="text-foreground font-medium">
-                        {usernames.length}
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
-
-            {/* Emoji picker button */}
-            {!isOwnPost && (
-              <div className="absolute bottom-2 right-2 z-30">
-                {showEmojiPicker ? (
-                  <ReactionBarSelector
-                    iconSize={24}
-                    style={{
-                      border: `1px solid rgba(255, 255, 255, 0.2)`,
-                      backgroundColor: "rgba(255, 255, 255, 0.5)",
-                      zIndex: 40,
-                    }}
-                    reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
-                      ([key, value]) => ({
-                        label: key,
-                        node: <div>{value}</div>,
-                        key,
-                      })
-                    )}
-                    onSelect={(key: any) =>
-                      handleReactionClick(
-                        REACTION_EMOJI_MAPPING[
-                          key as keyof typeof REACTION_EMOJI_MAPPING
-                        ]
-                      )
-                    }
-                  />
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowEmojiPicker(!showEmojiPicker);
-                    }}
-                    className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
-                  >
-                    <Smile className={`h-6 w-6 text-foreground`} />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Comment section */}
-          <div className="mx-4 mb-2">
-            <CommentSection
-              achievementPostId={achievementPost.id}
-              comments={comments}
-              onAddComment={(text) =>
-                addCommentToAchievement({
-                  achievementPostId: achievementPost.id,
-                  userUsername: achievementPost.user.username || "",
-                  text,
-                })
-              }
-              onRemoveComment={(commentId) =>
-                removeCommentFromAchievement({
-                  achievementPostId: achievementPost.id,
-                  userUsername: achievementPost.user.username || "",
-                  commentId,
-                })
-              }
-              hasImage={true}
-              showAllComments={showAllComments}
-              onToggleShowAll={setShowAllComments}
-              isAddingComment={isAddingComment}
-              isRemovingComment={isRemovingComment}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* No images case - just show reactions and comments below */}
-      {!hasImages && (
-        <div className="px-4 pb-4">
-          {/* Plan goal and message when no images */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-muted-foreground mb-2">
-              {achievementPost.plan.goal}
-            </p>
-            {achievementPost.message && (
-              <p className="text-sm text-foreground">
-                {achievementPost.message}
-              </p>
-            )}
-          </div>
-
-          {/* Reactions */}
-          {reactions && Object.keys(reactions).length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {Object.entries(reactions).map(([emoji, usernames]) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReactionClick(emoji)}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm transition-all gap-2 ${
-                    usernames.includes(currentUserUsername || "")
-                      ? variants.card.selected.bg
-                      : variants.card.bg
-                  }`}
-                >
-                  <span className="text-base">{emoji}</span>
-                  <span className="text-foreground font-medium">
-                    {usernames.length}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Emoji picker */}
-          {!isOwnPost && (
-            <div className="mb-3">
-              {showEmojiPicker ? (
-                <ReactionBarSelector
-                  iconSize={24}
-                  style={{
-                    border: `1px solid rgba(128, 128, 128, 0.2)`,
-                  }}
-                  reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
-                    ([key, value]) => ({
-                      label: key,
-                      node: <div>{value}</div>,
-                      key,
-                    })
-                  )}
-                  onSelect={(key: any) =>
-                    handleReactionClick(
-                      REACTION_EMOJI_MAPPING[
-                        key as keyof typeof REACTION_EMOJI_MAPPING
-                      ]
-                    )
-                  }
+              {/* Reactions overlay */}
+              <div className="absolute top-2 left-2 z-30">
+                <ReactionsList
+                  reactions={reactions}
+                  currentUsername={currentUserUsername || undefined}
+                  onReactionClick={handleReactionClick}
+                  variant="overlay"
                 />
-              ) : (
-                <button
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1"
-                >
-                  <Smile className="h-4 w-4" />
-                  Add reaction
-                </button>
+              </div>
+
+              {/* Emoji picker button */}
+              {!isOwnPost && (
+                <div className="absolute bottom-2 right-2 z-30">
+                  <ReactionPicker
+                    show={showEmojiPicker}
+                    onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
+                    onSelect={handleReactionClick}
+                    variant="overlay"
+                  />
+                </div>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Comments */}
+        {/* Content when no images */}
+        {!hasImages && (
+          <>
+            <PlanDescription
+              goal={achievementPost.plan.goal}
+              message={achievementPost.message}
+              overlay={false}
+            />
+
+            <ReactionsList
+              reactions={reactions}
+              currentUsername={currentUserUsername || undefined}
+              onReactionClick={handleReactionClick}
+              variant="inline"
+            />
+
+            {!isOwnPost && (
+              <ReactionPicker
+                show={showEmojiPicker}
+                onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
+                onSelect={handleReactionClick}
+                variant="inline"
+              />
+            )}
+          </>
+        )}
+
+        {/* Comment section */}
+        <div className={hasImages ? "mx-4 mb-2" : ""}>
           <CommentSection
             achievementPostId={achievementPost.id}
             comments={comments}
@@ -561,14 +392,14 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                 commentId,
               })
             }
-            hasImage={false}
+            hasImage={hasImages}
             showAllComments={showAllComments}
             onToggleShowAll={setShowAllComments}
             isAddingComment={isAddingComment}
             isRemovingComment={isRemovingComment}
           />
         </div>
-      )}
+      </div>
     </div>
   );
 };

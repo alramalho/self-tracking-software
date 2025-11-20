@@ -14,7 +14,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "w-fit rounded-2xl p-3 px-4 bg-muted max-w-full",
+        "w-fit rounded-3xl p-3 px-4 bg-muted max-w-full",
         direction === "left" ? "rounded-bl-none" : "rounded-br-none",
         className
       )}
