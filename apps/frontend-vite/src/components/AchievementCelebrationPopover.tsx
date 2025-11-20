@@ -218,7 +218,7 @@ export const AchievementCelebrationPopover: React.FC<
               variant={onShare ? "ghost" : "default"}
               className={onShare ? "w-full" : `w-full ${variants.button.solid} font-semibold`}
             >
-              {onShare ? "Maybe Later" : "Awesome!"}
+              {onShare ? "Skip this one" : "Awesome!"}
             </Button>
           </motion.div>
         </div>
