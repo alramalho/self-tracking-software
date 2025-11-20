@@ -154,6 +154,7 @@ function HomePage() {
     handleCelebrationClose,
     markAchievementAsCelebrated,
     dismissCelebration,
+    isMarkingAsCelebrated,
   } = useAchievements();
 
   // Achievement share state (local UI concern)
@@ -533,6 +534,7 @@ function HomePage() {
           planEmoji={celebrationToShow.planEmoji}
           planGoal={celebrationToShow.planGoal}
           streakNumber={celebrationToShow.streakNumber}
+          isLoading={isMarkingAsCelebrated}
         />
       )}
 

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import React from "react";
 
 export type AchievementType = "streak" | "habit" | "lifestyle";
@@ -16,6 +16,7 @@ interface AchievementCelebrationPopoverProps {
   planEmoji: string;
   planGoal: string;
   streakNumber?: number; // For streak type
+  isLoading?: boolean;
 }
 
 const getAchievementText = (
@@ -50,7 +51,7 @@ const getAchievementText = (
 
 export const AchievementCelebrationPopover: React.FC<
   AchievementCelebrationPopoverProps
-> = ({ open, onClose, onShare, achievementType, planEmoji, planGoal, streakNumber }) => {
+> = ({ open, onClose, onShare, achievementType, planEmoji, planGoal, streakNumber, isLoading = false }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const details = getAchievementText(achievementType, streakNumber);
@@ -68,10 +69,18 @@ export const AchievementCelebrationPopover: React.FC<
         exit={{ opacity: 0, scale: 0.95 }}
         className="relative p-8 pb-6"
       >
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="absolute top-4 left-4 z-20">
+            <Loader2 size={20} className="text-muted-foreground animate-spin" />
+          </div>
+        )}
+
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-full hover:bg-muted/50 transition-colors z-20"
+          disabled={isLoading}
+          className="absolute top-4 right-4 p-1 rounded-full hover:bg-muted/50 transition-colors z-20 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Dismiss"
         >
           <X size={20} className="text-muted-foreground" />
@@ -197,6 +206,7 @@ export const AchievementCelebrationPopover: React.FC<
             {onShare && (
               <Button
                 onClick={onShare}
+                disabled={isLoading}
                 className={`w-full ${variants.button.solid} font-semibold`}
               >
                 Share with Connections 🎉
@@ -204,6 +214,7 @@ export const AchievementCelebrationPopover: React.FC<
             )}
             <Button
               onClick={onClose}
+              disabled={isLoading}
               variant={onShare ? "ghost" : "default"}
               className={onShare ? "w-full" : `w-full ${variants.button.solid} font-semibold`}
             >

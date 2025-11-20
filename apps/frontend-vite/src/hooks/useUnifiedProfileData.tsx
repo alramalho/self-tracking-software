@@ -1,12 +1,14 @@
 import { useActivities } from "@/contexts/activities/useActivities";
 import { usePlans } from "@/contexts/plans";
 import { useCurrentUser, useUser } from "@/contexts/users";
+import { useTimeline } from "@/contexts/timeline/useTimeline";
 import { useMemo } from "react";
 
 export const useUnifiedProfileData = (username?: string) => {
   const { currentUser, isLoadingCurrentUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = useCurrentUser();
   const { activities, activityEntries, isLoadingActivities, isLoadingActivityEntries } = useActivities();
   const { plans, isLoadingPlans } = usePlans();
+  const { timelineData, isLoadingTimeline } = useTimeline();
 
   // For external users, use the existing useUser hook
   // Only call useUser when we have a username and it's not the current user
@@ -26,6 +28,9 @@ export const useUnifiedProfileData = (username?: string) => {
         plans: plans || [],
         activities: activities || [],
         activityEntries: activityEntries || [],
+        achievementPosts: timelineData?.achievementPosts?.filter(
+          post => post.user.username === currentUser.username
+        ) || [],
         // Keep existing fields from currentUser (friends, connections, etc.)
       };
     } else if (!isOwnProfile && externalUserData) {
@@ -34,16 +39,16 @@ export const useUnifiedProfileData = (username?: string) => {
     }
 
     return null;
-  }, [isOwnProfile, currentUser, plans, activities, activityEntries, externalUserData]);
+  }, [isOwnProfile, currentUser, plans, activities, activityEntries, timelineData, externalUserData]);
 
   // Loading states
   const isLoading = useMemo(() => {
     if (isOwnProfile) {
-      return isLoadingCurrentUser || isLoadingActivities || isLoadingActivityEntries || isLoadingPlans;
+      return isLoadingCurrentUser || isLoadingActivities || isLoadingActivityEntries || isLoadingPlans || isLoadingTimeline;
     } else {
       return isLoadingExternalUser;
     }
-  }, [isOwnProfile, isLoadingCurrentUser, isLoadingActivities, isLoadingActivityEntries, isLoadingPlans, isLoadingExternalUser]);
+  }, [isOwnProfile, isLoadingCurrentUser, isLoadingActivities, isLoadingActivityEntries, isLoadingPlans, isLoadingTimeline, isLoadingExternalUser]);
 
   return {
     profileData,

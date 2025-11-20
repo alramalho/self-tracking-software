@@ -26,4 +26,5 @@ export interface AchievementsContextType {
   dismissCelebration: () => void;
   createAchievementPost: (data: CreateAchievementPostData) => Promise<void>;
   isCreatingAchievementPost: boolean;
+  isMarkingAsCelebrated: boolean;
 }
