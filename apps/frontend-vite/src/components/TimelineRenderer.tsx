@@ -235,7 +235,7 @@ const TimelineRenderer: React.FC<{
 
   // Divider component - Instagram style
   const AllCaughtUpDivider: React.FC = () => (
-    <div className="col-span-3 sm:col-span-6 flex items-center justify-center py-6">
+    <div className="col-span-2 sm:col-span-4 flex items-center justify-center py-6">
       <div className="flex flex-col items-center gap-2">
         <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
           <Check className="w-6 h-6 text-muted-foreground" strokeWidth={2.5} />
@@ -252,7 +252,7 @@ const TimelineRenderer: React.FC<{
 
   if (isLoadingTimeline && !timelineData) {
     return (
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
@@ -337,8 +337,8 @@ const TimelineRenderer: React.FC<{
   }
 
   return (
-    <div ref={timelineRef} className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-      <div className="flex items-center justify-start mt-4 col-span-3 sm:col-span-6">
+    <div ref={timelineRef} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="flex items-center justify-start mt-4 col-span-2 sm:col-span-4">
         <h2 className="mt-0 text-lg font-semibold ">
           Friend&apos;s last activities
         </h2>
@@ -397,7 +397,7 @@ const TimelineRenderer: React.FC<{
               return (
                 <React.Fragment key={`achievement-${post.id}`}>
                   {shouldShowDivider && <AllCaughtUpDivider />}
-                  <div className="col-span-3 sm:col-span-6">
+                  <div className="col-span-2 sm:col-span-4">
                     <AchievementPostCard
                       achievementPost={post}
                       onAvatarClick={() => {
@@ -483,10 +483,10 @@ const TimelineRenderer: React.FC<{
                         : ""
                     } ${
                       hasImage
-                        ? "col-span-3 sm:col-span-6"
+                        ? "col-span-2 sm:col-span-4"
                         : isCollapsed
                         ? "col-span-1"
-                        : "col-span-3 sm:col-span-6"
+                        : "col-span-2 sm:col-span-4"
                     }`}
                   >
                     <ActivityEntryPhotoCard

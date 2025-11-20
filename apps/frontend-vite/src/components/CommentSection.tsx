@@ -23,6 +23,8 @@ interface CommentSectionProps {
   isAddingComment?: boolean;
   isRemovingComment?: boolean;
   className?: string;
+  inputClassName?: string;
+  inputWrapperClassName?: string;
 }
 
 const getFormattedDate = (date: Date) => {
@@ -65,6 +67,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   isAddingComment = false,
   isRemovingComment = false,
   className = "",
+  inputClassName = "",
+  inputWrapperClassName = "",
 }) => {
   const [newComment, setNewComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
@@ -341,9 +345,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       {/* Comment input */}
       {currentUser && (
         <div className="relative">
-          <form onSubmit={handleSubmitComment} className="flex gap-2 w-full">
+          <form onSubmit={handleSubmitComment} className={`flex gap-2 w-full ${inputWrapperClassName}`}>
             <div
-              className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 dark:border-gray-700/20 shadow-sm backdrop-blur-lg`}
+              className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 dark:border-gray-700/20 shadow-sm backdrop-blur-lg ${inputClassName}`}
             >
               <Avatar className="w-6 h-6">
                 <AvatarImage src={currentUser?.picture || undefined} />

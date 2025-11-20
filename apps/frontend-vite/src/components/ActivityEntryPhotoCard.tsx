@@ -330,46 +330,47 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
-    <div className="relative h-28 bg-card/50 backdrop-blur-sm border rounded-2xl relative overflow-visible aspect-square flex items-center justify-center">
-      <div className="flex flex-col items-center justify-center">
-        <div className="relative">
-          <span className="text-6xl leading-none">{activity.emoji}</span>
-        </div>
-        {/* <span className="text-lg font-semibold text-foreground">
-          {trimmedActivityTitle}
-        </span> */}
-      </div>
-      <div className="absolute top-2 right-2">
-        <Maximize2 className="w-4 h-4 text-muted-foreground opacity-30" />
-      </div>
-      <div className="absolute -bottom-0 left-1">
-        <div className="relative">
-          <ProgressRing
-            size={20}
-            strokeWidth={1}
-            percentage={accountLevel.percentage}
-            currentLevel={accountLevel.currentLevel}
-            atLeastBronze={accountLevel.atLeastBronze}
-            badge={false}
-            badgeSize={20}
+    <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
+      <div className="relative flex-shrink-0">
+        <ProgressRing
+          size={20}
+          strokeWidth={1.5}
+          percentage={accountLevel.percentage}
+          currentLevel={accountLevel.currentLevel}
+          atLeastBronze={accountLevel.atLeastBronze}
+          badge={false}
+          badgeSize={20}
+        >
+          <Avatar
+            className="w-6 h-6"
+            style={{
+              boxShadow: `0 0 0 1px ${
+                isLightMode ? "white" : "black"
+              }, 0 0 0 3px ${accountLevel.currentLevel?.color}`,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAvatarClick?.();
+            }}
           >
-            <Avatar
-              className="w-8 h-8"
-              style={{
-                boxShadow: `0 0 0 2px ${
-                  isLightMode ? "white" : "black"
-                }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onAvatarClick?.();
-              }}
-            >
-              <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-              <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-            </Avatar>
-          </ProgressRing>
-        </div>
+            <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+            <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+          </Avatar>
+        </ProgressRing>
+      </div>
+      <div className="relative flex-shrink-0">
+        <span className="text-3xl leading-none">{activity.emoji}</span>
+      </div>
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-xs font-semibold text-foreground line-clamp-1">
+          {activity.title}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {activityEntry.quantity} {activity.measure}
+        </span>
+      </div>
+      <div className="absolute top-1.5 right-1.5">
+        <Maximize2 className="w-3 h-3 text-muted-foreground opacity-30" />
       </div>
     </div>
   );
