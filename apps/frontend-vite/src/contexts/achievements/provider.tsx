@@ -20,6 +20,7 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { handleQueryError } = useLogError();
   const [celebrationToShow, setCelebrationToShow] =
     useState<CelebrationData | null>(null);
+  const [isMarkingAsCelebrated, setIsMarkingAsCelebrated] = useState(false);
 
   // Detect uncelebrated achievements
   useMemo(() => {
@@ -139,8 +140,13 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleCelebrationClose = async () => {
     if (!celebrationToShow) return;
-    await markAchievementAsCelebrated(celebrationToShow);
-    setCelebrationToShow(null);
+    setIsMarkingAsCelebrated(true);
+    try {
+      await markAchievementAsCelebrated(celebrationToShow);
+      setCelebrationToShow(null);
+    } finally {
+      setIsMarkingAsCelebrated(false);
+    }
   };
 
   const dismissCelebration = () => {
@@ -193,6 +199,7 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
     dismissCelebration,
     createAchievementPost,
     isCreatingAchievementPost: createAchievementPostMutation.isPending,
+    isMarkingAsCelebrated,
   };
 
   return (

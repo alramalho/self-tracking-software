@@ -1,6 +1,8 @@
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
+import AchievementPostCard from "@/components/AchievementPostCard";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import { useActivities } from "@/contexts/activities/useActivities";
 import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import Divider from "@/components/Divider";
@@ -132,6 +134,7 @@ function ProfilePage() {
     rejectFriendRequest,
     currentUser,
   } = useUnifiedProfileData(username);
+  const { deleteAchievementPost } = useActivities();
   const { totalStreaks, totalHabits, totalLifestyles } = useMemo(() => {
     return userifyPlansProgress(
       profileData?.plans?.map((plan) => plan.progress) || []
@@ -141,6 +144,15 @@ function ProfilePage() {
   // Extract activities and activityEntries from profileData for consistency
   const activities = profileData?.activities || [];
   const activityEntries = profileData?.activityEntries || [];
+  const achievementPosts = profileData?.achievementPosts || [];
+  
+  const historyItems = useMemo(() => {
+    const items = [
+      ...activityEntries.map(entry => ({ type: 'activity' as const, date: new Date(entry.datetime), data: entry })),
+      ...achievementPosts.map(post => ({ type: 'achievement' as const, date: new Date(post.createdAt), data: post }))
+    ];
+    return items.sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [activityEntries, achievementPosts]);
 
   // For connection requests, we always use the current user data regardless of profile being viewed
   const currentUserSentConnectionRequests = useMemo(
@@ -646,15 +658,11 @@ function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="history">
-                {activityEntries?.length > 0 ? (
+                {historyItems.length > 0 ? (
                   <div className="space-y-4">
-                    {activityEntries
-                      .sort(
-                        (a, b) =>
-                          new Date(b.datetime).getTime() -
-                          new Date(a.datetime).getTime()
-                      )
-                      .map((entry) => {
+                    {historyItems.map((item) => {
+                      if (item.type === 'activity') {
+                        const entry = item.data;
                         const activity = activities.find(
                           (a) => a.id === entry.activityId
                         );
@@ -685,15 +693,32 @@ function ProfilePage() {
                             )}
                           />
                         );
-                      })}
+                      } else {
+                        const post = item.data;
+                        return (
+                          <AchievementPostCard
+                            key={post.id}
+                            achievementPost={post as any}
+                            editable={isOwnProfile}
+                            onAvatarClick={() => {
+                              // navigate to user profile if needed, but we are already there mostly
+                            }}
+                            onDeleteClick={() => {
+                              deleteAchievementPost({
+                                achievementPostId: post.id,
+                                userUsername: profileData?.username || "",
+                              });
+                            }}
+                          />
+                        );
+                      }
+                    })}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    {activityEntries?.length === 0
-                      ? isOwnProfile
-                        ? "You haven't completed any activities yet."
-                        : `${profileData?.name} hasn't got any public activities.`
-                      : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
+                    {isOwnProfile
+                      ? "You haven't posted any activity or achievement yet."
+                      : `${profileData?.name} hasn't posted anything yet.`}
                   </div>
                 )}
               </TabsContent>

@@ -252,6 +252,42 @@ router.get(
   }
 );
 
+// Delete achievement post
+router.delete(
+  "/:id",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { id } = req.params;
+
+      const achievementPost = await prisma.achievementPost.findUnique({
+        where: { id },
+      });
+
+      if (!achievementPost) {
+        return res.status(404).json({ error: "Achievement post not found" });
+      }
+
+      if (achievementPost.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await prisma.achievementPost.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+
+      res.json({ message: "Achievement post deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting achievement post:", error);
+      res.status(500).json({ error: "Failed to delete achievement post" });
+    }
+  }
+);
+
 // Modify reactions for achievement post
 router.post(
   "/:achievementPostId/modify-reactions",

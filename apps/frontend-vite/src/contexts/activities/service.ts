@@ -39,3 +39,10 @@ export async function getActivitiyEntries(api: AxiosInstance) {
   );
   return response.data;
 }
+
+export async function deleteAchievementPost(
+  api: AxiosInstance,
+  achievementPostId: string
+) {
+  await api.delete(`/achievements/${achievementPostId}`);
+}

@@ -78,6 +78,11 @@ export interface ActivitiesContextType {
     userUsername: string;
     commentId: string;
   }) => Promise<void>;
+  deleteAchievementPost: (data: {
+    achievementPostId: string;
+    userUsername: string;
+  }) => Promise<void>;
+  isDeletingAchievementPost: boolean;
 }
 
 export const ActivitiesContext = createContext<

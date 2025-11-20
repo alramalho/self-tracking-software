@@ -9,7 +9,7 @@ import { toast } from "react-hot-toast";
 import { useComputeProgressForUserPlans } from "../plans-progress";
 import { type TimelineData } from "../timeline/service";
 import { type HydratedUser } from "../users/service";
-import { getActivities, getActivitiyEntries } from "./service";
+import { getActivities, getActivitiyEntries, deleteAchievementPost } from "./service";
 import {
   ActivitiesContext,
   type ActivitiesContextType,
@@ -537,6 +537,49 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const deleteAchievementPostMutation = useMutation({
+    mutationFn: async (data: {
+      achievementPostId: string;
+      userUsername: string;
+    }) => {
+      await deleteAchievementPost(api, data.achievementPostId);
+    },
+    onSuccess: (_, input) => {
+      // Remove from timeline data
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
+        return {
+          ...old,
+          achievementPosts: old.achievementPosts?.filter(
+            (post) => post.id !== input.achievementPostId
+          ),
+        };
+      });
+      // Remove from user data
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            achievementPosts: old.achievementPosts?.filter(
+              (post) => post.id !== input.achievementPostId
+            ),
+          };
+        }
+      );
+      toast.success("Achievement post deleted successfully");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to delete achievement post`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to delete achievement post. Please try again.");
+    },
+  });
+
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
     activityEntries: activitiesEntriesQuery.data || [],
@@ -567,6 +610,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     modifyReactionsOnAchievement: modifyReactionsOnAchievementMutation.mutateAsync,
     addCommentToAchievement: addCommentToAchievementMutation.mutateAsync,
     removeCommentFromAchievement: removeCommentFromAchievementMutation.mutateAsync,
+    deleteAchievementPost: deleteAchievementPostMutation.mutateAsync,
+    isDeletingAchievementPost: deleteAchievementPostMutation.isPending,
   };
 
   return (

@@ -13,6 +13,7 @@ import {
 } from "date-fns";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 import { type TimelineAchievementPost } from "@/contexts/timeline/service";
 import { type Comment } from "@tsw/prisma";
 import CommentSection from "./CommentSection";
@@ -80,12 +81,16 @@ interface AchievementPostCardProps {
   achievementPost: TimelineAchievementPost;
   onAvatarClick?: () => void;
   onUsernameClick?: () => void;
+  editable?: boolean;
+  onDeleteClick?: () => void;
 }
 
 const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   achievementPost,
   onAvatarClick,
   onUsernameClick,
+  editable = false,
+  onDeleteClick,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -285,7 +290,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
       : 1;
 
   return (
-    <div className="bg-card backdrop-blur-sm border rounded-2xl relative overflow-visible mb-10">
+    <div className="bg-card backdrop-blur-sm border rounded-2xl relative overflow-visible mb-12">
       {/* Image with overlays */}
       <div className="relative">
         {hasImages ? (
@@ -294,13 +299,27 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
           <div className="bg-card rounded-t-2xl h-[24rem]" />
         )}
 
-        {/* Top overlay - Date */}
-        <div className="absolute top-3 right-3 z-20">
+        {/* Top overlay - Date and Delete button */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
           <div className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/20">
             <p className="text-xs text-white font-medium">
               {getFormattedDate(achievementPost.createdAt)}
             </p>
           </div>
+          {editable && onDeleteClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm('Are you sure you want to delete this achievement post?')) {
+                  onDeleteClick();
+                }
+              }}
+              className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-white/20 transition-colors"
+              title="Delete achievement post"
+            >
+              <Trash2 size={16} className="text-white" />
+            </button>
+          )}
         </div>
 
         {/* Top-left counter with animated fire */}
