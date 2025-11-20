@@ -62,7 +62,7 @@ const ConfirmDialogOrPopover: React.FC<ConfirmDialogProps> = ({
   } else {
     return (
       <Drawer open={isOpen} onOpenChange={onClose}>
-        <DrawerContent>
+        <DrawerContent className="mb-2">
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
             <DrawerDescription>{description}</DrawerDescription>

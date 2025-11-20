@@ -23,6 +23,7 @@ import ReactionPicker from "./ReactionPicker";
 import ImageCarousel from "./ImageCarousel";
 import AnimatedCounter from "./AnimatedCounter";
 import JSConfetti from "js-confetti";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 
 const getFormattedDate = (date: Date) => {
   const now = new Date();
@@ -95,6 +96,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
   const [showAllComments, setShowAllComments] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setReactions(
@@ -310,9 +312,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm('Are you sure you want to delete this achievement post?')) {
-                  onDeleteClick();
-                }
+                setShowDeleteConfirm(true);
               }}
               className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-white/20 transition-colors"
               title="Delete achievement post"
@@ -478,6 +478,21 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
           />
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialogOrPopover
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          onDeleteClick?.();
+        }}
+        title="Delete Achievement Post"
+        description="Are you sure you want to delete this achievement post? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 };
