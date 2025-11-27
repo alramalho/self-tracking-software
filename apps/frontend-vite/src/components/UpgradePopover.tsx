@@ -24,8 +24,8 @@ const OG_MONTHLY = 13.99;
 const OG_QUARTERLY = 29.99;
 const OG_YEARLY = 83.99;
 
-const PLUS_MONTHLY = 8.99;
-const PLUS_QUARTERLY = 20.99;
+const PLUS_MONTHLY = 9.99;
+const PLUS_QUARTERLY = 24.99;
 const PLUS_YEARLY = 59.99;
 
 // Calculate savings
@@ -425,6 +425,14 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 All plans include a free trial and full access to all features
               </p>
               <p>Cancel anytime, no strings attached.</p>
+              <a
+                href="https://tracking.so/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
+              >
+                Terms of Service
+              </a>
             </div>
           </div>
         </div>
