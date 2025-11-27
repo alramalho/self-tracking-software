@@ -45,7 +45,7 @@ model User {
 
   unactivatedEmailSentAt          DateTime?
   themeBaseColor                  ThemeColor         @default(BLUE)
-  themeMode                       ThemeMode          @default(LIGHT)
+  themeMode                       ThemeMode          @default(DARK)
   recommendationsOutdated         Boolean            @default(false)
   recommendationsLastCalculatedAt DateTime?
   onboardingCompletedAt           DateTime?
