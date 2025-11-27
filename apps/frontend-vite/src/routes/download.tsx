@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DownloadComponent from "../components/DownloadComponent";
 import { Drawer, DrawerContent, DrawerTrigger } from "../components/ui/drawer";
 import { Button } from "../components/ui/button";
@@ -19,6 +19,20 @@ export const Route = createFileRoute("/download")({
 function DownloadPage() {
   const { instagram, tiktok } = Route.useSearch();
   const [open, setOpen] = useState(true);
+
+  // Force dark mode on /download page
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains("dark");
+    root.classList.add("dark");
+
+    return () => {
+      // Restore previous state on unmount
+      if (!wasDark) {
+        root.classList.remove("dark");
+      }
+    };
+  }, []);
 
   return (
     <div className="h-full w-full absolute flex z-[10] flex-col items-center justify-center px-4 bg-background overflow-hidden pointer-events-auto z-[1000]">

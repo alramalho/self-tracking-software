@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useCurrentUser } from "@/contexts/users";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, Loader2, User, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, User, XCircle, Moon, Sun } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
   const api = useApiWithAuth();
   const { currentUser, updateUser } = useCurrentUser();
+  const { effectiveThemeMode, updateThemeMode } = useTheme();
   const isUsernameSet = useMemo(() => !currentUser?.username?.startsWith("__pending__"), [currentUser?.username]);
 
   // Determine initial substep based on whether user has username
@@ -263,6 +265,27 @@ const WelcomeStep = () => {
               exit="exit"
               className="space-y-6"
             >
+              {/* Theme toggle */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => updateThemeMode(effectiveThemeMode === "dark" ? "light" : "dark")}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground"
+                >
+                  {effectiveThemeMode === "dark" ? (
+                    <>
+                      <Moon className="w-4 h-4" />
+                      <span>Dark</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-4 h-4" />
+                      <span>Light</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <div className="space-y-3">
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-foreground mb-2">
