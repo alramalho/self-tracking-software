@@ -22,7 +22,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     [currentUser?.themeBaseColor]
   );
 
-  // Get theme mode from user data, fallback to localStorage, then to light
+  // Get theme mode from user data, fallback to localStorage, then to dark
   const themeMode = useMemo(() => {
     if (currentUser?.themeMode) {
       return currentUser.themeMode.toLowerCase() as LowerThemeMode;
@@ -32,7 +32,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       const stored = localStorage.getItem("themeMode") as LowerThemeMode | null;
       if (stored) return stored;
     }
-    return "light" as LowerThemeMode;
+    return "dark" as LowerThemeMode;
   }, [currentUser?.themeMode]);
 
   // Detect system preference for AUTO mode
