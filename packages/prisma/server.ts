@@ -18,12 +18,4 @@ if (nodeEnv !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// Export using both ESM and CommonJS for compatibility
 export { prisma, PrismaClient };
-
-// CommonJS compatibility - only if module exists (Node.js environment)
-// @ts-ignore - module may not exist in browser/vite environments
-if (typeof module !== "undefined" && module.exports) {
-  // @ts-ignore
-  module.exports = { prisma, PrismaClient };
-}

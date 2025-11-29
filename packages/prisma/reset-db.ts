@@ -67,9 +67,7 @@ async function main() {
   }
 }
 
-// Run the script if called directly
-if (require.main === module) {
-  main();
-}
+// Run the script
+main();
 
 export { deleteAllData };

@@ -158,7 +158,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}
         title="Delete Activity"
-        description="Are you sure you want to delete this activity? This action cannot be undone."
+        description={<>Are you sure you want to delete this activity? <strong>This will permanently delete all entries, reactions, and comments associated with it.</strong> This action cannot be undone.</>}
         confirmText="Delete"
         variant="destructive"
       />

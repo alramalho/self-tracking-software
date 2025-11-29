@@ -11,6 +11,7 @@ interface ReactionsListProps {
   currentUsername?: string;
   onReactionClick: (emoji: string) => void;
   variant?: "overlay" | "inline";
+  vertical?: boolean;
 }
 
 const ReactionsList: React.FC<ReactionsListProps> = ({
@@ -18,6 +19,7 @@ const ReactionsList: React.FC<ReactionsListProps> = ({
   currentUsername,
   onReactionClick,
   variant = "inline",
+  vertical = false,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -30,7 +32,7 @@ const ReactionsList: React.FC<ReactionsListProps> = ({
 
   return (
     <div
-      className={`flex flex-wrap gap-2 ${isOverlay ? "justify-center" : ""} ${isOverlay ? "" : "mb-3"}`}
+      className={`flex gap-2 ${vertical ? "flex-col" : "flex-wrap"} ${isOverlay ? "justify-center" : ""} ${isOverlay ? "" : "mb-3"}`}
     >
       {Object.entries(reactions).map(([emoji, usernames]) => {
         const isSelected = usernames.includes(currentUsername || "");
