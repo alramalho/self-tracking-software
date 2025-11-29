@@ -1200,6 +1200,14 @@ export class PlansService {
         `Processing post-activity coaching for user '${user.username}' on plan '${plan.goal}'`
       );
 
+      // Skip if activity entry has no activity (orphaned entry)
+      if (!activityEntry.activityId) {
+        logger.info(
+          `Skipping post-activity coaching for orphaned entry ${activityEntry.id}`
+        );
+        return null;
+      }
+
       // Check if user is on free plan
       if (user.planType === "FREE") {
         logger.info(
