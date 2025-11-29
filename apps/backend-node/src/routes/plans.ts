@@ -1327,6 +1327,12 @@ router.post(
             milestones: true,
           },
         });
+
+        // Invalidate progress cache if activities were modified
+        if (planData.activities) {
+          await plansService.invalidatePlanProgressCache(updatedPlan.id);
+        }
+
         // Mark user recommendations as outdated
         recommendationsService.computeRecommendedUsers(req.user!.id);
 
