@@ -44,6 +44,7 @@ router.get(
         where: {
           userId: req.user!.id,
           deletedAt: null,
+          activityId: { not: null },
           activity: {
             deletedAt: null,
           },
@@ -323,6 +324,8 @@ router.get(
         where: {
           userId: req.user!.id,
           deletedAt: null,
+          activityId: { not: null },
+          activity: { deletedAt: null },
         },
         include: {
           activity: true,
@@ -331,15 +334,17 @@ router.get(
         take: 5,
       });
 
-      const recentActivities = recentEntries.map((entry) => ({
-        id: entry.id,
-        activity_title: entry.activity.title,
-        activity_emoji: entry.activity.emoji,
-        quantity: entry.quantity,
-        measure: entry.activity.measure,
-        datetime: entry.datetime,
-        createdAt: entry.createdAt,
-      }));
+      const recentActivities = recentEntries
+        .filter((entry) => entry.activity !== null)
+        .map((entry) => ({
+          id: entry.id,
+          activity_title: entry.activity!.title,
+          activity_emoji: entry.activity!.emoji,
+          quantity: entry.quantity,
+          measure: entry.activity!.measure,
+          datetime: entry.datetime,
+          createdAt: entry.createdAt,
+        }));
 
       res.json({ recent_activities: recentActivities });
     } catch (error) {

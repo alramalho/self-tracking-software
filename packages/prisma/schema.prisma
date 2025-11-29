@@ -142,7 +142,7 @@ model Activity {
 
 model ActivityEntry {
   id          String    @id @default(cuid())
-  activityId  String
+  activityId  String?
   userId      String
   quantity    Int
   datetime    DateTime
@@ -160,7 +160,7 @@ model ActivityEntry {
   imageIsPublic  Boolean   @default(false)
 
   // Relations
-  activity  Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activity  Activity?  @relation(fields: [activityId], references: [id], onDelete: SetNull)
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions Reaction[]
   comments  Comment[]

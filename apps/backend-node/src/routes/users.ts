@@ -535,7 +535,11 @@ usersRouter.post(
             where: { deletedAt: null },
           },
           activityEntries: {
-            where: { deletedAt: null },
+            where: {
+              deletedAt: null,
+              activityId: { not: null },
+              activity: { deletedAt: null },
+            },
             include: {
               activity: true,
               comments: {
@@ -848,7 +852,11 @@ usersRouter.get(
       });
 
       const activityIds = Array.from(
-        new Set(filteredActivityEntries.map((entry) => entry.activityId))
+        new Set(
+          filteredActivityEntries
+            .map((entry) => entry.activityId)
+            .filter((id): id is string => id !== null)
+        )
       );
       const activities = await prisma.activity.findMany({
         where: { id: { in: activityIds } },
