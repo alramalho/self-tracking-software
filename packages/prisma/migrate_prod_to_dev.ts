@@ -154,6 +154,8 @@ async function clearTargetDatabase() {
     "connections",
     "comments",
     "reactions",
+    "achievement_images",
+    "achievement_posts",
     "activity_entries",
     "metric_entries",
     "activities",
@@ -477,6 +479,78 @@ async function migrateData() {
       });
     }
     console.info(`Migrated ${planInviteLinks.length} plan invite links`);
+
+    // Step 12c: Migrate Achievement Posts
+    console.info("Migrating achievement posts...");
+
+    // Get actual columns from both databases
+    const sourceAchievementPostColumns = await getTableColumns(sourcePrisma, "achievement_posts");
+    const targetAchievementPostColumns = await getTableColumns(targetPrisma, "achievement_posts");
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceAchievementPostSelect = buildSelectForExistingColumns(sourceAchievementPostColumns);
+
+    const achievementPosts = await sourcePrisma.achievementPost.findMany({
+      select: sourceAchievementPostSelect as any,
+    });
+
+    for (const achievementPost of achievementPosts) {
+      const { id, ...achievementPostData } = achievementPost;
+
+      // Filter data to only include fields that exist in both source and target
+      const commonColumns = new Set(
+        [...sourceAchievementPostColumns].filter((col) => targetAchievementPostColumns.has(col))
+      );
+      const filteredData = filterToExistingColumns(achievementPostData, commonColumns);
+
+      await targetPrisma.achievementPost.upsert({
+        where: { id },
+        create: {
+          id,
+          ...filteredData,
+        } as any,
+        update: {
+          ...filteredData,
+        } as any,
+      });
+    }
+    console.info(`Migrated ${achievementPosts.length} achievement posts`);
+
+    // Step 12d: Migrate Achievement Images
+    console.info("Migrating achievement images...");
+
+    // Get actual columns from both databases
+    const sourceAchievementImageColumns = await getTableColumns(sourcePrisma, "achievement_images");
+    const targetAchievementImageColumns = await getTableColumns(targetPrisma, "achievement_images");
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceAchievementImageSelect = buildSelectForExistingColumns(sourceAchievementImageColumns);
+
+    const achievementImages = await sourcePrisma.achievementImage.findMany({
+      select: sourceAchievementImageSelect as any,
+    });
+
+    for (const achievementImage of achievementImages) {
+      const { id, ...achievementImageData } = achievementImage;
+
+      // Filter data to only include fields that exist in both source and target
+      const commonColumns = new Set(
+        [...sourceAchievementImageColumns].filter((col) => targetAchievementImageColumns.has(col))
+      );
+      const filteredData = filterToExistingColumns(achievementImageData, commonColumns);
+
+      await targetPrisma.achievementImage.upsert({
+        where: { id },
+        create: {
+          id,
+          ...filteredData,
+        } as any,
+        update: {
+          ...filteredData,
+        } as any,
+      });
+    }
+    console.info(`Migrated ${achievementImages.length} achievement images`);
 
     // Step 13: Migrate Reactions
     console.info("Migrating reactions...");
@@ -811,9 +885,7 @@ async function main() {
   }
 }
 
-// Run the script if called directly
-if (require.main === module) {
-  main();
-}
+// Run the script
+main();
 
 export { migrateData };

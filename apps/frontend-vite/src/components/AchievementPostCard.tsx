@@ -335,7 +335,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
 
         {/* Center overlay - Avatar and Info Card */}
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-3 px-6">
+          <div className="flex flex-col items-center gap-3">
             {/* Avatar with progress ring */}
             <div className="relative">
               <ProgressRing
@@ -371,11 +371,11 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             </div>
 
             {/* Info card with glass background */}
-            <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl">
+            <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12">
               <div className="flex items-center gap-2 mb-1 justify-center">
                 <span className="text-4xl">{achievementPost.plan.emoji}</span>
               </div>
-              <h3 className="text-2xl font-bold text-white text-center drop-shadow-lg">
+              <h3 className="text-xl font-bold text-white text-center drop-shadow-lg">
                 {achievementTitle}
               </h3>
               <p className="text-sm text-white/80 text-center mt-1">
@@ -397,21 +397,8 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
               </p>
             </div>
 
-            {/* Reactions section below the central card */}
-            <div className="mt-4 flex flex-col items-center gap-2">
-              {/* Existing reactions */}
-              {reactions && Object.keys(reactions).length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <ReactionsList
-                    reactions={reactions}
-                    currentUsername={currentUserUsername || undefined}
-                    onReactionClick={handleReactionClick}
-                    variant="overlay"
-                  />
-                </div>
-              )}
-
-              {/* Emoji picker button */}
+            {/* Emoji picker button - centered below card */}
+            <div className="mt-2">
               <ReactionPicker
                 show={showEmojiPicker}
                 onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -421,6 +408,39 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Reactions on the sides */}
+        {reactions && Object.keys(reactions).length > 0 && (
+          <>
+            {/* Left side reactions (first 4 or all if ≤4) */}
+            <div className="absolute left-1 bottom-16 z-20 flex flex-col gap-2">
+              <ReactionsList
+                reactions={Object.fromEntries(
+                  Object.entries(reactions).slice(0, 4)
+                )}
+                currentUsername={currentUserUsername || undefined}
+                onReactionClick={handleReactionClick}
+                variant="overlay"
+                vertical
+              />
+            </div>
+
+            {/* Right side reactions (remaining if >4) */}
+            {Object.keys(reactions).length > 4 && (
+              <div className="absolute right-1 bottom-16 z-20 flex flex-col gap-2">
+                <ReactionsList
+                  reactions={Object.fromEntries(
+                    Object.entries(reactions).slice(4)
+                  )}
+                  currentUsername={currentUserUsername || undefined}
+                  onReactionClick={handleReactionClick}
+                  variant="overlay"
+                  vertical
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Comment input overlay at bottom - styled like ActivityEntryPhotoCard description */}
         {currentUser && (
