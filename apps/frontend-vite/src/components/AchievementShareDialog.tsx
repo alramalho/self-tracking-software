@@ -13,11 +13,12 @@ import { type AchievementType } from "./AchievementCelebrationPopover";
 interface AchievementShareDialogProps {
   open: boolean;
   onClose: () => void;
-  planId: string;
+  planId?: string;
   planEmoji: string;
   planGoal: string;
   achievementType: AchievementType;
   streakNumber?: number;
+  levelName?: string;
 }
 
 export const AchievementShareDialog: React.FC<
@@ -30,12 +31,14 @@ export const AchievementShareDialog: React.FC<
   planGoal,
   achievementType,
   streakNumber,
+  levelName,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { createAchievementPost, isCreatingAchievementPost } = useAchievements();
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  const isLevelUp = achievementType === "level_up";
 
   const getAchievementTitle = () => {
     switch (achievementType) {
@@ -45,6 +48,8 @@ export const AchievementShareDialog: React.FC<
         return "Habit Formed!";
       case "lifestyle":
         return "Lifestyle Achievement!";
+      case "level_up":
+        return `Reached ${levelName}!`;
     }
   };
 
@@ -54,6 +59,7 @@ export const AchievementShareDialog: React.FC<
         planId,
         achievementType,
         streakNumber,
+        levelName,
         message,
         photos,
       });
@@ -83,11 +89,13 @@ export const AchievementShareDialog: React.FC<
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-6xl mb-3">{planEmoji}</div>
+          <div className="text-6xl mb-3">{isLevelUp ? "🎖️" : planEmoji}</div>
           <h3 className="text-2xl font-bold text-foreground mb-1">
             {getAchievementTitle()}
           </h3>
-          <p className="text-sm text-muted-foreground">{planGoal}</p>
+          <p className="text-sm text-muted-foreground">
+            {isLevelUp ? "New account level unlocked!" : planGoal}
+          </p>
         </div>
 
         {/* Share prompt */}

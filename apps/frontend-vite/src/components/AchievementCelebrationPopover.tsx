@@ -1,12 +1,14 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getAccountLevels } from "@/hooks/useAccountLevel";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import React from "react";
 
-export type AchievementType = "streak" | "habit" | "lifestyle";
+export type AchievementType = "streak" | "habit" | "lifestyle" | "level_up";
 
 interface AchievementCelebrationPopoverProps {
   open: boolean;
@@ -16,12 +18,14 @@ interface AchievementCelebrationPopoverProps {
   planEmoji: string;
   planGoal: string;
   streakNumber?: number; // For streak type
+  levelName?: string; // For level_up type
   isLoading?: boolean;
 }
 
 const getAchievementText = (
   type: AchievementType,
-  streakNumber?: number
+  streakNumber?: number,
+  levelName?: string
 ): {
   title: string;
   subtitle: string;
@@ -46,15 +50,30 @@ const getAchievementText = (
         subtitle: "Wow! Less than 1% achieved this! Congratulations on your 9 weeks strong!",
         fireEmojis: ["🏆", "🏆"],
       };
+    case "level_up":
+      return {
+        title: `${levelName}!`,
+        subtitle: "You've reached a new level!",
+        fireEmojis: ["🎖️", "🎖️"],
+      };
   }
 };
 
 export const AchievementCelebrationPopover: React.FC<
   AchievementCelebrationPopoverProps
-> = ({ open, onClose, onShare, achievementType, planEmoji, planGoal, streakNumber, isLoading = false }) => {
+> = ({ open, onClose, onShare, achievementType, planEmoji, planGoal, streakNumber, levelName, isLoading = false }) => {
   const themeColors = useThemeColors();
+  const { isDarkMode } = useTheme();
   const variants = getThemeVariants(themeColors.raw);
-  const details = getAchievementText(achievementType, streakNumber);
+  const details = getAchievementText(achievementType, streakNumber, levelName);
+
+  // Get the level icon for level_up achievements
+  const levelIcon = React.useMemo(() => {
+    if (achievementType !== "level_up" || !levelName) return null;
+    const levels = getAccountLevels(isDarkMode);
+    const level = levels.find(l => l.name === levelName);
+    return level?.getIcon({ size: 80 });
+  }, [achievementType, levelName, isDarkMode]);
 
   return (
     <AppleLikePopover
@@ -145,9 +164,9 @@ export const AchievementCelebrationPopover: React.FC<
               {details.fireEmojis[0]}
             </motion.div>
 
-            {/* Main Plan Emoji */}
+            {/* Main Plan Emoji or Level Icon */}
             <div className="text-8xl">
-              {planEmoji}
+              {levelIcon || planEmoji}
             </div>
 
             {/* Right fire */}

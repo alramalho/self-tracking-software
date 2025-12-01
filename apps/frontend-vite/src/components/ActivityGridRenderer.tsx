@@ -19,7 +19,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getActivityEntriesData = () => {
     const result = activityEntries
       .filter((entry) =>
-        activities.map((a) => a.id).includes(entry.activityId)
+        entry.activityId && activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
         date: new Date(entry.datetime).toISOString().replaceAll("-", "/"),
@@ -31,7 +31,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getIntensityForDate = (date: string) => {
     const entriesOnDate = activityEntries.filter(
       (e: ActivityEntry) =>
-        activities.map((a) => a.id).includes(e.activityId) &&
+        e.activityId && activities.map((a) => a.id).includes(e.activityId) &&
         isSameDay(e.datetime, date)
     );
 
@@ -76,7 +76,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
     const entriesOnDate = activityEntries.filter(
       (entry) =>
-        activities.map((a) => a.id).includes(entry.activityId) &&
+        entry.activityId && activities.map((a) => a.id).includes(entry.activityId) &&
         isSameDay(entry.datetime, focusedDate)
     );
 

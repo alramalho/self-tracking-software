@@ -799,12 +799,15 @@ usersRouter.get(
           []
       );
 
-      // Fetch achievement posts for users with PUBLIC plans
+      // Fetch achievement posts for users with PUBLIC plans OR level-up posts (no plan)
       const achievementPosts = await prisma.achievementPost.findMany({
         where: {
           userId: { in: userIds },
-          planId: { in: publicPlanIds },
           deletedAt: null,
+          OR: [
+            { planId: { in: publicPlanIds } },
+            { planId: null, achievementType: "LEVEL_UP" },
+          ],
         },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -822,6 +825,7 @@ usersRouter.get(
               id: true,
               goal: true,
               emoji: true,
+              backgroundImageUrl: true,
             },
           },
           images: {

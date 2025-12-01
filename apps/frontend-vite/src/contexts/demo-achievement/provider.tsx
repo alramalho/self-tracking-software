@@ -8,11 +8,12 @@ import { DemoAchievementContext, type DemoAchievementContextType } from './types
 export const DemoAchievementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [demoAchievementType, setDemoAchievementType] = useState<DemoAchievementContextType['demoAchievementType']>(null);
   const [shareDialogData, setShareDialogData] = useState<{
-    planId: string;
+    planId?: string;
     planEmoji: string;
     planGoal: string;
     achievementType: AchievementType;
     streakNumber?: number;
+    levelName?: string;
   } | null>(null);
 
   const { plans } = usePlans();
@@ -38,15 +39,18 @@ export const DemoAchievementProvider: React.FC<{ children: React.ReactNode }> = 
     setDemoAchievementType,
   };
 
+  const isLevelUp = demoAchievementType === "level_up";
+
   const handleCelebrationShare = () => {
     if (!demoAchievementType) return;
     // Transfer celebration data to share dialog
     setShareDialogData({
-      planId: demoPlanData.planId,
-      planEmoji: demoPlanData.planEmoji,
-      planGoal: demoPlanData.planGoal,
+      planId: isLevelUp ? undefined : demoPlanData.planId,
+      planEmoji: isLevelUp ? "🎖️" : demoPlanData.planEmoji,
+      planGoal: isLevelUp ? "You've reached Gold level!" : demoPlanData.planGoal,
       achievementType: demoAchievementType,
       streakNumber: demoAchievementType === "streak" ? 5 : undefined,
+      levelName: isLevelUp ? "Gold" : undefined,
     });
     setDemoAchievementType(null);
   };
@@ -64,9 +68,10 @@ export const DemoAchievementProvider: React.FC<{ children: React.ReactNode }> = 
           onClose={() => setDemoAchievementType(null)}
           onShare={handleCelebrationShare}
           achievementType={demoAchievementType}
-          planEmoji={demoPlanData.planEmoji}
-          planGoal={demoPlanData.planGoal}
+          planEmoji={isLevelUp ? "🎖️" : demoPlanData.planEmoji}
+          planGoal={isLevelUp ? "You've reached Gold level!" : demoPlanData.planGoal}
           streakNumber={demoAchievementType === "streak" ? 5 : undefined}
+          levelName={isLevelUp ? "Gold" : undefined}
         />
       )}
       {shareDialogData && (
@@ -78,6 +83,7 @@ export const DemoAchievementProvider: React.FC<{ children: React.ReactNode }> = 
           planGoal={shareDialogData.planGoal}
           achievementType={shareDialogData.achievementType}
           streakNumber={shareDialogData.streakNumber}
+          levelName={shareDialogData.levelName}
         />
       )}
     </DemoAchievementContext.Provider>

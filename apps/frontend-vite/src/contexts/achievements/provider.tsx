@@ -1,10 +1,12 @@
-import React, { createContext, useMemo, useState } from "react";
+import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { startOfWeek } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
 import { usePlans } from "../plans";
+import { useCurrentUser } from "../users";
+import { useAccountLevel, getAccountLevels } from "@/hooks/useAccountLevel";
 import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData } from "./types";
 
 export const AchievementsContext = createContext<
@@ -15,27 +17,30 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { plans, upsertPlan } = usePlans();
+  const { currentUser } = useCurrentUser();
+  const accountLevel = useAccountLevel();
   const api = useApiWithAuth();
   const queryClient = useQueryClient();
   const { handleQueryError } = useLogError();
   const [celebrationToShow, setCelebrationToShow] =
     useState<CelebrationData | null>(null);
+  const [celebrationsQueue, setCelebrationsQueue] = useState<CelebrationData[]>([]);
   const [isMarkingAsCelebrated, setIsMarkingAsCelebrated] = useState(false);
 
-  // Detect uncelebrated achievements
-  useMemo(() => {
-    if (!plans) return;
+  // Track if we've already processed level-ups to avoid duplicates
+  const processedLevelThreshold = useRef<number | null>(null);
 
-    // Get the start of the current week (Monday)
+  // Detect uncelebrated plan achievements
+  const planCelebrations = useMemo(() => {
+    if (!plans) return [];
+
+    const celebrations: CelebrationData[] = [];
     const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-    // Check all active plans for uncelebrated achievements
     for (const plan of plans) {
       if (!plan.progress) continue;
 
       const progress = plan.progress;
-
-      console.log("progress", progress);
 
       // Check streak achievement
       if (
@@ -44,66 +49,132 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
           new Date(progress.achievement.achievedLastStreakAt) >
             new Date(progress.achievement.celebratedStreakAt))
       ) {
-        // Only show if the achievement was achieved this week
         const achievedDate = new Date(progress.achievement.achievedLastStreakAt);
         if (achievedDate >= currentWeekStart) {
-          setCelebrationToShow({
+          celebrations.push({
             planId: plan.id,
             planEmoji: plan.emoji || "🎯",
             planGoal: plan.goal,
             achievementType: "streak",
             streakNumber: progress.achievement.streak,
           });
-          return;
         }
       }
 
-      // Check habit achievement (4 weeks = 28 days)
+      // Check habit achievement
       if (
         progress.habitAchievement?.achievedAt &&
         (!progress.habitAchievement?.celebratedAt ||
           new Date(progress.habitAchievement.achievedAt) >
             new Date(progress.habitAchievement.celebratedAt))
       ) {
-        // Only show if the achievement was achieved this week
         const achievedDate = new Date(progress.habitAchievement.achievedAt);
         if (achievedDate >= currentWeekStart) {
-          setCelebrationToShow({
+          celebrations.push({
             planId: plan.id,
             planEmoji: plan.emoji || "🎯",
             planGoal: plan.goal,
             achievementType: "habit",
           });
-          return;
         }
       }
 
-      // Check lifestyle achievement (9 weeks = 63 days)
+      // Check lifestyle achievement
       if (
         progress.lifestyleAchievement?.achievedAt &&
         (!progress.lifestyleAchievement?.celebratedAt ||
           new Date(progress.lifestyleAchievement.achievedAt) >
             new Date(progress.lifestyleAchievement.celebratedAt))
       ) {
-        // Only show if the achievement was achieved this week
         const achievedDate = new Date(progress.lifestyleAchievement.achievedAt);
         if (achievedDate >= currentWeekStart) {
-          setCelebrationToShow({
+          celebrations.push({
             planId: plan.id,
             planEmoji: plan.emoji || "🎯",
             planGoal: plan.goal,
             achievementType: "lifestyle",
           });
-          return;
         }
       }
     }
+
+    return celebrations;
   }, [plans]);
 
+  // Detect uncelebrated level-ups
+  const levelUpCelebrations = useMemo(() => {
+    if (!currentUser || !accountLevel.currentLevel) return [];
+
+    const celebratedThreshold = currentUser.celebratedLevelThreshold ?? 0;
+    const currentThreshold = accountLevel.currentLevel.threshold;
+
+    // If current level is higher than celebrated level, queue level-ups
+    if (currentThreshold > celebratedThreshold) {
+      // Avoid re-processing if we already processed this threshold
+      if (processedLevelThreshold.current === currentThreshold) {
+        return [];
+      }
+
+      const ACCOUNT_LEVELS = getAccountLevels(false);
+      const celebrations: CelebrationData[] = [];
+
+      // Find all levels between celebrated and current (exclusive of celebrated, inclusive of current)
+      for (const level of ACCOUNT_LEVELS) {
+        if (level.threshold > celebratedThreshold && level.threshold <= currentThreshold) {
+          celebrations.push({
+            planEmoji: "🎖️",
+            planGoal: `You've reached ${level.name} level!`,
+            achievementType: "level_up",
+            levelName: level.name,
+            levelThreshold: level.threshold,
+          });
+        }
+      }
+
+      return celebrations;
+    }
+
+    return [];
+  }, [currentUser, accountLevel.currentLevel]);
+
+  // Combine and queue all celebrations
+  useEffect(() => {
+    const allCelebrations = [...planCelebrations, ...levelUpCelebrations];
+
+    if (allCelebrations.length > 0 && !celebrationToShow && celebrationsQueue.length === 0) {
+      // Mark level-ups as processed to avoid duplicates
+      const levelUps = allCelebrations.filter(c => c.achievementType === "level_up");
+      if (levelUps.length > 0) {
+        const maxThreshold = Math.max(...levelUps.map(c => c.levelThreshold ?? 0));
+        processedLevelThreshold.current = maxThreshold;
+      }
+
+      // Show first celebration, queue the rest
+      setCelebrationToShow(allCelebrations[0]);
+      if (allCelebrations.length > 1) {
+        setCelebrationsQueue(allCelebrations.slice(1));
+      }
+    }
+  }, [planCelebrations, levelUpCelebrations, celebrationToShow, celebrationsQueue.length]);
+
   const markAchievementAsCelebrated = async (achievementData: {
-    planId: string;
-    achievementType: "streak" | "habit" | "lifestyle";
+    planId?: string;
+    achievementType: "streak" | "habit" | "lifestyle" | "level_up";
+    levelThreshold?: number;
   }) => {
+    // Handle level_up achievements
+    if (achievementData.achievementType === "level_up" && achievementData.levelThreshold) {
+      await api.post("/achievements/mark-level-celebrated", {
+        levelThreshold: achievementData.levelThreshold,
+      });
+      // Update the current user cache
+      queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      return;
+    }
+
+    // Handle plan-based achievements
+    if (!achievementData.planId) return;
+
     const plan = plans?.find((p) => p.id === achievementData.planId);
     if (!plan?.progress) return;
 
@@ -142,24 +213,48 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!celebrationToShow) return;
     setIsMarkingAsCelebrated(true);
     try {
-      await markAchievementAsCelebrated(celebrationToShow);
-      setCelebrationToShow(null);
+      await markAchievementAsCelebrated({
+        planId: celebrationToShow.planId,
+        achievementType: celebrationToShow.achievementType,
+        levelThreshold: celebrationToShow.levelThreshold,
+      });
+
+      // Process the next celebration in queue
+      if (celebrationsQueue.length > 0) {
+        const [next, ...rest] = celebrationsQueue;
+        setCelebrationToShow(next);
+        setCelebrationsQueue(rest);
+      } else {
+        setCelebrationToShow(null);
+      }
     } finally {
       setIsMarkingAsCelebrated(false);
     }
   };
 
   const dismissCelebration = () => {
-    setCelebrationToShow(null);
+    // Process the next celebration in queue
+    if (celebrationsQueue.length > 0) {
+      const [next, ...rest] = celebrationsQueue;
+      setCelebrationToShow(next);
+      setCelebrationsQueue(rest);
+    } else {
+      setCelebrationToShow(null);
+    }
   };
 
   const createAchievementPostMutation = useMutation({
     mutationFn: async (data: CreateAchievementPostData) => {
       const formData = new FormData();
-      formData.append("planId", data.planId);
+      if (data.planId) {
+        formData.append("planId", data.planId);
+      }
       formData.append("achievementType", data.achievementType.toUpperCase());
       if (data.streakNumber) {
         formData.append("streakNumber", data.streakNumber.toString());
+      }
+      if (data.levelName) {
+        formData.append("levelName", data.levelName);
       }
       if (data.message?.trim()) {
         formData.append("message", data.message.trim());
