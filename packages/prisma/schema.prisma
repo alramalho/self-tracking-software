@@ -92,6 +92,9 @@ model User {
   // Achievement posts
   achievementPosts AchievementPost[]
 
+  // Level celebration tracking
+  celebratedLevelThreshold Int?
+
   @@map("users")
   @@schema("public")
 }
@@ -218,16 +221,17 @@ model Comment {
 model AchievementPost {
   id              String          @id @default(cuid())
   userId          String
-  planId          String
+  planId          String?
   achievementType AchievementType
   streakNumber    Int? // For streak achievements (e.g., 3 for "3 Week Streak")
+  levelName       String? // For level-up achievements (e.g., "Gold", "Silver")
   message         String? // User's custom message about the achievement
   createdAt       DateTime        @default(now())
   deletedAt       DateTime?
 
   // Relations
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan      Plan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan      Plan?              @relation(fields: [planId], references: [id], onDelete: Cascade)
   images    AchievementImage[]
   reactions Reaction[]
   comments  Comment[]
@@ -787,6 +791,7 @@ enum AchievementType {
   STREAK
   HABIT
   LIFESTYLE
+  LEVEL_UP
 
   @@schema("public")
 }

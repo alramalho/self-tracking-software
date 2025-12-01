@@ -176,11 +176,13 @@ function HomePage() {
 
   // Achievement share state (local UI concern)
   const [shareDialogData, setShareDialogData] = useState<{
-    planId: string;
+    planId?: string;
     planEmoji: string;
     planGoal: string;
     achievementType: AchievementType;
     streakNumber?: number;
+    levelName?: string;
+    levelThreshold?: number;
   } | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
@@ -194,7 +196,11 @@ function HomePage() {
 
   const handleShareDialogClose = async () => {
     if (!shareDialogData) return;
-    await markAchievementAsCelebrated(shareDialogData);
+    await markAchievementAsCelebrated({
+      planId: shareDialogData.planId,
+      achievementType: shareDialogData.achievementType,
+      levelThreshold: shareDialogData.levelThreshold,
+    });
     // Close animation first, then clear data
     setIsShareDialogOpen(false);
     setTimeout(() => setShareDialogData(null), 300);
@@ -555,6 +561,7 @@ function HomePage() {
           planEmoji={celebrationData.planEmoji}
           planGoal={celebrationData.planGoal}
           streakNumber={celebrationData.streakNumber}
+          levelName={celebrationData.levelName}
           isLoading={isMarkingAsCelebrated}
         />
       )}
@@ -569,6 +576,7 @@ function HomePage() {
           planGoal={shareDialogData.planGoal}
           achievementType={shareDialogData.achievementType}
           streakNumber={shareDialogData.streakNumber}
+          levelName={shareDialogData.levelName}
         />
       )}
 

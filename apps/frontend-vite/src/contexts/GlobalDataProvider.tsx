@@ -17,7 +17,6 @@ import { PlansProvider } from "./plans";
 import { PlansProgressProvider } from "./plans-progress";
 import { RecommendationsProvider } from "./recommendations";
 import { TimelineProvider } from "./timeline";
-import { UsersProvider } from "./users";
 
 interface GlobalDataProviderProps {
   children: React.ReactNode;
@@ -72,28 +71,26 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
   children,
 }) => {
   return (
-    <UsersProvider>
-      <DataNotificationsProvider>
-        <MetricsProvider>
-          <DailyCheckinPopoverProvider>
-            <TimelineProvider>
-              <PlansProvider>
-                <PlansProgressProvider>
+    <DataNotificationsProvider>
+      <MetricsProvider>
+        <DailyCheckinPopoverProvider>
+          <TimelineProvider>
+            <PlansProvider>
+              <PlansProgressProvider>
+                <ActivitiesProvider>
                   <AchievementsProvider>
-                    <ActivitiesProvider>
-                      <AIProvider>
-                        <RecommendationsProvider>
-                          <NotificationsProvider>{children}</NotificationsProvider>
-                        </RecommendationsProvider>
-                      </AIProvider>
-                    </ActivitiesProvider>
+                    <AIProvider>
+                      <RecommendationsProvider>
+                        <NotificationsProvider>{children}</NotificationsProvider>
+                      </RecommendationsProvider>
+                    </AIProvider>
                   </AchievementsProvider>
-                </PlansProgressProvider>
-              </PlansProvider>
-            </TimelineProvider>
-          </DailyCheckinPopoverProvider>
-        </MetricsProvider>
-      </DataNotificationsProvider>
-    </UsersProvider>
+                </ActivitiesProvider>
+              </PlansProgressProvider>
+            </PlansProvider>
+          </TimelineProvider>
+        </DailyCheckinPopoverProvider>
+      </MetricsProvider>
+    </DataNotificationsProvider>
   );
 };

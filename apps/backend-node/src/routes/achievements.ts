@@ -24,34 +24,45 @@ router.post(
       logger.info(
         `Creating achievement post for user ${req.user!.username} (${req.user!.id})`
       );
-      const { planId, achievementType, streakNumber, message } = req.body;
+      const { planId, achievementType, streakNumber, levelName, message } = req.body;
       const photos = req.files as Express.Multer.File[] | undefined;
 
       // Validate achievement type
-      if (!["STREAK", "HABIT", "LIFESTYLE"].includes(achievementType)) {
+      if (!["STREAK", "HABIT", "LIFESTYLE", "LEVEL_UP"].includes(achievementType)) {
         return res.status(400).json({ error: "Invalid achievement type" });
       }
 
-      // Check if plan exists and belongs to user
-      const plan = await prisma.plan.findFirst({
-        where: {
-          id: planId,
-          userId: req.user!.id,
-          deletedAt: null,
-        },
-      });
-
-      if (!plan) {
-        return res.status(404).json({ error: "Plan not found" });
+      // For non-level-up achievements, planId is required
+      let plan = null;
+      if (achievementType !== "LEVEL_UP") {
+        if (!planId) {
+          return res.status(400).json({ error: "Plan ID is required for this achievement type" });
+        }
+        plan = await prisma.plan.findFirst({
+          where: {
+            id: planId,
+            userId: req.user!.id,
+            deletedAt: null,
+          },
+        });
+        if (!plan) {
+          return res.status(404).json({ error: "Plan not found" });
+        }
+      } else {
+        // For level-up, levelName is required
+        if (!levelName) {
+          return res.status(400).json({ error: "Level name is required for level-up achievements" });
+        }
       }
 
       // Create achievement post
       const achievementPost = await prisma.achievementPost.create({
         data: {
           userId: req.user!.id,
-          planId: planId,
+          planId: planId || null,
           achievementType: achievementType as AchievementType,
           streakNumber: streakNumber ? parseInt(streakNumber) : null,
+          levelName: levelName || null,
           message: message || null,
         },
       });
@@ -127,10 +138,14 @@ router.post(
             ? `${streakNumber} week streak`
             : achievementType === "HABIT"
               ? "habit milestone"
-              : "lifestyle achievement";
+              : achievementType === "LIFESTYLE"
+                ? "lifestyle achievement"
+                : `level-up to ${levelName}`;
 
         for (const connectedUser of connectedUsers) {
-          const notificationMessage = `${req.user!.username} shared a ${achievementTypeText} for ${plan.emoji} ${plan.goal}! 🎉`;
+          const notificationMessage = achievementType === "LEVEL_UP"
+            ? `${req.user!.username} reached ${levelName} level! 🎖️`
+            : `${req.user!.username} shared a ${achievementTypeText} for ${plan!.emoji} ${plan!.goal}! 🎉`;
           await notificationService.createAndProcessNotification({
             userId: connectedUser.id,
             message: notificationMessage,
@@ -525,6 +540,41 @@ router.delete(
     } catch (error) {
       logger.error("Error removing comment:", error);
       res.status(500).json({ error: "Failed to remove comment" });
+    }
+  }
+);
+
+// Mark level as celebrated
+router.post(
+  "/mark-level-celebrated",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { levelThreshold } = req.body;
+
+      if (typeof levelThreshold !== "number" || levelThreshold < 0) {
+        return res.status(400).json({ error: "Invalid level threshold" });
+      }
+
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: { celebratedLevelThreshold: levelThreshold },
+      });
+
+      logger.info(
+        `User ${req.user!.username} marked level threshold ${levelThreshold} as celebrated`
+      );
+
+      res.json({
+        success: true,
+        celebratedLevelThreshold: levelThreshold,
+      });
+    } catch (error) {
+      logger.error("Error marking level as celebrated:", error);
+      res.status(500).json({ error: "Failed to mark level as celebrated" });
     }
   }
 );

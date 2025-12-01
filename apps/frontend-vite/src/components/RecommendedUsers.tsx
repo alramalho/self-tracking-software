@@ -1,12 +1,12 @@
 import { MatchScoreExplainer } from "@/components/MatchScoreExplainer";
+import { SendMessagePopover } from "@/components/SendMessagePopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRecommendations } from "@/contexts/recommendations";
-import { useCurrentUser } from "@/contexts/users";
 import { usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { Info, UserCheck, UserPlus } from "lucide-react";
+import { Info, MessageCircle } from "lucide-react";
 import React, { useState } from "react";
 
 interface RecommendedUsersProps {
@@ -24,15 +24,18 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     plans: recommendedPlans,
     isLoadingRecommendations,
   } = useRecommendations();
-  const { sendFriendRequest, isSendingFriendRequest, currentUser } =
-    useCurrentUser();
   const { plans: currentUserPlans } = usePlans();
   const navigate = useNavigate();
   const [selectedExplainer, setSelectedExplainer] = useState<string | null>(
     null
   );
-  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortBy>("overall");
+  const [messageUser, setMessageUser] = useState<{
+    id: string;
+    name?: string | null;
+    username?: string | null;
+    picture?: string | null;
+  } | null>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
@@ -89,30 +92,6 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
       return 0;
     }
   );
-
-  const getConnectionStatus = (
-    userId: string
-  ): "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED" | null => {
-    if (!currentUser) return null;
-
-    const connectionFrom = currentUser.connectionsFrom?.find(
-      (conn) => conn.toId === userId
-    );
-    if (connectionFrom) return connectionFrom.status as any;
-
-    const connectionTo = currentUser.connectionsTo?.find(
-      (conn) => conn.fromId === userId
-    );
-    if (connectionTo) return connectionTo.status as any;
-
-    return null;
-  };
-
-  const handleSendFriendRequest = async (userId: string | undefined) => {
-    if (!userId) return;
-    await sendFriendRequest(userId);
-    setSentRequests((prev) => new Set(prev).add(userId));
-  };
 
   if (isLoadingRecommendations) {
     return (
@@ -210,8 +189,6 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                 })[0];
 
               const score = recommendation.score;
-              const connectionStatus = getConnectionStatus(user.id);
-              const hasSentRequest = sentRequests.has(user.id);
 
               return (
                 <div
@@ -258,30 +235,17 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSendFriendRequest(user.id);
+                          setMessageUser({
+                            id: user.id!,
+                            name: user.name,
+                            username: user.username,
+                            picture: user.picture,
+                          });
                         }}
-                        disabled={
-                          isSendingFriendRequest ||
-                          hasSentRequest ||
-                          connectionStatus === "PENDING" ||
-                          connectionStatus === "ACCEPTED"
-                        }
-                        className="p-2 rounded-full hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={
-                          hasSentRequest || connectionStatus === "PENDING"
-                            ? "Request Sent"
-                            : connectionStatus === "ACCEPTED"
-                            ? "Friends"
-                            : "Add Friend"
-                        }
+                        className="p-2 rounded-full hover:bg-muted transition-colors"
+                        title="Send Message"
                       >
-                        {hasSentRequest ||
-                        connectionStatus === "PENDING" ||
-                        connectionStatus === "ACCEPTED" ? (
-                          <UserCheck className="h-6 w-6 text-green-600" />
-                        ) : (
-                          <UserPlus className="h-6 w-6 text-muted-foreground" />
-                        )}
+                        <MessageCircle className="h-6 w-6 text-muted-foreground" />
                       </button>
                     </div>
                   </div>
@@ -360,6 +324,15 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
             : undefined
         }
       />
+
+      {/* Send Message Popover */}
+      {messageUser && (
+        <SendMessagePopover
+          open={!!messageUser}
+          onClose={() => setMessageUser(null)}
+          user={messageUser}
+        />
+      )}
     </>
   );
 };

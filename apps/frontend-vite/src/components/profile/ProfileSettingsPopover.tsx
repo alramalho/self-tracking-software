@@ -557,6 +557,50 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           </div>
                           <span className="text-2xl">🏆</span>
                         </div>
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => {
+                            navigate({ to: "/" });
+                            setTimeout(() => setDemoAchievementType("level_up"), 300);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Demo Level Up Achievement
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Preview level-up celebration
+                            </p>
+                          </div>
+                          <span className="text-2xl">🎖️</span>
+                        </div>
+                      </div>
+
+                      {/* Reset Level Celebration */}
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground px-3">
+                          Level Celebration
+                        </p>
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                          onClick={async () => {
+                            await updateUser({
+                              updates: { celebratedLevelThreshold: 0 },
+                              muteNotifications: false,
+                            });
+                            navigate({ to: "/" });
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Reset Level Celebration
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Set celebratedLevelThreshold to 0 to re-trigger level-up popups
+                            </p>
+                          </div>
+                          <span className="text-2xl">🔄</span>
+                        </div>
                       </div>
                     </div>
                   </div>

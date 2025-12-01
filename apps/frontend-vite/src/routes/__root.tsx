@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/theme/provider";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { UpgradeProvider } from "@/contexts/upgrade/provider";
 import { DemoAchievementProvider } from "@/contexts/demo-achievement/provider";
+import { UsersProvider } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -76,9 +77,13 @@ function RootComponent() {
         client={queryClient}
         persistOptions={{ persister: localStoragePersister }}
       >
-        <GlobalDataProvider>
-          <ThemedLayout />
-        </GlobalDataProvider>
+        <UsersProvider>
+          <ThemeProvider>
+            <GlobalDataProvider>
+              <ThemedLayout />
+            </GlobalDataProvider>
+          </ThemeProvider>
+        </UsersProvider>
       </PersistQueryClientProvider>
     </AuthProvider>
   );
@@ -91,9 +96,7 @@ function ThemedLayout() {
   const isDownloadPage = location.pathname.startsWith("/download");
 
   return (
-    <ThemeProvider>
-      <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} />
-    </ThemeProvider>
+    <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} />
   );
 }
 

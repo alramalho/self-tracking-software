@@ -23,7 +23,7 @@ const PlanActivityEntriesRenderer: React.FC<
   )?.isCompleted ?? false;
 
   const planActivityEntries = activityEntries.filter((e) =>
-    plan.activities?.map((a) => a.id).includes(e.activityId)
+    e.activityId && plan.activities?.map((a) => a.id).includes(e.activityId)
   );
 
   const beginingOfWeekOfFirstActivityEntry = useMemo(() => {

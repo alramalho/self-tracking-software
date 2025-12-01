@@ -51,7 +51,8 @@ interface ReactionCount {
 
 const getAchievementTitle = (
   type: string,
-  streakNumber?: number | null
+  streakNumber?: number | null,
+  levelName?: string | null
 ): string => {
   switch (type) {
     case "STREAK":
@@ -60,6 +61,8 @@ const getAchievementTitle = (
       return "Habit Formed!";
     case "LIFESTYLE":
       return "Lifestyle Achievement!";
+    case "LEVEL_UP":
+      return `Reached ${levelName}!`;
     default:
       return "Achievement!";
   }
@@ -73,6 +76,8 @@ const getAchievementEmoji = (type: string): string => {
       return "⭐";
     case "LIFESTYLE":
       return "🏆";
+    case "LEVEL_UP":
+      return "🎖️";
     default:
       return "🎉";
   }
@@ -129,10 +134,11 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const effectiveImages =
     userImages.length > 0
       ? userImages
-      : achievementPost.plan.backgroundImageUrl
+      : achievementPost.plan?.backgroundImageUrl
       ? [{ url: achievementPost.plan.backgroundImageUrl, sortOrder: 0 }]
       : [];
   const hasImages = effectiveImages.length > 0;
+  const isLevelUp = achievementPost.achievementType === "LEVEL_UP";
 
   const {
     modifyReactionsOnAchievement,
@@ -282,13 +288,17 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const achievementEmoji = getAchievementEmoji(achievementPost.achievementType);
   const achievementTitle = getAchievementTitle(
     achievementPost.achievementType,
-    achievementPost.streakNumber
+    achievementPost.streakNumber,
+    achievementPost.levelName
   );
 
   // For streak achievements, use the streak number for the counter
+  // For level-up, don't show counter
   const counterValue =
     achievementPost.achievementType === "STREAK"
       ? achievementPost.streakNumber || 0
+      : isLevelUp
+      ? 0
       : 1;
 
   return (
@@ -322,16 +332,18 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
           )}
         </div>
 
-        {/* Top-left counter with animated fire */}
-        <div className="absolute top-3 left-3 z-20">
-          <AnimatedCounter
-            count={counterValue}
-            emoji={achievementEmoji}
-            label={
-              achievementPost.achievementType === "STREAK" ? "weeks" : undefined
-            }
-          />
-        </div>
+        {/* Top-left counter with animated fire (hide for level-up) */}
+        {!isLevelUp && (
+          <div className="absolute top-3 left-3 z-20">
+            <AnimatedCounter
+              count={counterValue}
+              emoji={achievementEmoji}
+              label={
+                achievementPost.achievementType === "STREAK" ? "weeks" : undefined
+              }
+            />
+          </div>
+        )}
 
         {/* Center overlay - Avatar and Info Card */}
         <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -373,14 +385,23 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             {/* Info card with glass background */}
             <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12">
               <div className="flex items-center gap-2 mb-1 justify-center">
-                <span className="text-4xl">{achievementPost.plan.emoji}</span>
+                <span className="text-4xl">
+                  {isLevelUp ? achievementEmoji : achievementPost.plan?.emoji}
+                </span>
               </div>
               <h3 className="text-xl font-bold text-white text-center drop-shadow-lg">
                 {achievementTitle}
               </h3>
-              <p className="text-sm text-white/80 text-center mt-1">
-                {achievementPost.plan.goal}
-              </p>
+              {!isLevelUp && achievementPost.plan?.goal && (
+                <p className="text-sm text-white/80 text-center mt-1">
+                  {achievementPost.plan.goal}
+                </p>
+              )}
+              {isLevelUp && (
+                <p className="text-sm text-white/80 text-center mt-1">
+                  New account level unlocked!
+                </p>
+              )}
               {achievementPost.message && (
                 <p className="text-xs text-white/70 text-center mt-1 italic">
                   "{achievementPost.message}"

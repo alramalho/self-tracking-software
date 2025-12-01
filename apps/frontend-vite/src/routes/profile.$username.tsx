@@ -5,6 +5,7 @@ import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
+import { SendMessagePopover } from "@/components/SendMessagePopover";
 import Divider from "@/components/Divider";
 import { FireAnimation } from "@/components/FireBadge";
 import MedalExplainerPopover from "@/components/MedalExplainerPopover";
@@ -32,6 +33,7 @@ import {
   Flame,
   History,
   Loader2,
+  MessageCircle,
   Rocket,
   Sprout,
   UserPlus,
@@ -186,6 +188,7 @@ function ProfilePage() {
     planIds: string[];
     badgeType: "streaks" | "habits" | "lifestyles" | null;
   }>({ open: false, planIds: [], badgeType: null });
+  const [showMessagePopover, setShowMessagePopover] = useState(false);
 
   useEffect(() => {
     if (profileData?.username && !username && isOwnProfile) {
@@ -515,58 +518,75 @@ function ProfilePage() {
         <AnimatedSection delay={0.25}>
           <div className="flex flex-col items-center">
             {/* Action buttons */}
-            {!isOwnProfile && !isFriend && (
-              <>
-                {hasPendingReceivedConnectionRequest ? (
-                  <div className="flex space-x-3 mb-6">
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-full"
-                      onClick={() =>
-                        acceptFriendRequest({
-                          id: profileData.id,
-                          username: profileData.username || "",
-                        })
-                      }
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="px-6 rounded-full"
-                      onClick={() =>
-                        rejectFriendRequest({
-                          id: profileData.id,
-                          username: profileData.username || "",
-                        })
-                      }
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Decline
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    className="mb-6 px-8 rounded-full bg-black text-white hover:bg-foreground/90"
-                    onClick={handleSendConnectionRequest}
-                    disabled={hasPendingSentConnectionRequest}
-                  >
-                    {hasPendingSentConnectionRequest ? (
+            {!isOwnProfile && (
+              <div className="flex space-x-3 mb-6">
+                {/* Message button - always show for non-own profiles */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="px-6 rounded-full"
+                  onClick={() => setShowMessagePopover(true)}
+                >
+                  <MessageCircle className="h-4 w-4 mr-1" />
+                  Message
+                </Button>
+
+                {/* Friend request buttons */}
+                {!isFriend && (
+                  <>
+                    {hasPendingReceivedConnectionRequest ? (
                       <>
-                        <Check size={16} className="mr-2" />
-                        Request Sent
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-full"
+                          onClick={() =>
+                            acceptFriendRequest({
+                              id: profileData.id,
+                              username: profileData.username || "",
+                            })
+                          }
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="px-6 rounded-full"
+                          onClick={() =>
+                            rejectFriendRequest({
+                              id: profileData.id,
+                              username: profileData.username || "",
+                            })
+                          }
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Decline
+                        </Button>
                       </>
                     ) : (
-                      <>
-                        <UserPlus size={16} className="mr-2" />
-                        Add Friend
-                      </>
+                      <Button
+                        className="px-8 rounded-full bg-black text-white hover:bg-foreground/90"
+                        size="sm"
+                        onClick={handleSendConnectionRequest}
+                        disabled={hasPendingSentConnectionRequest}
+                      >
+                        {hasPendingSentConnectionRequest ? (
+                          <>
+                            <Check size={16} className="mr-2" />
+                            Request Sent
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus size={16} className="mr-2" />
+                            Add Friend
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
         </AnimatedSection>
@@ -646,7 +666,7 @@ function ProfilePage() {
                       <ActivityGridRenderer
                         activities={activitiesNotInPlans}
                         activityEntries={activityEntries.filter((entry) =>
-                          activitiesNotInPlans
+                          entry.activityId && activitiesNotInPlans
                             .map((a) => a.id)
                             .includes(entry.activityId)
                         )}
@@ -734,7 +754,7 @@ function ProfilePage() {
               id: showEditActivityEntry.id,
               quantity: showEditActivityEntry.quantity,
               datetime: showEditActivityEntry.datetime,
-              activityId: showEditActivityEntry.activityId,
+              activityId: showEditActivityEntry.activityId || "",
               description: showEditActivityEntry.description || undefined,
             }}
             onClose={() => setShowActivityToEdit(undefined)}
@@ -759,6 +779,20 @@ function ProfilePage() {
         onClose={() => setProgressExplainerOpen(false)}
         username={profileData?.username || undefined}
       />
+
+      {/* Send Message Popover */}
+      {profileData && (
+        <SendMessagePopover
+          open={showMessagePopover}
+          onClose={() => setShowMessagePopover(false)}
+          user={{
+            id: profileData.id,
+            name: profileData.name,
+            username: profileData.username,
+            picture: profileData.picture,
+          }}
+        />
+      )}
     </motion.div>
   );
 }
