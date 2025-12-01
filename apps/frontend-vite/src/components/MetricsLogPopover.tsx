@@ -1,13 +1,14 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { MetricIsland } from "@/components/MetricIsland";
-import { TodaysNoteSection } from "@/components/TodaysNoteSection";
+import { Button } from "@/components/ui/button";
+import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { useDailyCheckin } from "@/contexts/daily-checkin";
 import { useMetrics } from "@/contexts/metrics";
+import { todaysLocalDate } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { isToday } from "date-fns";
-import { AlertTriangle, BarChartHorizontal, ChevronRight } from "lucide-react";
-import React from "react";
+import { AlertTriangle, BarChartHorizontal, ChevronRight, Loader2 } from "lucide-react";
+import React, { useState, useCallback } from "react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
@@ -30,19 +31,63 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
   showActivityWarning = true,
 }) => {
   const navigate = useNavigate();
-  const { metrics } = useMetrics();
+  const { metrics, logMetrics, logTodaysNote } = useMetrics();
   const { activityEntries } = useActivities();
-  const { areAllMetricsCompleted } = useDailyCheckin();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+
+  // Local state for pending ratings - only submitted on close
+  const [pendingRatings, setPendingRatings] = useState<Record<string, number>>({});
+  // Local state for pending note - only submitted on close
+  const [pendingNote, setPendingNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRatingChange = useCallback((metricId: string, rating: number) => {
+    setPendingRatings(prev => ({ ...prev, [metricId]: rating }));
+  }, []);
+
+  const handleClose = useCallback(async () => {
+    // Submit all pending ratings on close
+    const ratingsToSubmit = Object.entries(pendingRatings);
+    if (ratingsToSubmit.length > 0) {
+      setIsSubmitting(true);
+      try {
+        await logMetrics(
+          ratingsToSubmit.map(([metricId, rating]) => ({
+            metricId,
+            rating,
+            date: todaysLocalDate(),
+          }))
+        );
+
+        // Submit note after ratings (entries must exist first)
+        if (pendingNote.trim()) {
+          await logTodaysNote(pendingNote.trim());
+        }
+      } catch (error) {
+        console.error("Failed to log metrics:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+    // Clear state and close
+    setPendingRatings({});
+    setPendingNote("");
+    onClose();
+  }, [pendingRatings, pendingNote, logMetrics, logTodaysNote, onClose]);
 
   // Check if any activities were logged today
   const hasActivitiesToday = activityEntries?.some((entry) =>
     isToday(entry.datetime)
   );
 
+  // Check if all metrics have a pending rating (for showing note section)
+  const allMetricsHavePendingRating = metrics?.length
+    ? metrics.every((metric) => pendingRatings[metric.id] !== undefined)
+    : false;
+
   return (
-    <AppleLikePopover open={open} onClose={onClose}>
+    <AppleLikePopover open={open} onClose={handleClose}>
       <div className="space-y-6 p-6">
         {/* Icon */}
         {customIcon ? (
@@ -98,7 +143,7 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
                 </p>
                 <button
                   onClick={() => {
-                    onClose();
+                    handleClose();
                     navigate({ to: "/add" });
                   }}
                   className="text-sm text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 font-medium flex items-center gap-1 transition-colors"
@@ -120,16 +165,54 @@ export const MetricsLogPopover: React.FC<MetricsLogPopoverProps> = ({
                 metric={metric}
                 isLoggedToday={false}
                 isSkippedToday={false}
+                onRatingChange={handleRatingChange}
+                controlledRating={pendingRatings[metric.id]}
               />
             );
           })}
         </div>
 
-        {/* Today's Note Section - shown when all metrics completed */}
-        {areAllMetricsCompleted && (
-          <div className="pt-4 border-t border-border">
-            <TodaysNoteSection />
-          </div>
+        {/* Note input - shown when all metrics have pending ratings */}
+        {allMetricsHavePendingRating && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="pt-4 border-t border-border space-y-4"
+          >
+            <TextAreaWithVoice
+              value={pendingNote}
+              onChange={setPendingNote}
+              label="Anything to add?"
+              placeholder="Add any additional thoughts or notes about your day..."
+              disabled={isSubmitting}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Skip
+              </Button>
+              <Button
+                onClick={handleClose}
+                disabled={isSubmitting}
+                size="sm"
+                className={`text-white ${variants.bg}`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Done"
+                )}
+              </Button>
+            </div>
+          </motion.div>
         )}
       </div>
     </AppleLikePopover>

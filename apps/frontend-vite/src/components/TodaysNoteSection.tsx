@@ -93,14 +93,19 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
 
   if (isSubmitted) {
     const hasNote = existingNote || note.trim();
-    
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 0.9, y: 0 }}
+        onClick={() => {
+          if (hasNote && !wasSkipped) {
+            setIsSubmitted(false);
+          }
+        }}
         className={`ring-1 rounded-3xl p-4 backdrop-blur-sm ${cn(
           hasNote && !wasSkipped
-            ? `${variants.card.softGlassBg} ${variants.ringSoft}` // Use variants for submitted notes
+            ? `${variants.card.softGlassBg} ${variants.ringSoft} cursor-pointer hover:opacity-80 transition-opacity` // Use variants for submitted notes
             : "bg-muted ring-border" // Use semantic tokens for skipped
         )}`}
       >
