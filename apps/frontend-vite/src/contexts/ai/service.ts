@@ -1,15 +1,7 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
-import { type Chat, type Message, type MessageFeedback } from "./types";
-
-type ChatApiResponse = Omit<Chat, "createdAt" | "updatedAt"> & {
-  createdAt: string;
-  updatedAt: string;
-};
-
-type MessageApiResponse = Omit<Message, "createdAt"> & {
-  createdAt: string;
-};
+import { type MessageFeedback } from "./types";
+import { type Chat, deserializeChat } from "@/contexts/messages/service";
 
 type MessageFeedbackApiResponse = Omit<
   MessageFeedback,
@@ -17,14 +9,6 @@ type MessageFeedbackApiResponse = Omit<
 > & {
   createdAt: string;
   updatedAt: string;
-};
-
-const deserializeChat = (chat: ChatApiResponse): Chat => {
-  return normalizeApiResponse<Chat>(chat, ["createdAt", "updatedAt"]);
-};
-
-const deserializeMessage = (message: MessageApiResponse): Message => {
-  return normalizeApiResponse<Message>(message, ["createdAt"]);
 };
 
 const deserializeFeedback = (
@@ -36,28 +20,12 @@ const deserializeFeedback = (
   ]);
 };
 
-// Get all chats (coach, direct, group) - uses new unified endpoint
-export async function getChats(api: AxiosInstance): Promise<Chat[]> {
-  const response = await api.get<{ chats: ChatApiResponse[] }>("/chats");
-  return response.data.chats.map(deserializeChat);
-}
-
-// Get messages for any chat type - uses new unified endpoint
-export async function getMessages(
-  api: AxiosInstance,
-  chatId: string
-): Promise<Message[]> {
-  const response = await api.get<{ messages: MessageApiResponse[] }>(
-    `/chats/${chatId}/messages`
-  );
-  return response.data.messages.map(deserializeMessage);
-}
-
-export async function createChat(
+// Create a coach chat (AI-specific)
+export async function createCoachChat(
   api: AxiosInstance,
   data: { title?: string | null; initialCoachMessage?: string }
 ): Promise<Chat> {
-  const response = await api.post<{ chat: ChatApiResponse }>(
+  const response = await api.post<{ chat: any }>(
     "/ai/coach/chats",
     {
       title: data.title || null,
@@ -67,29 +35,19 @@ export async function createChat(
   return deserializeChat(response.data.chat);
 }
 
-// Send message to any chat type (coach, direct, group) - uses new unified endpoint
-export async function sendMessage(
-  api: AxiosInstance,
-  data: { message: string; chatId: string }
-): Promise<Message> {
-  const response = await api.post<{ message: MessageApiResponse }>(
-    `/chats/${data.chatId}/messages`,
-    { message: data.message }
-  );
-  return deserializeMessage(response.data.message);
-}
-
+// Update chat title (coach-specific)
 export async function updateChatTitle(
   api: AxiosInstance,
   data: { chatId: string; title: string }
 ): Promise<Chat> {
-  const response = await api.patch<{ chat: ChatApiResponse }>(
+  const response = await api.patch<{ chat: any }>(
     `/ai/coach/chats/${data.chatId}`,
     { title: data.title }
   );
   return deserializeChat(response.data.chat);
 }
 
+// Submit AI message feedback
 export async function submitFeedback(
   api: AxiosInstance,
   data: {
@@ -110,6 +68,7 @@ export async function submitFeedback(
   return deserializeFeedback(response.data.feedback);
 }
 
+// Accept a metric suggestion from AI
 export async function acceptMetric(
   api: AxiosInstance,
   data: {
@@ -122,6 +81,7 @@ export async function acceptMetric(
   });
 }
 
+// Reject a metric suggestion from AI
 export async function rejectMetric(
   api: AxiosInstance,
   messageId: string
@@ -129,20 +89,10 @@ export async function rejectMetric(
   await api.post(`/ai/messages/${messageId}/reject-metric`);
 }
 
+// Submit AI satisfaction feedback
 export async function submitAISatisfaction(
   api: AxiosInstance,
   data: { liked: boolean; content?: string }
 ): Promise<void> {
   await api.post("/ai/feedback/ai-satisfaction", data);
-}
-
-// Create a direct message chat with another user
-export async function createDirectChat(
-  api: AxiosInstance,
-  userId: string
-): Promise<Chat> {
-  const response = await api.post<{ chat: ChatApiResponse }>("/chats/direct", {
-    userId,
-  });
-  return deserializeChat(response.data.chat);
 }

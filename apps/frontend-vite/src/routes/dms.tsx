@@ -10,14 +10,13 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
+import { useMessages, getMessages, type Message } from "@/contexts/messages";
 import { createFileRoute } from "@tanstack/react-router";
 import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { createDirectChat, getMessages } from "@/contexts/ai/service";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
-import { type Message } from "@/contexts/ai/types";
 
 // Helper to format relative dates for dividers
 function formatRelativeDate(date: Date): string {
@@ -73,13 +72,17 @@ function DirectMessagesPage() {
     isLoadingMessages,
     sendMessage,
     isSendingMessage,
+    isLoadingChats,
+    createDirectChat,
+    isCreatingDirectChat,
+  } = useMessages();
+  const {
     submitFeedback,
     isSubmittingFeedback,
     acceptMetric,
     rejectMetric,
-    isLoadingChats,
-    createChat,
-    isCreatingChat,
+    createCoachChat,
+    isCreatingCoachChat,
   } = useAI();
   const [inputValue, setInputValue] = useState("");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -166,7 +169,7 @@ function DirectMessagesPage() {
 
   const handleStartAIChat = async () => {
     try {
-      await createChat({ title: null });
+      await createCoachChat({ title: null });
     } catch (error) {
       console.error("Failed to create AI chat:", error);
       toast.error("Failed to start AI chat");
@@ -175,7 +178,7 @@ function DirectMessagesPage() {
 
   const handleUserSelect = async (user: UserSearchResult) => {
     try {
-      const chat = await createDirectChat(api, user.userId);
+      const chat = await createDirectChat(user.userId);
       setCurrentChatId(chat.id);
     } catch (error) {
       console.error("Failed to create direct chat:", error);
@@ -348,7 +351,7 @@ function DirectMessagesPage() {
                   ) : (
                     <button
                       onClick={handleStartAIChat}
-                      disabled={isCreatingChat}
+                      disabled={isCreatingCoachChat}
                       className="w-full p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
                     >
                       <Avatar className="w-12 h-12">
@@ -360,7 +363,7 @@ function DirectMessagesPage() {
                           <span className="font-medium">Coach Oli</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {isCreatingChat ? "Starting chat..." : "Start a conversation with your AI Coach"}
+                          {isCreatingCoachChat ? "Starting chat..." : "Start a conversation with your AI Coach"}
                         </p>
                       </div>
                     </button>

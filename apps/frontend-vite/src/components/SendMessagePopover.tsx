@@ -1,7 +1,6 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useApiWithAuth } from "@/api";
-import { createDirectChat } from "@/contexts/ai/service";
+import { useMessages } from "@/contexts/messages";
 import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -22,20 +21,20 @@ export function SendMessagePopover({
   onClose,
   user,
 }: SendMessagePopoverProps) {
-  const api = useApiWithAuth();
+  const { sendMessage, createDirectChat, isSendingMessage, isCreatingDirectChat } = useMessages();
   const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
+
+  const isSending = isSendingMessage || isCreatingDirectChat;
 
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
 
-    setIsSending(true);
     try {
       // Create or get existing direct chat with the user
-      const chat = await createDirectChat(api, user.id);
+      const chat = await createDirectChat(user.id);
 
-      // Send the message
-      await api.post(`/chats/${chat.id}/messages`, { message: message.trim() });
+      // Send the message through the context (updates cache automatically)
+      await sendMessage({ message: message.trim(), chatId: chat.id });
 
       toast.success(`Message sent to ${user.name || user.username}!`);
       setMessage("");
@@ -43,8 +42,6 @@ export function SendMessagePopover({
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
-    } finally {
-      setIsSending(false);
     }
   };
 

@@ -28,8 +28,8 @@ function AICoachPage() {
     setCurrentChatId,
     messages,
     isLoadingMessages,
-    createChat,
-    isCreatingChat,
+    createCoachChat,
+    isCreatingCoachChat,
     sendMessage,
     isSendingMessage,
     updateChatTitle,
@@ -73,7 +73,7 @@ function AICoachPage() {
 
   const handleNewChat = async () => {
     try {
-      await createChat({ title: null });
+      await createCoachChat({ title: null });
       setIsSideMenuOpen(false);
     } catch (error) {
       console.error("Failed to create new chat:", error);
@@ -317,11 +317,11 @@ function AICoachPage() {
               </div>
               <Button
                 onClick={handleNewChat}
-                disabled={isCreatingChat}
+                disabled={isCreatingCoachChat}
                 className={`${themeColors.button.solid} gap-2`}
                 size="lg"
               >
-                {isCreatingChat ? (
+                {isCreatingCoachChat ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Creating Chat...

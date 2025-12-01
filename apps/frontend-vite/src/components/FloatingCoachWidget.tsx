@@ -12,7 +12,7 @@ export const FloatingCoachWidget: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { isUserFree } = usePaidPlan();
   const navigate = useNavigate();
-  const { isUserAIWhitelisted, createChat } = useAI();
+  const { isUserAIWhitelisted, createCoachChat } = useAI();
   const [isOpen, setIsOpen] = useState(false);
 
   // Get the most recent coach notification (regardless of status)
@@ -34,7 +34,7 @@ export const FloatingCoachWidget: React.FC = () => {
 
     try {
       // Create new chat
-      const newChat = await createChat({
+      const newChat = await createCoachChat({
         title: null,
         initialCoachMessage: latestCoachNotification.message,
       });

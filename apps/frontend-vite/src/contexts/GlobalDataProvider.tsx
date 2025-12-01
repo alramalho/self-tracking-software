@@ -11,6 +11,7 @@ import { AchievementsProvider } from "./achievements";
 import { ActivitiesProvider } from "./activities/provider";
 import { AIProvider } from "./ai";
 import { DailyCheckinPopoverProvider } from "./daily-checkin";
+import { MessagesProvider } from "./messages";
 import { MetricsProvider } from "./metrics";
 import { DataNotificationsProvider } from "./notifications";
 import { PlansProvider } from "./plans";
@@ -79,11 +80,13 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
               <PlansProgressProvider>
                 <ActivitiesProvider>
                   <AchievementsProvider>
-                    <AIProvider>
-                      <RecommendationsProvider>
-                        <NotificationsProvider>{children}</NotificationsProvider>
-                      </RecommendationsProvider>
-                    </AIProvider>
+                    <MessagesProvider>
+                      <AIProvider>
+                        <RecommendationsProvider>
+                          <NotificationsProvider>{children}</NotificationsProvider>
+                        </RecommendationsProvider>
+                      </AIProvider>
+                    </MessagesProvider>
                   </AchievementsProvider>
                 </ActivitiesProvider>
               </PlansProgressProvider>
