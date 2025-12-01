@@ -23,7 +23,7 @@ import {
   RefreshCcw,
   Send,
 } from "lucide-react";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { motion, AnimatePresence } from "framer-motion";
 import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
@@ -157,6 +157,23 @@ function HomePage() {
     isMarkingAsCelebrated,
   } = useAchievements();
 
+  // Local state to preserve celebration data during close animation
+  const [celebrationData, setCelebrationData] = useState(celebrationToShow);
+  const [isCelebrationOpen, setIsCelebrationOpen] = useState(!!celebrationToShow);
+
+  // Sync celebration data from context, but preserve during close animation
+  useEffect(() => {
+    if (celebrationToShow) {
+      setCelebrationData(celebrationToShow);
+      setIsCelebrationOpen(true);
+    } else {
+      // Close animation first, then clear data
+      setIsCelebrationOpen(false);
+      const timer = setTimeout(() => setCelebrationData(null), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [celebrationToShow]);
+
   // Achievement share state (local UI concern)
   const [shareDialogData, setShareDialogData] = useState<{
     planId: string;
@@ -165,18 +182,22 @@ function HomePage() {
     achievementType: AchievementType;
     streakNumber?: number;
   } | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   const handleCelebrationShare = () => {
-    if (!celebrationToShow) return;
+    if (!celebrationData) return;
     // Transfer celebration data to share dialog
-    setShareDialogData(celebrationToShow);
+    setShareDialogData(celebrationData);
+    setIsShareDialogOpen(true);
     dismissCelebration();
   };
 
   const handleShareDialogClose = async () => {
     if (!shareDialogData) return;
     await markAchievementAsCelebrated(shareDialogData);
-    setShareDialogData(null);
+    // Close animation first, then clear data
+    setIsShareDialogOpen(false);
+    setTimeout(() => setShareDialogData(null), 300);
   };
 
   const handleNotificationsClose = async () => {
@@ -525,15 +546,15 @@ function HomePage() {
       />
 
       {/* Achievement Celebration Popover */}
-      {celebrationToShow && (
+      {celebrationData && (
         <AchievementCelebrationPopover
-          open={!!celebrationToShow}
+          open={isCelebrationOpen}
           onClose={handleCelebrationClose}
           onShare={handleCelebrationShare}
-          achievementType={celebrationToShow.achievementType}
-          planEmoji={celebrationToShow.planEmoji}
-          planGoal={celebrationToShow.planGoal}
-          streakNumber={celebrationToShow.streakNumber}
+          achievementType={celebrationData.achievementType}
+          planEmoji={celebrationData.planEmoji}
+          planGoal={celebrationData.planGoal}
+          streakNumber={celebrationData.streakNumber}
           isLoading={isMarkingAsCelebrated}
         />
       )}
@@ -541,7 +562,7 @@ function HomePage() {
       {/* Achievement Share Dialog */}
       {shareDialogData && (
         <AchievementShareDialog
-          open={!!shareDialogData}
+          open={isShareDialogOpen}
           onClose={handleShareDialogClose}
           planId={shareDialogData.planId}
           planEmoji={shareDialogData.planEmoji}
