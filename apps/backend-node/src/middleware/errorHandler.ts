@@ -8,6 +8,56 @@ export interface CustomError extends Error {
   code?: string;
 }
 
+// Routes to ignore for error notifications (common attack/probe patterns)
+const IGNORED_ERROR_ROUTES = [
+  // Auth probe attempts
+  /\/auth\//i,
+  /\/saml/i,
+  /\/oauth/i,
+  /\/sso/i,
+  /\/login/i,
+  /\/signin/i,
+  /\/cas/i,
+  // WordPress/CMS probes
+  /\/wp-/i,
+  /\/wordpress/i,
+  /\/admin/i,
+  /\/administrator/i,
+  /\/cms/i,
+  /\/joomla/i,
+  /\/drupal/i,
+  // Common vulnerability probes
+  /\.php$/i,
+  /\.asp$/i,
+  /\.aspx$/i,
+  /\.jsp$/i,
+  /\.env/i,
+  /\.git/i,
+  /\.aws/i,
+  /\/config/i,
+  /\/backup/i,
+  /\/debug/i,
+  /\/phpinfo/i,
+  /\/phpmyadmin/i,
+  /\/mysql/i,
+  /\/actuator/i,
+  /\/swagger/i,
+  /\/graphql/i,
+  /\/api-docs/i,
+  // Bot/scanner patterns
+  /\/robots\.txt/i,
+  /\/sitemap/i,
+  /\/favicon/i,
+  /\/well-known/i,
+];
+
+const shouldIgnoreErrorNotification = (url: string, statusCode: number): boolean => {
+  // Only filter 404s for probe routes (real errors should still notify)
+  if (statusCode !== 404) return false;
+
+  return IGNORED_ERROR_ROUTES.some(pattern => pattern.test(url));
+};
+
 export const responseMonitor = (
   req: Request,
   res: Response,
@@ -18,6 +68,11 @@ export const responseMonitor = (
 
   const sendTelegramNotification = async () => {
     if (res.statusCode >= 400 && res.statusCode != 401) {
+      // Skip notifications for common probe/attack routes
+      if (shouldIgnoreErrorNotification(req.url, res.statusCode)) {
+        return;
+      }
+
       try {
         const telegramService = new TelegramService();
         const authenticatedReq = req as AuthenticatedRequest;
