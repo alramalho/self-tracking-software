@@ -18,6 +18,10 @@ interface MetricIslandProps {
   todaysRating?: number;
   isSkippedToday?: boolean;
   className?: string;
+  /** When provided, rating changes call this callback instead of logging to API */
+  onRatingChange?: (metricId: string, rating: number) => void;
+  /** Controlled rating value - when provided, overrides internal state */
+  controlledRating?: number;
 }
 
 export const MetricIsland: React.FC<MetricIslandProps> = ({
@@ -26,6 +30,8 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   todaysRating,
   isSkippedToday = false,
   className,
+  onRatingChange,
+  controlledRating,
 }) => {
   const { logMetrics, skipMetric } = useMetrics();
   const [isLogging, setIsLogging] = useState(false);
@@ -34,7 +40,17 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const canLogMetrics = !isSkippedToday;
 
+  // Use controlled mode if onRatingChange is provided
+  const isControlled = !!onRatingChange;
+
   const handleRatingSelect = async (rating: number) => {
+    if (isControlled) {
+      // In controlled mode, just call the callback - no API call
+      onRatingChange(metric.id, rating);
+      return;
+    }
+
+    // Uncontrolled mode - call API directly
     setIsLogging(true);
     try {
       await logMetrics([
@@ -109,7 +125,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
               onRatingSelect={handleRatingSelect}
               loading={isLogging}
               disabled={isLogging || isSkipping}
-              initialRating={todaysRating}
+              initialRating={controlledRating ?? todaysRating}
             />
 
             {/* <Button
