@@ -6,7 +6,7 @@ import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
 import { usePlans } from "../plans";
 import { useCurrentUser } from "../users";
-import { useAccountLevel, getAccountLevels } from "@/hooks/useAccountLevel";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData } from "./types";
 
 export const AchievementsContext = createContext<
@@ -101,37 +101,29 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
     return celebrations;
   }, [plans]);
 
-  // Detect uncelebrated level-ups
+  // Detect uncelebrated level-ups (only current level, not intermediate ones)
   const levelUpCelebrations = useMemo(() => {
     if (!currentUser || !accountLevel.currentLevel) return [];
 
     const celebratedThreshold = currentUser.celebratedLevelThreshold ?? 0;
-    const currentThreshold = accountLevel.currentLevel.threshold;
+    const currentLevel = accountLevel.currentLevel;
 
-    // If current level is higher than celebrated level, queue level-ups
-    if (currentThreshold > celebratedThreshold) {
+    // Only celebrate if current level hasn't been celebrated yet
+    if (currentLevel.threshold > celebratedThreshold) {
       // Avoid re-processing if we already processed this threshold
-      if (processedLevelThreshold.current === currentThreshold) {
+      if (processedLevelThreshold.current === currentLevel.threshold) {
         return [];
       }
 
-      const ACCOUNT_LEVELS = getAccountLevels(false);
-      const celebrations: CelebrationData[] = [];
-
-      // Find all levels between celebrated and current (exclusive of celebrated, inclusive of current)
-      for (const level of ACCOUNT_LEVELS) {
-        if (level.threshold > celebratedThreshold && level.threshold <= currentThreshold) {
-          celebrations.push({
-            planEmoji: "🎖️",
-            planGoal: `You've reached ${level.name} level!`,
-            achievementType: "level_up",
-            levelName: level.name,
-            levelThreshold: level.threshold,
-          });
-        }
-      }
-
-      return celebrations;
+      // Only celebrate the current level, not intermediate ones
+      // (e.g., if user is Gold but never celebrated, only show Gold - not Bronze & Silver too)
+      return [{
+        planEmoji: "🎖️",
+        planGoal: `You've reached ${currentLevel.name} level!`,
+        achievementType: "level_up" as const,
+        levelName: currentLevel.name,
+        levelThreshold: currentLevel.threshold,
+      }];
     }
 
     return [];
