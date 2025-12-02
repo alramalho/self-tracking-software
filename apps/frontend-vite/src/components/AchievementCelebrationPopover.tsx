@@ -53,7 +53,7 @@ const getAchievementText = (
     case "level_up":
       return {
         title: `${levelName}!`,
-        subtitle: "You've reached a new level!",
+        subtitle: `You've reached ${levelName} level!`,
         fireEmojis: ["🎖️", "🎖️"],
       };
   }
@@ -165,7 +165,7 @@ export const AchievementCelebrationPopover: React.FC<
             </motion.div>
 
             {/* Main Plan Emoji or Level Icon */}
-            <div className="text-8xl">
+            <div className="flex items-center justify-center text-8xl">
               {levelIcon || planEmoji}
             </div>
 
@@ -205,15 +205,18 @@ export const AchievementCelebrationPopover: React.FC<
             {details.subtitle}
           </motion.p>
 
-          {/* Plan goal */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="text-sm text-muted-foreground/70 mb-6"
-          >
-            {planGoal}
-          </motion.p>
+          {/* Plan goal - hide for level_up since subtitle already contains the info */}
+          {achievementType !== "level_up" && (
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="text-sm text-muted-foreground/70 mb-6"
+            >
+              {planGoal}
+            </motion.p>
+          )}
+          {achievementType === "level_up" && <div className="mb-6" />}
 
           {/* Action buttons */}
           <motion.div

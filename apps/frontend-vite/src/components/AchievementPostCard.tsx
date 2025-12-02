@@ -13,7 +13,7 @@ import {
 } from "date-fns";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil, Target, Sprout, Rocket } from "lucide-react";
 import { type TimelineAchievementPost } from "@/contexts/timeline/service";
 import { type Comment } from "@tsw/prisma";
 import CommentSection from "./CommentSection";
@@ -24,6 +24,8 @@ import ImageCarousel from "./ImageCarousel";
 import AnimatedCounter from "./AnimatedCounter";
 import JSConfetti from "js-confetti";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
+import MedalExplainerPopover from "./MedalExplainerPopover";
+import AchievementEditDialog from "./AchievementEditDialog";
 
 const getFormattedDate = (date: Date) => {
   const now = new Date();
@@ -102,6 +104,9 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const [reactions, setReactions] = useState<ReactionCount>({});
   const [showAllComments, setShowAllComments] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [replyToUsername, setReplyToUsername] = useState<string | undefined>();
+  const [showMedalExplainer, setShowMedalExplainer] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     setReactions(
@@ -155,6 +160,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
     isAddingComment,
     isRemovingComment,
   } = useActivities();
+
 
   const comments = (achievementPost.comments || []) as (Comment & {
     user: { username: string; picture: string };
@@ -326,23 +332,43 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
               {getFormattedDate(achievementPost.createdAt)}
             </p>
           </div>
-          {editable && onDeleteClick && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-white/20 transition-colors"
-              title="Delete achievement post"
-            >
-              <Trash2 size={16} className="text-white" />
-            </button>
+          {editable && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEditDialog(true);
+                }}
+                className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 transition-colors"
+                title="Edit achievement post"
+              >
+                <Pencil size={16} className="text-white" />
+              </button>
+              {onDeleteClick && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-white/20 transition-colors"
+                  title="Delete achievement post"
+                >
+                  <Trash2 size={16} className="text-white" />
+                </button>
+              )}
+            </>
           )}
         </div>
 
-        {/* Top-left counter with animated fire (hide for level-up) */}
-        {!isLevelUp && (
-          <div className="absolute top-3 left-3 z-20">
+        {/* Top-left counter */}
+        <div className="absolute top-3 left-3 z-20">
+          {isLevelUp ? (
+            <AnimatedCounter
+              count={accountLevel.totalPoints}
+              emoji="⭐"
+              label="points"
+            />
+          ) : (
             <AnimatedCounter
               count={counterValue}
               emoji={achievementEmoji}
@@ -350,8 +376,8 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                 achievementPost.achievementType === "STREAK" ? "weeks" : undefined
               }
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Center overlay - Avatar and Info Card */}
         <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -391,7 +417,10 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             </div>
 
             {/* Info card with glass background */}
-            <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12">
+            <div
+              className={`bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12 ${isLevelUp ? "cursor-pointer hover:bg-black/50 transition-colors" : ""}`}
+              onClick={() => isLevelUp && setShowMedalExplainer(true)}
+            >
               <div className="flex items-center gap-2 mb-1 justify-center">
                 <span className="text-4xl">
                   {isLevelUp ? (levelIcon || achievementEmoji) : achievementPost.plan?.emoji}
@@ -406,10 +435,25 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                 </p>
               )}
               {isLevelUp && (
-                <p className="text-sm text-white/80 text-center mt-1">
-                  New account level unlocked!
-                </p>
+                <div className="text-sm text-white/80 text-center mt-1">
+                  <p className="mb-1">New account level unlocked!</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Target size={14} className="text-gray-300" />
+                      {accountLevel.totalActivitiesLogged}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Sprout size={14} className="text-lime-400" />
+                      {accountLevel.habitCount}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Rocket size={14} className="text-orange-400" />
+                      {accountLevel.lifestyleCount}
+                    </span>
+                  </div>
+                </div>
               )}
+              {/* Message */}
               {achievementPost.message && (
                 <p className="text-xs text-white/70 text-center mt-1 italic">
                   "{achievementPost.message}"
@@ -478,13 +522,14 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
               <CommentSection
                 achievementPostId={achievementPost.id}
                 comments={[]} // Only show input here, comments will be below
-                onAddComment={(text) =>
-                  addCommentToAchievement({
+                onAddComment={(text) => {
+                  setReplyToUsername(undefined); // Clear reply after submitting
+                  return addCommentToAchievement({
                     achievementPostId: achievementPost.id,
                     userUsername: achievementPost.user.username || "",
                     text,
-                  })
-                }
+                  });
+                }}
                 onRemoveComment={(commentId) =>
                   removeCommentFromAchievement({
                     achievementPostId: achievementPost.id,
@@ -498,6 +543,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
                 inputClassName="bg-transparent p-3 rounded-full border-none"
+                replyToUsername={replyToUsername}
               />
             </div>
           </div>
@@ -524,6 +570,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             isAddingComment={false}
             isRemovingComment={isRemovingComment}
             className="[&>div:last-child]:hidden" // Hide the input section, only show comments
+            onReply={(username) => setReplyToUsername(username)}
           />
         </div>
       )}
@@ -541,6 +588,22 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+      />
+
+      {/* Medal Explainer Popover for level-up achievements */}
+      <MedalExplainerPopover
+        open={showMedalExplainer}
+        onClose={() => setShowMedalExplainer(false)}
+        username={achievementPost.user.username || undefined}
+      />
+
+      {/* Edit Dialog */}
+      <AchievementEditDialog
+        open={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        achievementPostId={achievementPost.id}
+        currentMessage={achievementPost.message || undefined}
+        planEmoji={isLevelUp ? "🎖️" : achievementPost.plan?.emoji}
       />
     </div>
   );

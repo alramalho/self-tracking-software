@@ -7,7 +7,7 @@ import { useLogError } from "@/hooks/useLogError";
 import { usePlans } from "../plans";
 import { useCurrentUser } from "../users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
-import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData } from "./types";
+import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData, type UpdateAchievementPostData } from "./types";
 
 export const AchievementsContext = createContext<
   AchievementsContextType | undefined
@@ -279,13 +279,37 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
     return createAchievementPostMutation.mutateAsync(data);
   };
 
+  const updateAchievementPostMutation = useMutation({
+    mutationFn: async (data: UpdateAchievementPostData) => {
+      const response = await api.patch(`/achievements/${data.achievementPostId}`, {
+        message: data.message,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Achievement updated!");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to update achievement");
+      toast.error("Failed to update achievement. Please try again.");
+    },
+  });
+
+  const updateAchievementPost = async (data: UpdateAchievementPostData) => {
+    return updateAchievementPostMutation.mutateAsync(data);
+  };
+
   const context: AchievementsContextType = {
     celebrationToShow,
     handleCelebrationClose,
     markAchievementAsCelebrated,
     dismissCelebration,
     createAchievementPost,
+    updateAchievementPost,
     isCreatingAchievementPost: createAchievementPostMutation.isPending,
+    isUpdatingAchievementPost: updateAchievementPostMutation.isPending,
     isMarkingAsCelebrated,
   };
 

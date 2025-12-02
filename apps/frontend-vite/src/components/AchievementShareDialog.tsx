@@ -3,11 +3,13 @@ import MultiPhotoUploader from "@/components/ui/MultiPhotoUploader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAchievements } from "@/contexts/achievements";
+import { getAccountLevels } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { type AchievementType } from "./AchievementCelebrationPopover";
 
 interface AchievementShareDialogProps {
@@ -34,11 +36,20 @@ export const AchievementShareDialog: React.FC<
   levelName,
 }) => {
   const themeColors = useThemeColors();
+  const { isDarkMode } = useTheme();
   const variants = getThemeVariants(themeColors.raw);
   const { createAchievementPost, isCreatingAchievementPost } = useAchievements();
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const isLevelUp = achievementType === "level_up";
+
+  // Get the level icon for level_up achievements
+  const levelIcon = useMemo(() => {
+    if (!isLevelUp || !levelName) return null;
+    const levels = getAccountLevels(isDarkMode);
+    const level = levels.find(l => l.name === levelName);
+    return level?.getIcon({ size: 64 });
+  }, [isLevelUp, levelName, isDarkMode]);
 
   const getAchievementTitle = () => {
     switch (achievementType) {
@@ -89,7 +100,9 @@ export const AchievementShareDialog: React.FC<
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-6xl mb-3">{isLevelUp ? "🎖️" : planEmoji}</div>
+          <div className="flex items-center justify-center text-6xl mb-3">
+            {levelIcon || planEmoji}
+          </div>
           <h3 className="text-2xl font-bold text-foreground mb-1">
             {getAchievementTitle()}
           </h3>

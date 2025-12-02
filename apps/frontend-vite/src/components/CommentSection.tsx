@@ -25,6 +25,8 @@ interface CommentSectionProps {
   className?: string;
   inputClassName?: string;
   inputWrapperClassName?: string;
+  onReply?: (username: string) => void; // External reply handler
+  replyToUsername?: string; // Pre-fill input with @username
 }
 
 const getFormattedDate = (date: Date) => {
@@ -69,6 +71,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   className = "",
   inputClassName = "",
   inputWrapperClassName = "",
+  onReply,
+  replyToUsername,
 }) => {
   const [newComment, setNewComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
@@ -93,6 +97,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       setShowAllComments(externalShowAllState);
     }
   }, [externalShowAllState]);
+
+  // Handle external reply-to username
+  useEffect(() => {
+    if (replyToUsername) {
+      setNewComment(`@${replyToUsername} `);
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
+  }, [replyToUsername]);
 
   // Search users for @mentions
   const searchUsersForMention = useCallback(async (query: string) => {
@@ -196,11 +210,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   // Reply to a comment
   const handleReply = useCallback((username: string) => {
-    setNewComment(`@${username} `);
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (onReply) {
+      // Use external handler if provided (for split input/comments sections)
+      onReply(username);
+    } else {
+      setNewComment(`@${username} `);
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
-  }, []);
+  }, [onReply]);
 
   const handleSubmitComment = async (e?: React.FormEvent) => {
     if (e) {

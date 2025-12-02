@@ -36,10 +36,14 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
     setKey(prev => prev + 1);
   }, [debouncedCount]);
 
-  const handleClick = () => {
-    // Tap animation
+  const triggerAnimation = () => {
     setShouldAnimate(true);
     setTimeout(() => setShouldAnimate(false), 600);
+  };
+
+  const handleClick = () => {
+    // Tap animation
+    triggerAnimation();
 
     // Increment click counter
     clickCountRef.current += 1;
@@ -56,6 +60,11 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
 
       shootConfetti();
     }
+  };
+
+  const handleCountComplete = () => {
+    // Trigger the shake animation when count-up finishes
+    triggerAnimation();
   };
 
   return (
@@ -86,6 +95,7 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
           value={debouncedCount}
           className="text-lg font-bold text-white font-geist-mono"
           delay={0}
+          onAnimationComplete={handleCountComplete}
         />
         {label && (
           <span className="text-[10px] text-white/80 uppercase tracking-wide font-medium">

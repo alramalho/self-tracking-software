@@ -12,6 +12,7 @@ interface NumberTickerProps extends ComponentPropsWithoutRef<"span"> {
   delay?: number
   decimalPlaces?: number
   onAnimationStart?: () => void
+  onAnimationComplete?: () => void
 }
 
 export function NumberTicker({
@@ -22,8 +23,10 @@ export function NumberTicker({
   className,
   decimalPlaces = 0,
   onAnimationStart,
+  onAnimationComplete,
   ...props
 }: NumberTickerProps) {
+  const hasCompletedRef = useRef(false)
   const ref = useRef<HTMLSpanElement>(null)
   const motionValue = useMotionValue(direction === "down" ? value : startValue)
   const springValue = useSpring(motionValue, {
@@ -50,9 +53,16 @@ export function NumberTicker({
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces,
           }).format(Number(latest.toFixed(decimalPlaces)))
+
+          // Check if animation is complete (value is very close to target)
+          const target = direction === "down" ? startValue : value
+          if (!hasCompletedRef.current && Math.abs(latest - target) < 0.5) {
+            hasCompletedRef.current = true
+            onAnimationComplete?.()
+          }
         }
       }),
-    [springValue, decimalPlaces]
+    [springValue, decimalPlaces, value, startValue, direction, onAnimationComplete]
   )
 
   return (
