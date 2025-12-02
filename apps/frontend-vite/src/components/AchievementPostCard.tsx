@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser } from "@/contexts/users";
-import { useAccountLevel } from "@/hooks/useAccountLevel";
+import { useAccountLevel, getAccountLevels } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import {
@@ -139,6 +139,14 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
       : [];
   const hasImages = effectiveImages.length > 0;
   const isLevelUp = achievementPost.achievementType === "LEVEL_UP";
+
+  // Get the level icon for level-up achievements
+  const levelIcon = React.useMemo(() => {
+    if (!isLevelUp || !achievementPost.levelName) return null;
+    const levels = getAccountLevels(!isLightMode);
+    const level = levels.find(l => l.name === achievementPost.levelName);
+    return level?.getIcon({ size: 40 });
+  }, [isLevelUp, achievementPost.levelName, isLightMode]);
 
   const {
     modifyReactionsOnAchievement,
@@ -386,7 +394,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             <div className="bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12">
               <div className="flex items-center gap-2 mb-1 justify-center">
                 <span className="text-4xl">
-                  {isLevelUp ? achievementEmoji : achievementPost.plan?.emoji}
+                  {isLevelUp ? (levelIcon || achievementEmoji) : achievementPost.plan?.emoji}
                 </span>
               </div>
               <h3 className="text-xl font-bold text-white text-center drop-shadow-lg">
