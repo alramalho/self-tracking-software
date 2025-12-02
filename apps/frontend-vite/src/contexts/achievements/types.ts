@@ -22,6 +22,8 @@ export interface CreateAchievementPostData {
 export interface UpdateAchievementPostData {
   achievementPostId: string;
   message?: string;
+  imageIdsToKeep?: string[];
+  newPhotos?: File[];
 }
 
 export interface AchievementsContextType {

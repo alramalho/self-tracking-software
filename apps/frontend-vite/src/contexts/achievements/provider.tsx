@@ -8,6 +8,7 @@ import { usePlans } from "../plans";
 import { useCurrentUser } from "../users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData, type UpdateAchievementPostData } from "./types";
+import { type TimelineData, type TimelineAchievementPost, normalizeAchievementPost } from "../timeline/service";
 
 export const AchievementsContext = createContext<
   AchievementsContextType | undefined
@@ -281,14 +282,62 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateAchievementPostMutation = useMutation({
     mutationFn: async (data: UpdateAchievementPostData) => {
-      const response = await api.patch(`/achievements/${data.achievementPostId}`, {
-        message: data.message,
+      const formData = new FormData();
+
+      if (data.message !== undefined) {
+        formData.append("message", data.message || "");
+      }
+
+      if (data.imageIdsToKeep) {
+        formData.append("imageIdsToKeep", JSON.stringify(data.imageIdsToKeep));
+      }
+
+      // Append new photos
+      data.newPhotos?.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+
+      const response = await api.patch(`/achievements/${data.achievementPostId}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    onSuccess: (data, input) => {
+      const updatedPost = normalizeAchievementPost(data.achievementPost as TimelineAchievementPost);
+      const updatedImages = [...(updatedPost.images || [])];
+      const updatedMessage = updatedPost.message;
+
+      // Update timeline cache (for own profile - achievementPosts come from timeline)
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return old;
+        const newAchievementPosts = old.achievementPosts?.map((post) =>
+          post.id === input.achievementPostId
+            ? { ...post, message: updatedMessage, images: updatedImages }
+            : post
+        ) || [];
+        return {
+          ...old,
+          achievementPosts: newAchievementPosts,
+        };
+      });
+
+      // Update user cache (for external profile views)
+      if (updatedPost.user?.username) {
+        queryClient.setQueryData(["user", updatedPost.user.username], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            achievementPosts: old.achievementPosts?.map((post: TimelineAchievementPost) =>
+              post.id === input.achievementPostId
+                ? { ...post, message: updatedMessage, images: updatedImages }
+                : post
+            ),
+          };
+        });
+      }
+
       toast.success("Achievement updated!");
     },
     onError: (error) => {

@@ -271,16 +271,19 @@ router.get(
 router.patch(
   "/:id",
   requireAuth,
+  upload.array("photos", 1),
   async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<Response | void> => {
     try {
       const { id } = req.params;
-      const { message } = req.body;
+      const { message, imageIdsToKeep } = req.body;
+      const newPhotos = req.files as Express.Multer.File[] | undefined;
 
       const achievementPost = await prisma.achievementPost.findUnique({
         where: { id },
+        include: { images: true },
       });
 
       if (!achievementPost) {
@@ -291,9 +294,75 @@ router.patch(
         return res.status(403).json({ error: "Not authorized" });
       }
 
+      // Parse imageIdsToKeep (can be JSON string or array)
+      let keepIds: string[] = [];
+      if (imageIdsToKeep) {
+        try {
+          keepIds = typeof imageIdsToKeep === "string"
+            ? JSON.parse(imageIdsToKeep)
+            : imageIdsToKeep;
+        } catch {
+          keepIds = Array.isArray(imageIdsToKeep) ? imageIdsToKeep : [imageIdsToKeep];
+        }
+      }
+
+      // Delete images that are not in the keep list
+      const imagesToDelete = achievementPost.images.filter(
+        (img) => !keepIds.includes(img.id)
+      );
+
+      for (const image of imagesToDelete) {
+        try {
+          await s3Service.delete(image.s3Path);
+        } catch (error) {
+          logger.error(`Error deleting image from S3: ${image.s3Path}`, error);
+        }
+        await prisma.achievementImage.delete({ where: { id: image.id } });
+      }
+
+      // Upload new photos
+      const existingImageCount = keepIds.length;
+      if (newPhotos && newPhotos.length > 0) {
+        const imageCreationPromises = newPhotos.map(async (photo, index) => {
+          const photoId = uuidv4();
+          const fileExtension = photo.originalname
+            ? photo.originalname.split(".").pop()
+            : "jpg";
+          const s3Path = `/users/${req.user!.id}/achievement_posts/${achievementPost.id}/photos/${photoId}.${fileExtension}`;
+
+          // Upload to S3
+          await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
+
+          // Generate presigned URL with 7 days expiration
+          const expirationSeconds = 7 * 24 * 60 * 60;
+          const presignedUrl = await s3Service.generatePresignedUrl(
+            s3Path,
+            expirationSeconds
+          );
+          const expiresAt = new Date(Date.now() + expirationSeconds * 1000);
+
+          // Create achievement image record
+          return prisma.achievementImage.create({
+            data: {
+              achievementPostId: achievementPost.id,
+              s3Path: s3Path,
+              url: presignedUrl,
+              expiresAt: expiresAt,
+              sortOrder: existingImageCount + index,
+            },
+          });
+        });
+
+        await Promise.all(imageCreationPromises);
+        logger.info(
+          `${newPhotos.length} new photo(s) uploaded for achievement post ${achievementPost.id}`
+        );
+      }
+
+      // Update message
       const updatedPost = await prisma.achievementPost.update({
         where: { id },
-        data: { message: message || null },
+        data: { message: message !== undefined ? (message || null) : undefined },
         include: {
           images: {
             orderBy: { sortOrder: "asc" },

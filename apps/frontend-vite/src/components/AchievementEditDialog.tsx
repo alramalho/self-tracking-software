@@ -6,14 +6,20 @@ import { useAchievements } from "@/contexts/achievements";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
+
+interface ExistingImage {
+  id: string;
+  url: string;
+}
 
 interface AchievementEditDialogProps {
   open: boolean;
   onClose: () => void;
   achievementPostId: string;
-  currentMessage?: string | null;
+  currentMessage?: string;
+  currentImages?: ExistingImage[];
   planEmoji?: string;
 }
 
@@ -22,31 +28,45 @@ export const AchievementEditDialog: React.FC<AchievementEditDialogProps> = ({
   onClose,
   achievementPostId,
   currentMessage,
+  currentImages = [],
   planEmoji,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { updateAchievementPost, isUpdatingAchievementPost } = useAchievements();
   const [message, setMessage] = useState(currentMessage || "");
+  const [imagesToKeep, setImagesToKeep] = useState<ExistingImage[]>(currentImages);
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
 
-  // Reset message when dialog opens
+  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setMessage(currentMessage || "");
+      setImagesToKeep(currentImages);
+      setNewPhotos([]);
     }
-  }, [open, currentMessage]);
+  }, [open, currentMessage, currentImages]);
+
+  const handleRemoveExistingImage = (imageId: string) => {
+    setImagesToKeep((prev) => prev.filter((img) => img.id !== imageId));
+  };
 
   const handleSave = async () => {
     try {
       await updateAchievementPost({
         achievementPostId,
         message: message.trim() || undefined,
+        imageIdsToKeep: imagesToKeep.map((img) => img.id),
+        newPhotos: newPhotos.length > 0 ? newPhotos : undefined,
       });
       onClose();
-    } catch (error) {
+    } catch {
       // Error is handled in the context
     }
   };
+
+  const totalImages = imagesToKeep.length + newPhotos.length;
+  const canAddMorePhotos = totalImages < 1;
 
   return (
     <AppleLikePopover
@@ -78,22 +98,80 @@ export const AchievementEditDialog: React.FC<AchievementEditDialogProps> = ({
               placeholder="Add a message about your achievement (optional)..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[100px] resize-none"
+              className="min-h-[80px] resize-none"
               disabled={isUpdatingAchievementPost}
             />
           </div>
 
-          {/* TODO: Photo editing could be added here in the future */}
-          {/* <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">
-              Photos
-            </label>
-            <MultiPhotoUploader
-              onFilesChange={setPhotos}
-              maxFiles={10}
-              disabled={isUpdatingAchievementPost}
-            />
-          </div> */}
+          {/* Existing photo */}
+          {imagesToKeep.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Current Photo
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {imagesToKeep.map((image) => (
+                  <div key={image.id} className="relative">
+                    <img
+                      src={image.url}
+                      alt="Achievement"
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExistingImage(image.id)}
+                      disabled={isUpdatingAchievementPost}
+                      className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 text-white disabled:opacity-50"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New photo preview */}
+          {newPhotos.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                New Photo
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {newPhotos.map((file, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt="New photo"
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewPhotos(prev => prev.filter((_, i) => i !== index))}
+                      disabled={isUpdatingAchievementPost}
+                      className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 text-white disabled:opacity-50"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add new photo */}
+          {canAddMorePhotos && (
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                {imagesToKeep.length > 0 ? "Replace Photo" : "Photo"}
+              </label>
+              <MultiPhotoUploader
+                onFilesChange={setNewPhotos}
+                maxFiles={1}
+                disabled={isUpdatingAchievementPost}
+              />
+            </div>
+          )}
         </div>
 
         {/* Actions */}
