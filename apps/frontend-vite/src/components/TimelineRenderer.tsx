@@ -48,31 +48,14 @@ const TimelineRenderer: React.FC<{
   const [collapsedEntries, setCollapsedEntries] = useState<Set<string>>(
     new Set()
   );
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const [dividerSeen, setDividerSeen] = useState(false);
 
   // Track when user last viewed timeline
   const [lastViewedTimelineAt, setLastViewedTimelineAt] = useLocalStorage<
     string | null
   >("last-viewed-timeline-at", null);
 
-  // Update last viewed timestamp when user views timeline
-  // Wait 3 seconds before updating to ensure they actually viewed content
-  useEffect(() => {
-    if (!timelineData?.recommendedActivityEntries?.length) return;
-
-    const timer = setTimeout(() => {
-      const newestEntry = timelineData.recommendedActivityEntries[0];
-      if (newestEntry?.datetime) {
-        const newestDatetime = new Date(newestEntry.datetime).toISOString();
-        console.log(
-          "[Timeline] Updating lastViewedTimelineAt to:",
-          newestDatetime
-        );
-        setLastViewedTimelineAt(newestDatetime);
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [timelineData?.recommendedActivityEntries, setLastViewedTimelineAt]);
 
   // Initialize collapsed state for entries without images
   useEffect(() => {
@@ -188,6 +171,93 @@ const TimelineRenderer: React.FC<{
     return items;
   }, [timelineData]);
 
+  // Check if there will be a divider shown (new posts exist AND we have a lastViewedTimelineAt)
+  const willShowDivider = useMemo(() => {
+    if (!lastViewedTimelineAt || !mergedTimelineItems.length) return false;
+    const lastViewed = new Date(lastViewedTimelineAt);
+
+    // Check if there are any items newer than lastViewed
+    const hasNewItems = mergedTimelineItems.some((item) => {
+      const itemDate =
+        item.type === "activity"
+          ? new Date(item.data.datetime)
+          : new Date(item.data.createdAt);
+      return itemDate > lastViewed;
+    });
+
+    // Check if there are any items older than or equal to lastViewed (where divider would appear)
+    const hasOldItems = mergedTimelineItems.some((item) => {
+      const itemDate =
+        item.type === "activity"
+          ? new Date(item.data.datetime)
+          : new Date(item.data.createdAt);
+      return itemDate <= lastViewed;
+    });
+
+    return hasNewItems && hasOldItems;
+  }, [lastViewedTimelineAt, mergedTimelineItems]);
+
+  // Update last viewed timestamp when user views timeline
+  // If divider exists: wait until user scrolls to it
+  // If no divider: use 3-second fallback (first-time user or user who's seen everything)
+  useEffect(() => {
+    if (!timelineData?.recommendedActivityEntries?.length) return;
+
+    const updateLastViewed = () => {
+      const newestEntry = timelineData.recommendedActivityEntries[0];
+      if (newestEntry?.datetime) {
+        const newestDatetime = new Date(newestEntry.datetime).toISOString();
+        console.log(
+          "[Timeline] Updating lastViewedTimelineAt to:",
+          newestDatetime
+        );
+        setLastViewedTimelineAt(newestDatetime);
+      }
+    };
+
+    // If a divider will be shown, wait for user to scroll to it
+    if (willShowDivider) {
+      // Use IntersectionObserver to detect when divider is visible
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const [entry] = entries;
+          if (entry.isIntersecting && !dividerSeen) {
+            console.log("[Timeline] Divider seen, updating lastViewedTimelineAt");
+            setDividerSeen(true);
+            updateLastViewed();
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.5 } // Trigger when 50% of divider is visible
+      );
+
+      // Small delay to ensure divider is rendered
+      const setupTimer = setTimeout(() => {
+        if (dividerRef.current) {
+          observer.observe(dividerRef.current);
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(setupTimer);
+        observer.disconnect();
+      };
+    } else {
+      // No divider will be shown (first-time user or no new posts)
+      // Fall back to 3-second timeout
+      const timer = setTimeout(() => {
+        updateLastViewed();
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [timelineData?.recommendedActivityEntries, setLastViewedTimelineAt, willShowDivider, dividerSeen]);
+
+  // Reset dividerSeen when timeline data changes significantly
+  useEffect(() => {
+    setDividerSeen(false);
+  }, [timelineData?.recommendedActivityEntries?.length]);
+
   // Reorder entries to prevent grid breaks on mount
   // Group collapsed entries and full-width entries intelligently
   // Only reorder once on mount, not when collapse state changes
@@ -234,8 +304,8 @@ const TimelineRenderer: React.FC<{
   // }, [timelineData?.recommendedActivityEntries]);
 
   // Divider component - Instagram style
-  const AllCaughtUpDivider: React.FC = () => (
-    <div className="col-span-2 sm:col-span-4 flex items-center justify-center py-6">
+  const AllCaughtUpDivider = React.forwardRef<HTMLDivElement>((_, ref) => (
+    <div ref={ref} className="col-span-2 sm:col-span-4 flex items-center justify-center py-6">
       <div className="flex flex-col items-center gap-2">
         <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
           <Check className="w-6 h-6 text-muted-foreground" strokeWidth={2.5} />
@@ -248,7 +318,7 @@ const TimelineRenderer: React.FC<{
         </span>
       </div>
     </div>
-  );
+  ));
 
   if (isLoadingTimeline && !timelineData) {
     return (
@@ -396,7 +466,7 @@ const TimelineRenderer: React.FC<{
 
               return (
                 <React.Fragment key={`achievement-${post.id}`}>
-                  {shouldShowDivider && <AllCaughtUpDivider />}
+                  {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
                   <div className="col-span-2 sm:col-span-4">
                     <AchievementPostCard
                       achievementPost={post}
@@ -465,7 +535,7 @@ const TimelineRenderer: React.FC<{
 
               return (
                 <React.Fragment key={`activity-${entry.id}`}>
-                  {shouldShowDivider && <AllCaughtUpDivider />}
+                  {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
                   <div
                     ref={(el) => {
                       if (el) {
