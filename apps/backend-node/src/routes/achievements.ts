@@ -33,7 +33,7 @@ router.post(
       }
 
       // For non-level-up achievements, planId is required
-      let plan = null;
+      let plan: { id: string; emoji: string | null; goal: string } | null = null;
       if (achievementType !== "LEVEL_UP") {
         if (!planId) {
           return res.status(400).json({ error: "Plan ID is required for this achievement type" });
