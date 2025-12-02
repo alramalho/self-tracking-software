@@ -98,15 +98,16 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
                 {accountLevel.currentLevel?.name || "New"}
               </span>
               <span>•</span>
-              <span>
-                {accountLevel.totalActivitiesLogged} activities
-                {accountLevel.bonusPoints > 0 && (
-                  <span className="text-xs text-green-600 ml-1">
-                    (+{accountLevel.bonusPoints} bonus)
-                  </span>
-                )}
-              </span>
+              <span>{accountLevel.totalPoints} points</span>
             </div>
+            <span className="text-xs text-muted-foreground/60 ml-1">
+              ({accountLevel.totalActivitiesLogged} from activities)
+            </span>
+            {accountLevel.bonusPoints > 0 && (
+              <span className="text-xs text-green-600 ml-1">
+                (+{accountLevel.bonusPoints} bonus)
+              </span>
+            )}
           </div>
         </div>
 
@@ -148,17 +149,26 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
                 </span>{" "}
               </p>
             </div>
-            <div className="flex items-center gap-2 opacity-59 justify-center">
+            <div className="flex flex-col items-center gap-2 opacity-59 justify-center">
+              <div className="flex items-center gap-1">
+                <Target size={16} className="text-gray-500" />
+                <span className="text-xs text-gray-500"> activity</span>
+                <span className="text-xs text-muted-foreground">
+                  worth 1 point
+                </span>
+              </div>
               <div className="flex items-center gap-1">
                 <Sprout size={16} className="text-lime-500" />
+                <span className="text-xs text-lime-500"> habit</span>
                 <span className="text-xs text-muted-foreground">
-                  worth 25 points
+                  worth 25 bonus points
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <Rocket size={16} className="text-orange-500" />
+                <span className="text-xs text-orange-500"> lifestyle</span>
                 <span className="text-xs text-muted-foreground">
-                  worth 100 points
+                  worth 100 bonus points
                 </span>
               </div>
             </div>

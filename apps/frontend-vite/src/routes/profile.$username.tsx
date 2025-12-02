@@ -417,10 +417,10 @@ function ProfilePage() {
               >
                 <div className="flex items-center justify-center gap-1">
                   <p className="text-xl font-bold text-foreground">
-                    {profileData?.activityEntries?.length || 0}
+                    {accountLevel.totalPoints}
                   </p>
                 </div>
-                <p className="text-sm text-muted-foreground">Entries</p>
+                <p className="text-sm text-muted-foreground">Points</p>
               </div>
 
               {accountLevel.currentLevel && (

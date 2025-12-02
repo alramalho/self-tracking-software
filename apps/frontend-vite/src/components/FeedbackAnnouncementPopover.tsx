@@ -19,6 +19,7 @@ interface FeedbackAnnouncementPopoverProps {
     message: string;
     wasRewritten: boolean;
   }) => Promise<void>;
+  onClose?: () => void;
 }
 
 const SENTIMENT_OPTIONS = [
@@ -34,6 +35,7 @@ export const FeedbackAnnouncementPopover: React.FC<FeedbackAnnouncementPopoverPr
   userPicture,
   activityEntryCount,
   onSubmit,
+  onClose,
 }) => {
   const [completed, setCompleted] = useLocalStorage<boolean>(
     "feedback-announcement-completed",
@@ -120,17 +122,20 @@ export const FeedbackAnnouncementPopover: React.FC<FeedbackAnnouncementPopoverPr
 
   const canSubmit = selectedSentiment !== null && message.trim().length > 0;
 
+  const handleClose = () => {
+    setCompleted(true);
+    onClose?.();
+  };
+
   if (completed) {
     return null;
   }
 
   return (
     <AppleLikePopover
-      onClose={() => {}} // No-op since it's unclosable
+      onClose={handleClose}
       open={open}
       title="We need your help!"
-      unclosable={true}
-      displayIcon={false}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
