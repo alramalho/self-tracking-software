@@ -267,6 +267,62 @@ router.get(
   }
 );
 
+// Update achievement post
+router.patch(
+  "/:id",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+
+      const achievementPost = await prisma.achievementPost.findUnique({
+        where: { id },
+      });
+
+      if (!achievementPost) {
+        return res.status(404).json({ error: "Achievement post not found" });
+      }
+
+      if (achievementPost.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const updatedPost = await prisma.achievementPost.update({
+        where: { id },
+        data: { message: message || null },
+        include: {
+          images: {
+            orderBy: { sortOrder: "asc" },
+          },
+          plan: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              picture: true,
+            },
+          },
+        },
+      });
+
+      logger.info(`Achievement post ${id} updated by user ${req.user!.username}`);
+
+      return res.json({
+        success: true,
+        achievementPost: updatedPost,
+      });
+    } catch (error) {
+      logger.error("Error updating achievement post:", error);
+      return res.status(500).json({ error: "Failed to update achievement post" });
+    }
+  }
+);
+
 // Delete achievement post
 router.delete(
   "/:id",

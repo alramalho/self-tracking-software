@@ -19,6 +19,11 @@ export interface CreateAchievementPostData {
   photos?: File[];
 }
 
+export interface UpdateAchievementPostData {
+  achievementPostId: string;
+  message?: string;
+}
+
 export interface AchievementsContextType {
   celebrationToShow: CelebrationData | null;
   handleCelebrationClose: () => Promise<void>;
@@ -29,6 +34,8 @@ export interface AchievementsContextType {
   }) => Promise<void>;
   dismissCelebration: () => void;
   createAchievementPost: (data: CreateAchievementPostData) => Promise<void>;
+  updateAchievementPost: (data: UpdateAchievementPostData) => Promise<void>;
   isCreatingAchievementPost: boolean;
+  isUpdatingAchievementPost: boolean;
   isMarkingAsCelebrated: boolean;
 }
