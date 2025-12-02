@@ -603,7 +603,8 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
         onClose={() => setShowEditDialog(false)}
         achievementPostId={achievementPost.id}
         currentMessage={achievementPost.message || undefined}
-        planEmoji={isLevelUp ? "🎖️" : achievementPost.plan?.emoji}
+        currentImages={userImages.filter((img) => img.url).map((img) => ({ id: img.id, url: img.url! }))}
+        planEmoji={isLevelUp ? "🎖️" : achievementPost.plan?.emoji || undefined}
       />
     </div>
   );

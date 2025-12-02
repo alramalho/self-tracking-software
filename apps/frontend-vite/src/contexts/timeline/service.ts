@@ -164,7 +164,7 @@ function normalizeUser(user: TimelineUser): TimelineUser {
   };
 }
 
-function normalizeAchievementPost(
+export function normalizeAchievementPost(
   post: TimelineAchievementPost
 ): TimelineAchievementPost {
   return normalizeApiResponse<TimelineAchievementPost>(post, [
