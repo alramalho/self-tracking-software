@@ -10,6 +10,7 @@
 /admin/debug-plan-similarity/{userId}
 /admin/generate-coach-message
 /admin/get-recommendations/{username}
+/admin/invalidate-plan-cache
 /admin/public/log-error
 /admin/regenerate-image-url
 /admin/run-daily-job
