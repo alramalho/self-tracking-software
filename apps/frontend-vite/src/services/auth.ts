@@ -13,6 +13,7 @@ export class AuthService {
         google: {
           webClientId: import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID,
           iOSClientId: import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID,
+          // iOSServerClientId: import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID,
         },
         apple: {
           // iOS: No config needed (uses native Sign in with Apple)
@@ -35,6 +36,12 @@ export class AuthService {
           },
         });
 
+        console.log(
+          "🔵 Full Google login result:",
+          JSON.stringify(result, null, 2)
+        );
+        console.log("🔵 result.result keys:", Object.keys(result.result || {}));
+
         // Look for ID token in different possible locations
         const idToken =
           // @ts-expect-error lol
@@ -48,9 +55,26 @@ export class AuthService {
         // @ts-expect-error lol
         const serverAuthCode = result.result?.serverAuthCode;
 
+        console.log(
+          "🔵 Extracted idToken:",
+          idToken ? "✅ Present" : "❌ Missing"
+        );
+        console.log(
+          "🔵 Extracted accessToken:",
+          accessToken ? "✅ Present" : "❌ Missing"
+        );
+        console.log(
+          "🔵 Extracted serverAuthCode:",
+          serverAuthCode ? "✅ Present" : "❌ Missing"
+        );
+
         // Send idToken to backend for verification and session creation
         const backendUrl =
           import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+        console.log("🔵 VITE_BACKEND_URL env:", import.meta.env.VITE_BACKEND_URL);
+        console.log("🔵 Using backendUrl:", backendUrl);
+        console.log("🔵 Full endpoint:", `${backendUrl}/auth/ios-google-signin`);
+        console.log("🔵 Calling backend...");
         const response = await fetch(`${backendUrl}/auth/ios-google-signin`, {
           method: "POST",
           headers: {
@@ -58,6 +82,7 @@ export class AuthService {
           },
           body: JSON.stringify({ idToken }),
         });
+        console.log("🔵 Backend response status:", response.status);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -65,27 +90,34 @@ export class AuthService {
           throw new Error(errorData.error || "Authentication failed");
         }
 
-        const { verificationUrl } = await response.json();
+        const responseData = await response.json();
+        console.log("🔵 Backend response data:", JSON.stringify(responseData, null, 2));
+        const { verificationUrl } = responseData;
 
         // Use the verification URL to create a Supabase session
         const url = new URL(verificationUrl);
         const token = url.searchParams.get("token");
         const type = url.searchParams.get("type");
+        console.log("🔵 Parsed token:", token ? "✅ Present" : "❌ Missing");
+        console.log("🔵 Parsed type:", type);
 
         if (!token || type !== "magiclink") {
+          console.error("🔴 Invalid verification URL:", verificationUrl);
           throw new Error("Invalid verification URL");
         }
 
+        console.log("🔵 Calling supabase.auth.verifyOtp...");
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: "magiclink",
         });
 
         if (error) {
-          console.error("🔴 Supabase error:", error);
+          console.error("🔴 Supabase verifyOtp error:", error);
           throw error;
         }
 
+        console.log("🔵 ✅ Google sign-in complete! Session:", data);
         return data;
       } else {
         // Web: Use Supabase's built-in OAuth

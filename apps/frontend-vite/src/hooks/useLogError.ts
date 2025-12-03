@@ -53,7 +53,7 @@ export const useLogError = () => {
     }
 
     try {
-      const backendUrl = import.meta.env.VITE_API_URL;
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
       if (!backendUrl) {
         console.error("Backend URL not configured");
         return;

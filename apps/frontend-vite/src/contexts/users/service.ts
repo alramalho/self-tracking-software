@@ -233,8 +233,7 @@ export async function updateUser(
 export async function getPublicUserProfile(
   usernameOrId: string
 ): Promise<HydratedUser> {
-  const baseUrl =
-    import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
+  const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
   if (!baseUrl) {
     throw new Error("Backend URL is not configured");
