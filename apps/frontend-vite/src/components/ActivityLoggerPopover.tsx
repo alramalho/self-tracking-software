@@ -131,7 +131,11 @@ export function ActivityLoggerPopover({
                 transition={{ duration: 0.2, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="mt-4">
+                <div
+                  className="mt-4"
+                  onTouchMove={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                >
                   <h3 className="text-lg font-semibold mb-2 text-center">
                     Select Time
                   </h3>
