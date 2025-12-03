@@ -327,8 +327,8 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
 
         {/* Top overlay - Date and Delete button */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-          <div className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/20">
-            <p className="text-xs text-white font-medium">
+          <div className="px-3 py-1.5 rounded-full bg-white/70 dark:bg-black/30 backdrop-blur-md border border-black/10 dark:border-white/20">
+            <p className="text-xs text-gray-800 dark:text-white font-medium">
               {getFormattedDate(achievementPost.createdAt)}
             </p>
           </div>
@@ -339,10 +339,10 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                   e.stopPropagation();
                   setShowEditDialog(true);
                 }}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 transition-colors"
+                className="p-2 rounded-full bg-black/10 hover:bg-black/20 dark:bg-white/20 dark:hover:bg-white/30 backdrop-blur-md border border-black/10 dark:border-white/20 transition-colors"
                 title="Edit achievement post"
               >
-                <Pencil size={16} className="text-white" />
+                <Pencil size={16} className="text-gray-800 dark:text-white" />
               </button>
               {onDeleteClick && (
                 <button
@@ -350,7 +350,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                     e.stopPropagation();
                     setShowDeleteConfirm(true);
                   }}
-                  className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-white/20 transition-colors"
+                  className="p-2 rounded-full bg-red-500/80 hover:bg-red-600/90 backdrop-blur-md border border-red-300/30 dark:border-white/20 transition-colors"
                   title="Delete achievement post"
                 >
                   <Trash2 size={16} className="text-white" />
@@ -418,7 +418,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
 
             {/* Info card with glass background */}
             <div
-              className={`bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12 ${isLevelUp ? "cursor-pointer hover:bg-black/50 transition-colors" : ""}`}
+              className={`bg-white/70 dark:bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/20 rounded-2xl px-6 py-3 shadow-xl mx-12 ${isLevelUp ? "cursor-pointer hover:bg-white/80 dark:hover:bg-black/50 transition-colors" : ""}`}
               onClick={() => isLevelUp && setShowMedalExplainer(true)}
             >
               <div className="flex items-center gap-2 mb-1 justify-center">
@@ -426,28 +426,28 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                   {isLevelUp ? (levelIcon || achievementEmoji) : achievementPost.plan?.emoji}
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-white text-center drop-shadow-lg">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center drop-shadow-lg">
                 {achievementTitle}
               </h3>
               {!isLevelUp && achievementPost.plan?.goal && (
-                <p className="text-sm text-white/80 text-center mt-1">
+                <p className="text-sm text-gray-700 dark:text-white/80 text-center mt-1">
                   {achievementPost.plan.goal}
                 </p>
               )}
               {isLevelUp && (
-                <div className="text-sm text-white/80 text-center mt-1">
+                <div className="text-sm text-gray-700 dark:text-white/80 text-center mt-1">
                   <p className="mb-1">New account level unlocked!</p>
                   <div className="flex items-center justify-center gap-3">
                     <span className="flex items-center gap-1">
-                      <Target size={14} className="text-gray-300" />
+                      <Target size={14} className="text-gray-500 dark:text-gray-300" />
                       {accountLevel.totalActivitiesLogged}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Sprout size={14} className="text-lime-400" />
+                      <Sprout size={14} className="text-lime-600 dark:text-lime-400" />
                       {accountLevel.habitCount}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Rocket size={14} className="text-orange-400" />
+                      <Rocket size={14} className="text-orange-500 dark:text-orange-400" />
                       {accountLevel.lifestyleCount}
                     </span>
                   </div>
@@ -455,7 +455,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
               )}
               {/* Message */}
               {achievementPost.message && (
-                <p className="text-xs text-white/70 text-center mt-1 italic">
+                <p className="text-xs text-gray-600 dark:text-white/70 text-center mt-1 italic">
                   "{achievementPost.message}"
                 </p>
               )}
@@ -464,7 +464,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
                   e.stopPropagation();
                   onUsernameClick?.();
                 }}
-                className="text-sm text-white/90 text-center mt-2 cursor-pointer hover:underline font-medium"
+                className="text-sm text-gray-800 dark:text-white/90 text-center mt-2 cursor-pointer hover:underline font-medium"
               >
                 @{achievementPost.user.username}
               </p>

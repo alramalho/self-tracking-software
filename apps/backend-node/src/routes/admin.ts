@@ -718,6 +718,53 @@ router.get(
   }
 );
 
+// Invalidate plan progress cache endpoint
+router.post(
+  "/invalidate-plan-cache",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { planId, username } = req.body;
+
+      if (planId) {
+        // Invalidate specific plan by ID
+        await plansService.invalidatePlanProgressCache(planId);
+        return res.json({ message: `Cache invalidated for plan ${planId}` });
+      }
+
+      if (username) {
+        // Invalidate all plans for a user
+        const user = await prisma.user.findUnique({
+          where: { username },
+          include: {
+            plans: {
+              where: { deletedAt: null },
+              select: { id: true },
+            },
+          },
+        });
+
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        for (const plan of user.plans) {
+          await plansService.invalidatePlanProgressCache(plan.id);
+        }
+
+        return res.json({
+          message: `Cache invalidated for ${user.plans.length} plans of user ${username}`,
+        });
+      }
+
+      return res.status(400).json({ error: "Provide either planId or username" });
+    } catch (error) {
+      logger.error("Error invalidating plan cache:", error);
+      res.status(500).json({ error: "Failed to invalidate plan cache" });
+    }
+  }
+);
+
 // Generate coach message endpoint
 router.post(
   "/generate-coach-message",

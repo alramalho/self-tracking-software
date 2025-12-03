@@ -1,9 +1,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUnifiedProfileData } from '@/hooks/useUnifiedProfileData'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
 import { useMemo } from 'react'
+import UserSearch, { type UserSearchResult } from '@/components/UserSearch'
 
 export const Route = createFileRoute('/friends/$username')({
   component: FriendsPage,
@@ -12,6 +13,11 @@ export const Route = createFileRoute('/friends/$username')({
 function FriendsPage() {
   const { username } = Route.useParams()
   const { profileData, isLoading, isOwnProfile } = useUnifiedProfileData(username)
+  const navigate = useNavigate()
+
+  const handleUserClick = (user: UserSearchResult) => {
+    navigate({ to: '/profile/$username', params: { username: user.username } })
+  }
 
   const friends = useMemo(
     () => [
@@ -36,6 +42,13 @@ function FriendsPage() {
         </button>
         <h1 className="text-2xl font-bold mx-auto">Friends</h1>
       </div>
+
+      {isOwnProfile && (
+        <div className="mb-6">
+          <UserSearch onUserClick={handleUserClick} />
+        </div>
+      )}
+
       {friends?.length && friends?.length > 0 ? (
         <ul className="space-y-4">
           {friends?.map((friend) => (
