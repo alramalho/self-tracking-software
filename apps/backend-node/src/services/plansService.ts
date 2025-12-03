@@ -19,6 +19,7 @@ import {
   isThisWeek,
   startOfWeek,
 } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
 import { withErrorHandling } from "../utils/errorHandling";
 import { logger } from "../utils/logger";
@@ -801,7 +802,8 @@ export class PlansService {
   private async getPlanWeek(
     date: Date,
     plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
-    userActivities: Activity[]
+    userActivities: Activity[],
+    userTimezone: string = "UTC"
   ): Promise<{
     startDate: Date;
     activities: Activity[];
@@ -833,12 +835,12 @@ export class PlansService {
 
     // For completed activities, return the performed activity entries this week for that plan
     const completedActivities = planActivityEntriesThisWeek;
-    const numberOfDaysCompletedThisWeek = // must be completedActivites but as a set for .date as YYYY-MM-DD
-      new Set(
-        completedActivities.map((activity) =>
-          format(new Date(activity.datetime), "yyyy-MM-dd")
-        )
-      ).size;
+    // Count unique days in the user's timezone to match their perception of "days"
+    const numberOfDaysCompletedThisWeek = new Set(
+      completedActivities.map((activity) =>
+        formatInTimeZone(new Date(activity.datetime), userTimezone, "yyyy-MM-dd")
+      )
+    ).size;
 
     // Check whether the plan is times per week or scheduled sessions
     let plannedActivities: number | PlanSession[];
@@ -950,6 +952,9 @@ export class PlansService {
       plan.finishingDate || addWeeks(new Date(), this.LIFESTYLE_WEEKS)
     );
 
+    // Use user's timezone for consistent day counting
+    const userTimezone = user.timezone || "UTC";
+
     while (
       isBefore(weekStart, planEndDate) ||
       isSameDay(
@@ -960,7 +965,8 @@ export class PlansService {
       const weekData = await this.getPlanWeek(
         weekStart,
         planWithSessions,
-        userActivities
+        userActivities,
+        userTimezone
       );
       weeks.push(weekData);
       weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
