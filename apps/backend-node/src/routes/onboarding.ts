@@ -407,19 +407,10 @@ router.post(
 
         Analyze if this frequency is realistic for their experience level. Only suggest a reduction if there's a clear mismatch.
 
-        If suggesting a reduction, structure your reason like this:
-        1. First, acknowledge their ambitious target (e.g., "6x per week is ambitious")
-        2. Then, explain why a lower frequency (e.g., "3x per week") is more likely to build and keep consistency, which is the main focus
-        3. Emphasize that we're maximizing their chances of success by setting them up for wins, not limiting them
+        If suggesting a reduction, keep it short (1-2 sentences), heartfelt, and coach-like. 
 
-        Be heartfelt and coach-like. Focus on:
-        - Building a sustainable foundation first
-        - Creating early wins that build momentum
-        - Setting them up for long-term success, not short-term intensity
-        - The goal is consistency over time, not perfection from day one
-
-        Avoid mentioning: burnout, injury, or failure. Instead, frame it as strategic planning for success.
-        Should be max 1-2 sentences long, and use simple language.
+        Keep the tone simple, friendly, coach like, and 1 / 2 sentences max:
+        Example: "6x a week for a complete beginner is tough! I strongly suggest you start with something less intense, as the main point is building an habit. It's a marathon, not a sprint. Consistency always beats intensity! 😊"
       `;
 
       const result = await aiService.generateStructuredResponse({
