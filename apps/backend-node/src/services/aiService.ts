@@ -337,12 +337,7 @@ export class AIService {
       relativeToPlan: { id: string; goal: string; emoji: string | null } | null;
     }>;
   }> {
-    const {
-      user,
-      conversationHistory,
-      plans,
-      metrics,
-    } = params;
+    const { user, conversationHistory, plans, metrics } = params;
 
     // 1. Fetch available recommendations context
     const { contextString: recommendationsContext, availableRecommendations } =
@@ -576,7 +571,7 @@ export class AIService {
       schema: UnifiedCoachResponseSchema,
       systemPrompt,
       options: {
-        model: "x-ai/grok-4-fast",
+        model: "x-ai/grok-4.1-fast",
         temperature: 0.3,
       },
     })) as {

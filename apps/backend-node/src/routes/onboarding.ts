@@ -8,6 +8,7 @@ import { memoryService } from "../services/memoryService";
 import { chatService } from "../services/chatService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import dedent from "dedent";
 
 const router = Router();
 
@@ -346,6 +347,101 @@ async function generatePlan(params: {
     intensity: params.intensity,
   };
 }
+
+// Validate plan frequency based on user's experience level
+router.post(
+  "/validate-plan-frequency",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { plan_goal, plan_progress, times_per_week } = req.body;
+
+      if (!plan_goal || !plan_progress || times_per_week == null) {
+        return res.status(400).json({
+          error: "plan_goal, plan_progress, and times_per_week are required",
+        });
+      }
+
+      logger.info(
+        `Validating plan frequency for user ${req.user!.id}: ${times_per_week}x/week`
+      );
+
+      const schema = z.object({
+        should_reduce: z
+          .boolean()
+          .describe(
+            "Whether the user should reduce their frequency. True if they are overshooting based on their experience level."
+          ),
+        suggested_times_per_week: z
+          .number()
+          .nullable()
+          .describe(
+            "The suggested times per week if should_reduce is true. Null otherwise."
+          ),
+        reason: z
+          .string()
+          .nullable()
+          .describe(
+            "A short, encouraging reason for the suggestion (1-2 sentences). Null if no change needed."
+          ),
+      });
+      const systemPrompt = dedent`
+        You are a habit coach helping users build sustainable habits.
+
+        Frequency guidelines:
+        - Complete beginners: 2-3x/week max
+        - Some experience: 3-4x/week max
+        - Regular practitioners: 4-5x/week
+        - Experienced: 5+x/week
+
+        Keep reasons short (1-2 sentences), positive, and focused on building consistency first.
+      `;
+
+      const prompt = dedent`
+        Goal: "${plan_goal}"
+        Experience: "${plan_progress}"
+        Planned frequency: ${times_per_week}x/week
+
+        Analyze if this frequency is realistic for their experience level. Only suggest a reduction if there's a clear mismatch.
+
+        If suggesting a reduction, structure your reason like this:
+        1. First, acknowledge their ambitious target (e.g., "6x per week is ambitious")
+        2. Then, explain why a lower frequency (e.g., "3x per week") is more likely to build and keep consistency, which is the main focus
+        3. Emphasize that we're maximizing their chances of success by setting them up for wins, not limiting them
+
+        Be heartfelt and coach-like. Focus on:
+        - Building a sustainable foundation first
+        - Creating early wins that build momentum
+        - Setting them up for long-term success, not short-term intensity
+        - The goal is consistency over time, not perfection from day one
+
+        Avoid mentioning: burnout, injury, or failure. Instead, frame it as strategic planning for success.
+        Should be max 1-2 sentences long, and use simple language.
+      `;
+
+      const result = await aiService.generateStructuredResponse({
+        prompt,
+        schema,
+        systemPrompt,
+      });
+
+      logger.info(`Frequency validation result: ${JSON.stringify(result)}`);
+
+      res.json({
+        suggested_times_per_week: result.should_reduce
+          ? result.suggested_times_per_week
+          : null,
+        reason: result.should_reduce ? result.reason : null,
+      });
+    } catch (error) {
+      logger.error("Error validating plan frequency:", error);
+      res.status(500).json({ error: "Failed to validate plan frequency" });
+    }
+  }
+);
 
 export const onboardingRouter: Router = router;
 export default onboardingRouter;
