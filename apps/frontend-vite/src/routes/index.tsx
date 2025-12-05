@@ -120,6 +120,10 @@ function HomePage() {
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
 
+  useEffect(() => {
+    console.log({VITE_SUPABASE_API_URL: import.meta.env.VITE_SUPABASE_API_URL})
+  }, []);
+
   // Calculate unlogged metrics count
   const { entries: metricEntries } = useMetrics();
   const unloggedMetricsCount = metrics?.filter((metric) => {

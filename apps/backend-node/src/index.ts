@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env" });
 
+import { logger, morganMiddleware } from "./utils/logger";
+if (process.env.USE_CAP_ENV === "true") {
+  logger.info("🛠️ Using capacitor environment");
+  dotenv.config({ path: ".env.cap" });
+}
+
 import compression from "compression";
 import cors from "cors";
 import express, { Express } from "express";
@@ -11,7 +17,6 @@ import { errorHandler, responseMonitor } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
 import { cronScheduler } from "./services/cronScheduler";
-import { logger, morganMiddleware } from "./utils/logger";
 import { prisma } from "./utils/prisma";
 
 // Import routes
@@ -97,7 +102,7 @@ app.use(morganMiddleware);
 app.use(limiter);
 
 // Disable ETags to prevent 304 responses - let client-side caching (TanStack Query) handle it
-app.set('etag', false);
+app.set("etag", false);
 
 // Health check endpoint
 

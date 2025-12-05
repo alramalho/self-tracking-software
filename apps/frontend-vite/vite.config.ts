@@ -26,17 +26,17 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   // Capacitor configuration
-  base: './', // Use relative paths for Capacitor
+  base: "./", // Use relative paths for Capacitor
   build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
+    outDir: "dist",
+    assetsDir: "assets",
     rollupOptions: {
       output: {
         // Ensure consistent asset naming for Capacitor
-        assetFileNames: 'assets/[name].[hash][extname]',
-        chunkFileNames: 'assets/[name].[hash].js',
-        entryFileNames: 'assets/[name].[hash].js',
-      }
-    }
-  }
+        assetFileNames: "assets/[name].[hash][extname]",
+        chunkFileNames: "assets/[name].[hash].js",
+        entryFileNames: "assets/[name].[hash].js",
+      },
+    },
+  },
 });
