@@ -8,6 +8,7 @@
     "dev": "tsr generate && vite",
     "gen": "tsr generate",
     "build": "tsr generate && tsc -b && vite build",
+    "build:cap": "tsr generate && tsc -b && vite build --mode cap",
     "start": "vite preview",
     "serve": "vite preview --host --port 4173",
     "lint": "eslint .",

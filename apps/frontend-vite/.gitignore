@@ -27,5 +27,6 @@ public/sw*
 public/swe-worker*
 
 .env*
+.env.cap
 !.env.example
 .vercel

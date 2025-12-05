@@ -1,5 +1,3 @@
-# Frontend Vite
-
 ## Capacitor iOS Development
 
 ### Env setting 
@@ -12,17 +10,16 @@ First, print your local network address
 ipconfig getifaddr en0
 ```
 
-Then, use that in the frontend
+Then, use that in the frontend .env
 ```
-cd apps/frontend-vite
-export VITE_BACKEND_URL=http://192.168.10.183:3000
-export VITE_SUPABASE_API_URL=http://192.168.10.183:55321
+VITE_BACKEND_URL=http://192.168.10.183:3000
+VITE_SUPABASE_API_URL=http://192.168.10.183:55321
+VITE_SUPABASE_OAUTH_REDIRECT_URL=http://192.168.10.183:55321/auth/v1/callback
 ```
 
 and backend
 ```
-cd apps/backend-node
-export SUPABASE_URL=http://192.168.10.183:55321
+SUPABASE_URL=http://192.168.10.183:55321
 ```
 
 ⚠️ Make sure your iPhone is connected to the same Wi-Fi as your server so they can connect.
