@@ -65,7 +65,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-slate-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-slate-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-slate-50/60 dark:from-transparent dark:to-slate-900/60 backdrop-blur-sm",
     veryFadedBg: "bg-slate-50 dark:bg-slate-600/30",
     fadedBg: "bg-slate-200/50 dark:bg-slate-800/50",
     text: "text-slate-500",
@@ -74,8 +74,8 @@ export const themeVariants: Record<
     ringBright: "ring-slate-300 dark:ring-slate-700",
     ringOffset: "ring-offset-slate-50 dark:ring-offset-slate-900",
     fadedText: "text-slate-500/50",
-    veryFadedText: "text-slate-200/50",
-    brightBorder: "border-slate-200",
+    veryFadedText: "text-slate-200/50 dark:text-slate-800/50",
+    brightBorder: "border-slate-200 dark:border-slate-800",
     border: "border-slate-400",
     primary: "bg-slate-500",
     secondary: "bg-slate-400",
@@ -113,7 +113,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-blue-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-blue-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-blue-50/60 dark:from-transparent dark:to-blue-900/60 backdrop-blur-sm",
     fadedBg: "bg-blue-200/50 dark:bg-blue-800/50",
     veryFadedBg: "bg-blue-50 dark:bg-blue-600/30",
     text: "text-blue-500",
@@ -122,8 +122,8 @@ export const themeVariants: Record<
     ringBright: "ring-blue-300 dark:ring-blue-700",
     ringOffset: "ring-offset-blue-50 dark:ring-offset-blue-900",
     fadedText: "text-blue-500/50",
-    veryFadedText: "text-blue-200/50",
-    brightBorder: "border-blue-200",
+    veryFadedText: "text-blue-200/50 dark:text-blue-800/50",
+    brightBorder: "border-blue-200 dark:border-blue-800",
     border: "border-blue-400",
     primary: "bg-blue-500",
     secondary: "bg-blue-400",
@@ -161,7 +161,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-violet-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-violet-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-violet-50/60 dark:from-transparent dark:to-violet-900/60 backdrop-blur-sm",
     fadedBg: "bg-violet-100 dark:bg-violet-800/50",
     veryFadedBg: "bg-violet-50 dark:bg-violet-600/30",
     text: "text-violet-500",
@@ -170,8 +170,8 @@ export const themeVariants: Record<
     ringBright: "ring-violet-300 dark:ring-violet-700",
     ringOffset: "ring-offset-violet-50 dark:ring-offset-violet-900",
     fadedText: "text-violet-500/50",
-    veryFadedText: "text-violet-200/30",
-    brightBorder: "border-violet-200",
+    veryFadedText: "text-violet-200/30 dark:text-violet-800/30",
+    brightBorder: "border-violet-200 dark:border-violet-800",
     border: "border-violet-500",
     primary: "bg-violet-500",
     secondary: "bg-violet-400",
@@ -209,7 +209,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-amber-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-amber-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-amber-50/60 dark:from-transparent dark:to-amber-900/60 backdrop-blur-sm",
     fadedBg: "bg-amber-100 dark:bg-amber-800/50",
     veryFadedBg: "bg-amber-50 dark:bg-amber-600/30",
     text: "text-amber-500",
@@ -218,8 +218,8 @@ export const themeVariants: Record<
     ringBright: "ring-amber-300 dark:ring-amber-700",
     ringOffset: "ring-offset-amber-50 dark:ring-offset-amber-900",
     fadedText: "text-amber-500/50",
-    veryFadedText: "text-amber-200/30",
-    brightBorder: "border-amber-200",
+    veryFadedText: "text-amber-200/30 dark:text-amber-800/30",
+    brightBorder: "border-amber-200 dark:border-amber-800",
     border: "border-amber-400",
     primary: "bg-amber-500",
     secondary: "bg-amber-400",
@@ -257,7 +257,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-emerald-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-emerald-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-emerald-50/60 dark:from-transparent dark:to-emerald-900/60 backdrop-blur-sm",
     fadedBg: "bg-emerald-100 dark:bg-emerald-800/50",
     veryFadedBg: "bg-emerald-50 dark:bg-emerald-600/30",
     text: "text-emerald-500",
@@ -266,8 +266,8 @@ export const themeVariants: Record<
     ringBright: "ring-emerald-300 dark:ring-emerald-700",
     ringOffset: "ring-offset-emerald-50 dark:ring-offset-emerald-900",
     fadedText: "text-emerald-500/50",
-    veryFadedText: "text-emerald-200/30",
-    brightBorder: "border-emerald-200",
+    veryFadedText: "text-emerald-200/30 dark:text-emerald-800/30",
+    brightBorder: "border-emerald-200 dark:border-emerald-800",
     border: "border-emerald-400",
     primary: "bg-emerald-500",
     secondary: "bg-emerald-400",
@@ -305,7 +305,7 @@ export const themeVariants: Record<
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20to-rose-50 backdrop-blur-sm",
     verySoftGrandientBg:
-      "bg-gradient-to-r from-transparent to-rose-50/60 backdrop-blur-sm",
+      "bg-gradient-to-r from-transparent to-rose-50/60 dark:from-transparent dark:to-rose-900/60 backdrop-blur-sm",
     fadedBg: "bg-rose-100 dark:bg-rose-800/50",
     veryFadedBg: "bg-rose-50 dark:bg-rose-600/30",
     text: "text-rose-500",
@@ -314,8 +314,8 @@ export const themeVariants: Record<
     ringBright: "ring-rose-300 dark:ring-rose-700",
     ringOffset: "ring-offset-rose-50 dark:ring-offset-rose-900",
     fadedText: "text-rose-500/50",
-    veryFadedText: "text-rose-200/30",
-    brightBorder: "border-rose-200",
+    veryFadedText: "text-rose-200/30 dark:text-rose-800/30",
+    brightBorder: "border-rose-200 dark:border-rose-800",
     border: "border-rose-400",
     primary: "bg-rose-500",
     secondary: "bg-rose-400",

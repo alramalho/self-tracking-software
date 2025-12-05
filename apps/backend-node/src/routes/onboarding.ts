@@ -50,9 +50,9 @@ router.post(
         : `${req.user!.name || req.user!.username || "User"}: ${message}`;
 
       // Run parallel analysis
-      const [questionAnalysis, goalParaphrase] = await Promise.all([
+      const [questionAnalysis, extractedPlans] = await Promise.all([
         aiService.analyzeQuestionCoverage(fullConversation, question_checks),
-        aiService.paraphraseGoal(message),
+        aiService.extractPlans(message),
       ]);
 
       const response: any = {
@@ -62,8 +62,8 @@ router.post(
       if (!questionAnalysis.all_answered) {
         response.message = questionAnalysis.follow_up_message;
       } else {
-        response.goal = goalParaphrase.goal;
-        response.emoji = goalParaphrase.emoji;
+        // Return array of plans (supports multiple goals from single input)
+        response.plans = extractedPlans.plans;
       }
 
       res.json(response);
@@ -103,11 +103,10 @@ router.post(
         role: "USER",
       });
 
-      const conversationHistory = await memoryService.readConversationHistory(
-        req.user!.id,
-        30
-      );
-      const userContext = `Plan goal: ${plan_goal}. Conversation History: ${conversationHistory || message}`;
+      // Use only the selected plan goal as context, not conversation history
+      // This ensures we extract activities for the specific goal the user selected,
+      // not for other goals they may have mentioned earlier
+      const userContext = `Plan goal: ${plan_goal}. User input: ${message}`;
 
       // Extract activities using AI
       const activitiesResult = await aiService.extractActivitiesForPlan(

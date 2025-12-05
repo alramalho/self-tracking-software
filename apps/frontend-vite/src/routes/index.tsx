@@ -9,6 +9,7 @@ import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import Notifications from "@/components/Notifications";
+import { PendingPlanBanner } from "@/components/PendingPlanBanner";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import { Button } from "@/components/ui/button";
@@ -438,6 +439,10 @@ function HomePage() {
                 )}
               </div>
             </div>
+          </AnimatedSection>
+
+          <AnimatedSection delay={0.05}>
+            <PendingPlanBanner />
           </AnimatedSection>
 
           {activePlans && activePlans.length > 0 && (

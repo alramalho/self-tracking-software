@@ -1157,27 +1157,36 @@ export class AIService {
     });
   }
 
-  // Paraphrase user goal with emoji
-  async paraphraseGoal(goal: string): Promise<{
-    goal: string;
-    emoji: string;
+  // Extract and paraphrase user goals with emoji - handles multiple goals
+  async extractPlans(userInput: string): Promise<{
+    plans: Array<{ goal: string; emoji: string }>;
   }> {
     const schema = z.object({
-      goal: z.string(),
-      emoji: z.string(),
+      plans: z.array(
+        z.object({
+          goal: z.string(),
+          emoji: z.string().length(1).or(z.string().length(2)), // Single emoji (1-2 chars for emoji with variation selector)
+        })
+      ),
     });
 
     // FIXME note to self: coach message and notes still shitty and not in sync with plan state: need to fix
     const systemPrompt =
-      `You are a plan coach. Paraphrase goals to be short, concrete and tangible. ` +
-      `They should include the achievable result, not timeframe or details.` +
-      `Examples: 'I want to read 12 books this year' instead of 'i want to read more'` +
-      `'I want to run 10km in under 1 hour' instead of 'i want to run more'` +
-      `If the goal is already well phrased, output the same goal.` +
-      `If the goal is already short, concrete, and tangible, output the same goal.` +
-      `Also provide a relevant emoji that represents the goal.`;
+      `You are a plan coach. Extract and paraphrase goals from user input. ` +
+      `Users may mention one or multiple distinct goals in a single message. ` +
+      `\n\nIMPORTANT RULES:` +
+      `\n1. Extract EACH distinct goal as a separate plan` +
+      `\n2. Paraphrase each goal to be short, concrete and tangible` +
+      `\n3. Goals should include the achievable result, not timeframe or details` +
+      `\n4. Each emoji MUST be exactly ONE emoji character (e.g., 📚, 🏃, 💪) - NEVER multiple emojis` +
+      `\n\nExamples of correct extraction:` +
+      `\n- Input: "I want to read 12 books and run a marathon" → Two plans: [{goal: "Read 12 books", emoji: "📚"}, {goal: "Run a marathon", emoji: "🏃"}]` +
+      `\n- Input: "I want to become healthier and read 12 books this year" → Two plans: [{goal: "Become healthier", emoji: "💪"}, {goal: "Read 12 books", emoji: "📚"}]` +
+      `\n- Input: "I want to read more books" → One plan: [{goal: "Read 12 books", emoji: "📚"}]` +
+      `\n\nIf the goal is already well phrased, output the same goal.` +
+      `\nIf the goal is already short, concrete, and tangible, output the same goal.`;
 
-    const prompt = `Paraphrase my goal: '${goal}'`;
+    const prompt = `Extract and paraphrase the goals from this input: '${userInput}'`;
 
     return this.generateStructuredResponse({
       prompt,
