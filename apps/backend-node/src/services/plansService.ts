@@ -814,7 +814,8 @@ export class PlansService {
   }> {
     // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
     const weekStart = toMidnightUTCDate(startOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
-    const weekEnd = toMidnightUTCDate(endOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
+    // Use next week's start for exclusive upper bound (lt) to include full Saturday
+    const nextWeekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
 
     // Filter to have available only the activities present in the plan.activities
     const planActivities = userActivities.filter((activity) =>
@@ -827,7 +828,7 @@ export class PlansService {
         activityId: { in: plan.activities.map((a) => a.id) },
         datetime: {
           gte: weekStart,
-          lte: weekEnd,
+          lt: nextWeekStart,
         },
         deletedAt: null,
       },
@@ -853,7 +854,8 @@ export class PlansService {
       const sessionsThisWeek = plan.sessions?.filter((session) => {
         const sessionDate = new Date(session.date);
         return (
-          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd)
+          (isAfter(sessionDate, weekStart) || isSameDay(sessionDate, weekStart)) &&
+          isBefore(sessionDate, nextWeekStart)
         );
       });
       plannedActivities = sessionsThisWeek ?? 0;
@@ -867,7 +869,8 @@ export class PlansService {
       const sessionsThisWeek = plan.sessions?.filter((session) => {
         const sessionDate = new Date(session.date);
         return (
-          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd)
+          (isAfter(sessionDate, weekStart) || isSameDay(sessionDate, weekStart)) &&
+          isBefore(sessionDate, nextWeekStart)
         );
       });
 
