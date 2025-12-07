@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { toMidnightUTCDate } from "@/lib/utils";
-import { format } from "date-fns";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import React, { useState } from "react";
+import Picker from "react-mobile-picker";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 
@@ -28,47 +28,191 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   onClose,
   open,
 }) => {
-  const [quantity, setQuantity] = useState(activityEntry.quantity.toString());
-  const [date, setDate] = useState(
-    format(new Date(activityEntry.datetime), "yyyy-MM-dd")
-  );
-  const [description, setDescription] = useState(
-    activityEntry.description || ""
-  );
+  const entryDate = new Date(activityEntry.datetime);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(entryDate);
+  const [quantity, setQuantity] = useState<number>(activityEntry.quantity);
+  const [time, setTime] = useState({
+    hour: entryDate.getHours().toString().padStart(2, "0"),
+    minute: entryDate.getMinutes().toString().padStart(2, "0"),
+  });
+  const [description, setDescription] = useState(activityEntry.description || "");
+  const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const {
     upsertActivityEntry,
     isUpsertingActivityEntry,
     deleteActivityEntry,
     isDeletingActivityEntry,
+    activities,
   } = useActivities();
+
+  const activity = activities.find((a) => a.id === activityEntry.activityId);
+  const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Generate hours and minutes options
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
+
+  const handleQuantityChange = (amount: number) => {
+    setQuantity(Math.max(0, quantity + amount));
+  };
+
+  const formatTimeReadable = (hour: string, minute: string) => {
+    const hourNum = parseInt(hour);
+    const minuteNum = parseInt(minute);
+
+    if (minuteNum === 0) {
+      return `at ${hourNum} o'clock`;
+    }
+    return `at ${hourNum}:${minute}`;
+  };
+
+  const handleSave = () => {
+    // Combine selected date with selected time
+    const datetime = new Date(selectedDate);
+    datetime.setHours(parseInt(time.hour), parseInt(time.minute), 0, 0);
+
+    upsertActivityEntry({
+      entry: {
+        id: activityEntry.id,
+        quantity,
+        datetime,
+        description,
+      },
+    });
+    onClose?.();
+  };
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
-      <h2 className="text-2xl font-bold mb-4">Edit Activity Entry</h2>
-      <div className="space-y-4">
+      <div className="space-y-6 p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Edit Entry</h2>
+          {activity && (
+            <div className="text-4xl mb-4">{activity.emoji}</div>
+          )}
+          <p className="text-xs font-normal text-center my-4">
+            <span className="italic">📍 {currentTimezone}</span>
+          </p>
+        </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Quantity</label>
-          <Input
-            type="number"
-            value={quantity}
-            onChange={(e) =>
-              setQuantity(Math.floor(Number(e.target.value)).toString())
-            }
-            step="1"
-            min="0"
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date: Date | undefined) => {
+              if (date) {
+                setSelectedDate(date);
+              }
+            }}
+            className="rounded-md border mx-auto"
+            disableFutureDates={true}
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
-          <Input
-            type="date"
-            value={new Date(date).toISOString().split("T")[0]}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {formatTimeReadable(time.hour, time.minute)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsTimePickerExpanded(!isTimePickerExpanded)}
+              className="p-1 hover:bg-accent rounded-md transition-colors"
+              aria-label="Edit time"
+            >
+              <Pencil className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {isTimePickerExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="mt-4"
+                  onTouchMove={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-semibold mb-2 text-center">
+                    Select Time
+                  </h3>
+                  <div className="max-w-xs mx-auto">
+                    <Picker
+                      value={time}
+                      onChange={setTime}
+                      wheelMode="normal"
+                      height={180}
+                    >
+                      <Picker.Column name="hour">
+                        {hours.map((hour) => (
+                          <Picker.Item key={hour} value={hour}>
+                            {hour}
+                          </Picker.Item>
+                        ))}
+                      </Picker.Column>
+                      <Picker.Column name="minute">
+                        {minutes.map((minute) => (
+                          <Picker.Item key={minute} value={minute}>
+                            {minute}
+                          </Picker.Item>
+                        ))}
+                      </Picker.Column>
+                    </Picker>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
+          <h3 className="text-lg font-semibold mb-4 text-center">
+            how many <i>{activity?.measure || "units"}</i>?
+          </h3>
+          <div className="flex items-center justify-center space-x-4">
+            <Button
+              onClick={() => handleQuantityChange(-1)}
+              variant="outline"
+              size="icon"
+              className="bg-card"
+            >
+              -
+            </Button>
+            <span className="text-2xl font-bold">{quantity}</span>
+            <Button
+              onClick={() => handleQuantityChange(1)}
+              variant="outline"
+              size="icon"
+              className="bg-card"
+            >
+              +
+            </Button>
+          </div>
+          <div className="mt-4 flex justify-center space-x-2">
+            {[10, 30, 45, 60, 90].map((value) => (
+              <Button
+                key={value}
+                onClick={() => setQuantity(value)}
+                variant="secondary"
+                className="bg-card"
+                size="sm"
+              >
+                {value}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2 text-center">Description</h3>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -76,23 +220,15 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
             className="min-h-[80px]"
           />
         </div>
+
         <Button
-          onClick={() => {
-            upsertActivityEntry({
-              entry: {
-                id: activityEntry.id,
-                quantity: Number(quantity),
-                datetime: toMidnightUTCDate(new Date(date)),
-                description,
-              },
-            });
-            onClose?.();
-          }}
+          onClick={handleSave}
           className="w-full"
-          disabled={isUpsertingActivityEntry}
+          disabled={quantity === 0 || !selectedDate || isUpsertingActivityEntry}
         >
           {isUpsertingActivityEntry ? "Saving..." : "Save Changes"}
         </Button>
+
         <Button
           onClick={() => setShowDeleteConfirm(true)}
           variant="destructive"
@@ -104,15 +240,16 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           ) : (
             <Trash2 className="w-4 h-4 mr-2" />
           )}
-          Delete Activity
+          Delete Entry
         </Button>
+
         <ConfirmDialogOrPopover
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={() => {
             deleteActivityEntry({
               id: activityEntry.id,
-              activityId: activityEntry.activityId
+              activityId: activityEntry.activityId,
             });
             setShowDeleteConfirm(false);
             onClose?.();
