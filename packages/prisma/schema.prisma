@@ -362,6 +362,9 @@ model PlanSession {
   quantity         Int
   createdAt        DateTime @default(now())
 
+  // AI-generated reference images for the session (exercise poses, techniques, etc.)
+  imageUrls String[] @default([])
+
   // Relations
   plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
