@@ -69,7 +69,7 @@ export const PlanWeekDisplay = ({
   // This ensures the UI updates immediately when activities are added/deleted
   const planActivityIds = plan.activities?.map((a) => a.id) || [];
   const liveCompletedActivities = activityEntries.filter(
-    (entry) =>
+    (entry) => entry.activityId &&
       planActivityIds.includes(entry.activityId) &&
       isSameWeek(new Date(entry.datetime), date)
   );

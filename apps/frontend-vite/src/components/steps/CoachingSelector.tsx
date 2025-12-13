@@ -83,7 +83,7 @@ const CoachingSelector = () => {
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                   option.recommended ? "bg-blue-500" : "bg-muted"
                 }`}>
-                  {option.icon ? (
+                  {Icon ? (
                     <Icon className={`w-6 h-6 ${
                       option.recommended ? "text-white" : "text-muted-foreground"
                     }`} />

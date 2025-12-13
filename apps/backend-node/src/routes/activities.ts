@@ -445,15 +445,17 @@ router.put(
 
       // Invalidate progress cache for all plans using this activity
       // This ensures the next fetch will recompute progress with fresh data
-      await prisma.plan.updateMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: { id: existingEntry.activityId },
+      if (existingEntry.activityId) {
+        await prisma.plan.updateMany({
+          where: {
+            userId: req.user!.id,
+            activities: {
+              some: { id: existingEntry.activityId },
+            },
           },
-        },
-        data: { progressCalculatedAt: null },
-      });
+          data: { progressCalculatedAt: null },
+        });
+      }
 
       res.json(updatedEntry);
     } catch (error) {
@@ -789,15 +791,17 @@ router.delete(
 
       // Invalidate progress cache for all plans using this activity
       // This ensures the next fetch will recompute progress with fresh data
-      await prisma.plan.updateMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: { id: activityEntry.activityId },
+      if (activityEntry.activityId) {
+        await prisma.plan.updateMany({
+          where: {
+            userId: req.user!.id,
+            activities: {
+              some: { id: activityEntry.activityId },
+            },
           },
-        },
-        data: { progressCalculatedAt: null },
-      });
+          data: { progressCalculatedAt: null },
+        });
+      }
 
       res.json({ message: "Activity entry deleted successfully" });
     } catch (error) {
