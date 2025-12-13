@@ -5,6 +5,7 @@ import { type PlanWithRelations } from "./service";
 
 export type CompletePlan = PlanWithRelations & {
   milestones: PlanMilestone[];
+  estimatedWeeks?: number | null;
 };
 
 export interface PlansContextType {

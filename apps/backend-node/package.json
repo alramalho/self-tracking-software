@@ -43,6 +43,7 @@
     "@linear/sdk": "^60.0.0",
     "@openrouter/ai-sdk-provider": "^1.1.2",
     "@parse/node-apn": "^6.5.0",
+    "@perplexity-ai/perplexity_ai": "^0.18.1",
     "@pinecone-database/pinecone": "^6.1.2",
     "@supabase/supabase-js": "^2.74.0",
     "@tsw/prisma": "workspace:*",

@@ -5,6 +5,7 @@
 import { useApiWithAuth } from "@/api";
 import { BarProgressLoader } from "@/components/ui/bar-progress-loader";
 import { Button } from "@/components/ui/button";
+import { OnboardingPlanPreview } from "@/components/OnboardingPlanPreview";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
@@ -15,120 +16,29 @@ import { CheckCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-const PlanCard = ({
-  plan,
-  icon,
-  label,
-  isSelected,
-  onSelect,
-  index,
-}: {
-  plan: CompletePlan;
-  icon: React.ReactNode;
-  label: React.ReactNode;
-  isSelected: boolean;
-  onSelect: () => void;
-  index: number;
-}) => {
-  const getWeeksCount = () => {
-    if (!plan.finishingDate) return 0;
-    const finishDate = new Date(plan.finishingDate);
-    const today = new Date();
-    const diffTime = Math.abs(finishDate.getTime() - today.getTime());
-    const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-    return diffWeeks;
-  };
+const getExperienceLabel = (progress: string | null): string => {
+  if (!progress) return "a beginner";
+  const lower = progress.toLowerCase();
+  if (lower.includes("beginner") || lower.includes("never") || lower.includes("new") || lower.includes("starting")) {
+    return "a beginner";
+  }
+  if (lower.includes("some") || lower.includes("little") || lower.includes("occasionally")) {
+    return "someone with some experience";
+  }
+  if (lower.includes("regular") || lower.includes("often") || lower.includes("weekly")) {
+    return "an intermediate";
+  }
+  if (lower.includes("advanced") || lower.includes("years") || lower.includes("experienced")) {
+    return "an experienced practitioner";
+  }
+  return "a beginner";
+};
 
-  const getFrequencyDescription = () => {
-    const weeksCount = getWeeksCount();
-    if (weeksCount > 0) {
-      const sessionsPerWeek = plan.sessions.length / weeksCount;
-      const minSessions = Math.floor(sessionsPerWeek);
-      const maxSessions = Math.ceil(sessionsPerWeek);
-      return minSessions === maxSessions
-        ? `${minSessions} times per week`
-        : `${minSessions}-${maxSessions} times per week`;
-    }
-    return "Flexible schedule";
-  };
-
-  const weeksCount = getWeeksCount();
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.1,
-        type: "spring",
-        stiffness: 300,
-        damping: 25,
-      }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onSelect}
-      className={`w-full p-6 rounded-3xl border-2 transition-all duration-200 text-left ${
-        isSelected
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md"
-          : "border-border bg-card hover:bg-muted/50"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <motion.div
-          className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-            isSelected ? "bg-blue-200 dark:bg-blue-800" : "bg-muted"
-          }`}
-          animate={isSelected ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <motion.div
-            className={`text-2xl ${
-              isSelected ? "text-blue-900 dark:text-blue-100" : "text-muted-foreground"
-            }`}
-            animate={isSelected ? { rotate: [0, 10, -10, 0] } : { rotate: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {icon}
-          </motion.div>
-        </motion.div>
-        <div className="flex-1">
-          <motion.div
-            className={`font-semibold text-lg ${
-              isSelected ? "text-blue-600 dark:text-blue-400" : "text-foreground"
-            }`}
-            animate={{ opacity: 1 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 + 0.2 }}
-          >
-            {label}
-          </motion.div>
-          <motion.div
-            className={`text-sm mt-1 ${
-              isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
-            }`}
-            animate={{ opacity: 1 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 + 0.3 }}
-          >
-            {getFrequencyDescription()}
-          </motion.div>
-          {weeksCount > 0 && (
-            <motion.div
-              className={`text-sm mt-1 ${
-                isSelected ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
-              }`}
-              animate={{ opacity: 1 }}
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 + 0.4 }}
-            >
-              {weeksCount} {weeksCount === 1 ? "week" : "weeks"} duration
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </motion.button>
-  );
+const formatDuration = (weeks: number | null | undefined): string | null => {
+  if (!weeks) return null;
+  if (weeks <= 4) return `~${weeks} weeks`;
+  if (weeks <= 8) return `~${Math.round(weeks / 4)} months`;
+  return `~${Math.round(weeks / 4)} months`;
 };
 
 const PlanGenerator = () => {
@@ -137,6 +47,7 @@ const PlanGenerator = () => {
     plans,
     planActivities,
     planProgress,
+    planTimesPerWeek,
     selectedPlan,
     wantsCoaching,
     completeStep,
@@ -198,6 +109,7 @@ const PlanGenerator = () => {
           plan_activities: planActivities,
           plan_progress: planProgress,
           wants_coaching: wantsCoaching,
+          times_per_week: planTimesPerWeek,
         },
         {
           timeout: 180000, // 3 minutes in milliseconds
@@ -331,7 +243,7 @@ const PlanGenerator = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
                 >
-                  Your personalized plans are ready!
+                  Your plan is ready!
                 </motion.h2>
 
                 <motion.p
@@ -340,39 +252,44 @@ const PlanGenerator = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.6 }}
                 >
-                  Choose the plan that fits your schedule:
+                  {generatedPlans?.[0]?.estimatedWeeks ? (
+                    <>
+                      {formatDuration(generatedPlans[0].estimatedWeeks)} program for {getExperienceLabel(planProgress)} at {planTimesPerWeek}x/week.
+                      <br />
+                      <span className="text-sm">Here's your first two weeks:</span>
+                    </>
+                  ) : (
+                    <>Here's your first two weeks based on {planTimesPerWeek}x per week for {getExperienceLabel(planProgress)}:</>
+                  )}
                 </motion.p>
 
-                {generatedPlans && generatedPlans.length > 1 && (
+                {generatedPlans && generatedPlans.length > 0 && (
                   <motion.div
-                    className="space-y-4 w-full"
+                    className="space-y-6 w-full"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.8 }}
                   >
-                    <PlanCard
-                      plan={generatedPlans[0]}
-                      icon={generatedPlans[0].emoji}
-                      label="Moderate Plan"
-                      isSelected={selectedPlan?.id === generatedPlans[0].id}
-                      onSelect={() => handlePlanSelect(generatedPlans[0])}
-                      index={0}
-                    />
-                    <PlanCard
-                      plan={generatedPlans[1]}
-                      icon="🔥"
-                      label="Intense Plan"
-                      isSelected={selectedPlan?.id === generatedPlans[1].id}
-                      onSelect={() => handlePlanSelect(generatedPlans[1])}
-                      index={1}
+                    <OnboardingPlanPreview
+                      sessions={generatedPlans[0].sessions}
+                      activities={generatedPlans[0].activities || generatedActivities}
                     />
 
-                    {import.meta.env.NODE_ENV === "development" && (
+                    <Button
+                      onClick={() => handlePlanSelect(generatedPlans[0])}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Start my plan
+                    </Button>
+
+                    {import.meta.env.DEV && (
                       <Button
                         onClick={() => generatePlans()}
-                        className="w-full bg-yellow-400 text-black"
+                        variant="outline"
+                        className="w-full"
                       >
-                        Regenerate Plans
+                        Regenerate Plan
                       </Button>
                     )}
                   </motion.div>

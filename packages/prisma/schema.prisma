@@ -321,6 +321,8 @@ model Plan {
   coachSuggestedTimesPerWeek Int?
   notes                      String?
   coachNotes                 String?
+  internalNotes              String?
+  estimatedWeeks             Int?
   suggestedByCoachAt         DateTime?
   isCoached                  Boolean            @default(false)
   visibility                 Visibility         @default(PUBLIC)

@@ -16,6 +16,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const scrollToTop = () => {
+  // Scroll the main container (used by GeneralInitializer)
+  const mainContainer = document.getElementById("main-scroll-container");
+  if (mainContainer) {
+    mainContainer.scrollTo({ top: 0, behavior: "smooth" });
+  }
+};
+
 // This forces Tailwind to include these classes in the build
 const themeTextClasses: Record<BaseLoweredThemeColor, string> = {
   slate: "text-slate-500",
@@ -90,8 +98,11 @@ const BottomNav = () => {
                   )
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => {
-              if (pathname !== "/") {
+            onClick={(e) => {
+              if (pathname === "/") {
+                e.preventDefault();
+                scrollToTop();
+              } else {
                 setIsLoadingFeed(true);
               }
             }}
@@ -138,8 +149,11 @@ const BottomNav = () => {
                   )
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => {
-              if (pathname !== "/plans") {
+            onClick={(e) => {
+              if (pathname === "/plans") {
+                e.preventDefault();
+                scrollToTop();
+              } else {
                 setIsLoadingPlans(true);
               }
             }}
@@ -178,8 +192,11 @@ const BottomNav = () => {
                   )
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => {
-              if (pathname !== "/add") {
+            onClick={(e) => {
+              if (pathname === "/add") {
+                e.preventDefault();
+                scrollToTop();
+              } else {
                 setIsLoadingLog(true);
               }
             }}
@@ -230,8 +247,11 @@ const BottomNav = () => {
                   )
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => {
-              if (!pathname.startsWith("/search")) {
+            onClick={(e) => {
+              if (pathname.startsWith("/search")) {
+                e.preventDefault();
+                scrollToTop();
+              } else {
                 setIsLoadingInsights(true);
               }
             }}
@@ -270,8 +290,11 @@ const BottomNav = () => {
                   )
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => {
-              if (!pathname.startsWith(`/profile/${userUsername}`)) {
+            onClick={(e) => {
+              if (pathname.startsWith("/profile")) {
+                e.preventDefault();
+                scrollToTop();
+              } else {
                 setIsLoadingProfile(true);
               }
             }}
