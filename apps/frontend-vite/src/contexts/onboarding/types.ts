@@ -36,12 +36,14 @@ export interface OnboardingContextValue {
   planTimesPerWeek: number;
   partnerType: "human" | "ai" | null;
   planProgress: string | null;
+  wantsCoaching: boolean | null;
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
   setPlanTimesPerWeek: (times: number) => void;
   setSelectedPlan: (plan: CompletePlan) => void;
   setPartnerType: (type: "human" | "ai") => void;
+  setWantsCoaching: (wants: boolean) => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
 }
@@ -64,4 +66,5 @@ export interface OnboardingState {
   partnerType: "human" | "ai" | null;
   planTimesPerWeek: number;
   isPushGranted: boolean;
+  wantsCoaching: boolean | null;
 }

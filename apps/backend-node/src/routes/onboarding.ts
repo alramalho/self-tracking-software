@@ -163,15 +163,23 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { plan_goal, plan_activities, plan_progress } = req.body;
+      const { plan_goal, plan_activities, plan_progress, wants_coaching } = req.body;
 
-      if (!plan_goal || !plan_activities || !plan_progress) {
+      // For coached mode, activities are optional (the pipeline will generate them)
+      if (!plan_goal || !plan_progress) {
         return res.status(400).json({
-          error: "plan_goal, plan_activities, and plan_progress are required",
+          error: "plan_goal and plan_progress are required",
         });
       }
 
-      logger.info(`Generating plans for user ${req.user!.id}`);
+      // If not coaching mode, activities are required
+      if (!wants_coaching && (!plan_activities || plan_activities.length === 0)) {
+        return res.status(400).json({
+          error: "plan_activities are required for self-guided plans",
+        });
+      }
+
+      logger.info(`Generating plans for user ${req.user!.id} (coaching: ${wants_coaching})`);
 
       // Extract guidelines and generate plans using AI
       const guidelinesResult = await extractGuidelinesAndEmoji(
@@ -213,10 +221,13 @@ router.post(
       const relaxedPlan = plan1.intensity === "relaxed" ? plan1 : plan2;
       const intensePlan = plan1.intensity === "intense" ? plan1 : plan2;
 
+      // Return the activities from the plans (may have been generated/adapted by the pipeline)
+      const finalActivities = relaxedPlan.activities;
+
       res.json({
         message: "Here are two plans for you to choose from",
         plans: [relaxedPlan, intensePlan],
-        activities: plan_activities,
+        activities: finalActivities,
       });
     } catch (error) {
       logger.error("Error generating plans:", error);
@@ -297,7 +308,7 @@ async function extractGuidelinesAndEmoji(
   }
 }
 
-// Helper function to generate a plan TODO: this shoudl not be stored in DB, but returned
+
 async function generatePlan(params: {
   userId: string;
   goal: string;
@@ -322,10 +333,20 @@ async function generatePlan(params: {
     activityId: string;
     descriptive_guide: string;
     quantity: number;
+    imageUrls?: string[];
   }[];
 }> {
   const finishingDate = new Date();
   finishingDate.setDate(finishingDate.getDate() + params.weeks * 7);
+
+  // Fetch user age for the research-based pipeline
+  const user = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { age: true },
+  });
+
+  // Parse sessionsPerWeek - take the lower bound of the range (e.g., "3-4" -> 3)
+  const timesPerWeek = parseInt(params.sessionsPerWeek.split("-")[0], 10) || 3;
 
   const description = `${params.guidelines}\n\nWeeks: ${params.weeks}, Sessions per week: ${params.sessionsPerWeek}`;
   const sessionsResult = await aiService.generatePlanSessions({
@@ -333,17 +354,91 @@ async function generatePlan(params: {
     finishingDate: finishingDate,
     goal: params.goal,
     description,
+    // New parameters for the 4-stage pipeline
+    userAge: user?.age ?? null,
+    experience: params.progress,
+    timesPerWeek,
   });
+
+  // Handle adapted activities from the pipeline
+  // Build a map of temp IDs to real DB IDs for new activities
+  const activityIdMap: Record<string, string> = {};
+  let finalActivities: Activity[] = [...params.activities];
+
+  if (sessionsResult.adaptedActivities) {
+    for (const adapted of sessionsResult.adaptedActivities) {
+      if (adapted.isNew) {
+        // Create new activity in DB
+        const existingActivity = await prisma.activity.findFirst({
+          where: {
+            userId: params.userId,
+            title: { equals: adapted.title, mode: "insensitive" },
+          },
+        });
+
+        if (existingActivity) {
+          // Activity with same name already exists, use it
+          activityIdMap[adapted.id] = existingActivity.id;
+          if (!finalActivities.some(a => a.id === existingActivity.id)) {
+            finalActivities.push(existingActivity);
+          }
+        } else {
+          // Create new activity
+          const newActivity = await prisma.activity.create({
+            data: {
+              userId: params.userId,
+              title: adapted.title,
+              emoji: adapted.emoji || "🎯",
+              measure: adapted.measure,
+            },
+          });
+          activityIdMap[adapted.id] = newActivity.id;
+          finalActivities.push(newActivity);
+          logger.info(`Created new activity from pipeline: ${adapted.title} (${adapted.reason || "research-based"})`);
+        }
+      } else {
+        // Existing activity - map to itself
+        activityIdMap[adapted.id] = adapted.id;
+
+        // Check if this activity was modified (title changed) from the original
+        const originalActivity = params.activities.find(a => a.id === adapted.id);
+        if (originalActivity && originalActivity.title !== adapted.title) {
+          // The pipeline specialized the activity name - update it in DB
+          await prisma.activity.update({
+            where: { id: adapted.id },
+            data: { title: adapted.title, emoji: adapted.emoji },
+          });
+          logger.info(`Updated activity title: ${originalActivity.title} → ${adapted.title}`);
+
+          // Update in finalActivities
+          const idx = finalActivities.findIndex(a => a.id === adapted.id);
+          if (idx !== -1) {
+            finalActivities[idx] = {
+              ...finalActivities[idx],
+              title: adapted.title,
+              emoji: adapted.emoji || finalActivities[idx].emoji,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // Remap session activityIds from temp IDs to real DB IDs
+  const remappedSessions = sessionsResult.sessions.map(session => ({
+    ...session,
+    activityId: activityIdMap[session.activityId] || session.activityId,
+  }));
 
   return {
     id: uuidv4(),
     userId: params.userId,
     goal: params.goal,
     emoji: params.emoji,
-    activities: params.activities,
+    activities: finalActivities,
     finishingDate: finishingDate,
     notes: description,
-    sessions: sessionsResult.sessions,
+    sessions: remappedSessions,
     intensity: params.intensity,
   };
 }

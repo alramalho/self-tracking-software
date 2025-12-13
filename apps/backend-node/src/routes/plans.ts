@@ -970,8 +970,16 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { goal, finishingDate, activities, description, existing_plan } =
-        req.body;
+      const {
+        goal,
+        finishingDate,
+        activities,
+        description,
+        existing_plan,
+        // New parameters for research-based pipeline
+        experience,
+        timesPerWeek,
+      } = req.body;
 
       if (!goal || !activities) {
         res.status(400).json({ error: "goal and activities are required" });
@@ -980,7 +988,11 @@ router.post(
 
       logger.info(`Generating sessions for plan goal: ${goal}`);
 
-      // Use AI to generate sessions based on goal and activities
+      // Fetch user age for the research-based pipeline
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { age: true },
+      });
 
       console.log({ finishingDate });
       const sessionsResult = await aiService.generatePlanSessions({
@@ -989,9 +1001,18 @@ router.post(
         activities,
         description,
         existingPlan: existing_plan,
+        // New parameters for the 3-stage pipeline
+        userAge: user?.age ?? null,
+        experience,
+        timesPerWeek,
       });
 
-      res.json({ sessions: sessionsResult.sessions });
+      res.json({
+        sessions: sessionsResult.sessions,
+        // Optionally include research findings and coach prompt for debugging/display
+        researchFindings: sessionsResult.researchFindings,
+        coachPrompt: sessionsResult.coachPrompt,
+      });
     } catch (error) {
       logger.error("Error generating sessions:", error);
       res.status(500).json({ error: "Failed to generate sessions" });
