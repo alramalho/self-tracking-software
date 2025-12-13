@@ -43,7 +43,47 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const progress = plan.progress;
 
-      // Check streak achievement
+      // Check for "special" achievements first (lifestyle > habit > streak)
+      // Only show the most significant achievement, not all of them
+      const hasUncelebratedLifestyle =
+        progress.lifestyleAchievement?.achievedAt &&
+        (!progress.lifestyleAchievement?.celebratedAt ||
+          new Date(progress.lifestyleAchievement.achievedAt) >
+            new Date(progress.lifestyleAchievement.celebratedAt)) &&
+        new Date(progress.lifestyleAchievement.achievedAt) >= currentWeekStart;
+
+      const hasUncelebratedHabit =
+        progress.habitAchievement?.achievedAt &&
+        (!progress.habitAchievement?.celebratedAt ||
+          new Date(progress.habitAchievement.achievedAt) >
+            new Date(progress.habitAchievement.celebratedAt)) &&
+        new Date(progress.habitAchievement.achievedAt) >= currentWeekStart;
+
+      // Check lifestyle achievement (highest priority)
+      if (hasUncelebratedLifestyle) {
+        celebrations.push({
+          planId: plan.id,
+          planEmoji: plan.emoji || "🎯",
+          planGoal: plan.goal,
+          achievementType: "lifestyle",
+        });
+        // Skip habit and streak for this plan - lifestyle is the big one
+        continue;
+      }
+
+      // Check habit achievement (second priority)
+      if (hasUncelebratedHabit) {
+        celebrations.push({
+          planId: plan.id,
+          planEmoji: plan.emoji || "🎯",
+          planGoal: plan.goal,
+          achievementType: "habit",
+        });
+        // Skip streak for this plan - habit is more significant
+        continue;
+      }
+
+      // Check streak achievement (only if no habit/lifestyle to celebrate)
       if (
         progress.achievement?.achievedLastStreakAt &&
         (!progress.achievement?.celebratedStreakAt ||
@@ -58,42 +98,6 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
             planGoal: plan.goal,
             achievementType: "streak",
             streakNumber: progress.achievement.streak,
-          });
-        }
-      }
-
-      // Check habit achievement
-      if (
-        progress.habitAchievement?.achievedAt &&
-        (!progress.habitAchievement?.celebratedAt ||
-          new Date(progress.habitAchievement.achievedAt) >
-            new Date(progress.habitAchievement.celebratedAt))
-      ) {
-        const achievedDate = new Date(progress.habitAchievement.achievedAt);
-        if (achievedDate >= currentWeekStart) {
-          celebrations.push({
-            planId: plan.id,
-            planEmoji: plan.emoji || "🎯",
-            planGoal: plan.goal,
-            achievementType: "habit",
-          });
-        }
-      }
-
-      // Check lifestyle achievement
-      if (
-        progress.lifestyleAchievement?.achievedAt &&
-        (!progress.lifestyleAchievement?.celebratedAt ||
-          new Date(progress.lifestyleAchievement.achievedAt) >
-            new Date(progress.lifestyleAchievement.celebratedAt))
-      ) {
-        const achievedDate = new Date(progress.lifestyleAchievement.achievedAt);
-        if (achievedDate >= currentWeekStart) {
-          celebrations.push({
-            planId: plan.id,
-            planEmoji: plan.emoji || "🎯",
-            planGoal: plan.goal,
-            achievementType: "lifestyle",
           });
         }
       }

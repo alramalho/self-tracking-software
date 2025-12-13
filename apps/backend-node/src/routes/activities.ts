@@ -303,6 +303,18 @@ router.post(
         }
       }
 
+      // Invalidate progress cache for all plans using this activity
+      // This ensures the next fetch will recompute progress with fresh data
+      await prisma.plan.updateMany({
+        where: {
+          userId: req.user!.id,
+          activities: {
+            some: { id: activityId },
+          },
+        },
+        data: { progressCalculatedAt: null },
+      });
+
       res.json(entry);
     } catch (error) {
       logger.error("Error logging activity:", error);
@@ -429,6 +441,18 @@ router.put(
           description:
             description !== undefined ? description : existingEntry.description,
         },
+      });
+
+      // Invalidate progress cache for all plans using this activity
+      // This ensures the next fetch will recompute progress with fresh data
+      await prisma.plan.updateMany({
+        where: {
+          userId: req.user!.id,
+          activities: {
+            some: { id: existingEntry.activityId },
+          },
+        },
+        data: { progressCalculatedAt: null },
       });
 
       res.json(updatedEntry);
@@ -707,12 +731,22 @@ router.delete(
         return res.status(404).json({ error: "Activity not found" });
       }
 
-      // TODO: Check if activity is used in any active plans
-
       // Soft delete
       await prisma.activity.update({
         where: { id: activityId },
         data: { deletedAt: new Date() },
+      });
+
+      // Invalidate progress cache for all plans using this activity
+      // This ensures the next fetch will recompute progress with fresh data
+      await prisma.plan.updateMany({
+        where: {
+          userId: req.user!.id,
+          activities: {
+            some: { id: activityId },
+          },
+        },
+        data: { progressCalculatedAt: null },
       });
 
       res.json({ message: "Activity deleted successfully" });
@@ -751,6 +785,18 @@ router.delete(
       await prisma.activityEntry.update({
         where: { id: activityEntryId },
         data: { deletedAt: new Date() },
+      });
+
+      // Invalidate progress cache for all plans using this activity
+      // This ensures the next fetch will recompute progress with fresh data
+      await prisma.plan.updateMany({
+        where: {
+          userId: req.user!.id,
+          activities: {
+            some: { id: activityEntry.activityId },
+          },
+        },
+        data: { progressCalculatedAt: null },
       });
 
       res.json({ message: "Activity entry deleted successfully" });

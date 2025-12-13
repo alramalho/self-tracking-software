@@ -65,9 +65,18 @@ export const PlanWeekDisplay = ({
       ? (week?.plannedActivities as number)
       : (week?.plannedActivities as PlanSession[])?.length || 0;
 
+  // Use live activityEntries data instead of cached plan.progress.weeks.completedActivities
+  // This ensures the UI updates immediately when activities are added/deleted
+  const planActivityIds = plan.activities?.map((a) => a.id) || [];
+  const liveCompletedActivities = activityEntries.filter(
+    (entry) =>
+      planActivityIds.includes(entry.activityId) &&
+      isSameWeek(new Date(entry.datetime), date)
+  );
+
   const uniqueDaysWithActivities = new Set(
-    week?.completedActivities.map((entry) =>
-      format(new Date(entry.datetime || entry.date), "yyyy-MM-dd")
+    liveCompletedActivities.map((entry) =>
+      format(new Date(entry.datetime), "yyyy-MM-dd")
     )
   );
 

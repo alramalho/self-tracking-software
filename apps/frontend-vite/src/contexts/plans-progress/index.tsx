@@ -209,7 +209,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       // Find all user's plans that use the affected activities
       const userPlans = plans || [];
       const affectedPlanIds = userPlans
-        .filter(plan => 
+        .filter(plan =>
           plan.activities?.some(activity => activityIds.includes(activity.id))
         )
         .map(plan => plan.id);
@@ -218,7 +218,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Compute fresh progress for affected plans
       const freshProgressData = await computePlansProgress(api, affectedPlanIds);
-      
+
       // Update query cache with fresh data
       freshProgressData.forEach((planProgress) => {
         queryClient.setQueryData(["plan-progress", planProgress.plan.id], planProgress);
