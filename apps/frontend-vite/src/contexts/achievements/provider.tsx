@@ -204,24 +204,30 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleCelebrationClose = async () => {
     if (!celebrationToShow) return;
-    setIsMarkingAsCelebrated(true);
-    try {
-      await markAchievementAsCelebrated({
-        planId: celebrationToShow.planId,
-        achievementType: celebrationToShow.achievementType,
-        levelThreshold: celebrationToShow.levelThreshold,
-      });
 
-      // Process the next celebration in queue
-      if (celebrationsQueue.length > 0) {
-        const [next, ...rest] = celebrationsQueue;
-        setCelebrationToShow(next);
-        setCelebrationsQueue(rest);
-      } else {
-        setCelebrationToShow(null);
-      }
-    } finally {
-      setIsMarkingAsCelebrated(false);
+    // Capture data before clearing (for background API call)
+    const dataToMark = {
+      planId: celebrationToShow.planId,
+      achievementType: celebrationToShow.achievementType,
+      levelThreshold: celebrationToShow.levelThreshold,
+    };
+
+    // Optimistically close the popover immediately
+    if (celebrationsQueue.length > 0) {
+      const [next, ...rest] = celebrationsQueue;
+      setCelebrationToShow(next);
+      setCelebrationsQueue(rest);
+    } else {
+      setCelebrationToShow(null);
+    }
+
+    // Mark as celebrated in the background (don't block UI)
+    try {
+      await markAchievementAsCelebrated(dataToMark);
+    } catch (error) {
+      console.error("Failed to mark achievement as celebrated:", error);
+      // Don't show error to user - they've already moved on
+      // The achievement will show again next time if it truly failed
     }
   };
 
