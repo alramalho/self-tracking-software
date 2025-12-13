@@ -1009,9 +1009,8 @@ router.post(
 
       res.json({
         sessions: sessionsResult.sessions,
-        // Optionally include research findings and coach prompt for debugging/display
+        // Optionally include research findings for debugging/display
         researchFindings: sessionsResult.researchFindings,
-        coachPrompt: sessionsResult.coachPrompt,
       });
     } catch (error) {
       logger.error("Error generating sessions:", error);

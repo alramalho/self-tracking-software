@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { perplexityAiService } from "../services/perplexityAiService";
 import { memoryService } from "../services/memoryService";
 import { chatService } from "../services/chatService";
 import { logger } from "../utils/logger";
@@ -154,7 +155,7 @@ router.post(
   }
 );
 
-// Generate plans based on goal, activities, and progress
+// Generate plan based on goal, activities, and progress
 router.post(
   "/generate-plans",
   requireAuth,
@@ -163,7 +164,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { plan_goal, plan_activities, plan_progress, wants_coaching } = req.body;
+      const { plan_goal, plan_activities, plan_progress, wants_coaching, times_per_week } = req.body;
 
       // For coached mode, activities are optional (the pipeline will generate them)
       if (!plan_goal || !plan_progress) {
@@ -179,55 +180,38 @@ router.post(
         });
       }
 
-      logger.info(`Generating plans for user ${req.user!.id} (coaching: ${wants_coaching})`);
+      logger.info(`Generating plan for user ${req.user!.id} (coaching: ${wants_coaching})`);
 
-      // Extract guidelines and generate plans using AI
-      const guidelinesResult = await extractGuidelinesAndEmoji(
-        plan_goal,
-        plan_progress
-      );
+      // Infer times per week from experience if not provided
+      const timesPerWeek = times_per_week || inferTimesPerWeek(plan_progress);
 
-      logger.info("Guidelines result:", guidelinesResult);
+      // Do research once using Perplexity
+      const researchResult = await perplexityAiService.researchPlan({
+        goal: plan_goal,
+        experience: plan_progress,
+        timesPerWeek,
+      });
 
-      // Generate two plan options with different intensities
-      const [plan1, plan2] = await Promise.all([
-        generatePlan({
-          userId: req.user!.id,
-          goal: plan_goal,
-          activities: plan_activities,
-          progress: plan_progress,
-          weeks: guidelinesResult.timeframes[0].weeks,
-          sessionsPerWeek: guidelinesResult.timeframes[0].sessions_per_week,
-          guidelines: guidelinesResult.guidelines,
-          emoji: guidelinesResult.emoji,
-          intensity: guidelinesResult.timeframes[0].intensity,
-        }),
-        generatePlan({
-          userId: req.user!.id,
-          goal: plan_goal,
-          activities: plan_activities,
-          progress: plan_progress,
-          weeks: guidelinesResult.timeframes[1].weeks,
-          sessionsPerWeek: guidelinesResult.timeframes[1].sessions_per_week,
-          guidelines: guidelinesResult.guidelines,
-          emoji: guidelinesResult.emoji,
-          intensity: guidelinesResult.timeframes[1].intensity,
-        }),
-      ]);
+      logger.info("Research completed, generating plan...");
 
-      logger.info("Plan1:", plan1);
-      logger.info("Plan2:", plan2);
+      // Generate single plan with research-based guidelines
+      const plan = await generatePlan({
+        userId: req.user!.id,
+        goal: plan_goal,
+        activities: plan_activities,
+        progress: plan_progress,
+        weeks: researchResult.estimatedWeeks || 12, // Use estimated or default 12 weeks
+        timesPerWeek,
+        researchFindings: researchResult.guidelines,
+        estimatedWeeks: researchResult.estimatedWeeks,
+      });
 
-      const relaxedPlan = plan1.intensity === "relaxed" ? plan1 : plan2;
-      const intensePlan = plan1.intensity === "intense" ? plan1 : plan2;
-
-      // Return the activities from the plans (may have been generated/adapted by the pipeline)
-      const finalActivities = relaxedPlan.activities;
+      logger.info("Plan generated:", plan.id);
 
       res.json({
-        message: "Here are two plans for you to choose from",
-        plans: [relaxedPlan, intensePlan],
-        activities: finalActivities,
+        message: "Your plan is ready",
+        plans: [plan],
+        activities: plan.activities,
       });
     } catch (error) {
       logger.error("Error generating plans:", error);
@@ -236,76 +220,39 @@ router.post(
   }
 );
 
-// Helper function to extract guidelines and emoji
-async function extractGuidelinesAndEmoji(
-  planGoal: string,
-  planProgress: string
-): Promise<{
-  guidelines: string;
-  timeframes: Array<{
-    weeks: number;
-    sessions_per_week: string;
-    intensity: "relaxed" | "intense";
-  }>;
-  emoji: string;
-}> {
-  const systemPrompt = `You are a coach of coaches. You create guidelines that help the coach create a plan for their client.`;
-
-  const prompt = `Create guidelines for a coach to create a plan with goal '${planGoal}' for someone with progress '${planProgress}'`;
-
-  try {
-    const schema = z.object({
-      guidelines: z
-        .string()
-        .describe(
-          "Guidelines for the plan coach. The guidelines should be focused on ."
-        ),
-      timeframes: z.array(
-        z.object({
-          intensity: z
-            .enum(["relaxed", "intense"])
-            .describe(
-              "Intensity of the plan. Intense plans are shorter (less weeks) and have more sessions per week than relaxed plans. "
-            ),
-          weeks: z.number().min(8).max(16),
-          sessions_per_week: z
-            .string()
-            .describe(
-              "Range of sessions per week. For example, '3-4' or '4-5'"
-            ),
-        })
-      ),
-      emoji: z.string(),
-    });
-
-    const result = await aiService.generateStructuredResponse({
-      prompt,
-      schema,
-      systemPrompt,
-    });
-    logger.debug("Guidelines and emoji:", result);
-    return result as {
-      guidelines: string;
-      timeframes: {
-        weeks: number;
-        sessions_per_week: string;
-        intensity: "relaxed" | "intense";
-      }[];
-      emoji: string;
-    };
-  } catch (error) {
-    logger.error("Error extracting guidelines and emoji:", error);
-    // Fallback to defaults if AI fails
-    return {
-      guidelines:
-        "Follow a progressive approach with consistency and gradual increases.",
-      timeframes: [
-        { weeks: 12, sessions_per_week: "3", intensity: "relaxed" },
-        { weeks: 8, sessions_per_week: "4-5", intensity: "intense" },
-      ],
-      emoji: "🎯",
-    };
+// Infer times per week based on experience level
+function inferTimesPerWeek(experience: string): number {
+  const lowerExp = experience.toLowerCase();
+  if (
+    lowerExp.includes("beginner") ||
+    lowerExp.includes("never") ||
+    lowerExp.includes("new") ||
+    lowerExp.includes("starting")
+  ) {
+    return 3;
   }
+  if (
+    lowerExp.includes("some") ||
+    lowerExp.includes("little") ||
+    lowerExp.includes("occasionally")
+  ) {
+    return 3;
+  }
+  if (
+    lowerExp.includes("regular") ||
+    lowerExp.includes("often") ||
+    lowerExp.includes("weekly")
+  ) {
+    return 4;
+  }
+  if (
+    lowerExp.includes("advanced") ||
+    lowerExp.includes("years") ||
+    lowerExp.includes("experienced")
+  ) {
+    return 5;
+  }
+  return 3; // Default for beginners
 }
 
 
@@ -315,19 +262,19 @@ async function generatePlan(params: {
   activities: Activity[];
   progress: string;
   weeks: number;
-  sessionsPerWeek: string;
-  guidelines: string;
-  emoji: string;
-  intensity: "relaxed" | "intense";
+  timesPerWeek: number;
+  researchFindings: string;
+  estimatedWeeks: number | null;
 }): Promise<{
   id: string;
   userId: string;
   goal: string;
   emoji: string;
-  intensity: "relaxed" | "intense";
   activities: Activity[];
   finishingDate: Date;
   notes: string;
+  internalNotes: string;
+  estimatedWeeks: number | null;
   sessions: {
     date: Date;
     activityId: string;
@@ -339,88 +286,74 @@ async function generatePlan(params: {
   const finishingDate = new Date();
   finishingDate.setDate(finishingDate.getDate() + params.weeks * 7);
 
-  // Fetch user age for the research-based pipeline
+  // Fetch user age for the pipeline
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
     select: { age: true },
   });
 
-  // Parse sessionsPerWeek - take the lower bound of the range (e.g., "3-4" -> 3)
-  const timesPerWeek = parseInt(params.sessionsPerWeek.split("-")[0], 10) || 3;
-
-  const description = `${params.guidelines}\n\nWeeks: ${params.weeks}, Sessions per week: ${params.sessionsPerWeek}`;
   const sessionsResult = await aiService.generatePlanSessions({
-    activities: params.activities,
+    activities: params.activities || [],
     finishingDate: finishingDate,
     goal: params.goal,
-    description,
-    // New parameters for the 4-stage pipeline
+    description: params.researchFindings,
+    // Parameters for the pipeline
     userAge: user?.age ?? null,
     experience: params.progress,
-    timesPerWeek,
+    timesPerWeek: params.timesPerWeek,
+    maxWeeks: 2, // Only generate first 2 weeks of sessions
+    researchFindings: params.researchFindings,
   });
 
-  // Handle adapted activities from the pipeline
-  // Build a map of temp IDs to real DB IDs for new activities
+  // Handle activities from the pipeline
+  // Build a map of temp IDs (new_1, new_2) to real DB IDs
   const activityIdMap: Record<string, string> = {};
-  let finalActivities: Activity[] = [...params.activities];
+  let finalActivities: Activity[] = [];
 
-  if (sessionsResult.adaptedActivities) {
-    for (const adapted of sessionsResult.adaptedActivities) {
-      if (adapted.isNew) {
-        // Create new activity in DB
+  // If pipeline generated activities, create them in DB
+  if (sessionsResult.activities && sessionsResult.activities.length > 0) {
+    for (const activity of sessionsResult.activities) {
+      // Check if activity ID starts with "new_" (generated by pipeline)
+      if (activity.id.startsWith("new_")) {
+        // Check if activity with same name already exists
         const existingActivity = await prisma.activity.findFirst({
           where: {
             userId: params.userId,
-            title: { equals: adapted.title, mode: "insensitive" },
+            title: { equals: activity.title, mode: "insensitive" },
           },
         });
 
         if (existingActivity) {
-          // Activity with same name already exists, use it
-          activityIdMap[adapted.id] = existingActivity.id;
-          if (!finalActivities.some(a => a.id === existingActivity.id)) {
-            finalActivities.push(existingActivity);
-          }
+          activityIdMap[activity.id] = existingActivity.id;
+          finalActivities.push(existingActivity);
         } else {
           // Create new activity
           const newActivity = await prisma.activity.create({
             data: {
               userId: params.userId,
-              title: adapted.title,
-              emoji: adapted.emoji || "🎯",
-              measure: adapted.measure,
+              title: activity.title,
+              emoji: activity.emoji || "🎯",
+              measure: activity.measure,
             },
           });
-          activityIdMap[adapted.id] = newActivity.id;
+          activityIdMap[activity.id] = newActivity.id;
           finalActivities.push(newActivity);
-          logger.info(`Created new activity from pipeline: ${adapted.title} (${adapted.reason || "research-based"})`);
+          logger.info(`Created activity from pipeline: ${activity.title}`);
         }
       } else {
         // Existing activity - map to itself
-        activityIdMap[adapted.id] = adapted.id;
-
-        // Check if this activity was modified (title changed) from the original
-        const originalActivity = params.activities.find(a => a.id === adapted.id);
-        if (originalActivity && originalActivity.title !== adapted.title) {
-          // The pipeline specialized the activity name - update it in DB
-          await prisma.activity.update({
-            where: { id: adapted.id },
-            data: { title: adapted.title, emoji: adapted.emoji },
-          });
-          logger.info(`Updated activity title: ${originalActivity.title} → ${adapted.title}`);
-
-          // Update in finalActivities
-          const idx = finalActivities.findIndex(a => a.id === adapted.id);
-          if (idx !== -1) {
-            finalActivities[idx] = {
-              ...finalActivities[idx],
-              title: adapted.title,
-              emoji: adapted.emoji || finalActivities[idx].emoji,
-            };
-          }
+        activityIdMap[activity.id] = activity.id;
+        const existingActivity = params.activities?.find(a => a.id === activity.id);
+        if (existingActivity) {
+          finalActivities.push(existingActivity);
         }
       }
+    }
+  } else if (params.activities && params.activities.length > 0) {
+    // Use provided activities if pipeline didn't return any
+    finalActivities = [...params.activities];
+    for (const activity of params.activities) {
+      activityIdMap[activity.id] = activity.id;
     }
   }
 
@@ -430,17 +363,63 @@ async function generatePlan(params: {
     activityId: activityIdMap[session.activityId] || session.activityId,
   }));
 
+  // Use emoji from first activity or default
+  const emoji = finalActivities[0]?.emoji || "🎯";
+
+  // Generate user-facing notes summarizing the plan focus
+  const userNotes = await generatePlanSummary({
+    goal: params.goal,
+    activities: finalActivities,
+    experience: params.progress,
+    timesPerWeek: params.timesPerWeek,
+  });
+
   return {
     id: uuidv4(),
     userId: params.userId,
     goal: params.goal,
-    emoji: params.emoji,
+    emoji,
     activities: finalActivities,
     finishingDate: finishingDate,
-    notes: description,
+    notes: userNotes,
+    internalNotes: `[Perplexity Research Guidelines]\n\n${params.researchFindings}`,
+    estimatedWeeks: params.estimatedWeeks,
     sessions: remappedSessions,
-    intensity: params.intensity,
   };
+}
+
+async function generatePlanSummary(params: {
+  goal: string;
+  activities: Activity[];
+  experience: string;
+  timesPerWeek: number;
+}): Promise<string> {
+  try {
+    const schema = z.object({
+      summary: z.string().describe("A 1-2 sentence summary of what this plan focuses on"),
+    });
+
+    const result = await aiService.generateStructuredResponse({
+      prompt: dedent`
+        Generate a brief, friendly summary (1-2 sentences) of what this training plan focuses on.
+
+        Goal: ${params.goal}
+        Activities: ${params.activities.map(a => a.title).join(", ")}
+        Experience level: ${params.experience}
+        Frequency: ${params.timesPerWeek} times per week
+
+        The summary should explain the plan's approach in a motivating way.
+        Example: "This plan builds your running foundation with easy runs and gradual progression, focusing on consistency over speed."
+      `,
+      schema,
+      systemPrompt: "You write concise, motivating plan summaries. Keep it to 1-2 sentences.",
+    });
+
+    return result.summary;
+  } catch (error) {
+    logger.error("Error generating plan summary:", error);
+    return `A ${params.timesPerWeek}x/week plan to help you ${params.goal.toLowerCase()}.`;
+  }
 }
 
 // Validate plan frequency based on user's experience level

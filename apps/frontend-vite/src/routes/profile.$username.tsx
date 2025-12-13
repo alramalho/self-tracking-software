@@ -7,7 +7,7 @@ import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import { SendMessagePopover } from "@/components/SendMessagePopover";
 import Divider from "@/components/Divider";
-import { FireAnimation } from "@/components/FireBadge";
+import { FireAnimation, RocketAnimation, SeedAnimation } from "@/components/FireBadge";
 import MedalExplainerPopover from "@/components/MedalExplainerPopover";
 import ProfileSettingsPopover, {
   type ActiveView,
@@ -490,7 +490,17 @@ function ProfilePage() {
                 {isProfileDataLoading ? (
                   <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
                 ) : (
-                  <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+                  <>
+                    {totalHabits == 0 ? (
+                      <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+                    ) : (
+                      <SeedAnimation
+                        height={100}
+                        width={100}
+                        className="pb-2 w-full h-full"
+                      />
+                    )}
+                  </>
                 )}
               </BadgeCard>
               <BadgeCard
@@ -508,7 +518,17 @@ function ProfilePage() {
                 {isProfileDataLoading ? (
                   <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
                 ) : (
-                  <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+                  <>
+                    {totalLifestyles == 0 ? (
+                      <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+                    ) : (
+                      <RocketAnimation
+                        height={100}
+                        width={100}
+                        className="pb-2 w-full h-full"
+                      />
+                    )}
+                  </>
                 )}
               </BadgeCard>
             </div>

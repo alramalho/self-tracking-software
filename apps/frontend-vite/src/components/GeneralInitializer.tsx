@@ -208,6 +208,7 @@ export default function GeneralInitializer({
       ) : (
         <>
           <div
+            id="main-scroll-container"
             ref={scrollContainerRef}
             className={cn(
               "absolute inset-0 overflow-auto",

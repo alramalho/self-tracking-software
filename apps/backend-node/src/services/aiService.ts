@@ -1313,10 +1313,14 @@ export class AIService {
     description?: string;
     existingPlan?: any;
     sessionsPerWeek?: number;
-    // New parameters for the 4-stage pipeline
+    // Parameters for the pipeline
     userAge?: number | null;
     experience?: string;
     timesPerWeek?: number;
+    // Limit to first N weeks (default: 2)
+    maxWeeks?: number;
+    // Pre-computed research findings from perplexityAiService
+    researchFindings?: string;
   }): Promise<{
     sessions: {
       date: Date;
@@ -1325,23 +1329,19 @@ export class AIService {
       quantity: number;
       imageUrls?: string[];
     }[];
-    // Adapted activities from the pipeline - may include new activities with isNew=true
-    adaptedActivities?: {
+    // Activities generated/used by the pipeline
+    activities?: {
       id: string;
       title: string;
       measure: string;
       emoji?: string;
-      isNew: boolean;
-      originalId: string | null;
-      reason: string | null;
     }[];
     researchFindings?: string;
-    coachPrompt?: string;
   }> {
     try {
       const today = new Date();
 
-      // Use the new 3-stage pipeline if experience is provided
+      // Use the 3-stage pipeline if experience is provided
       if (params.experience) {
         let finishingDate: Date;
         if (params.finishingDate) {
@@ -1357,18 +1357,22 @@ export class AIService {
 
         const pipelineResult = await planGenerationPipeline.generatePlan({
           goal: params.goal,
-          activities: params.activities.map((a) => ({
-            id: a.id,
-            title: a.title,
-            measure: a.measure,
-            emoji: a.emoji,
-          })),
+          activities: params.activities?.length > 0
+            ? params.activities.map((a) => ({
+                id: a.id,
+                title: a.title,
+                measure: a.measure,
+                emoji: a.emoji,
+              }))
+            : [], // Empty array - pipeline will generate activities
           userAge: params.userAge ?? null,
           experience: params.experience,
           timesPerWeek: params.timesPerWeek ?? params.sessionsPerWeek ?? 3,
           weeks,
           finishingDate,
           sessionsPerWeek: params.sessionsPerWeek,
+          maxWeeks: params.maxWeeks, // Pass maxWeeks to limit session generation
+          researchFindings: params.researchFindings, // Pass pre-computed research
         });
 
         // Map pipeline result to expected format
@@ -1380,9 +1384,8 @@ export class AIService {
             quantity: session.quantity,
             imageUrls: session.imageUrls,
           })),
-          adaptedActivities: pipelineResult.adaptedActivities,
+          activities: pipelineResult.activities,
           researchFindings: pipelineResult.researchFindings,
-          coachPrompt: pipelineResult.coachPrompt,
         };
       }
 
@@ -1582,15 +1585,19 @@ export class AIService {
       return { sessions };
     } catch (error) {
       logger.error("Error in AI session generation:", error);
-      // Fallback to basic generation
-      return {
-        sessions: await this.generateBasicPlanSessions({
-          activities: params.activities,
-          weeks: DEFAULT_WEEKS,
-          startDate: new Date(),
-          goal: params.goal,
-        }),
-      };
+      // Fallback to basic generation only if we have activities
+      if (params.activities && params.activities.length > 0) {
+        return {
+          sessions: await this.generateBasicPlanSessions({
+            activities: params.activities,
+            weeks: DEFAULT_WEEKS,
+            startDate: new Date(),
+            goal: params.goal,
+          }),
+        };
+      }
+      // No activities available, return empty sessions
+      throw error;
     }
   }
 
