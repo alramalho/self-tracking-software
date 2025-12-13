@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
 import React from "react";
 import { toast } from "react-hot-toast";
-import { useComputeProgressForUserPlans } from "../plans-progress";
 import { type TimelineData } from "../timeline/service";
 import { type HydratedUser } from "../users/service";
 import { getActivities, getActivitiyEntries, deleteAchievementPost } from "./service";
@@ -25,7 +24,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
-  const computeProgressForUserPlans = useComputeProgressForUserPlans();
 
   const activitiesQuery = useQuery({
     queryKey: ["activities"],
@@ -69,15 +67,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await api.post("/activities/log-activity", formData);
       return response.data;
     },
-    onSuccess: (entry, variables) => {
+    onSuccess: async (entry, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
       queryClient.setQueryData(
         ["activity-entries"],
         (old: ReturnedActivityEntriesType) => {
-          if (!old)
-            return queryClient.refetchQueries({
-              queryKey: ["activity-entries"],
-            });
+          if (!old || !Array.isArray(old)) {
+            queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+            return old;
+          }
           return [...old, entry];
         }
       );
@@ -85,10 +83,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
 
-      computeProgressForUserPlans([variables.activityId]);
+      // Refetch plans and WAIT for it - this ensures fresh progress data
+      // is available for achievement detection
+      await queryClient.refetchQueries({ queryKey: ["plans"] });
 
       const hasPhoto = !!variables.photo;
       toast.success(
@@ -146,9 +145,13 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         description: data.entry.description || "",
       });
     },
-    onSuccess: (_, { muteNotification }) => {
+    onSuccess: async (_, { muteNotification }) => {
       queryClient.refetchQueries({ queryKey: ["activity-entries"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
+
+      // Refetch plans to update progress after entry update
+      await queryClient.refetchQueries({ queryKey: ["plans"] });
+
       if (!muteNotification) {
         toast.success("Activity updated successfully!");
       }
@@ -167,7 +170,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/${data.id}`);
       return data.id;
     },
-    onSuccess: (id) => {
+    onSuccess: async (id) => {
       queryClient.setQueryData(
         ["activities"],
         (old: ReturnedActivitiesType) => {
@@ -177,6 +180,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
       queryClient.refetchQueries({ queryKey: ["timeline"] });
+
+      // Refetch plans to update progress after activity deletion
+      await queryClient.refetchQueries({ queryKey: ["plans"] });
+
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
@@ -190,7 +197,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/activity-entries/${data.id}`);
       return data;
     },
-    onSuccess: ({ id, activityId }) => {
+    onSuccess: async ({ id }) => {
       queryClient.setQueryData(
         ["activity-entries"],
         (old: ReturnedActivityEntriesType) => {
@@ -211,7 +218,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       });
 
-      computeProgressForUserPlans([activityId]);
+      // Refetch plans to update progress after entry deletion
+      await queryClient.refetchQueries({ queryKey: ["plans"] });
 
       toast.success("Activity deleted successfully!");
     },

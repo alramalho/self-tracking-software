@@ -6,8 +6,8 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
 import { format, subDays, differenceInDays } from "date-fns";
-import { AnimatePresence, motion, useInView } from "framer-motion";
-import { Brush, ChevronDown, Lock } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Brush, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
@@ -108,9 +108,10 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   // Add ref for scroll container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Add ref for the card container to detect when it's in view
+  // Add ref for the card container
   const cardContainerRef = useRef<HTMLDivElement>(null);
-  const isCardInView = useInView(cardContainerRef, { once: true, margin: "-100px" });
+  // Track if today's cell is visible using Intersection Observer
+  const [isTodayVisible, setIsTodayVisible] = useState(true);
 
   // Convert dates to UTC
   const originalUtcStartDate = new Date(
@@ -160,27 +161,52 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
 
-  // Auto-scroll to center today's date only when card is in view
+  // Use Intersection Observer to detect when today's cell is visible
   useEffect(() => {
-    if (!isCardInView) return;
+    const cellId = uniqueId
+      ? `heatmap-today-cell-${uniqueId}`
+      : "heatmap-today-cell";
 
-    // Wait for heatmap to render, then scroll to today
+    let observer: IntersectionObserver | null = null;
+
+    // Wait for heatmap to render
     const timeoutId = setTimeout(() => {
-      const cellId = uniqueId
-        ? `heatmap-today-cell-${uniqueId}`
-        : "heatmap-today-cell";
       const todayCell = document.getElementById(cellId);
-      if (todayCell) {
-        todayCell.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "center",
-        });
-      }
+      if (!todayCell || !scrollContainerRef.current) return;
+
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsTodayVisible(entry.isIntersecting);
+        },
+        {
+          root: scrollContainerRef.current,
+          threshold: 0.1,
+        }
+      );
+
+      observer.observe(todayCell);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [heatmapData.length, uniqueId, isCardInView]);
+    return () => {
+      clearTimeout(timeoutId);
+      observer?.disconnect();
+    };
+  }, [heatmapData.length, uniqueId]);
+
+  // Scroll to today's cell when user clicks the arrow button
+  const scrollToToday = () => {
+    const cellId = uniqueId
+      ? `heatmap-today-cell-${uniqueId}`
+      : "heatmap-today-cell";
+    const todayCell = document.getElementById(cellId);
+    if (todayCell) {
+      todayCell.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  };
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix(isLightMode);
     return (
@@ -295,7 +321,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         <div
           className={`sticky left-0 z-20 flex flex-col gap-[6px] pt-[30px] pr-2 pl-4 ml-0`}
         >
-          {weekdays.map((day, index) => (
+          {weekdays.map((day) => (
             <div
               key={day}
               className="text-[10px] text-foreground h-[16px] flex items-center"
@@ -702,6 +728,23 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             />
           </div>
         </div>
+
+        {/* Floating arrow button to scroll to today */}
+        <AnimatePresence>
+          {!isTodayVisible && (
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={scrollToToday}
+              className="sticky right-2 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-8 bg-secondary text-secondary-foreground rounded-full shadow-lg hover:bg-secondary/90 transition-colors border border-border dark:border-primary/20"
+              title="Scroll to today"
+            >
+              <ChevronRight size={20} />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
       <div className="flex justify-center mx-4">{renderActivityLegend()}</div>
     </div>

@@ -1,6 +1,6 @@
 import { type CompletePlan } from "@/contexts/plans";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
-import { format, isSameWeek, startOfWeek } from "date-fns";
+import { addWeeks, subWeeks, format, isSameWeek, startOfWeek, differenceInWeeks } from "date-fns";
 import React, { useEffect, useMemo, useState } from "react";
 import ActivityEditor from "./ActivityEditor";
 import BaseHeatmapRenderer from "./BaseHeatmapRenderer";
@@ -38,14 +38,30 @@ const PlanActivityEntriesRenderer: React.FC<
 
   useEffect(() => {}, [beginingOfWeekOfFirstActivityEntry]);
 
+  const MINIMUM_WEEKS_TO_DISPLAY = 5; // ~1 month minimum
+  const WEEKS_AFTER_TODAY = 1;
+
   const getDefaultStartDate = () => {
     if (startDate) return startDate;
     if (planActivityEntries.length === 0) {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      return sevenDaysAgo;
+      // For empty plans, show ~2 weeks before today so today appears roughly in the middle
+      return subWeeks(new Date(), 2);
     }
     return beginingOfWeekOfFirstActivityEntry;
+  };
+
+  const getEndDate = () => {
+    if (endDate) return endDate;
+    const defaultStart = getDefaultStartDate();
+    const oneWeekFromNow = addWeeks(new Date(), WEEKS_AFTER_TODAY);
+
+    // Ensure minimum display period
+    const weeksFromStartToEnd = differenceInWeeks(oneWeekFromNow, defaultStart);
+    if (weeksFromStartToEnd < MINIMUM_WEEKS_TO_DISPLAY) {
+      return addWeeks(defaultStart, MINIMUM_WEEKS_TO_DISPLAY);
+    }
+
+    return oneWeekFromNow;
   };
 
   const formatEntriesForHeatMap = () => {
@@ -148,7 +164,7 @@ const PlanActivityEntriesRenderer: React.FC<
       <BaseHeatmapRenderer
         activities={plan.activities}
         startDate={getDefaultStartDate()}
-        endDate={plan.finishingDate ? new Date(plan.finishingDate) : undefined}
+        endDate={getEndDate()}
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}

@@ -100,9 +100,9 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       return response.data;
     },
-    onSuccess: (result, { planId }) => {
-      // Invalidate and refetch to ensure proper data propagation
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+    onSuccess: async (result, { planId }) => {
+      // Refetch plans and wait for it to ensure fresh data is available
+      await queryClient.refetchQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["plan", planId] });
       queryClient.invalidateQueries({ queryKey: ["recommendations"] });
     },

@@ -400,7 +400,7 @@ const PlanConfigurationForm = forwardRef<PlanConfigurationFormRef, PlanConfigura
       backgroundImageUrl: finalBackgroundImageUrl || null,
     };
 
-    upsertPlan({
+    await upsertPlan({
       planId: plan?.id || "",
       updates: planToSave,
       muteNotifications: true,
