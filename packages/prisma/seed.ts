@@ -174,7 +174,7 @@ async function generateDummyData() {
           userId: users[0].id,
           metricId: happinessMetric.id,
           rating: happinessRating,
-          date: currentDate,
+          // Note: MetricEntry uses createdAt (auto-set), not a separate date field
         },
       });
       metricEntries.push(metricEntry);
@@ -450,7 +450,7 @@ async function generateDummyData() {
           activities: {
             include: {
               entries: {
-                orderBy: { date: "desc" },
+                orderBy: { datetime: "desc" },
                 take: 5,
               },
             },
@@ -459,7 +459,11 @@ async function generateDummyData() {
             include: {
               planGroup: {
                 include: {
-                  members: true,
+                  members: {
+                    include: {
+                      user: true,
+                    },
+                  },
                 },
               },
               sessions: {
@@ -484,8 +488,9 @@ async function generateDummyData() {
       console.info(`\nUser: ${userData.name} (username: ${userData.username})`);
       console.info(`Friends: ${friends.map((f) => f.name).join(", ")}`);
 
-      const pendingPlanInvitations = await prisma.planInvitation.count({
-        where: { recipientId: userData.id, status: "PENDING" },
+      // PlanInvitation was replaced by PlanGroupMember with INVITED status
+      const pendingPlanInvitations = await prisma.planGroupMember.count({
+        where: { userId: userData.id, status: "INVITED" },
       });
 
       const pendingConnectionRequests = await prisma.connection.count({
@@ -510,7 +515,7 @@ async function generateDummyData() {
         console.info(`- ${plan.goal} (Finishing date: ${plan.finishingDate})`);
         if (plan.planGroup) {
           console.info(
-            `  Members: ${plan.planGroup.members.map((m) => m.name).join(", ")}`
+            `  Members: ${plan.planGroup.members.map((m) => m.user.name).join(", ")}`
           );
         }
         console.info(`  Sessions: ${plan.sessions.length}`);
