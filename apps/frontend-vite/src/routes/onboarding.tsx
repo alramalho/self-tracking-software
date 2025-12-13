@@ -1,6 +1,7 @@
 import { OnboardingContainer } from "@/components/OnboardingContainer";
 import { ProgressBar } from "@/components/ProgressBar";
 import AIPartnerFinder from "@/components/steps/AIPartnerFinder";
+import CoachingSelector from "@/components/steps/CoachingSelector";
 import HumanPartnerFinder from "@/components/steps/HumanPartnerFinder";
 import NotificationsSelector from "@/components/steps/NotificationsSelector";
 import PartnerTypeSelector from "@/components/steps/PartnerSelector";
@@ -8,14 +9,13 @@ import PlanActivitySetter from "@/components/steps/PlanActivitySetter";
 import PlanGenerator from "@/components/steps/PlanGenerator";
 import PlanGoalSetter from "@/components/steps/PlanGoalSetter";
 import PlanProgressInitiator from "@/components/steps/PlanProgressInitiator";
-import { PlanTypeSelector } from "@/components/steps/PlanTypeSelector";
+import PlanTimesPerWeekSelector from "@/components/steps/PlanTimesPerWeekSelector";
 import WelcomeStep from "@/components/steps/WelcomeStep";
 import { OnboardingProvider } from "@/contexts/onboarding/provider";
 import { type OnboardingStep, type OnboardingState } from "@/contexts/onboarding/types";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
-import { useMemo } from "react";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -25,6 +25,18 @@ export const Route = createFileRoute("/onboarding")({
  * Defines the onboarding step flow with dynamic navigation based on state.
  * ALL navigation logic is centralized here - components should only call completeStep
  * with state updates, and this function determines the next/previous steps.
+ *
+ * NEW FLOW:
+ * 1. welcome
+ * 2. plan-goal-setter - Ask for the goal
+ * 3. plan-times-per-week - Ask desired frequency
+ * 4. plan-progress-initiator - Ask experience level
+ * 5. coaching-selector - AI coaching vs self-guided
+ * 6a. If coaching: plan-generator (AI generates activities + adapts frequency)
+ * 6b. If self-guided: plan-activity-selector (user picks activities)
+ * 7. partner-selection
+ * 8. notifications-selector (if needed)
+ * 9. human/ai-partner-finder
  */
 const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
   {
@@ -36,25 +48,34 @@ const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
     component: PlanGoalSetter,
   },
   {
-    id: "plan-type-selector",
-    component: PlanTypeSelector,
-  },
-  {
-    id: "plan-activity-selector",
-    component: PlanActivitySetter,
+    id: "plan-times-per-week",
+    component: PlanTimesPerWeekSelector,
   },
   {
     id: "plan-progress-initiator",
     component: PlanProgressInitiator,
+  },
+  {
+    id: "coaching-selector",
+    component: CoachingSelector,
     next: (state) => {
-      if (state.planType === "TIMES_PER_WEEK") return "partner-selection";
-      return "plan-generator";
+      // AI coaching: go to plan generator (AI generates activities)
+      if (state.wantsCoaching) return "plan-generator";
+      // Self-guided: user picks their own activities
+      return "plan-activity-selector";
     },
+  },
+  {
+    id: "plan-activity-selector",
+    component: PlanActivitySetter,
+    next: "partner-selection",
+    previous: "coaching-selector",
   },
   {
     id: "plan-generator",
     component: PlanGenerator,
     next: "partner-selection",
+    previous: "coaching-selector",
   },
   {
     id: "partner-selection",
@@ -69,8 +90,9 @@ const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
       return "notifications-selector";
     },
     previous: (state) => {
-      if (state.planType === "TIMES_PER_WEEK") return "plan-progress-initiator";
-      return "plan-generator";
+      // Go back based on coaching choice
+      if (state.wantsCoaching) return "plan-generator";
+      return "plan-activity-selector";
     },
   },
   {
@@ -154,6 +176,7 @@ function OnboardingPage() {
     partnerType: null,
     planTimesPerWeek: 3,
     isPushGranted: false,
+    wantsCoaching: null,
   });
 
   return (

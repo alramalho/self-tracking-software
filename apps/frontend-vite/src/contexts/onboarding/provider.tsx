@@ -43,6 +43,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       partnerType: null as "human" | "ai" | null,
       planTimesPerWeek: 3 as number,
       isPushGranted: false,
+      wantsCoaching: null as boolean | null,
     }
   );
   const {
@@ -58,6 +59,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     partnerType,
     selectedPlan,
     planTimesPerWeek,
+    wantsCoaching,
   } = onboardingState;
 
   const navigate = useNavigate();
@@ -104,6 +106,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const setPartnerType = (type: "human" | "ai") => {
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, partnerType: type }));
+  };
+
+  const setWantsCoaching = (wants: boolean) => {
+    setOnboardingState((prevState: OnboardingState) => ({ ...prevState, wantsCoaching: wants }));
   };
 
   const posthog = usePostHog();
@@ -290,6 +296,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     planType,
     planProgress,
     planTimesPerWeek,
+    wantsCoaching,
     setPlanGoal,
     setPlanActivities,
     updateOnboardingState: (updates: object) => {
@@ -299,6 +306,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setPlanType,
     setSelectedPlan,
     setPartnerType,
+    setWantsCoaching,
   };
 
   return (

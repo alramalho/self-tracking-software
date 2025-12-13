@@ -136,9 +136,9 @@ const PlanGenerator = () => {
     planGoal,
     plans,
     planActivities,
-    planType,
     planProgress,
     selectedPlan,
+    wantsCoaching,
     completeStep,
     updateOnboardingState,
     setSelectedPlan,
@@ -196,8 +196,8 @@ const PlanGenerator = () => {
         {
           plan_goal: planGoal,
           plan_activities: planActivities,
-          plan_type: planType,
           plan_progress: planProgress,
+          wants_coaching: wantsCoaching,
         },
         {
           timeout: 180000, // 3 minutes in milliseconds
@@ -256,21 +256,21 @@ const PlanGenerator = () => {
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
                   <motion.div
-                    className="absolute inset-0 rounded-full bg-blue-100"
+                    className="absolute inset-0 rounded-full bg-blue-100 dark:bg-blue-900/50"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />
                   <motion.div
-                    className="absolute inset-2 rounded-full bg-blue-200"
+                    className="absolute inset-2 rounded-full bg-blue-200 dark:bg-blue-800/60"
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1.2, repeat: Infinity }}
                   />
                   <motion.div
-                    className="absolute inset-4 rounded-full bg-blue-400"
+                    className="absolute inset-4 rounded-full bg-blue-400 dark:bg-blue-600"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
                   />
-                  <div className="absolute inset-6 rounded-full bg-blue-600"></div>
+                  <div className="absolute inset-6 rounded-full bg-blue-600 dark:bg-blue-400"></div>
                 </motion.div>
 
                 <motion.h2

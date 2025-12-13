@@ -10,6 +10,7 @@ import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
 import type { PlansService } from "./plansService";
+import { planGenerationPipeline } from "./planGenerationPipeline";
 const DEFAULT_WEEKS = 8;
 
 export class AIService {
@@ -1079,21 +1080,27 @@ export class AIService {
     });
 
     const systemPrompt =
-      `You are an expert at extracting activities for plan creation.\m` +
+      `You are an expert at extracting activities for plan creation.\n` +
       `${userContext ? ` Context: ${userContext}` : ""}\n` +
       `\n` +
-      `Guidelines:` +
+      `Guidelines:\n` +
       `- Extract activities mentioned in the conversation\n` +
       `- Use atomic measures (e.g., 'pages', 'minutes', 'kilometers', NOT 'books' or 'marathons')\n` +
       `- Only single measure per activity (Never joint measures like 'pages or minutes')\n` +
       `- Provide clear reasoning for each activity\n` +
       `- Set confidence based on clarity of information\n` +
-      `– Take special attention to the user messages in the conversation history, if any` +
+      `- Take special attention to the user messages in the conversation history, if any\n` +
+      `- IMPORTANT: Only suggest ACTIVE, trackable activities. Do NOT suggest passive activities like:\n` +
+      `  - "Rest and Recovery" or "Rest days" (these are not things you actively do/log)\n` +
+      `  - "Sleep" (unless explicitly asked for sleep tracking)\n` +
+      `  - "Recovery" or "Active recovery" as standalone activities\n` +
       `\n` +
-      `Examples:\n` +
+      `Examples of GOOD activities:\n` +
       `- 'Reading' measured in 'pages' or 'minutes'\n` +
       `- 'Running' measured in 'kilometers' or 'minutes'\n` +
-      `- 'Gym' measured in 'minutes' or 'sessions'\n`;
+      `- 'Gym' measured in 'minutes' or 'sessions'\n` +
+      `- 'Stretching' measured in 'minutes'\n` +
+      `- 'Meditation' measured in 'minutes'\n`;
     return this.generateStructuredResponse({
       prompt: message,
       schema,
@@ -1306,16 +1313,80 @@ export class AIService {
     description?: string;
     existingPlan?: any;
     sessionsPerWeek?: number;
+    // New parameters for the 4-stage pipeline
+    userAge?: number | null;
+    experience?: string;
+    timesPerWeek?: number;
   }): Promise<{
     sessions: {
       date: Date;
       activityId: any;
       descriptive_guide: string;
       quantity: number;
+      imageUrls?: string[];
     }[];
+    // Adapted activities from the pipeline - may include new activities with isNew=true
+    adaptedActivities?: {
+      id: string;
+      title: string;
+      measure: string;
+      emoji?: string;
+      isNew: boolean;
+      originalId: string | null;
+      reason: string | null;
+    }[];
+    researchFindings?: string;
+    coachPrompt?: string;
   }> {
     try {
       const today = new Date();
+
+      // Use the new 3-stage pipeline if experience is provided
+      if (params.experience) {
+        let finishingDate: Date;
+        if (params.finishingDate) {
+          finishingDate = new Date(params.finishingDate);
+        } else {
+          finishingDate = new Date(
+            today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000
+          );
+        }
+        const weeks = Math.ceil(
+          (finishingDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        );
+
+        const pipelineResult = await planGenerationPipeline.generatePlan({
+          goal: params.goal,
+          activities: params.activities.map((a) => ({
+            id: a.id,
+            title: a.title,
+            measure: a.measure,
+            emoji: a.emoji,
+          })),
+          userAge: params.userAge ?? null,
+          experience: params.experience,
+          timesPerWeek: params.timesPerWeek ?? params.sessionsPerWeek ?? 3,
+          weeks,
+          finishingDate,
+          sessionsPerWeek: params.sessionsPerWeek,
+        });
+
+        // Map pipeline result to expected format
+        return {
+          sessions: pipelineResult.sessions.map((session) => ({
+            date: session.date,
+            activityId: session.activityId,
+            descriptive_guide: session.descriptiveGuide,
+            quantity: session.quantity,
+            imageUrls: session.imageUrls,
+          })),
+          adaptedActivities: pipelineResult.adaptedActivities,
+          researchFindings: pipelineResult.researchFindings,
+          coachPrompt: pipelineResult.coachPrompt,
+        };
+      }
+
+      // Fallback to original logic if experience is not provided
       const todayReadableDate = today.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
