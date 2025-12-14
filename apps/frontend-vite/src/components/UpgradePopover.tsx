@@ -80,7 +80,7 @@ const pricingTiers: PricingTier[] = [
     savings: MONTHLY_SAVINGS,
     period: "month",
     positioning: "Try it out",
-    paymentLink: "https://buy.stripe.com/fZu28reqL7BlaI6eorcfK0e",
+    paymentLink: "https://buy.stripe.com/14A3cvdmH5td9E2803cfK0i",
   },
   {
     id: "quarterly",
@@ -95,7 +95,7 @@ const pricingTiers: PricingTier[] = [
     badge: "Most Popular",
     badgeColor: "bg-purple-500",
     positioning: "Commit to real transformation",
-    paymentLink: "https://buy.stripe.com/eVqeVd2I32h16rQgwzcfK0f",
+    paymentLink: "https://buy.stripe.com/eVqeVdeqLcVF6rQ2FJcfK0h",
     isPopular: true,
   },
   {
