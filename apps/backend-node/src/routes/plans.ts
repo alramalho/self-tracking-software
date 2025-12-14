@@ -49,6 +49,7 @@ const SessionSchema = z.object({
   descriptive_guide: z.string().optional(),
   descriptiveGuide: z.string().optional(),
   quantity: z.number().positive().optional(),
+  imageUrls: z.array(z.string()).optional(),
 });
 
 const MilestoneSchema = z.object({
@@ -1328,6 +1329,7 @@ router.post(
                   descriptiveGuide:
                     session.descriptive_guide || session.descriptiveGuide || "",
                   quantity: session.quantity,
+                  imageUrls: session.imageUrls || [],
                 })),
               },
             }),
@@ -1416,6 +1418,7 @@ router.post(
                       session.descriptiveGuide ||
                       "",
                     quantity: session.quantity,
+                    imageUrls: session.imageUrls || [],
                   })),
                 },
               }),
