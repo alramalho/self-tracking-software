@@ -3,6 +3,8 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
+import AppleLikePopover from "@/components/AppleLikePopover";
 import { BarProgressLoader } from "@/components/ui/bar-progress-loader";
 import { Button } from "@/components/ui/button";
 import { OnboardingPlanPreview } from "@/components/OnboardingPlanPreview";
@@ -10,9 +12,11 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import type { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCheck } from "lucide-react";
+import { CheckCheck, MoveRight, Route } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -53,9 +57,12 @@ const PlanGenerator = () => {
     completeStep,
     updateOnboardingState,
     setSelectedPlan,
+    goToStep,
   } = useOnboarding();
   const { upsertPlan } = usePlans();
   const { upsertActivity } = useActivities();
+  const { setShowUpgradePopover, setOnUpgradePopoverClose } = useUpgrade();
+  const { isUserPremium } = usePaidPlan();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [generatedPlans, setGeneratedPlans] = useState<CompletePlan[] | null>(
     plans
@@ -63,6 +70,8 @@ const PlanGenerator = () => {
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
+  const [showPaywallPopover, setShowPaywallPopover] = useState(false);
+  const [showSelfGuidedConfirmPopover, setShowSelfGuidedConfirmPopover] = useState(false);
   const api = useApiWithAuth();
 
   const handlePlanSelect = async (plan: CompletePlan) => {
@@ -98,6 +107,42 @@ const PlanGenerator = () => {
       plans: generatedPlans,
     });
   };
+
+  const handleStartPlanClick = () => {
+    // If user is already premium, proceed directly
+    if (isUserPremium) {
+      if (generatedPlans?.[0]) {
+        handlePlanSelect(generatedPlans[0]);
+      }
+      return;
+    }
+    // Otherwise, show the paywall popover
+    setShowPaywallPopover(true);
+  };
+
+  const handlePaywallClose = () => {
+    setShowPaywallPopover(false);
+    // Show the self-guided confirmation popup
+    setShowSelfGuidedConfirmPopover(true);
+  };
+
+  const handleSelfGuidedConfirm = () => {
+    setShowSelfGuidedConfirmPopover(false);
+    // Update state to reflect self-guided choice and redirect to activity selector
+    goToStep("plan-activity-selector", {
+      wantsCoaching: false,
+      planType: "TIMES_PER_WEEK",
+      plans: null, // Clear generated plans so they can pick their own activities
+    });
+  };
+
+  // Auto-proceed with plan when user becomes premium while self-guided popup is showing
+  useEffect(() => {
+    if (showSelfGuidedConfirmPopover && isUserPremium && generatedPlans?.[0]) {
+      setShowSelfGuidedConfirmPopover(false);
+      handlePlanSelect(generatedPlans[0]);
+    }
+  }, [isUserPremium, showSelfGuidedConfirmPopover, generatedPlans]);
 
   async function generatePlans() {
     try {
@@ -136,17 +181,22 @@ const PlanGenerator = () => {
     }
   }
 
+  // Sync generatedPlans from onboarding state when plans changes
   useEffect(() => {
-    console.log("plans", plans);
-    if (!plans) {
+    if (plans && !generatedPlans) {
+      setGeneratedPlans(plans);
+    }
+  }, [plans]);
+
+  useEffect(() => {
+    console.log("plans", plans, "generatedPlans", generatedPlans);
+    if (!plans && !generatedPlans) {
       generatePlans();
       setIsLoading(true);
-    } else {
-      if (generatedActivities?.length === 0 && planActivities?.length > 0) {
-        setGeneratedActivities(planActivities);
-      }
+    } else if (generatedActivities?.length === 0 && planActivities?.length > 0) {
+      setGeneratedActivities(planActivities);
     }
-  }, [plans, planActivities]);
+  }, [plans, generatedPlans, planActivities]);
 
   return (
     <div className="w-full max-w-md space-y-8">
@@ -276,7 +326,7 @@ const PlanGenerator = () => {
                     />
 
                     <Button
-                      onClick={() => handlePlanSelect(generatedPlans[0])}
+                      onClick={handleStartPlanClick}
                       className="w-full"
                       size="lg"
                     >
@@ -299,6 +349,90 @@ const PlanGenerator = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Paywall Popover with AI Coach Features */}
+      <AppleLikePopover
+        open={showPaywallPopover}
+        onClose={handlePaywallClose}
+      >
+        <AICoachFeaturePreview>
+          <Button
+            size="lg"
+            className="w-full mt-8 rounded-xl"
+            onClick={() => {
+              setShowPaywallPopover(false);
+              // Set callback to show self-guided confirmation when upgrade popover closes
+              setOnUpgradePopoverClose(() => {
+                setShowSelfGuidedConfirmPopover(true);
+              });
+              setShowUpgradePopover(true);
+            }}
+          >
+            <span>Start free trial</span>
+            <MoveRight className="ml-3 w-4 h-4" />
+          </Button>
+        </AICoachFeaturePreview>
+      </AppleLikePopover>
+
+      {/* Self-Guided Confirmation Popover */}
+      <AppleLikePopover
+        open={showSelfGuidedConfirmPopover && !isUserPremium}
+        onClose={() => setShowSelfGuidedConfirmPopover(false)}
+      >
+        <div className="flex flex-col items-center gap-6 py-4 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <Route className="w-16 h-16 text-blue-600" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Continue without coaching?
+            </h2>
+            <p className="text-md text-muted-foreground">
+              No worries! We&apos;ll set you up with a self-guided plan instead:
+            </p>
+          </div>
+
+          <div className="w-full space-y-3 text-left bg-muted/30 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground">•</span>
+              <p className="text-sm text-muted-foreground">
+                Your plan will be <span className="font-semibold text-foreground">{planTimesPerWeek}x per week</span> (as you selected)
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground">•</span>
+              <p className="text-sm text-muted-foreground">
+                You&apos;ll pick your own activities to track
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground">•</span>
+              <p className="text-sm text-muted-foreground">
+                No AI-generated schedule or weekly adaptations
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <Button
+              size="lg"
+              className="w-full rounded-xl"
+              onClick={handleSelfGuidedConfirm}
+            >
+              Continue with self-guided
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              className="w-full rounded-xl text-muted-foreground"
+              onClick={() => {
+                setShowSelfGuidedConfirmPopover(false);
+                setShowPaywallPopover(true);
+              }}
+            >
+              Go back to coaching
+            </Button>
+          </div>
+        </div>
+      </AppleLikePopover>
     </div>
   );
 };

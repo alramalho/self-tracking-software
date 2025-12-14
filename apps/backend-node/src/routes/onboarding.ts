@@ -320,6 +320,7 @@ async function generatePlan(params: {
           where: {
             userId: params.userId,
             title: { equals: activity.title, mode: "insensitive" },
+            measure: { equals: activity.measure, mode: "insensitive" },
           },
         });
 

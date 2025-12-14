@@ -117,7 +117,7 @@ export class PlanGenerationPipeline {
     } else {
       try {
         activities = await this.generateActivities(params, researchFindings);
-        logger.info(`Activity Generation completed: ${activities.length} activities`);
+        logger.info(`Activity Generation completed: ${activities.length} (${activities.map(a => `${a.title} (${a.measure})`).join(", ")}) activities`);
       } catch (error) {
         logger.error("Activity Generation failed", error);
         throw new Error("Failed to generate activities for plan");
@@ -144,7 +144,7 @@ export class PlanGenerationPipeline {
       // Sessions already have empty imageUrls, so we continue
     }
 
-    return {
+  return {
       sessions,
       activities,
       researchFindings,
@@ -259,21 +259,30 @@ export class PlanGenerationPipeline {
     const weekStartDates = this.calculateWeekStartDates(maxWeeks);
     const todayStr = format(new Date(), "yyyy-MM-dd");
 
+    // Build a single enum where each option is a complete activity string
+    // Format: "id::title::measure" - this forces the AI to pick a valid combination
+    const activityOptions = activities.map(a => `${a.id}::${a.title}::${a.measure}`) as [string, ...string[]];
+
+    // Build display string for the prompt to help AI understand the options
+    const activityDisplayList = activities
+      .map(a => `- "${a.id}::${a.title}::${a.measure}" (quantity in ${a.measure})`)
+      .join("\n");
+
     const SessionsSchema = z.object({
       weeks: z.array(z.object({
         weekNumber: z.number(),
         weekStartDate: z.string(),
         sessions: z.array(z.object({
           date: z.string().describe("Session date in YYYY-MM-DD format"),
-          activityId: z.string().describe("ID of the activity"),
-          quantity: z.number().describe("Amount to do (in the activity's measure unit)"),
-          descriptiveGuide: z.string().describe("Detailed, motivating description of this specific session - what to focus on, tips, and encouragement (2-3 sentences)"),
+          activity: z.enum(activityOptions).describe(`Pick one of the available activities. The format is "id::title::measure". The measure tells you what unit to use for quantity.`),
+          quantity: z.number().describe("Amount in the measure unit from the activity you picked. For 'minutes': 15-60 for beginners. For 'miles': 1-5 for beginners. For 'km': 2-8 for beginners."),
+          descriptiveGuide: z.string().describe("2-3 sentences. Reference the quantity with correct measure (e.g. 'This 20-minute session...' or 'These 3 miles...')."),
         })),
       })),
     });
 
     const result = await generateObject({
-      model: this.openrouter.chat("openai/gpt-4.1-mini"),
+      model: this.openrouter.chat("openai/gpt-5.2-chat"),
       schema: SessionsSchema,
       system: dedent`
         You are a personal coach creating a ${maxWeeks}-week progressive plan.
@@ -299,27 +308,30 @@ export class PlanGenerationPipeline {
       prompt: dedent`
         Create a ${maxWeeks}-week plan for a ${experienceLevel} working towards: "${goal}"
 
-        ACTIVITIES:
-        ${activities.map(a => `- ${a.title} (measured in ${a.measure}, ID: ${a.id})`).join("\n")}
+        AVAILABLE ACTIVITIES (pick from these exact values):
+        ${activityDisplayList}
 
         REQUIREMENTS:
         - EXACTLY ${timesPerWeek} sessions per week (no more, no less)
         - Week start dates: ${weekStartDates.join(", ")}
         - Today is ${todayStr}, schedule from today onwards
         - Spread sessions across different days
+        - quantity MUST be appropriate for the measure in the activity you picked
 
         Remember: This is a ${experienceLevel} - use appropriate starting quantities from the guidelines.
       `,
       temperature: 0.3,
     });
 
-    // Flatten weeks into sessions array
+    // Flatten weeks into sessions array, parsing the "id::title::measure" format
     const sessions: GeneratedSession[] = [];
     for (const week of result.object.weeks) {
       for (const session of week.sessions) {
+        // Parse "id::title::measure" format
+        const [activityId] = session.activity.split("::");
         sessions.push({
           date: new Date(session.date),
-          activityId: session.activityId,
+          activityId,
           quantity: session.quantity,
           descriptiveGuide: session.descriptiveGuide,
           imageUrls: [],
@@ -327,7 +339,7 @@ export class PlanGenerationPipeline {
       }
     }
 
-    return sessions;
+     return sessions;
   }
 
   /**

@@ -17,7 +17,7 @@ export interface OnboardingContextValue {
   hasNextStep: boolean;
   nextStep: () => void;
   prevStep: () => void;
-  goToStep: (stepId: string) => void;
+  goToStep: (stepId: string, updates?: object) => void;
   completeStep: (
     stepId: string,
     updates?: object,
@@ -34,7 +34,7 @@ export interface OnboardingContextValue {
   planType: string | null;
   planEmoji: string | null;
   planTimesPerWeek: number;
-  partnerType: "human" | "ai" | null;
+  partnerType: "human" | null;
   planProgress: string | null;
   wantsCoaching: boolean | null;
   setPlanGoal: (goal: string) => void;
@@ -42,7 +42,7 @@ export interface OnboardingContextValue {
   setPlanType: (type: string) => void;
   setPlanTimesPerWeek: (times: number) => void;
   setSelectedPlan: (plan: CompletePlan) => void;
-  setPartnerType: (type: "human" | "ai") => void;
+  setPartnerType: (type: "human" | null) => void;
   setWantsCoaching: (wants: boolean) => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
@@ -63,7 +63,7 @@ export interface OnboardingState {
   planProgress: string | null;
   planType: string | null;
   planId: string;
-  partnerType: "human" | "ai" | null;
+  partnerType: "human" | null;
   planTimesPerWeek: number;
   isPushGranted: boolean;
   wantsCoaching: boolean | null;
