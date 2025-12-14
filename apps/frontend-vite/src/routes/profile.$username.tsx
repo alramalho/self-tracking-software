@@ -5,6 +5,7 @@ import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
+import { CoachProfileViewDrawer } from "@/components/CoachProfileViewDrawer";
 import { SendMessagePopover } from "@/components/SendMessagePopover";
 import Divider from "@/components/Divider";
 import { FireAnimation, RocketAnimation, SeedAnimation } from "@/components/FireBadge";
@@ -15,13 +16,14 @@ import ProfileSettingsPopover, {
 import { ProfilePlanCard } from "@/components/profile/ProfilePlanCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { type ActivityEntry } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { subDays } from "date-fns";
@@ -34,6 +36,7 @@ import {
   History,
   Loader2,
   MessageCircle,
+  Pencil,
   Rocket,
   Sprout,
   UserPlus,
@@ -122,6 +125,8 @@ function ProfilePage() {
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
     null
   );
+  const [showCoachProfileDrawer, setShowCoachProfileDrawer] = useState(false);
+  const navigate = useNavigate();
   const { username } = Route.useParams();
   const searchParams = Route.useSearch() as {
     redirectTo?: string;
@@ -392,6 +397,24 @@ function ProfilePage() {
             <p className="text-muted-foreground text-sm mb-2">
               @{profileData?.username}
             </p>
+
+            {/* Coach Badge */}
+            {profileData?.coachProfile && (
+              <button
+                onClick={() => setShowCoachProfileDrawer(true)}
+                className="group flex items-center gap-1.5 mt-1"
+              >
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors cursor-pointer"
+                >
+                  {(profileData.coachProfile.details as any)?.title || "Coach"}
+                </Badge>
+                {isOwnProfile && (
+                  <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </button>
+            )}
           </div>
         </AnimatedSection>
 
@@ -810,6 +833,22 @@ function ProfilePage() {
             name: profileData.name,
             username: profileData.username,
             picture: profileData.picture,
+          }}
+        />
+      )}
+
+      {/* Coach Profile Drawer */}
+      {profileData?.coachProfile && (
+        <CoachProfileViewDrawer
+          coachProfile={profileData.coachProfile as any}
+          ownerName={profileData.name}
+          ownerUsername={profileData.username}
+          ownerPicture={profileData.picture}
+          isOpen={showCoachProfileDrawer}
+          onClose={() => setShowCoachProfileDrawer(false)}
+          isOwnProfile={isOwnProfile}
+          onEditClick={() => {
+            navigate({ to: "/create-coach-profile" });
           }}
         />
       )}

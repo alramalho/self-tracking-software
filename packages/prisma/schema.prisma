@@ -454,11 +454,12 @@ model PlanInviteLink {
 }
 
 model Coach {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   ownerId   String
-  details   Json     @default("{}") // bio, personality, appearance, voice, etc.
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  type      CoachType @default(AI)
+  details   Json      @default("{}") // bio, personality, appearance, voice, etc.
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -805,6 +806,13 @@ enum ChatType {
   COACH  // User <-> Coach conversation
   DIRECT // User <-> User conversation
   GROUP  // Plan group chat
+
+  @@schema("public")
+}
+
+enum CoachType {
+  AI
+  HUMAN
 
   @@schema("public")
 }

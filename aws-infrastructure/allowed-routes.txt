@@ -25,6 +25,8 @@
 /chats
 /chats/{any}
 /clerk/{any}
+/coaches
+/coaches/{any}
 /exception
 /health
 /messages/{any}

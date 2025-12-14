@@ -92,7 +92,16 @@ usersRouter.get(
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
-        include: basicUserInclude,
+        include: {
+          ...basicUserInclude,
+          // Include coach profile if user is a human coach
+          coaches: {
+            where: {
+              type: "HUMAN",
+            },
+            take: 1,
+          },
+        },
       });
 
       if (!user) {
@@ -100,7 +109,14 @@ usersRouter.get(
         return;
       }
 
-      res.json(user);
+      // Transform to include coachProfile field
+      const { coaches, ...userData } = user;
+      const userWithCoachProfile = {
+        ...userData,
+        coachProfile: coaches?.[0] || null,
+      };
+
+      res.json(userWithCoachProfile);
     } catch (error) {
       logger.error("Failed to fetch current user:", error);
       res.status(500).json({ error: "Failed to fetch current user" });
@@ -116,10 +132,25 @@ usersRouter.patch(
       const updatedUser = await prisma.user.update({
         where: { id: req.user!.id },
         data: req.body,
-        include: basicUserInclude,
+        include: {
+          ...basicUserInclude,
+          coaches: {
+            where: {
+              type: "HUMAN",
+            },
+            take: 1,
+          },
+        },
       });
 
-      res.json(updatedUser);
+      // Transform to include coachProfile field
+      const { coaches, ...userData } = updatedUser;
+      const userWithCoachProfile = {
+        ...userData,
+        coachProfile: coaches?.[0] || null,
+      };
+
+      res.json(userWithCoachProfile);
     } catch (error) {
       logger.error("Failed to update user:", error);
       res.status(500).json({ error: "Failed to update user" });
@@ -565,6 +596,13 @@ usersRouter.post(
               },
             },
           },
+          // Include coach profile if user is a human coach
+          coaches: {
+            where: {
+              type: "HUMAN",
+            },
+            take: 1,
+          },
         },
       });
       if (!user) {
@@ -589,16 +627,21 @@ usersRouter.post(
       // Create progress map for fast lookup
       const progressMap = new Map(plansProgress.map((p) => [p.plan.id, p]));
 
-      // Augment each plan with progress data
+      // Augment each plan with progress data and add coach profile
       const userWithProgress = {
         ...user,
         plans: user.plans.map((plan) => ({
           ...plan,
           progress: progressMap.get(plan.id),
         })),
+        // Extract the first (and only) human coach profile if exists
+        coachProfile: user.coaches?.[0] || null,
       };
 
-      res.json(userWithProgress);
+      // Remove the raw coaches array from response
+      const { coaches, ...userResponse } = userWithProgress;
+
+      res.json(userResponse);
     } catch (error) {
       logger.error("Failed to fetch user data:", error);
       res.status(500).json({ error: "Failed to fetch user data" });
