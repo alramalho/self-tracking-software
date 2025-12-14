@@ -1,6 +1,7 @@
 import { OnboardingContainer } from "@/components/OnboardingContainer";
 import { ProgressBar } from "@/components/ProgressBar";
 import CoachingSelector from "@/components/steps/CoachingSelector";
+import CoachSelector from "@/components/steps/CoachSelector";
 import CommunityPartnerFinder from "@/components/steps/CommunityPartnerFinder";
 import PlanActivitySetter from "@/components/steps/PlanActivitySetter";
 import PlanGenerator from "@/components/steps/PlanGenerator";
@@ -29,10 +30,10 @@ export const Route = createFileRoute("/onboarding")({
  * 3. plan-times-per-week - Ask desired frequency
  * 4. plan-progress-initiator - Ask experience level
  * 5. coaching-selector - AI coaching vs self-guided
- * 6a. If coaching: plan-generator (AI generates activities + adapts frequency)
- * 6b. If self-guided: plan-activity-selector (user picks activities)
- * 7. community-partner-finder - Ask if user wants community accountability partner (merged step)
- * 8. notifications-selector (if needed, only if user wants partner)
+ * 6. coach-selector - Choose AI or human coach (only if coaching selected)
+ * 7a. If coaching: plan-generator (AI generates activities + adapts frequency)
+ * 7b. If self-guided: plan-activity-selector (user picks activities)
+ * 8. community-partner-finder - Ask if user wants community accountability partner (merged step)
  */
 const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
   {
@@ -55,11 +56,17 @@ const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
     id: "coaching-selector",
     component: CoachingSelector,
     next: (state) => {
-      // AI coaching: go to plan generator (AI generates activities)
-      if (state.wantsCoaching) return "plan-generator";
+      // AI coaching: go to coach selector to choose AI or human coach
+      if (state.wantsCoaching) return "coach-selector";
       // Self-guided: user picks their own activities
       return "plan-activity-selector";
     },
+  },
+  {
+    id: "coach-selector",
+    component: CoachSelector,
+    next: "plan-generator",
+    previous: "coaching-selector",
   },
   {
     id: "plan-activity-selector",
@@ -71,7 +78,7 @@ const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
     id: "plan-generator",
     component: PlanGenerator,
     next: "community-partner-finder",
-    previous: "coaching-selector",
+    previous: "coach-selector",
   },
   {
     id: "community-partner-finder",
@@ -137,6 +144,8 @@ function OnboardingPage() {
     planTimesPerWeek: 3,
     isPushGranted: false,
     wantsCoaching: null,
+    selectedCoachId: null,
+    selectedCoach: null,
   });
 
   return (

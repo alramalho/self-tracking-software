@@ -2,12 +2,10 @@
 
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
-import { useTheme } from "@/contexts/theme/useTheme";
-import { UserRound, Route, Check } from "lucide-react";
+import { UserRound, Route, Check, Users } from "lucide-react";
 
 const CoachingSelector = () => {
   const { completeStep, setWantsCoaching } = useOnboarding();
-  const { isDarkMode } = useTheme();
 
   const handleSelect = (wantsCoaching: boolean) => {
     setWantsCoaching(wantsCoaching);
@@ -18,23 +16,18 @@ const CoachingSelector = () => {
     });
   };
 
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
-
   const options = [
     {
       id: "coaching",
       value: true,
-      title: "AI Coaching",
+      title: "Coaching",
       description: "Get a personalized plan with research-backed activities and adaptive scheduling",
-      icon: null, // Uses coach image instead
+      icon: Users,
       features: [
         "Research-based activity suggestions",
         "Adaptive frequency based on your level",
         "Progressive difficulty",
       ],
-      recommended: true,
     },
     {
       id: "self-guided",
@@ -47,7 +40,6 @@ const CoachingSelector = () => {
         "Simple tracking",
         "Full control",
       ],
-      recommended: false,
     },
   ];
 
@@ -73,35 +65,16 @@ const CoachingSelector = () => {
             <button
               key={option.id}
               onClick={() => handleSelect(option.value)}
-              className={`w-full rounded-xl border-2 p-6 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                option.recommended
-                  ? "border-blue-300 dark:border-blue-700"
-                  : "border-border"
-              }`}
+              className="w-full rounded-xl border-2 border-border p-6 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
             >
               <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  option.recommended ? "bg-blue-500" : "bg-muted"
-                }`}>
-                  {Icon ? (
-                    <Icon className={`w-6 h-6 ${
-                      option.recommended ? "text-white" : "text-muted-foreground"
-                    }`} />
-                  ) : (
-                    <img src={coachIcon} alt="AI Coach" className="w-7 h-7" />
-                  )}
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-muted">
+                  <Icon className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {option.title}
-                    </h3>
-                    {option.recommended && (
-                      <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {option.title}
+                  </h3>
                   <p className="text-sm mt-1 text-muted-foreground">
                     {option.description}
                   </p>

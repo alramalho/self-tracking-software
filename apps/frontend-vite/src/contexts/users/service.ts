@@ -149,11 +149,30 @@ type FullUserApiResponse = Omit<FullUserApiResponseBase, "plans"> & {
   plans: Array<FullUserApiResponseBase["plans"][number] & { progress: any }>;
 };
 
-export type HydratedCurrentUser = BasicUserApiResponse;
+// Coach profile type for human coaches
+type CoachProfile = {
+  id: string;
+  ownerId: string;
+  type: "HUMAN";
+  details: {
+    title: string;
+    bio?: string;
+    focusDescription: string;
+    idealPlans?: Array<{ emoji: string; title: string }>;
+    introVideoUrl?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type HydratedCurrentUser = BasicUserApiResponse & {
+  coachProfile?: CoachProfile | null;
+};
 export type HydratedUser = Omit<FullUserApiResponseBase, "plans"> & {
   plans: Array<
     FullUserApiResponseBase["plans"][number] & { progress: PlanProgressData }
   >;
+  coachProfile?: CoachProfile | null;
 };
 
 function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {

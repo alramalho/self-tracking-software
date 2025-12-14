@@ -1,7 +1,9 @@
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan } from "@/contexts/plans";
 import useConfetti from "@/hooks/useConfetti";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
 import { type Activity, type PlanSession } from "@tsw/prisma";
 import { endOfWeek, format, isAfter, isSameWeek } from "date-fns";
 import { AnimatePresence } from "framer-motion";
@@ -9,6 +11,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
+import { X } from "lucide-react";
 
 interface PlanWeekDisplayProps {
   plan: CompletePlan;
@@ -46,6 +49,8 @@ export const PlanWeekDisplay = ({
   // Always call hooks to maintain consistent order
   const { activities, activityEntries } = useActivities();
   const { stars, shapes } = useConfetti();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   // Use provided plan progress if available, otherwise use from hook
   const week = plan.progress?.weeks.find((w) => isSameWeek(w.startDate, date));
@@ -54,6 +59,7 @@ export const PlanWeekDisplay = ({
     useState(0);
   const [isFullyDone, setIsFullyDone] = useState(false);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -249,9 +255,10 @@ export const PlanWeekDisplay = ({
                       activityId: session.activityId,
                       quantity: session.quantity,
                       description: session.descriptiveGuide,
+                      imageUrls: session.imageUrls,
                     }}
                     onClick={(sessionId) => {
-                      setSelectedSession(sessionId);
+                      setSelectedSession(prev => prev === sessionId ? null : sessionId);
                     }}
                     activity={activity}
                     completed={completed}
@@ -260,8 +267,109 @@ export const PlanWeekDisplay = ({
                 );
               })}
           </div>
+
+          {/* Selected session detail panel */}
+          <AnimatePresence mode="wait">
+            {selectedSession && (() => {
+              const selectedSessionData = plan.sessions.find(
+                (s) => `${s.date}-${s.activityId}` === selectedSession
+              );
+              const selectedActivity = selectedSessionData
+                ? activities.find((a) => a.id === selectedSessionData.activityId)
+                : null;
+
+              if (!selectedSessionData || !selectedActivity) return null;
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className={cn("w-full p-4 rounded-xl border", variants.brightBorder, variants.veryFadedBg)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{selectedActivity.emoji || "📋"}</span>
+                      <div>
+                        <h4 className="text-left font-semibold text-foreground">
+                          {selectedActivity.title}
+                        </h4>
+                        <p className="text-left text-sm text-muted-foreground">
+                          {format(new Date(selectedSessionData.date), "EEEE, MMM d")} •{" "}
+                          {selectedSessionData.quantity} {selectedActivity.measure}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedSession(null)}
+                      className="p-1 rounded-md hover:bg-muted transition-colors"
+                    >
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
+
+                  {selectedSessionData.descriptiveGuide && (
+                    <p className="mt-3 text-sm text-foreground text-left">
+                      {selectedSessionData.descriptiveGuide}
+                    </p>
+                  )}
+
+                  {selectedSessionData.imageUrls && selectedSessionData.imageUrls.length > 0 && (
+                    <div className="mt-3 flex gap-2 overflow-x-auto">
+                      {selectedSessionData.imageUrls.map((url, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setExpandedImage(url)}
+                          className={cn("flex-shrink-0 rounded-lg overflow-hidden hover:ring-2 transition-all", variants.ring)}
+                        >
+                          <img
+                            src={url}
+                            alt={`Session reference ${idx + 1}`}
+                            className="h-24 w-auto object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
         </div>
       )}
+
+      {/* Full-screen image dialog */}
+      <AnimatePresence>
+        {expandedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setExpandedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative max-w-full max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setExpandedImage(null)}
+                className="absolute -top-10 right-0 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+              <img
+                src={expandedImage}
+                alt="Session reference expanded"
+                className="max-w-full max-h-[80vh] rounded-xl object-contain"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

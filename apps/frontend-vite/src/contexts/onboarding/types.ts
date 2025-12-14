@@ -9,6 +9,14 @@ export interface OnboardingStep {
   previous?: string | ((state: OnboardingState) => string | undefined);
 }
 
+export interface HumanCoachInfo {
+  id: string;
+  name: string | null;
+  username: string;
+  picture: string | null;
+  title: string;
+}
+
 export interface OnboardingContextValue {
   currentStep: string;
   totalSteps: number;
@@ -37,6 +45,8 @@ export interface OnboardingContextValue {
   partnerType: "human" | null;
   planProgress: string | null;
   wantsCoaching: boolean | null;
+  selectedCoachId: string | null; // null = AI coach, string = human coach ID
+  selectedCoach: HumanCoachInfo | null; // Full coach info when human coach selected
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
@@ -44,6 +54,7 @@ export interface OnboardingContextValue {
   setSelectedPlan: (plan: CompletePlan) => void;
   setPartnerType: (type: "human" | null) => void;
   setWantsCoaching: (wants: boolean) => void;
+  setSelectedCoachId: (coachId: string | null, coachInfo?: HumanCoachInfo | null) => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
 }
@@ -67,4 +78,6 @@ export interface OnboardingState {
   planTimesPerWeek: number;
   isPushGranted: boolean;
   wantsCoaching: boolean | null;
+  selectedCoachId: string | null; // null = AI coach, string = human coach ID
+  selectedCoach: HumanCoachInfo | null; // Full coach info when human coach selected
 }

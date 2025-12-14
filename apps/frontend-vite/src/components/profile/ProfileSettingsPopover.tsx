@@ -15,6 +15,7 @@ import {
   Bell,
   ChevronLeft,
   CreditCard,
+  GraduationCap,
   LogOut,
   Moon,
   MoveRight,
@@ -671,6 +672,18 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       >
                         <UserPen size={28} />
                         <span>User Settings</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-start px-0 gap-2"
+                        onClick={() => {
+                          onClose();
+                          navigate({ to: "/create-coach-profile" });
+                        }}
+                      >
+                        <GraduationCap size={28} />
+                        <span>Coach Profile</span>
                       </Button>
 
                       <Button

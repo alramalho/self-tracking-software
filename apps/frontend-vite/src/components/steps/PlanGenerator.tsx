@@ -54,6 +54,8 @@ const PlanGenerator = () => {
     planTimesPerWeek,
     selectedPlan,
     wantsCoaching,
+    selectedCoachId,
+    selectedCoach,
     completeStep,
     updateOnboardingState,
     setSelectedPlan,
@@ -355,7 +357,7 @@ const PlanGenerator = () => {
         open={showPaywallPopover}
         onClose={handlePaywallClose}
       >
-        <AICoachFeaturePreview>
+        <AICoachFeaturePreview humanCoach={selectedCoach}>
           <Button
             size="lg"
             className="w-full mt-8 rounded-xl"

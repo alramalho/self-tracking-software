@@ -15,6 +15,7 @@ export interface Entry {
   activityId: string;
   quantity: number;
   description?: string;
+  imageUrls?: string[];
 }
 
 export const SmallActivityEntryCard = ({

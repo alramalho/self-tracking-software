@@ -27,6 +27,7 @@ import { aiRouter } from "./routes/ai";
 import authRouter from "./routes/auth";
 import { chatsRouter } from "./routes/chats";
 import { clerkRouter } from "./routes/clerk";
+import { coachesRouter } from "./routes/coaches";
 import { messagesRouter } from "./routes/messages";
 import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
@@ -132,6 +133,7 @@ app.use("/admin", adminRouter);
 app.use("/clerk", clerkRouter);
 app.use("/ai", aiRouter);
 app.use("/chats", chatsRouter);
+app.use("/coaches", coachesRouter);
 app.use("/stripe", stripeRouter);
 
 // Error handling middleware (must be last)

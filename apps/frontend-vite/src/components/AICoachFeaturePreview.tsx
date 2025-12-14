@@ -172,12 +172,22 @@ const CardItem = ({
   );
 };
 
+interface HumanCoachInfo {
+  id: string;
+  name: string | null;
+  username: string;
+  picture: string | null;
+  title: string;
+}
+
 interface AICoachFeaturePreviewProps {
   children?: React.ReactNode;
+  humanCoach?: HumanCoachInfo | null;
 }
 
 export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
   children,
+  humanCoach,
 }) => {
   const [planStatePopoverDemoOpen, setPlanStatePopoverDemoOpen] =
     useState(false);
@@ -195,19 +205,37 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
       <div className="w-full max-w-lg space-y-2">
         <div className="flex flex-col items-center gap-4 text-center pt-0">
           <div className="flex flex-col items-center gap-2">
-            <img
-              src="/images/jarvis_logo_blue_transparent.png"
-              className="w-24 h-24"
-            />
+            {humanCoach ? (
+              <img
+                src={humanCoach.picture || "/images/default-avatar.png"}
+                className="w-24 h-24 rounded-full object-cover"
+                alt={humanCoach.name || humanCoach.username}
+              />
+            ) : (
+              <img
+                src="/images/jarvis_logo_blue_transparent.png"
+                className="w-24 h-24"
+              />
+            )}
             <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
-              Meet Oli,
+              Meet {humanCoach ? (humanCoach.name || humanCoach.username) : "Oli"},
               <br /> your new personal coach
             </h2>
           </div>
           <p className="text-md text-muted-foreground">
-            Oli is designed to help you stay on track and motivated.
-            <br />
-            Here&apos;s some things he can do:
+            {humanCoach ? (
+              <>
+                {humanCoach.name || humanCoach.username} will help you stay on track and motivated.
+                <br />
+                Here&apos;s what coaching includes:
+              </>
+            ) : (
+              <>
+                Oli is designed to help you stay on track and motivated.
+                <br />
+                Here&apos;s some things he can do:
+              </>
+            )}
           </p>
         </div>
         <div className="space-y-0">

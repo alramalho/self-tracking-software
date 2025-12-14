@@ -44,6 +44,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planTimesPerWeek: 3 as number,
       isPushGranted: false,
       wantsCoaching: null as boolean | null,
+      selectedCoachId: null as string | null,
     }
   );
   const {
@@ -60,6 +61,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     selectedPlan,
     planTimesPerWeek,
     wantsCoaching,
+    selectedCoachId,
+    selectedCoach,
   } = onboardingState;
 
   const navigate = useNavigate();
@@ -110,6 +113,14 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const setWantsCoaching = (wants: boolean) => {
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, wantsCoaching: wants }));
+  };
+
+  const setSelectedCoachId = (coachId: string | null, coachInfo?: { id: string; name: string | null; username: string; picture: string | null; title: string } | null) => {
+    setOnboardingState((prevState: OnboardingState) => ({
+      ...prevState,
+      selectedCoachId: coachId,
+      selectedCoach: coachInfo || null,
+    }));
   };
 
   const posthog = usePostHog();
@@ -314,6 +325,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     planProgress,
     planTimesPerWeek,
     wantsCoaching,
+    selectedCoachId,
+    selectedCoach,
     setPlanGoal,
     setPlanActivities,
     updateOnboardingState: (updates: object) => {
@@ -324,6 +337,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setSelectedPlan,
     setPartnerType,
     setWantsCoaching,
+    setSelectedCoachId,
   };
 
   return (
