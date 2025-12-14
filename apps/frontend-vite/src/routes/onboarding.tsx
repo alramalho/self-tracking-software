@@ -1,10 +1,7 @@
 import { OnboardingContainer } from "@/components/OnboardingContainer";
 import { ProgressBar } from "@/components/ProgressBar";
-import AIPartnerFinder from "@/components/steps/AIPartnerFinder";
 import CoachingSelector from "@/components/steps/CoachingSelector";
-import HumanPartnerFinder from "@/components/steps/HumanPartnerFinder";
-import NotificationsSelector from "@/components/steps/NotificationsSelector";
-import PartnerTypeSelector from "@/components/steps/PartnerSelector";
+import CommunityPartnerFinder from "@/components/steps/CommunityPartnerFinder";
 import PlanActivitySetter from "@/components/steps/PlanActivitySetter";
 import PlanGenerator from "@/components/steps/PlanGenerator";
 import PlanGoalSetter from "@/components/steps/PlanGoalSetter";
@@ -26,7 +23,7 @@ export const Route = createFileRoute("/onboarding")({
  * ALL navigation logic is centralized here - components should only call completeStep
  * with state updates, and this function determines the next/previous steps.
  *
- * NEW FLOW:
+ * FLOW:
  * 1. welcome
  * 2. plan-goal-setter - Ask for the goal
  * 3. plan-times-per-week - Ask desired frequency
@@ -34,11 +31,10 @@ export const Route = createFileRoute("/onboarding")({
  * 5. coaching-selector - AI coaching vs self-guided
  * 6a. If coaching: plan-generator (AI generates activities + adapts frequency)
  * 6b. If self-guided: plan-activity-selector (user picks activities)
- * 7. partner-selection
- * 8. notifications-selector (if needed)
- * 9. human/ai-partner-finder
+ * 7. community-partner-finder - Ask if user wants community accountability partner (merged step)
+ * 8. notifications-selector (if needed, only if user wants partner)
  */
-const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
+const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
   {
     id: "welcome",
     component: WelcomeStep,
@@ -68,58 +64,22 @@ const getOnboardingSteps = (state: OnboardingState): OnboardingStep[] => [
   {
     id: "plan-activity-selector",
     component: PlanActivitySetter,
-    next: "partner-selection",
+    next: "community-partner-finder",
     previous: "coaching-selector",
   },
   {
     id: "plan-generator",
     component: PlanGenerator,
-    next: "partner-selection",
+    next: "community-partner-finder",
     previous: "coaching-selector",
   },
   {
-    id: "partner-selection",
-    component: PartnerTypeSelector,
-    next: (state) => {
-      // If notifications already granted, skip notifications step
-      if (state.isPushGranted) {
-        if (state.partnerType === "human") return "human-partner-finder";
-        if (state.partnerType === "ai") return "ai-partner-finder";
-      }
-      // Otherwise, go to notifications first
-      return "notifications-selector";
-    },
+    id: "community-partner-finder",
+    component: CommunityPartnerFinder,
     previous: (state) => {
       // Go back based on coaching choice
       if (state.wantsCoaching) return "plan-generator";
       return "plan-activity-selector";
-    },
-  },
-  {
-    id: "notifications-selector",
-    component: NotificationsSelector,
-    next: (state) => {
-      if (state.partnerType === "human") return "human-partner-finder";
-      if (state.partnerType === "ai") return "ai-partner-finder";
-      return undefined;
-    },
-    previous: "partner-selection",
-  },
-  {
-    id: "human-partner-finder",
-    component: HumanPartnerFinder,
-    previous: (state) => {
-      // Go back to notifications if we came through that path
-      if (!state.isPushGranted) return "notifications-selector";
-      return "partner-selection";
-    },
-  },
-  {
-    id: "ai-partner-finder",
-    component: AIPartnerFinder,
-    previous: (state) => {
-      if (!state.isPushGranted) return "notifications-selector";
-      return "partner-selection";
     },
   },
 ];

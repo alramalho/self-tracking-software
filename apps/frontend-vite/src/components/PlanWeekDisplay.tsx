@@ -221,7 +221,7 @@ export const PlanWeekDisplay = ({
       {plan.outlineType == "SPECIFIC" && (isCurrentWeek || isFutureWeek) && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-muted-foreground">Coming up:</span>
-          <div className="flex flex-row flex-wrap gap-2">
+          <div className="flex flex-row flex-wrap gap-2 p-1">
             {plan.sessions
               .filter((session) => {
                 return isSameWeek(session.date, date);

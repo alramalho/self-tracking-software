@@ -266,7 +266,7 @@ class PerplexityAiService {
 
     try {
       const { object } = await generateObject({
-        model: this.openrouter.chat("openai/gpt-4.1-mini"),
+        model: this.openrouter.chat("openai/gpt-5.2-chat"),
         schema: z.object({
           isMilestoneGoal: z.boolean().describe("Whether this goal has a clear endpoint (true) or is ongoing/lifestyle (false)"),
           estimatedWeeks: z.number().nullable().describe("Estimated weeks to achieve the goal, or null if ongoing"),

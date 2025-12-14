@@ -40,7 +40,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planProgress: null as string | null,
       planType: null as string | null,
       planId: uuidv4(),
-      partnerType: null as "human" | "ai" | null,
+      partnerType: null as "human" | null,
       planTimesPerWeek: 3 as number,
       isPushGranted: false,
       wantsCoaching: null as boolean | null,
@@ -75,7 +75,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   }, [isPushGranted]);
 
   const setCurrentStep = (stepId: string) => {
-    setOnboardingState({ ...onboardingState, currentStep: stepId });
+    setOnboardingState((prevState) => ({ ...prevState, currentStep: stepId }));
   };
 
   const setPlanGoal = (goal: string) => {
@@ -104,7 +104,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, selectedPlan: plan }));
   };
 
-  const setPartnerType = (type: "human" | "ai") => {
+  const setPartnerType = (type: "human" | null) => {
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, partnerType: type }));
   };
 
@@ -190,10 +190,14 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   }, [currentStep, steps, resolveStepNavigation]);
 
   const goToStep = useCallback(
-    (stepId: string) => {
+    (stepId: string, updates?: object) => {
       const stepExists = steps.some((step) => step.id === stepId);
       if (stepExists) {
-        setCurrentStep(stepId);
+        setOnboardingState((prevState) => ({
+          ...prevState,
+          ...(updates || {}),
+          currentStep: stepId,
+        }));
       }
     },
     [steps]
@@ -205,20 +209,17 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       updates?: object,
       options?: { nextStep?: string; complete?: boolean }
     ) => {
-      let newState = onboardingState;
-      if (!completedSteps.includes(stepId)) {
-        newState = {
-          ...onboardingState,
-          completedSteps: [...onboardingState.completedSteps, stepId],
-        };
-      }
-      newState = {
-        ...newState,
-        ...(updates || {}),
-      };
-
       // Check if this step should mark onboarding as complete
       if (options?.complete) {
+        // Apply updates before completing
+        setOnboardingState((prevState) => ({
+          ...prevState,
+          ...(updates || {}),
+          completedSteps: prevState.completedSteps.includes(stepId)
+            ? prevState.completedSteps
+            : [...prevState.completedSteps, stepId],
+        }));
+
         updateUser({
           updates: {
             onboardingCompletedAt: new Date(),
@@ -236,38 +237,54 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
             navigate({ to: "/" });
           });
       } else {
-        // Priority 1: If options.nextStep is provided, go to that specific step
-        if (options?.nextStep) {
-          newState.currentStep = options.nextStep;
-        } else {
-          // Priority 2: Check if the completed step has a custom next step defined
-          const completedStepData = steps.find((step) => step.id === stepId);
-          if (completedStepData?.next) {
-            const resolvedNext = typeof completedStepData.next === 'function'
-              ? completedStepData.next(newState)
-              : completedStepData.next;
-            if (resolvedNext) {
-              newState.currentStep = resolvedNext;
-            }
+        setOnboardingState((prevState) => {
+          let newState = { ...prevState };
+
+          // Add to completed steps if not already there
+          if (!prevState.completedSteps.includes(stepId)) {
+            newState.completedSteps = [...prevState.completedSteps, stepId];
+          }
+
+          // Apply updates
+          newState = {
+            ...newState,
+            ...(updates || {}),
+          };
+
+          // Priority 1: If options.nextStep is provided, go to that specific step
+          if (options?.nextStep) {
+            newState.currentStep = options.nextStep;
           } else {
-            // Priority 3: Default behavior - go to next sequential step
-            const currentStepIndex = steps.findIndex(
-              (step) => step.id === stepId
-            );
-            if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
-              const nextStepId = steps[currentStepIndex + 1]?.id;
-              if (nextStepId) {
-                newState.currentStep = nextStepId;
+            // Priority 2: Check if the completed step has a custom next step defined
+            const completedStepData = steps.find((step) => step.id === stepId);
+            if (completedStepData?.next) {
+              const resolvedNext = typeof completedStepData.next === 'function'
+                ? completedStepData.next(newState)
+                : completedStepData.next;
+              if (resolvedNext) {
+                newState.currentStep = resolvedNext;
+              }
+            } else {
+              // Priority 3: Default behavior - go to next sequential step
+              const currentStepIndex = steps.findIndex(
+                (step) => step.id === stepId
+              );
+              if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
+                const nextStepId = steps[currentStepIndex + 1]?.id;
+                if (nextStepId) {
+                  newState.currentStep = nextStepId;
+                }
               }
             }
           }
-        }
+
+          return newState;
+        });
       }
 
-      setOnboardingState(newState);
       posthog?.capture(`onboarding-${stepId}-completed`);
     },
-    [completedSteps, steps, totalSteps, posthog, onboardingState]
+    [steps, totalSteps, posthog, updateUser, refetchCurrentUser, sideCannons, navigate]
   );
 
   const contextValue: OnboardingContextValue = {
@@ -300,7 +317,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setPlanGoal,
     setPlanActivities,
     updateOnboardingState: (updates: object) => {
-      setOnboardingState({ ...onboardingState, ...updates });
+      setOnboardingState((prevState) => ({ ...prevState, ...updates }));
     },
     setPlanTimesPerWeek,
     setPlanType,
