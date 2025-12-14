@@ -427,6 +427,9 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
             {selectedPlan.outlineType === "TIMES_PER_WEEK"
               ? `${selectedPlan.timesPerWeek} times per week`
               : `custom plan`}
+            {selectedPlan.finishingDate && (
+              <> · until {format(selectedPlan.finishingDate, "MMM d, yyyy")}</>
+            )}
           </span>
           <div className="flex gap-2 items-center justify-start">
             {isPlanCoached(selectedPlan) && (
