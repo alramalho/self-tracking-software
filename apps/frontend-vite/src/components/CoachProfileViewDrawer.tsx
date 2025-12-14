@@ -106,17 +106,17 @@ export function CoachProfileViewDrawer({
           )}
 
           {/* Bio */}
-          {(details.bio || details.focusDescription) && (
+          {(details.bio) && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 About
               </h3>
-              <p className="text-foreground">{details.bio || details.focusDescription}</p>
+              <p className="text-foreground">{details.bio}</p>
             </div>
           )}
 
           {/* Focus */}
-          {details.bio && details.focusDescription && (
+          {details.focusDescription && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Specialization

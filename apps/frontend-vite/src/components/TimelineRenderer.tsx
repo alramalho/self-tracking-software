@@ -9,7 +9,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity, type PlanType } from "@tsw/prisma";
-import { Bell, Check, RefreshCcw, Squirrel } from "lucide-react";
+import { ArrowRight, Bell, Check, RefreshCcw, Sparkles, Squirrel } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
@@ -353,17 +353,39 @@ const TimelineRenderer: React.FC<{
   }
   if (!friends?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 text-center text-muted-foreground pt-2">
-        <Squirrel className="w-24 h-24 text-muted-foreground mx-auto" />
-        <div>
-          <h3 className="text-lg text-foreground font-semibold">Uh oh...</h3>
-          <p className="text-sm text-muted-foreground">
-            You haven't added any friends yet...
-          </p>
+      <div className="flex flex-col items-center gap-8 text-center pt-2">
+        {/* Get Coached Banner */}
+        <button
+          onClick={() => navigate({ to: "/get-coached", search: { coach: "" } })}
+          className="w-full rounded-2xl overflow-hidden relative group cursor-pointer"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
+          <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
+          <div className="relative p-4 text-white text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-5 h-5" />
+              <span className="text-sm font-semibold">Struggling to stay on track?</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-white/70">Get personalized coaching today</p>
+              <ArrowRight className="w-4 h-4 text-white/70 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </button>
+
+        {/* Find Friends Section */}
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Squirrel className="w-20 h-20 text-muted-foreground mx-auto" />
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Add friends to see their activity here
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate({ to: "/search" })} className="mt-1">
+            Find Friends
+          </Button>
         </div>
-        <Button onClick={() => navigate({ to: "/search" })} className="mt-2">
-          Find Friends
-        </Button>
       </div>
     );
   }

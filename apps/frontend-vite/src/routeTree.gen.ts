@@ -15,6 +15,7 @@ import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as DmsRouteImport } from './routes/dms'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
@@ -55,6 +56,11 @@ const PlansRoute = PlansRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GetCoachedRoute = GetCoachedRouteImport.update({
+  id: '/get-coached',
+  path: '/get-coached',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadRoute = DownloadRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
+  '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
+  '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
+  '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/create-coach-profile'
     | '/dms'
     | '/download'
+    | '/get-coached'
     | '/onboarding'
     | '/plans'
     | '/search'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/create-coach-profile'
     | '/dms'
     | '/download'
+    | '/get-coached'
     | '/onboarding'
     | '/plans'
     | '/search'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/create-coach-profile'
     | '/dms'
     | '/download'
+    | '/get-coached'
     | '/onboarding'
     | '/plans'
     | '/search'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
   DmsRoute: typeof DmsRoute
   DownloadRoute: typeof DownloadRoute
+  GetCoachedRoute: typeof GetCoachedRoute
   OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
   SearchRoute: typeof SearchRoute
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/get-coached': {
+      id: '/get-coached'
+      path: '/get-coached'
+      fullPath: '/get-coached'
+      preLoaderRoute: typeof GetCoachedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/download': {
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateCoachProfileRoute: CreateCoachProfileRoute,
   DmsRoute: DmsRoute,
   DownloadRoute: DownloadRoute,
+  GetCoachedRoute: GetCoachedRoute,
   OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,
   SearchRoute: SearchRoute,

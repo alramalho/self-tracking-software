@@ -42,7 +42,7 @@ export interface OnboardingContextValue {
   planType: string | null;
   planEmoji: string | null;
   planTimesPerWeek: number;
-  partnerType: "human" | null;
+  partnerType: "human" | "ai" | null;
   planProgress: string | null;
   wantsCoaching: boolean | null;
   selectedCoachId: string | null; // null = AI coach, string = human coach ID
@@ -74,7 +74,7 @@ export interface OnboardingState {
   planProgress: string | null;
   planType: string | null;
   planId: string;
-  partnerType: "human" | null;
+  partnerType: "human" | "ai" | null;
   planTimesPerWeek: number;
   isPushGranted: boolean;
   wantsCoaching: boolean | null;

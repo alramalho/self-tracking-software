@@ -30,7 +30,7 @@ export function BadgeCard({
         height: `${height}px`,
       }}
     >
-      <span className="ml-2 text-3xl font-cursive">x{count}</span>
+      <span className="ml-2 text-xl font-cursive">x{count}</span>
       <div
         className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2`}
         style={{

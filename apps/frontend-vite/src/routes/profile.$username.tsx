@@ -16,11 +16,11 @@ import ProfileSettingsPopover, {
 import { ProfilePlanCard } from "@/components/profile/ProfilePlanCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -28,6 +28,7 @@ import { type ActivityEntry } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { subDays } from "date-fns";
 import {
+  ArrowRight,
   BarChart3,
   Check,
   ChevronLeft,
@@ -268,6 +269,7 @@ function ProfilePage() {
 
   // Calculate account level (handles all data internally)
   const accountLevel = useAccountLevel(username);
+  const themeColors = useThemeColors();
 
   if (isProfileDataLoading) {
     return (
@@ -366,203 +368,279 @@ function ProfilePage() {
           )}
         </div>
 
+        {/* Instagram-style header: Avatar left, Stats right */}
         <AnimatedSection delay={0.1}>
-          <div className="flex flex-col items-center">
-            {/* Avatar with progress ring */}
-            <div className="relative mb-1">
-              <ProgressRing
-                size={112}
-                strokeWidth={5}
-                atLeastBronze={accountLevel.atLeastBronze}
-                percentage={accountLevel.percentage}
-                currentLevel={accountLevel.currentLevel}
-                onClick={() => setProgressExplainerOpen(true)}
-              >
-                <Avatar className="w-24 h-24">
-                  <AvatarImage
-                    src={profileData?.picture || ""}
-                    alt={profileData?.name || ""}
-                  />
-                  <AvatarFallback className="text-2xl">
-                    {(profileData?.name || "U")[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </ProgressRing>
-            </div>
-
-            {/* Name and username */}
-            <h2 className="text-xl font-bold text-foreground">
-              {profileData?.name}
-            </h2>
-            <p className="text-muted-foreground text-sm mb-2">
-              @{profileData?.username}
-            </p>
-
-            {/* Coach Badge */}
-            {profileData?.coachProfile && (
-              <button
-                onClick={() => setShowCoachProfileDrawer(true)}
-                className="group flex items-center gap-1.5 mt-1"
-              >
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors cursor-pointer"
+          <div className="px-4">
+            <div className="flex items-center gap-6">
+              {/* Left: Avatar with progress ring */}
+              <div className="relative flex-shrink-0">
+                <ProgressRing
+                  size={96}
+                  strokeWidth={4}
+                  atLeastBronze={accountLevel.atLeastBronze}
+                  percentage={accountLevel.percentage}
+                  currentLevel={accountLevel.currentLevel}
+                  onClick={() => setProgressExplainerOpen(true)}
                 >
-                  {(profileData.coachProfile.details as any)?.title || "Coach"}
-                </Badge>
-                {isOwnProfile && (
-                  <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Avatar className="w-20 h-20">
+                    <AvatarImage
+                      src={profileData?.picture || ""}
+                      alt={profileData?.name || ""}
+                    />
+                    <AvatarFallback className="text-xl">
+                      {(profileData?.name || "U")[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </ProgressRing>
+                {/* Coach verified badge */}
+                {profileData?.coachProfile && (
+                  <button
+                    onClick={() => setShowCoachProfileDrawer(true)}
+                    className="absolute -bottom-0.5 -right-0.5 rounded-full p-1 border-2 border-background shadow-md transition-opacity hover:opacity-80"
+                    style={{ backgroundColor: themeColors.hex }}
+                  >
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  </button>
                 )}
-              </button>
-            )}
-          </div>
-        </AnimatedSection>
-
-        <AnimatedSection delay={0.15}>
-          <div className="flex flex-col items-center">
-            {/* TikTok-style stats */}
-            <div className="flex items-center justify-center space-x-8 mb-4">
-              <Link
-                to={`/friends/$username`}
-                params={{ username: profileData?.username || "" }}
-              >
-                <div className="text-center cursor-pointer">
-                  <p className="text-xl font-bold text-foreground">
-                    {friends?.length || 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Friends</p>
-                </div>
-              </Link>
-
-              <div
-                className="text-center cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setProgressExplainerOpen(true)}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <p className="text-xl font-bold text-foreground">
-                    {accountLevel.totalPoints}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">Points</p>
               </div>
 
-              {accountLevel.currentLevel && (
-                <>
-                  <div className="flex flex-col items-center justify-center gap-0" onClick={() => setProgressExplainerOpen(true)}>
+              {/* Right: Stats grid */}
+              <div className="flex-1 grid grid-cols-3 gap-2">
+                <Link
+                  to={`/friends/$username`}
+                  params={{ username: profileData?.username || "" }}
+                >
+                  <div className="text-center cursor-pointer">
+                    <p className="text-lg font-bold text-foreground">
+                      {friends?.length || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Friends</p>
+                  </div>
+                </Link>
+
+                <div
+                  className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setProgressExplainerOpen(true)}
+                >
+                  <p className="text-lg font-bold text-foreground">
+                    {accountLevel.totalPoints}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Points</p>
+                </div>
+
+                {accountLevel.currentLevel && (
+                  <div
+                    className="flex flex-col items-center justify-center cursor-pointer"
+                    onClick={() => setProgressExplainerOpen(true)}
+                  >
                     {accountLevel.currentLevel.getIcon({
-                      size: 35,
+                      size: 24,
                       className: "drop-shadow-sm",
                     })}
                     <span
-                      className="text-sm px-1.5 py-0.5 rounded-full bg-transparentfont-semibold"
+                      className="text-xs font-semibold"
                       style={{ color: accountLevel.currentLevel?.color }}
                     >
                       {accountLevel.currentLevel?.name}
                     </span>
                   </div>
-                </>
-              )}
+                )}
+              </div>
+            </div>
+
+            {/* Name, username and badges row */}
+            <div className="my-3 flex items-end justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  {profileData?.name}
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  @{profileData?.username}
+                </p>
+              </div>
+
+              {/* Achievement Badges */}
+              <div className="flex gap-1.5">
+                <BadgeCard
+                  count={totalStreaks}
+                  width={50}
+                  height={62}
+                  onClick={() =>
+                    setBadgeExplainer({
+                      open: true,
+                      planIds: planIds,
+                      badgeType: "streaks",
+                    })
+                  }
+                >
+                  {isProfileDataLoading ? (
+                    <Loader2 className="w-full h-full animate-spin mt-3 ml-3" />
+                  ) : (
+                    <>
+                      {totalStreaks == 0 ? (
+                        <Flame size={55} className="pb-1 text-red-500 mt-3" />
+                      ) : (
+                        <FireAnimation
+                          height={65}
+                          width={65}
+                          className="pb-1 w-full h-full"
+                        />
+                      )}
+                    </>
+                  )}
+                </BadgeCard>
+                <BadgeCard
+                  count={totalHabits}
+                  width={50}
+                  height={62}
+                  onClick={() =>
+                    setBadgeExplainer({
+                      open: true,
+                      planIds: planIds,
+                      badgeType: "habits",
+                    })
+                  }
+                >
+                  {isProfileDataLoading ? (
+                    <Loader2 className="w-full h-full animate-spin mt-3 ml-3" />
+                  ) : (
+                    <>
+                      {totalHabits == 0 ? (
+                        <Sprout size={55} className="pb-1 text-lime-500 mt-3" />
+                      ) : (
+                        <SeedAnimation
+                          height={65}
+                          width={65}
+                          className="pb-1 w-full h-full"
+                        />
+                      )}
+                    </>
+                  )}
+                </BadgeCard>
+                <BadgeCard
+                  count={totalLifestyles}
+                  width={50}
+                  height={62}
+                  onClick={() =>
+                    setBadgeExplainer({
+                      open: true,
+                      planIds: planIds,
+                      badgeType: "lifestyles",
+                    })
+                  }
+                >
+                  {isProfileDataLoading ? (
+                    <Loader2 className="w-full h-full animate-spin mt-3 ml-3" />
+                  ) : (
+                    <>
+                      {totalLifestyles == 0 ? (
+                        <Rocket size={55} className="pb-1 text-orange-500 mt-3" />
+                      ) : (
+                        <RocketAnimation
+                          height={65}
+                          width={65}
+                          className="pb-1 w-full h-full"
+                        />
+                      )}
+                    </>
+                  )}
+                </BadgeCard>
+              </div>
             </div>
           </div>
         </AnimatedSection>
 
-        <AnimatedSection delay={0.2}>
-          <div className="flex flex-col items-center">
-            {/* Badges */}
-            <div className="flex justify-center mb-6 gap-3">
-              <BadgeCard
-                count={totalStreaks}
-                width={70}
-                height={90}
-                onClick={() =>
-                  setBadgeExplainer({
-                    open: true,
-                    planIds: planIds,
-                    badgeType: "streaks",
-                  })
-                }
+        {/* Coach Card - Runna style */}
+        {profileData?.coachProfile && (
+          <AnimatedSection delay={0.15}>
+            <div className="px-4 mt-4">
+              <div
+                onClick={() => setShowCoachProfileDrawer(true)}
+                className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
               >
-                {isProfileDataLoading ? (
-                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-                ) : (
-                  <>
-                    {totalStreaks == 0 ? (
-                      <Flame size={90} className="pb-2 text-red-500 mt-5" />
-                    ) : (
-                      <FireAnimation
-                        height={100}
-                        width={100}
-                        className="pb-2 w-full h-full"
-                      />
+                {/* Background with profile image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${profileData?.picture || ""})`,
+                  }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/60" />
+
+                {/* Content */}
+                <div className="relative p-4 text-white">
+                  {/* Specs Grid - Runna style */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    {(profileData.coachProfile.details as any)?.title && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-white/60">
+                          Title
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {(profileData.coachProfile.details as any).title}
+                        </p>
+                      </div>
                     )}
-                  </>
-                )}
-              </BadgeCard>
-              <BadgeCard
-                count={totalHabits}
-                width={70}
-                height={90}
-                onClick={() =>
-                  setBadgeExplainer({
-                    open: true,
-                    planIds: planIds,
-                    badgeType: "habits",
-                  })
-                }
-              >
-                {isProfileDataLoading ? (
-                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-                ) : (
-                  <>
-                    {totalHabits == 0 ? (
-                      <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
-                    ) : (
-                      <SeedAnimation
-                        height={100}
-                        width={100}
-                        className="pb-2 w-full h-full"
-                      />
+                    {(profileData.coachProfile.details as any)?.focusDescription && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-white/60">
+                          Focus
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {(profileData.coachProfile.details as any).focusDescription}
+                        </p>
+                      </div>
                     )}
-                  </>
-                )}
-              </BadgeCard>
-              <BadgeCard
-                count={totalLifestyles}
-                width={70}
-                height={90}
-                onClick={() =>
-                  setBadgeExplainer({
-                    open: true,
-                    planIds: planIds,
-                    badgeType: "lifestyles",
-                  })
-                }
-              >
-                {isProfileDataLoading ? (
-                  <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
-                ) : (
-                  <>
-                    {totalLifestyles == 0 ? (
-                      <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
-                    ) : (
-                      <RocketAnimation
-                        height={100}
-                        width={100}
-                        className="pb-2 w-full h-full"
-                      />
+                    {(profileData.coachProfile.details as any)?.idealPlans?.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-white/60">
+                          Helps with
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {(profileData.coachProfile.details as any).idealPlans
+                            .slice(0, 3)
+                            .map((p: { emoji: string; title: string }) => `${p.emoji} ${p.title}`)
+                            .join(" · ")}
+                        </p>
+                      </div>
                     )}
-                  </>
-                )}
-              </BadgeCard>
+                  </div>
+
+                  {/* Bio preview */}
+                  {(profileData.coachProfile.details as any)?.bio && (
+                    <p className="text-xs text-white/70 mt-3 line-clamp-2">
+                      {(profileData.coachProfile.details as any).bio}
+                    </p>
+                  )}
+
+                  {/* Get coached CTA - only show on other profiles */}
+                  {!isOwnProfile && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate({
+                          to: "/get-coached",
+                          search: { coach: profileData.username || "" },
+                        });
+                      }}
+                      className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white text-sm font-medium transition-colors"
+                    >
+                      Get coached
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </AnimatedSection>
+          </AnimatedSection>
+        )}
 
         <AnimatedSection delay={0.25}>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-start p-3">
             {/* Action buttons */}
             {!isOwnProfile && (
-              <div className="flex space-x-3 mb-6">
+              <div className="flex space-x-3">
                 {/* Message button - always show for non-own profiles */}
                 <Button
                   size="sm"
@@ -852,6 +930,7 @@ function ProfilePage() {
           }}
         />
       )}
+
     </motion.div>
   );
 }
