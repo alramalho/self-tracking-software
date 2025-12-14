@@ -2,13 +2,27 @@
 
 import { useApiWithAuth } from "@/api";
 import { CoachProfileDrawer } from "@/components/CoachProfileDrawer";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Sparkles, User } from "lucide-react";
-import { useState } from "react";
+import { LandPlot, Route, Send, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+
+const CoachingFeatureItem = ({
+  icon,
+  title,
+}: {
+  icon: React.ReactNode;
+  title: string;
+}) => (
+  <div className="flex items-center gap-3">
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted">
+      {icon}
+    </div>
+    <p className="text-sm text-muted-foreground">{title}</p>
+  </div>
+);
 
 interface CoachDetails {
   title: string;
@@ -79,7 +93,7 @@ const CoachSelector = () => {
   const coachIcon = "/images/jarvis_logo_blue_transparent.png"
 
   return (
-    <div className="w-full max-w-lg space-y-8">
+    <div className="w-full max-w-lg space-y-6">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-2">
           <Sparkles className="w-16 h-16 text-blue-600" />
@@ -88,58 +102,84 @@ const CoachSelector = () => {
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Select an AI coach for free or work with a human coach for personalized guidance.
+          All coaches help you build habits with the same powerful features.
         </p>
       </div>
 
-      <div className="space-y-4">
+      {/* Shared coaching features */}
+      <div className="space-y-3 px-2">
+        <CoachingFeatureItem
+          icon={<LandPlot className="w-5 h-5 text-blue-500" />}
+          title="Track your plan progress"
+        />
+        <CoachingFeatureItem
+          icon={<Send className="w-5 h-5 text-blue-500" />}
+          title="Check-ins several times a week"
+        />
+        <CoachingFeatureItem
+          icon={<Route className="w-5 h-5 text-blue-500" />}
+          title="Weekly plan adjustments based on progress"
+        />
+      </div>
+
+      <div className="space-y-3">
         {/* AI Coach Option */}
         <button
           onClick={() => handleSelectCoach(null)}
-          className="w-full rounded-xl border-2 border-border p-5 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+          className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
         >
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 bg-transparent text-blue-500 flex items-center justify-center flex-shrink-0">
-              <img src={coachIcon} alt="AI Coach" className="w-8 h-8" />
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
+          {/* Subtle pattern overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
+          <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
+
+          {/* Content */}
+          <div className="relative p-4 text-white">
+            {/* Name with icon */}
+            <div className="flex items-center gap-2 mb-2">
+              <img src={coachIcon} alt="AI Coach" className="w-8 h-8 brightness-0 invert" />
+              <h3 className="text-lg font-bold">Oli</h3>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-foreground">
-                AI Coach
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Research-backed activities with adaptive scheduling
-              </p>
-              <ul className="mt-3 space-y-1">
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  Personalized activity suggestions
-                </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  Available 24/7
-                </li>
-              </ul>
-              <div className="mt-3 inline-block bg-muted text-foreground px-3 py-1 rounded-full text-sm font-medium">
-                Free trial, then €9.99/m
+
+            {/* Specs Grid */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/60">
+                  Type
+                </p>
+                <p className="text-sm font-semibold">
+                  AI Coach
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/60">
+                  Availability
+                </p>
+                <p className="text-sm font-semibold">
+                  24/7
+                </p>
               </div>
             </div>
+
+            <p className="text-xs text-white/70 mt-3">
+              Research-backed guidance with adaptive scheduling
+            </p>
           </div>
         </button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
 
         {/* Human Coaches */}
         {isLoading ? (
           <>
             {[1, 2].map((i) => (
-              <div key={i} className="rounded-xl border-2 border-border p-5">
-                <div className="flex items-start gap-4">
-                  <Skeleton className="w-14 h-14 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                </div>
-              </div>
+              <Skeleton key={i} className="h-32 w-full rounded-2xl" />
             ))}
           </>
         ) : (
@@ -150,26 +190,68 @@ const CoachSelector = () => {
               <button
                 key={coach.id}
                 onClick={() => handleCoachClick(coach)}
-                className="w-full rounded-xl border-2 border-border p-5 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
               >
-                <div className="flex items-start gap-4">
-                  <Avatar className="w-14 h-14 flex-shrink-0">
-                    <AvatarImage src={coach.owner.picture || undefined} />
-                    <AvatarFallback>
-                      <User className="w-6 h-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {coach.owner.name || coach.owner.username}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {details.title}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {details.focusDescription}
-                    </p>
+                {/* Background with profile image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${coach.owner.picture || ""})`,
+                  }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors" />
+
+                {/* Content */}
+                <div className="relative p-4 text-white">
+                  {/* Name */}
+                  <h3 className="text-lg font-bold mb-2">
+                    {coach.owner.name || coach.owner.username}
+                  </h3>
+
+                  {/* Specs Grid */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-white/60">
+                        Title
+                      </p>
+                      <p className="text-sm font-semibold">
+                        {details.title}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-white/60">
+                        Focus
+                      </p>
+                      <p className="text-sm font-semibold">
+                        {details.focusDescription}
+                      </p>
+                    </div>
+                    {details.idealPlans && details.idealPlans.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-white/60">
+                          Helps with
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {details.idealPlans
+                            .slice(0, 3)
+                            .map((p) => `${p.emoji} ${p.title}`)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Bio preview */}
+                  {details.bio && (
+                    <p className="text-xs text-white/70 mt-3 line-clamp-2">
+                      {details.bio}
+                    </p>
+                  )}
+
+                  <p className="text-[10px] text-white/50 mt-3 italic">
+                    Subject to acceptance by coach
+                  </p>
                 </div>
               </button>
             );
@@ -178,7 +260,7 @@ const CoachSelector = () => {
 
         {!isLoading && (!humanCoaches || humanCoaches.length === 0) && (
           <p className="text-center text-muted-foreground text-sm py-4">
-            No human coaches available yet. Choose AI coaching to get started!
+            No human coaches available yet.
           </p>
         )}
       </div>

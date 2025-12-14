@@ -40,11 +40,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planProgress: null as string | null,
       planType: null as string | null,
       planId: uuidv4(),
-      partnerType: null as "human" | null,
+      partnerType: null as "human" | "ai" | null,
       planTimesPerWeek: 3 as number,
       isPushGranted: false,
       wantsCoaching: null as boolean | null,
       selectedCoachId: null as string | null,
+      selectedCoach: null as { id: string; name: string | null; username: string; picture: string | null; title: string } | null,
     }
   );
   const {
@@ -107,7 +108,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, selectedPlan: plan }));
   };
 
-  const setPartnerType = (type: "human" | null) => {
+  const setPartnerType = (type: "human" | "ai" | null) => {
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, partnerType: type }));
   };
 

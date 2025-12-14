@@ -509,7 +509,8 @@ export class PlansService {
   } {
     const maxValue = this.HABIT_WEEKS; // 4 weeks
     const progressValue = Math.min(maxValue, achievement.streak);
-    const isAchieved = achievement.streak >= maxValue;
+    // Only count as habit if streak >= 4 weeks but < 9 weeks (not yet a lifestyle)
+    const isAchieved = achievement.streak >= maxValue && achievement.streak < this.LIFESTYLE_WEEKS;
     const progressPercentage = Math.round((progressValue / maxValue) * 100);
 
     return {

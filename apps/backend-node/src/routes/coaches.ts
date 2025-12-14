@@ -234,5 +234,136 @@ router.post(
   }
 );
 
+// Schema for coaching request
+const CoachingRequestSchema = z.object({
+  coachId: z.string().min(1),
+  planId: z.string().min(1),
+  message: z.string().optional(),
+});
+
+// Send a coaching request to a human coach
+router.post(
+  "/request",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const body = CoachingRequestSchema.parse(req.body);
+      const user = req.user!;
+
+      // Find the coach
+      const coach = await prisma.coach.findUnique({
+        where: { id: body.coachId },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      if (!coach || coach.type !== "HUMAN") {
+        res.status(404).json({ error: "Coach not found" });
+        return;
+      }
+
+      // Find the user's plan
+      const plan = await prisma.plan.findFirst({
+        where: {
+          id: body.planId,
+          userId: user.id,
+          deletedAt: null,
+        },
+        include: {
+          activities: true,
+        },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      // Check if plan is already being coached
+      if (plan.coachId) {
+        res.status(400).json({ error: "This plan already has a coach" });
+        return;
+      }
+
+      // Create or find existing direct chat with the coach
+      let chat = await prisma.chat.findFirst({
+        where: {
+          type: "DIRECT",
+          AND: [
+            { participants: { some: { userId: user.id } } },
+            { participants: { some: { userId: coach.ownerId } } },
+          ],
+        },
+      });
+
+      if (!chat) {
+        chat = await prisma.chat.create({
+          data: {
+            type: "DIRECT",
+            participants: {
+              create: [{ userId: user.id }, { userId: coach.ownerId }],
+            },
+          },
+        });
+        logger.info(
+          `Created direct chat ${chat.id} for coaching request from ${user.username} to ${coach.owner.username}`
+        );
+      }
+
+      // Format the coaching request message
+      const activitiesStr = plan.activities
+        .map((a) => `${a.emoji} ${a.title}`)
+        .join(", ");
+
+      const messageContent = `**Coaching Request**
+
+Hi! I'd like to request coaching for my plan.
+
+**Plan:** ${plan.emoji} ${plan.goal}
+**Activities:** ${activitiesStr}
+**Frequency:** ${plan.timesPerWeek || "Not set"} times per week
+
+${body.message ? `**Message:**\n${body.message}` : ""}
+
+Looking forward to working with you!`;
+
+      // Send the message
+      await prisma.message.create({
+        data: {
+          chatId: chat.id,
+          role: "USER",
+          content: messageContent,
+        },
+      });
+
+      // Update chat's updatedAt timestamp
+      await prisma.chat.update({
+        where: { id: chat.id },
+        data: { updatedAt: new Date() },
+      });
+
+      logger.info(
+        `Coaching request sent from ${user.username} to ${coach.owner.username} for plan ${plan.goal}`
+      );
+
+      res.json({
+        success: true,
+        chatId: chat.id,
+        message: "Coaching request sent successfully",
+      });
+    } catch (error) {
+      logger.error("Error sending coaching request:", error);
+      res.status(500).json({ error: "Failed to send coaching request" });
+    }
+  }
+);
+
 export const coachesRouter: Router = router;
 export default router;
