@@ -31,6 +31,7 @@ const WelcomeStep = () => {
 
   // Username state
   const [username, setUsername] = useState("");
+  const [name, setName] = useState(currentUser?.name || "");
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmittingUsername, setIsSubmittingUsername] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -99,10 +100,10 @@ const WelcomeStep = () => {
 
     try {
       await updateUser({
-        updates: { username },
+        updates: { username, ...(name.trim() && { name: name.trim() }) },
         muteNotifications: true,
       });
-      toast.success("Username set successfully");
+      toast.success("Profile updated successfully");
       // Fade to age selection
       setCurrentSubStep("age");
     } catch (err: any) {
@@ -204,12 +205,31 @@ const WelcomeStep = () => {
 
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Choose your username
+                  Set up your profile
                 </h3>
               </div>
 
               <form onSubmit={handleUsernameSubmit} className="space-y-4">
                 <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium text-muted-foreground">
+                    Your name
+                  </label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="text-lg bg-card border-xl py-2 px-4"
+                    autoFocus
+                    disabled={isSubmittingUsername}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="username" className="text-sm font-medium text-muted-foreground">
+                    Username
+                  </label>
                   <div className="relative">
                     <Input
                       id="username"
@@ -218,7 +238,6 @@ const WelcomeStep = () => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase())}
                       className="pr-10 text-lg bg-card border-xl py-2 px-4"
-                      autoFocus
                       disabled={isSubmittingUsername}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">

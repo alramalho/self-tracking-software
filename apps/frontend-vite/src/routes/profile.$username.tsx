@@ -5,6 +5,7 @@ import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
+import { BecomeCoachBanner } from "@/components/BecomeCoachBanner";
 import { CoachProfileViewDrawer } from "@/components/CoachProfileViewDrawer";
 import { SendMessagePopover } from "@/components/SendMessagePopover";
 import Divider from "@/components/Divider";
@@ -707,6 +708,13 @@ function ProfilePage() {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Become a coach banner - only for own profile without coach profile */}
+            {isOwnProfile && !profileData?.coachProfile && (
+              <div className="w-full mt-3">
+                <BecomeCoachBanner username={profileData?.username} />
               </div>
             )}
           </div>

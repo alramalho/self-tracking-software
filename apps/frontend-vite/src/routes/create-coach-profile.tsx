@@ -1,5 +1,5 @@
 import { useApiWithAuth } from "@/api";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EditProfileBanner } from "@/components/profile/EditProfileBanner";
 import { Button } from "@/components/ui/button";
 import { EmojiInput } from "@/components/ui/emoji-input";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/contexts/users";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2, Plus, Trash2, User, Video, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Video, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -227,21 +227,8 @@ function CreateCoachProfilePage() {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Profile Info (read-only from user account) */}
-        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={currentUser?.picture || undefined} />
-            <AvatarFallback>
-              <User className="h-6 w-6" />
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-lg">{currentUser?.name || "No name set"}</p>
-            <p className="text-sm text-muted-foreground">
-              From your account profile
-            </p>
-          </div>
-        </div>
+        {/* Profile Info (editable) */}
+        <EditProfileBanner />
 
         {/* Coach Title */}
         <div className="space-y-2">
