@@ -365,7 +365,7 @@ const TimelineRenderer: React.FC<{
           <div className="relative p-4 text-white text-left">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-semibold">Struggling to stay on track?</span>
+              <span className="text-sm font-semibold">Need help getting started?</span>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-xs text-white/70">Get personalized coaching today</p>
