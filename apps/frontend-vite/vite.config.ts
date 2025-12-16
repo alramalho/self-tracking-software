@@ -6,7 +6,7 @@ import path from "path";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
@@ -25,8 +25,8 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
-  // Capacitor configuration
-  base: "./", // Use relative paths for Capacitor
+  // Use relative paths for Capacitor, absolute for web
+  base: mode === "cap" ? "./" : "/",
   build: {
     outDir: "dist",
     assetsDir: "assets",
@@ -39,4 +39,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
