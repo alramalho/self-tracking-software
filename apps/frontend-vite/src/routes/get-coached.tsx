@@ -172,7 +172,7 @@ function GetCoachedPage() {
             </div>
           </div>
 
-          {/* Selected Coach Card (mini) */}
+          {/* Selected Coach Card */}
           <div className="rounded-2xl overflow-hidden relative mb-6">
             <div
               className="absolute inset-0 bg-cover bg-center"
@@ -182,8 +182,9 @@ function GetCoachedPage() {
             />
             <div className="absolute inset-0 bg-black/60" />
             <div className="relative p-4 text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-white/20">
+              {/* Name with avatar */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
                   {selectedCoach.owner.picture && (
                     <img
                       src={selectedCoach.owner.picture}
@@ -192,15 +193,54 @@ function GetCoachedPage() {
                     />
                   )}
                 </div>
-                <div>
-                  <h3 className="font-semibold">
-                    {selectedCoach.owner.name || selectedCoach.owner.username}
-                  </h3>
-                  <p className="text-sm text-white/70">
-                    {selectedCoach.details.title}
-                  </p>
-                </div>
+                <h3 className="text-lg font-bold">
+                  {selectedCoach.owner.name || selectedCoach.owner.username}
+                </h3>
               </div>
+
+              {/* Specs Grid */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                {selectedCoach.details.title && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-white/60">
+                      Title
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {selectedCoach.details.title}
+                    </p>
+                  </div>
+                )}
+                {selectedCoach.details.focusDescription && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-white/60">
+                      Focus
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {selectedCoach.details.focusDescription}
+                    </p>
+                  </div>
+                )}
+                {selectedCoach.details.idealPlans && selectedCoach.details.idealPlans.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-[10px] uppercase tracking-wider text-white/60">
+                      Helps with
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {selectedCoach.details.idealPlans
+                        .slice(0, 3)
+                        .map((p) => `${p.emoji} ${p.title}`)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bio preview */}
+              {selectedCoach.details.bio && (
+                <p className="text-xs text-white/70 mt-3 line-clamp-2">
+                  {selectedCoach.details.bio}
+                </p>
+              )}
             </div>
           </div>
 
