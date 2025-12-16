@@ -66,12 +66,11 @@ const PlanGenerator = () => {
   const { setShowUpgradePopover, setOnUpgradePopoverClose } = useUpgrade();
   const { isUserPremium } = usePaidPlan();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [generatedPlans, setGeneratedPlans] = useState<CompletePlan[] | null>(
-    plans
-  );
+  const [generatedPlans, setGeneratedPlans] = useState<CompletePlan[] | null>(null);
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
+  const [hasAttemptedGeneration, setHasAttemptedGeneration] = useState(false);
   const [showPaywallPopover, setShowPaywallPopover] = useState(false);
   const [showSelfGuidedConfirmPopover, setShowSelfGuidedConfirmPopover] = useState(false);
   const api = useApiWithAuth();
@@ -183,22 +182,33 @@ const PlanGenerator = () => {
     }
   }
 
-  // Sync generatedPlans from onboarding state when plans changes
+  // Single effect to handle plan synchronization and generation
   useEffect(() => {
-    if (plans && !generatedPlans) {
+    // If plans already exist in onboarding state (from localStorage), use them
+    if (plans && plans.length > 0) {
       setGeneratedPlans(plans);
+      setIsLoading(false);
+      if (planActivities?.length > 0 && generatedActivities?.length === 0) {
+        setGeneratedActivities(planActivities);
+      }
+      return;
     }
-  }, [plans]);
 
-  useEffect(() => {
-    console.log("plans", plans, "generatedPlans", generatedPlans);
-    if (!plans && !generatedPlans) {
-      generatePlans();
-      setIsLoading(true);
-    } else if (generatedActivities?.length === 0 && planActivities?.length > 0) {
-      setGeneratedActivities(planActivities);
+    // If we already have locally generated plans, sync activities if needed
+    if (generatedPlans && generatedPlans.length > 0) {
+      if (planActivities?.length > 0 && generatedActivities?.length === 0) {
+        setGeneratedActivities(planActivities);
+      }
+      return;
     }
-  }, [plans, generatedPlans, planActivities]);
+
+    // Only generate if we haven't attempted generation yet
+    if (!hasAttemptedGeneration && !isLoading) {
+      console.log("Generating plans - no existing plans found");
+      setHasAttemptedGeneration(true);
+      generatePlans();
+    }
+  }, [plans, generatedPlans, planActivities, hasAttemptedGeneration, isLoading]);
 
   return (
     <div className="w-full max-w-md space-y-8">
