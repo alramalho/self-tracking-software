@@ -55,11 +55,15 @@ function DateDivider({ date }: { date: Date }) {
   );
 }
 
-export const Route = createFileRoute("/dms")({
-  component: DirectMessagesPage,
+export const Route = createFileRoute("/messages/")({
+  component: MessagesPage,
 });
 
-function DirectMessagesPage() {
+export interface MessagesPageProps {
+  targetUsername?: string;
+}
+
+export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
   const { isDarkMode } = useTheme();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
@@ -93,6 +97,9 @@ function DirectMessagesPage() {
   const [loadedCoachChatIds, setLoadedCoachChatIds] = useState<string[]>([]);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
 
+  // Track if we've tried to auto-open the target user's chat
+  const [hasTriedAutoOpen, setHasTriedAutoOpen] = useState(false);
+
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
@@ -105,14 +112,32 @@ function DirectMessagesPage() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()) || []
   , [chats]);
 
-  // Filter chats to show only ONE coach entry in the conversation list
+  // Filter chats to show only ONE coach entry and deduplicate direct chats by user
   const displayChats = useMemo(() => {
     const nonCoachChats = chats?.filter(c => c.type !== "COACH") || [];
     const latestCoach = coachChats[0];
 
+    // Deduplicate direct chats - keep only the most recent chat per user
+    const seenUserIds = new Set<string>();
+    const deduplicatedChats = nonCoachChats
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .filter(chat => {
+        if (chat.type !== "DIRECT") return true; // Keep non-direct chats as is
+
+        // For direct chats, find the other participant
+        const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
+        if (!otherParticipant?.userId) return true;
+
+        // Skip if we've already seen a chat with this user
+        if (seenUserIds.has(otherParticipant.userId)) return false;
+
+        seenUserIds.add(otherParticipant.userId);
+        return true;
+      });
+
     // Put coach at the top if it exists
-    return latestCoach ? [latestCoach, ...nonCoachChats] : nonCoachChats;
-  }, [chats, coachChats]);
+    return latestCoach ? [latestCoach, ...deduplicatedChats] : deduplicatedChats;
+  }, [chats, coachChats, currentUser?.id]);
 
   // Check if there are older coach conversations to load
   const hasOlderConversations = currentChat?.type === "COACH" &&
@@ -129,6 +154,46 @@ function DirectMessagesPage() {
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
   }, [currentChat?.type, messages, olderCoachMessages]);
+
+  // Auto-open conversation with target user if provided
+  useEffect(() => {
+    // Wait for chats to finish loading before trying to auto-open
+    if (!targetUsername || hasTriedAutoOpen || isLoadingChats) return;
+
+    setHasTriedAutoOpen(true);
+
+    // Find existing chat with this user
+    const existingChat = chats?.find(chat => {
+      if (chat.type !== "DIRECT") return false;
+      return chat.participants?.some(p =>
+        p.username?.toLowerCase() === targetUsername.toLowerCase()
+      );
+    });
+
+    if (existingChat) {
+      setCurrentChatId(existingChat.id);
+    } else {
+      // Create a new chat with this user
+      // First we need to find the user's ID
+      api.get(`/users/get-user-profile/${targetUsername}`)
+        .then(response => {
+          const user = response.data?.user;
+          if (user?.id) {
+            return createDirectChat(user.id);
+          }
+          throw new Error("User not found");
+        })
+        .then(chat => {
+          if (chat?.id) {
+            setCurrentChatId(chat.id);
+          }
+        })
+        .catch(error => {
+          console.error("Failed to open chat with user:", error);
+          toast.error(`Could not start conversation with @${targetUsername}`);
+        });
+    }
+  }, [targetUsername, hasTriedAutoOpen, isLoadingChats, chats, api, createDirectChat, setCurrentChatId]);
 
   // Load older coach conversation
   const handleLoadOlder = useCallback(async () => {
@@ -310,7 +375,7 @@ function DirectMessagesPage() {
     <div className="flex h-screen bg-background relative z-50 overflow-hidden">
       {!currentChatId ? (
         // Full-screen message history view
-        <div className="flex-1 flex flex-col w-full max-w-full">
+        (<div className="flex-1 flex flex-col w-full max-w-full">
           {/* Header */}
           <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-b border-border">
             <div className="px-4 py-3 space-y-3">
@@ -327,10 +392,9 @@ function DirectMessagesPage() {
               </div>
 
               {/* User Search */}
-              <UserSearch onUserClick={handleUserSelect} />
+              <UserSearch onUserClick={handleUserSelect} emptyMessage="No friends found" />
             </div>
           </div>
-
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {isLoadingChats ? (
@@ -395,10 +459,10 @@ function DirectMessagesPage() {
               </>
             )}
           </div>
-        </div>
+        </div>)
       ) : (
         // Full-screen chat view
-        <div className="flex-1 flex flex-col w-full max-w-full">
+        (<div className="flex-1 flex flex-col w-full max-w-full">
           {/* Chat Header with Back Button */}
           {currentChat && (
             <>
@@ -500,110 +564,108 @@ function DirectMessagesPage() {
               )}
             </>
           )}
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
+            <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-4">
+              {/* Load older conversations button for coach chat */}
+              {hasOlderConversations && (
+                <button
+                  onClick={handleLoadOlder}
+                  disabled={isLoadingOlder}
+                  className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {isLoadingOlder ? (
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : (
+                    "Load older conversations"
+                  )}
+                </button>
+              )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
-              <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-4">
-                {/* Load older conversations button for coach chat */}
-                {hasOlderConversations && (
-                  <button
-                    onClick={handleLoadOlder}
-                    disabled={isLoadingOlder}
-                    className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {isLoadingOlder ? (
-                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                    ) : (
-                      "Load older conversations"
-                    )}
-                  </button>
-                )}
-
-                {isLoadingMessages ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              {isLoadingMessages ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : allMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">No messages yet</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Send a message to start the conversation
+                    </p>
                   </div>
-                ) : allMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">No messages yet</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Send a message to start the conversation
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  allMessages.map((message: any, index: number) => {
-                    const isUserMessage = message.role === "USER" || message.senderId === currentUser?.id;
-                    const isCoachMessage = message.role === "COACH";
-                    const isHumanMessage = message.role === "HUMAN";
+                </div>
+              ) : (
+                allMessages.map((message: any, index: number) => {
+                  const isUserMessage = message.role === "USER" || message.senderId === currentUser?.id;
+                  const isCoachMessage = message.role === "COACH";
+                  const isHumanMessage = message.role === "HUMAN";
 
-                    // Check if we need a date divider
-                    const prevMessage = allMessages[index - 1];
-                    const messageDate = new Date(message.createdAt);
-                    const showDateDivider = !prevMessage ||
-                      !isSameDay(messageDate, new Date(prevMessage.createdAt));
+                  // Check if we need a date divider
+                  const prevMessage = allMessages[index - 1];
+                  const messageDate = new Date(message.createdAt);
+                  const showDateDivider = !prevMessage ||
+                    !isSameDay(messageDate, new Date(prevMessage.createdAt));
 
-                    return (
-                      <div key={message.id}>
-                        {showDateDivider && <DateDivider date={messageDate} />}
-                        <div
-                          className={`flex gap-3 max-w-full overflow-visible ${
-                            isUserMessage ? "flex-row-reverse" : "flex-row"
-                          }`}
-                        >
-                          <div className="flex flex-col gap-1 max-w-full overflow-visible">
-                            <MessageBubble
-                              direction={isUserMessage ? "right" : "left"}
-                              className={
-                                isUserMessage
-                                  ? `bg-muted`
-                                  : isHumanMessage ? "" : "bg-transparent pl-0"
+                  return (
+                    <div key={message.id}>
+                      {showDateDivider && <DateDivider date={messageDate} />}
+                      <div
+                        className={`flex gap-3 max-w-full overflow-visible ${
+                          isUserMessage ? "flex-row-reverse" : "flex-row"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-1 max-w-full overflow-visible">
+                          <MessageBubble
+                            direction={isUserMessage ? "right" : "left"}
+                            className={
+                              isUserMessage
+                                ? `bg-muted`
+                                : isHumanMessage ? "" : "bg-transparent pl-0"
+                            }
+                          >
+                            <div className="text-sm whitespace-pre-wrap">
+                              {renderMessageContent(message)}
+                            </div>
+                          </MessageBubble>
+
+                          {isCoachMessage && message.userRecommendations && (
+                            <UserRecommendationCards
+                              recommendations={message.userRecommendations}
+                            />
+                          )}
+
+                          {isCoachMessage && (
+                            <MessageFeedback
+                              messageId={message.id}
+                              existingFeedback={
+                                message.feedback && message.feedback.length > 0
+                                  ? message.feedback[0]
+                                  : null
                               }
-                            >
-                              <div className="text-sm whitespace-pre-wrap">
-                                {renderMessageContent(message)}
-                              </div>
-                            </MessageBubble>
-
-                            {isCoachMessage && message.userRecommendations && (
-                              <UserRecommendationCards
-                                recommendations={message.userRecommendations}
-                              />
-                            )}
-
-                            {isCoachMessage && (
-                              <MessageFeedback
-                                messageId={message.id}
-                                existingFeedback={
-                                  message.feedback && message.feedback.length > 0
-                                    ? message.feedback[0]
-                                    : null
-                                }
-                                onSubmitFeedback={async (data) => {
-                                  await submitFeedback(data);
-                                }}
-                                isSubmitting={isSubmittingFeedback}
-                              />
-                            )}
-                          </div>
+                              onSubmitFeedback={async (data) => {
+                                await submitFeedback(data);
+                              }}
+                              isSubmitting={isSubmittingFeedback}
+                            />
+                          )}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-                {/* Typing indicator - only for coach chats */}
-                {isSendingMessage && currentChat?.type === "COACH" && (
-                  <div className="flex items-center gap-3 py-2">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <div className="w-4 h-4 rounded-full bg-muted-foreground/50 animate-pulse" />
                     </div>
+                  );
+                })
+              )}
+              {/* Typing indicator - only for coach chats */}
+              {isSendingMessage && currentChat?.type === "COACH" && (
+                <div className="flex items-center gap-3 py-2">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <div className="w-4 h-4 rounded-full bg-muted-foreground/50 animate-pulse" />
                   </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
-
+          </div>
           {/* Input - ChatGPT style */}
           <div className="flex-shrink-0 pb-4 pt-2">
             <div className="w-full max-w-4xl mx-auto px-4">
@@ -634,10 +696,10 @@ function DirectMessagesPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>)
       )}
     </div>
-  );
+  )
 }
 
-export default DirectMessagesPage;
+export default MessagesPage;

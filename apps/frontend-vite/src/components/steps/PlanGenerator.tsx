@@ -156,6 +156,7 @@ const PlanGenerator = () => {
           plan_progress: planProgress,
           wants_coaching: wantsCoaching,
           times_per_week: planTimesPerWeek,
+          coach_id: selectedCoachId,
         },
         {
           timeout: 180000, // 3 minutes in milliseconds

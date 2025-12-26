@@ -88,8 +88,8 @@ export const PlanWeekDisplay = ({
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-  const isWeekCompleted = week
-    ? (plan.outlineType === "TIMES_PER_WEEK" 
+  const isWeekCompleted = week && totalPlannedActivities > 0
+    ? (plan.outlineType === "TIMES_PER_WEEK"
         ? totalCompletedActivities >= totalPlannedActivities
         : totalCompletedActivities === totalPlannedActivities)
     : false;
@@ -174,6 +174,15 @@ export const PlanWeekDisplay = ({
           title
         ))}
 
+      {/* Empty week state */}
+      {totalPlannedActivities === 0 && (
+        <div className="flex items-center gap-2 mt-3 py-3">
+          <span className="text-muted-foreground text-sm">
+            📭 No activities scheduled for this week
+          </span>
+        </div>
+      )}
+
       {/* Week completed badge */}
       {isWeekCompleted && (
         <div className="flex items-center gap-2 flex-wrap mt-2">
@@ -185,35 +194,38 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      <div className="flex gap-1 mt-3">
-        {Array.from({ length: totalPlannedActivities }, (_, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex-1 h-2 rounded transition-all duration-300",
-              index < animatedCompletedActivities
-                ? "bg-green-500"
-                : "bg-muted"
-            )}
-          />
-        ))}
-      </div>
+      {totalPlannedActivities > 0 && (
+        <>
+          <div className="flex gap-1 mt-3">
+            {Array.from({ length: totalPlannedActivities }, (_, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex-1 h-2 rounded transition-all duration-300",
+                  index < animatedCompletedActivities
+                    ? "bg-green-500"
+                    : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
 
-      <div className="flex flex-col items-start justify-center gap-0">
-        <span className="flex w-full flex-row items-center justify-between text-xs text-muted-foreground gap-2">
-          <span>
-            <span className="text-lg uppercase">{plan.emoji}</span> ACTIVITIES:
-            <span className="font-semibold">
-              {" "}
-              {totalCompletedActivities}/{totalPlannedActivities}
+          <div className="flex flex-col items-start justify-center gap-0">
+            <span className="flex w-full flex-row items-center justify-between text-xs text-muted-foreground gap-2">
+              <span>
+                <span className="text-lg uppercase">{plan.emoji}</span> ACTIVITIES:
+                <span className="font-semibold">
+                  {" "}
+                  {totalCompletedActivities}/{totalPlannedActivities}
+                </span>
+              </span>
             </span>
-          </span>
-        </span>
-      </div>
-
+          </div>
+        </>
+      )}
 
       {/* coming up section, wherewe either display  */}
-      {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && (
+      {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && totalPlannedActivities > 0 && (
         <div className="flex flex-col items-start justify-center gap-0 mt-4">
           <span className="text-sm text-muted-foreground">Coming up, any of:</span>
           <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
@@ -224,7 +236,7 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      {plan.outlineType == "SPECIFIC" && (isCurrentWeek || isFutureWeek) && (
+      {plan.outlineType == "SPECIFIC" && (isCurrentWeek || isFutureWeek) && totalPlannedActivities > 0 && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-muted-foreground">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-2 p-1">

@@ -1,27 +1,151 @@
+import { useApiWithAuth } from "@/api";
+import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { format, isSameWeek } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { format, isSameWeek, isAfter, startOfDay, isSameDay } from "date-fns";
 import { AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
+  ChevronRight,
   CircleCheck,
   Flame,
   MoveRight,
   Rocket,
+  Send,
   Sparkles,
   Sprout,
   TrendingDown,
   TrendingUp,
+  User,
 } from "lucide-react";
 import { motion } from "motion/react";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { FireAnimation } from "./FireBadge";
 import { SteppedBarProgress } from "./SteppedBarProgress";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Confetti, type ConfettiRef } from "./ui/confetti";
+
+interface HumanCoach {
+  id: string;
+  ownerId: string;
+  type: "HUMAN";
+  details: {
+    title: string;
+    bio?: string;
+    focusDescription: string;
+  };
+  owner: {
+    id: string;
+    username: string;
+    name: string | null;
+    picture: string | null;
+  };
+}
+
+interface ComingUpSectionProps {
+  sessions: any[];
+  activities: any[];
+  variants: any;
+}
+
+const ComingUpSection: React.FC<ComingUpSectionProps> = ({
+  sessions,
+  activities,
+  variants,
+}) => {
+  const [selectedSession, setSelectedSession] = useState<any | null>(null);
+
+  return (
+    <div className="mt-2 pt-2 border-t border-border/50">
+      <span className="text-xs text-muted-foreground">Coming up:</span>
+      <div className="flex flex-nowrap gap-2 overflow-x-auto mt-2 pb-1">
+        {sessions.map((session) => {
+          const activity = activities.find(
+            (a: any) => a.id === session.activityId
+          );
+          if (!activity) return null;
+          const sessionKey = `${session.date}-${session.activityId}`;
+          const isSelected = selectedSession?.key === sessionKey;
+
+          return (
+            <button
+              key={sessionKey}
+              onClick={() =>
+                setSelectedSession(
+                  isSelected ? null : { ...session, activity, key: sessionKey }
+                )
+              }
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-lg border text-center min-w-[70px] transition-all",
+                isSelected
+                  ? cn(variants.brightBorder, variants.veryFadedBg)
+                  : "border-border bg-muted/50 hover:border-muted-foreground/30"
+              )}
+            >
+              <span className="text-xl">{activity.emoji || "📋"}</span>
+              <span className="text-[10px] text-muted-foreground font-medium">
+                {format(new Date(session.date), "EEE d")}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected session detail */}
+      <AnimatePresence mode="wait">
+        {selectedSession && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div
+              className={cn(
+                "mt-2 p-3 rounded-xl border",
+                variants.brightBorder,
+                variants.veryFadedBg
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">
+                  {selectedSession.activity.emoji || "📋"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-foreground truncate">
+                    {selectedSession.activity.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(selectedSession.date), "EEEE, MMM d")}
+                    {selectedSession.quantity && (
+                      <>
+                        {" "}
+                        • {selectedSession.quantity}{" "}
+                        {selectedSession.activity.measure}
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {selectedSession.descriptiveGuide && (
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                  {selectedSession.descriptiveGuide}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export const PlanStatus = ({ plan }: { plan: CompletePlan }) => {
   if (!plan?.currentWeekState) {
@@ -89,6 +213,48 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const confettiRef = useRef<ConfettiRef>(null);
   const navigate = useNavigate();
   const planProgressData = plan.progress;
+  const { activities, activityEntries } = useActivities();
+  const api = useApiWithAuth();
+
+  // Fetch coaches to get coach info for coached plans
+  const { data: humanCoaches } = useQuery({
+    queryKey: ["coaches"],
+    queryFn: async () => {
+      const response = await api.get<HumanCoach[]>("/coaches");
+      return response.data;
+    },
+    enabled: !!(plan as any).coachId && (plan as any).isCoached,
+  });
+
+  // Find the coach for this plan
+  const planCoach = useMemo(() => {
+    if (!humanCoaches || !(plan as any).coachId) return null;
+    return humanCoaches.find((c) => c.id === (plan as any).coachId) || null;
+  }, [humanCoaches, (plan as any).coachId]);
+
+  // Get upcoming sessions for SPECIFIC plans
+  const upcomingSessions = React.useMemo(() => {
+    if (plan.outlineType !== "SPECIFIC" || !plan.sessions) return [];
+
+    const today = startOfDay(new Date());
+    return plan.sessions
+      .filter((session) => {
+        const sessionDate = startOfDay(new Date(session.date));
+        // Include today and future sessions
+        return isAfter(sessionDate, today) || isSameDay(sessionDate, today);
+      })
+      .filter((session) => {
+        // Filter out completed sessions
+        const isCompleted = activityEntries.some(
+          (entry) =>
+            entry.activityId === session.activityId &&
+            isSameDay(new Date(entry.datetime), new Date(session.date))
+        );
+        return !isCompleted;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 3); // Show next 3 upcoming
+  }, [plan, activityEntries]);
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
@@ -196,23 +362,18 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       <CollapsibleContent className="space-y-0 overflow-visible">
         <div
           className={cn(
-            `rounded-3xl ring-1 flex flex-col gap-2 p-4 transition-all duration-300`,
-            isCoached
-              ? cn(
-                  variants.veryFadedBg,
-                  variants.ringBright,
-                  "backdrop-blur-sm"
-                )
-              : "bg-card/90 ring-border",
+            `rounded-3xl ring-1 flex flex-col gap-2 p-4 transition-all duration-300 bg-card/90 ring-border`,
             className
           )}
         >
           <div className="flex items-center justify-between gap-2 ">
             <div className="flex items-center gap-2">
               <span className="text-4xl">{plan.emoji || "📋"}</span>
-              <span className="text-md font-semibold text-foreground">
-                {plan.goal}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-md font-semibold text-foreground">
+                  {plan.goal}
+                </span>
+              </div>
             </div>
             <div
               className={cn(
@@ -235,17 +396,41 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
           {/* Badges row - beneath the title */}
           <div className="flex items-center gap-2 flex-wrap">
             {isCoached && (
-              <div
-                className={cn(
-                  "flex items-center gap-1 px-3 py-1 rounded-full w-fit",
-                  variants.fadedBg
+              <>
+                {planCoach ? (
+                  <div className="flex items-center gap-1 w-full justify-between">
+                    <div className="flex items-center gap-2 pt-2 pb-4">
+                      <Avatar onClick={() => navigate({ to: `/messages/${planCoach.owner.username}` })} className={cn("w-5 h-5 ring-1 ring-offset-1 ring-offset-card cursor-pointer", variants.ring, variants.veryFadedBg)}>
+                        <AvatarImage src={planCoach.owner.picture || ""} />
+                        <AvatarFallback className="text-[8px]">
+                          {planCoach.owner.name?.[0] || "C"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-xs text-white/70">
+                        Coached by <a href={`/messages/${planCoach.owner.username}`}><span className={cn("font-medium hover:underline cursor-pointer", variants.text)}>{planCoach.owner.name || planCoach.owner.username}</span></a>
+                      </p>
+                    </div>
+                    <div onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })} className="flex items-center gap-1 ml-2 cursor-pointer opacity-70">
+                      <span className="text-xs text-white/70">See full plan</span>
+                      <ChevronRight className="h-3 w-3" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className={cn(
+                        "flex items-center justify-between gap-1.5 px-2 py-1 rounded-full w-fit",
+                        variants.fadedBg
+                      )}
+                    >
+                      <Sparkles size={16} className={variants.text} />
+                      <span className={cn("text-[12px] font-medium", variants.text)}>
+                        Coached
+                      </span>
+                    </div>
+                  </>
                 )}
-              >
-                <Sparkles size={18} className={variants.text} />
-                <span className={cn("text-[12px] font-medium", variants.text)}>
-                  Coached
-                </span>
-              </div>
+              </>
             )}
             {habitIsAchieved && (
               <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
@@ -432,6 +617,16 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               )}
             </AnimatePresence> */}
           </div>
+
+          {/* Coming up section for SPECIFIC plans */}
+          {plan.outlineType === "SPECIFIC" && upcomingSessions.length > 0 && (
+            <ComingUpSection
+              sessions={upcomingSessions}
+              activities={activities}
+              variants={variants}
+            />
+          )}
+
         </div>
       </CollapsibleContent>
     </Collapsible>

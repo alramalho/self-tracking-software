@@ -17,12 +17,13 @@ import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
-import { Route as DmsRouteImport } from './routes/dms'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MessagesIndexRouteImport } from './routes/messages.index'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as MessagesUsernameRouteImport } from './routes/messages.$username'
 import { Route as JoinPlanInvitationIdRouteImport } from './routes/join-plan.$invitationId'
 import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboarding'
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
@@ -68,11 +69,6 @@ const DownloadRoute = DownloadRouteImport.update({
   path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DmsRoute = DmsRouteImport.update({
-  id: '/dms',
-  path: '/dms',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CreateCoachProfileRoute = CreateCoachProfileRouteImport.update({
   id: '/create-coach-profile',
   path: '/create-coach-profile',
@@ -93,9 +89,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MessagesIndexRoute = MessagesIndexRouteImport.update({
+  id: '/messages/',
+  path: '/messages/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   id: '/profile/$username',
   path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesUsernameRoute = MessagesUsernameRouteImport.update({
+  id: '/messages/$username',
+  path: '/messages/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinPlanInvitationIdRoute = JoinPlanInvitationIdRouteImport.update({
@@ -124,7 +130,6 @@ export interface FileRoutesByFullPath {
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
-  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -137,14 +142,15 @@ export interface FileRoutesByFullPath {
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
   '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
+  '/messages/$username': typeof MessagesUsernameRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/messages': typeof MessagesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
-  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -157,7 +163,9 @@ export interface FileRoutesByTo {
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
   '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
+  '/messages/$username': typeof MessagesUsernameRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/messages': typeof MessagesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -165,7 +173,6 @@ export interface FileRoutesById {
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
-  '/dms': typeof DmsRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -178,7 +185,9 @@ export interface FileRoutesById {
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
   '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
+  '/messages/$username': typeof MessagesUsernameRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/messages/': typeof MessagesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,7 +196,6 @@ export interface FileRouteTypes {
     | '/add'
     | '/ai'
     | '/create-coach-profile'
-    | '/dms'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -200,14 +208,15 @@ export interface FileRouteTypes {
     | '/insights/dashboard'
     | '/insights/onboarding'
     | '/join-plan/$invitationId'
+    | '/messages/$username'
     | '/profile/$username'
+    | '/messages'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/add'
     | '/ai'
     | '/create-coach-profile'
-    | '/dms'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -220,14 +229,15 @@ export interface FileRouteTypes {
     | '/insights/dashboard'
     | '/insights/onboarding'
     | '/join-plan/$invitationId'
+    | '/messages/$username'
     | '/profile/$username'
+    | '/messages'
   id:
     | '__root__'
     | '/'
     | '/add'
     | '/ai'
     | '/create-coach-profile'
-    | '/dms'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -240,7 +250,9 @@ export interface FileRouteTypes {
     | '/insights/dashboard'
     | '/insights/onboarding'
     | '/join-plan/$invitationId'
+    | '/messages/$username'
     | '/profile/$username'
+    | '/messages/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,7 +260,6 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute
   AiRoute: typeof AiRoute
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
-  DmsRoute: typeof DmsRoute
   DownloadRoute: typeof DownloadRoute
   GetCoachedRoute: typeof GetCoachedRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -261,7 +272,9 @@ export interface RootRouteChildren {
   InsightsDashboardRoute: typeof InsightsDashboardRoute
   InsightsOnboardingRoute: typeof InsightsOnboardingRoute
   JoinPlanInvitationIdRoute: typeof JoinPlanInvitationIdRoute
+  MessagesUsernameRoute: typeof MessagesUsernameRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
+  MessagesIndexRoute: typeof MessagesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -322,13 +335,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dms': {
-      id: '/dms'
-      path: '/dms'
-      fullPath: '/dms'
-      preLoaderRoute: typeof DmsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/create-coach-profile': {
       id: '/create-coach-profile'
       path: '/create-coach-profile'
@@ -357,11 +363,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages/': {
+      id: '/messages/'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile/$username': {
       id: '/profile/$username'
       path: '/profile/$username'
       fullPath: '/profile/$username'
       preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages/$username': {
+      id: '/messages/$username'
+      path: '/messages/$username'
+      fullPath: '/messages/$username'
+      preLoaderRoute: typeof MessagesUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join-plan/$invitationId': {
@@ -400,7 +420,6 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   AiRoute: AiRoute,
   CreateCoachProfileRoute: CreateCoachProfileRoute,
-  DmsRoute: DmsRoute,
   DownloadRoute: DownloadRoute,
   GetCoachedRoute: GetCoachedRoute,
   OnboardingRoute: OnboardingRoute,
@@ -413,7 +432,9 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsDashboardRoute: InsightsDashboardRoute,
   InsightsOnboardingRoute: InsightsOnboardingRoute,
   JoinPlanInvitationIdRoute: JoinPlanInvitationIdRoute,
+  MessagesUsernameRoute: MessagesUsernameRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
+  MessagesIndexRoute: MessagesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
