@@ -2,11 +2,12 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { format, startOfWeek, addDays, isSameDay, isBefore, startOfDay } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Check } from "lucide-react";
+import { X, Check, Pencil } from "lucide-react";
 
 export interface CalendarSession {
+  id?: string;
   date: Date | string;
   activityId: string;
   quantity?: number;
@@ -29,6 +30,8 @@ interface CalendarGridProps {
   isCompletedOnDay?: (activityId: string, day: Date) => boolean;
   /** Callback when a session is selected */
   onSessionSelect?: (session: CalendarSession, activity: CalendarActivity) => void;
+  /** Callback when edit button is clicked on a session */
+  onSessionEdit?: (session: CalendarSession, activity: CalendarActivity) => void;
   /** Whether to show the legend at the bottom */
   showLegend?: boolean;
   /** Custom week labels */
@@ -41,14 +44,23 @@ export const CalendarGrid = ({
   className,
   isCompletedOnDay,
   onSessionSelect,
+  onSessionEdit,
   showLegend = true,
   weekLabels = { week1: "This week", week2: "Next week" },
 }: CalendarGridProps) => {
-  const [selectedSession, setSelectedSession] = useState<{
-    session: CalendarSession;
-    activity: CalendarActivity;
-  } | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  // Derive selectedSession from props to always have fresh data
+  const selectedSession = selectedSessionId
+    ? (() => {
+        const session = sessions.find((s) => s.id === selectedSessionId);
+        if (!session) return null;
+        const activity = activities.find((a) => a.id === session.activityId);
+        if (!activity) return null;
+        return { session, activity };
+      })()
+    : null;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
@@ -72,14 +84,12 @@ export const CalendarGrid = ({
   };
 
   const handleSessionClick = (session: CalendarSession, activity: CalendarActivity) => {
-    const isCurrentlySelected =
-      selectedSession?.session.activityId === session.activityId &&
-      isSameDay(new Date(selectedSession?.session.date), new Date(session.date));
+    const isCurrentlySelected = selectedSessionId === session.id;
 
     if (isCurrentlySelected) {
-      setSelectedSession(null);
+      setSelectedSessionId(null);
     } else {
-      setSelectedSession({ session, activity });
+      setSelectedSessionId(session.id || null);
       onSessionSelect?.(session, activity);
     }
   };
@@ -90,15 +100,12 @@ export const CalendarGrid = ({
       const firstSession = daySessions[0];
       const activity = getActivity(firstSession.activityId);
       if (activity) {
-        // Check if clicking the same day that's already selected
-        const isCurrentlySelected =
-          selectedSession?.session.activityId === firstSession.activityId &&
-          isSameDay(new Date(selectedSession?.session.date), day);
+        const isCurrentlySelected = selectedSessionId === firstSession.id;
 
         if (isCurrentlySelected) {
-          setSelectedSession(null);
+          setSelectedSessionId(null);
         } else {
-          setSelectedSession({ session: firstSession, activity });
+          setSelectedSessionId(firstSession.id || null);
           onSessionSelect?.(firstSession, activity);
         }
       }
@@ -144,9 +151,7 @@ export const CalendarGrid = ({
             if (!activity) return null;
 
             const isCompleted = isCompletedOnDay?.(session.activityId, day) ?? false;
-            const isSelected =
-              selectedSession?.session.activityId === session.activityId &&
-              isSameDay(new Date(selectedSession?.session.date), day);
+            const isSelected = selectedSessionId === session.id;
 
             return (
               <button
@@ -233,12 +238,22 @@ export const CalendarGrid = ({
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedSession(null)}
-                className="p-1 rounded-md hover:bg-muted transition-colors"
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
+              <div className="flex items-center gap-1">
+                {onSessionEdit && (
+                  <button
+                    onClick={() => onSessionEdit(selectedSession.session, selectedSession.activity)}
+                    className="p-1 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedSessionId(null)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
             </div>
 
             {selectedSession.session.descriptiveGuide && (
