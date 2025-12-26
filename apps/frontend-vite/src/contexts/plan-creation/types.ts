@@ -24,6 +24,19 @@ export interface PlanCreationStep {
   previous?: string | ((state: PlanCreationState) => string | undefined);
 }
 
+export interface OriginalPlanValues {
+  goal: string | null;
+  emoji: string | null;
+  backgroundImageUrl: string | null;
+  isCoached: boolean;
+  selectedCoachId: string | null;
+  visibility: Visibility;
+  finishingDate: Date | null;
+  activities: Activity[];
+  timesPerWeek: number | null;
+  milestones: PlanMilestone[];
+}
+
 export interface PlanCreationState {
   currentStep: string;
   completedSteps: string[];
@@ -46,6 +59,7 @@ export interface PlanCreationState {
   // Edit mode
   editingPlanId: string | null;
   editingSection: string | null; // Which section is being edited in overview mode
+  originalValues: OriginalPlanValues | null; // Original values for change tracking
 }
 
 export interface PlanCreationContextValue {
@@ -89,6 +103,7 @@ export interface PlanCreationContextValue {
   editingPlanId: string | null;
   editingSection: string | null;
   isEditMode: boolean;
+  originalValues: OriginalPlanValues | null;
 
   // Setters
   setGoal: (goal: string) => void;
