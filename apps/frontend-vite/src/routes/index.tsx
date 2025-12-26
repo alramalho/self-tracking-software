@@ -23,6 +23,7 @@ import {
   MoveRight,
   RefreshCcw,
   Send,
+  Users,
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -49,6 +50,8 @@ import { isAfter, isFuture, isToday } from "date-fns";
 import { useAI } from "@/contexts/ai";
 import { type MetricEntry } from "@tsw/prisma";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
+import { useQuery } from "@tanstack/react-query";
+import { useApiWithAuth } from "@/api";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -87,9 +90,23 @@ const AnimatedSection = ({
   );
 };
 
+// Type for client plan data from /coaches/my-clients
+interface ClientPlan {
+  id: string;
+  goal: string;
+  emoji: string | null;
+  user: {
+    id: string;
+    username: string;
+    name: string | null;
+    picture: string | null;
+  };
+}
+
 function HomePage() {
   const { currentUser, hasLoadedUserData, isAdmin } = useCurrentUser();
   const navigate = useNavigate();
+  const api = useApiWithAuth();
   const { isLightMode, isDarkMode } = useTheme();
   const { activityEntryId } = Route.useSearch();
   const { notifications } = useDataNotifications();
@@ -120,6 +137,16 @@ function HomePage() {
   const { isLoaded, isSignedIn } = useSession();
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
+
+  // Fetch coach's clients if user has a coach profile
+  const { data: coachClients } = useQuery({
+    queryKey: ["coach-clients"],
+    queryFn: async () => {
+      const response = await api.get<ClientPlan[]>("/coaches/my-clients");
+      return response.data;
+    },
+    enabled: !!currentUser?.coachProfile,
+  });
 
   useEffect(() => {
     console.log({VITE_SUPABASE_API_URL: import.meta.env.VITE_SUPABASE_API_URL})
@@ -444,6 +471,53 @@ function HomePage() {
           <AnimatedSection delay={0.05}>
             <PendingPlanBanner />
           </AnimatedSection>
+
+          {/* My Clients Section - Only shown for coaches */}
+          {currentUser?.coachProfile && coachClients && coachClients.length > 0 && (
+            <AnimatedSection delay={0.075}>
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">
+                      My Clients
+                    </h3>
+                    <span className="text-sm text-muted-foreground">
+                      ({coachClients.length})
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {coachClients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => navigate({ to: `/messages/${client.user.username}` })}
+                      className="w-full p-3 flex items-center gap-3 bg-card hover:bg-muted/50 rounded-xl border border-border transition-colors text-left"
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage
+                          src={client.user.picture || undefined}
+                          alt={client.user.name || client.user.username}
+                        />
+                        <AvatarFallback>
+                          {(client.user.name || client.user.username)[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">
+                          {client.user.name || client.user.username}
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {client.emoji || "📋"} {client.goal}
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </AnimatedSection>
+          )}
 
           {activePlans && activePlans.length > 0 && (
             <AnimatedSection delay={0.1}>

@@ -11,12 +11,17 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, getMessages, type Message } from "@/contexts/messages";
+import { usePlans } from "@/contexts/plans";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target } from "lucide-react";
+import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target, Pin } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 
 // Helper to format relative dates for dividers
 function formatRelativeDate(date: Date): string {
@@ -55,6 +60,23 @@ function DateDivider({ date }: { date: Date }) {
   );
 }
 
+interface HumanCoach {
+  id: string;
+  ownerId: string;
+  type: "HUMAN";
+  details: {
+    title: string;
+    bio?: string;
+    focusDescription: string;
+  };
+  owner: {
+    id: string;
+    username: string;
+    name: string | null;
+    picture: string | null;
+  };
+}
+
 export const Route = createFileRoute("/messages/")({
   component: MessagesPage,
 });
@@ -68,6 +90,9 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const api = useApiWithAuth();
+  const { plans } = usePlans();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
   const {
     chats,
     currentChatId,
@@ -103,6 +128,41 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
+
+  // Fetch all human coaches
+  const { data: humanCoaches } = useQuery({
+    queryKey: ["coaches"],
+    queryFn: async () => {
+      const response = await api.get<HumanCoach[]>("/coaches");
+      return response.data;
+    },
+  });
+
+  // Get coaches from user's plans (plans with coachId that have human coaches)
+  const pinnedCoaches = useMemo(() => {
+    if (!plans || !humanCoaches) return [];
+
+    const coachesWithPlans: Array<{
+      coach: HumanCoach;
+      plan: { id: string; goal: string; emoji: string | null };
+    }> = [];
+
+    // Find plans with human coaches
+    for (const plan of plans) {
+      const planAny = plan as any;
+      if (planAny.coachId && planAny.isCoached) {
+        const coach = humanCoaches.find(c => c.id === planAny.coachId);
+        if (coach) {
+          coachesWithPlans.push({
+            coach,
+            plan: { id: plan.id, goal: plan.goal, emoji: plan.emoji },
+          });
+        }
+      }
+    }
+
+    return coachesWithPlans;
+  }, [plans, humanCoaches]);
 
   const currentChat = chats?.find((chat) => chat.id === currentChatId);
 
@@ -403,40 +463,102 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
               </div>
             ) : (
               <>
-                {/* Coach Oli - Always at top with distinct styling */}
-                <div className="border-b-2 border-primary/20">
-                  {coachChats[0] ? (
-                    <ConversationListItem
-                      chat={coachChats[0]}
-                      isActive={false}
-                      onClick={() => setCurrentChatId(coachChats[0].id)}
-                      currentUserId={currentUser?.id}
-                    />
-                  ) : (
+                {/* Pinned Section - Coaches from plans + AI Coach */}
+                <div className="p-3 space-y-2">
+                  {/* Pinned Human Coaches from Plans */}
+                  {pinnedCoaches.map(({ coach, plan }) => (
                     <button
-                      onClick={handleStartAIChat}
-                      disabled={isCreatingCoachChat}
-                      className="w-full p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
+                      key={`${coach.id}-${plan.id}`}
+                      onClick={async () => {
+                        // Find or create a direct chat with this coach
+                        const existingChat = chats?.find(chat => {
+                          if (chat.type !== "DIRECT") return false;
+                          return chat.participants?.some(p => p.userId === coach.ownerId);
+                        });
+                        if (existingChat) {
+                          setCurrentChatId(existingChat.id);
+                        } else {
+                          const newChat = await createDirectChat(coach.ownerId);
+                          if (newChat?.id) {
+                            setCurrentChatId(newChat.id);
+                          }
+                        }
+                      }}
+                      className={cn(
+                        "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
+                        variants.fadedBg,
+                        "border",
+                        variants.border,
+                        "hover:opacity-80"
+                      )}
                     >
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={coachIcon} alt="Coach Oli" />
-                        <AvatarFallback>CO</AvatarFallback>
+                      <Avatar className="w-11 h-11">
+                        <AvatarImage src={coach.owner.picture || undefined} alt={coach.owner.name || coach.owner.username} />
+                        <AvatarFallback>
+                          {coach.owner.name?.[0] || coach.owner.username[0]}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="font-medium">Coach Oli</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{coach.owner.name || coach.owner.username}</span>
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground")}>
+                            Coach
+                          </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {isCreatingCoachChat ? "Starting chat..." : "Start a conversation with your AI Coach"}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {plan.emoji || "📋"} {plan.goal}
                         </p>
                       </div>
                     </button>
-                  )}
+                  ))}
+
+                  {/* AI Coach - Always available */}
+                  <button
+                    onClick={() => {
+                      if (coachChats[0]) {
+                        setCurrentChatId(coachChats[0].id);
+                      } else {
+                        handleStartAIChat();
+                      }
+                    }}
+                    disabled={isCreatingCoachChat}
+                    className={cn(
+                      "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
+                      pinnedCoaches.length === 0 ? cn(variants.fadedBg, "border", variants.border) : "hover:bg-muted/50"
+                    )}
+                  >
+                    <Avatar className="w-11 h-11 bg-transparent">
+                      <AvatarImage src={coachIcon} alt="Coach Oli" className="object-contain" />
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Coach Oli</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          AI
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {isCreatingCoachChat ? "Starting chat..." : "Your AI assistant"}
+                      </p>
+                    </div>
+                  </button>
                 </div>
+
+                <div className="h-px bg-border mx-3" />
 
                 {/* Other conversations */}
                 {displayChats
-                  .filter((chat) => chat.type !== "COACH")
+                  .filter((chat) => {
+                    if (chat.type === "COACH") return false;
+                    // Filter out direct chats with users who are already shown as coaches
+                    if (chat.type === "DIRECT") {
+                      const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
+                      const isCoachUser = pinnedCoaches.some(({ coach }) => coach.ownerId === otherParticipant?.userId);
+                      if (isCoachUser) return false;
+                    }
+                    return true;
+                  })
                   .map((chat) => (
                     <ConversationListItem
                       key={chat.id}
@@ -448,7 +570,15 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                   ))}
 
                 {/* Empty state for no other conversations */}
-                {displayChats.filter((chat) => chat.type !== "COACH").length === 0 && (
+                {displayChats.filter((chat) => {
+                  if (chat.type === "COACH") return false;
+                  if (chat.type === "DIRECT") {
+                    const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
+                    const isCoachUser = pinnedCoaches.some(({ coach }) => coach.ownerId === otherParticipant?.userId);
+                    if (isCoachUser) return false;
+                  }
+                  return true;
+                }).length === 0 && (
                   <div className="flex flex-col items-center justify-center text-center p-6 pt-12">
                     <MessageCircle size={32} className="text-muted-foreground mb-3 opacity-50" />
                     <p className="text-sm text-muted-foreground">
