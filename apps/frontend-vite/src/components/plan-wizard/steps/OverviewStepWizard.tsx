@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { usePlans } from "@/contexts/plans";
 import { useNavigate } from "@tanstack/react-router";
 import useConfetti from "@/hooks/useConfetti";
+import { cn } from "@/lib/utils";
 import {
   Goal,
   Smile,
@@ -17,7 +18,7 @@ import {
   Loader2,
   Pencil,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 
@@ -26,18 +27,31 @@ interface OverviewCardProps {
   label: string;
   value: string | React.ReactNode;
   onClick: () => void;
+  isChanged?: boolean;
 }
 
-const OverviewCard = ({ icon, label, value, onClick }: OverviewCardProps) => (
+const OverviewCard = ({ icon, label, value, onClick, isChanged }: OverviewCardProps) => (
   <button
     onClick={onClick}
-    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-foreground/30 hover:bg-muted/50 transition-all text-left w-full group bg-card"
+    className={cn(
+      "flex items-center gap-3 p-3 rounded-xl border transition-all text-left w-full group bg-card",
+      isChanged
+        ? "border-primary/50 bg-primary/5"
+        : "border-border hover:border-foreground/30 hover:bg-muted/50"
+    )}
   >
     <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted/50 shrink-0">
       {icon}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+        {isChanged && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+            Changed
+          </span>
+        )}
+      </div>
       <p className="text-sm font-medium truncate">{value}</p>
     </div>
     <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -52,6 +66,7 @@ const OverviewStepWizard = () => {
     backgroundImageFile,
     isCoached,
     selectedCoach,
+    selectedCoachId,
     visibility,
     finishingDate,
     activities,
@@ -60,6 +75,7 @@ const OverviewStepWizard = () => {
     generatedSessions,
     milestones,
     editingPlanId,
+    originalValues,
     goToStep,
     resetState,
   } = usePlanCreation();
@@ -130,6 +146,42 @@ const OverviewStepWizard = () => {
     FRIENDS: "Friends only",
   };
 
+  // Change detection for edit mode
+  const changes = useMemo(() => {
+    if (!originalValues) return {};
+
+    const compareDates = (a: Date | null, b: Date | null) => {
+      if (!a && !b) return false;
+      if (!a || !b) return true;
+      return new Date(a).getTime() !== new Date(b).getTime();
+    };
+
+    const compareArrays = (a: unknown[], b: unknown[], key?: string) => {
+      if (a.length !== b.length) return true;
+      if (key) {
+        const aIds = a.map((item: any) => item[key]).sort();
+        const bIds = b.map((item: any) => item[key]).sort();
+        return JSON.stringify(aIds) !== JSON.stringify(bIds);
+      }
+      return JSON.stringify(a) !== JSON.stringify(b);
+    };
+
+    return {
+      goal: goal !== originalValues.goal,
+      emoji: emoji !== originalValues.emoji,
+      backgroundImage: backgroundImageUrl !== originalValues.backgroundImageUrl || !!backgroundImageFile,
+      coaching: isCoached !== originalValues.isCoached || selectedCoachId !== originalValues.selectedCoachId,
+      visibility: visibility !== originalValues.visibility,
+      duration: compareDates(finishingDate, originalValues.finishingDate),
+      activities: compareArrays(activities, originalValues.activities, "id"),
+      timesPerWeek: timesPerWeek !== originalValues.timesPerWeek,
+      milestones: compareArrays(milestones, originalValues.milestones),
+    };
+  }, [
+    originalValues, goal, emoji, backgroundImageUrl, backgroundImageFile,
+    isCoached, selectedCoachId, visibility, finishingDate, activities, timesPerWeek, milestones
+  ]);
+
   return (
     <div className="w-full max-w-lg flex flex-col h-[calc(100dvh-140px)]">
       {/* Header */}
@@ -150,18 +202,21 @@ const OverviewStepWizard = () => {
           label="Goal"
           value={goal || "Not set"}
           onClick={() => goToStep("goal")}
+          isChanged={changes.goal}
         />
         <OverviewCard
           icon={<Smile className="w-5 h-5 text-muted-foreground" />}
           label="Emoji"
           value={emoji ? <span className="text-2xl">{emoji}</span> : "Not set"}
           onClick={() => goToStep("emoji")}
+          isChanged={changes.emoji}
         />
         <OverviewCard
           icon={<CalendarCheck className="w-5 h-5 text-muted-foreground" />}
           label="Frequency"
           value={timesPerWeek ? `${timesPerWeek}x per week` : "Not set"}
           onClick={() => goToStep("times-per-week")}
+          isChanged={changes.timesPerWeek}
         />
         <OverviewCard
           icon={<Users className="w-5 h-5 text-muted-foreground" />}
@@ -174,36 +229,42 @@ const OverviewStepWizard = () => {
               : "Self-guided"
           }
           onClick={() => goToStep("coaching")}
+          isChanged={changes.coaching}
         />
         <OverviewCard
           icon={<Eye className="w-5 h-5 text-muted-foreground" />}
           label="Visibility"
           value={visibilityLabels[visibility] || visibility}
           onClick={() => goToStep("visibility")}
+          isChanged={changes.visibility}
         />
         <OverviewCard
           icon={<Calendar className="w-5 h-5 text-muted-foreground" />}
           label="Duration"
           value={finishingDate ? format(new Date(finishingDate), "MMM d, yyyy") : "No end date"}
           onClick={() => goToStep("duration")}
+          isChanged={changes.duration}
         />
         <OverviewCard
           icon={<Dumbbell className="w-5 h-5 text-muted-foreground" />}
           label="Activities"
           value={activities.length > 0 ? `${activities.length} selected` : "None"}
           onClick={() => goToStep("activities")}
+          isChanged={changes.activities}
         />
         <OverviewCard
           icon={<Flag className="w-5 h-5 text-muted-foreground" />}
           label="Milestones"
           value={milestones.length > 0 ? `${milestones.length} milestones` : "None"}
           onClick={() => goToStep("milestones")}
+          isChanged={changes.milestones}
         />
         <OverviewCard
           icon={<ImageIcon className="w-5 h-5 text-muted-foreground" />}
           label="Cover Image"
           value={backgroundImageUrl ? "Image set" : "No image"}
           onClick={() => goToStep("background")}
+          isChanged={changes.backgroundImage}
         />
       </div>
 

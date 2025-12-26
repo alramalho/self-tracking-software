@@ -40,6 +40,7 @@ const getDefaultState = (initialStepId?: string, steps?: PlanCreationStep[]): Pl
   description: null,
   editingPlanId: null,
   editingSection: null,
+  originalValues: null,
 });
 
 export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
@@ -74,6 +75,7 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     description,
     editingPlanId,
     editingSection,
+    originalValues,
   } = state;
 
   const totalSteps = steps.length;
@@ -295,11 +297,26 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
 
   const initializeForEdit = useCallback(
     (planId: string, planData: Partial<PlanCreationState>) => {
+      // Store original values for change tracking
+      const originalValues = {
+        goal: planData.goal ?? null,
+        emoji: planData.emoji ?? null,
+        backgroundImageUrl: planData.backgroundImageUrl ?? null,
+        isCoached: planData.isCoached ?? false,
+        selectedCoachId: planData.selectedCoachId ?? null,
+        visibility: planData.visibility ?? "PUBLIC",
+        finishingDate: planData.finishingDate ?? null,
+        activities: planData.activities ?? [],
+        timesPerWeek: planData.timesPerWeek ?? null,
+        milestones: planData.milestones ?? [],
+      };
+
       setState((prev) => ({
         ...getDefaultState(initialStepId, steps),
         ...planData,
         editingPlanId: planId,
         currentStep: "overview", // For edit mode, start with overview
+        originalValues,
       }));
     },
     [setState, initialStepId, steps]
@@ -342,6 +359,7 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     editingPlanId,
     editingSection,
     isEditMode,
+    originalValues,
 
     // Setters
     setGoal,
