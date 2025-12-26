@@ -1087,5 +1087,30 @@ router.post(
   }
 );
 
+// Classify whether a plan goal would benefit from coaching
+router.post(
+  "/classify-coaching-need",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planGoal } = req.body;
+
+      if (!planGoal || typeof planGoal !== "string") {
+        return res.status(400).json({ error: "planGoal is required" });
+      }
+
+      const result = await aiService.classifyCoachingNeed(planGoal);
+
+      res.json(result);
+    } catch (error) {
+      logger.error("Error classifying coaching need:", error);
+      res.status(500).json({ error: "Failed to classify coaching need" });
+    }
+  }
+);
+
 export const aiRouter: Router = router;
 export default aiRouter;
