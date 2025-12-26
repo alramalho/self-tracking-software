@@ -125,7 +125,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const habitMaxValue =
     backendProgress?.habitAchievement?.maxValue ?? FALLBACK_HABIT_WEEKS;
   const habitIsAchieved =
-    backendProgress?.habitAchievement?.isAchieved ??
+    backendProgress?.habitAchievement?.isAchieved ||
     achievement.streak >= FALLBACK_HABIT_WEEKS;
 
   const lifestyleProgressValue =
@@ -134,7 +134,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const lifestyleMaxValue =
     backendProgress?.lifestyleAchievement?.maxValue ?? FALLBACK_LIFESTYLE_WEEKS;
   const lifestyleIsAchieved =
-    backendProgress?.lifestyleAchievement?.isAchieved ??
+    backendProgress?.lifestyleAchievement?.isAchieved ||
     achievement.streak >= FALLBACK_LIFESTYLE_WEEKS;
 
   // Calculate if week is completed from current week data
@@ -386,8 +386,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               </div>
             )}
 
-            {/* Lifestyle achievement progress (9 weeks) - only show after habit is achieved */}
-            {habitIsAchieved && !lifestyleIsAchieved && (
+            {/* Lifestyle achievement progress (9 weeks) - show after habit is achieved */}
+            {habitIsAchieved && (
               <div className="space-y-1">
                 <SteppedBarProgress
                   value={lifestyleProgressValue}
