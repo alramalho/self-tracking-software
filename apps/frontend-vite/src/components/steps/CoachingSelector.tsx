@@ -1,11 +1,27 @@
 "use client";
 
+import api from "@/lib/api";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { UserRound, Route, Check, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const CoachingSelector = () => {
-  const { completeStep, setWantsCoaching } = useOnboarding();
+  const { completeStep, setWantsCoaching, planGoal } = useOnboarding();
+  const [recommendsCoaching, setRecommendsCoaching] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const fetchRecommendation = async () => {
+      if (!planGoal) return;
+      try {
+        const response = await api.post<{ needsCoaching: boolean }>("/ai/classify-coaching-need", { planGoal });
+        setRecommendsCoaching(response.data.needsCoaching);
+      } catch (error) {
+        console.error("Failed to fetch coaching recommendation:", error);
+      }
+    };
+    fetchRecommendation();
+  }, [planGoal]);
 
   const handleSelect = (wantsCoaching: boolean) => {
     setWantsCoaching(wantsCoaching);
@@ -21,24 +37,24 @@ const CoachingSelector = () => {
       id: "coaching",
       value: true,
       title: "Coaching",
-      description: "Get a personalized plan with research-backed activities and adaptive scheduling",
+      description: "Get a personalized plan with structured progression",
       icon: Users,
       features: [
-        "Research-based activity suggestions",
-        "Adaptive frequency based on your level",
-        "Progressive difficulty",
+        "Adaptation based on week achievement",
+        "AI or Human coached",
+        "Great for: progressive and clear objective plans",
       ],
     },
     {
       id: "self-guided",
       value: false,
       title: "Self-Guided",
-      description: "Choose your own activities and track them at your own pace",
+      description: "Build your own routine with activities you choose",
       icon: UserRound,
       features: [
         "Pick your own activities",
-        "Simple tracking",
-        "Full control",
+        "Consistent weekly schedule",
+        "Great for: recurring habits, simple tracking",
       ],
     },
   ];
@@ -60,21 +76,31 @@ const CoachingSelector = () => {
       <div className="space-y-4">
         {options.map((option) => {
           const Icon = option.icon;
+          const isRecommended = recommendsCoaching !== null && option.value === recommendsCoaching;
 
           return (
             <button
               key={option.id}
               onClick={() => handleSelect(option.value)}
-              className="w-full rounded-xl border-2 border-border p-6 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              className={`w-full rounded-xl border-2 p-6 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
+                isRecommended ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20" : "border-border"
+              }`}
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-muted">
                   <Icon className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {option.title}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {option.title}
+                    </h3>
+                    {isRecommended && (
+                      <span className="text-xs font-medium text-blue-600 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm mt-1 text-muted-foreground">
                     {option.description}
                   </p>
