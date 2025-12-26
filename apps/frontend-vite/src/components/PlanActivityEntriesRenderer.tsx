@@ -126,11 +126,11 @@ const PlanActivityEntriesRenderer: React.FC<
 
     return (
       <div className="p-4 bg-muted/70 backdrop-blur-sm rounded-xl w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4 text-left">
+        <h3 className="text-md font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
         {entriesOnDate.length === 0 ? (
-          <p className="text-center text-muted-foreground">
+          <p className="text-left text-sm text-muted-foreground">
             No activities recorded for this date.
           </p>
         ) : (

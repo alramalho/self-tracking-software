@@ -1112,5 +1112,45 @@ router.post(
   }
 );
 
+// Recommend activities based on plan goal
+router.post(
+  "/recommend-activities",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { planGoal } = req.body;
+
+      if (!planGoal || typeof planGoal !== "string") {
+        return res.status(400).json({ error: "planGoal is required" });
+      }
+
+      // Get user's existing activities
+      const activities = await prisma.activity.findMany({
+        where: { userId: user.id },
+        select: { id: true, title: true, emoji: true },
+      });
+
+      if (activities.length === 0) {
+        return res.json({ recommendedActivityIds: [] });
+      }
+
+      const result = await aiService.recommendActivities(planGoal, activities);
+
+      logger.info(
+        `Recommended ${result.recommendedActivityIds.length} activities for goal "${planGoal.substring(0, 50)}..."`
+      );
+
+      res.json(result);
+    } catch (error) {
+      logger.error("Error recommending activities:", error);
+      res.status(500).json({ error: "Failed to recommend activities" });
+    }
+  }
+);
+
 export const aiRouter: Router = router;
 export default aiRouter;

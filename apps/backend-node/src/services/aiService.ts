@@ -1238,6 +1238,50 @@ export class AIService {
     });
   }
 
+  async recommendActivities(
+    planGoal: string,
+    existingActivities: { id: string; title: string; emoji: string | null }[]
+  ): Promise<{ recommendedActivityIds: string[] }> {
+    if (existingActivities.length === 0) {
+      return { recommendedActivityIds: [] };
+    }
+
+    const schema = z.object({
+      recommendedActivityIds: z.array(z.string()).describe(
+        "Array of activity IDs that are most relevant to the plan goal"
+      ),
+    });
+
+    const activitiesList = existingActivities
+      .map((a) => `- ID: "${a.id}" | ${a.emoji || ""} ${a.title}`)
+      .join("\n");
+
+    const systemPrompt = dedent`
+      You are an activity recommendation expert. Given a user's plan goal and their existing activities,
+      select which activities are most relevant to help achieve that goal.
+
+      Be selective - only recommend activities that clearly relate to the goal.
+      If no activities are relevant, return an empty array.
+
+      Return ONLY the activity IDs that are relevant, not all of them.
+    `;
+
+    const prompt = dedent`
+      Plan goal: "${planGoal}"
+
+      Available activities:
+      ${activitiesList}
+
+      Select which activity IDs are most relevant to this goal.
+    `;
+
+    return this.generateStructuredResponse({
+      prompt,
+      schema,
+      systemPrompt,
+    });
+  }
+
   async generateCoachMessage(
     user: User,
     plan: Plan & { activities: Activity[] }

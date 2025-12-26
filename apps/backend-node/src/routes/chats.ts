@@ -357,7 +357,7 @@ router.post(
       }
 
       // Save user message
-      await prisma.message.create({
+      const userMessage = await prisma.message.create({
         data: {
           chatId: chatId,
           role: "USER",
@@ -534,11 +534,11 @@ router.post(
 
       res.json({
         message: {
-          id: "user-message",
-          chatId: chatId,
-          role: "USER",
-          content: message,
-          createdAt: new Date(),
+          id: userMessage.id,
+          chatId: userMessage.chatId,
+          role: userMessage.role,
+          content: userMessage.content,
+          createdAt: userMessage.createdAt,
           senderId: user.id,
           senderName: user.name,
           senderPicture: user.picture,

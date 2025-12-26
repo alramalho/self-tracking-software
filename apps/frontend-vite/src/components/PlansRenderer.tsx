@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
 import { BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -14,8 +14,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
-import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
-import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { capitalize } from "@/lib/utils";
@@ -106,11 +104,11 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   scrollTo,
 }) => {
   const { plans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
-  const { currentUser } = useCurrentUser();
   const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const navigate = useNavigate();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
@@ -120,7 +118,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const [expiredPlanPopover, setExpiredPlanPopover] = useState<CompletePlan | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
-  const [showCreatePlanPopover, setShowCreatePlanPopover] = useState(false);
   const [showPlanLimitPopover, setShowPlanLimitPopover] = useState(false);
 
   useEffect(() => {
@@ -161,13 +158,8 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     if (userPlanCount >= maxPlans) {
       setShowPlanLimitPopover(true);
     } else {
-      setShowCreatePlanPopover(true);
+      navigate({ to: "/create-plan" });
     }
-  };
-
-  const handleCreatePlanSuccess = () => {
-    setShowCreatePlanPopover(false);
-    toast.success("Plan created successfully!");
   };
 
   if (plans && plans.length === 0) {
@@ -181,32 +173,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
           <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
           <span>Create new Plan</span>
         </Button>
-
-        {/* Create Plan Popover */}
-        <AppleLikePopover
-          open={showCreatePlanPopover}
-          onClose={() => setShowCreatePlanPopover(false)}
-          title="Create New Plan"
-        >
-          <div className="text-center mb-6 mt-4">
-            <div className="text-6xl mb-3">
-              🎯
-            </div>
-            <h3 className="text-lg font-semibold">
-              Create Your New Plan
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Set up a new plan to track your goals and activities
-            </p>
-          </div>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <PlanConfigurationForm
-              onSuccess={handleCreatePlanSuccess}
-              onClose={() => setShowCreatePlanPopover(false)}
-              title={`${currentUser?.name}'s New Plan`}
-            />
-          </div>
-        </AppleLikePopover>
 
         {/* Plan Limit Popover */}
         <AppleLikePopover
@@ -437,32 +403,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         cancelText="Cancel"
         variant="destructive"
       />
-
-      {/* Create Plan Popover */}
-      <AppleLikePopover
-        open={showCreatePlanPopover}
-        onClose={() => setShowCreatePlanPopover(false)}
-        title="Create New Plan"
-      >
-        <div className="text-center mb-6 mt-4">
-          <div className="text-6xl mb-3">
-            🎯
-          </div>
-          <h3 className="text-lg font-semibold">
-            Create Your New Plan
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Set up a new plan to track your goals and activities
-          </p>
-        </div>
-        <div className="max-h-[60vh] overflow-y-auto">
-          <PlanConfigurationForm
-            onSuccess={handleCreatePlanSuccess}
-            onClose={() => setShowCreatePlanPopover(false)}
-            title={`${currentUser?.name}'s New Plan`}
-          />
-        </div>
-      </AppleLikePopover>
 
       {/* Plan Limit Popover */}
       <AppleLikePopover

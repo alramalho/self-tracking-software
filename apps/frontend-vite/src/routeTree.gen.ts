@@ -17,6 +17,7 @@ import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as CreatePlanRouteImport } from './routes/create-plan'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
@@ -28,6 +29,7 @@ import { Route as JoinPlanInvitationIdRouteImport } from './routes/join-plan.$in
 import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboarding'
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
+import { Route as EditPlanPlanIdRouteImport } from './routes/edit-plan.$planId'
 
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
@@ -67,6 +69,11 @@ const GetCoachedRoute = GetCoachedRouteImport.update({
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatePlanRoute = CreatePlanRouteImport.update({
+  id: '/create-plan',
+  path: '/create-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateCoachProfileRoute = CreateCoachProfileRouteImport.update({
@@ -124,12 +131,18 @@ const FriendsUsernameRoute = FriendsUsernameRouteImport.update({
   path: '/friends/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EditPlanPlanIdRoute = EditPlanPlanIdRouteImport.update({
+  id: '/edit-plan/$planId',
+  path: '/edit-plan/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
+  '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -138,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -151,6 +165,7 @@ export interface FileRoutesByTo {
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
+  '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -159,6 +174,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -173,6 +189,7 @@ export interface FileRoutesById {
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
+  '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/onboarding': typeof OnboardingRoute
@@ -181,6 +198,7 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -196,6 +214,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/ai'
     | '/create-coach-profile'
+    | '/create-plan'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -204,6 +223,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -217,6 +237,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/ai'
     | '/create-coach-profile'
+    | '/create-plan'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -225,6 +246,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -238,6 +260,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/ai'
     | '/create-coach-profile'
+    | '/create-plan'
     | '/download'
     | '/get-coached'
     | '/onboarding'
@@ -246,6 +269,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -260,6 +284,7 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute
   AiRoute: typeof AiRoute
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
+  CreatePlanRoute: typeof CreatePlanRoute
   DownloadRoute: typeof DownloadRoute
   GetCoachedRoute: typeof GetCoachedRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -268,6 +293,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
   UpgradeRoute: typeof UpgradeRoute
+  EditPlanPlanIdRoute: typeof EditPlanPlanIdRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
   InsightsOnboardingRoute: typeof InsightsOnboardingRoute
@@ -333,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/download'
       fullPath: '/download'
       preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-plan': {
+      id: '/create-plan'
+      path: '/create-plan'
+      fullPath: '/create-plan'
+      preLoaderRoute: typeof CreatePlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create-coach-profile': {
@@ -412,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FriendsUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/edit-plan/$planId': {
+      id: '/edit-plan/$planId'
+      path: '/edit-plan/$planId'
+      fullPath: '/edit-plan/$planId'
+      preLoaderRoute: typeof EditPlanPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -420,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   AiRoute: AiRoute,
   CreateCoachProfileRoute: CreateCoachProfileRoute,
+  CreatePlanRoute: CreatePlanRoute,
   DownloadRoute: DownloadRoute,
   GetCoachedRoute: GetCoachedRoute,
   OnboardingRoute: OnboardingRoute,
@@ -428,6 +469,7 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
   UpgradeRoute: UpgradeRoute,
+  EditPlanPlanIdRoute: EditPlanPlanIdRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,
   InsightsOnboardingRoute: InsightsOnboardingRoute,

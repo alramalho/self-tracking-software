@@ -12,11 +12,13 @@ import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, getMessages, type Message } from "@/contexts/messages";
 import { usePlans } from "@/contexts/plans";
+import { useSessionMessage } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target, Pin } from "lucide-react";
+import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target, Pin, X, Calendar } from "lucide-react";
+import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
@@ -113,6 +115,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
     createCoachChat,
     isCreatingCoachChat,
   } = useAI();
+  const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -316,7 +319,16 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
       return;
     }
 
-    const messageToSend = inputValue;
+    // Build message with session context if present
+    let messageToSend = inputValue;
+    if (pendingSession) {
+      const sessionDate = format(new Date(pendingSession.date), "EEEE, MMM d");
+      const description = pendingSession.descriptiveGuide ? `|${pendingSession.descriptiveGuide}` : "";
+      const sessionInfo = `[About: ${pendingSession.activityEmoji || "📋"} ${pendingSession.activityTitle} on ${sessionDate}${pendingSession.quantity ? ` (${pendingSession.quantity} ${pendingSession.activityMeasure})` : ""}${description}]\n\n`;
+      messageToSend = sessionInfo + inputValue;
+      clearPendingSession();
+    }
+
     setInputValue("");
 
     try {
@@ -351,12 +363,87 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
     }
   };
 
+  // Session info card component with collapsible description
+  const SessionInfoCard = ({ sessionText }: { sessionText: string }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Parse: [About: 📖 Book reading on Sunday, Dec 28 (10 pages)|description]
+    const match = sessionText.match(/\[About: (.+?) (.+?) on ([^(|]+?)(?:\s*\((.+?)\))?(?:\|(.+?))?\]/);
+    if (!match) return null;
+
+    const [, emoji, title, date, quantityInfo, description] = match;
+    const isLong = description && description.length > 80;
+    const isClickable = isLong || description;
+
+    return (
+      <div
+        className={cn(
+          "flex gap-2 pl-3 py-1 mb-2 border-l-2",
+          variants.brightBorder,
+          isClickable && "cursor-pointer"
+        )}
+        onClick={() => isClickable && setIsExpanded(!isExpanded)}
+      >
+        <span className="text-base">{emoji}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-xs font-medium text-foreground/80">{title}</span>
+            <span className="text-xs text-muted-foreground/70">• {date.trim()}</span>
+            {quantityInfo && (
+              <span className="text-xs text-muted-foreground/70">• {quantityInfo}</span>
+            )}
+          </div>
+          {description && (
+            <div className="mt-0.5">
+              <p className={cn("text-xs text-muted-foreground/60", !isExpanded && isLong && "line-clamp-1")}>
+                {description}
+              </p>
+              {isLong && (
+                <span className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground/50">
+                  {isExpanded ? "Show less" : "Read more"}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper to render session info card from message
+  const renderSessionInfoCard = (sessionText: string) => {
+    return <SessionInfoCard sessionText={sessionText} />;
+  };
+
   // Helper to render message content with replacements (for coach messages)
   const renderMessageContent = (message: any) => {
-    if (message.role !== "COACH") {
-      return message.content;
+    const content = message.content;
+
+    // Check for session info pattern in any message
+    const sessionPattern = /\[About: .+?\]\n\n/;
+    const sessionMatch = content.match(sessionPattern);
+
+    if (sessionMatch) {
+      const sessionCard = renderSessionInfoCard(sessionMatch[0]);
+      const restOfMessage = content.replace(sessionPattern, '');
+
+      return (
+        <>
+          {sessionCard}
+          {message.role === "COACH" ? renderCoachContent({ ...message, content: restOfMessage }) : restOfMessage}
+        </>
+      );
     }
 
+    if (message.role !== "COACH") {
+      return content;
+    }
+
+    return renderCoachContent(message);
+  };
+
+  // Helper to render coach-specific content with replacements
+  const renderCoachContent = (message: any) => {
     const content = message.content;
     const parts: (string | JSX.Element)[] = [];
     const replacements: Array<{
@@ -604,7 +691,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setCurrentChatId(null)}
+                          onClick={() => window.history.back()}
                         >
                           <ArrowLeft size={20} />
                         </Button>
@@ -633,7 +720,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setCurrentChatId(null)}
+                        onClick={() => window.history.back()}
                       >
                         <ArrowLeft size={20} />
                       </Button>
@@ -673,7 +760,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setCurrentChatId(null)}
+                        onClick={() => window.history.back()}
                       >
                         <ArrowLeft size={20} />
                       </Button>
@@ -798,16 +885,47 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
           </div>
           {/* Input - ChatGPT style */}
           <div className="flex-shrink-0 pb-4 pt-2">
-            <div className="w-full max-w-4xl mx-auto px-4">
+            <div className="w-full max-w-4xl mx-auto px-4 space-y-2">
+              {/* Session preview card - shown when talking about a session */}
+              {pendingSession && (
+                <div className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl border",
+                  variants.fadedBg,
+                  variants.border
+                )}>
+                  <span className="text-2xl">{pendingSession.activityEmoji || "📋"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">
+                        {pendingSession.activityTitle}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        • {format(new Date(pendingSession.date), "EEE, MMM d")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {pendingSession.planEmoji || "📋"} {pendingSession.planGoal}
+                    </p>
+                  </div>
+                  <button
+                    onClick={clearPendingSession}
+                    className="p-1 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <X size={16} className="text-muted-foreground" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-3 bg-muted/80 rounded-full px-4 py-2 border border-border">
                 <input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder={
-                    currentChat?.type === "COACH"
-                      ? "Ask anything"
-                      : "Type a message..."
+                    pendingSession
+                      ? "Ask about this session..."
+                      : currentChat?.type === "COACH"
+                        ? "Ask anything"
+                        : "Type a message..."
                   }
                   className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
                   disabled={isSendingMessage}

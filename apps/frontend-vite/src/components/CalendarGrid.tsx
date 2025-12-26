@@ -84,6 +84,27 @@ export const CalendarGrid = ({
     }
   };
 
+  const handleDayClick = (day: Date) => {
+    const daySessions = getSessionsForDay(day);
+    if (daySessions.length > 0) {
+      const firstSession = daySessions[0];
+      const activity = getActivity(firstSession.activityId);
+      if (activity) {
+        // Check if clicking the same day that's already selected
+        const isCurrentlySelected =
+          selectedSession?.session.activityId === firstSession.activityId &&
+          isSameDay(new Date(selectedSession?.session.date), day);
+
+        if (isCurrentlySelected) {
+          setSelectedSession(null);
+        } else {
+          setSelectedSession({ session: firstSession, activity });
+          onSessionSelect?.(firstSession, activity);
+        }
+      }
+    }
+  };
+
   const DayCell = ({ day }: { day: Date }) => {
     const daySessions = getSessionsForDay(day);
     const isToday = isSameDay(day, today);
@@ -92,6 +113,7 @@ export const CalendarGrid = ({
 
     return (
       <div
+        onClick={() => hasSession && handleDayClick(day)}
         className={cn(
           "flex flex-col items-center p-1 min-h-[72px] rounded-lg border transition-all",
           isToday && cn(variants.brightBorder, variants.veryFadedBg),
@@ -129,7 +151,10 @@ export const CalendarGrid = ({
             return (
               <button
                 key={`${session.activityId}-${idx}`}
-                onClick={() => handleSessionClick(session, activity)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSessionClick(session, activity);
+                }}
                 className={cn(
                   "relative text-lg leading-none rounded-md p-0.5 transition-all",
                   isSelected && cn(variants.fadedBg, "ring-2", variants.ring),

@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { s3Service } from "../services/s3Service";
+import { plansService } from "../services/plansService";
 
 const router: Router = Router();
 const upload = multer({
@@ -176,6 +177,115 @@ router.get(
     } catch (error) {
       logger.error("Error fetching coach clients:", error);
       res.status(500).json({ error: "Failed to fetch clients" });
+    }
+  }
+);
+
+// Get complete client plan data for coach overview
+router.get(
+  "/clients/:planId",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { planId } = req.params;
+
+      // Find the user's coach profile
+      const coach = await prisma.coach.findFirst({
+        where: {
+          ownerId: req.user!.id,
+          type: "HUMAN",
+        },
+      });
+
+      if (!coach) {
+        res.status(404).json({ error: "Coach profile not found" });
+        return;
+      }
+
+      // Get the plan with full relations, verifying this coach manages it
+      const plan = await prisma.plan.findFirst({
+        where: {
+          id: planId,
+          coachId: coach.id,
+          deletedAt: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              picture: true,
+            },
+          },
+          activities: {
+            where: {
+              deletedAt: null,
+            },
+          },
+          sessions: {
+            orderBy: { date: "asc" },
+          },
+          planGroup: {
+            include: {
+              members: {
+                where: {
+                  status: "ACTIVE",
+                },
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      username: true,
+                      picture: true,
+                    },
+                  },
+                  plan: {
+                    select: {
+                      id: true,
+                      goal: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          milestones: true,
+        },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Client plan not found or you are not the coach" });
+        return;
+      }
+
+      // Get plan progress
+      const [planProgress] = await plansService.getBatchPlanProgress(
+        [planId],
+        plan.userId,
+        false // Use cache
+      );
+
+      // Get activity entries for this client's plan activities
+      const activityIds = plan.activities.map((a) => a.id);
+      const activityEntries = await prisma.activityEntry.findMany({
+        where: {
+          userId: plan.userId,
+          activityId: { in: activityIds },
+          deletedAt: null,
+        },
+        orderBy: { datetime: "desc" },
+      });
+
+      res.json({
+        ...plan,
+        progress: planProgress,
+        activityEntries,
+      });
+    } catch (error) {
+      logger.error("Error fetching client plan:", error);
+      res.status(500).json({ error: "Failed to fetch client plan" });
     }
   }
 );
