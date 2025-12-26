@@ -492,7 +492,7 @@ function HomePage() {
                     <button
                       key={client.id}
                       onClick={() => navigate({ to: `/messages/${client.user.username}` })}
-                      className="w-full p-3 flex items-center gap-3 bg-card hover:bg-muted/50 rounded-xl border border-border transition-colors text-left"
+                      className="w-full p-3 flex items-center gap-3 bg-card hover:bg-muted/50 rounded-3xl border border-border transition-colors text-left"
                     >
                       <Avatar className="w-10 h-10">
                         <AvatarImage
