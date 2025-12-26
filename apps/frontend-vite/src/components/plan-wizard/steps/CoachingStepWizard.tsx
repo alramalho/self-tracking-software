@@ -1,35 +1,53 @@
-"use client";
-
+import { usePlanCreation } from "@/contexts/plan-creation";
+import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import api from "@/lib/api";
-import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
-import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
-import { UserRound, Route, Check, Users } from "lucide-react";
+import { Route, Users, UserRound, Check, MoveRight, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const CoachingSelector = () => {
-  const { completeStep, setWantsCoaching, planGoal } = useOnboarding();
+const CoachingStepWizard = () => {
+  const { goal, setIsCoached, setOutlineType, completeStep } = usePlanCreation();
+  const { isUserPremium } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
   const [recommendsCoaching, setRecommendsCoaching] = useState<boolean | null>(null);
 
   useEffect(() => {
     const fetchRecommendation = async () => {
-      if (!planGoal) return;
+      if (!goal) return;
       try {
-        const response = await api.post<{ needsCoaching: boolean }>("/ai/classify-coaching-need", { planGoal });
+        const response = await api.post<{ needsCoaching: boolean }>("/ai/classify-coaching-need", { planGoal: goal });
         setRecommendsCoaching(response.data.needsCoaching);
       } catch (error) {
         console.error("Failed to fetch coaching recommendation:", error);
       }
     };
     fetchRecommendation();
-  }, [planGoal]);
+  }, [goal]);
 
   const handleSelect = (wantsCoaching: boolean) => {
-    setWantsCoaching(wantsCoaching);
-    completeStep("coaching-selector", {
-      wantsCoaching,
-      // Set planType based on coaching choice
-      planType: wantsCoaching ? "SPECIFIC" : "TIMES_PER_WEEK",
-    });
+    if (wantsCoaching && !isUserPremium) {
+      // Free user wants coaching - show upgrade
+      setShowUpgradePopover(true);
+      return;
+    }
+
+    setIsCoached(wantsCoaching);
+    setOutlineType(wantsCoaching ? "SPECIFIC" : "TIMES_PER_WEEK");
+
+    if (wantsCoaching) {
+      // Coaching selected - go to coach selector next
+      completeStep("coaching", {
+        isCoached: true,
+        outlineType: "SPECIFIC",
+      }, { nextStep: "coach-selector" });
+    } else {
+      // Self-guided - skip coach selector
+      completeStep("coaching", {
+        isCoached: false,
+        outlineType: "TIMES_PER_WEEK",
+      });
+    }
   };
 
   const options = [
@@ -40,10 +58,11 @@ const CoachingSelector = () => {
       description: "Get a personalized plan with structured progression",
       icon: Users,
       features: [
-        "Adaptation based on week achievement",
-        "AI or Human coached",
+        "Specific weekly schedule",
+        "Adapted every week based on performance",
         "Great for: progressive and clear objective plans",
       ],
+      requiresPremium: true,
     },
     {
       id: "self-guided",
@@ -55,6 +74,7 @@ const CoachingSelector = () => {
         "On a times per week basis",
         "Great for: recurring habits, simple tracking",
       ],
+      requiresPremium: false,
     },
   ];
 
@@ -68,14 +88,15 @@ const CoachingSelector = () => {
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Choose between AI-powered coaching or self-guided tracking.
+          Choose between personalized coaching or self-guided tracking.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-2">
         {options.map((option) => {
           const Icon = option.icon;
           const isRecommended = recommendsCoaching !== null && option.value === recommendsCoaching;
+          const showUpgradeBadge = option.requiresPremium && !isUserPremium;
 
           return (
             <button
@@ -90,13 +111,19 @@ const CoachingSelector = () => {
                   <Icon className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-lg font-semibold text-foreground">
                       {option.title}
                     </h3>
                     {isRecommended && (
                       <span className="text-xs font-medium text-blue-600 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-400 px-2 py-0.5 rounded-full">
                         Recommended
+                      </span>
+                    )}
+                    {showUpgradeBadge && (
+                      <span className="text-xs font-medium text-yellow-600 bg-yellow-100 dark:bg-yellow-900/50 dark:text-yellow-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Crown className="w-3 h-3" />
+                        Premium
                       </span>
                     )}
                   </div>
@@ -111,6 +138,12 @@ const CoachingSelector = () => {
                       </li>
                     ))}
                   </ul>
+                  {showUpgradeBadge && (
+                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                      <span>Upgrade to unlock</span>
+                      <MoveRight className="w-4 h-4" />
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
@@ -121,4 +154,4 @@ const CoachingSelector = () => {
   );
 };
 
-export default withFadeUpAnimation(CoachingSelector);
+export default withFadeUpAnimation(CoachingStepWizard);

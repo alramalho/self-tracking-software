@@ -5,6 +5,7 @@ import { AchievementCelebrationPopover, type AchievementType } from "@/component
 import { AchievementShareDialog } from "@/components/AchievementShareDialog";
 import { useAchievements } from "@/contexts/achievements";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import ClientOverviewPopover from "@/components/ClientOverviewPopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
@@ -130,6 +131,10 @@ function HomePage() {
     "plans-section-collapsed",
     false
   );
+  const [isClientsCollapsed, setIsClientsCollapsed] = useLocalStorage<boolean>(
+    "clients-section-collapsed",
+    false
+  );
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
@@ -137,6 +142,7 @@ function HomePage() {
   const { isLoaded, isSignedIn } = useSession();
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<ClientPlan | null>(null);
 
   // Fetch coach's clients if user has a coach profile
   const { data: coachClients } = useQuery({
@@ -434,36 +440,32 @@ function HomePage() {
                 >
                   <BarChartHorizontal size={24} />
                 </button>
-                {isAdmin && (
-                  <>
-                    <div className="relative">
-                      <button
-                        onClick={() => navigate({ to: "/messages" })}
-                        className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                        title="AI Coach"
-                      >
-                        <Send 
-                          size={28}
-                          className="text-foreground"
-                        />
-                        <AnimatePresence>
-                          {lastCoachNotification && hasFinishedLastCoachMessageAnimation && lastCoachNotification.status !== "CONCLUDED" && (
-                            <motion.span
-                              key="coach-badge"
-                              initial={{ opacity: 0, scale: 0 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0 }}
-                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center z-1000"
-                            >
-                              1
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div className="relative">
+                  <button
+                    onClick={() => navigate({ to: "/messages" })}
+                    className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                    title="Messages"
+                  >
+                    <Send
+                      size={28}
+                      className="text-foreground"
+                    />
+                    <AnimatePresence>
+                      {lastCoachNotification && hasFinishedLastCoachMessageAnimation && lastCoachNotification.status !== "CONCLUDED" && (
+                        <motion.span
+                          key="coach-badge"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center z-1000"
+                        >
+                          1
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                </div>
               </div>
             </div>
           </AnimatedSection>
@@ -478,6 +480,27 @@ function HomePage() {
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsClientsCollapsed((prev) => !prev)}
+                      className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
+                      aria-label={
+                        isClientsCollapsed
+                          ? "Expand clients"
+                          : "Collapse clients"
+                      }
+                    >
+                      {isClientsCollapsed ? (
+                        <ChevronRight
+                          size={16}
+                          className="text-muted-foreground"
+                        />
+                      ) : (
+                        <ChevronDown
+                          size={16}
+                          className="text-muted-foreground"
+                        />
+                      )}
+                    </button>
                     <Users size={18} className="text-muted-foreground" />
                     <h3 className="text-lg font-semibold text-foreground">
                       My Clients
@@ -487,34 +510,46 @@ function HomePage() {
                     </span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {coachClients.map((client) => (
-                    <button
-                      key={client.id}
-                      onClick={() => navigate({ to: `/messages/${client.user.username}` })}
-                      className="w-full p-3 flex items-center gap-3 bg-card hover:bg-muted/50 rounded-3xl border border-border transition-colors text-left"
+                <AnimatePresence initial={false}>
+                  {!isClientsCollapsed && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
                     >
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage
-                          src={client.user.picture || undefined}
-                          alt={client.user.name || client.user.username}
-                        />
-                        <AvatarFallback>
-                          {(client.user.name || client.user.username)[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
-                          {client.user.name || client.user.username}
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate">
-                          {client.emoji || "📋"} {client.goal}
-                        </div>
+                      <div className="space-y-2">
+                        {coachClients.map((client) => (
+                          <button
+                            key={client.id}
+                            onClick={() => setSelectedClient(client)}
+                            className="w-full p-3 flex items-center gap-3 bg-card hover:bg-muted/50 rounded-3xl border border-border transition-colors text-left"
+                          >
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage
+                                src={client.user.picture || undefined}
+                                alt={client.user.name || client.user.username}
+                              />
+                              <AvatarFallback>
+                                {(client.user.name || client.user.username)[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">
+                                {client.user.name || client.user.username}
+                              </div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                {client.emoji || "📋"} {client.goal}
+                              </div>
+                            </div>
+                            <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
+                          </button>
+                        ))}
                       </div>
-                      <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-                    </button>
-                  ))}
-                </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </AnimatedSection>
           )}
@@ -697,6 +732,18 @@ function HomePage() {
           userPicture={currentUser.picture}
           activityEntryCount={activityEntries?.length || 0}
           onSubmit={handleTestimonialSubmit}
+        />
+      )}
+
+      {/* Client Overview Popover for Coaches */}
+      {selectedClient && (
+        <ClientOverviewPopover
+          open={!!selectedClient}
+          onClose={() => setSelectedClient(null)}
+          planId={selectedClient.id}
+          clientInfo={selectedClient.user}
+          planGoal={selectedClient.goal}
+          planEmoji={selectedClient.emoji}
         />
       )}
 

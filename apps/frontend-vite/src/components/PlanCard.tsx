@@ -11,7 +11,7 @@ import React, { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
-import { PlanEditModal } from "./PlanEditModal";
+import { useNavigate } from "@tanstack/react-router";
 
 interface PlanCardProps {
   plan: CompletePlan;
@@ -38,11 +38,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { plans, deletePlan } = usePlans();
   const { isUserPremium } = usePaidPlan();
   const { currentUser } = useCurrentUser();
+  const navigate = useNavigate();
   const isCoached = isUserPremium && (plan as any).isCoached;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     console.log({ isCoached });
@@ -50,7 +50,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowEditModal(true);
+    navigate({ to: "/edit-plan/$planId", params: { planId: plan.id! } });
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -191,13 +191,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
         confirmText="Delete Plan"
         cancelText="Cancel"
         variant="destructive"
-      />
-
-      <PlanEditModal
-        plan={plan}
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={() => setShowEditModal(false)}
       />
     </>
   );

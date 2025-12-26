@@ -1,6 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan } from "@/contexts/plans";
+import { useSessionMessage, type SessionSnapshot } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -15,12 +16,10 @@ import {
   Flame,
   MoveRight,
   Rocket,
-  Send,
   Sparkles,
   Sprout,
   TrendingDown,
   TrendingUp,
-  User,
 } from "lucide-react";
 import { motion } from "motion/react";
 import React, { useMemo, useRef, useState } from "react";
@@ -51,14 +50,41 @@ interface ComingUpSectionProps {
   sessions: any[];
   activities: any[];
   variants: any;
+  plan: CompletePlan;
+  coachUsername?: string;
+  onTalkToCoach?: (sessionSnapshot: SessionSnapshot) => void;
 }
 
 const ComingUpSection: React.FC<ComingUpSectionProps> = ({
   sessions,
   activities,
   variants,
+  plan,
+  coachUsername,
+  onTalkToCoach,
 }) => {
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  const handleTalkToCoach = () => {
+    if (!selectedSession || !coachUsername || !onTalkToCoach) return;
+
+    const sessionSnapshot: SessionSnapshot = {
+      activityId: selectedSession.activityId,
+      activityTitle: selectedSession.activity.title,
+      activityEmoji: selectedSession.activity.emoji || null,
+      activityMeasure: selectedSession.activity.measure || "",
+      date: new Date(selectedSession.date).toISOString(),
+      quantity: selectedSession.quantity,
+      descriptiveGuide: selectedSession.descriptiveGuide,
+      planId: plan.id,
+      planGoal: plan.goal,
+      planEmoji: plan.emoji || null,
+      coachUsername,
+    };
+
+    onTalkToCoach(sessionSnapshot);
+  };
 
   return (
     <div className="mt-2 pt-2 border-t border-border/50">
@@ -75,11 +101,12 @@ const ComingUpSection: React.FC<ComingUpSectionProps> = ({
           return (
             <button
               key={sessionKey}
-              onClick={() =>
+              onClick={() => {
+                setIsDescriptionExpanded(false);
                 setSelectedSession(
                   isSelected ? null : { ...session, activity, key: sessionKey }
-                )
-              }
+                );
+              }}
               className={cn(
                 "flex flex-col items-center gap-1 p-2 rounded-lg border text-center min-w-[70px] transition-all",
                 isSelected
@@ -135,9 +162,33 @@ const ComingUpSection: React.FC<ComingUpSectionProps> = ({
               </div>
 
               {selectedSession.descriptiveGuide && (
-                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                  {selectedSession.descriptiveGuide}
-                </p>
+                <div className="mt-2">
+                  <p className={cn(
+                    "text-xs text-muted-foreground",
+                    !isDescriptionExpanded && selectedSession.descriptiveGuide.length > 80 && "line-clamp-1"
+                  )}>
+                    {selectedSession.descriptiveGuide}
+                  </p>
+                  {selectedSession.descriptiveGuide.length > 80 && (
+                    <button
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    >
+                      {isDescriptionExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Talk to coach link */}
+              {coachUsername && onTalkToCoach && (
+                <button
+                  onClick={handleTalkToCoach}
+                  className="mt-2 flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                >
+                  <span>Talk to coach about this</span>
+                  <ChevronRight size={12} />
+                </button>
               )}
             </div>
           </motion.div>
@@ -214,6 +265,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const navigate = useNavigate();
   const planProgressData = plan.progress;
   const { activities, activityEntries } = useActivities();
+  const { setPendingSession } = useSessionMessage();
   const api = useApiWithAuth();
 
   // Fetch coaches to get coach info for coached plans
@@ -624,6 +676,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               sessions={upcomingSessions}
               activities={activities}
               variants={variants}
+              plan={plan}
+              coachUsername={planCoach?.owner.username}
+              onTalkToCoach={(sessionSnapshot) => {
+                setPendingSession(sessionSnapshot);
+                navigate({ to: `/messages/${sessionSnapshot.coachUsername}` });
+              }}
             />
           )}
 

@@ -3,8 +3,7 @@ import { ShineBorder } from "@/components/ui/shine-border";
 import { cn } from "@/lib/utils";
 import { Medal, Pencil, Sprout } from "lucide-react";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
-import { useState } from "react";
-import { PlanEditModal } from "@/components/PlanEditModal";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { type CompletePlan } from "@/contexts/plans";
 
@@ -28,7 +27,7 @@ export function ProfilePlanCard({
   isOwnProfile,
   onBadgeClick,
 }: ProfilePlanCardProps) {
-  const [showEditModal, setShowEditModal] = useState(false);
+  const navigate = useNavigate();
 
   // Check achievements from inline progress data
   const habitAchieved = plan.progress?.habitAchievement?.isAchieved ?? false;
@@ -115,7 +114,7 @@ export function ProfilePlanCard({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowEditModal(true)}
+                        onClick={() => navigate({ to: "/edit-plan/$planId", params: { planId: plan.id! } })}
                         className="h-5 w-5 text-foreground/90 inline-flex"
                       >
                         <Pencil size={20} />
@@ -185,15 +184,6 @@ export function ProfilePlanCard({
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {isOwnProfile && (
-        <PlanEditModal
-          plan={plan}
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={() => setShowEditModal(false)}
-        />
-      )}
     </div>
   );
 }

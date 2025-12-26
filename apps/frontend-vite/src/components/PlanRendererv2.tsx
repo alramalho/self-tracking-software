@@ -42,7 +42,6 @@ import { CoachOverviewCard } from "./CoachOverviewCard";
 import InviteButton from "./InviteButton";
 import { MilestoneOverview } from "./MilestoneOverview";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
-import { PlanEditModal } from "./PlanEditModal";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { PlanCalendarView } from "./PlanCalendarView";
@@ -124,8 +123,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     return humanCoaches.find((c) => c.id === (selectedPlan as any).coachId) || null;
   }, [humanCoaches, (selectedPlan as any).coachId]);
 
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
   const [showAllWeeksPopover, setShowAllWeeksPopover] = useState(false);
@@ -496,7 +493,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowEditModal(true)}
+              onClick={() => navigate({ to: "/edit-plan/$planId", params: { planId: selectedPlan.id! } })}
               className="text-muted-foreground hover:text-foreground"
             >
               <Pencil className="h-6 w-6" />
@@ -513,8 +510,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               milestones={selectedPlan.milestones}
               planId={selectedPlan.id}
               onEdit={() => {
-                setOpenedFromMilestone(true);
-                setShowEditModal(true);
+                navigate({ to: "/edit-plan/$planId", params: { planId: selectedPlan.id! } });
               }}
             />
           </div>
@@ -888,20 +884,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         confirmText="Delete Plan"
         cancelText="Cancel"
         variant="destructive"
-      />
-
-      <PlanEditModal
-        plan={selectedPlan}
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setOpenedFromMilestone(false);
-        }}
-        onSuccess={() => {
-          setShowEditModal(false);
-          setOpenedFromMilestone(false);
-        }}
-        scrollToMilestones={openedFromMilestone}
       />
 
       {/* Coaching Time Selector Popover */}

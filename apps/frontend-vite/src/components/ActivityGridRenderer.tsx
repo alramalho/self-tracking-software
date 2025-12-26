@@ -86,7 +86,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
         {entriesOnDate.length === 0 ? (
-          <p className="text-center text-muted-foreground">
+          <p className="text-left text-muted-foreground">
             No activities recorded for this date.
           </p>
         ) : (

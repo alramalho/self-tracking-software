@@ -17,6 +17,7 @@ import { DataNotificationsProvider } from "./notifications";
 import { PlansProvider } from "./plans";
 import { PlansProgressProvider } from "./plans-progress";
 import { RecommendationsProvider } from "./recommendations";
+import { SessionMessageProvider } from "./session-message";
 import { TimelineProvider } from "./timeline";
 
 interface GlobalDataProviderProps {
@@ -81,11 +82,13 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
                 <ActivitiesProvider>
                   <AchievementsProvider>
                     <MessagesProvider>
-                      <AIProvider>
-                        <RecommendationsProvider>
-                          <NotificationsProvider>{children}</NotificationsProvider>
-                        </RecommendationsProvider>
-                      </AIProvider>
+                      <SessionMessageProvider>
+                        <AIProvider>
+                          <RecommendationsProvider>
+                            <NotificationsProvider>{children}</NotificationsProvider>
+                          </RecommendationsProvider>
+                        </AIProvider>
+                      </SessionMessageProvider>
                     </MessagesProvider>
                   </AchievementsProvider>
                 </ActivitiesProvider>
