@@ -2,15 +2,17 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { useApiWithAuth } from "@/api";
 import { type CompletePlan } from "@/contexts/plans";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isSameDay, subWeeks } from "date-fns";
 import { Loader2, MessageCircle } from "lucide-react";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { CalendarGrid, type CalendarSession } from "./CalendarGrid";
+import { CalendarGrid, type CalendarSession, type CalendarActivity } from "./CalendarGrid";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import { useNavigate } from "@tanstack/react-router";
+import SessionEditor, { type SessionUpdateData } from "./SessionEditor";
+import { toast } from "sonner";
 
 interface ClientOverviewPopoverProps {
   open: boolean;
@@ -46,6 +48,9 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
 }) => {
   const api = useApiWithAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   const { data: clientPlan, isLoading } = useQuery({
     queryKey: ["coach-client-plan", planId],
@@ -58,15 +63,114 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
     enabled: open && !!planId,
   });
 
+  const updateSessionMutation = useMutation({
+    mutationFn: async (data: { sessionId: string; updates: SessionUpdateData }) => {
+      const response = await api.patch(`/coaches/sessions/${data.sessionId}`, data.updates);
+      return { sessionId: data.sessionId, updates: data.updates, response: response.data };
+    },
+    onSuccess: ({ sessionId, updates }) => {
+      // Update query data directly
+      queryClient.setQueryData<ClientPlanResponse>(
+        ["coach-client-plan", planId],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            sessions: oldData.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    ...(updates.activityId && { activityId: updates.activityId }),
+                    ...(updates.date && { date: updates.date }),
+                    ...(updates.quantity !== undefined && { quantity: updates.quantity }),
+                    ...(updates.descriptiveGuide !== undefined && { descriptiveGuide: updates.descriptiveGuide }),
+                  }
+                : s
+            ),
+          };
+        }
+      );
+      toast.success("Session updated successfully");
+      setEditingSessionId(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to update session");
+      console.error("Session update error:", error);
+    },
+  });
+
+  const handleUploadImages = async (sessionId: string, files: File[]): Promise<string[]> => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    const response = await api.post<{ imageUrls: string[]; newUrls: string[] }>(
+      `/coaches/sessions/${sessionId}/upload-images`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    // Update query data directly instead of invalidating
+    queryClient.setQueryData<ClientPlanResponse>(
+      ["coach-client-plan", planId],
+      (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          sessions: oldData.sessions.map((s) =>
+            s.id === sessionId ? { ...s, imageUrls: response.data.imageUrls } : s
+          ),
+        };
+      }
+    );
+
+    toast.success("Images uploaded successfully");
+    return response.data.imageUrls;
+  };
+
+  const handleDeleteImage = async (sessionId: string, imageUrl: string) => {
+    await api.delete(`/coaches/sessions/${sessionId}/images`, {
+      data: { imageUrl },
+    });
+
+    // Update query data directly instead of invalidating
+    queryClient.setQueryData<ClientPlanResponse>(
+      ["coach-client-plan", planId],
+      (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          sessions: oldData.sessions.map((s) =>
+            s.id === sessionId
+              ? { ...s, imageUrls: (s.imageUrls || []).filter((url) => url !== imageUrl) }
+              : s
+          ),
+        };
+      }
+    );
+  };
+
   const handleMessageClient = () => {
     onClose();
     navigate({ to: `/messages/${clientInfo.username}` });
+  };
+
+  const handleSessionEdit = (session: CalendarSession) => {
+    if (session.id) {
+      setEditingSessionId(session.id);
+    }
+  };
+
+  const handleSessionSave = (sessionId: string, updates: SessionUpdateData) => {
+    updateSessionMutation.mutate({ sessionId, updates });
   };
 
   // Convert plan sessions to CalendarSession format
   const calendarSessions: CalendarSession[] = useMemo(() => {
     if (!clientPlan?.sessions) return [];
     return clientPlan.sessions.map((session) => ({
+      id: session.id,
       date: new Date(session.date),
       activityId: session.activityId,
       quantity: session.quantity,
@@ -97,6 +201,16 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
       );
     };
   }, [clientPlan?.activityEntries]);
+
+  // Get the editing session from fresh query data (must be after calendarSessions/calendarActivities)
+  const editingSession = useMemo(() => {
+    if (!editingSessionId) return null;
+    const session = calendarSessions.find((s) => s.id === editingSessionId);
+    if (!session) return null;
+    const activity = calendarActivities.find((a) => a.id === session.activityId);
+    if (!activity) return null;
+    return { session, activity };
+  }, [editingSessionId, calendarSessions, calendarActivities]);
 
   return (
     <AppleLikePopover
@@ -149,6 +263,7 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
                 sessions={calendarSessions}
                 activities={calendarActivities}
                 isCompletedOnDay={isCompletedOnDay}
+                onSessionEdit={handleSessionEdit}
                 showLegend={true}
               />
             </div>
@@ -173,6 +288,21 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
           </div>
         )}
       </div>
+
+      {/* Session Editor */}
+      {editingSession && (
+        <SessionEditor
+          key={JSON.stringify(editingSession.session)}
+          open={!!editingSession}
+          onClose={() => setEditingSessionId(null)}
+          session={editingSession.session}
+          activities={calendarActivities}
+          onSave={handleSessionSave}
+          onUploadImages={handleUploadImages}
+          onDeleteImage={handleDeleteImage}
+          isSaving={updateSessionMutation.isPending}
+        />
+      )}
     </AppleLikePopover>
   );
 };

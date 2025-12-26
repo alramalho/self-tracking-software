@@ -6,6 +6,8 @@ import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { s3Service } from "../services/s3Service";
+import { notificationService } from "../services/notificationService";
+import { format } from "date-fns";
 import { plansService } from "../services/plansService";
 
 const router: Router = Router();
@@ -432,17 +434,22 @@ router.post(
         .map((a) => `${a.emoji} ${a.title}`)
         .join(", ");
 
-      const messageContent = `**Coaching Request**
+      const dedent = (str: string) =>
+        str.replace(/^[ \t]*([\S].*?)[ \t]*$/gm, '$1').trim();
 
-Hi! I'd like to request coaching for my plan.
+      const messageContent = dedent(`
+        **Coaching Request**
 
-**Plan:** ${plan.emoji} ${plan.goal}
-**Activities:** ${activitiesStr}
-**Frequency:** ${plan.timesPerWeek || "Not set"} times per week
+        Hi! I'd like to request coaching for my plan.
 
-${body.message ? `**Message:**\n${body.message}` : ""}
+        **Plan:** ${plan.emoji} ${plan.goal}
+        **Activities:** ${activitiesStr}
+        **Frequency:** ${plan.timesPerWeek || "Not set"} times per week
 
-Looking forward to working with you!`;
+        ${body.message ? `**Message:**\n${body.message}` : ""}
+
+        Looking forward to working with you!
+      `);
 
       // Send the message
       await prisma.message.create({
@@ -471,6 +478,414 @@ Looking forward to working with you!`;
     } catch (error) {
       logger.error("Error sending coaching request:", error);
       res.status(500).json({ error: "Failed to send coaching request" });
+    }
+  }
+);
+
+// Upload images for a session (coach only)
+router.post(
+  "/sessions/:sessionId/upload-images",
+  requireAuth,
+  upload.array("images", 10), // Max 10 images
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        res.status(400).json({ error: "No image files provided" });
+        return;
+      }
+
+      // Find the user's coach profile
+      const coach = await prisma.coach.findFirst({
+        where: {
+          ownerId: req.user!.id,
+          type: "HUMAN",
+        },
+      });
+
+      if (!coach) {
+        res.status(404).json({ error: "Coach profile not found" });
+        return;
+      }
+
+      // Get the session with its plan
+      const session = await prisma.planSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          plan: {
+            select: {
+              id: true,
+              coachId: true,
+            },
+          },
+        },
+      });
+
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      // Verify this coach manages the plan
+      if (session.plan.coachId !== coach.id) {
+        res.status(403).json({ error: "You are not the coach for this plan" });
+        return;
+      }
+
+      // Upload each image to S3
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const imageId = uuidv4();
+        const fileExtension = file.originalname?.split(".").pop() || "jpg";
+        const s3Path = `sessions/${sessionId}/images/${imageId}.${fileExtension}`;
+
+        await s3Service.upload(file.buffer, s3Path, file.mimetype);
+        const imageUrl = s3Service.getPublicUrl(s3Path);
+        uploadedUrls.push(imageUrl);
+      }
+
+      // Append new URLs to existing imageUrls
+      const existingUrls = session.imageUrls || [];
+      const updatedUrls = [...existingUrls, ...uploadedUrls];
+
+      // Update the session with new image URLs
+      const updatedSession = await prisma.planSession.update({
+        where: { id: sessionId },
+        data: {
+          imageUrls: updatedUrls,
+        },
+      });
+
+      logger.info(
+        `Coach ${req.user!.username} uploaded ${files.length} images to session ${sessionId}`
+      );
+
+      res.json({
+        imageUrls: updatedUrls,
+        newUrls: uploadedUrls,
+        session: updatedSession,
+      });
+    } catch (error) {
+      logger.error("Error uploading session images:", error);
+      res.status(500).json({ error: "Failed to upload images" });
+    }
+  }
+);
+
+// Delete an image from a session (coach only)
+router.delete(
+  "/sessions/:sessionId/images",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const { imageUrl } = req.body;
+
+      if (!imageUrl) {
+        res.status(400).json({ error: "Image URL is required" });
+        return;
+      }
+
+      // Find the user's coach profile
+      const coach = await prisma.coach.findFirst({
+        where: {
+          ownerId: req.user!.id,
+          type: "HUMAN",
+        },
+      });
+
+      if (!coach) {
+        res.status(404).json({ error: "Coach profile not found" });
+        return;
+      }
+
+      // Get the session with its plan
+      const session = await prisma.planSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          plan: {
+            select: {
+              id: true,
+              coachId: true,
+            },
+          },
+        },
+      });
+
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      // Verify this coach manages the plan
+      if (session.plan.coachId !== coach.id) {
+        res.status(403).json({ error: "You are not the coach for this plan" });
+        return;
+      }
+
+      // Remove the URL from the array
+      const updatedUrls = (session.imageUrls || []).filter(
+        (url) => url !== imageUrl
+      );
+
+      // Update the session
+      const updatedSession = await prisma.planSession.update({
+        where: { id: sessionId },
+        data: {
+          imageUrls: updatedUrls,
+        },
+      });
+
+      logger.info(
+        `Coach ${req.user!.username} deleted an image from session ${sessionId}`
+      );
+
+      res.json({
+        imageUrls: updatedUrls,
+        session: updatedSession,
+      });
+    } catch (error) {
+      logger.error("Error deleting session image:", error);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  }
+);
+
+// Schema for session update
+const UpdateSessionSchema = z.object({
+  activityId: z.string().optional(),
+  date: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid datetime string",
+    })
+    .optional(),
+  quantity: z.number().positive().optional(),
+  descriptiveGuide: z.string().optional(),
+  imageUrls: z.array(z.string()).optional(),
+});
+
+// Update a session for a client (coach only)
+router.patch(
+  "/sessions/:sessionId",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const body = UpdateSessionSchema.parse(req.body);
+
+      // Find the user's coach profile
+      const coach = await prisma.coach.findFirst({
+        where: {
+          ownerId: req.user!.id,
+          type: "HUMAN",
+        },
+        include: {
+          owner: {
+            select: {
+              name: true,
+              username: true,
+              picture: true,
+            },
+          },
+        },
+      });
+
+      if (!coach) {
+        res.status(404).json({ error: "Coach profile not found" });
+        return;
+      }
+
+      // Get the session with its plan
+      const session = await prisma.planSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          plan: {
+            select: {
+              id: true,
+              coachId: true,
+              userId: true,
+              goal: true,
+              emoji: true,
+            },
+          },
+          activity: {
+            select: {
+              id: true,
+              title: true,
+              emoji: true,
+              measure: true,
+            },
+          },
+        },
+      });
+
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      // Verify this coach manages the plan
+      if (session.plan.coachId !== coach.id) {
+        res.status(403).json({ error: "You are not the coach for this plan" });
+        return;
+      }
+
+      // Prepare update data
+      const updateData: {
+        activityId?: string;
+        date?: Date;
+        quantity?: number;
+        descriptiveGuide?: string;
+        imageUrls?: string[];
+      } = {};
+
+      if (body.activityId !== undefined) {
+        updateData.activityId = body.activityId;
+      }
+      if (body.date !== undefined) {
+        updateData.date = new Date(body.date);
+      }
+      if (body.quantity !== undefined) {
+        updateData.quantity = body.quantity;
+      }
+      if (body.descriptiveGuide !== undefined) {
+        updateData.descriptiveGuide = body.descriptiveGuide;
+      }
+      if (body.imageUrls !== undefined) {
+        updateData.imageUrls = body.imageUrls;
+      }
+
+      // Store original values for the message
+      const originalActivity = session.activity;
+      const originalDate = format(session.date, "MMM d, yyyy");
+      const originalQuantity = session.quantity;
+      const originalGuide = session.descriptiveGuide;
+
+      // Update the session
+      const updatedSession = await prisma.planSession.update({
+        where: { id: sessionId },
+        data: updateData,
+        include: {
+          activity: {
+            select: {
+              id: true,
+              title: true,
+              emoji: true,
+              measure: true,
+            },
+          },
+        },
+      });
+
+      // Build the change message
+      const changes: string[] = [];
+
+      if (body.activityId && body.activityId !== session.activityId) {
+        changes.push(
+          `**Activity:** ${originalActivity.emoji} ${originalActivity.title} → ${updatedSession.activity.emoji} ${updatedSession.activity.title}`
+        );
+      }
+      if (body.date) {
+        const newDate = format(updatedSession.date, "MMM d, yyyy");
+        if (newDate !== originalDate) {
+          changes.push(`**Date:** ${originalDate} → ${newDate}`);
+        }
+      }
+      if (body.quantity !== undefined && body.quantity !== originalQuantity) {
+        const measure = updatedSession.activity.measure || "units";
+        changes.push(
+          `**Quantity:** ${originalQuantity} ${measure} → ${body.quantity} ${measure}`
+        );
+      }
+      if (
+        body.descriptiveGuide !== undefined &&
+        body.descriptiveGuide !== originalGuide
+      ) {
+        if (originalGuide && body.descriptiveGuide) {
+          changes.push(`**Guide:** Updated session instructions`);
+        } else if (body.descriptiveGuide) {
+          changes.push(`**Guide:** Added session instructions`);
+        } else {
+          changes.push(`**Guide:** Removed session instructions`);
+        }
+      }
+
+      // Only send message if there were actual changes
+      if (changes.length > 0) {
+        // Find or create direct chat with the trainee
+        let chat = await prisma.chat.findFirst({
+          where: {
+            type: "DIRECT",
+            AND: [
+              { participants: { some: { userId: req.user!.id } } },
+              { participants: { some: { userId: session.plan.userId } } },
+            ],
+          },
+        });
+
+        if (!chat) {
+          chat = await prisma.chat.create({
+            data: {
+              type: "DIRECT",
+              participants: {
+                create: [
+                  { userId: req.user!.id },
+                  { userId: session.plan.userId },
+                ],
+              },
+            },
+          });
+        }
+
+        const sessionDate = format(updatedSession.date, "EEEE, MMM d");
+        const messageContent = `📅 **Session Updated**
+
+I've made some changes to your ${updatedSession.activity.emoji} ${updatedSession.activity.title} session on **${sessionDate}**:
+
+${changes.join("\n")}
+
+Let me know if you have any questions!`;
+
+        // Send the message
+        await prisma.message.create({
+          data: {
+            chatId: chat.id,
+            role: "USER",
+            content: messageContent,
+          },
+        });
+
+        // Update chat timestamp
+        await prisma.chat.update({
+          where: { id: chat.id },
+          data: { updatedAt: new Date() },
+        });
+
+        // Send push notification for the message
+        await notificationService.createAndProcessNotification({
+          userId: session.plan.userId,
+          title: "Message from your coach",
+          message: `Session updated: ${updatedSession.activity.emoji} ${updatedSession.activity.title}`,
+          type: "INFO",
+          relatedId: chat.id,
+          relatedData: {
+            chatId: chat.id,
+            coachName: coach.owner.name || coach.owner.username,
+          },
+        });
+      }
+
+      logger.info(
+        `Coach ${req.user!.username} updated session ${sessionId} for plan ${session.plan.id}`
+      );
+
+      res.json(updatedSession);
+    } catch (error) {
+      logger.error("Error updating session:", error);
+      res.status(500).json({ error: "Failed to update session" });
     }
   }
 );

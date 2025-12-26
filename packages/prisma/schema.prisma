@@ -515,13 +515,14 @@ model ChatParticipant {
 }
 
 model Message {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   chatId    String
   planId    String?
   role      MessageRole
   content   String
   metadata  Json?
-  createdAt DateTime    @default(now())
+  status    MessageStatus @default(SENT)
+  createdAt DateTime      @default(now())
 
   // Relations
   chat     Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
@@ -741,6 +742,7 @@ enum NotificationType {
   INFO
   METRIC_CHECKIN
   COACH
+  SESSION_EDIT
 
   @@schema("public")
 }
@@ -755,6 +757,13 @@ enum MessageRole {
   USER
   COACH
   SYSTEM
+
+  @@schema("public")
+}
+
+enum MessageStatus {
+  SENT
+  READ
 
   @@schema("public")
 }
