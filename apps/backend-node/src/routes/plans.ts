@@ -80,6 +80,7 @@ const PlanUpsertSchema = z.object({
   outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
   timesPerWeek: z.number().positive().optional(),
   isCoached: z.boolean().optional(),
+  coachId: z.string().nullable().optional(),
   activities: z.array(ActivitySchema).optional(),
   sessions: z.array(SessionSchema).optional(),
   milestones: z.array(MilestoneSchema).optional(),
@@ -1385,6 +1386,7 @@ router.post(
               outlineType: planData.outlineType || "SPECIFIC",
               timesPerWeek: planData.timesPerWeek,
               isCoached: planData.isCoached || false,
+              coachId: planData.coachId || null,
               backgroundImageUrl: planData.backgroundImageUrl,
 
               // Connect activities directly - handle both activities array and activityIds array

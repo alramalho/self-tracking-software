@@ -411,7 +411,7 @@ function HomePage() {
                   <>
                     <div className="relative">
                       <button
-                        onClick={() => navigate({ to: "/dms" })}
+                        onClick={() => navigate({ to: "/messages" })}
                         className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
                         title="AI Coach"
                       >

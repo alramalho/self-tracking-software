@@ -1,3 +1,4 @@
+import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
@@ -6,7 +7,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { getPeriodLabel } from "@/utils/coachingTime";
 import { MINIMUM_ENTRIES } from "@/lib/metrics";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   addWeeks,
   endOfWeek,
@@ -20,6 +22,7 @@ import {
   BadgeCheck,
   Loader2,
   Maximize2,
+  MessageCircle,
   Minimize2,
   Pencil,
   PlusSquare,
@@ -42,6 +45,7 @@ import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import { PlanEditModal } from "./PlanEditModal";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
+import { PlanCalendarView } from "./PlanCalendarView";
 import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
 import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
 import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
@@ -78,11 +82,47 @@ const AnimatedSection = ({ children, delay = 0 }: { children: React.ReactNode; d
   );
 };
 
+interface HumanCoach {
+  id: string;
+  ownerId: string;
+  type: "HUMAN";
+  details: {
+    title: string;
+    bio?: string;
+    focusDescription: string;
+    idealPlans?: Array<{ emoji: string; title: string }>;
+  };
+  owner: {
+    id: string;
+    username: string;
+    name: string | null;
+    picture: string | null;
+  };
+}
+
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
   const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
   const { metrics, entries: metricEntries } = useMetrics();
+  const api = useApiWithAuth();
+  const navigate = useNavigate();
+
+  // Fetch human coaches to get coach info for the plan
+  const { data: humanCoaches } = useQuery({
+    queryKey: ["coaches"],
+    queryFn: async () => {
+      const response = await api.get<HumanCoach[]>("/coaches");
+      return response.data;
+    },
+    enabled: !!(selectedPlan as any).coachId && (selectedPlan as any).isCoached,
+  });
+
+  // Find the coach for this plan
+  const planCoach = useMemo(() => {
+    if (!humanCoaches || !(selectedPlan as any).coachId) return null;
+    return humanCoaches.find((c) => c.id === (selectedPlan as any).coachId) || null;
+  }, [humanCoaches, (selectedPlan as any).coachId]);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
@@ -481,37 +521,101 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-      {/* 1. Current Week Card */}
-      {currentWeekData && (
+      {/* 1. Next 2 Weeks Calendar View (SPECIFIC plans) or Current Week (TIMES_PER_WEEK) */}
+      {selectedPlan.outlineType === "SPECIFIC" ? (
         <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
           <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold">Current week</span>
-              <span className="text-sm text-muted-foreground">
-                {format(currentWeekData.startDate, "d")}-
-                {format(endOfWeek(currentWeekData.startDate), "d MMM")}
-              </span>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-lg font-semibold">Coming up</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllWeeksPopover(true)}
+                className="text-xs"
+              >
+                See all weeks
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAllWeeksPopover(true)}
-              className="text-xs"
-            >
-              See all weeks
-            </Button>
+            <PlanCalendarView plan={selectedPlan} />
           </div>
-          <PlanWeekDisplay
-            plan={selectedPlan}
-            date={currentWeekData.startDate}
-          />
+        </AnimatedSection>
+      ) : currentWeekData && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
+          <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">Current week</span>
+                <span className="text-sm text-muted-foreground">
+                  {format(currentWeekData.startDate, "d")}-
+                  {format(endOfWeek(currentWeekData.startDate), "d MMM")}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllWeeksPopover(true)}
+                className="text-xs"
+              >
+                See all weeks
+              </Button>
+            </div>
+            <PlanWeekDisplay
+              plan={selectedPlan}
+              date={currentWeekData.startDate}
+            />
           </div>
         </AnimatedSection>
       )}
 
-      {/* 2. Coach Overview (no card) */}
-      {isPlanCoached(selectedPlan) && (
+      {/* 2. Coach Info Banner (Human Coach) */}
+      {isPlanCoached(selectedPlan) && planCoach && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
+          <div className="mb-6">
+            <div className="rounded-2xl overflow-hidden relative">
+              {/* Background with coach's profile image */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${planCoach.owner.picture || ""})`,
+                }}
+              />
+              {/* Dark overlay */}
+              <div className="absolute inset-0 bg-black/60" />
+
+              {/* Content */}
+              <div className="relative p-4 text-white">
+                <div className="flex items-center gap-3 mb-3">
+                  <Avatar className="w-12 h-12 border-2 border-white/20">
+                    <AvatarImage src={planCoach.owner.picture || ""} />
+                    <AvatarFallback className="bg-white/20 text-white">
+                      {planCoach.owner.name?.[0] || "C"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">
+                      {planCoach.owner.name || planCoach.owner.username}
+                    </p>
+                    <p className="text-xs text-white/70">
+                      {planCoach.details.title}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigate({ to: `/messages/${planCoach.owner.username}` })}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white text-sm font-medium transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Message Coach
+                </button>
+              </div>
+            </div>
+          </div>
+        </AnimatedSection>
+      )}
+
+      {/* AI Coach Overview (deprecated - will be removed) */}
+      {isPlanCoached(selectedPlan) && !planCoach && (
         <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
           <div className="mb-6">
           <CoachOverviewCard

@@ -1208,31 +1208,25 @@ export class AIService {
     });
 
     const systemPrompt = dedent`
-      You are a plan classification expert. Given a user's goal, determine if they would benefit from coaching or should be self-guided.
+      You are a plan classification expert. For each user goal, decide if it should be self-guided or needs coaching.
 
-      COACHED plans are for goals that:
-      - Have a clear end objective or milestone (e.g., "run a marathon", "ace my test", "lose 20 pounds")
-      - Require structured progression and skill building (e.g., "learn guitar", "get stronger")
-      - Need adaptive difficulty based on progress
-      - Benefit from expert guidance on how to progress
+      COACHED plans:
+      - Have a clear end result or milestone (e.g., "run a marathon", "lose 20 pounds", "learn guitar")
+      - Require structured progression or skill-building
 
-      SELF-GUIDED plans are for goals that:
-      - Are recurring habits with fixed frequency (e.g., "read 3 times a week", "exercise 3x a week")
-      - Are simple tracking goals (e.g., "meditate daily", "drink more water")
-      - User already knows what activities to do, just needs accountability
-      - Don't require progression or skill building
+      SELF-GUIDED plans:
+      - Are simple habits or routines done on a regular basis (e.g., "read 3 times a week", "drink more water daily")
+      - Do not require progression
+
+      Classify only as needsCoaching: true if working towards a milestone or new skill that requires planning and progression.
+      If the goal is basically a recurring habit, tracking, or a fixed frequency activity, set needsCoaching: false.
 
       Examples:
-      - "run a marathon" → needsCoaching: true (progressive goal with clear objective)
-      - "ace my test" → needsCoaching: true (needs structured study plan)
-      - "learn guitar" → needsCoaching: true (skill building with progression)
-      - "lose 20 pounds" → needsCoaching: true (milestone goal needing structure)
-      - "get stronger" → needsCoaching: true (progressive fitness goal)
-      - "read 3 times a week" → needsCoaching: false (fixed frequency habit)
-      - "exercise 3x a week" → needsCoaching: false (fixed frequency habit)
-      - "meditate daily" → needsCoaching: false (simple recurring habit)
-      - "read more books" → needsCoaching: false (simple habit tracking)
-      - "drink 8 glasses of water" → needsCoaching: false (simple daily habit)
+      - "run a marathon" → needsCoaching: true
+      - "run 3x a week" → needsCoaching: false
+      - "read 10 books" → needsCoaching: false
+      - "meditate daily" → needsCoaching: false
+      - "learn guitar" → needsCoaching: true
     `;
 
     const prompt = `Classify this goal: "${planGoal}"`;

@@ -47,7 +47,7 @@ export default function GeneralInitializer({
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
   const isAiPage = pathname.startsWith("/ai");
-  const isDmsPage = pathname.startsWith("/dms");
+  const isDmsPage = pathname.startsWith("/messages");
   const friends = useMemo(() => {
     return [
       ...(currentUser?.connectionsFrom

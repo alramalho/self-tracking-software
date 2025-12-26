@@ -16,12 +16,14 @@ interface UserSearchProps {
   selectedUsers?: UserSearchResult[];
   onUserRemove?: (userId: string) => void;
   apRedirect?: boolean;
+  emptyMessage?: string;
 }
 
 const UserSearch: React.FC<UserSearchProps> = ({
   onUserClick,
   selectedUsers = [],
   onUserRemove,
+  emptyMessage = "No users found",
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -102,6 +104,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
             <span>{user.username}</span>
           </li>
         ))}
+        {searchTerm.trim() !== "" && !isLoading && searchResults.length === 0 && (
+          <li className="p-2 text-muted-foreground text-center">
+            {emptyMessage}
+          </li>
+        )}
       </ul>
     </div>
   );

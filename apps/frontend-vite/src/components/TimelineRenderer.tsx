@@ -1,6 +1,8 @@
+import { useApiWithAuth } from "@/api";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import AchievementPostCard from "@/components/AchievementPostCard";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { usePlans } from "@/contexts/plans";
 import { useTimeline } from "@/contexts/timeline/useTimeline";
 import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -8,9 +10,11 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { type Activity, type PlanType } from "@tsw/prisma";
-import { ArrowRight, Bell, Check, RefreshCcw, Sparkles, Squirrel } from "lucide-react";
+import { ArrowRight, Bell, Check, MessageCircle, RefreshCcw, Sparkles, Squirrel, User } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -22,12 +26,30 @@ import {
   type TimelineAchievementPost,
 } from "@/contexts/timeline/service";
 
+interface HumanCoach {
+  id: string;
+  ownerId: string;
+  type: "HUMAN";
+  details: {
+    title: string;
+    bio?: string;
+    focusDescription: string;
+  };
+  owner: {
+    id: string;
+    username: string;
+    name: string | null;
+    picture: string | null;
+  };
+}
+
 const TimelineRenderer: React.FC<{
   onOpenSearch: () => void;
   highlightActivityEntryId?: string;
 }> = ({ onOpenSearch, highlightActivityEntryId }) => {
   const { timelineData, isLoadingTimeline } = useTimeline();
   const { currentUser } = useCurrentUser();
+  const { plans } = usePlans();
   const navigate = useNavigate();
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const { isAppInstalled, isPushGranted, requestPermission } =
@@ -38,6 +60,29 @@ const TimelineRenderer: React.FC<{
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
   const themeColors = useThemeColors();
+  const api = useApiWithAuth();
+
+  // Check if user has any coached plan
+  const coachedPlan = useMemo(() =>
+    plans?.find((plan: any) => plan.isCoached && !plan.deletedAt),
+    [plans]
+  );
+
+  // Fetch coaches to get coach info for coached plans
+  const { data: humanCoaches } = useQuery({
+    queryKey: ["coaches"],
+    queryFn: async () => {
+      const response = await api.get<HumanCoach[]>("/coaches");
+      return response.data;
+    },
+    enabled: !!(coachedPlan as any)?.coachId,
+  });
+
+  // Find the coach for the coached plan
+  const planCoach = useMemo(() => {
+    if (!humanCoaches || !(coachedPlan as any)?.coachId) return null;
+    return humanCoaches.find((c) => c.id === (coachedPlan as any).coachId) || null;
+  }, [humanCoaches, (coachedPlan as any)?.coachId]);
   const variants = getThemeVariants(themeColors.raw);
 
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -354,25 +399,27 @@ const TimelineRenderer: React.FC<{
   if (!friends?.length) {
     return (
       <div className="flex flex-col items-center gap-8 text-center pt-2">
-        {/* Get Coached Banner */}
-        <button
-          onClick={() => navigate({ to: "/get-coached", search: { coach: "" } })}
-          className="w-full rounded-2xl overflow-hidden relative group cursor-pointer"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
-          <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
-          <div className="relative p-4 text-white text-left">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-semibold">Need help getting started?</span>
+        {/* Show Coach Card if user has coached plan, otherwise show Get Coached Banner */}
+        {!coachedPlan && (
+          <button
+            onClick={() => navigate({ to: "/get-coached", search: { coach: "" } })}
+            className="w-full rounded-2xl overflow-hidden relative group cursor-pointer"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
+            <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
+            <div className="relative p-4 text-white text-left">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-5 h-5" />
+                <span className="text-sm font-semibold">Need help getting started?</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-white/70">Get personalized coaching today</p>
+                <ArrowRight className="w-4 h-4 text-white/70 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-white/70">Get personalized coaching today</p>
-              <ArrowRight className="w-4 h-4 text-white/70 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </button>
+          </button>
+        )}
 
         {/* Find Friends Section */}
         <div className="flex flex-col items-center gap-3 text-muted-foreground">

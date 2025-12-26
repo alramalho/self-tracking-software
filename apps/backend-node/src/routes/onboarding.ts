@@ -164,7 +164,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { plan_goal, plan_activities, plan_progress, wants_coaching, times_per_week } = req.body;
+      const { plan_goal, plan_activities, plan_progress, wants_coaching, times_per_week, coach_id } = req.body;
 
       // For coached mode, activities are optional (the pipeline will generate them)
       if (!plan_goal || !plan_progress) {
@@ -204,6 +204,8 @@ router.post(
         timesPerWeek,
         researchFindings: researchResult.guidelines,
         estimatedWeeks: researchResult.estimatedWeeks,
+        coachId: coach_id || undefined,
+        isCoached: wants_coaching && !!coach_id,
       });
 
       logger.info("Plan generated:", plan.id);
@@ -265,6 +267,8 @@ async function generatePlan(params: {
   timesPerWeek: number;
   researchFindings: string;
   estimatedWeeks: number | null;
+  coachId?: string;
+  isCoached?: boolean;
 }): Promise<{
   id: string;
   userId: string;
@@ -275,6 +279,8 @@ async function generatePlan(params: {
   notes: string;
   internalNotes: string;
   estimatedWeeks: number | null;
+  coachId?: string;
+  isCoached: boolean;
   sessions: {
     date: Date;
     activityId: string;
@@ -385,6 +391,8 @@ async function generatePlan(params: {
     notes: userNotes,
     internalNotes: `[Perplexity Research Guidelines]\n\n${params.researchFindings}`,
     estimatedWeeks: params.estimatedWeeks,
+    coachId: params.coachId,
+    isCoached: params.isCoached || false,
     sessions: remappedSessions,
   };
 }
