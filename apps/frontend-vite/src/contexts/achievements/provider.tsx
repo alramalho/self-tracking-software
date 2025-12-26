@@ -31,6 +31,17 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
   // Track if we've already processed level-ups to avoid duplicates
   const processedLevelThreshold = useRef<number | null>(null);
 
+  // Track dismissed celebrations to prevent them from re-appearing while API call is in flight
+  const dismissedCelebrations = useRef<Set<string>>(new Set());
+
+  // Generate a unique key for a celebration
+  const getCelebrationKey = (celebration: CelebrationData): string => {
+    if (celebration.achievementType === "level_up") {
+      return `level_up:${celebration.levelThreshold}`;
+    }
+    return `${celebration.achievementType}:${celebration.planId}`;
+  };
+
   // Detect uncelebrated plan achievements
   const planCelebrations = useMemo(() => {
     if (!plans) return [];
@@ -136,7 +147,9 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Combine and queue all celebrations
   useEffect(() => {
-    const allCelebrations = [...planCelebrations, ...levelUpCelebrations];
+    const allCelebrations = [...planCelebrations, ...levelUpCelebrations]
+      // Filter out any celebrations that were dismissed (prevents re-showing while API is in flight)
+      .filter(c => !dismissedCelebrations.current.has(getCelebrationKey(c)));
 
     if (allCelebrations.length > 0 && !celebrationToShow && celebrationsQueue.length === 0) {
       // Mark level-ups as processed to avoid duplicates
@@ -209,6 +222,10 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleCelebrationClose = async () => {
     if (!celebrationToShow) return;
 
+    // Add to dismissed set immediately to prevent re-showing while API is in flight
+    const celebrationKey = getCelebrationKey(celebrationToShow);
+    dismissedCelebrations.current.add(celebrationKey);
+
     // Capture data before clearing (for background API call)
     const dataToMark = {
       planId: celebrationToShow.planId,
@@ -236,6 +253,11 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const dismissCelebration = () => {
+    // Add current to dismissed set to prevent re-showing
+    if (celebrationToShow) {
+      dismissedCelebrations.current.add(getCelebrationKey(celebrationToShow));
+    }
+
     // Process the next celebration in queue
     if (celebrationsQueue.length > 0) {
       const [next, ...rest] = celebrationsQueue;
