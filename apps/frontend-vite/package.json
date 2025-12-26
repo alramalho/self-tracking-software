@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf node_modules && rm -rf dist",
-    "dev": "tsr generate && vite",
+    "dev": "pnpm dlx @react-grab/claude-code@latest && tsr generate && vite",
     "gen": "tsr generate",
     "build": "tsr generate && tsc -b && vite build",
     "build:cap": "tsr generate && tsc -b && vite build --mode cap",
