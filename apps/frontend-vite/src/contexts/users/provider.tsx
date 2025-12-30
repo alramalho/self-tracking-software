@@ -245,8 +245,12 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      console.log("🧹 Clearing users cache because not signed in");
-      queryClient.clear();
+      console.log("🧹 Clearing user-specific cache because not signed in");
+      // Only clear user-specific queries, not public ones like "coaches"
+      const userSpecificKeys = ["current-user", "plans", "activities", "timeline", "notifications", "recommendations", "messages", "achievements", "metrics"];
+      userSpecificKeys.forEach(key => {
+        queryClient.removeQueries({ queryKey: [key] });
+      });
       if (typeof window !== "undefined") {
         localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
       }

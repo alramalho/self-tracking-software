@@ -91,24 +91,13 @@ function GetCoachedPage() {
   );
 
   // Use axios directly without auth interceptor - /coaches is a public endpoint
-  const { data: humanCoaches, isLoading: isLoadingCoaches, error: coachesError, status: coachesStatus } = useQuery({
+  const { data: humanCoaches, isLoading: isLoadingCoaches } = useQuery({
     queryKey: ["coaches"],
     queryFn: async () => {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-      console.log("[get-coached] Fetching coaches from:", `${baseUrl}/coaches`);
       const response = await axios.get<HumanCoach[]>(`${baseUrl}/coaches`);
-      console.log("[get-coached] Coaches response:", response.data);
       return response.data;
     },
-  });
-
-  // Debug logging
-  console.log("[get-coached] Query state:", {
-    isLoadingCoaches,
-    coachesStatus,
-    coachesError,
-    humanCoachesLength: humanCoaches?.length,
-    coachUsername
   });
 
   // Pre-select coach from query param (only for signed-in users)
