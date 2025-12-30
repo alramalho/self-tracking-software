@@ -94,13 +94,14 @@ function ThemedLayout() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const location = useLocation();
   const isDownloadPage = location.pathname.startsWith("/download");
+  const isGetCoachedPage = location.pathname.startsWith("/get-coached");
 
   return (
-    <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} />
+    <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} isGetCoachedPage={isGetCoachedPage} />
   );
 }
 
-function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage }: { isSignedIn: boolean, isDesktop: boolean, isDownloadPage: boolean }) {
+function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isGetCoachedPage }: { isSignedIn: boolean, isDesktop: boolean, isDownloadPage: boolean, isGetCoachedPage: boolean }) {
   const { effectiveThemeMode } = useTheme();
 
   return (
@@ -110,7 +111,7 @@ function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage }: { isSigned
           <main
             className={cn(
               "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
-              (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
+              (isSignedIn && isDesktop && !isDownloadPage && !isGetCoachedPage) ? "ml-64" : ""
             )}
           >
             <GeneralInitializer>
