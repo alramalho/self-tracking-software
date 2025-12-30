@@ -1,4 +1,4 @@
-import { Message, MessageRole } from "@tsw/prisma";
+import { Message, MessageRole, MessageStatus } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 export class MemoryService {
@@ -20,15 +20,7 @@ export class MemoryService {
         },
       });
 
-      return {
-        id: savedMessage.id,
-        chatId: savedMessage.chatId,
-        planId: savedMessage.planId,
-        role: savedMessage.role,
-        content: savedMessage.content,
-        createdAt: savedMessage.createdAt,
-        metadata: savedMessage.metadata,
-      };
+      return savedMessage;
     } catch (error) {
       logger.warn(
         "Could not save message, continuing without memory storage:",
@@ -42,6 +34,8 @@ export class MemoryService {
         createdAt: new Date(),
         planId: options.planId || null,
         metadata: null,
+        status: MessageStatus.SENT,
+        senderId: null,
       };
     }
   }

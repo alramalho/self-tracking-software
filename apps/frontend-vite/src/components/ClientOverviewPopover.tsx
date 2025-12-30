@@ -81,7 +81,7 @@ const ClientOverviewPopover: React.FC<ClientOverviewPopoverProps> = ({
                 ? {
                     ...s,
                     ...(updates.activityId && { activityId: updates.activityId }),
-                    ...(updates.date && { date: updates.date }),
+                    ...(updates.date && { date: new Date(updates.date) }),
                     ...(updates.quantity !== undefined && { quantity: updates.quantity }),
                     ...(updates.descriptiveGuide !== undefined && { descriptiveGuide: updates.descriptiveGuide }),
                   }
