@@ -1,6 +1,7 @@
 import { Response, Router } from "express";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -71,37 +72,49 @@ router.get(
       });
 
       // Transform chats to include useful information
-      const transformedChats = chats.map((chat) => {
-        const lastMessage = chat.messages[0];
+      const transformedChats = await Promise.all(
+        chats.map(async (chat) => {
+          const lastMessage = chat.messages[0];
 
-        return {
-          id: chat.id,
-          type: chat.type,
-          title: chat.title,
-          createdAt: chat.createdAt,
-          updatedAt: chat.updatedAt,
-          coachId: chat.coachId,
-          planGroupId: chat.planGroupId,
-          participants: chat.participants.map((p) => ({
-            id: p.id,
-            userId: p.user.id,
-            name: p.user.name,
-            username: p.user.username,
-            picture: p.user.picture,
-            joinedAt: p.joinedAt,
-            leftAt: p.leftAt,
-          })),
-          lastMessage: lastMessage
-            ? {
-                content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
-                // For group chats, we'd need to fetch sender name
-                senderName:
-                  lastMessage.role === "USER" ? user.name : "Coach Oli",
-              }
-            : undefined,
-        };
-      });
+          // Count unread messages (messages not sent by current user with SENT status)
+          const unreadCount = await prisma.message.count({
+            where: {
+              chatId: chat.id,
+              status: "SENT",
+              senderId: { not: user.id },
+            },
+          });
+
+          return {
+            id: chat.id,
+            type: chat.type,
+            title: chat.title,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            coachId: chat.coachId,
+            planGroupId: chat.planGroupId,
+            unreadCount,
+            participants: chat.participants.map((p) => ({
+              id: p.id,
+              userId: p.user.id,
+              name: p.user.name,
+              username: p.user.username,
+              picture: p.user.picture,
+              joinedAt: p.joinedAt,
+              leftAt: p.leftAt,
+            })),
+            lastMessage: lastMessage
+              ? {
+                  content: lastMessage.content,
+                  createdAt: lastMessage.createdAt,
+                  // For group chats, we'd need to fetch sender name
+                  senderName:
+                    lastMessage.role === "USER" ? user.name : "Coach Oli",
+                }
+              : undefined,
+          };
+        })
+      );
 
       logger.info(`Fetched ${chats.length} chats for user ${user.username}`);
 
@@ -167,6 +180,14 @@ router.get(
         },
         include: {
           feedback: true,
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              picture: true,
+            },
+          },
         },
         orderBy: { createdAt: "asc" },
       });
@@ -285,24 +306,17 @@ router.get(
       }
 
       // For DIRECT and GROUP chats, return messages with sender information
-      const structuredMessages = messages.map((msg) => {
-        // Find sender from participants if it's a user message
-        const sender =
-          msg.role === "USER"
-            ? chat.participants.find((p) => p.userId === user.id)
-            : null;
-
-        return {
-          id: msg.id,
-          chatId: msg.chatId,
-          role: msg.role,
-          content: msg.content,
-          createdAt: msg.createdAt,
-          senderId: sender?.userId,
-          senderName: sender?.user.name,
-          senderPicture: sender?.user.picture,
-        };
-      });
+      const structuredMessages = messages.map((msg) => ({
+        id: msg.id,
+        chatId: msg.chatId,
+        role: msg.role,
+        content: msg.content,
+        status: msg.status,
+        createdAt: msg.createdAt,
+        senderId: msg.senderId,
+        senderName: msg.sender?.name,
+        senderPicture: msg.sender?.picture,
+      }));
 
       logger.info(
         `Fetched ${messages.length} messages for chat ${chatId}, user ${user.username}`
@@ -362,6 +376,7 @@ router.post(
           chatId: chatId,
           role: "USER",
           content: message,
+          senderId: user.id,
         },
       });
 
@@ -532,6 +547,32 @@ router.post(
         `${chat.type} chat message - User: ${user.username}, Chat: ${chatId}`
       );
 
+      // Send notifications to other participants
+      if (chat.type === "DIRECT" || chat.type === "GROUP") {
+        const recipients = chat.participants.filter(
+          (p) => p.userId !== user.id
+        );
+        const senderName = user.name || user.username || "Someone";
+        const preview =
+          message.length > 50 ? message.substring(0, 50) + "..." : message;
+
+        for (const recipient of recipients) {
+          await notificationService.createAndProcessNotification({
+            userId: recipient.userId,
+            title: `New message from ${senderName}`,
+            message: preview,
+            type: "INFO",
+            relatedId: chatId,
+            relatedData: {
+              chatId,
+              senderId: user.id,
+              senderName,
+              senderPicture: user.picture,
+            },
+          });
+        }
+      }
+
       res.json({
         message: {
           id: userMessage.id,
@@ -547,6 +588,63 @@ router.post(
     } catch (error) {
       logger.error("Error sending message:", error);
       res.status(500).json({ error: "Failed to send message" });
+    }
+  }
+);
+
+// Mark messages as read
+router.post(
+  "/:chatId/messages/mark-read",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { chatId } = req.params;
+      const { messageIds } = req.body;
+
+      if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        return res.status(400).json({ error: "messageIds array is required" });
+      }
+
+      // Verify user has access to this chat
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          OR: [
+            { userId: user.id, type: "COACH" },
+            { participants: { some: { userId: user.id } } },
+          ],
+        },
+      });
+
+      if (!chat) {
+        return res.status(404).json({ error: "Chat not found" });
+      }
+
+      // Update messages to READ status
+      // Only update messages where the current user is NOT the sender
+      const result = await prisma.message.updateMany({
+        where: {
+          id: { in: messageIds },
+          chatId: chatId,
+          senderId: { not: user.id },
+          status: "SENT",
+        },
+        data: {
+          status: "READ",
+        },
+      });
+
+      logger.info(
+        `Marked ${result.count} messages as read in chat ${chatId} for user ${user.username}`
+      );
+      res.json({ success: true, count: result.count });
+    } catch (error) {
+      logger.error("Error marking messages as read:", error);
+      res.status(500).json({ error: "Failed to mark messages as read" });
     }
   }
 );

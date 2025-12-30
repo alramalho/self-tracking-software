@@ -1,5 +1,5 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
-import { Response, Router } from "express";
+import { Request, Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
@@ -106,8 +106,8 @@ router.get(
   }
 );
 
-// List all human coaches (for coach selection in onboarding)
-router.get("/", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+// List all human coaches (public endpoint for coach selection)
+router.get("/", async (req: Request, res: Response) => {
   try {
     const coaches = await prisma.coach.findMany({
       where: {

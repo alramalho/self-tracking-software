@@ -48,6 +48,7 @@ export default function GeneralInitializer({
   const isDownloadPage = pathname.startsWith("/download");
   const isAiPage = pathname.startsWith("/ai");
   const isDmsPage = pathname.startsWith("/messages");
+  const isGetCoachedPage = pathname.startsWith("/get-coached");
   const friends = useMemo(() => {
     return [
       ...(currentUser?.connectionsFrom
@@ -85,7 +86,8 @@ export default function GeneralInitializer({
       !isSignedIn &&
       !pathname.startsWith("/signin") &&
       !pathname.startsWith("/signup") &&
-      !pathname.startsWith("/download")
+      !pathname.startsWith("/download") &&
+      !pathname.startsWith("/get-coached")
     ) {
       navigate({ to: "/signin", search: { redirect_url: pathname } });
     }
@@ -200,7 +202,7 @@ export default function GeneralInitializer({
 
   const isProfilePage = pathname.startsWith("/profile");
   const isHomePage = pathname == "/";
-  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage && !isDmsPage;
+  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage && !isDmsPage && !isGetCoachedPage;
   return (
     <>
       {isOnboardingPage ? (

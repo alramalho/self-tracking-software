@@ -79,6 +79,7 @@ model User {
   chats                   Chat[]
   chatParticipations      ChatParticipant[]
   feedback                Feedback[]
+  sentMessages            Message[]         @relation("SentMessages")
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -518,6 +519,7 @@ model Message {
   id        String        @id @default(cuid())
   chatId    String
   planId    String?
+  senderId  String?
   role      MessageRole
   content   String
   metadata  Json?
@@ -527,11 +529,13 @@ model Message {
   // Relations
   chat     Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
   plan     Plan?             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender   User?             @relation("SentMessages", fields: [senderId], references: [id], onDelete: SetNull)
   emotions MessageEmotion[]
   feedback Feedback[]
 
   @@index([chatId])
   @@index([planId])
+  @@index([senderId])
   @@index([createdAt])
   @@map("messages")
   @@schema("public")

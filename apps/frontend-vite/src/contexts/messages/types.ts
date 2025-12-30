@@ -4,6 +4,7 @@ export interface Message {
   id: string;
   role: "USER" | "COACH" | "SYSTEM";
   content: string;
+  status?: "SENT" | "READ";
   createdAt: string | Date;
   senderId?: string; // For DIRECT and GROUP chats
   senderName?: string;
@@ -35,6 +36,8 @@ export interface Chat {
   // For GROUP chats
   planGroupId?: string;
   planGroupName?: string;
+  // Unread message count
+  unreadCount?: number;
   // Latest message preview
   lastMessage?: {
     content: string;
@@ -49,6 +52,7 @@ export interface MessagesContextType {
   isLoadingChats: boolean;
   currentChatId: string | null;
   setCurrentChatId: (chatId: string | null) => void;
+  totalUnreadCount: number;
 
   // Messages
   messages: Message[] | undefined;
@@ -59,6 +63,7 @@ export interface MessagesContextType {
   isSendingMessage: boolean;
   createDirectChat: (userId: string) => Promise<Chat>;
   isCreatingDirectChat: boolean;
+  markMessagesAsRead: (chatId: string, messageIds: string[]) => Promise<void>;
 }
 
 export const MessagesContext = createContext<MessagesContextType | undefined>(undefined);

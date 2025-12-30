@@ -20,6 +20,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Send, Loader2, MessageCircle, ArrowLeft, Home, Target, Pin, X, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useInView } from "react-intersection-observer";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
@@ -60,6 +61,33 @@ function DateDivider({ date }: { date: Date }) {
       <div className="flex-1 h-px bg-border" />
     </div>
   );
+}
+
+// Component to track message visibility and mark as read
+function MessageWithReadTracking({
+  message,
+  isOwnMessage,
+  onVisible,
+  children,
+}: {
+  message: { id: string; status?: string };
+  isOwnMessage: boolean;
+  onVisible: (messageId: string) => void;
+  children: React.ReactNode;
+}) {
+  const { ref, inView } = useInView({
+    threshold: 0.5,
+    triggerOnce: true,
+  });
+
+  useEffect(() => {
+    // Only mark as read if: visible, not own message, and status is SENT
+    if (inView && !isOwnMessage && message.status === "SENT") {
+      onVisible(message.id);
+    }
+  }, [inView, isOwnMessage, message.id, message.status, onVisible]);
+
+  return <div ref={ref}>{children}</div>;
 }
 
 interface HumanCoach {
@@ -106,6 +134,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
     isLoadingChats,
     createDirectChat,
     isCreatingDirectChat,
+    markMessagesAsRead,
   } = useMessages();
   const {
     submitFeedback,
@@ -119,6 +148,43 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
   const [inputValue, setInputValue] = useState("");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Debounced mark-as-read tracking
+  const messageQueueRef = useRef<Set<string>>(new Set());
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushReadQueue = useCallback(() => {
+    if (messageQueueRef.current.size > 0 && currentChatId) {
+      const idsToMark = Array.from(messageQueueRef.current);
+      markMessagesAsRead(currentChatId, idsToMark);
+      messageQueueRef.current.clear();
+    }
+  }, [currentChatId, markMessagesAsRead]);
+
+  const queueMessageForRead = useCallback(
+    (messageId: string) => {
+      messageQueueRef.current.add(messageId);
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        flushReadQueue();
+      }, 2000); // 2 second debounce
+    },
+    [flushReadQueue]
+  );
+
+  // Cleanup: flush queue on unmount or chat change
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      flushReadQueue();
+    };
+  }, [flushReadQueue]);
 
   // State for loading older coach conversations
   const [olderCoachMessages, setOlderCoachMessages] = useState<Message[]>([]);
@@ -825,7 +891,12 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                     !isSameDay(messageDate, new Date(prevMessage.createdAt));
 
                   return (
-                    <div key={message.id}>
+                    <MessageWithReadTracking
+                      key={message.id}
+                      message={message}
+                      isOwnMessage={isUserMessage}
+                      onVisible={queueMessageForRead}
+                    >
                       {showDateDivider && <DateDivider date={messageDate} />}
                       <div
                         className={`flex gap-3 max-w-full overflow-visible ${
@@ -868,7 +939,7 @@ export function MessagesPage({ targetUsername }: MessagesPageProps = {}) {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </MessageWithReadTracking>
                   );
                 })
               )}

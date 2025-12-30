@@ -2,6 +2,7 @@ import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/auth";
 import { usePlans } from "@/contexts/plans";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -14,7 +15,7 @@ import {
   Loader2,
   Route as RouteIcon,
   Send,
-  Sparkles,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -67,6 +68,7 @@ const CoachingFeatureItem = ({
 function GetCoachedPage() {
   const navigate = useNavigate();
   const api = useApiWithAuth();
+  const { isSignedIn } = useAuth();
   const { plans, isLoadingPlans } = usePlans();
   const { coach: coachUsername } = Route.useSearch();
 
@@ -95,9 +97,9 @@ function GetCoachedPage() {
     },
   });
 
-  // Pre-select coach from query param
+  // Pre-select coach from query param (only for signed-in users)
   useEffect(() => {
-    if (coachUsername && humanCoaches && !selectedCoach) {
+    if (isSignedIn && coachUsername && humanCoaches && !selectedCoach) {
       const coach = humanCoaches.find(
         (c) => c.owner.username === coachUsername
       );
@@ -105,17 +107,39 @@ function GetCoachedPage() {
         setSelectedCoach(coach);
       }
     }
-  }, [coachUsername, humanCoaches, selectedCoach]);
+  }, [isSignedIn, coachUsername, humanCoaches, selectedCoach]);
 
   const coachIcon = "/images/jarvis_logo_blue_transparent.png";
 
+  // Find the coach matching the query param (if any)
+  const matchedCoachFromUrl = useMemo(() => {
+    if (!coachUsername || !humanCoaches) return null;
+    return humanCoaches.find((c) => c.owner.username === coachUsername) || null;
+  }, [coachUsername, humanCoaches]);
+
   const handleSelectAICoach = () => {
-    // For AI coach, just navigate to onboarding or home
+    if (!isSignedIn) {
+      // Redirect to signin for AI coach
+      navigate({
+        to: "/signin",
+        search: { redirect_url: "/" }
+      });
+      return;
+    }
+    // For AI coach, just navigate to home
     navigate({ to: "/" });
     toast.success("You're already using Oli as your AI coach!");
   };
 
   const handleSelectHumanCoach = (coach: HumanCoach) => {
+    if (!isSignedIn) {
+      // Redirect to signin with the coach param preserved
+      navigate({
+        to: "/signin",
+        search: { redirect_url: `/get-coached?coach=${coach.owner.username}` }
+      });
+      return;
+    }
     setSelectedCoach(coach);
   };
 
@@ -155,7 +179,7 @@ function GetCoachedPage() {
   if (selectedCoach) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-6 max-w-lg">
+        <div className="container mx-auto px-6 py-8 max-w-lg">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <button
@@ -348,10 +372,160 @@ function GetCoachedPage() {
     );
   }
 
-  // Coach selection view
+  // Show loading state if we have a coach query param but are still loading
+  if (coachUsername && isLoadingCoaches) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-8 max-w-lg">
+          <div className="space-y-6 pt-8">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <Skeleton className="w-24 h-24 rounded-full" />
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="space-y-3 px-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-40 w-full rounded-2xl" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If a specific coach is matched from the URL, show only that coach
+  if (matchedCoachFromUrl) {
+    const coach = matchedCoachFromUrl;
+    const details = coach.details;
+
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-8 max-w-lg">
+          <div className="space-y-6 pt-8">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="flex flex-col items-center gap-3">
+                {coach.owner.picture ? (
+                  <img
+                    src={coach.owner.picture}
+                    alt={coach.owner.name || coach.owner.username}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-blue-600"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center border-4 border-blue-600">
+                    <Users className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                )}
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                  Get coached by {coach.owner.name || coach.owner.username}
+                </h2>
+              </div>
+              <p className="text-md text-muted-foreground">
+                Build habits with personalized coaching and powerful features.
+              </p>
+            </div>
+
+            {/* Shared coaching features */}
+            <div className="space-y-3 px-2">
+              <CoachingFeatureItem
+                icon={<LandPlot className="w-5 h-5 text-blue-500" />}
+                title="Track your plan progress"
+              />
+              <CoachingFeatureItem
+                icon={<Send className="w-5 h-5 text-blue-500" />}
+                title="Check-ins several times a week"
+              />
+              <CoachingFeatureItem
+                icon={<RouteIcon className="w-5 h-5 text-blue-500" />}
+                title="Weekly plan adjustments based on progress"
+              />
+            </div>
+
+            {/* Single Coach Card */}
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSelectHumanCoach(coach)}
+                className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
+              >
+                {/* Background with profile image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${coach.owner.picture || ""})`,
+                  }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors" />
+
+                {/* Content */}
+                <div className="relative p-4 text-white">
+                  {/* Name */}
+                  <h3 className="text-lg font-bold mb-2">
+                    {coach.owner.name || coach.owner.username}
+                  </h3>
+
+                  {/* Specs Grid */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-white/60">
+                        Title
+                      </p>
+                      <p className="text-sm font-semibold">{details.title}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-white/60">
+                        Focus
+                      </p>
+                      <p className="text-sm font-semibold">
+                        {details.focusDescription}
+                      </p>
+                    </div>
+                    {details.idealPlans && details.idealPlans.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-white/60">
+                          Helps with
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {details.idealPlans
+                            .slice(0, 3)
+                            .map((p) => `${p.emoji} ${p.title}`)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bio preview */}
+                  {details.bio && (
+                    <p className="text-xs text-white/70 mt-3 line-clamp-2">
+                      {details.bio}
+                    </p>
+                  )}
+                </div>
+              </button>
+
+              {/* CTA Button */}
+              <Button
+                onClick={() => handleSelectHumanCoach(coach)}
+                className="w-full"
+                size="lg"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Get Coached
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Coach selection view (no specific coach from URL)
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-lg">
+      <div className="container mx-auto px-6 py-8 max-w-lg">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
@@ -366,7 +540,7 @@ function GetCoachedPage() {
         <div className="space-y-6">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-col items-center gap-2">
-              <Sparkles className="w-16 h-16 text-blue-600" />
+              <Users className="w-20 h-20 text-blue-600" />
               <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
                 Choose your coach
               </h2>
