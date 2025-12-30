@@ -3,7 +3,7 @@
   <head>
     <script type="module">
       if (import.meta.env.DEV) {
-        import("react-grab");
+        import("react-grab").then((m) => m.init({"activationMode":"toggle","allowActivationInsideInput":true,"maxContextLines":3}));
         import("@react-grab/claude-code/client");
       }
     </script>

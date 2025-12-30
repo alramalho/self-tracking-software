@@ -2,13 +2,14 @@ import { useApiWithAuth } from "@/api";
 import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import {
   getChats,
   getMessages,
   sendMessage,
   createDirectChat,
+  markMessagesAsRead,
 } from "./service";
 import {
   MessagesContext,
@@ -147,17 +148,52 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const markMessagesAsReadMutation = useMutation({
+    mutationFn: async ({
+      chatId,
+      messageIds,
+    }: {
+      chatId: string;
+      messageIds: string[];
+    }) => {
+      return await markMessagesAsRead(api, chatId, messageIds);
+    },
+    onSuccess: (_, { chatId, messageIds }) => {
+      // Optimistically update the messages in cache
+      queryClient.setQueryData(
+        ["messages", chatId],
+        (oldMessages: Message[] = []) => {
+          return oldMessages.map((msg) =>
+            messageIds.includes(msg.id) ? { ...msg, status: "READ" as const } : msg
+          );
+        }
+      );
+      // Invalidate chats to update unread counts
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+  });
+
+  const totalUnreadCount = useMemo(() => {
+    return (
+      chats.data?.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) || 0
+    );
+  }, [chats.data]);
+
   const context: MessagesContextType = {
     chats: chats.data,
     isLoadingChats: chats.isLoading,
     currentChatId,
     setCurrentChatId,
+    totalUnreadCount,
     messages: messages.data,
     isLoadingMessages: messages.isLoading,
     sendMessage: sendMessageMutation.mutateAsync,
     isSendingMessage: sendMessageMutation.isPending,
     createDirectChat: createDirectChatMutation.mutateAsync,
     isCreatingDirectChat: createDirectChatMutation.isPending,
+    markMessagesAsRead: async (chatId: string, messageIds: string[]) => {
+      await markMessagesAsReadMutation.mutateAsync({ chatId, messageIds });
+    },
   };
 
   return (

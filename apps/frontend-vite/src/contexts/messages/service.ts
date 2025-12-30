@@ -60,3 +60,12 @@ export async function createDirectChat(
   });
   return deserializeChat(response.data.chat);
 }
+
+// Mark messages as read
+export async function markMessagesAsRead(
+  api: AxiosInstance,
+  chatId: string,
+  messageIds: string[]
+): Promise<void> {
+  await api.post(`/chats/${chatId}/messages/mark-read`, { messageIds });
+}

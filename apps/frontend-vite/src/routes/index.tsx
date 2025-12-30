@@ -44,6 +44,7 @@ import { usePlans } from "@/contexts/plans";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
+import { useMessages } from "@/contexts/messages";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
@@ -111,6 +112,7 @@ function HomePage() {
   const { isLightMode, isDarkMode } = useTheme();
   const { activityEntryId } = Route.useSearch();
   const { notifications } = useDataNotifications();
+  const { totalUnreadCount } = useMessages();
   const lastCoachNotification = useMemo(() => {
     return notifications?.filter((n) => n.type === "COACH").sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   }, [notifications]);
@@ -451,16 +453,16 @@ function HomePage() {
                       className="text-foreground"
                     />
                     <AnimatePresence>
-                      {lastCoachNotification && hasFinishedLastCoachMessageAnimation && lastCoachNotification.status !== "CONCLUDED" && (
+                      {totalUnreadCount > 0 && (
                         <motion.span
-                          key="coach-badge"
+                          key="message-badge"
                           initial={{ opacity: 0, scale: 0 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0 }}
                           transition={{ type: "spring", stiffness: 300, damping: 20 }}
                           className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center z-1000"
                         >
-                          1
+                          {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
                         </motion.span>
                       )}
                     </AnimatePresence>
