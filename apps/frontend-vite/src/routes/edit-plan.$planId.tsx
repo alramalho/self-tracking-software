@@ -235,6 +235,7 @@ function EditPlanPage() {
     description: null,
     editingPlanId: planId,
     editingSection: null,
+    originalValues: null,
   });
 
   return (

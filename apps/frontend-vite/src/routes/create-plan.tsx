@@ -183,6 +183,7 @@ function CreatePlanPage() {
     description: null,
     editingPlanId: null,
     editingSection: null,
+    originalValues: null,
   });
 
   return (
