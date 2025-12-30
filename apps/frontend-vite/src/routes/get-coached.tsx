@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth";
 import { usePlans } from "@/contexts/plans";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import axios from "axios";
 import { isAfter } from "date-fns";
 import {
   ArrowLeft,
@@ -89,10 +90,12 @@ function GetCoachedPage() {
     [plans]
   );
 
+  // Use axios directly without auth interceptor - /coaches is a public endpoint
   const { data: humanCoaches, isLoading: isLoadingCoaches } = useQuery({
     queryKey: ["coaches"],
     queryFn: async () => {
-      const response = await api.get<HumanCoach[]>("/coaches");
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+      const response = await axios.get<HumanCoach[]>(`${baseUrl}/coaches`);
       return response.data;
     },
   });
