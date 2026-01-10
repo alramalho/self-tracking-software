@@ -284,3 +284,22 @@ export async function uploadPlanBackgroundImage(
 
   return response.data.url;
 }
+
+export async function pausePlan(
+  api: AxiosInstance,
+  planId: string,
+  reason?: string
+) {
+  const response = await api.post<{ success: boolean; plan: PlanApiResponse }>(
+    `/plans/${planId}/pause`,
+    { reason }
+  );
+  return response.data;
+}
+
+export async function resumePlan(api: AxiosInstance, planId: string) {
+  const response = await api.post<{ success: boolean; plan: PlanApiResponse }>(
+    `/plans/${planId}/resume`
+  );
+  return response.data;
+}

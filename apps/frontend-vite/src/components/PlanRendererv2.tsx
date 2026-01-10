@@ -24,7 +24,9 @@ import {
   Maximize2,
   MessageCircle,
   Minimize2,
+  Pause,
   Pencil,
+  Play,
   PlusSquare,
   Send,
   Trash2,
@@ -101,7 +103,7 @@ interface HumanCoach {
 
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
-  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
+  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan } = usePlans();
   const { activities, activityEntries } = useActivities();
   const { metrics, entries: metricEntries } = useMetrics();
   const api = useApiWithAuth();
@@ -128,6 +130,8 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
   const [showAllWeeksPopover, setShowAllWeeksPopover] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPausePopover, setShowPausePopover] = useState(false);
+  const [pauseReason, setPauseReason] = useState("");
   const [showCoachingTimeSelector, setShowCoachingTimeSelector] =
     useState(false);
   const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
@@ -393,6 +397,18 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     setShowDeleteConfirm(false);
   };
 
+  const handlePausePlan = async () => {
+    await pausePlan(selectedPlan.id!, pauseReason || undefined);
+    setShowPausePopover(false);
+    setPauseReason("");
+  };
+
+  const handleResumePlan = async () => {
+    await resumePlan(selectedPlan.id!);
+  };
+
+  const isPlanPaused = (selectedPlan as any).isPaused;
+
   const handleSaveCoachingTime = async (startHour: number) => {
     if (!currentUser) return;
 
@@ -475,6 +491,12 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 <span className="text-sm text-muted-foreground">Coached</span>
               </div>
             )}
+            {isPlanPaused && (
+              <div className="flex items-center gap-1 mr-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
+                <Pause className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Paused</span>
+              </div>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -498,6 +520,26 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
             >
               <Pencil className="h-6 w-6" />
             </Button>
+            {isPlanPaused ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleResumePlan}
+                disabled={isResumingPlan}
+                className="text-green-500 hover:text-green-600 hover:bg-green-50"
+              >
+                {isResumingPlan ? <Loader2 className="h-6 w-6 animate-spin" /> : <Play className="h-6 w-6" />}
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPausePopover(true)}
+                className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50"
+              >
+                <Pause className="h-6 w-6" />
+              </Button>
+            )}
           </div>
         </div>
         </div>
@@ -938,6 +980,68 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               </div>
             );
           })}
+        </div>
+      </AppleLikePopover>
+
+      {/* Pause Plan Popover */}
+      <AppleLikePopover
+        open={showPausePopover}
+        onClose={() => {
+          setShowPausePopover(false);
+          setPauseReason("");
+        }}
+        title="Pause Plan"
+      >
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+            <Pause className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              Streaks will still count down while your plan is paused.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="pause-reason" className="text-sm font-medium">
+              Reason for pausing (optional)
+            </label>
+            <textarea
+              id="pause-reason"
+              value={pauseReason}
+              onChange={(e) => setPauseReason(e.target.value)}
+              placeholder="e.g., Going on vacation, taking a break..."
+              className="w-full p-3 rounded-lg border border-border bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              rows={3}
+            />
+          </div>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              onClick={handlePausePlan}
+              disabled={isPausingPlan}
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+            >
+              {isPausingPlan ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Pausing...
+                </>
+              ) : (
+                <>
+                  <Pause className="h-4 w-4 mr-2" />
+                  Pause Plan
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPausePopover(false);
+                setPauseReason("");
+              }}
+              disabled={isPausingPlan}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </AppleLikePopover>
     </motion.div>

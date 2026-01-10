@@ -92,7 +92,7 @@ const PlanGenerator = () => {
       })
     );
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { progressState, ...planWithoutProgress } = plan;
+    const { progressState, pauseHistory, progress, ...planWithoutProgress } = plan as any;
     upsertPlan({
       planId: plan.id,
       updates: {

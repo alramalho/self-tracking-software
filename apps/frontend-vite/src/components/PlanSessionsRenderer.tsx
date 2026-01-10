@@ -2,9 +2,10 @@ import { type CompletePlan } from "@/contexts/plans";
 import { cn } from "@/lib/utils";
 import { type Activity, type ActivityEntry, type PlanSession } from "@tsw/prisma";
 import { format, isSameWeek, startOfWeek, isSameDay } from "date-fns";
+import { ChevronDown, ChevronUp, Info, Pause, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import AppleLikePopover from "./AppleLikePopover";
 import BaseHeatmapRenderer from "./BaseHeatmapRenderer";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface PlanSessionsRendererProps {
@@ -24,6 +25,11 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [showPauseReasonDialog, setShowPauseReasonDialog] = useState(false);
+
+  const isPaused = (plan as any).isPaused;
+  const pauseReason = (plan as any).pauseReason;
+  const pauseHistory = (plan as any).pauseHistory as Array<{ pausedAt: string; resumedAt?: string; reason?: string }> | null;
 
   const isWeekCompleted = (startDate: Date) =>
     plan.progress.weeks?.find((week) => isSameWeek(week.startDate, startDate))
@@ -230,6 +236,29 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 
   return (
     <div className="px-0">
+      {/* Pause indicator banner */}
+      {isPaused && (
+        <div className="flex items-center justify-between gap-3 p-3 mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+          <div className="flex items-center gap-2">
+            <Pause className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+              Plan is paused
+            </span>
+            {pauseReason && (
+              <button
+                onClick={() => setShowPauseReasonDialog(true)}
+                className="p-1 text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <span className="text-xs text-yellow-600 dark:text-yellow-400">
+            Streaks still count down
+          </span>
+        </div>
+      )}
+
       <div className="flex justify-center mb-4">{renderSessionViewer()}</div>
 
       <BaseHeatmapRenderer
@@ -243,7 +272,40 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
           isWeekCompleted(weekStartDate)
         }
         uniqueId={`sessions-${plan.id}`}
+        pauseHistory={pauseHistory}
       />
+
+      {/* Pause reason dialog */}
+      <AppleLikePopover
+        open={showPauseReasonDialog}
+        onClose={() => setShowPauseReasonDialog(false)}
+        title="Pause Reason"
+      >
+        <div className="p-4">
+          {pauseReason ? (
+            <p className="text-foreground">{pauseReason}</p>
+          ) : pauseHistory && pauseHistory.length > 0 ? (
+            <div className="space-y-4">
+              {pauseHistory.map((pause, index) => (
+                <div key={index} className="border-b border-border pb-3 last:border-0">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <span>{format(new Date(pause.pausedAt), "MMM d, yyyy")}</span>
+                    {pause.resumedAt && (
+                      <>
+                        <span>→</span>
+                        <span>{format(new Date(pause.resumedAt), "MMM d, yyyy")}</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-foreground">{pause.reason || "No reason provided"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No pause reason provided.</p>
+          )}
+        </div>
+      </AppleLikePopover>
     </div>
   );
 };

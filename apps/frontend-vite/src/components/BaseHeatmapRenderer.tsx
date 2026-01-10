@@ -17,6 +17,12 @@ export interface HeatmapData {
   count: number;
 }
 
+export interface PauseHistoryEntry {
+  pausedAt: string;
+  resumedAt?: string;
+  reason?: string;
+}
+
 export interface BaseHeatmapRendererProps {
   activities: Activity[];
   startDate: Date;
@@ -32,6 +38,7 @@ export interface BaseHeatmapRendererProps {
   refreshKey?: number | string;
   uniqueId?: string;
   bgClassName?: string;
+  pauseHistory?: PauseHistoryEntry[] | null;
 }
 
 export const getActivityColorMatrix = (isLightMode: boolean = true) => {
@@ -98,10 +105,24 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   getWeekCompletionStatus,
   onEditActivity,
   uniqueId,
+  pauseHistory,
 }) => {
   const { isLightMode } = useTheme();
   const { isUserPremium } = usePaidPlan();
   const navigate = useNavigate();
+
+  // Helper to check if a date falls within any pause period
+  const isDatePaused = (dateObj: Date): boolean => {
+    if (!pauseHistory || pauseHistory.length === 0) return false;
+
+    const dateTime = dateObj.getTime();
+    return pauseHistory.some((pause) => {
+      const pausedAt = new Date(pause.pausedAt).getTime();
+      const resumedAt = pause.resumedAt ? new Date(pause.resumedAt).getTime() : Date.now();
+      return dateTime >= pausedAt && dateTime <= resumedAt;
+    });
+  };
+
   // Add state for selected date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   // Add state for legend expansion
@@ -251,6 +272,23 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               </div>
               <span className="text-sm font-semibold">Today / Selected</span>
 
+              {pauseHistory && pauseHistory.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4"
+                      style={{
+                        backgroundColor: isLightMode ? "#FEF3C7" : "#422006",
+                        border: `1.5px dashed ${isLightMode ? "#F59E0B" : "#FBBF24"}`,
+                        borderRadius: "2px",
+                      }}
+                      title="Paused date"
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">Paused</span>
+                </>
+              )}
+
               {!noActivityLegend &&
                 activities?.map((activity, index) => (
                   <React.Fragment key={index}>
@@ -390,6 +428,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     return dateObj.getTime() === selectedUTC.getTime();
                   })();
 
+                // Check if this date falls within a pause period
+                const isPausedDate = isDatePaused(dateObj);
+
                 // note to self:
                 // we were refactoring plan prgoress, right now its scatteres throughout the frontend,
                 // making it hard to iterate, and prone to bugs
@@ -418,6 +459,10 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   : undefined;
 
                 const renderRects = () => {
+                  // Paused date styling colors
+                  const pausedFill = isLightMode ? "#FEF3C7" : "#422006"; // Yellow-100 / Yellow-900
+                  const pausedStroke = isLightMode ? "#F59E0B" : "#FBBF24"; // Amber-500 / Amber-400
+
                   if (!intensities || intensities.length === 0) {
                     const rects = [];
                     rects.push(
@@ -425,12 +470,28 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                         key={data.index}
                         id={todayCellId}
                         {...(props as React.SVGProps<SVGRectElement>)}
-                        fill={isLightMode ? "#EBEDF0" : "#242424"}
+                        fill={isPausedDate ? pausedFill : (isLightMode ? "#EBEDF0" : "#242424")}
                         stroke={isCurrentDay ? "#FF0000" : "none"}
                         strokeWidth={isCurrentDay ? 2 : 0}
                         rx={4}
+                        opacity={isPausedDate ? 0.7 : 1}
                       />
                     );
+
+                    // Add paused indicator (dashed border)
+                    if (isPausedDate) {
+                      rects.push(
+                        <rect
+                          key="paused-border"
+                          {...(props as React.SVGProps<SVGRectElement>)}
+                          fill="none"
+                          stroke={pausedStroke}
+                          strokeWidth={1.5}
+                          strokeDasharray="3,2"
+                          rx={4}
+                        />
+                      );
+                    }
 
                     // Add today's border if needed
                     if (isCurrentDay) {
@@ -693,6 +754,28 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                         fill="none"
                         stroke="#0066FF"
                         strokeWidth={2}
+                        rx={4}
+                      />
+                    );
+                  }
+
+                  // Add paused overlay (semi-transparent with dashed border)
+                  if (isPausedDate) {
+                    rects.push(
+                      <rect
+                        key="paused-overlay"
+                        {...(props as React.SVGProps<SVGRectElement>)}
+                        fill={pausedFill}
+                        opacity={0.5}
+                        rx={4}
+                      />,
+                      <rect
+                        key="paused-border"
+                        {...(props as React.SVGProps<SVGRectElement>)}
+                        fill="none"
+                        stroke={pausedStroke}
+                        strokeWidth={1.5}
+                        strokeDasharray="3,2"
                         rx={4}
                       />
                     );
