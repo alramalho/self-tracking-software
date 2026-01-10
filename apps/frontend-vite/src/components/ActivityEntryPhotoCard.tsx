@@ -5,6 +5,7 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser, useUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { extractFirstUrl } from "@/lib/linkUtils";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import {
@@ -32,6 +33,8 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
+import LinkifiedText from "./LinkifiedText";
+import LinkPreview from "./LinkPreview";
 import { ProgressRing } from "./ProgressRing";
 import { Separator } from "./ui/separator";
 
@@ -324,6 +327,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImage = activityEntry.imageUrl && !hasImageExpired;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
+  // Extract first URL from description for link preview
+  const firstUrl = useMemo(
+    () => extractFirstUrl(activityEntry.description),
+    [activityEntry.description]
+  );
+
   if (!activity || !activityEntry) return null;
 
   const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
@@ -461,8 +470,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </>
             )}
           </div>
+          {hasImage && firstUrl && (
+            <div className="relative -mt-6 mx-2 mb-2">
+              <LinkPreview url={firstUrl} />
+            </div>
+          )}
           {hasImage && activityEntry.description && (
-            <div className="relative -mt-6 mx-2">
+            <div className={`relative mx-2 ${!firstUrl ? "-mt-6" : ""}`}>
               <div
                 className={`relative rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-4`}
               >
@@ -475,7 +489,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     ref={textRef}
                     className="text-foreground font-medium text-sm relative z-10"
                   >
-                    {activityEntry.description}
+                    <LinkifiedText text={activityEntry.description} />
                   </p>
                   {shouldShowReadMore && !isExpanded && (
                     <div className="absolute bottom-0 right-0 left-0 h-6" />
@@ -579,6 +593,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
         </div>
 
+        {/* Non-image posts: link preview (if link exists) */}
+        {!hasImage && !isCollapsed && firstUrl && (
+          <div className="mt-3">
+            <LinkPreview url={firstUrl} />
+          </div>
+        )}
+
+        {/* Non-image posts: description */}
         {!hasImage && !isCollapsed && activityEntry.description && (
           <div
             className={`mt-3 ${!isExpanded && "max-h-[4.5em]"} ${
@@ -586,7 +608,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             } relative`}
           >
             <p ref={textRef} className="text-foreground text-sm">
-              {activityEntry.description}
+              <LinkifiedText text={activityEntry.description} />
             </p>
             {shouldShowReadMore && !isExpanded && (
               <div className="absolute bottom-0 right-0 left-0 h-6" />
