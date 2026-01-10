@@ -1946,6 +1946,125 @@ router.post(
   }
 );
 
+// Pause plan
+router.post(
+  "/:planId/pause",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const { reason } = req.body as { reason?: string };
+
+      // Verify ownership
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to pause this plan" });
+        return;
+      }
+
+      if (plan.isPaused) {
+        res.status(400).json({ error: "Plan is already paused" });
+        return;
+      }
+
+      // Get existing pause history or initialize empty array
+      const existingHistory = (plan.pauseHistory as any[]) || [];
+      const now = new Date();
+
+      // Add new pause entry to history
+      const newPauseEntry = {
+        pausedAt: now.toISOString(),
+        resumedAt: null,
+        reason: reason || null,
+      };
+
+      const updatedPlan = await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          isPaused: true,
+          pauseReason: reason || null,
+          pauseHistory: [...existingHistory, newPauseEntry],
+        },
+      });
+
+      logger.info(`User ${req.user!.id} paused plan ${planId}`);
+      res.json({ success: true, plan: updatedPlan });
+    } catch (error) {
+      logger.error("Error pausing plan:", error);
+      res.status(500).json({ error: "Failed to pause plan" });
+    }
+  }
+);
+
+// Resume plan
+router.post(
+  "/:planId/resume",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Verify ownership
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to resume this plan" });
+        return;
+      }
+
+      if (!plan.isPaused) {
+        res.status(400).json({ error: "Plan is not paused" });
+        return;
+      }
+
+      // Update the last pause entry with resume time
+      const existingHistory = (plan.pauseHistory as any[]) || [];
+      const now = new Date();
+
+      if (existingHistory.length > 0) {
+        const lastEntry = existingHistory[existingHistory.length - 1];
+        lastEntry.resumedAt = now.toISOString();
+      }
+
+      const updatedPlan = await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          isPaused: false,
+          pauseReason: null,
+          pauseHistory: existingHistory,
+        },
+      });
+
+      logger.info(`User ${req.user!.id} resumed plan ${planId}`);
+      res.json({ success: true, plan: updatedPlan });
+    } catch (error) {
+      logger.error("Error resuming plan:", error);
+      res.status(500).json({ error: "Failed to resume plan" });
+    }
+  }
+);
+
 // Delete plan (soft delete)
 router.delete(
   "/:planId",

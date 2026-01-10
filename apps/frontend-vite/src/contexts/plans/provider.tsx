@@ -12,6 +12,8 @@ import {
   deletePlan,
   getPlans,
   modifyManualMilestone,
+  pausePlan,
+  resumePlan,
   updatePlans,
   upgradeCoachSuggestedSessionsToPlanSessions,
   uploadPlanBackgroundImage,
@@ -221,6 +223,38 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const pausePlanMutation = useMutation({
+    mutationFn: async ({ planId, reason }: { planId: string; reason?: string }) => {
+      await pausePlan(api, planId, reason);
+    },
+    onSuccess: (_data, { planId }) => {
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+      toast.success("Plan paused. Note: Streaks will still count down while paused.");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to pause plan`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const resumePlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      await resumePlan(api, planId);
+    },
+    onSuccess: (_data, planId) => {
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+      toast.success("Plan resumed!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to resume plan`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   // Safety check: Remove coaching flags from all plans if user is on FREE plan
   useEffect(() => {
     // Only run once when plans are loaded and user data is available
@@ -278,6 +312,12 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     isDeletingPlan: deletePlanMutation.isPending,
     uploadPlanBackgroundImage: uploadPlanBackgroundImageMutation.mutateAsync,
     isUploadingPlanBackgroundImage: uploadPlanBackgroundImageMutation.isPending,
+    pausePlan: async (planId: string, reason?: string) => {
+      await pausePlanMutation.mutateAsync({ planId, reason });
+    },
+    isPausingPlan: pausePlanMutation.isPending,
+    resumePlan: resumePlanMutation.mutateAsync,
+    isResumingPlan: resumePlanMutation.isPending,
   };
 
   return (

@@ -3,6 +3,7 @@
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AchievementCelebrationPopover, type AchievementType } from "@/components/AchievementCelebrationPopover";
 import { AchievementShareDialog } from "@/components/AchievementShareDialog";
+import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import { useAchievements } from "@/contexts/achievements";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import ClientOverviewPopover from "@/components/ClientOverviewPopover";
@@ -22,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   MoveRight,
+  Pause,
   RefreshCcw,
   Send,
   Users,
@@ -725,6 +727,22 @@ function HomePage() {
         actionLabel="Try it out →"
         onAction={() => navigate({ to: "/plans" })}
       /> */}
+
+      <AnnouncementPopover
+        id="pause-plan-feature-2025"
+        title="Pause Your Plans!"
+        icon={<Pause size={32} className="text-foreground" />}
+        description={
+          <span>
+            Need a break? You can now pause your plans when life gets in the way.
+            <span className="block mt-2 text-yellow-600 dark:text-yellow-400 font-medium">
+              Note: Streaks will still count down while paused.
+            </span>
+          </span>
+        }
+        actionLabel="Try it out →"
+        onAction={() => navigate({ to: "/plans" })}
+      />
 
       {/* Testimonial Feedback Popover */}
       {shouldShowTestimonialPopover && currentUser && (

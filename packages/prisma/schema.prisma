@@ -337,6 +337,11 @@ model Plan {
   progressState        Json?
   progressCalculatedAt DateTime?
 
+  // Pause state
+  isPaused     Boolean  @default(false)
+  pauseReason  String?
+  pauseHistory Json?    // Array of {pausedAt: DateTime, resumedAt?: DateTime, reason?: String}
+
   // Relations
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   planGroup         PlanGroup?        @relation(fields: [planGroupId], references: [id])

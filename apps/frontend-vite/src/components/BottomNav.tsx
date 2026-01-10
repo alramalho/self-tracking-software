@@ -71,7 +71,7 @@ const BottomNav = () => {
   return (
     <>
       <nav className={cn(
-        "box-border backdrop-blur-xl z-[50] m-2 rounded-3xl border border-white/30 dark:border-gray-500/30",
+        "box-border backdrop-blur-xl z-[50] m-2 rounded-4xl border border-white/30 dark:border-gray-500/30",
         isDesktop
           ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-border border-2 bg-card"
           : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1 bg-transparent"

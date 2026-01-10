@@ -43,6 +43,10 @@ export interface PlansContextType {
   isDeletingPlan: boolean;
   uploadPlanBackgroundImage: (file: File) => Promise<string>;
   isUploadingPlanBackgroundImage: boolean;
+  pausePlan: (planId: string, reason?: string) => Promise<void>;
+  isPausingPlan: boolean;
+  resumePlan: (planId: string) => Promise<void>;
+  isResumingPlan: boolean;
 }
 
 export const PlansContext = createContext<PlansContextType | undefined>(
