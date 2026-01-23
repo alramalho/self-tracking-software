@@ -6,7 +6,7 @@ import { usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { Info, MessageCircle } from "lucide-react";
+import { Info, MessageCircle, Users } from "lucide-react";
 import React, { useState } from "react";
 
 interface RecommendedUsersProps {
@@ -167,6 +167,19 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
             </button>
           </div>
 
+          {sortedRecommendations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="bg-muted p-6 rounded-full mb-6">
+                <Users size={48} className="text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                No matches found yet
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-xs">
+                We're still looking for people with similar goals. Check back soon or try a different plan!
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sortedRecommendations.map((recommendation) => {
               const user = recommendedUsers.find(
@@ -266,6 +279,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
               );
             })}
           </div>
+          )}
         </div>
       </div>
       <MatchScoreExplainer

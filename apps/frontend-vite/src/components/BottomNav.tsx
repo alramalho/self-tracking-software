@@ -134,15 +134,15 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            to="/plans"
+            to="/search"
             preload="intent"
-            data-testid="nav-plans"
+            data-testid="nav-search"
             className={cn(
-              "transition-all duration-200",
+              "relative transition-all duration-200",
               isDesktop
                 ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
-              isActiveRoute("/plans")
+              isActiveRoute("/search")
                 ? cn(
                     activeThemeClass,
                     isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
@@ -150,29 +150,29 @@ const BottomNav = () => {
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={(e) => {
-              if (pathname === "/plans") {
+              if (pathname.startsWith("/search")) {
                 e.preventDefault();
                 scrollToTop();
               } else {
-                setIsLoadingPlans(true);
+                setIsLoadingInsights(true);
               }
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingPlans ? (
+              {isLoadingInsights ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <BarChart3 size={24} strokeWidth={2.5} />
+                <Search size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(
               "font-medium",
-              isDesktop 
-                ? "text-sm" 
+              isDesktop
+                ? "text-sm"
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/plans")) || isActiveRoute("/plans") ? "hidden" : ""
+              (!isDesktop && !isActiveRoute("/search")) || isActiveRoute("/search") ? "hidden" : ""
             )}>
-              Plans
+              Search
             </span>
           </Link>
 
@@ -232,15 +232,15 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            to="/search"
+            to="/insights/dashboard"
             preload="intent"
-            data-testid="nav-search"
+            data-testid="nav-insights"
             className={cn(
-              "relative transition-all duration-200",
+              "transition-all duration-200",
               isDesktop
                 ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
-              isActiveRoute("/search")
+              isActiveRoute("/insights")
                 ? cn(
                     activeThemeClass,
                     isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
@@ -248,29 +248,29 @@ const BottomNav = () => {
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={(e) => {
-              if (pathname.startsWith("/search")) {
+              if (pathname.startsWith("/insights")) {
                 e.preventDefault();
                 scrollToTop();
               } else {
-                setIsLoadingInsights(true);
+                setIsLoadingPlans(true);
               }
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingInsights ? (
+              {isLoadingPlans ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <Search size={24} strokeWidth={2.5} />
+                <BarChart3 size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(
               "font-medium",
-              isDesktop 
-                ? "text-sm" 
+              isDesktop
+                ? "text-sm"
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/search")) || isActiveRoute("/search") ? "hidden" : ""
+              (!isDesktop && !isActiveRoute("/insights")) || isActiveRoute("/insights") ? "hidden" : ""
             )}>
-              Search
+              Insights
             </span>
           </Link>
 
