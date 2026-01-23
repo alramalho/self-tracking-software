@@ -62,7 +62,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { message: string; chatId: string }) => {
+    mutationFn: async (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => {
       // Optimistically add user message to the cache immediately
       const userMessage: Message = {
         id: `temp-${Date.now()}`,
@@ -100,6 +100,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           return [...filteredMessages, responseMessage];
         }
       );
+
+      // Invalidate to ensure cache is fresh (handles race conditions)
+      queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
 
       // Update the chat's updatedAt timestamp
       queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
