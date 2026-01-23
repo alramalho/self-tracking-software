@@ -1,6 +1,7 @@
 import { Response, Router } from "express";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { coachAgentService } from "../services/coachAgentService";
 import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -341,11 +342,13 @@ router.post(
     try {
       const user = req.user!;
       const { chatId } = req.params;
-      const { message } = req.body;
+      const { message, coachVersion } = req.body;
 
       if (!message || typeof message !== "string" || !message.trim()) {
         return res.status(400).json({ error: "Message is required" });
       }
+
+      const useV2Coach = coachVersion === "v2";
 
       // Verify user has access to this chat
       const chat = await prisma.chat.findFirst({
@@ -396,7 +399,7 @@ router.post(
         });
         history.reverse();
 
-        // Get user's plans and metrics
+        // Get user's plans (include sessions for v2 agent)
         const plans = await prisma.plan.findMany({
           where: {
             userId: user.id,
@@ -406,29 +409,56 @@ router.post(
               { finishingDate: { gt: new Date() } },
             ],
           },
-          include: { activities: true },
-          orderBy: [{ createdAt: "desc" }],
-        });
-
-        const metrics = await prisma.metric.findMany({
-          where: { userId: user.id },
+          include: {
+            activities: true,
+            ...(useV2Coach && { sessions: true }),
+          },
           orderBy: [{ createdAt: "desc" }],
         });
 
         const conversationHistory = history.map((msg) => ({
           role: msg.role === "USER" ? "user" : "assistant",
           content: msg.content,
-        }));
+        })) as Array<{ role: "user" | "assistant"; content: string }>;
 
-        // Generate AI response
-        const aiResponse = await aiService.generateCoachChatResponse({
-          user: user,
-          message: message,
-          chatId: chatId,
-          conversationHistory: conversationHistory,
-          plans: plans,
-          metrics: metrics,
-        });
+        let aiResponse: {
+          messageContent: string;
+          planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
+          metricReplacement?: { textToReplace: string; metricTitle: string; rating: number } | null;
+          userRecommendations?: unknown;
+          toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
+        };
+
+        if (useV2Coach) {
+          // Use the new agent-based coach (v2)
+          logger.info(`Using coach v2 for user ${user.username}`);
+          const v2Response = await coachAgentService.generateResponse({
+            user,
+            message,
+            conversationHistory,
+            plans: plans as Array<typeof plans[0] & { sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }> }>,
+          });
+          aiResponse = {
+            messageContent: v2Response.messageContent,
+            planReplacements: v2Response.planReplacements,
+            toolCalls: v2Response.toolCalls,
+          };
+        } else {
+          // Use the original coach (v1)
+          const metrics = await prisma.metric.findMany({
+            where: { userId: user.id },
+            orderBy: [{ createdAt: "desc" }],
+          });
+
+          aiResponse = await aiService.generateCoachChatResponse({
+            user: user,
+            message: message,
+            chatId: chatId,
+            conversationHistory: conversationHistory,
+            plans: plans,
+            metrics: metrics,
+          });
+        }
 
         // Save coach message
         const coachMessage = await prisma.message.create({
@@ -440,6 +470,9 @@ router.post(
               planReplacements: aiResponse.planReplacements || [],
               metricReplacement: aiResponse.metricReplacement || null,
               userRecommendations: aiResponse.userRecommendations || null,
+              ...(aiResponse.toolCalls && {
+                toolCalls: JSON.parse(JSON.stringify(aiResponse.toolCalls)),
+              }),
             },
           },
         });
@@ -507,7 +540,12 @@ router.post(
             .filter(Boolean) || [];
 
         let resolvedMetricReplacement: any = null;
-        if (aiResponse.metricReplacement) {
+        if (aiResponse.metricReplacement && !useV2Coach) {
+          // Metric replacement is only available in v1
+          const metrics = await prisma.metric.findMany({
+            where: { userId: user.id },
+            orderBy: [{ createdAt: "desc" }],
+          });
           const aiMetricTitle = stripEmojis(
             aiResponse.metricReplacement.metricTitle
           ).toLowerCase();
@@ -536,6 +574,7 @@ router.post(
             planReplacements: resolvedPlanReplacements,
             metricReplacement: resolvedMetricReplacement,
             userRecommendations: aiResponse.userRecommendations || null,
+            toolCalls: aiResponse.toolCalls || null,
             createdAt: coachMessage.createdAt,
           },
         });
@@ -678,6 +717,20 @@ router.post(
 
       if (!otherUser) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if users are friends (have an ACCEPTED connection)
+      const connection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { fromId: user.id, toId: otherUserId, status: "ACCEPTED" },
+            { fromId: otherUserId, toId: user.id, status: "ACCEPTED" },
+          ],
+        },
+      });
+
+      if (!connection) {
+        return res.status(403).json({ error: "You can only message users you are connected with" });
       }
 
       // Check if a direct chat already exists between these users
