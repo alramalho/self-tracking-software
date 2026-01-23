@@ -7,12 +7,12 @@ import { cn } from "@/lib/utils";
 import { type BaseLoweredThemeColor } from "@/utils/theme";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  BarChart3,
   Home,
   Loader2,
   Plus,
   Target,
-  User
+  User,
+  Users
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -260,7 +260,7 @@ const BottomNav = () => {
               {isLoadingInsights ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <BarChart3 size={24} strokeWidth={2.5} />
+                <Users size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(
