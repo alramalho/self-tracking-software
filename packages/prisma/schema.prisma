@@ -96,6 +96,9 @@ model User {
   // Level celebration tracking
   celebratedLevelThreshold Int?
 
+  // Reminders
+  reminders Reminder[]
+
   @@map("users")
   @@schema("public")
 }
@@ -832,6 +835,43 @@ enum ChatType {
 enum CoachType {
   AI
   HUMAN
+
+  @@schema("public")
+}
+
+model Reminder {
+  id              String          @id @default(cuid())
+  userId          String
+  message         String          // What to remind about
+  triggerAt       DateTime        // When to trigger (next occurrence)
+  isRecurring     Boolean         @default(false)
+  recurringType   RecurringType?  // DAILY, WEEKLY, MONTHLY
+  recurringDays   String[]        @default([])  // For weekly: ["MONDAY", "WEDNESDAY"]
+  status          ReminderStatus  @default(PENDING)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([triggerAt, status])
+  @@map("reminders")
+  @@schema("public")
+}
+
+enum RecurringType {
+  DAILY
+  WEEKLY
+  MONTHLY
+
+  @@schema("public")
+}
+
+enum ReminderStatus {
+  PENDING    // Active, waiting to trigger
+  COMPLETED  // One-time that was sent
+  CANCELLED  // User cancelled
 
   @@schema("public")
 }

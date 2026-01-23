@@ -1,8 +1,9 @@
 import { TZDate } from "@date-fns/tz";
-import { JobType, User } from "@tsw/prisma";
+import { addDays, addMonths, setHours, setMinutes } from "date-fns";
+import { JobType, User, Reminder } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { plansService } from "./plansService";
+import { notificationService } from "./notificationService";
 import { sesService } from "./sesService";
 import { userService } from "./userService";
 
@@ -40,6 +41,8 @@ interface HourlyJobResult {
   message: string;
   started_for_users: string[];
   total_users_checked: number;
+  reminders_processed: number;
+  reminders_sent: string[];
 }
 
 export class RecurringJobService {
@@ -261,138 +264,167 @@ export class RecurringJobService {
 
   /**
    * Internal hourly job execution (without tracking)
+   * Note: Old plan coaching notifications have been disabled in favor of the new AI reminders system
    */
   private async executeHourlyJob(
     options: HourlyJobOptions = {}
   ): Promise<HourlyJobResult> {
-    const { filter_usernames = [], force = false } = options;
+    logger.info("Starting hourly job execution (reminders only - plan coaching disabled)");
+
+    // Process due reminders
+    const reminderResults = await this.processDueReminders();
 
     logger.info(
-      `Starting hourly job execution for plan coaching${force ? " (FORCED - ignoring timezone check)" : ""}`
-    );
-
-    // Get paid users with plans
-    let users = await prisma.user.findMany({
-      where: {
-        planType: "PLUS",
-        deletedAt: null,
-      },
-      include: {
-        plans: {
-          where: {
-            deletedAt: null,
-          },
-          include: {
-            activities: true,
-          },
-        },
-      },
-    });
-
-    if (filter_usernames.length > 0) {
-      logger.info(
-        `Filtering users by usernames: ${filter_usernames.join(", ")}`
-      );
-      const beforeCount = users.length;
-      users = users.filter(
-        (user) => user.username && filter_usernames.includes(user.username)
-      );
-      logger.info(
-        `Filtered from ${beforeCount} users to ${users.length} users`
-      );
-    }
-
-    // Filter users who have plans and it's their preferred coaching time (or force is true)
-    const usersToCoach = users.filter((user) => {
-      if (!user.plans || user.plans.length === 0) {
-        return false;
-      }
-      // If force is true, bypass timezone check
-      if (force) {
-        return true;
-      }
-      return this.isUserPreferredCoachingTime(user);
-    });
-
-    logger.info(
-      force
-        ? `Processing ${usersToCoach.length} users (FORCED mode)`
-        : `Found ${usersToCoach.length} users at their preferred coaching time (out of ${users.length} paid users)`
-    );
-
-    let coachingSuccesses = 0;
-    let coachingFailures = 0;
-    const startedForUsers: string[] = [];
-
-    // Process plan coaching for each eligible user
-    // Process their coached plan, or fallback to newest plan
-    for (const user of usersToCoach) {
-      try {
-        // Check if user received a coaching notification recently
-        const hasRecentNotification = await this.hasRecentCoachingNotification(
-          user.id
-        );
-        if (hasRecentNotification) {
-          logger.info(
-            `User ${user.username} received a coaching notification in the last 12 hours - skipping`
-          );
-          continue;
-        }
-
-        // Get the user's coached plan, or the newest plan as fallback
-        const coachedPlan = (user.plans as any[]).find((p: any) => p.isCoached);
-        const firstPlan =
-          coachedPlan ||
-          user.plans.sort((a, b) => {
-            return b.createdAt.getTime() - a.createdAt.getTime();
-          })[0];
-
-        if (!firstPlan) {
-          logger.warn(`User ${user.username} has no plans to coach`);
-          continue;
-        }
-
-        logger.info(
-          `Processing plan coaching for user ${user.username} on plan '${firstPlan.goal}'`
-        );
-
-        // Process coaching (this will check activity, recalculate state, and send notification if needed)
-        const notification = await plansService.processPlanCoaching(
-          user,
-          firstPlan,
-          true // pushNotify
-        );
-
-        if (notification) {
-          coachingSuccesses++;
-          startedForUsers.push(user.username || "unknown");
-          logger.info(
-            `Successfully sent coaching notification to ${user.username}`
-          );
-        } else {
-          logger.info(
-            `No coaching notification needed for ${user.username} (no state change or inactive)`
-          );
-        }
-      } catch (error) {
-        coachingFailures++;
-        logger.error(
-          `Failed to process coaching for user ${user.username}:`,
-          error
-        );
-        // Continue with other users even if one fails
-      }
-    }
-
-    logger.info(
-      `Hourly coaching job completed: ${coachingSuccesses} notifications sent, ${coachingFailures} failures, ${users.length} total users checked`
+      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent`
     );
 
     return {
-      message: `Processed coaching for ${usersToCoach.length} users (${coachingSuccesses} notifications sent, ${coachingFailures} failures)`,
-      started_for_users: startedForUsers,
-      total_users_checked: users.length,
+      message: `Processed ${reminderResults.processed} reminders (${reminderResults.sent.length} sent). Plan coaching disabled.`,
+      started_for_users: [],
+      total_users_checked: 0,
+      reminders_processed: reminderResults.processed,
+      reminders_sent: reminderResults.sent,
     };
+  }
+
+  /**
+   * Process reminders that are due to trigger
+   */
+  private async processDueReminders(): Promise<{
+    processed: number;
+    sent: string[];
+  }> {
+    const now = new Date();
+    const sent: string[] = [];
+
+    try {
+      // Find all reminders that are due (triggerAt <= now and status = PENDING)
+      const dueReminders = await prisma.reminder.findMany({
+        where: {
+          status: "PENDING",
+          triggerAt: {
+            lte: now,
+          },
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      logger.info(`Found ${dueReminders.length} due reminders to process`);
+
+      for (const reminder of dueReminders) {
+        try {
+          // Send notification to the user
+          await notificationService.createAndProcessNotification({
+            userId: reminder.userId,
+            title: "Reminder",
+            message: reminder.message,
+            type: "COACH",
+            relatedId: reminder.id,
+            relatedData: {
+              reminderId: reminder.id,
+              isRecurring: reminder.isRecurring,
+            },
+          });
+
+          sent.push(reminder.message);
+          logger.info(
+            `Sent reminder "${reminder.message}" to user ${reminder.user.username}`
+          );
+
+          if (reminder.isRecurring) {
+            // Calculate next trigger time
+            const nextTriggerAt = this.calculateNextReminderTrigger(reminder);
+
+            if (nextTriggerAt) {
+              await prisma.reminder.update({
+                where: { id: reminder.id },
+                data: {
+                  triggerAt: nextTriggerAt,
+                  lastTriggeredAt: now,
+                },
+              });
+              logger.info(
+                `Scheduled next occurrence of recurring reminder ${reminder.id} for ${nextTriggerAt}`
+              );
+            }
+          } else {
+            // Mark one-time reminder as completed
+            await prisma.reminder.update({
+              where: { id: reminder.id },
+              data: {
+                status: "COMPLETED",
+                lastTriggeredAt: now,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error(
+            `Failed to process reminder ${reminder.id}:`,
+            error
+          );
+          // Continue with other reminders
+        }
+      }
+
+      return {
+        processed: dueReminders.length,
+        sent,
+      };
+    } catch (error) {
+      logger.error("Error processing due reminders:", error);
+      return {
+        processed: 0,
+        sent: [],
+      };
+    }
+  }
+
+  /**
+   * Calculate the next trigger time for a recurring reminder
+   */
+  private calculateNextReminderTrigger(reminder: Reminder): Date | null {
+    const currentTrigger = new Date(reminder.triggerAt);
+    const hours = currentTrigger.getHours();
+    const minutes = currentTrigger.getMinutes();
+
+    switch (reminder.recurringType) {
+      case "DAILY":
+        // Next day at the same time
+        return addDays(currentTrigger, 1);
+
+      case "WEEKLY": {
+        // Find the next occurrence based on recurringDays
+        if (!reminder.recurringDays || reminder.recurringDays.length === 0) {
+          // Default to same day next week
+          return addDays(currentTrigger, 7);
+        }
+
+        const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+        const currentDayIndex = currentTrigger.getDay();
+
+        // Find the next valid day
+        for (let i = 1; i <= 7; i++) {
+          const nextDayIndex = (currentDayIndex + i) % 7;
+          const nextDayName = dayNames[nextDayIndex];
+          if (reminder.recurringDays.includes(nextDayName)) {
+            const nextDate = addDays(currentTrigger, i);
+            return setMinutes(setHours(nextDate, hours), minutes);
+          }
+        }
+
+        // Fallback to same day next week
+        return addDays(currentTrigger, 7);
+      }
+
+      case "MONTHLY":
+        // Same day next month
+        return addMonths(currentTrigger, 1);
+
+      default:
+        return null;
+    }
   }
 
   /**

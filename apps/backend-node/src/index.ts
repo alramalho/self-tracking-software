@@ -33,8 +33,10 @@ import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
 import { onboardingRouter } from "./routes/onboarding";
 import { plansRouter } from "./routes/plans";
+import { remindersRouter } from "./routes/reminders";
 import { stripeRouter } from "./routes/stripe";
 import { usersRouter } from "./routes/users";
+import { utilsRouter } from "./routes/utils";
 
 const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -135,6 +137,8 @@ app.use("/ai", aiRouter);
 app.use("/chats", chatsRouter);
 app.use("/coaches", coachesRouter);
 app.use("/stripe", stripeRouter);
+app.use("/reminders", remindersRouter);
+app.use("/utils", utilsRouter);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler);
