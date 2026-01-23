@@ -139,11 +139,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       entry: Partial<ActivityEntry>;
       muteNotification?: boolean;
     }) => {
-      await api.put(`/activities/activity-entries/${data.entry.id}`, {
-        quantity: Number(data.entry.quantity),
-        datetime: data.entry.datetime,
-        description: data.entry.description || "",
-      });
+      const payload: Record<string, unknown> = {};
+      if (data.entry.quantity !== undefined)
+        payload.quantity = Number(data.entry.quantity);
+      if (data.entry.datetime !== undefined)
+        payload.datetime = data.entry.datetime;
+      if (data.entry.description !== undefined)
+        payload.description = data.entry.description;
+      if ((data.entry as any).difficulty !== undefined)
+        payload.difficulty = (data.entry as any).difficulty;
+
+      await api.put(`/activities/activity-entries/${data.entry.id}`, payload);
     },
     onSuccess: async (_, { muteNotification }) => {
       queryClient.refetchQueries({ queryKey: ["activity-entries"] });

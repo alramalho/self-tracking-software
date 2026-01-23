@@ -155,6 +155,7 @@ model ActivityEntry {
   description String?
   deletedAt   DateTime?
   timezone    String?
+  difficulty  String?
 
   // Image info
   imageS3Path    String?

@@ -2,12 +2,17 @@ import { ActivityCard } from "@/components/ActivityCard";
 import ActivityEditor from "@/components/ActivityEditor";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
+import {
+  DifficultyLogPopover,
+  type DifficultyLevel,
+} from "@/components/DifficultyLogPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityLogData } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useMetrics } from "@/contexts/metrics";
 import { createFileRoute } from "@tanstack/react-router";
+import { differenceInHours } from "date-fns";
 import type { Activity, ActivityEntry } from "@tsw/prisma";
 import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -17,7 +22,12 @@ export const Route = createFileRoute("/add")({
 });
 
 function LogPage() {
-  const { activities, activityEntries, isLoadingActivities } = useActivities();
+  const {
+    activities,
+    activityEntries,
+    isLoadingActivities,
+    upsertActivityEntry,
+  } = useActivities();
   const { metrics } = useMetrics();
 
   const sortedActivities = [...activities].sort((a, b) => {
@@ -35,6 +45,7 @@ function LogPage() {
   >();
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [showDifficultyPopover, setShowDifficultyPopover] = useState(false);
   const [showMetricsPopover, setShowMetricsPopover] = useState(false);
   const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(
@@ -42,6 +53,7 @@ function LogPage() {
   );
   const [currentActivityLogData, setCurrentActivityLogData] =
     useState<ActivityLogData | null>(null);
+  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
 
   const handleActivityLogSubmit = useCallback(
     (data: ActivityLogData) => {
@@ -71,14 +83,53 @@ function LogPage() {
     setEditingActivity(activity);
   };
 
-  const handleActivityLoggedAndPhotoSkippedOrDone = () => {
+  const handleActivityLoggedAndPhotoSkippedOrDone = (entryId: string) => {
     setShowPhotoUploader(false);
-    setCurrentActivityLogData(null);
+    setCurrentEntryId(entryId);
 
-    // Show metrics popover if user has metrics configured
-    if (metrics && metrics.length > 0) {
-      setShowMetricsPopover(true);
+    // Show difficulty popover if activity was within the past 48 hours
+    const isWithin48Hours =
+      currentActivityLogData &&
+      differenceInHours(new Date(), currentActivityLogData.datetime) < 48;
+
+    if (isWithin48Hours) {
+      setShowDifficultyPopover(true);
+    } else {
+      // Skip to metrics check if activity is older than 48h
+      handleDifficultyDone();
     }
+  };
+
+  const handleDifficultySubmit = async (difficulty: DifficultyLevel) => {
+    if (!currentEntryId) return;
+
+    await upsertActivityEntry({
+      entry: { id: currentEntryId, difficulty } as Partial<ActivityEntry>,
+      muteNotification: true,
+    });
+  };
+
+  const handleDifficultyDone = () => {
+    setShowDifficultyPopover(false);
+
+    // Show metrics popover if user has metrics configured and activity was within the past 6 hours
+    const isWithin6Hours =
+      currentActivityLogData &&
+      differenceInHours(new Date(), currentActivityLogData.datetime) < 6;
+
+    if (metrics && metrics.length > 0 && isWithin6Hours) {
+      setShowMetricsPopover(true);
+    } else {
+      // Clean up if not showing metrics
+      setCurrentActivityLogData(null);
+      setCurrentEntryId(null);
+    }
+  };
+
+  const handleMetricsDone = () => {
+    setShowMetricsPopover(false);
+    setCurrentActivityLogData(null);
+    setCurrentEntryId(null);
   };
 
   return (
@@ -152,10 +203,22 @@ function LogPage() {
         </>
       )}
 
-      {/* Metrics Popover - shown after activity is logged */}
+      {/* Difficulty Popover - shown after activity is logged (within 48h) */}
+      <DifficultyLogPopover
+        open={showDifficultyPopover}
+        onClose={handleDifficultyDone}
+        onSubmit={async (difficulty) => {
+          await handleDifficultySubmit(difficulty);
+          handleDifficultyDone();
+        }}
+        activityTitle={selectedActivity?.title}
+        activityEmoji={selectedActivity?.emoji}
+      />
+
+      {/* Metrics Popover - shown after difficulty (within 6h) */}
       <MetricsLogPopover
         open={showMetricsPopover}
-        onClose={() => setShowMetricsPopover(false)}
+        onClose={handleMetricsDone}
         title={`How are you feeling after ${selectedActivity?.title}?`}
         description="This helps us identify patterns and correlations between your activities and how you feel throughout the day."
         customIcon={<span className="text-6xl">{selectedActivity?.emoji}</span>}

@@ -18,7 +18,7 @@ interface ActivityPhotoUploaderProps {
     quantity: number;
   };
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (entryId: string) => void;
   open: boolean;
 }
 
@@ -36,16 +36,20 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 
   const handleLogActivity = async () => {
     try {
-      await submitActivity({
+      const entry = await submitActivity({
         activityId: activityData.activityId,
         datetime: activityData.datetime,
         quantity: activityData.quantity,
         description,
         photo: selectedFile || undefined,
       });
-      
-      addToNotificationCount(1, 'profile');
-      onSuccess();
+
+      if (!entry?.id) {
+        throw new Error("No entry ID returned");
+      }
+
+      addToNotificationCount(1, "profile");
+      onSuccess(entry.id);
     } catch (error: any) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");
