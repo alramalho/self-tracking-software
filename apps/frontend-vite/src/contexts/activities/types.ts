@@ -20,7 +20,7 @@ export interface ActivitiesContextType {
   isLoadingActivities: boolean;
   isLoadingActivityEntries: boolean;
 
-  logActivity: (data: ActivityLogData) => Promise<void>;
+  logActivity: (data: ActivityLogData) => Promise<ActivityEntry>;
   isLoggingActivity: boolean;
 
   upsertActivity: (data: {

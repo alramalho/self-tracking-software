@@ -418,7 +418,7 @@ router.put(
   ): Promise<Response | void> => {
     try {
       const { activityEntryId } = req.params;
-      const { quantity, datetime, description } = req.body;
+      const { quantity, datetime, description, difficulty } = req.body;
 
       // Verify ownership
       const existingEntry = await prisma.activityEntry.findFirst({
@@ -437,9 +437,12 @@ router.put(
         where: { id: activityEntryId },
         data: {
           quantity: quantity !== undefined ? quantity : existingEntry.quantity,
-          datetime: new Date(datetime) || existingEntry.datetime,
+          datetime:
+            datetime !== undefined ? new Date(datetime) : existingEntry.datetime,
           description:
             description !== undefined ? description : existingEntry.description,
+          difficulty:
+            difficulty !== undefined ? difficulty : existingEntry.difficulty,
         },
       });
 
