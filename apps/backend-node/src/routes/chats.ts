@@ -274,6 +274,7 @@ router.get(
                 planReplacements,
                 metricReplacement,
                 userRecommendations: metadata.userRecommendations || null,
+                toolCalls: metadata.toolCalls || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };
@@ -287,6 +288,7 @@ router.get(
               content: msg.content,
               planReplacements: [],
               metricReplacement: null,
+              toolCalls: null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };
@@ -432,11 +434,22 @@ router.post(
         if (useV2Coach) {
           // Use the new agent-based coach (v2)
           logger.info(`Using coach v2 for user ${user.username}`);
+
+          // Fetch user's active reminders for v2 coach
+          const reminders = await prisma.reminder.findMany({
+            where: {
+              userId: user.id,
+              status: "PENDING",
+            },
+            orderBy: { triggerAt: "asc" },
+          });
+
           const v2Response = await coachAgentService.generateResponse({
             user,
             message,
             conversationHistory,
             plans: plans as Array<typeof plans[0] & { sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }> }>,
+            reminders,
           });
           aiResponse = {
             messageContent: v2Response.messageContent,

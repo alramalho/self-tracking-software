@@ -15,7 +15,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, MoreVertical, Plus } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Target, X, MoreVertical, Plus, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
@@ -215,7 +215,7 @@ function MessageAIPage() {
   const coachChats = useMemo(() =>
     chats?.filter(c => c.type === "COACH")
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()) || []
-  , [chats]);
+    , [chats]);
 
   const currentChat = chats?.find((chat) => chat.id === currentChatId);
 
@@ -589,13 +589,11 @@ function MessageAIPage() {
                 </div>
               </div>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate({ to: "/plans" })}
-                className="gap-2"
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate({ to: "/manage-ai-coach" })}
               >
-                <Target size={16} />
-                See Plans
+                <Settings size={18} />
               </Button>
             </div>
           </div>
@@ -645,9 +643,8 @@ function MessageAIPage() {
                   <div key={message.id}>
                     {showDateDivider && <DateDivider date={messageDate} />}
                     <div
-                      className={`flex gap-3 max-w-full overflow-visible ${
-                        isUserMessage ? "flex-row-reverse" : "flex-row"
-                      }`}
+                      className={`flex gap-3 max-w-full overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
+                        }`}
                     >
                       <div className="flex flex-col gap-1 max-w-full overflow-visible">
                         <MessageBubble
@@ -783,11 +780,10 @@ function MessageAIPage() {
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isSendingMessage}
-                className={`p-2 rounded-full transition-colors ${
-                  inputValue.trim() && !isSendingMessage
+                className={`p-2 rounded-full transition-colors ${inputValue.trim() && !isSendingMessage
                     ? "bg-foreground text-background hover:bg-foreground/90"
                     : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
-                }`}
+                  }`}
               >
                 <Send size={16} />
               </button>
