@@ -18,13 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  BarChartHorizontal,
   Bell,
   ChevronDown,
   ChevronRight,
   MoveRight,
   Pause,
   RefreshCcw,
+  Search,
   Send,
   Users,
 } from "lucide-react";
@@ -438,11 +438,11 @@ function HomePage() {
                   </button>
                 </div>
                 <button
-                  onClick={() => navigate({ to: "/insights/dashboard" })}
+                  onClick={() => navigate({ to: "/search" })}
                   className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                  title="AI Insights"
+                  title="Search"
                 >
-                  <BarChartHorizontal size={24} />
+                  <Search size={24} />
                 </button>
                 <div className="relative">
                   <button
