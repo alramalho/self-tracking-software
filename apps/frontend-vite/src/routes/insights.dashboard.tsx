@@ -1,6 +1,9 @@
 import AINotification from "@/components/AINotification";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
+import { DayOfWeekInsights } from "@/components/metrics/DayOfWeekInsights";
+import { MetricCard } from "@/components/metrics/MetricCard";
+import { MetricHeatmap } from "@/components/metrics/MetricHeatmap";
 import { MetricInsightsCard, type Correlation } from "@/components/metrics/MetricInsightsCard";
 import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
 import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
@@ -18,8 +21,10 @@ import { getThemeVariants } from "@/utils/theme";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type Metric, type MetricEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowDown, Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import Divider from "@/components/Divider";
 
 export const Route = createFileRoute("/insights/dashboard")({
   component: InsightsDashboardPage,
@@ -48,6 +53,16 @@ function InsightsDashboardPage() {
   const { setShowUpgradePopover } = useUpgrade();
   const { isUserFree } = usePaidPlan();
   const isUserOnFreePlan = isUserFree;
+
+  // Selected metric state for toggle pattern
+  const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
+
+  // Auto-select first metric when metrics load
+  useEffect(() => {
+    if (userMetrics && userMetrics.length > 0 && !selectedMetricId) {
+      setSelectedMetricId(userMetrics[0].id);
+    }
+  }, [userMetrics, selectedMetricId]);
 
   if (isUserOnFreePlan && (hasLoadedMetricsAndEntries && userMetrics?.length === 0)) {
     navigate({ to: "/insights/onboarding" });
@@ -388,10 +403,25 @@ function InsightsDashboardPage() {
     return ((thisWeekAvg - lastWeekAvg) / lastWeekAvg) * 100;
   };
 
+  // Handle metric selection toggle
+  const handleMetricSelect = (metricId: string) => {
+    if (selectedMetricId === metricId) {
+      setSelectedMetricId(null);
+    } else {
+      setSelectedMetricId(metricId);
+    }
+  };
+
+  // Get selected metric and its data
+  const selectedMetric = userMetrics?.find((m) => m.id === selectedMetricId);
+  const selectedMetricEntries = entries?.filter(
+    (e) => e.metricId === selectedMetricId
+  ) || [];
 
   // Render insights when we have enough data
   return (
     <div className="mx-auto p-6 max-w-2xl space-y-8">
+      {/* Check-ins Section */}
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
         <DailyCheckinViewer
@@ -401,97 +431,170 @@ function InsightsDashboardPage() {
         />
       </div>
 
+      {/* Metrics Section with Toggle Pattern */}
       <div>
         <h3 className="text-lg font-semibold my-4">Metrics</h3>
 
-        <div className="space-y-4">
-          {userMetrics?.map((metric) => {
-            const count = entries?.filter(
-              (e) => e.metricId === metric.id
-            ).length;
+        {/* Metric Cards Grid */}
+        <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
+          <AnimatePresence mode="popLayout">
+            {userMetrics?.map((metric, index) => {
+              const entryCount = entries?.filter(
+                (e) => e.metricId === metric.id
+              ).length || 0;
 
-            // Check if we have enough data to show insights
-            const hasEnoughData = count && count >= MINIMUM_ENTRIES;
-            const trend = calculateMetricTrend(
-              entries?.filter((e) => e.metricId === metric.id) || []
-            );
-
-            // Calculate weekly averages for display
-            const twoWeeksAgo = new Date();
-            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-            const recentEntries = entries
-              ?.filter((e) => e.metricId === metric.id)
-              .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
-              .sort(
-                (a, b) =>
-                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              return (
+                <motion.div
+                  key={metric.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{
+                    layout: { type: "spring", stiffness: 350, damping: 25 },
+                    opacity: { duration: 0.2 },
+                    scale: { duration: 0.2 },
+                    delay: index * 0.03,
+                  }}
+                >
+                  <MetricCard
+                    metric={metric}
+                    isSelected={selectedMetricId === metric.id}
+                    onSelect={handleMetricSelect}
+                    entryCount={entryCount}
+                  />
+                </motion.div>
               );
+            })}
+          </AnimatePresence>
 
-            const thisWeekEntries = recentEntries?.filter(
-              (entry) => new Date(entry.createdAt) >= oneWeekAgo
-            );
-            const lastWeekEntries = recentEntries?.filter(
-              (entry) => new Date(entry.createdAt) < oneWeekAgo
-            );
-
-            const thisWeekAvg =
-              (thisWeekEntries?.length || 0) > 0 && thisWeekEntries
-                ? thisWeekEntries.reduce(
-                    (sum, entry) => sum + entry.rating,
-                    0
-                  ) / thisWeekEntries.length
-                : 0;
-            const lastWeekAvg =
-              (lastWeekEntries?.length || 0) > 0 && lastWeekEntries
-                ? lastWeekEntries.reduce(
-                    (sum, entry) => sum + entry.rating,
-                    0
-                  ) / lastWeekEntries.length
-                : 0;
-
-            if (!hasEnoughData) {
-              const nextMilestone = getNextMilestone(count || 0);
-              return renderProgressUI(nextMilestone, metric);
-            }
-
-            return (
-              <div key={metric.id} className="space-y-4">
-                <MetricTrendCard
-                  metric={metric}
-                  trend={trend}
-                  thisWeekAvg={thisWeekAvg}
-                  lastWeekAvg={lastWeekAvg}
-                  thisWeekEntries={thisWeekEntries || []}
-                  lastWeekEntries={lastWeekEntries || []}
-                  onHelpClick={() => setTrendHelpMetricId(metric.id)}
-                />
-
-                <MetricInsightsCard
-                  metric={metric}
-                  activities={activities}
-                  activityEntries={activityEntries}
-                  metricEntries={entries || []}
-                  onHelpClick={() => setHelpMetricId(metric.id)}
-                />
-
-                <TrendHelpPopover
-                  isOpen={trendHelpMetricId === metric.id}
-                  onClose={() => setTrendHelpMetricId(null)}
-                  metricTitle={metric.title}
-                />
-
-                <CorrelationHelpPopover
-                  isOpen={helpMetricId === metric.id}
-                  onClose={() => setHelpMetricId(null)}
-                  metricTitle={metric.title}
-                />
-              </div>
-            );
-          })}
+          {/* Add Metric Button */}
+          <Button
+            variant="outline"
+            className="bg-muted/50 w-full h-20 flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
+            onClick={() => navigate({ to: "/insights/onboarding" })}
+          >
+            <Plus className="h-8 w-8 text-muted-foreground/70" />
+          </Button>
         </div>
+
+        <Divider />
+
+        {/* Selected Metric Details */}
+        <AnimatePresence mode="wait">
+          {selectedMetric && (
+            <motion.div
+              key={selectedMetricId}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4 mt-6"
+            >
+              {/* Metric Title */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-4xl">{selectedMetric.emoji}</span>
+                <h2 className="text-2xl font-bold">{selectedMetric.title}</h2>
+              </div>
+
+              {/* Check if we have enough data */}
+              {(() => {
+                const count = selectedMetricEntries.length;
+                const hasEnoughData = count >= MINIMUM_ENTRIES;
+
+                if (!hasEnoughData) {
+                  const nextMilestone = getNextMilestone(count);
+                  return renderProgressUI(nextMilestone, selectedMetric);
+                }
+
+                // Calculate trend and weekly data
+                const trend = calculateMetricTrend(selectedMetricEntries);
+                const twoWeeksAgo = new Date();
+                twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+                const recentEntries = selectedMetricEntries
+                  .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
+                  .sort(
+                    (a, b) =>
+                      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                  );
+
+                const thisWeekEntries = recentEntries.filter(
+                  (entry) => new Date(entry.createdAt) >= oneWeekAgo
+                );
+                const lastWeekEntries = recentEntries.filter(
+                  (entry) => new Date(entry.createdAt) < oneWeekAgo
+                );
+
+                const thisWeekAvg =
+                  thisWeekEntries.length > 0
+                    ? thisWeekEntries.reduce(
+                        (sum, entry) => sum + entry.rating,
+                        0
+                      ) / thisWeekEntries.length
+                    : 0;
+                const lastWeekAvg =
+                  lastWeekEntries.length > 0
+                    ? lastWeekEntries.reduce(
+                        (sum, entry) => sum + entry.rating,
+                        0
+                      ) / lastWeekEntries.length
+                    : 0;
+
+                return (
+                  <>
+                    {/* Heatmap */}
+                    <MetricHeatmap
+                      entries={selectedMetricEntries}
+                      metricEmoji={selectedMetric.emoji}
+                    />
+
+                    {/* Day of Week Insights */}
+                    <DayOfWeekInsights
+                      entries={selectedMetricEntries}
+                      metricTitle={selectedMetric.title}
+                      metricEmoji={selectedMetric.emoji}
+                    />
+
+                    {/* Trend Card */}
+                    <MetricTrendCard
+                      metric={selectedMetric}
+                      trend={trend}
+                      thisWeekAvg={thisWeekAvg}
+                      lastWeekAvg={lastWeekAvg}
+                      thisWeekEntries={thisWeekEntries}
+                      lastWeekEntries={lastWeekEntries}
+                      onHelpClick={() => setTrendHelpMetricId(selectedMetric.id)}
+                    />
+
+                    {/* Activity Correlations */}
+                    <MetricInsightsCard
+                      metric={selectedMetric}
+                      activities={activities}
+                      activityEntries={activityEntries}
+                      metricEntries={entries || []}
+                      onHelpClick={() => setHelpMetricId(selectedMetric.id)}
+                    />
+
+                    <TrendHelpPopover
+                      isOpen={trendHelpMetricId === selectedMetric.id}
+                      onClose={() => setTrendHelpMetricId(null)}
+                      metricTitle={selectedMetric.title}
+                    />
+
+                    <CorrelationHelpPopover
+                      isOpen={helpMetricId === selectedMetric.id}
+                      onClose={() => setHelpMetricId(null)}
+                      metricTitle={selectedMetric.title}
+                    />
+                  </>
+                );
+              })()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

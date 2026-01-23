@@ -26,6 +26,7 @@ import {
   RefreshCcw,
   Search,
   Send,
+  Target,
   Users,
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
@@ -586,11 +587,13 @@ function HomePage() {
                         )}
                       </button>
                     )}
-                    <div className="flex flex-row items-center justify-between gap-2">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Your Plans
-                      </h3>
-                    </div>
+                    <Target size={18} className="text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Your Plans
+                    </h3>
+                    <span className="text-sm text-muted-foreground">
+                      ({activePlans.length})
+                    </span>
                   </div>
                   <button
                     onClick={() => navigate({ to: "/plans" })}

@@ -12,7 +12,7 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { type Activity, type PlanType } from "@tsw/prisma";
-import { ArrowRight, Bell, Check, MessageCircle, RefreshCcw, Sparkles, Squirrel, User } from "lucide-react";
+import { ArrowRight, Bell, Check, MessageCircle, RefreshCcw, Sparkles, Squirrel, User, Users } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -477,14 +477,16 @@ const TimelineRenderer: React.FC<{
 
   return (
     <div ref={timelineRef} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div className="flex items-center justify-start mt-4 col-span-2 sm:col-span-4">
-        <h2 className="mt-0 text-lg font-semibold ">
+      <div className="flex items-center justify-start gap-2 mt-4 col-span-2 sm:col-span-4">
+        <Users size={18} className="text-muted-foreground" />
+        <h2 className="mt-0 text-lg font-semibold">
           Friend&apos;s last activities
         </h2>
+        <span className="text-sm text-muted-foreground">
+          ({mergedTimelineItems.length})
+        </span>
         {isLoadingTimeline && (
-          <span>
-            <RefreshCcw className={`w-4 h-4 ml-2 animate-spin`} />
-          </span>
+          <RefreshCcw className="w-4 h-4 animate-spin" />
         )}
       </div>
 
