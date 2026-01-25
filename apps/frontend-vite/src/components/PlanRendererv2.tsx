@@ -33,6 +33,7 @@ import {
   UserPlus,
   BarChart3,
   BarChartHorizontal,
+  Activity,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
@@ -559,9 +560,42 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-      {/* 1. Next 2 Weeks Calendar View (SPECIFIC plans) or Current Week (TIMES_PER_WEEK) */}
+      {/* 1. Activities Overview Grid */}
+      <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
+        <div className="rounded-2xl border border-border p-2 mb-6">
+        {selectedPlan.outlineType === "SPECIFIC" && (
+          <div className="flex flex-row justify-end items-center gap-2 mb-4">
+            <span className="text-xs text-muted-foreground">Completed</span>
+            <Switch
+              data-testid="display-future-activities-switch"
+              checked={displayFutureActivities}
+              onCheckedChange={setDisplayFutureActivities}
+            />
+            <span className="text-xs text-muted-foreground">Planned</span>
+          </div>
+        )}
+        {displayFutureActivities ? (
+          <PlanSessionsRenderer
+            plan={selectedPlan}
+            activities={activities.filter((a) =>
+              selectedPlan.activities.map((a) => a.id).includes(a.id)
+            )}
+            startDate={getStartDate()}
+          />
+        ) : (
+          <PlanActivityEntriesRenderer
+            plan={selectedPlan}
+            activities={activities}
+            activityEntries={activityEntries}
+            startDate={getStartDate()}
+          />
+        )}
+        </div>
+      </AnimatedSection>
+
+      {/* 2. Next 2 Weeks Calendar View (SPECIFIC plans) or Current Week (TIMES_PER_WEEK) */}
       {selectedPlan.outlineType === "SPECIFIC" ? (
-        <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
           <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
             <div className="flex justify-between items-center mb-4">
               <span className="text-lg font-semibold">Coming up</span>
@@ -578,7 +612,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
           </div>
         </AnimatedSection>
       ) : currentWeekData && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.2 : 0.15}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
           <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
@@ -605,9 +639,9 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-      {/* 2. Coach Info Banner (Human Coach) */}
+      {/* 3. Coach Info Banner (Human Coach) */}
       {isPlanCoached(selectedPlan) && planCoach && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
           <div className="mb-6">
             <div className="rounded-2xl overflow-hidden relative">
               {/* Background with coach's profile image */}
@@ -654,7 +688,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       {/* AI Coach Overview (deprecated - will be removed) */}
       {isPlanCoached(selectedPlan) && !planCoach && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.25 : 0.2}>
+        <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
           <div className="mb-6">
           <CoachOverviewCard
             selectedPlan={selectedPlan}
@@ -673,39 +707,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
           </div>
         </AnimatedSection>
       )}
-
-      {/* 3. Activities Overview Grid Card */}
-      <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
-        <div className="rounded-2xl bg-card border border-border p-4 mb-6">
-        {selectedPlan.outlineType === "SPECIFIC" && (
-          <div className="flex flex-row justify-end items-center gap-2 mb-4">
-            <span className="text-xs text-muted-foreground">Completed</span>
-            <Switch
-              data-testid="display-future-activities-switch"
-              checked={displayFutureActivities}
-              onCheckedChange={setDisplayFutureActivities}
-            />
-            <span className="text-xs text-muted-foreground">Planned</span>
-          </div>
-        )}
-        {displayFutureActivities ? (
-          <PlanSessionsRenderer
-            plan={selectedPlan}
-            activities={activities.filter((a) =>
-              selectedPlan.activities.map((a) => a.id).includes(a.id)
-            )}
-            startDate={getStartDate()}
-          />
-        ) : (
-          <PlanActivityEntriesRenderer
-            plan={selectedPlan}
-            activities={activities}
-            activityEntries={activityEntries}
-            startDate={getStartDate()}
-          />
-        )}
-        </div>
-      </AnimatedSection>
 
       {/* 4. Metrics Insights for Plan Activities */}
       {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
@@ -735,7 +736,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
           </div>
           <Link to="/insights/dashboard">
             <div className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4">
-              <BarChartHorizontal className="h-5 w-5 text-muted-foreground" />
+              <Activity className="h-5 w-5 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">
                 See full metrics dashboard
               </span>
