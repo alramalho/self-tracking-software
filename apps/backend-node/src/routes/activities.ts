@@ -463,6 +463,156 @@ router.put(
   }
 );
 
+// Add or update photo for activity entry (only entries from last 7 days)
+router.put(
+  "/activity-entries/:activityEntryId/photo",
+  requireAuth,
+  upload.single("photo"),
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+      const photo = req.file;
+
+      if (!photo) {
+        return res.status(400).json({ error: "No photo provided" });
+      }
+
+      // Verify ownership
+      const existingEntry = await prisma.activityEntry.findFirst({
+        where: {
+          id: activityEntryId,
+          userId: req.user!.id,
+          deletedAt: null,
+        },
+      });
+
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Activity entry not found" });
+      }
+
+      // Check if entry is within last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      if (existingEntry.createdAt < sevenDaysAgo) {
+        return res.status(403).json({
+          error: "Can only edit photos for activity entries from the last 7 days",
+        });
+      }
+
+      // Delete old photo from S3 if it exists
+      if (existingEntry.imageS3Path) {
+        try {
+          await s3Service.delete(existingEntry.imageS3Path);
+          logger.info(`Deleted old photo from S3: ${existingEntry.imageS3Path}`);
+        } catch (error) {
+          logger.warn(`Failed to delete old photo from S3: ${existingEntry.imageS3Path}`, error);
+        }
+      }
+
+      // Upload new photo
+      const photoId = uuidv4();
+      const fileExtension = photo.originalname
+        ? photo.originalname.split(".").pop()
+        : "jpg";
+      const s3Path = `/users/${req.user!.id}/activity_entries/${existingEntry.id}/photos/${photoId}.${fileExtension}`;
+
+      await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
+
+      // Use public URL
+      const publicUrl = s3Service.getPublicUrl(s3Path);
+
+      // Update entry with new image information
+      const updatedEntry = await prisma.activityEntry.update({
+        where: { id: activityEntryId },
+        data: {
+          imageS3Path: s3Path,
+          imageUrl: publicUrl,
+          imageExpiresAt: null,
+          imageCreatedAt: new Date(),
+        },
+      });
+
+      logger.info(`Photo updated successfully for activity entry ${activityEntryId}`);
+
+      res.json(updatedEntry);
+    } catch (error) {
+      logger.error("Error updating activity entry photo:", error);
+      res.status(500).json({ error: "Failed to update photo" });
+    }
+  }
+);
+
+// Delete photo from activity entry (only entries from last 7 days)
+router.delete(
+  "/activity-entries/:activityEntryId/photo",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+
+      // Verify ownership
+      const existingEntry = await prisma.activityEntry.findFirst({
+        where: {
+          id: activityEntryId,
+          userId: req.user!.id,
+          deletedAt: null,
+        },
+      });
+
+      if (!existingEntry) {
+        return res.status(404).json({ error: "Activity entry not found" });
+      }
+
+      // Check if entry is within last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      if (existingEntry.createdAt < sevenDaysAgo) {
+        return res.status(403).json({
+          error: "Can only delete photos for activity entries from the last 7 days",
+        });
+      }
+
+      if (!existingEntry.imageS3Path) {
+        return res.status(404).json({ error: "No photo to delete" });
+      }
+
+      // Delete photo from S3
+      try {
+        await s3Service.delete(existingEntry.imageS3Path);
+        logger.info(`Deleted photo from S3: ${existingEntry.imageS3Path}`);
+      } catch (error) {
+        logger.warn(`Failed to delete photo from S3: ${existingEntry.imageS3Path}`, error);
+      }
+
+      // Clear image fields
+      const updatedEntry = await prisma.activityEntry.update({
+        where: { id: activityEntryId },
+        data: {
+          imageS3Path: null,
+          imageUrl: null,
+          imageExpiresAt: null,
+          imageCreatedAt: null,
+        },
+      });
+
+      logger.info(`Photo deleted for activity entry ${activityEntryId}`);
+
+      res.json(updatedEntry);
+    } catch (error) {
+      logger.error("Error deleting activity entry photo:", error);
+      res.status(500).json({ error: "Failed to delete photo" });
+    }
+  }
+);
+
 // Modify reactions for activity entry (unified add/remove)
 router.post(
   "/activity-entries/:activityEntryId/modify-reactions",

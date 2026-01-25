@@ -885,6 +885,8 @@ function ProfilePage() {
               datetime: showEditActivityEntry.datetime,
               activityId: showEditActivityEntry.activityId || "",
               description: showEditActivityEntry.description || undefined,
+              imageUrl: showEditActivityEntry.imageUrl,
+              createdAt: showEditActivityEntry.createdAt,
             }}
             onClose={() => setShowActivityToEdit(undefined)}
           />

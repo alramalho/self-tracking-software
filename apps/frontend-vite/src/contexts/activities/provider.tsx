@@ -594,6 +594,66 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const updateActivityEntryPhotoMutation = useMutation({
+    mutationFn: async (data: { activityEntryId: string; photo: File }) => {
+      const formData = new FormData();
+      formData.append("photo", data.photo);
+
+      const response = await api.put(
+        `/activities/activity-entries/${data.activityEntryId}/photo`,
+        formData
+      );
+      return response.data;
+    },
+    onSuccess: (updatedEntry) => {
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+          return old.map((entry) =>
+            entry.id === updatedEntry.id ? { ...entry, ...updatedEntry } : entry
+          );
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast.success("Photo updated successfully!");
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || "Failed to update photo";
+      handleQueryError(error, errorMessage);
+      toast.error(errorMessage);
+    },
+  });
+
+  const deleteActivityEntryPhotoMutation = useMutation({
+    mutationFn: async (data: { activityEntryId: string }) => {
+      const response = await api.delete(
+        `/activities/activity-entries/${data.activityEntryId}/photo`
+      );
+      return response.data;
+    },
+    onSuccess: (updatedEntry) => {
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+          return old.map((entry) =>
+            entry.id === updatedEntry.id ? { ...entry, ...updatedEntry } : entry
+          );
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast.success("Photo deleted successfully!");
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || "Failed to delete photo";
+      handleQueryError(error, errorMessage);
+      toast.error(errorMessage);
+    },
+  });
+
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
     activityEntries: activitiesEntriesQuery.data || [],
@@ -626,6 +686,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     removeCommentFromAchievement: removeCommentFromAchievementMutation.mutateAsync,
     deleteAchievementPost: deleteAchievementPostMutation.mutateAsync,
     isDeletingAchievementPost: deleteAchievementPostMutation.isPending,
+
+    updateActivityEntryPhoto: updateActivityEntryPhotoMutation.mutateAsync,
+    deleteActivityEntryPhoto: deleteActivityEntryPhotoMutation.mutateAsync,
+    isUpdatingActivityEntryPhoto: updateActivityEntryPhotoMutation.isPending,
+    isDeletingActivityEntryPhoto: deleteActivityEntryPhotoMutation.isPending,
   };
 
   return (
