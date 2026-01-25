@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { type BaseLoweredThemeColor } from "@/utils/theme";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Activity,
   Home,
   Loader2,
   Plus,
@@ -260,7 +261,7 @@ const BottomNav = () => {
               {isLoadingInsights ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <Users size={24} strokeWidth={2.5} />
+                <Activity size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(

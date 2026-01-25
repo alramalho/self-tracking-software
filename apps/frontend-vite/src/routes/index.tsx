@@ -15,6 +15,7 @@ import { PendingPlanBanner } from "@/components/PendingPlanBanner";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
@@ -410,6 +411,17 @@ function HomePage() {
                     </AvatarFallback>
                   </Avatar>
                 </ProgressRing>
+                <span
+                  className={cn(
+                    "text-3xl font-cursive",
+                    isUserOnFreePlan
+                      ? "text-muted-foreground cursor-pointer"
+                      : "text-blue-500"
+                  )}
+                  onClick={isUserOnFreePlan ? () => setShowUpgradePopover(true) : undefined}
+                >
+                  {isUserOnFreePlan ? "Free" : "Plus"}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <button

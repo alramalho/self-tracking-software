@@ -9,52 +9,47 @@ import { AnimatePresence, motion } from "framer-motion";
 interface MetricHeatmapProps {
   entries: MetricEntry[];
   metricEmoji?: string;
+  metricTitle?: string;
 }
 
-// Colors for metric intensity (0-10 rating scale)
+// Colors for metric intensity (0-5 rating scale)
 const getMetricColorMatrix = (isLightMode: boolean) => {
   if (isLightMode) {
     return [
       "#EBEDF0", // 0 - empty/no rating
-      "#FFE5E5", // 1-2 - very low
-      "#FFCCCC", // 3
-      "#FFB3B3", // 4
-      "#FFDB99", // 5 - neutral
-      "#D4EDBC", // 6
-      "#B8E0A0", // 7
-      "#9CD384", // 8
-      "#7FC668", // 9
-      "#62B94C", // 10 - best
+      "#F87171", // 1 - low (red)
+      "#FDBA74", // 2 - below average (orange)
+      "#FDE047", // 3 - neutral (yellow)
+      "#A3E635", // 4 - good (lime green)
+      "#4ADE80", // 5 - best (green)
     ];
   }
   return [
     "#242424", // 0 - empty/no rating
-    "#4A2020", // 1-2 - very low
-    "#5C2828", // 3
-    "#6E3030", // 4
-    "#5C4A20", // 5 - neutral
-    "#3A4A28", // 6
-    "#325A28", // 7
-    "#2A6A28", // 8
-    "#227A28", // 9
-    "#1A8A28", // 10 - best
+    "#991B1B", // 1 - low (dark red)
+    "#9A3412", // 2 - below average (dark orange)
+    "#A16207", // 3 - neutral (dark yellow)
+    "#4D7C0F", // 4 - good (dark lime)
+    "#166534", // 5 - best (dark green)
   ];
 };
 
 const getColorForRating = (rating: number, isLightMode: boolean): string => {
   const colors = getMetricColorMatrix(isLightMode);
-  // Map rating 0-10 to color index 0-9
-  const index = Math.min(Math.max(Math.round(rating), 0), 10);
+  // Map rating 0-5 to color index 0-5
+  const index = Math.min(Math.max(Math.round(rating), 0), 5);
   return colors[index] || colors[0];
 };
 
 export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
   entries,
   metricEmoji,
+  metricTitle,
 }) => {
   const { isLightMode } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isTodayVisible, setIsTodayVisible] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Get the earliest entry date as start date
   const sortedEntries = [...entries].sort(
@@ -137,8 +132,55 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
 
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  // Get entries for the selected date
+  const getEntriesForSelectedDate = () => {
+    if (!selectedDate) return [];
+    const selectedDateStr = format(selectedDate, "yyyy/MM/dd");
+    return entries.filter(
+      (entry) => format(new Date(entry.createdAt), "yyyy/MM/dd") === selectedDateStr
+    );
+  };
+
+  const renderSelectedDateViewer = () => {
+    if (!selectedDate) return null;
+
+    const entriesOnDate = getEntriesForSelectedDate();
+    const avgRating = entriesOnDate.length > 0
+      ? entriesOnDate.reduce((sum, e) => sum + e.rating, 0) / entriesOnDate.length
+      : null;
+
+    return (
+      <div className="p-4 bg-muted/70 backdrop-blur-sm rounded-xl w-full max-w-md mb-4">
+        <h3 className="text-md font-semibold mb-2 text-left">
+          {metricEmoji} {metricTitle ? `${metricTitle} on ` : ""}{format(selectedDate, "MMMM d, yyyy")}
+        </h3>
+        {entriesOnDate.length === 0 ? (
+          <p className="text-left text-sm text-muted-foreground">
+            No rating recorded for this date.
+          </p>
+        ) : (
+          <div className="text-left">
+            <p className="text-2xl font-bold">
+              {avgRating !== null ? avgRating.toFixed(1) : "-"} <span className="text-sm font-normal text-muted-foreground">/ 5</span>
+            </p>
+            {entriesOnDate.length > 1 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Average of {entriesOnDate.length} entries
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="mb-4 grid gap-3 -mx-4">
+      {/* Selected date viewer */}
+      <div className="flex justify-center px-4">
+        {renderSelectedDateViewer()}
+      </div>
+
       <div className="relative flex max-w-full overflow-x-scroll">
         {/* Fixed weekday labels */}
         <div className="sticky left-0 z-20 flex flex-col gap-[6px] pt-[30px] pr-2 pl-4 ml-0">
@@ -187,6 +229,16 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                   ? "metric-heatmap-today-cell"
                   : undefined;
 
+                // Check if selected
+                const isSelected = selectedDate &&
+                  dateObj.getTime() === new Date(
+                    Date.UTC(
+                      selectedDate.getFullYear(),
+                      selectedDate.getMonth(),
+                      selectedDate.getDate()
+                    )
+                  ).getTime();
+
                 // Get color based on rating (data.count is the average rating)
                 const hasData = data.count !== undefined && data.count > 0;
                 const fillColor = hasData
@@ -196,7 +248,15 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                   : "#242424";
 
                 return (
-                  <g id={todayCellId}>
+                  <g
+                    id={todayCellId}
+                    onClick={() => {
+                      if (!isNaN(dateObj.getTime())) {
+                        setSelectedDate(dateObj);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <rect
                       {...(props as React.SVGProps<SVGRectElement>)}
                       fill={fillColor}
@@ -207,6 +267,15 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                         {...(props as React.SVGProps<SVGRectElement>)}
                         fill="none"
                         stroke="#FF0000"
+                        strokeWidth={2}
+                        rx={4}
+                      />
+                    )}
+                    {isSelected && (
+                      <rect
+                        {...(props as React.SVGProps<SVGRectElement>)}
+                        fill="none"
+                        stroke="#0066FF"
                         strokeWidth={2}
                         rx={4}
                       />
@@ -240,7 +309,7 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
       <div className="flex justify-center items-center gap-2 text-xs text-muted-foreground px-4">
         <span>Low</span>
         <div className="flex gap-0.5">
-          {[1, 3, 5, 7, 10].map((rating) => (
+          {[1, 2, 3, 4, 5].map((rating) => (
             <div
               key={rating}
               className="w-3 h-3 rounded-sm"
