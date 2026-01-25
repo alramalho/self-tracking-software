@@ -1,4 +1,5 @@
 import AINotification from "@/components/AINotification";
+import AppleLikePopover from "@/components/AppleLikePopover";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { DayOfWeekInsights } from "@/components/metrics/DayOfWeekInsights";
@@ -10,10 +11,12 @@ import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useMetrics } from "@/contexts/metrics";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
+import { useFeedback } from "@/hooks/useFeedback";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { defaultMetrics, MINIMUM_ENTRIES } from "@/lib/metrics";
@@ -53,9 +56,14 @@ function InsightsDashboardPage() {
   const { setShowUpgradePopover } = useUpgrade();
   const { isUserFree } = usePaidPlan();
   const isUserOnFreePlan = isUserFree;
+  const { sendFeedback, isSendingFeedback } = useFeedback();
 
   // Selected metric state for toggle pattern
   const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
+
+  // Metric request popover state
+  const [showMetricRequestPopover, setShowMetricRequestPopover] = useState(false);
+  const [metricRequestText, setMetricRequestText] = useState("");
 
   // Auto-select first metric when metrics load
   useEffect(() => {
@@ -472,11 +480,55 @@ function InsightsDashboardPage() {
           <Button
             variant="outline"
             className="bg-muted/50 w-full h-20 flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
-            onClick={() => navigate({ to: "/insights/onboarding" })}
+            onClick={() => setShowMetricRequestPopover(true)}
           >
             <Plus className="h-8 w-8 text-muted-foreground/70" />
           </Button>
         </div>
+
+        {/* Metric Request Popover */}
+        <AppleLikePopover
+          open={showMetricRequestPopover}
+          onClose={() => {
+            setShowMetricRequestPopover(false);
+            setMetricRequestText("");
+          }}
+          title="Request a Metric"
+        >
+          <div className="p-4 space-y-4">
+            <h2 className="text-xl font-semibold">Request a New Metric</h2>
+            <p className="text-sm text-muted-foreground">
+              What metric would you like to track? We'll review your request and consider adding it.
+            </p>
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">
+                Metric description <span className="text-red-500">*</span>
+              </label>
+              <TextAreaWithVoice
+                value={metricRequestText}
+                onChange={setMetricRequestText}
+                className="w-full px-3 py-2 border border-border rounded-lg min-h-[100px] focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="e.g., Sleep quality, Stress level, Social interactions..."
+              />
+            </div>
+            <Button
+              onClick={async () => {
+                if (!metricRequestText.trim()) return;
+                await sendFeedback({
+                  text: `[Metric Request] ${metricRequestText}`,
+                  type: "feature_request",
+                  email: currentUser?.email,
+                });
+                setShowMetricRequestPopover(false);
+                setMetricRequestText("");
+              }}
+              disabled={!metricRequestText.trim() || isSendingFeedback}
+              className="w-full"
+            >
+              {isSendingFeedback ? "Sending..." : "Send Request"}
+            </Button>
+          </div>
+        </AppleLikePopover>
 
         <Divider />
 
@@ -549,6 +601,7 @@ function InsightsDashboardPage() {
                     <MetricHeatmap
                       entries={selectedMetricEntries}
                       metricEmoji={selectedMetric.emoji}
+                      metricTitle={selectedMetric.title}
                     />
 
                     {/* Day of Week Insights */}
