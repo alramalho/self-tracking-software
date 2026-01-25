@@ -83,6 +83,16 @@ export interface ActivitiesContextType {
     userUsername: string;
   }) => Promise<void>;
   isDeletingAchievementPost: boolean;
+
+  updateActivityEntryPhoto: (data: {
+    activityEntryId: string;
+    photo: File;
+  }) => Promise<ActivityEntry>;
+  deleteActivityEntryPhoto: (data: {
+    activityEntryId: string;
+  }) => Promise<ActivityEntry>;
+  isUpdatingActivityEntryPhoto: boolean;
+  isDeletingActivityEntryPhoto: boolean;
 }
 
 export const ActivitiesContext = createContext<

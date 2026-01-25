@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { differenceInDays } from "date-fns";
+import { Camera, ImagePlus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Picker from "react-mobile-picker";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -15,6 +16,8 @@ interface ActivityEntry {
   datetime: Date;
   activityId: string;
   description?: string;
+  imageUrl?: string | null;
+  createdAt?: Date;
 }
 
 interface ActivityEntryEditorProps {
@@ -39,14 +42,64 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   const [description, setDescription] = useState(activityEntry.description || "");
   const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showDeletePhotoConfirm, setShowDeletePhotoConfirm] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     upsertActivityEntry,
     isUpsertingActivityEntry,
     deleteActivityEntry,
     isDeletingActivityEntry,
+    updateActivityEntryPhoto,
+    deleteActivityEntryPhoto,
+    isUpdatingActivityEntryPhoto,
+    isDeletingActivityEntryPhoto,
     activities,
   } = useActivities();
+
+  // Check if entry is within last 7 days (for photo editing)
+  const entryCreatedAt = activityEntry.createdAt ? new Date(activityEntry.createdAt) : entryDate;
+  const canEditPhoto = differenceInDays(new Date(), entryCreatedAt) <= 7;
+  const hasExistingPhoto = !!activityEntry.imageUrl;
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhoto) return;
+    await updateActivityEntryPhoto({
+      activityEntryId: activityEntry.id,
+      photo: selectedPhoto,
+    });
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const handlePhotoDelete = async () => {
+    await deleteActivityEntryPhoto({
+      activityEntryId: activityEntry.id,
+    });
+    setShowDeletePhotoConfirm(false);
+  };
+
+  const clearSelectedPhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const activity = activities.find((a) => a.id === activityEntry.activityId);
   const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -221,6 +274,115 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           />
         </div>
 
+        {/* Photo Section */}
+        {canEditPhoto && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2 text-center">Photo</h3>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              ref={fileInputRef}
+              className="hidden"
+            />
+
+            {/* Show current photo or selected photo preview */}
+            {(photoPreview || activityEntry.imageUrl) && (
+              <div className="relative mb-3">
+                <img
+                  src={photoPreview || activityEntry.imageUrl || ""}
+                  alt="Activity photo"
+                  className="w-full max-h-48 object-cover rounded-lg"
+                />
+                {photoPreview && (
+                  <button
+                    onClick={clearSelectedPhoto}
+                    className="absolute top-2 right-2 p-1 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Photo action buttons */}
+            <div className="flex gap-2 justify-center">
+              {!photoPreview && !hasExistingPhoto && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1"
+                >
+                  <ImagePlus className="w-4 h-4 mr-2" />
+                  Add Photo
+                </Button>
+              )}
+
+              {!photoPreview && hasExistingPhoto && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Change Photo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setShowDeletePhotoConfirm(true)}
+                    disabled={isDeletingActivityEntryPhoto}
+                  >
+                    {isDeletingActivityEntryPhoto ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {photoPreview && (
+                <Button
+                  type="button"
+                  onClick={handlePhotoUpload}
+                  disabled={isUpdatingActivityEntryPhoto}
+                  className="flex-1"
+                >
+                  {isUpdatingActivityEntryPhoto ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 mr-2" />
+                      Upload Photo
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!canEditPhoto && hasExistingPhoto && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2 text-center">Photo</h3>
+            <img
+              src={activityEntry.imageUrl || ""}
+              alt="Activity photo"
+              className="w-full max-h-48 object-cover rounded-lg mb-2"
+            />
+            <p className="text-xs text-muted-foreground text-center">
+              Photos can only be edited within 7 days of the entry
+            </p>
+          </div>
+        )}
+
         <Button
           onClick={handleSave}
           className="w-full"
@@ -256,6 +418,17 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           }}
           title="Confirm Delete"
           description="Are you sure you want to delete this activity entry?"
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="destructive"
+        />
+
+        <ConfirmDialogOrPopover
+          isOpen={showDeletePhotoConfirm}
+          onClose={() => setShowDeletePhotoConfirm(false)}
+          onConfirm={handlePhotoDelete}
+          title="Delete Photo"
+          description="Are you sure you want to delete this photo?"
           confirmText="Delete"
           cancelText="Cancel"
           variant="destructive"
