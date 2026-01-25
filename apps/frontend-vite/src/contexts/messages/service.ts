@@ -41,11 +41,11 @@ export async function getMessages(
 // Send message to any chat type (coach, direct, group)
 export async function sendMessage(
   api: AxiosInstance,
-  data: { message: string; chatId: string }
+  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }
 ): Promise<Message> {
   const response = await api.post<{ message: MessageApiResponse }>(
     `/chats/${data.chatId}/messages`,
-    { message: data.message }
+    { message: data.message, coachVersion: data.coachVersion }
   );
   return deserializeMessage(response.data.message);
 }
