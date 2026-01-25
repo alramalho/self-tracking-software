@@ -1,5 +1,11 @@
 import { createContext } from "react";
 
+export interface ToolCall {
+  tool: string;
+  args: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
 export interface Message {
   id: string;
   role: "USER" | "COACH" | "SYSTEM";
@@ -9,6 +15,28 @@ export interface Message {
   senderId?: string; // For DIRECT and GROUP chats
   senderName?: string;
   senderPicture?: string;
+  // Coach message fields
+  planReplacements?: Array<{
+    textToReplace: string;
+    plan: { id: string; goal: string; emoji?: string | null };
+  }>;
+  metricReplacement?: {
+    textToReplace: string;
+    rating: number;
+    metric: { id: string; title: string; emoji?: string | null };
+    status?: string;
+  } | null;
+  userRecommendations?: Array<{
+    userId: string;
+    username: string;
+    name: string;
+    picture?: string;
+    planGoal?: string;
+    planEmoji?: string;
+    score: number;
+    matchReasons: string[];
+  }> | null;
+  toolCalls?: ToolCall[] | null;
 }
 
 export type ChatType = "COACH" | "DIRECT" | "GROUP";
@@ -59,7 +87,7 @@ export interface MessagesContextType {
   isLoadingMessages: boolean;
 
   // Mutations
-  sendMessage: (data: { message: string; chatId: string }) => Promise<Message>;
+  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message>;
   isSendingMessage: boolean;
   createDirectChat: (userId: string) => Promise<Chat>;
   isCreatingDirectChat: boolean;

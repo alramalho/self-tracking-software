@@ -224,7 +224,9 @@ const CoachSelector = () => {
                         Focus
                       </p>
                       <p className="text-sm font-semibold">
-                        {details.focusDescription}
+                        {details.focusDescription && details.focusDescription.length > 33
+                          ? details.focusDescription.slice(0, 30) + "..."
+                          : details.focusDescription}
                       </p>
                     </div>
                     {details.idealPlans && details.idealPlans.length > 0 && (

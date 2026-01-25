@@ -324,15 +324,16 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
     <div className={cn("flex flex-col gap-2 mt-3", className)}>
       {/* Plan Adaptations */}
       {planAdaptations.map((tc, idx) => {
-        const args = tc.args as { planId: string; operations: unknown[] };
+        const args = tc.args as { planId: string; operations: unknown[] } | undefined;
         const result = tc.result as {
           success: boolean;
           changes: PlanAdaptationChange[];
           error?: string;
         };
-        const plan = plans.find((p) => p.id === args.planId);
 
-        if (!result.changes || result.changes.length === 0) return null;
+        if (!args?.planId || !result?.changes || result.changes.length === 0) return null;
+
+        const plan = plans.find((p) => p.id === args.planId);
 
         return (
           <div
@@ -396,9 +397,9 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
           success: boolean;
           changes: ReminderChange[];
           error?: string;
-        };
+        } | undefined;
 
-        if (!result.changes || result.changes.length === 0) return null;
+        if (!result?.changes || result.changes.length === 0) return null;
 
         return (
           <div

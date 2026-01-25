@@ -135,6 +135,7 @@ router.get(
               planReplacements,
               metricReplacement,
               userRecommendations: metadata.userRecommendations || null,
+              toolCalls: metadata.toolCalls || null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };
@@ -199,6 +200,7 @@ router.get(
                 planReplacements,
                 metricReplacement,
                 userRecommendations: parsed.userRecommendations || null,
+                toolCalls: parsed.toolCalls || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };
@@ -212,6 +214,7 @@ router.get(
               content: parsed.message || msg.content,
               planReplacements: [],
               metricReplacement: null,
+              toolCalls: null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };
@@ -224,6 +227,7 @@ router.get(
               content: msg.content,
               planReplacements: [],
               metricReplacement: null,
+              toolCalls: null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };

@@ -37,5 +37,8 @@
 /onboarding/{any}
 /plans
 /plans/{any}
+/reminders
+/reminders/{any}
 /stripe/{any}
 /users/{any}
+/utils/{any}
