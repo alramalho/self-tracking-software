@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import { usePlans } from "@/contexts/plans";
+import { useActivities } from "@/contexts/activities/useActivities";
 import { format, isSameDay, startOfDay, addDays } from "date-fns";
 
 interface PlanLinkProps {
@@ -17,6 +18,7 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
   const navigate = useNavigate();
   const themeColors = useThemeColors();
   const { plans } = usePlans();
+  const { activityEntries } = useActivities();
   const [showPreview, setShowPreview] = useState(false);
 
   const plan = useMemo(() => plans?.find((p) => p.id === planId), [plans, planId]);
@@ -42,8 +44,8 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
 
   // Check if session is completed (has activity entry on that day)
   const isSessionCompleted = (session: { date: Date | string; activityId: string }) => {
-    if (!plan?.activityEntries) return false;
-    return plan.activityEntries.some(
+    if (!activityEntries) return false;
+    return activityEntries.some(
       (entry) =>
         entry.activityId === session.activityId &&
         isSameDay(new Date(entry.datetime), new Date(session.date))
