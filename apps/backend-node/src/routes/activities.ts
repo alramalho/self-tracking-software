@@ -168,21 +168,16 @@ router.post(
           // Upload to S3
           await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
 
-          // Generate presigned URL with 7 days expiration
-          const expirationSeconds = 7 * 24 * 60 * 60; // 7 days
-          const presignedUrl = await s3Service.generatePresignedUrl(
-            s3Path,
-            expirationSeconds
-          );
-          const expiresAt = new Date(Date.now() + expirationSeconds * 1000);
+          // Use public URL (bucket policy allows public read for activity_entries photos)
+          const publicUrl = s3Service.getPublicUrl(s3Path);
 
           // Update entry with image information
           entry = await prisma.activityEntry.update({
             where: { id: entry.id },
             data: {
               imageS3Path: s3Path,
-              imageUrl: presignedUrl,
-              imageExpiresAt: expiresAt,
+              imageUrl: publicUrl,
+              imageExpiresAt: null, // No expiration for public URLs
               imageCreatedAt: new Date(),
               imageIsPublic: isPublic === "true" || isPublic === true,
             },
