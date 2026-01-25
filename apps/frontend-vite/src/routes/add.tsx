@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityLogData } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useMetrics } from "@/contexts/metrics";
+import { usePlans } from "@/contexts/plans";
 import { createFileRoute } from "@tanstack/react-router";
 import { differenceInHours } from "date-fns";
 import type { Activity, ActivityEntry } from "@tsw/prisma";
@@ -29,6 +30,7 @@ function LogPage() {
     upsertActivityEntry,
   } = useActivities();
   const { metrics } = useMetrics();
+  const { plans } = usePlans();
 
   const sortedActivities = [...activities].sort((a, b) => {
     const aEntryCount = activityEntries.filter(
@@ -87,15 +89,21 @@ function LogPage() {
     setShowPhotoUploader(false);
     setCurrentEntryId(entryId);
 
-    // Show difficulty popover if activity was within the past 48 hours
+    // Show difficulty popover only for coached plans and if activity was within the past 48 hours
     const isWithin48Hours =
       currentActivityLogData &&
       differenceInHours(new Date(), currentActivityLogData.datetime) < 48;
 
-    if (isWithin48Hours) {
+    const isInCoachedPlan = plans?.some(
+      (p) =>
+        p.isCoached &&
+        p.activities?.some((a) => a.id === selectedActivity?.id)
+    ) ?? false;
+
+    if (isWithin48Hours && isInCoachedPlan) {
       setShowDifficultyPopover(true);
     } else {
-      // Skip to metrics check if activity is older than 48h
+      // Skip to metrics check if not in coached plan or activity is older than 48h
       handleDifficultyDone();
     }
   };
