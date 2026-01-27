@@ -7,7 +7,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
-import { BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { AnimatePresence, motion } from "framer-motion";
@@ -27,6 +27,13 @@ export const isPlanExpired = (plan: {
   return isBefore(plan.finishingDate, new Date());
 };
 
+// Helper function to check if a plan is archived
+export const isPlanArchived = (plan: {
+  archivedAt?: Date | null;
+}): boolean => {
+  return !!plan.archivedAt;
+};
+
 // Function to sort plans: coached first, then by creation date (newest first)
 const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
@@ -43,7 +50,7 @@ interface PlanCardProps {
   plan: CompletePlan;
   isSelected: boolean;
   onSelect: (planId: string) => void;
-  onExpiredPlanClick?: (plan: CompletePlan) => void;
+  onInactivePlanClick?: (plan: CompletePlan) => void;
   isCoached?: boolean;
 }
 
@@ -51,16 +58,18 @@ const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isSelected,
   onSelect,
-  onExpiredPlanClick,
+  onInactivePlanClick,
   isCoached = false,
 }) => {
   const isExpired = isPlanExpired(plan);
+  const isArchived = isPlanArchived(plan);
+  const isInactive = isExpired || isArchived;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
   const handleCardClick = () => {
-    if (isExpired && onExpiredPlanClick) {
-      onExpiredPlanClick(plan);
+    if (isInactive && onInactivePlanClick) {
+      onInactivePlanClick(plan);
     } else {
       onSelect(plan.id!);
     }
@@ -73,6 +82,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <BadgeCheck className={`h-4 w-4 ${variants.fadedText}`} />
         </div>
       )}
+      {isArchived && (
+        <div className="absolute top-1 left-1 z-10 flex bg-transparent">
+          <Archive className={`h-4 w-4 ${variants.fadedText}`} />
+        </div>
+      )}
       <div
         className={`flex items-center justify-center h-20 rounded-lg ring-2 bg-card cursor-pointer transition-all ${
           isSelected
@@ -80,7 +94,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
             : "ring-border hover:ring-muted-foreground/50"
         }`}
         onClick={handleCardClick}
-        style={{ opacity: isExpired ? 0.5 : 1 }}
+        style={{ opacity: isInactive ? 0.5 : 1 }}
       >
         {plan.emoji ? (
           <span className="text-5xl">{plan.emoji}</span>
@@ -103,7 +117,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
   scrollTo,
 }) => {
-  const { plans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
+  const { plans, isLoadingPlans, upsertPlan, deletePlan, archivePlan, unarchivePlan, isArchivingPlan, isUnarchivingPlan } = usePlans();
   const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
@@ -115,7 +129,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   );
   const [orderedPlans, setOrderedPlans] = useState<CompletePlan[]>([]);
   const [showOldPlans, setShowOldPlans] = useState(false);
-  const [expiredPlanPopover, setExpiredPlanPopover] = useState<CompletePlan | null>(null);
+  const [inactivePlanPopover, setInactivePlanPopover] = useState<CompletePlan | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
   const [showPlanLimitPopover, setShowPlanLimitPopover] = useState(false);
@@ -219,22 +233,22 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
-  const handleExpiredPlanClick = (plan: CompletePlan) => {
-    setExpiredPlanPopover(plan);
+  const handleInactivePlanClick = (plan: CompletePlan) => {
+    setInactivePlanPopover(plan);
   };
 
   const handleReactivate = async () => {
-    if (!expiredPlanPopover || isReactivating) return;
+    if (!inactivePlanPopover || isReactivating) return;
 
     setIsReactivating(true);
     try {
       const oneMonthLater = addMonths(new Date(), 1);
       await upsertPlan({
-        planId: expiredPlanPopover.id!,
+        planId: inactivePlanPopover.id!,
         updates: { finishingDate: oneMonthLater }
       });
       toast.success("Plan reactivated");
-      setExpiredPlanPopover(null);
+      setInactivePlanPopover(null);
     } catch (error) {
       toast.error("Failed to reactivate plan");
       console.error("Failed to reactivate plan:", error);
@@ -243,29 +257,53 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
+  const handleArchive = async () => {
+    if (!inactivePlanPopover) return;
+
+    try {
+      await archivePlan(inactivePlanPopover.id!);
+      setInactivePlanPopover(null);
+    } catch (error) {
+      toast.error("Failed to archive plan");
+      console.error("Failed to archive plan:", error);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    if (!inactivePlanPopover) return;
+
+    try {
+      await unarchivePlan(inactivePlanPopover.id!);
+      setInactivePlanPopover(null);
+    } catch (error) {
+      toast.error("Failed to restore plan");
+      console.error("Failed to restore plan:", error);
+    }
+  };
+
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!expiredPlanPopover) return;
+    if (!inactivePlanPopover) return;
 
     try {
-      await deletePlan(expiredPlanPopover.id!);
+      await deletePlan(inactivePlanPopover.id!);
       setShowDeleteConfirm(false);
-      setExpiredPlanPopover(null);
+      setInactivePlanPopover(null);
     } catch (error) {
       toast.error("Failed to delete plan");
       console.error("Failed to delete plan:", error);
     }
   };
 
-  // Filter plans based on whether we're showing old plans
+  // Filter plans based on whether we're showing old/archived plans
   const displayedPlans = showOldPlans
     ? orderedPlans
-    : orderedPlans.filter((plan) => !isPlanExpired(plan));
+    : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
 
-  const hasExpiredPlans = orderedPlans.some((plan) => isPlanExpired(plan));
+  const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
 
   return (
     <div className="space-y-6">
@@ -289,7 +327,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
                 plan={plan}
                 isSelected={selectedPlanId === plan.id}
                 onSelect={handlePlanSelect}
-                onExpiredPlanClick={handleExpiredPlanClick}
+                onInactivePlanClick={handleInactivePlanClick}
                 isCoached={plan.isCoached}
               />
             </motion.div>
@@ -304,7 +342,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         </Button>
       </div>
 
-      {hasExpiredPlans && !showOldPlans && (
+      {hasExpiredOrArchivedPlans && !showOldPlans && (
         <div className="flex justify-center">
           <Button
             variant="ghost"
@@ -312,7 +350,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
             onClick={() => setShowOldPlans(true)}
             className="text-muted-foreground"
           >
-            Show old plans
+            Show old & archived plans
           </Button>
         </div>
       )}
@@ -325,7 +363,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
             onClick={() => setShowOldPlans(false)}
             className="text-muted-foreground"
           >
-            Hide old plans
+            Hide old & archived plans
           </Button>
         </div>
       )}
@@ -345,48 +383,87 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       </AnimatePresence>
 
       <AppleLikePopover
-        open={expiredPlanPopover !== null}
-        onClose={() => setExpiredPlanPopover(null)}
+        open={inactivePlanPopover !== null}
+        onClose={() => setInactivePlanPopover(null)}
         title="Manage Plan"
       >
-        <div className="py-6 space-y-4">
-          <div className="text-center mb-6">
-            <div className="text-6xl mb-3">
-              {expiredPlanPopover?.emoji || "📋"}
+        {inactivePlanPopover && (() => {
+          const isExpired = isPlanExpired(inactivePlanPopover);
+          const isArchived = isPlanArchived(inactivePlanPopover);
+          const statusText = isArchived && isExpired
+            ? "This plan is archived and expired"
+            : isArchived
+              ? "This plan is archived"
+              : "This plan has expired";
+
+          return (
+            <div className="py-6 space-y-4">
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-3">
+                  {inactivePlanPopover?.emoji || "📋"}
+                </div>
+                <h3 className="text-lg font-semibold">
+                  {inactivePlanPopover?.goal}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {statusText}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {isArchived ? (
+                  <Button
+                    onClick={handleUnarchive}
+                    disabled={isUnarchivingPlan}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <ArchiveRestore
+                      className={`h-4 w-4 mr-2 ${isUnarchivingPlan ? "animate-spin" : ""}`}
+                    />
+                    Restore Plan
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleReactivate}
+                      disabled={isReactivating}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 mr-2 ${isReactivating ? "animate-spin" : ""}`}
+                      />
+                      Reactivate Plan
+                    </Button>
+
+                    <Button
+                      onClick={handleArchive}
+                      disabled={isArchivingPlan}
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive Plan
+                    </Button>
+                  </>
+                )}
+
+                <Button
+                  onClick={handleDeleteClick}
+                  disabled={isReactivating || isArchivingPlan || isUnarchivingPlan}
+                  variant="destructive"
+                  className="w-full"
+                  size="lg"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Plan
+                </Button>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold">
-              {expiredPlanPopover?.goal}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              This plan has expired
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <Button
-              onClick={handleReactivate}
-              disabled={isReactivating}
-              className="w-full"
-              size="lg"
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isReactivating ? "animate-spin" : ""}`}
-              />
-              Reactivate Plan
-            </Button>
-
-            <Button
-              onClick={handleDeleteClick}
-              disabled={isReactivating}
-              variant="destructive"
-              className="w-full"
-              size="lg"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Plan
-            </Button>
-          </div>
-        </div>
+          );
+        })()}
       </AppleLikePopover>
 
       <ConfirmDialogOrPopover

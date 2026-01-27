@@ -47,6 +47,10 @@ export interface PlansContextType {
   isPausingPlan: boolean;
   resumePlan: (planId: string) => Promise<void>;
   isResumingPlan: boolean;
+  archivePlan: (planId: string) => Promise<void>;
+  isArchivingPlan: boolean;
+  unarchivePlan: (planId: string) => Promise<void>;
+  isUnarchivingPlan: boolean;
 }
 
 export const PlansContext = createContext<PlansContextType | undefined>(

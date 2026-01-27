@@ -8,12 +8,14 @@ import React, { useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { normalizePlanProgress } from "../plans-progress/service";
 import {
+  archivePlan,
   clearCoachSuggestedSessionsInPlan,
   deletePlan,
   getPlans,
   modifyManualMilestone,
   pausePlan,
   resumePlan,
+  unarchivePlan,
   updatePlans,
   upgradeCoachSuggestedSessionsToPlanSessions,
   uploadPlanBackgroundImage,
@@ -255,6 +257,38 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const archivePlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      await archivePlan(api, planId);
+    },
+    onSuccess: (_data, planId) => {
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+      toast.success("Plan archived!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to archive plan`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const unarchivePlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      await unarchivePlan(api, planId);
+    },
+    onSuccess: (_data, planId) => {
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+      toast.success("Plan restored!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to restore plan`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   // Safety check: Remove coaching flags from all plans if user is on FREE plan
   useEffect(() => {
     // Only run once when plans are loaded and user data is available
@@ -318,6 +352,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     isPausingPlan: pausePlanMutation.isPending,
     resumePlan: resumePlanMutation.mutateAsync,
     isResumingPlan: resumePlanMutation.isPending,
+    archivePlan: archivePlanMutation.mutateAsync,
+    isArchivingPlan: archivePlanMutation.isPending,
+    unarchivePlan: unarchivePlanMutation.mutateAsync,
+    isUnarchivingPlan: unarchivePlanMutation.isPending,
   };
 
   return (
