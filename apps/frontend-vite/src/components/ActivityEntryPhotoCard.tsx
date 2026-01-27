@@ -324,7 +324,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImageExpired =
     activityEntry.imageExpiresAt &&
     new Date(activityEntry.imageExpiresAt) < new Date();
-  const hasImage = activityEntry.imageUrl && !hasImageExpired;
+  // Owner always sees their images, others only see non-expired images
+  const hasImage = activityEntry.imageUrl && (isOwnActivityEntry || !hasImageExpired);
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
   // Extract first URL from description for link preview

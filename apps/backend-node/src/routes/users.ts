@@ -17,6 +17,7 @@ import {
   FriendRequestSchema,
   TestimonialFeedbackSchema,
   ThemeUpdateSchema,
+  TimelineSeenUpdateSchema,
   TimezoneUpdateSchema,
 } from "../types/user";
 import { logger } from "../utils/logger";
@@ -1783,6 +1784,32 @@ usersRouter.post(
       res.status(500).json({
         success: false,
         error: { message: "Failed to update theme" },
+      });
+    }
+  }
+);
+
+// Update last seen timeline timestamp (for cross-device sync)
+usersRouter.post(
+  "/update-timeline-seen",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { lastSeenTimelineAt } = TimelineSeenUpdateSchema.parse(req.body);
+
+      await userService.updateUser(req.user!.id, {
+        lastSeenTimelineAt: new Date(lastSeenTimelineAt),
+      });
+
+      res.json({
+        success: true,
+        lastSeenTimelineAt,
+      });
+    } catch (error) {
+      logger.error("Failed to update timeline seen:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update timeline seen" },
       });
     }
   }

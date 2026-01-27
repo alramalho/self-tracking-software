@@ -4,6 +4,10 @@ export const TimezoneUpdateSchema = z.object({
   timezone: z.string(),
 });
 
+export const TimelineSeenUpdateSchema = z.object({
+  lastSeenTimelineAt: z.string().datetime(),
+});
+
 export const ThemeUpdateSchema = z.object({
   theme_base_color: z.enum(['RANDOM', 'SLATE', 'BLUE', 'VIOLET', 'AMBER', 'EMERALD', 'ROSE']),
 });

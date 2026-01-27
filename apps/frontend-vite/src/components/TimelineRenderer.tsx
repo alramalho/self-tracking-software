@@ -15,6 +15,7 @@ import { type Activity, type PlanType } from "@tsw/prisma";
 import { ArrowRight, Bell, Check, MessageCircle, RefreshCcw, Sparkles, Squirrel, User, Users } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -96,11 +97,22 @@ const TimelineRenderer: React.FC<{
   const dividerRef = useRef<HTMLDivElement>(null);
   const [dividerSeen, setDividerSeen] = useState(false);
 
-  // Track when user last viewed timeline
+  // Track when user last viewed timeline (localStorage for immediate UI, synced with DB)
   const [lastViewedTimelineAt, setLastViewedTimelineAt] = useLocalStorage<
     string | null
   >("last-viewed-timeline-at", null);
 
+  // Sync from DB on mount (DB takes precedence for cross-device sync)
+  const dbLastSeenTimelineAt = (currentUser as any)?.lastSeenTimelineAt as string | null | undefined;
+  useEffect(() => {
+    if (dbLastSeenTimelineAt) {
+      const dbTimestamp = new Date(dbLastSeenTimelineAt).toISOString();
+      // Only update localStorage if DB has a more recent timestamp
+      if (!lastViewedTimelineAt || new Date(dbTimestamp) > new Date(lastViewedTimelineAt)) {
+        setLastViewedTimelineAt(dbTimestamp);
+      }
+    }
+  }, [dbLastSeenTimelineAt]);
 
   // Initialize collapsed state for entries without images
   useEffect(() => {
@@ -242,6 +254,19 @@ const TimelineRenderer: React.FC<{
     return hasNewItems && hasOldItems;
   }, [lastViewedTimelineAt, mergedTimelineItems]);
 
+  // Count new items for badge display
+  const newItemsCount = useMemo(() => {
+    if (!lastViewedTimelineAt || !mergedTimelineItems.length) return 0;
+    const lastViewed = new Date(lastViewedTimelineAt);
+    return mergedTimelineItems.filter((item) => {
+      const itemDate =
+        item.type === "activity"
+          ? new Date(item.data.datetime)
+          : new Date(item.data.createdAt);
+      return itemDate > lastViewed;
+    }).length;
+  }, [lastViewedTimelineAt, mergedTimelineItems]);
+
   // Update last viewed timestamp when user views timeline
   // If divider exists: wait until user scrolls to it
   // If no divider: use 3-second fallback (first-time user or user who's seen everything)
@@ -257,6 +282,10 @@ const TimelineRenderer: React.FC<{
           newestDatetime
         );
         setLastViewedTimelineAt(newestDatetime);
+        // Sync to DB for cross-device persistence (fire and forget)
+        api.post("/users/update-timeline-seen", { lastSeenTimelineAt: newestDatetime }).catch((err) => {
+          console.warn("[Timeline] Failed to sync lastSeenTimelineAt to DB:", err);
+        });
       }
     };
 
@@ -296,7 +325,7 @@ const TimelineRenderer: React.FC<{
 
       return () => clearTimeout(timer);
     }
-  }, [timelineData?.recommendedActivityEntries, setLastViewedTimelineAt, willShowDivider, dividerSeen]);
+  }, [timelineData?.recommendedActivityEntries, setLastViewedTimelineAt, willShowDivider, dividerSeen, api]);
 
   // Reset dividerSeen when timeline data changes significantly
   useEffect(() => {
@@ -485,6 +514,11 @@ const TimelineRenderer: React.FC<{
         <span className="text-sm text-muted-foreground">
           ({mergedTimelineItems.length})
         </span>
+        {newItemsCount > 0 && (
+          <Badge variant="destructive" className="text-xs">
+            {newItemsCount} new
+          </Badge>
+        )}
         {isLoadingTimeline && (
           <RefreshCcw className="w-4 h-4 animate-spin" />
         )}
