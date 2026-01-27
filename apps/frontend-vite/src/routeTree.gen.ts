@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WrappedRouteImport } from './routes/wrapped'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
@@ -33,6 +34,11 @@ import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboa
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 import { Route as EditPlanPlanIdRouteImport } from './routes/edit-plan.$planId'
 
+const WrappedRoute = WrappedRouteImport.update({
+  id: '/wrapped',
+  path: '/wrapped',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
   path: '/upgrade',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/wrapped': typeof WrappedRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/wrapped': typeof WrappedRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
+  '/wrapped': typeof WrappedRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/wrapped'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/wrapped'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/upgrade'
+    | '/wrapped'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
   UpgradeRoute: typeof UpgradeRoute
+  WrappedRoute: typeof WrappedRoute
   EditPlanPlanIdRoute: typeof EditPlanPlanIdRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
@@ -331,6 +344,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wrapped': {
+      id: '/wrapped'
+      path: '/wrapped'
+      fullPath: '/wrapped'
+      preLoaderRoute: typeof WrappedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade': {
       id: '/upgrade'
       path: '/upgrade'
@@ -511,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
   UpgradeRoute: UpgradeRoute,
+  WrappedRoute: WrappedRoute,
   EditPlanPlanIdRoute: EditPlanPlanIdRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,

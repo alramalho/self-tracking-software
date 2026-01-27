@@ -180,6 +180,7 @@ function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
     "createdAt",
     "updatedAt",
     "lastActiveAt",
+    "lastSeenTimelineAt",
     "connectionsFrom.createdAt",
     "connectionsFrom.updatedAt",
     "connectionsTo.createdAt",
