@@ -303,3 +303,17 @@ export async function resumePlan(api: AxiosInstance, planId: string) {
   );
   return response.data;
 }
+
+export async function archivePlan(api: AxiosInstance, planId: string) {
+  const response = await api.post<{ success: boolean; plan: PlanApiResponse }>(
+    `/plans/${planId}/archive`
+  );
+  return response.data;
+}
+
+export async function unarchivePlan(api: AxiosInstance, planId: string) {
+  const response = await api.post<{ success: boolean; plan: PlanApiResponse }>(
+    `/plans/${planId}/unarchive`
+  );
+  return response.data;
+}

@@ -179,7 +179,7 @@ function ProfilePage() {
   );
 
   const profileActivePlans = profileData?.plans?.filter(
-    (p) => !isPlanExpired({ finishingDate: p.finishingDate })
+    (p) => !isPlanExpired({ finishingDate: p.finishingDate }) && !(p as any).archivedAt
   );
 
   const [showEditActivityEntry, setShowActivityToEdit] = useState<

@@ -320,6 +320,7 @@ model Plan {
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @default(now()) @updatedAt
   deletedAt                  DateTime?
+  archivedAt                 DateTime?
   durationType               PlanDurationType?
   outlineType                PlanOutlineType              @default(SPECIFIC)
   timesPerWeek               Int?
@@ -358,6 +359,7 @@ model Plan {
   achievementPosts  AchievementPost[]
 
   @@index([userId, deletedAt])
+  @@index([userId, deletedAt, archivedAt])
   @@index([userId, id])
   @@index([createdAt])
   @@map("plans")

@@ -19,6 +19,7 @@ import {
   subDays,
 } from "date-fns";
 import {
+  Archive,
   BadgeCheck,
   Loader2,
   Maximize2,
@@ -104,7 +105,7 @@ interface HumanCoach {
 
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
-  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan } = usePlans();
+  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan, archivePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
   const { metrics, entries: metricEntries } = useMetrics();
   const api = useApiWithAuth();
@@ -131,6 +132,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
   const [showAllWeeksPopover, setShowAllWeeksPopover] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showPausePopover, setShowPausePopover] = useState(false);
   const [pauseReason, setPauseReason] = useState("");
   const [showCoachingTimeSelector, setShowCoachingTimeSelector] =
@@ -398,6 +400,11 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     setShowDeleteConfirm(false);
   };
 
+  const handleArchivePlan = async () => {
+    await archivePlan(selectedPlan.id!);
+    setShowArchiveConfirm(false);
+  };
+
   const handlePausePlan = async () => {
     await pausePlan(selectedPlan.id!, pauseReason || undefined);
     setShowPausePopover(false);
@@ -541,6 +548,15 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 <Pause className="h-6 w-6" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowArchiveConfirm(true)}
+              className="text-muted-foreground hover:text-foreground"
+              title="Archive plan"
+            >
+              <Archive className="h-6 w-6" />
+            </Button>
           </div>
         </div>
         </div>
@@ -927,6 +943,20 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         confirmText="Delete Plan"
         cancelText="Cancel"
         variant="destructive"
+      />
+
+      <ConfirmDialogOrPopover
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={handleArchivePlan}
+        title={
+          <div className="flex items-center justify-center gap-2">
+            <Archive className="h-6 w-6 text-muted-foreground" /> Archive Plan
+          </div>
+        }
+        description="Archive this plan? You can restore it later from 'Show old & archived plans'."
+        confirmText="Archive"
+        cancelText="Cancel"
       />
 
       {/* Coaching Time Selector Popover */}

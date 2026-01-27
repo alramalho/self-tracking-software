@@ -2065,6 +2065,100 @@ router.post(
   }
 );
 
+// Archive plan
+router.post(
+  "/:planId/archive",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Verify ownership
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to archive this plan" });
+        return;
+      }
+
+      if (plan.archivedAt) {
+        res.status(400).json({ error: "Plan is already archived" });
+        return;
+      }
+
+      const archivedPlan = await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          archivedAt: new Date(),
+        },
+      });
+
+      logger.info(`User ${req.user!.id} archived plan ${planId}`);
+      res.json({ success: true, plan: archivedPlan });
+    } catch (error) {
+      logger.error("Error archiving plan:", error);
+      res.status(500).json({ error: "Failed to archive plan" });
+    }
+  }
+);
+
+// Unarchive plan
+router.post(
+  "/:planId/unarchive",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Verify ownership
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to unarchive this plan" });
+        return;
+      }
+
+      if (!plan.archivedAt) {
+        res.status(400).json({ error: "Plan is not archived" });
+        return;
+      }
+
+      const unarchivedPlan = await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          archivedAt: null,
+        },
+      });
+
+      logger.info(`User ${req.user!.id} unarchived plan ${planId}`);
+      res.json({ success: true, plan: unarchivedPlan });
+    } catch (error) {
+      logger.error("Error unarchiving plan:", error);
+      res.status(500).json({ error: "Failed to unarchive plan" });
+    }
+  }
+);
+
 // Delete plan (soft delete)
 router.delete(
   "/:planId",
