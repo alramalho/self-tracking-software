@@ -24,6 +24,8 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
+import { useCurrentUser } from "@/contexts/users";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { type ActivityEntry } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
@@ -40,6 +42,7 @@ import {
   MessageCircle,
   Pencil,
   Rocket,
+  Sparkles,
   Sprout,
   UserPlus,
   UserX,
@@ -143,6 +146,7 @@ function ProfilePage() {
     rejectFriendRequest,
     currentUser,
   } = useUnifiedProfileData(username);
+  const { isAdmin } = useCurrentUser();
   const { deleteAchievementPost } = useActivities();
   const { totalStreaks, totalHabits, totalLifestyles } = useMemo(() => {
     return userifyPlansProgress(
@@ -716,6 +720,35 @@ function ProfilePage() {
               <div className="w-full mt-3">
                 <BecomeCoachBanner username={profileData?.username} />
               </div>
+            )}
+
+            {/* Year Wrapped Card - only for admins */}
+            {isOwnProfile && isAdmin && (
+              <Link to="/wrapped" className="block w-full mt-3">
+                <div className="relative rounded-2xl overflow-hidden">
+                  <ShineBorder
+                    shineColor={["#f97316", "#ec4899", "#8b5cf6", "#06b6d4"]}
+                    borderWidth={2}
+                    duration={4}
+                    className="rounded-2xl"
+                  />
+                  <div className="relative bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-500" />
+                      <span
+                        className="text-xl tracking-wide"
+                        style={{
+                          fontFamily: 'var(--font-zalando-expanded-black)',
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        See your 2025
+                      </span>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </Link>
             )}
           </div>
         </AnimatedSection>
