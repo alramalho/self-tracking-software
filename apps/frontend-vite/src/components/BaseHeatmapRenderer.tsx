@@ -182,6 +182,16 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
 
+  // Scroll to the right (today) on mount
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+      }
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   // Use Intersection Observer to detect when today's cell is visible
   useEffect(() => {
     const cellId = uniqueId
@@ -375,7 +385,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         <div className={`flex-1 max-w-full flex flex-row justify-center items-center overflow-x-scroll`} ref={scrollContainerRef}>
           {isHistoryLimited && (
             <div
-              className="flex flex-col self-center justify-center w-16 bg-gradient-to-r from-card via-card/80 to-transparent cursor-pointer hover:from-muted transition-colors pb-5 px-4 ml-3 "
+              className="flex flex-col self-center justify-center w-16 bg-gradient-to-r from-card via-card/80 to-transparent cursor-pointer hover:from-muted transition-colors pb-5 px-4 ml-3"
               onClick={handleLockerClick}
               title="Upgrade to view full history"
             >

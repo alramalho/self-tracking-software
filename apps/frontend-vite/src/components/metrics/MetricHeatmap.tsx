@@ -92,6 +92,16 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
     })
   );
 
+  // Scroll to the right (today) on mount
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+      }
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   // Intersection Observer to detect when today's cell is visible
   useEffect(() => {
     let observer: IntersectionObserver | null = null;

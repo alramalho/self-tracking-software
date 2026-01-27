@@ -413,10 +413,8 @@ function HomePage() {
                 </ProgressRing>
                 <span
                   className={cn(
-                    "text-3xl font-cursive",
-                    isUserOnFreePlan
-                      ? "text-muted-foreground cursor-pointer"
-                      : "text-blue-500"
+                    "text-3xl font-cursive text-foreground/60",
+                    isUserOnFreePlan && "cursor-pointer"
                   )}
                   onClick={isUserOnFreePlan ? () => setShowUpgradePopover(true) : undefined}
                 >
