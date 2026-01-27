@@ -137,6 +137,7 @@ export const SeasonStory: React.FC<SeasonStoryProps> = ({
 
     const activityCounts = new Map<string, number>();
     seasonActivityEntries.forEach((entry) => {
+      if (!entry.activityId) return;
       const count = activityCounts.get(entry.activityId) || 0;
       activityCounts.set(entry.activityId, count + 1);
     });

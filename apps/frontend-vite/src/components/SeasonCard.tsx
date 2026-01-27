@@ -126,6 +126,7 @@ export const SeasonCard: React.FC<SeasonCardProps> = ({
     // Count activities
     const activityCounts = new Map<string, number>();
     seasonActivityEntries.forEach((entry) => {
+      if (!entry.activityId) return;
       const count = activityCounts.get(entry.activityId) || 0;
       activityCounts.set(entry.activityId, count + 1);
     });
@@ -203,10 +204,9 @@ export const SeasonCard: React.FC<SeasonCardProps> = ({
             {seasonData.photos.map((entry, idx) => (
               <div
                 key={entry.id}
-                className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden ring-2 ring-offset-2 ring-offset-card"
-                style={{
-                  ringColor: isLightMode ? "#a855f7" : "#7c3aed",
-                }}
+                className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden ring-2 ring-offset-2 ring-offset-card ${
+                  isLightMode ? "ring-purple-500" : "ring-violet-600"
+                }`}
               >
                 <img
                   src={entry.imageUrl!}
