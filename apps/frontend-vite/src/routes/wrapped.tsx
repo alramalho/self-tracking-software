@@ -12,12 +12,12 @@ export const Route = createFileRoute("/wrapped")({
 
 function WrappedPage() {
   const navigate = useNavigate();
-  const { currentUser, isLoading: isUserLoading } = useCurrentUser();
+  const { currentUser, isLoadingCurrentUser } = useCurrentUser();
   const { entries: metricEntries, isLoadingEntries: isLoadingMetrics } = useMetrics();
-  const { activities, activityEntries, isLoading: isLoadingActivities } = useActivities();
+  const { activities, activityEntries, isLoadingActivities } = useActivities();
   const { plans, isLoadingPlans } = usePlans();
 
-  const isLoading = isUserLoading || isLoadingMetrics || isLoadingActivities || isLoadingPlans;
+  const isLoading = isLoadingCurrentUser || isLoadingMetrics || isLoadingActivities || isLoadingPlans;
 
   // Default to 2025, could make this dynamic
   const year = 2025;
@@ -35,7 +35,7 @@ function WrappedPage() {
   }
 
   if (!currentUser) {
-    navigate({ to: "/signin" });
+    navigate({ to: "/signin", search: { redirect_url: "/wrapped" } });
     return null;
   }
 

@@ -8,6 +8,7 @@ import {
   Geographies,
   Geography,
   ZoomableGroup,
+// @ts-expect-error - react-simple-maps has no type definitions
 } from "react-simple-maps";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -200,8 +201,8 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
             maxZoom={8}
           >
             <Geographies geography={GEO_URL}>
-              {({ geographies }) =>
-                geographies.map((geo) => {
+              {({ geographies }: { geographies: any[] }) =>
+                geographies.map((geo: any) => {
                   const isoNumeric = geo.id;
                   const alpha2 = ISO_NUMERIC_TO_ALPHA2[isoNumeric];
                   const data = alpha2
