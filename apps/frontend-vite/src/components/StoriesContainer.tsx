@@ -86,8 +86,8 @@ export const StoriesContainer: React.FC<StoriesContainerProps> = ({
         onClick={handleTap}
       >
         {/* Tap zone indicators (invisible, for accessibility) */}
-        <div className="absolute inset-y-0 left-0 w-[30%] z-10 cursor-pointer" />
-        <div className="absolute inset-y-0 right-0 w-[30%] z-10 cursor-pointer" />
+        <div className="absolute inset-y-0 left-0 w-[30%] z-10 cursor-pointer pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-[30%] z-10 cursor-pointer pointer-events-none" />
 
         {/* Content */}
         <AnimatePresence mode="wait">
