@@ -66,7 +66,7 @@ export const PlanBreakdownStory: React.FC<PlanBreakdownStoryProps> = ({
   const topPhotos = useMemo(() => {
     return activityEntries
       .filter((e) => {
-        if (!planActivityIds.has(e.activityId)) return false;
+        if (!e.activityId || !planActivityIds.has(e.activityId)) return false;
         const url = getPublicImageUrl(e);
         return url && !failedImages.has(e.id);
       })
