@@ -24,3 +24,5 @@ PERSONAL_NOTES.md
 .env
 
 apps/backend-node/apple-stuff/*
+
+.mcp.json
