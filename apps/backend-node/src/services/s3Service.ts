@@ -112,10 +112,8 @@ export class S3Service {
   }
 
   getPublicUrl(key: string): string {
-    // Note: Some old entries have S3 keys with leading slash (e.g. /users/...), which need
-    // the double slash in the URL to work correctly with the bucket policy
-    // Always add trailing slash - if key has leading slash, this creates // which is needed
-    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+    const normalizedKey = key.startsWith("/") ? key.substring(1) : key;
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${normalizedKey}`;
   }
 }
 
