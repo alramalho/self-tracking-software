@@ -1,11 +1,14 @@
-import { motion } from "framer-motion";
-import React, { useMemo, useState, useEffect, useRef } from "react";
-import { eachDayOfInterval, startOfDay, format } from "date-fns";
+import { timezoneToCountryCode, getCountryName } from "@/lib/timezoneToCountry";
+import { motion, AnimatePresence } from "framer-motion";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { eachDayOfInterval, startOfDay, format, differenceInDays } from "date-fns";
 import type { ActivityEntry, MetricEntry, Activity } from "@tsw/prisma";
 
 interface SeasonRunningGraphProps {
   metricEntries: MetricEntry[];
   activityEntries: ActivityEntry[];
+  allActivityEntries: ActivityEntry[];
+  activities: Activity[];
   topActivities: Array<{ activity: Activity; count: number }>;
   animationDelay?: number;
 }
@@ -25,19 +28,53 @@ const COLORS = [
 ];
 
 const VISIBLE_DAYS = 28;
-const ANIMATION_DURATION = 8000; // 8 seconds total
+const ANIMATION_DURATION = 32000; // 32 seconds total
+const MIN_DAYS_BETWEEN_IMAGES = 14;
+
+const getPublicImageUrl = (entry: ActivityEntry): string | null => {
+  if (entry.imageS3Path) {
+    return `https://tracking-software-bucket-production.s3.eu-central-1.amazonaws.com/${entry.imageS3Path}`;
+  }
+  return entry.imageUrl || null;
+};
+
+interface ImageEntry {
+  entryId: string;
+  imageUrl: string;
+  dayIndex: number;
+  emoji: string;
+  date: Date;
+  location: string | null;
+  countryCode: string | null;
+  description: string | null;
+}
+
+const countryCodeToFlag = (code: string): string => {
+  const codePoints = code
+    .toUpperCase()
+    .split("")
+    .map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
 
 export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
   metricEntries,
   activityEntries,
+  allActivityEntries,
+  activities,
   topActivities,
   animationDelay = 0,
 }) => {
   const [progress, setProgress] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
+
+  const handleImageError = useCallback((entryId: string) => {
+    setFailedImages((prev) => new Set(prev).add(entryId));
+  }, []);
 
   const { lines, allDays, totalDays } = useMemo(() => {
     if (metricEntries.length === 0 && activityEntries.length === 0) {
@@ -78,10 +115,13 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
       activityMaps.set(item.activity.id, map);
     });
 
+    // Use 30-day rolling window for smoother monthly averages
+    const ROLLING_WINDOW = 30;
+
     const getMoodAvg = (dayIdx: number): number | null => {
       let sum = 0;
       let count = 0;
-      for (let i = Math.max(0, dayIdx - 6); i <= dayIdx; i++) {
+      for (let i = Math.max(0, dayIdx - ROLLING_WINDOW + 1); i <= dayIdx; i++) {
         const dateKey = startOfDay(days[i]).toISOString();
         const ratings = moodByDate.get(dateKey);
         if (ratings) {
@@ -98,7 +138,7 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
       const activityMap = activityMaps.get(activityId);
       if (!activityMap) return 0;
       let count = 0;
-      for (let i = Math.max(0, dayIdx - 6); i <= dayIdx; i++) {
+      for (let i = Math.max(0, dayIdx - ROLLING_WINDOW + 1); i <= dayIdx; i++) {
         const dateKey = startOfDay(days[i]).toISOString();
         count += activityMap.get(dateKey) || 0;
       }
@@ -108,7 +148,7 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
     const linesData: LineData[] = [];
 
     const moodPoints: LineData["allPoints"] = [];
-    for (let i = 6; i < days.length; i++) {
+    for (let i = ROLLING_WINDOW - 1; i < days.length; i++) {
       const moodAvg = getMoodAvg(i);
       if (moodAvg !== null) {
         moodPoints.push({ dayIndex: i, value: moodAvg });
@@ -141,6 +181,54 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
 
     return { lines: linesData, allDays: days, totalDays: days.length };
   }, [metricEntries, activityEntries, topActivities]);
+
+  const selectedImages = useMemo(() => {
+    if (allDays.length === 0) return [];
+
+    const firstDate = allDays[0];
+
+    const entriesWithImages = allActivityEntries
+      .filter((e) => {
+        const url = getPublicImageUrl(e);
+        return url && !failedImages.has(e.id);
+      })
+      .map((e) => {
+        const entryDate = new Date(e.datetime);
+        const dayIndex = differenceInDays(startOfDay(entryDate), startOfDay(firstDate));
+        const activity = activities.find((a) => a.id === e.activityId);
+        return {
+          entry: e,
+          dayIndex,
+          emoji: activity?.emoji || "📸",
+          reactionCount: (e as any).reactions?.length || 0,
+        };
+      })
+      .filter((e) => e.dayIndex >= 0 && e.dayIndex < allDays.length)
+      .sort((a, b) => b.reactionCount - a.reactionCount);
+
+    const selected: ImageEntry[] = [];
+    for (const item of entriesWithImages) {
+      const isFarEnough = selected.every(
+        (s) => Math.abs(s.dayIndex - item.dayIndex) >= MIN_DAYS_BETWEEN_IMAGES
+      );
+      if (isFarEnough) {
+        const countryCode = timezoneToCountryCode(item.entry.timezone);
+        const countryName = countryCode ? getCountryName(countryCode) : null;
+        selected.push({
+          entryId: item.entry.id,
+          imageUrl: getPublicImageUrl(item.entry)!,
+          dayIndex: item.dayIndex,
+          emoji: item.emoji,
+          date: new Date(item.entry.datetime),
+          location: countryName,
+          countryCode,
+          description: item.entry.description || null,
+        });
+      }
+    }
+
+    return selected.sort((a, b) => a.dayIndex - b.dayIndex);
+  }, [allActivityEntries, activities, allDays, failedImages]);
 
   useEffect(() => {
     if (totalDays === 0) return;
@@ -336,6 +424,33 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
     };
   };
 
+  const activeImage = useMemo(() => {
+    if (selectedImages.length === 0) return null;
+    let current: ImageEntry | null = null;
+    for (const img of selectedImages) {
+      if (img.dayIndex <= exactDayPosition) {
+        current = img;
+      } else {
+        break;
+      }
+    }
+    return current;
+  }, [selectedImages, exactDayPosition]);
+
+  // Bubble navigation: one bubble per 2-week segment
+  const numSegments = Math.max(1, Math.ceil(animatableDays / 14));
+  const currentSegment = Math.min(
+    Math.floor((exactDayPosition - VISIBLE_DAYS) / 14),
+    numSegments - 1
+  );
+
+  const handleBubbleClick = (segmentIndex: number) => {
+    const targetProgress = Math.min((segmentIndex * 14) / animatableDays, 1);
+    setProgress(targetProgress);
+    // Adjust startTimeRef so animation continues from this position
+    startTimeRef.current = performance.now() - targetProgress * ANIMATION_DURATION;
+  };
+
   return (
     <div
       ref={containerRef}
@@ -344,7 +459,7 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
       {/* Header with month/week */}
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-white/70 text-xs font-medium">
-          Your season journey
+          Your journey
         </h3>
         <div className="text-right">
           <span className="text-white font-bold text-sm">{monthLabel}</span>
@@ -418,13 +533,93 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
         })}
       </div>
 
-      {/* Progress indicator */}
-      <div className="h-0.5 bg-white/10 rounded-full overflow-hidden mt-2">
-        <motion.div
-          className="h-full bg-white/30"
-          style={{ width: `${progress * 100}%` }}
-        />
+      {/* Bubble navigation */}
+      <div className="flex items-center justify-center gap-1.5 mt-2">
+        {Array.from({ length: numSegments }, (_, i) => {
+          const isActive = i === currentSegment;
+          const isPast = i < currentSegment;
+          return (
+            <button
+              key={i}
+              onClick={() => handleBubbleClick(i)}
+              className={`rounded-full transition-all duration-300 ${
+                isActive
+                  ? "w-6 h-2.5 bg-white/70"
+                  : isPast
+                  ? "w-2.5 h-2.5 bg-white/40"
+                  : "w-2.5 h-2.5 bg-white/15"
+              }`}
+            />
+          );
+        })}
       </div>
+
+      {/* Image card area */}
+      {selectedImages.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-xl" style={{ minHeight: 160 }}>
+          <AnimatePresence mode="wait">
+            {activeImage && (
+              <motion.div
+                key={activeImage.entryId}
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -300, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 24 }}
+                className="relative rounded-xl overflow-hidden"
+              >
+                <div className="w-full aspect-[16/10] rounded-xl overflow-hidden ring-1 ring-white/20">
+                  <img
+                    src={activeImage.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={() => handleImageError(activeImage.entryId)}
+                  />
+                </div>
+                {activeImage.location && (
+                  <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-gradient-to-b from-black/50 to-transparent flex items-center gap-1.5">
+                    <span className="text-xs">📍</span>
+                    <span className="text-white/90 text-xs font-medium">
+                      {activeImage.location}
+                    </span>
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/60 to-transparent">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{activeImage.emoji}</span>
+                    <span className="text-white/90 text-xs font-medium">
+                      {format(activeImage.date, "MMM d")}
+                    </span>
+                  </div>
+                  {activeImage.description && (
+                    <p className="text-white/80 text-xs mt-1 line-clamp-2">
+                      {activeImage.description}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Flag indicator */}
+      {selectedImages.length > 0 && activeImage?.countryCode && (
+        <div className="mt-2 flex justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeImage.countryCode}
+              initial={{ x: 50, opacity: 0, scale: 0.8 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: -50, opacity: 0, scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full"
+            >
+              <span className="text-xl">{countryCodeToFlag(activeImage.countryCode)}</span>
+              <span className="text-white/70 text-xs">{activeImage.location}</span>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 };

@@ -742,7 +742,7 @@ function ProfilePage() {
                           fontStyle: 'italic'
                         }}
                       >
-                        See your 2025
+                        Your 2025 wrapped
                       </span>
                     </div>
                     <ArrowRight className="w-5 h-5 text-muted-foreground" />

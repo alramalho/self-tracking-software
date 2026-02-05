@@ -45,6 +45,7 @@ function WrappedPage() {
     emoji: plan.emoji,
     goal: plan.goal,
     progress: plan.progress,
+    activities: plan.activities || [],
   })) || [];
 
   return (

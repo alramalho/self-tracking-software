@@ -1,10 +1,12 @@
 import { type MetricEntry, type ActivityEntry, type Activity } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
-import React from "react";
+import React, { useMemo } from "react";
 import { StoriesContainer } from "./StoriesContainer";
 import { YearHeroStory } from "./wrapped/YearHeroStory";
 import { WorldMapStory } from "./wrapped/WorldMapStory";
-import { SeasonStory } from "./wrapped/SeasonStory";
+import { YearJourneyGraphStory } from "./wrapped/YearJourneyGraphStory";
+import { PlanBreakdownStory } from "./wrapped/PlanBreakdownStory";
+import { MoodInsightsStory } from "./wrapped/MoodInsightsStory";
 
 interface YearWrappedProps {
   year: number;
@@ -16,11 +18,10 @@ interface YearWrappedProps {
     emoji: string | null;
     goal: string;
     progress: PlanProgressData;
+    activities: Activity[];
   }>;
   onClose?: () => void;
 }
-
-const SEASONS = ["winter", "spring", "summer", "fall"] as const;
 
 export const YearWrapped: React.FC<YearWrappedProps> = ({
   year,
@@ -30,6 +31,20 @@ export const YearWrapped: React.FC<YearWrappedProps> = ({
   plans,
   onClose,
 }) => {
+  const qualifyingPlans = useMemo(() => {
+    return plans.filter(
+      (p) =>
+        p.progress?.habitAchievement?.isAchieved ||
+        p.progress?.lifestyleAchievement?.isAchieved
+    );
+  }, [plans]);
+
+  const yearActivityEntries = useMemo(() => {
+    return activityEntries.filter(
+      (e) => new Date(e.datetime).getFullYear() === year
+    );
+  }, [activityEntries, year]);
+
   return (
     <StoriesContainer onClose={onClose}>
       {/* Story 1: Year Hero */}
@@ -45,27 +60,29 @@ export const YearWrapped: React.FC<YearWrappedProps> = ({
         activityEntries={activityEntries}
       />
 
-      {/* Stories 3-10: Seasons (2 pages each - photos then graph) */}
-      {SEASONS.flatMap((season) => [
-        <SeasonStory
-          key={`${season}-photos`}
-          season={season}
-          year={year}
-          metricEntries={metricEntries}
-          activityEntries={activityEntries}
-          activities={activities}
-          variant="photos"
-        />,
-        <SeasonStory
-          key={`${season}-graph`}
-          season={season}
-          year={year}
-          metricEntries={metricEntries}
-          activityEntries={activityEntries}
-          activities={activities}
-          variant="graph"
-        />,
-      ])}
+      {/* Story 3: Year Journey Graph */}
+      <YearJourneyGraphStory
+        year={year}
+        metricEntries={metricEntries}
+        activityEntries={activityEntries}
+        activities={activities}
+      />
+
+      {/* Plan Breakdown stories */}
+      {qualifyingPlans.map((plan, idx) => (
+        <PlanBreakdownStory
+          key={plan.id}
+          plan={plan}
+          activityEntries={yearActivityEntries}
+          colorIndex={idx}
+        />
+      ))}
+
+      {/* Mood Insights */}
+      <MoodInsightsStory
+        year={year}
+        metricEntries={metricEntries}
+      />
     </StoriesContainer>
   );
 };
