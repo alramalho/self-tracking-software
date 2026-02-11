@@ -62,28 +62,28 @@ export const YearJourneyGraphStory: React.FC<YearJourneyGraphStoryProps> = ({
 
   return (
     <div
-      className={`h-full flex flex-col ${
-        isLightMode
-          ? "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"
-          : "bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-950"
-      }`}
+      className={`min-h-full flex flex-col relative ${isLightMode ? "bg-white" : "bg-neutral-950"}`}
     >
+      <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, ${isLightMode ? "black" : "white"} 1px, transparent 0)`, backgroundSize: "24px 24px" }} />
+      <div className={`absolute top-[10%] left-[-15%] w-[50%] h-[40%] rounded-full blur-3xl ${isLightMode ? "bg-indigo-200/30" : "bg-indigo-900/15"}`} />
+      <div className={`absolute bottom-[5%] right-[-10%] w-[45%] h-[35%] rounded-full blur-3xl ${isLightMode ? "bg-pink-200/25" : "bg-pink-900/10"}`} />
+
       {/* Header */}
-      <div className="p-6 pt-12 shrink-0">
+      <div className="p-6 pt-12 shrink-0 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="flex items-center justify-between"
         >
-          <div className="flex items-center gap-3">
-            <span className="text-4xl">📈</span>
-            <h2 className="text-3xl font-bold text-white">{year} Journey</h2>
+          <div className="flex items-center font-zalando-expanded-black font-black italic gap-3">
+
+            <h2 className={`text-3xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>{year} Journey</h2>
           </div>
           {avgMood !== null && (
-            <div className="text-white text-right">
+            <div className={`text-right ${isLightMode ? "text-neutral-900" : "text-white"}`}>
               <div className="text-2xl font-bold">{avgMood.toFixed(1)}</div>
-              <div className="text-xs opacity-70">avg mood</div>
+              <div className={`text-xs ${isLightMode ? "text-neutral-400" : "text-white/70"}`}>avg mood</div>
             </div>
           )}
         </motion.div>
@@ -98,25 +98,26 @@ export const YearJourneyGraphStory: React.FC<YearJourneyGraphStoryProps> = ({
           {topActivities.map(({ activity, count }) => (
             <div
               key={activity.id}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm"
+              className={`flex items-center gap-1 px-3 py-1.5 backdrop-blur-sm rounded-full text-sm ${isLightMode ? "bg-neutral-100 text-neutral-700" : "bg-white/10 text-white"}`}
             >
               <span>{activity.emoji}</span>
               <span className="opacity-80">×{count}</span>
             </div>
           ))}
-          <div className="flex items-center px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-white/70 text-sm">
+          <div className={`flex items-center px-3 py-1.5 backdrop-blur-sm rounded-full text-sm ${isLightMode ? "bg-neutral-50 text-neutral-400" : "bg-white/5 text-white/50"}`}>
             {yearActivityEntries.length} entries
           </div>
         </motion.div>
       </div>
 
       {/* Running Graph */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
         {(yearMetricEntries.length > 0 || yearActivityEntries.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
+            className="flex-1 min-h-0 flex flex-col"
           >
             <SeasonRunningGraph
               metricEntries={yearMetricEntries}

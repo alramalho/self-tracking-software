@@ -1,6 +1,8 @@
+import { useTheme } from "@/contexts/theme/useTheme";
 import { timezoneToCountryCode, getCountryName } from "@/lib/timezoneToCountry";
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { eachDayOfInterval, startOfDay, format, differenceInDays } from "date-fns";
 import type { ActivityEntry, MetricEntry, Activity } from "@tsw/prisma";
 
@@ -47,6 +49,8 @@ interface ImageEntry {
   location: string | null;
   countryCode: string | null;
   description: string | null;
+  quantity: number;
+  measure: string | null;
 }
 
 const countryCodeToFlag = (code: string): string => {
@@ -65,12 +69,14 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
   topActivities,
   animationDelay = 0,
 }) => {
+  const { isLightMode } = useTheme();
   const [progress, setProgress] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const [expandedImage, setExpandedImage] = useState<ImageEntry | null>(null);
 
   const handleImageError = useCallback((entryId: string) => {
     setFailedImages((prev) => new Set(prev).add(entryId));
@@ -200,6 +206,7 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
           entry: e,
           dayIndex,
           emoji: activity?.emoji || "📸",
+          measure: activity?.measure || null,
           reactionCount: (e as any).reactions?.length || 0,
         };
       })
@@ -223,6 +230,8 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
           location: countryName,
           countryCode,
           description: item.entry.description || null,
+          quantity: item.entry.quantity,
+          measure: item.measure,
         });
       }
     }
@@ -424,18 +433,13 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
     };
   };
 
-  const activeImage = useMemo(() => {
-    if (selectedImages.length === 0) return null;
-    let current: ImageEntry | null = null;
-    for (const img of selectedImages) {
-      if (img.dayIndex <= exactDayPosition) {
-        current = img;
-      } else {
-        break;
-      }
-    }
-    return current;
+  const visibleImages = useMemo(() => {
+    if (selectedImages.length === 0) return [];
+    const passed = selectedImages.filter(img => img.dayIndex <= exactDayPosition);
+    return passed.slice(-3).reverse();
   }, [selectedImages, exactDayPosition]);
+
+  const newestImage = visibleImages[0] || null;
 
   // Bubble navigation: one bubble per 2-week segment
   const numSegments = Math.max(1, Math.ceil(animatableDays / 14));
@@ -451,24 +455,41 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
     startTimeRef.current = performance.now() - targetProgress * ANIMATION_DURATION;
   };
 
+  const handleImageClick = (e: React.MouseEvent, image: ImageEntry) => {
+    e.stopPropagation();
+    setExpandedImage(image);
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    setIsAnimating(false);
+  };
+
+  const handleCloseExpanded = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedImage(null);
+    startTimeRef.current = performance.now() - progress * ANIMATION_DURATION;
+    setIsAnimating(true);
+  };
+
   return (
     <div
       ref={containerRef}
-      className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+      className={`w-full h-full rounded-2xl p-4 flex flex-col ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
     >
       {/* Header with month/week */}
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-white/70 text-xs font-medium">
+        <h3 className={`text-xs font-medium ${isLightMode ? "text-neutral-400" : "text-white/70"}`}>
           Your journey
         </h3>
         <div className="text-right">
-          <span className="text-white font-bold text-sm">{monthLabel}</span>
-          <span className="text-white/50 text-xs ml-2">Week {weekOfMonth}</span>
+          <span className={`font-bold text-sm ${isLightMode ? "text-neutral-900" : "text-white"}`}>{monthLabel}</span>
+          <span className={`text-xs ml-2 ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>Week {weekOfMonth}</span>
         </div>
       </div>
 
       {/* Graph container */}
-      <div className="relative" style={{ height: 180 }}>
+      <div className="relative shrink-0" style={{ height: 180 }}>
         <svg
           viewBox="0 0 115 100"
           preserveAspectRatio="none"
@@ -534,7 +555,7 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
       </div>
 
       {/* Bubble navigation */}
-      <div className="flex items-center justify-center gap-1.5 mt-2">
+      <div className="flex items-center justify-center gap-1.5 mt-2 shrink-0">
         {Array.from({ length: numSegments }, (_, i) => {
           const isActive = i === currentSegment;
           const isPast = i < currentSegment;
@@ -554,71 +575,76 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
         })}
       </div>
 
-      {/* Image card area */}
-      {selectedImages.length > 0 && (
-        <div className="mt-3 overflow-hidden rounded-xl" style={{ minHeight: 160 }}>
-          <AnimatePresence mode="wait">
-            {activeImage && (
+      {/* Image card area - vertical stack */}
+      {visibleImages.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-xl relative" style={{ minHeight: 480 }}>
+          <AnimatePresence initial={false}>
+            {visibleImages.map((img, idx) => (
               <motion.div
-                key={activeImage.entryId}
-                initial={{ x: 300, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -300, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                className="relative rounded-xl overflow-hidden"
+                key={img.entryId}
+                initial={{ top: "-34%", opacity: 0 }}
+                animate={{ top: `${idx * 34}%`, opacity: 1 }}
+                exit={{ top: "102%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="absolute left-0 right-0 rounded-xl overflow-hidden cursor-pointer ring-1 ring-white/20"
+                style={{ height: "30%", minHeight: 140 }}
+                onClick={(e) => handleImageClick(e, img)}
               >
-                <div className="w-full aspect-[16/10] rounded-xl overflow-hidden ring-1 ring-white/20">
-                  <img
-                    src={activeImage.imageUrl}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    onError={() => handleImageError(activeImage.entryId)}
-                  />
-                </div>
-                {activeImage.location && (
-                  <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-gradient-to-b from-black/50 to-transparent flex items-center gap-1.5">
-                    <span className="text-xs">📍</span>
-                    <span className="text-white/90 text-xs font-medium">
-                      {activeImage.location}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/60 to-transparent">
+                <img
+                  src={img.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={() => handleImageError(img.entryId)}
+                />
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{activeImage.emoji}</span>
-                    <span className="text-white/90 text-xs font-medium">
-                      {format(activeImage.date, "MMM d")}
+                    <span className="text-xl">{img.emoji}</span>
+                    <span className="text-white/90 text-sm font-medium">
+                      {img.quantity}{img.measure ? ` ${img.measure}` : ""} · {format(img.date, "MMM d")}
                     </span>
                   </div>
-                  {activeImage.description && (
-                    <p className="text-white/80 text-xs mt-1 line-clamp-2">
-                      {activeImage.description}
-                    </p>
+                  {img.countryCode && (
+                    <span className="text-xl">{countryCodeToFlag(img.countryCode)}</span>
                   )}
                 </div>
               </motion.div>
-            )}
+            ))}
           </AnimatePresence>
         </div>
       )}
 
-      {/* Flag indicator */}
-      {selectedImages.length > 0 && activeImage?.countryCode && (
-        <div className="mt-2 flex justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeImage.countryCode}
-              initial={{ x: 50, opacity: 0, scale: 0.8 }}
-              animate={{ x: 0, opacity: 1, scale: 1 }}
-              exit={{ x: -50, opacity: 0, scale: 0.8 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full"
-            >
-              <span className="text-xl">{countryCodeToFlag(activeImage.countryCode)}</span>
-              <span className="text-white/70 text-xs">{activeImage.location}</span>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      {/* Expanded image overlay */}
+      {expandedImage && createPortal(
+        <div
+          className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4"
+          onClick={handleCloseExpanded}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative max-w-full max-h-full"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <img
+              src={expandedImage.imageUrl}
+              alt=""
+              className="max-w-full max-h-[80vh] object-contain rounded-xl"
+            />
+            {expandedImage.location && (
+              <div className="text-white/80 text-sm mt-2 text-center flex items-center justify-center gap-1.5">
+                <span>📍</span>
+                <span>{expandedImage.location}</span>
+              </div>
+            )}
+            {expandedImage.description && (
+              <p className="text-white/70 text-xs mt-1 text-center">
+                {expandedImage.description}
+              </p>
+            )}
+          </motion.div>
+        </div>,
+        document.body
       )}
     </div>
   );
