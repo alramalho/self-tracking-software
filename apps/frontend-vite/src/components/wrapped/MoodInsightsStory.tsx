@@ -161,38 +161,32 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
   if (!overallStats || yearEntries.length < 7) {
     return (
       <div
-        className={`h-full flex flex-col items-center justify-center ${
-          isLightMode
-            ? "bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500"
-            : "bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950"
-        }`}
+        className={`h-full flex flex-col items-center justify-center ${isLightMode ? "bg-white" : "bg-neutral-950"}`}
       >
         <span className="text-6xl mb-4">😊</span>
-        <p className="text-white/70">Not enough mood data for {year}</p>
+        <p className={isLightMode ? "text-neutral-400" : "text-white/70"}>Not enough mood data for {year}</p>
       </div>
     );
   }
 
   return (
     <div
-      className={`h-full flex flex-col overflow-y-auto ${
-        isLightMode
-          ? "bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500"
-          : "bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950"
-      }`}
+      className={`min-h-full flex flex-col relative ${isLightMode ? "bg-white" : "bg-neutral-950"}`}
     >
+      <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, ${isLightMode ? "black" : "white"} 1px, transparent 0)`, backgroundSize: "24px 24px" }} />
+      <div className={`absolute top-[30%] right-[-15%] w-[50%] h-[30%] rounded-full blur-3xl ${isLightMode ? "bg-emerald-200/30" : "bg-emerald-900/15"}`} />
+
       {/* Header */}
-      <div className="p-6 pt-12 shrink-0">
+      <div className="p-6 pt-12 shrink-0 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">😊</span>
-            <h2 className="text-3xl font-bold text-white">Your Mood</h2>
+          <div className="flex items-center font-zalando-expanded-black font-black italic gap-3 mb-2">
+            <h2 className={`text-3xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>Your Mood</h2>
           </div>
-          <p className="text-white/70 text-sm">
+          <p className={`text-sm ${isLightMode ? "text-neutral-400" : "text-white/70"}`}>
             {yearEntries.length} mood entries in {year}
           </p>
         </motion.div>
@@ -204,7 +198,7 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
           transition={{ duration: 0.4, delay: 0.1 }}
           className="flex gap-4 mt-4"
         >
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white">
+          <div className={`flex items-center gap-2 px-4 py-2 backdrop-blur-sm rounded-full ${isLightMode ? "bg-neutral-100 text-neutral-700" : "bg-white/10 text-white"}`}>
             <span className="text-2xl font-bold">{overallStats.average.toFixed(1)}</span>
             <span className="text-sm opacity-80">avg mood</span>
           </div>
@@ -212,15 +206,15 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 px-4 pb-6 space-y-4 overflow-y-auto">
+      <div className="flex-1 px-4 pb-6 space-y-4 relative z-10">
         {/* Month-by-month graph */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+          className={`rounded-2xl p-4 ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
         >
-          <h3 className="text-white/80 text-sm font-medium mb-3">Mood by Month</h3>
+          <h3 className={`text-sm font-medium mb-3 ${isLightMode ? "text-neutral-500" : "text-white/60"}`}>Mood by Month</h3>
 
           {/* SVG Line Graph */}
           <div className="h-24 mb-2">
@@ -338,9 +332,9 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
-          className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+          className={`rounded-2xl p-4 ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
         >
-          <h3 className="text-white/80 text-sm font-medium mb-3">Day of Week Patterns</h3>
+          <h3 className={`text-sm font-medium mb-3 ${isLightMode ? "text-neutral-500" : "text-white/60"}`}>Day of Week Patterns</h3>
 
           <div className="grid grid-cols-7 gap-1">
             {dayStats.map((stat) => {
@@ -413,21 +407,21 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
-          className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+          className={`rounded-2xl p-4 ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
         >
-          <h3 className="text-white/80 text-sm font-medium mb-3">Quick Stats</h3>
+          <h3 className={`text-sm font-medium mb-3 ${isLightMode ? "text-neutral-500" : "text-white/60"}`}>Quick Stats</h3>
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
-              <div className="text-2xl font-bold text-white">{overallStats.max}</div>
-              <div className="text-[10px] text-white/50">Best day</div>
+              <div className={`text-2xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>{overallStats.max}</div>
+              <div className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>Best day</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{overallStats.average.toFixed(1)}</div>
-              <div className="text-[10px] text-white/50">Average</div>
+              <div className={`text-2xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>{overallStats.average.toFixed(1)}</div>
+              <div className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>Average</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{overallStats.min}</div>
-              <div className="text-[10px] text-white/50">Toughest day</div>
+              <div className={`text-2xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>{overallStats.min}</div>
+              <div className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>Toughest day</div>
             </div>
           </div>
         </motion.div>
@@ -437,9 +431,9 @@ export const MoodInsightsStory: React.FC<MoodInsightsStoryProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.6 }}
-          className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+          className={`rounded-2xl p-4 ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
         >
-          <h3 className="text-white/80 text-sm font-medium mb-3">Your mood calendar</h3>
+          <h3 className={`text-sm font-medium mb-3 ${isLightMode ? "text-neutral-500" : "text-white/60"}`}>Your mood calendar</h3>
           <div className="grid grid-cols-3 gap-3">
             {Array.from({ length: 12 }, (_, i) => (
               <motion.div

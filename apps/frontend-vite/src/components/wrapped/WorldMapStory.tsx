@@ -120,24 +120,22 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
 
   return (
     <div
-      className={`h-full flex flex-col ${
-        isLightMode
-          ? "bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500"
-          : "bg-gradient-to-br from-violet-900 via-purple-900 to-fuchsia-950"
-      }`}
+      className={`h-full flex flex-col relative ${isLightMode ? "bg-white" : "bg-neutral-950"}`}
     >
+      <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, ${isLightMode ? "black" : "white"} 1px, transparent 0)`, backgroundSize: "24px 24px" }} />
+      <div className={`absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full blur-3xl ${isLightMode ? "bg-violet-200/30" : "bg-violet-900/15"}`} />
+
       {/* Header */}
-      <div className="p-6 pt-12 shrink-0">
+      <div className="p-6 pt-12 shrink-0 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">🌍</span>
-            <h2 className="text-3xl font-bold text-white">Your World</h2>
+          <div className="flex items-center font-zalando-expanded-black font-black italic gap-3 mb-2">
+            <h2 className={`text-3xl font-bold ${isLightMode ? "text-neutral-900" : "text-white"}`}>Your World</h2>
           </div>
-          <p className="text-white/70 text-sm">
+          <p className={`text-sm ${isLightMode ? "text-neutral-400" : "text-white/70"}`}>
             Where you tracked activities in {year}
           </p>
         </motion.div>
@@ -149,13 +147,13 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
           transition={{ duration: 0.4, delay: 0.1 }}
           className="flex gap-4 mt-4"
         >
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white">
+          <div className={`flex items-center gap-2 px-4 py-2 backdrop-blur-sm rounded-full ${isLightMode ? "bg-neutral-100 text-neutral-700" : "bg-white/10 text-white"}`}>
             <span className="text-2xl font-bold">{totalCountries}</span>
             <span className="text-sm opacity-80">
               {totalCountries === 1 ? "country" : "countries"}
             </span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/70">
+          <div className={`flex items-center gap-2 px-4 py-2 backdrop-blur-sm rounded-full ${isLightMode ? "bg-neutral-50 text-neutral-400" : "bg-white/5 text-white/50"}`}>
             <span className="font-semibold">{totalEntriesWithLocation}</span>
             <span className="text-sm">entries</span>
           </div>
@@ -183,7 +181,7 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="flex-1 min-h-0 relative mx-4 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-sm"
+        className={`flex-1 min-h-0 relative mx-4 rounded-2xl overflow-hidden ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}
       >
         <ComposableMap
           projection="geoMercator"
@@ -274,8 +272,8 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
           transition={{ duration: 0.4, delay: 0.4 }}
           className="shrink-0 px-4 py-4"
         >
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-            <h3 className="text-white/80 text-sm font-medium mb-3">Top locations</h3>
+          <div className={`rounded-2xl p-4 ${isLightMode ? "bg-neutral-100" : "bg-white/5"}`}>
+            <h3 className={`text-sm font-medium mb-3 ${isLightMode ? "text-neutral-500" : "text-white/60"}`}>Top locations</h3>
             <div className="space-y-2">
               {countryData.data.slice(0, 5).map((item, idx) => (
                 <div
@@ -283,10 +281,10 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-white/50 text-sm w-4">{idx + 1}.</span>
-                    <span className="text-white">{item.countryName}</span>
+                    <span className={`text-sm w-4 ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>{idx + 1}.</span>
+                    <span className={isLightMode ? "text-neutral-700" : "text-white"}>{item.countryName}</span>
                   </div>
-                  <span className="text-white/70 text-sm">
+                  <span className={`text-sm ${isLightMode ? "text-neutral-400" : "text-white/70"}`}>
                     {item.count} {item.count === 1 ? "entry" : "entries"}
                   </span>
                 </div>
