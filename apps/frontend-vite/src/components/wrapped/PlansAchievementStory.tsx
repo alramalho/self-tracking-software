@@ -1,9 +1,12 @@
 import { useTheme } from "@/contexts/theme/useTheme";
 import type { ActivityEntry, Activity } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
-import { motion } from "framer-motion";
-import { Flame, Trophy } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Flame, Rocket, Sprout, X } from "lucide-react";
 import React, { useMemo, useState, useCallback } from "react";
+
+const HABIT_WEEKS = 4;
+const LIFESTYLE_WEEKS = 9;
 
 interface PlanData {
   id: string;
@@ -47,8 +50,16 @@ function getPeakStreak(plan: PlanData): number {
   return Math.max(peak, getStreak(plan));
 }
 
-function getCompletedWeeks(plan: PlanData): number {
-  return plan.progress?.achievement?.completedWeeks || 0;
+function getPeakTier(peakStreak: number): AchievementTier {
+  if (peakStreak >= LIFESTYLE_WEEKS) return "lifestyle";
+  if (peakStreak >= HABIT_WEEKS) return "habit";
+  return "none";
+}
+
+function getPeakTierHeldWeeks(peakStreak: number): { habit: number; lifestyle: number } {
+  const habit = peakStreak >= HABIT_WEEKS ? Math.min(peakStreak, LIFESTYLE_WEEKS - 1) - HABIT_WEEKS + 1 : 0;
+  const lifestyle = peakStreak >= LIFESTYLE_WEEKS ? peakStreak - LIFESTYLE_WEEKS + 1 : 0;
+  return { habit, lifestyle };
 }
 
 const tierOrder: Record<AchievementTier, number> = { lifestyle: 0, habit: 1, none: 2 };
@@ -68,6 +79,7 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
   const { isLightMode } = useTheme();
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const handleImageError = useCallback((entryId: string) => {
     setFailedImages((prev) => new Set(prev).add(entryId));
@@ -121,12 +133,6 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
     : podium.length === 2
       ? [96, 128]
       : [128];
-
-  const tierBadge = (tier: AchievementTier) => {
-    if (tier === "lifestyle") return { emoji: "🚀", label: "Lifestyle" };
-    if (tier === "habit") return { emoji: "🌱", label: "Habit" };
-    return null;
-  };
 
   const handlePlanClick = (planId: string) => {
     setSelectedPlanId((prev) => (prev === planId ? null : planId));
@@ -215,11 +221,11 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
         {/* Full list */}
         <div className="space-y-2 pb-4">
           {ranked.map((plan, idx) => {
-            const tier = getTier(plan);
             const streak = getStreak(plan);
             const peakStreak = getPeakStreak(plan);
-            const completedWeeks = getCompletedWeeks(plan);
-            const badge = tierBadge(tier);
+            const peakTier = getPeakTier(peakStreak);
+            const currentTier = getTier(plan);
+            const held = getPeakTierHeldWeeks(peakStreak);
             const isSelected = selectedPlanId === plan.id;
             return (
               <motion.div
@@ -240,20 +246,29 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
                   <span className={`text-sm font-mono w-6 text-center ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
                     {idx + 1}
                   </span>
-                  <span className="text-xl">{plan.emoji || "🎯"}</span>
+                  <span className="text-2xl">{plan.emoji || "🎯"}</span>
                   <div className={`flex-1 min-w-0 text-sm ${isLightMode ? "text-neutral-700" : "text-white/80"}`}>
                     <div className="truncate">{plan.goal}</div>
-                    {badge && (
-                      <div className={`text-xs ${tier === "lifestyle" ? (isLightMode ? "text-violet-500" : "text-violet-400") : (isLightMode ? "text-emerald-500" : "text-emerald-400")}`}>
-                        {badge.emoji} {badge.label}
+                    {peakTier !== "none" && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                        {held.habit > 0 && held.lifestyle === 0 && (
+                          <span className={`text-[11px] flex items-center gap-1 ${isLightMode ? "text-lime-600/70" : "text-lime-400/70"}`}>
+                            <Sprout size={11} /> {currentTier === "habit" ? "Current habit" : `Habit held for ${held.habit} ${held.habit === 1 ? "week" : "weeks"}`}
+                          </span>
+                        )}
+                        {held.lifestyle > 0 && (
+                          <span className={`text-[11px] flex items-center gap-1 ${isLightMode ? "text-amber-600/70" : "text-amber-400/70"}`}>
+                            <Rocket size={11} /> {currentTier === "lifestyle" ? "Current lifestyle" : `Lifestyle held for ${held.lifestyle} ${held.lifestyle === 1 ? "week" : "weeks"}`}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-0.5 shrink-0">
                     {peakStreak > 0 && (
                       <div className="flex items-center gap-1">
-                        <Trophy size={12} className={isLightMode ? "text-amber-500" : "text-amber-400"} />
-                        <span className={`text-sm font-mono font-semibold ${isLightMode ? "text-amber-600" : "text-amber-400"}`}>
+                        <Flame size={12} className={isLightMode ? "text-orange-500" : "text-orange-400"} />
+                        <span className={`text-sm font-mono font-semibold ${isLightMode ? "text-orange-600" : "text-orange-400"}`}>
                           {peakStreak}
                         </span>
                         <span className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
@@ -263,8 +278,8 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
                     )}
                     {streak > 0 && streak !== peakStreak && (
                       <div className="flex items-center gap-1">
-                        <Flame size={12} className={isLightMode ? "text-orange-500" : "text-orange-400"} />
-                        <span className={`text-xs font-mono font-semibold ${isLightMode ? "text-orange-600" : "text-orange-400"}`}>
+                        <Flame size={12} className={isLightMode ? "text-orange-500/60" : "text-orange-400/60"} />
+                        <span className={`text-xs font-mono font-semibold ${isLightMode ? "text-orange-600/60" : "text-orange-400/60"}`}>
                           {streak}
                         </span>
                         <span className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
@@ -274,11 +289,6 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
                     )}
                   </div>
                 </div>
-                {completedWeeks > 0 && (
-                  <div className={`ml-[52px] mt-1 text-[11px] ${isLightMode ? "text-neutral-400" : "text-white/35"}`}>
-                    {completedWeeks} {completedWeeks === 1 ? "week" : "weeks"} completed total
-                  </div>
-                )}
               </motion.div>
             );
           })}
@@ -299,7 +309,8 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 1.0 + idx * 0.05 }}
-                  className="aspect-square rounded-xl overflow-hidden ring-1 ring-white/20"
+                  className="aspect-square rounded-xl overflow-hidden ring-1 ring-white/20 cursor-pointer"
+                  onClick={() => setExpandedImage(photo.imageUrl)}
                 >
                   <img
                     src={photo.imageUrl}
@@ -314,6 +325,39 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
           </motion.div>
         )}
       </div>
+
+      {/* Full-screen image dialog */}
+      <AnimatePresence>
+        {expandedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setExpandedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative max-w-full max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setExpandedImage(null)}
+                className="absolute -top-10 right-0 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+              <img
+                src={expandedImage}
+                alt=""
+                className="max-w-full max-h-[80vh] rounded-xl object-contain"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
