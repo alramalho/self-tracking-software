@@ -2,7 +2,7 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import type { ActivityEntry, Activity } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { motion } from "framer-motion";
-import { Flame } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 import React, { useMemo, useState, useCallback } from "react";
 
 interface PlanData {
@@ -31,6 +31,26 @@ function getStreak(plan: PlanData): number {
   return plan.progress?.achievement?.streak || 0;
 }
 
+function getPeakStreak(plan: PlanData): number {
+  const weeks = plan.progress?.weeks;
+  if (!weeks || weeks.length === 0) return getStreak(plan);
+  let peak = 0;
+  let current = 0;
+  for (const week of weeks) {
+    if (week.isCompleted) {
+      current++;
+      if (current > peak) peak = current;
+    } else {
+      current = 0;
+    }
+  }
+  return Math.max(peak, getStreak(plan));
+}
+
+function getCompletedWeeks(plan: PlanData): number {
+  return plan.progress?.achievement?.completedWeeks || 0;
+}
+
 const tierOrder: Record<AchievementTier, number> = { lifestyle: 0, habit: 1, none: 2 };
 
 const getPublicImageUrl = (entry: ActivityEntry): string | null => {
@@ -47,6 +67,7 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
 }) => {
   const { isLightMode } = useTheme();
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   const handleImageError = useCallback((entryId: string) => {
     setFailedImages((prev) => new Set(prev).add(entryId));
@@ -58,15 +79,20 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
       .sort((a, b) => {
         const tierDiff = tierOrder[getTier(a)] - tierOrder[getTier(b)];
         if (tierDiff !== 0) return tierDiff;
-        return getStreak(b) - getStreak(a);
+        return getPeakStreak(b) - getPeakStreak(a);
       });
   }, [plans]);
 
-  // Best photos across all plans
   const topPhotos = useMemo(() => {
-    const allPlanActivityIds = new Set(plans.flatMap((p) => p.activities.map((a) => a.id)));
+    const targetPlan = selectedPlanId
+      ? plans.find((p) => p.id === selectedPlanId)
+      : null;
+    const relevantActivityIds = targetPlan
+      ? new Set(targetPlan.activities.map((a) => a.id))
+      : new Set(plans.flatMap((p) => p.activities.map((a) => a.id)));
+
     const yearEntries = activityEntries.filter(
-      (e) => new Date(e.datetime).getFullYear() === year && e.activityId && allPlanActivityIds.has(e.activityId)
+      (e) => new Date(e.datetime).getFullYear() === year && e.activityId && relevantActivityIds.has(e.activityId)
     );
     return yearEntries
       .filter((e) => {
@@ -79,8 +105,8 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
         reactionCount: (e as any).reactions?.length || 0,
       }))
       .sort((a, b) => b.reactionCount - a.reactionCount)
-      .slice(0, 5);
-  }, [activityEntries, plans, year, failedImages]);
+      .slice(0, 8);
+  }, [activityEntries, plans, year, failedImages, selectedPlanId]);
 
   if (ranked.length === 0) return null;
 
@@ -100,6 +126,10 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
     if (tier === "lifestyle") return { emoji: "🚀", label: "Lifestyle" };
     if (tier === "habit") return { emoji: "🌱", label: "Habit" };
     return null;
+  };
+
+  const handlePlanClick = (planId: string) => {
+    setSelectedPlanId((prev) => (prev === planId ? null : planId));
   };
 
   return (
@@ -187,36 +217,66 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
           {ranked.map((plan, idx) => {
             const tier = getTier(plan);
             const streak = getStreak(plan);
+            const peakStreak = getPeakStreak(plan);
+            const completedWeeks = getCompletedWeeks(plan);
             const badge = tierBadge(tier);
+            const isSelected = selectedPlanId === plan.id;
             return (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.7 + idx * 0.05 }}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl ${isLightMode ? "bg-neutral-50/60" : "bg-white/5"}`}
+                onClick={() => handlePlanClick(plan.id)}
+                className={`px-4 py-2.5 rounded-xl cursor-pointer transition-colors ${
+                  isSelected
+                    ? isLightMode
+                      ? "bg-violet-50/80 ring-1 ring-violet-200/60"
+                      : "bg-violet-500/10 ring-1 ring-violet-500/25"
+                    : isLightMode ? "bg-neutral-50/60" : "bg-white/5"
+                }`}
               >
-                <span className={`text-sm font-mono w-6 text-center ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
-                  {idx + 1}
-                </span>
-                <span className="text-xl">{plan.emoji || "🎯"}</span>
-                <div className={`flex-1 min-w-0 text-sm ${isLightMode ? "text-neutral-700" : "text-white/80"}`}>
-                  <div className="truncate">{plan.goal}</div>
-                  {badge && (
-                    <div className={`text-xs ${tier === "lifestyle" ? (isLightMode ? "text-violet-500" : "text-violet-400") : (isLightMode ? "text-emerald-500" : "text-emerald-400")}`}>
-                      {badge.emoji} {badge.label}
-                    </div>
-                  )}
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-mono w-6 text-center ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
+                    {idx + 1}
+                  </span>
+                  <span className="text-xl">{plan.emoji || "🎯"}</span>
+                  <div className={`flex-1 min-w-0 text-sm ${isLightMode ? "text-neutral-700" : "text-white/80"}`}>
+                    <div className="truncate">{plan.goal}</div>
+                    {badge && (
+                      <div className={`text-xs ${tier === "lifestyle" ? (isLightMode ? "text-violet-500" : "text-violet-400") : (isLightMode ? "text-emerald-500" : "text-emerald-400")}`}>
+                        {badge.emoji} {badge.label}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    {peakStreak > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Trophy size={12} className={isLightMode ? "text-amber-500" : "text-amber-400"} />
+                        <span className={`text-sm font-mono font-semibold ${isLightMode ? "text-amber-600" : "text-amber-400"}`}>
+                          {peakStreak}
+                        </span>
+                        <span className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
+                          peak
+                        </span>
+                      </div>
+                    )}
+                    {streak > 0 && streak !== peakStreak && (
+                      <div className="flex items-center gap-1">
+                        <Flame size={12} className={isLightMode ? "text-orange-500" : "text-orange-400"} />
+                        <span className={`text-xs font-mono font-semibold ${isLightMode ? "text-orange-600" : "text-orange-400"}`}>
+                          {streak}
+                        </span>
+                        <span className={`text-[10px] ${isLightMode ? "text-neutral-400" : "text-white/40"}`}>
+                          now
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {streak > 0 && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Flame size={14} className={isLightMode ? "text-orange-500" : "text-orange-400"} />
-                    <span className={`text-sm font-mono font-semibold ${isLightMode ? "text-orange-600" : "text-orange-400"}`}>
-                      {streak}
-                    </span>
-                    <span className={`text-xs ${isLightMode ? "text-neutral-400" : "text-white/50"}`}>
-                      wks
-                    </span>
+                {completedWeeks > 0 && (
+                  <div className={`ml-[52px] mt-1 text-[11px] ${isLightMode ? "text-neutral-400" : "text-white/35"}`}>
+                    {completedWeeks} {completedWeeks === 1 ? "week" : "weeks"} completed total
                   </div>
                 )}
               </motion.div>
@@ -224,7 +284,7 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
           })}
         </div>
 
-        {/* Photo strip */}
+        {/* Photo grid */}
         {topPhotos.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -232,14 +292,14 @@ export const PlansAchievementStory: React.FC<PlansAchievementStoryProps> = ({
             transition={{ duration: 0.4, delay: 0.9 }}
             className="pb-6"
           >
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div className="grid grid-cols-4 gap-2">
               {topPhotos.map((photo, idx) => (
                 <motion.div
                   key={photo.id}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 1.0 + idx * 0.05 }}
-                  className="w-20 h-20 shrink-0 rounded-xl overflow-hidden ring-1 ring-white/20"
+                  className="aspect-square rounded-xl overflow-hidden ring-1 ring-white/20"
                 >
                   <img
                     src={photo.imageUrl}
