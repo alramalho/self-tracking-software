@@ -1,12 +1,15 @@
-import { type MetricEntry, type ActivityEntry, type Activity } from "@tsw/prisma";
+import { type MetricEntry, type ActivityEntry, type Activity, type PlanType } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import React, { useMemo } from "react";
 import { StoriesContainer } from "./StoriesContainer";
 import { YearHeroStory } from "./wrapped/YearHeroStory";
 import { WorldMapStory } from "./wrapped/WorldMapStory";
 import { YearJourneyGraphStory } from "./wrapped/YearJourneyGraphStory";
-import { PlanBreakdownStory } from "./wrapped/PlanBreakdownStory";
+import { PlansAchievementStory } from "./wrapped/PlansAchievementStory";
 import { MoodInsightsStory } from "./wrapped/MoodInsightsStory";
+import { YearInNumbersStory } from "./wrapped/YearInNumbersStory";
+import { FriendsLeaderboardStory, computeFriendScore, type FriendScore } from "./wrapped/FriendsLeaderboardStory";
+import { StreakLeaderboardStory } from "./wrapped/StreakLeaderboardStory";
 
 interface YearWrappedProps {
   year: number;
@@ -20,6 +23,8 @@ interface YearWrappedProps {
     progress: PlanProgressData;
     activities: Activity[];
   }>;
+  user: { username: string; name: string; picture: string; planType: PlanType };
+  friendScores?: FriendScore[];
   onClose?: () => void;
 }
 
@@ -29,21 +34,26 @@ export const YearWrapped: React.FC<YearWrappedProps> = ({
   activityEntries,
   activities,
   plans,
+  user,
+  friendScores,
   onClose,
 }) => {
-  const qualifyingPlans = useMemo(() => {
-    return plans.filter(
-      (p) =>
-        p.progress?.habitAchievement?.isAchieved ||
-        p.progress?.lifestyleAchievement?.isAchieved
-    );
-  }, [plans]);
-
   const yearActivityEntries = useMemo(() => {
     return activityEntries.filter(
       (e) => new Date(e.datetime).getFullYear() === year
     );
   }, [activityEntries, year]);
+
+  const currentUserScore: FriendScore = useMemo(() => {
+    const { totalPoints, bestStreak } = computeFriendScore(activityEntries, plans);
+    return {
+      username: user.username,
+      name: user.name,
+      picture: user.picture,
+      totalPoints,
+      bestStreak,
+    };
+  }, [user, activityEntries, plans]);
 
   return (
     <StoriesContainer onClose={onClose}>
@@ -68,21 +78,45 @@ export const YearWrapped: React.FC<YearWrappedProps> = ({
         activities={activities}
       />
 
-      {/* Plan Breakdown stories */}
-      {qualifyingPlans.map((plan, idx) => (
-        <PlanBreakdownStory
-          key={plan.id}
-          plan={plan}
-          activityEntries={yearActivityEntries}
-          colorIndex={idx}
+      {/* Plans Achievement */}
+      {plans.length > 0 && (
+        <PlansAchievementStory
+          year={year}
+          plans={plans}
+          activityEntries={activityEntries}
         />
-      ))}
+      )}
 
       {/* Mood Insights */}
       <MoodInsightsStory
         year={year}
         metricEntries={metricEntries}
       />
+
+      {/* Activity totals */}
+      <YearInNumbersStory
+        year={year}
+        activityEntries={activityEntries}
+        activities={activities}
+      />
+
+      {/* Friends Leaderboard - by points */}
+      {friendScores && friendScores.length > 0 && (
+        <FriendsLeaderboardStory
+          year={year}
+          friends={friendScores}
+          currentUser={currentUserScore}
+        />
+      )}
+
+      {/* Friends Leaderboard - by streaks */}
+      {friendScores && friendScores.length > 0 && (
+        <StreakLeaderboardStory
+          year={year}
+          friends={friendScores}
+          currentUser={currentUserScore}
+        />
+      )}
     </StoriesContainer>
   );
 };

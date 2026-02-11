@@ -1,4 +1,5 @@
 import { useTheme } from "@/contexts/theme/useTheme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { timezoneToCountryCode, getCountryName } from "@/lib/timezoneToCountry";
 import { type ActivityEntry } from "@tsw/prisma";
 import { motion } from "framer-motion";
@@ -57,11 +58,28 @@ const countryCodeToFlag = (code: string): string => {
   return String.fromCodePoint(...codePoints);
 };
 
+const hexToHsl = (hex: string): [number, number, number] => {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+};
+
 const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
   year,
   activityEntries,
 }) => {
   const { isLightMode } = useTheme();
+  const variants = useThemeColors();
   const [tooltipContent, setTooltipContent] = useState<CountryData | null>(null);
   const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
 
@@ -92,6 +110,8 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
     return { data, maxCount, countryCounts };
   }, [activityEntries, year]);
 
+  const [themeH, themeS] = hexToHsl(variants.hex);
+
   const getCountryColor = (countryCode: string): string => {
     const count = countryData.countryCounts.get(countryCode);
     if (!count) {
@@ -101,13 +121,11 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
     const intensity = Math.min(count / countryData.maxCount, 1);
 
     if (isLightMode) {
-      // Light mode: violet scale
       const lightness = 90 - intensity * 50;
-      return `hsl(270, 70%, ${lightness}%)`;
+      return `hsl(${themeH}, ${themeS}%, ${lightness}%)`;
     } else {
-      // Dark mode: violet scale
       const lightness = 20 + intensity * 40;
-      return `hsl(270, 70%, ${lightness}%)`;
+      return `hsl(${themeH}, ${themeS}%, ${lightness}%)`;
     }
   };
 
@@ -123,7 +141,7 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
       className={`h-full flex flex-col relative ${isLightMode ? "bg-white" : "bg-neutral-950"}`}
     >
       <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, ${isLightMode ? "black" : "white"} 1px, transparent 0)`, backgroundSize: "24px 24px" }} />
-      <div className={`absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full blur-3xl ${isLightMode ? "bg-violet-200/30" : "bg-violet-900/15"}`} />
+      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full blur-3xl" style={{ backgroundColor: isLightMode ? `${variants.hex}30` : `${variants.hex}26` }} />
 
       {/* Header */}
       <div className="p-6 pt-12 shrink-0 relative z-10">
@@ -217,7 +235,7 @@ const WorldMapStoryComponent: React.FC<WorldMapStoryProps> = ({
                       style={{
                         default: { outline: "none" },
                         hover: {
-                          fill: data ? (isLightMode ? "#8b5cf6" : "#a78bfa") : (isLightMode ? "#d1d5db" : "#4b5563"),
+                          fill: data ? (isLightMode ? variants.hex : variants.brightHex) : (isLightMode ? "#d1d5db" : "#4b5563"),
                           outline: "none",
                           cursor: data ? "pointer" : "default",
                         },

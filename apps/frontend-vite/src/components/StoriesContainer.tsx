@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState, useCallback, useMemo } from "react";
-import { X } from "lucide-react";
+import { toPng } from "html-to-image";
+import React, { useState, useCallback, useMemo, useRef } from "react";
+import { Share, X, Check } from "lucide-react";
 
 interface StoriesContainerProps {
   children: React.ReactNode;
@@ -11,13 +12,15 @@ export const StoriesContainer: React.FC<StoriesContainerProps> = ({
   children,
   onClose,
 }) => {
-  // Flatten children array (handles mapped elements)
   const stories = useMemo(
     () => React.Children.toArray(children),
     [children]
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const storyRef = useRef<HTMLDivElement>(null);
   const totalStories = stories.length;
 
   const goNext = useCallback(() => {
@@ -37,12 +40,51 @@ export const StoriesContainer: React.FC<StoriesContainerProps> = ({
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const threshold = rect.width * 0.3; // 30% on each side
+    const threshold = rect.width * 0.3;
 
     if (x < threshold) {
       goPrev();
     } else if (x > rect.width - threshold) {
       goNext();
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!storyRef.current || isSharing) return;
+
+    setIsSharing(true);
+    try {
+      const dataUrl = await toPng(storyRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "wrapped.png", { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "My 2025 Wrapped",
+        });
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      } else {
+        const link = document.createElement("a");
+        link.download = "wrapped.png";
+        link.href = dataUrl;
+        link.click();
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Failed to share:", error);
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -70,29 +112,41 @@ export const StoriesContainer: React.FC<StoriesContainerProps> = ({
         ))}
       </div>
 
-      {/* Close button */}
-      {onClose && (
+      {/* Top buttons */}
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-1">
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-30 p-2 text-white/80 hover:text-white transition-colors"
+          onClick={handleShare}
+          disabled={isSharing}
+          className="p-2 text-white/80 hover:text-white transition-colors"
         >
-          <X size={24} />
+          {shareSuccess ? (
+            <Check size={24} className="text-green-400" />
+          ) : (
+            <Share size={24} className={isSharing ? "animate-pulse" : ""} />
+          )}
         </button>
-      )}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-2 text-white/80 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+        )}
+      </div>
 
       {/* Story content with tap zones */}
       <div
         className="flex-1 relative overflow-hidden"
         onClick={handleTap}
       >
-        {/* Tap zone indicators (invisible, for accessibility) */}
         <div className="absolute inset-y-0 left-0 w-[30%] z-10 cursor-pointer pointer-events-none" />
         <div className="absolute inset-y-0 right-0 w-[30%] z-10 cursor-pointer pointer-events-none" />
 
-        {/* Content */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
+            ref={storyRef}
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}

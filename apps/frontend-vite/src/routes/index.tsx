@@ -28,6 +28,7 @@ import {
   RefreshCcw,
   Search,
   Send,
+  Sparkles,
   Target,
   Users,
 } from "lucide-react";
@@ -770,6 +771,19 @@ function HomePage() {
           onAction={() => navigate({ to: "/insights/onboarding" })}
         />
       )}
+
+      <AnnouncementPopover
+        id="year-wrapped-2025"
+        title={
+          <span className="font-zalando-expanded-black italic">
+            Your 2025 wrapped
+          </span>
+        }
+        icon={<Sparkles size={32} />}
+        description="See your 2025 journey — all your highlights, streaks, and progress in one place."
+        actionLabel="View Wrapped →"
+        onAction={() => navigate({ to: "/wrapped" })}
+      />
 
       {/* Testimonial Feedback Popover */}
       {shouldShowTestimonialPopover && currentUser && (
