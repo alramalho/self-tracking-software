@@ -723,7 +723,7 @@ function ProfilePage() {
             )}
 
             {/* Year Wrapped Card - only for admins */}
-            {isOwnProfile && isAdmin && (
+            {isOwnProfile && (
               <Link to="/wrapped" className="block w-full mt-3">
                 <div className="relative rounded-2xl overflow-hidden">
                   <ShineBorder

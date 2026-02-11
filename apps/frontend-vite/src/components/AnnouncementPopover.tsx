@@ -10,7 +10,7 @@ import React, { useEffect, useState } from "react";
 
 interface AnnouncementPopoverProps {
   id: string; // unique identifier for localStorage key
-  title: string;
+  title: string | React.ReactNode;
   icon: React.ReactNode;
   description: string | React.ReactNode;
   imageSrcs?: string[]; // optional screenshots to display in iPhone mockups (horizontally scrollable)
