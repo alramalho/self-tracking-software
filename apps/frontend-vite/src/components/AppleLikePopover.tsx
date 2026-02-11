@@ -17,7 +17,7 @@ interface AppleLikePopoverProps {
   unclosable?: boolean;
   className?: string;
   open?: boolean;
-  title?: string;
+  title?: React.ReactNode;
   displayIcon?: boolean;
 }
 

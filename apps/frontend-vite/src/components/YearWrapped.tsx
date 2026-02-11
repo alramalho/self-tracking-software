@@ -23,7 +23,7 @@ interface YearWrappedProps {
     progress: PlanProgressData;
     activities: Activity[];
   }>;
-  user: { username: string; name: string; picture: string; planType: PlanType };
+  user: { username: string | null; name: string | null; picture: string | null; planType: PlanType };
   friendScores?: FriendScore[];
   onClose?: () => void;
 }
@@ -45,11 +45,12 @@ export const YearWrapped: React.FC<YearWrappedProps> = ({
   }, [activityEntries, year]);
 
   const currentUserScore: FriendScore = useMemo(() => {
-    const { totalPoints, bestStreak } = computeFriendScore(activityEntries, plans);
+    const plansWithDeletedAt = plans.map((p) => ({ ...p, deletedAt: null }));
+    const { totalPoints, bestStreak } = computeFriendScore(activityEntries, plansWithDeletedAt);
     return {
-      username: user.username,
-      name: user.name,
-      picture: user.picture,
+      username: user.username || "",
+      name: user.name || "",
+      picture: user.picture || "",
       totalPoints,
       bestStreak,
     };
