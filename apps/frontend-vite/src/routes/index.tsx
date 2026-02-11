@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   MoveRight,
+  Heart,
   Pause,
   RefreshCcw,
   Search,
@@ -273,7 +274,8 @@ function HomePage() {
 
   // Check if user has more than 50 activities
   const shouldShowTestimonialPopover = activityEntries && activityEntries.length > 50;
-
+  const shouldShowPlusUpgradeWelcomeAnnouncement = !isUserOnFreePlan && metricEntries && metricEntries.length === 0 && currentUser !== undefined && currentUser.planType === "PLUS";
+  
   // Show loader for unauthenticated users (prevents flash before redirect)
   if (!isLoaded || !isSignedIn) {
     return (
@@ -757,6 +759,18 @@ function HomePage() {
         onAction={() => navigate({ to: "/plans" })}
       />
 
+      {shouldShowPlusUpgradeWelcomeAnnouncement && (
+        <AnnouncementPopover
+          id="plus-upgrade-welcome-2026"
+          title={`Thank you ${currentUser.name || currentUser.username || "User"} for being a Plus User`}
+          icon={<Heart size={32} className="text-foreground" />}
+          description="You help keeping tracking.so alive"
+          imageSrcs={["https://tracking.so/metrics_rose_dark.png"]}
+          actionLabel="Explore Metrics →"
+          onAction={() => navigate({ to: "/insights/onboarding" })}
+        />
+      )}
+
       {/* Testimonial Feedback Popover */}
       {shouldShowTestimonialPopover && currentUser && (
         <FeedbackAnnouncementPopover
@@ -784,3 +798,4 @@ function HomePage() {
     </div>
   );
 }
+
