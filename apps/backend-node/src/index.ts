@@ -4,7 +4,7 @@ dotenv.config({ path: ".env" });
 import { logger, morganMiddleware } from "./utils/logger";
 if (process.env.USE_CAP_ENV === "true") {
   logger.info("🛠️ Using capacitor environment");
-  dotenv.config({ path: ".env.cap" });
+  dotenv.config({ path: ".env.cap", override: true });
 }
 
 import compression from "compression";
