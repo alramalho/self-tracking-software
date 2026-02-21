@@ -380,7 +380,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
         </div>
 
         {/* Center overlay - Avatar and Info Card */}
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="absolute inset-0 pb-14 flex items-center justify-center z-10">
           <div className="flex flex-col items-center gap-3">
             {/* Avatar with progress ring */}
             <div className="relative">
