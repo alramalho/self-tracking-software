@@ -14,6 +14,7 @@ import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as RankingsRouteImport } from './routes/rankings'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MessageAiRouteImport } from './routes/message-ai'
@@ -57,6 +58,11 @@ const SigninRoute = SigninRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingsRoute = RankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlansRoute = PlansRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
+  '/rankings': typeof RankingsRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
+  '/rankings': typeof RankingsRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
+  '/rankings': typeof RankingsRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/message-ai'
     | '/onboarding'
     | '/plans'
+    | '/rankings'
     | '/search'
     | '/signin'
     | '/signout'
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/message-ai'
     | '/onboarding'
     | '/plans'
+    | '/rankings'
     | '/search'
     | '/signin'
     | '/signout'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/message-ai'
     | '/onboarding'
     | '/plans'
+    | '/rankings'
     | '/search'
     | '/signin'
     | '/signout'
@@ -327,6 +339,7 @@ export interface RootRouteChildren {
   MessageAiRoute: typeof MessageAiRoute
   OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
+  RankingsRoute: typeof RankingsRoute
   SearchRoute: typeof SearchRoute
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rankings': {
+      id: '/rankings'
+      path: '/rankings'
+      fullPath: '/rankings'
+      preLoaderRoute: typeof RankingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/plans': {
@@ -527,6 +547,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessageAiRoute: MessageAiRoute,
   OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,
+  RankingsRoute: RankingsRoute,
   SearchRoute: SearchRoute,
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
