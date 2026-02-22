@@ -694,7 +694,12 @@ function HomePage() {
         <AchievementCelebrationPopover
           open={isCelebrationOpen}
           onClose={handleCelebrationClose}
-          onShare={handleCelebrationShare}
+          onShare={
+            celebrationData.achievementType === "streak" &&
+            (celebrationData.streakNumber === 4 || celebrationData.streakNumber === 9)
+              ? undefined
+              : handleCelebrationShare
+          }
           achievementType={celebrationData.achievementType}
           planEmoji={celebrationData.planEmoji}
           planGoal={celebrationData.planGoal}
