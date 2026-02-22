@@ -12,12 +12,14 @@ import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, getMessages, type Message } from "@/contexts/messages";
 import { usePlans } from "@/contexts/plans";
+import { useActivities } from "@/contexts/activities/useActivities";
+import type { ResolvedOperation } from "@/components/PlanProposalCard";
 import { useSessionMessage } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2 } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
@@ -206,6 +208,7 @@ function MessageAIPage() {
   const navigate = useNavigate();
   const api = useApiWithAuth();
   const { plans } = usePlans();
+  const { activities } = useActivities();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const {
@@ -221,6 +224,8 @@ function MessageAIPage() {
     markMessagesAsRead,
     clearCoachHistory,
     isClearingCoachHistory,
+    clearCoachMemory,
+    isClearingCoachMemory,
   } = useMessages();
   const {
     submitFeedback,
@@ -358,11 +363,10 @@ function MessageAIPage() {
     }
   }, [showMenu]);
 
-  const handleClearHistory = async () => {
+  const handleClearMemory = async () => {
     try {
-      await clearCoachHistory();
+      await clearCoachMemory();
       setShowClearDialog(false);
-      toast.success("Chat history cleared");
     } catch {
       // Error handled by mutation
     }
@@ -719,7 +723,23 @@ function MessageAIPage() {
                   <EllipsisVertical size={18} />
                 </Button>
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-[100] py-1">
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      onClick={async () => {
+                        setShowMenu(false);
+                        try {
+                          await createCoachChat({ title: null });
+                          toast.success("New conversation started");
+                        } catch {
+                          toast.error("Failed to create conversation");
+                        }
+                      }}
+                      disabled={isCreatingCoachChat}
+                    >
+                      <MessageSquarePlus size={16} />
+                      New conversation
+                    </button>
                     <button
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                       onClick={() => {
@@ -737,8 +757,8 @@ function MessageAIPage() {
                         setShowClearDialog(true);
                       }}
                     >
-                      <Trash2 size={16} />
-                      Clear history
+                      <Eraser size={16} />
+                      Clear memory
                     </button>
                   </div>
                 )}
@@ -832,20 +852,35 @@ function MessageAIPage() {
 
                         {isCoachMessage && message.planProposals && message.planProposals.filter((p: any) => p.operations?.length > 0).length > 0 && (
                           <div className="px-0">
-                            {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => (
-                              <PlanProposalCard
-                                key={`proposal-${message.id}-${idx}`}
-                                messageId={message.id}
-                                proposalIndex={idx}
-                                planGoal={proposal.planGoal}
-                                planEmoji={proposal.planEmoji}
-                                description={proposal.description}
-                                operationCount={proposal.operations?.length || 0}
-                                status={proposal.status}
-                                onAccept={handleAcceptProposal}
-                                onReject={handleRejectProposal}
-                              />
-                            ))}
+                            {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => {
+                              const plan = plans?.find(p => p.id === proposal.planId);
+                              const resolvedOperations: ResolvedOperation[] = (proposal.operations || []).map((op: any) => {
+                                const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
+                                  || activities?.find((a: any) => a.id === op.activityId);
+                                return {
+                                  date: op.date,
+                                  type: op.type,
+                                  quantity: op.quantity,
+                                  activityName: activity?.title || "Activity",
+                                  activityEmoji: activity?.emoji || "📋",
+                                  activityMeasure: activity?.measure || "",
+                                  descriptiveGuide: op.descriptiveGuide,
+                                };
+                              });
+                              return (
+                                <PlanProposalCard
+                                  key={`proposal-${message.id}-${idx}`}
+                                  messageId={message.id}
+                                  proposalIndex={idx}
+                                  planGoal={proposal.planGoal}
+                                  planEmoji={proposal.planEmoji}
+                                  operations={resolvedOperations}
+                                  status={proposal.status}
+                                  onAccept={handleAcceptProposal}
+                                  onReject={handleRejectProposal}
+                                />
+                              );
+                            })}
                           </div>
                         )}
 
@@ -1005,10 +1040,10 @@ function MessageAIPage() {
       <ConfirmDialogOrPopover
         isOpen={showClearDialog}
         onClose={() => setShowClearDialog(false)}
-        onConfirm={handleClearHistory}
-        title="Clear chat history?"
-        description="This will permanently delete all your conversations with Coach Oli and clear its memory of past interactions. This action cannot be undone."
-        confirmText="Clear history"
+        onConfirm={handleClearMemory}
+        title="Clear coach memory?"
+        description="This will erase Coach Oli's memory of past interactions. Your chat history will be kept. This action cannot be undone."
+        confirmText="Clear memory"
         variant="destructive"
       />
     </div>

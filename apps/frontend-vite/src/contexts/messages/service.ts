@@ -78,3 +78,8 @@ export async function markMessagesAsRead(
 export async function clearCoachHistory(api: AxiosInstance): Promise<void> {
   await api.delete("/ai/coach/history");
 }
+
+// Clear only supermemory (keeps chat history)
+export async function clearCoachMemory(api: AxiosInstance): Promise<void> {
+  await api.delete("/ai/coach/memory");
+}

@@ -411,6 +411,29 @@ router.delete(
   }
 );
 
+// Clear only supermemory (keeps chat history)
+router.delete(
+  "/coach/memory",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+
+      await supermemoryService.deleteAllMemories(user.id);
+
+      logger.info(`Cleared coach memory for user ${user.username}`);
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error clearing coach memory:", error);
+      res.status(500).json({ error: "Failed to clear coach memory" });
+    }
+  }
+);
+
 // Update chat title
 router.patch(
   "/coach/chats/:chatId",

@@ -5,8 +5,9 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import ActivityEditor from "@/components/ActivityEditor";
 import { type Activity } from "@tsw/prisma";
 import api from "@/lib/api";
-import { Dumbbell, Plus, Check, Sparkles, Loader2 } from "lucide-react";
+import { Dumbbell, Plus, Check, X, Sparkles, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 type SuggestedActivity = { title: string; emoji: string; measure: string };
 
@@ -49,11 +50,13 @@ const ActivityItem = ({
 const ActivitiesStepWizard = () => {
   const { goal, activities: selectedActivities, setActivities, completeStep } = usePlanCreation();
   const { activities: allActivities } = useActivities();
+  const queryClient = useQueryClient();
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
   const [suggestedNewActivities, setSuggestedNewActivities] = useState<SuggestedActivity[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [creatingSuggestion, setCreatingSuggestion] = useState<string | null>(null);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
   // Fetch AI recommendations based on goal
   useEffect(() => {
@@ -101,11 +104,17 @@ const ActivitiesStepWizard = () => {
       setSuggestedNewActivities((prev) =>
         prev.filter((s) => s.title !== suggestion.title)
       );
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
     } catch (error) {
       console.error("Failed to create suggested activity:", error);
     } finally {
       setCreatingSuggestion(null);
     }
+  };
+
+  const handleDismissSuggestion = (title: string) => {
+    setSuggestedNewActivities((prev) => prev.filter((s) => s.title !== title));
+    setDismissedSuggestions((prev) => new Set(prev).add(title));
   };
 
   const handleToggleActivity = (activity: Activity) => {
@@ -158,35 +167,45 @@ const ActivitiesStepWizard = () => {
               <Sparkles className="w-3 h-3" />
               Coach suggestions
             </p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="flex flex-col gap-2">
               {suggestedNewActivities.map((suggestion) => (
-                <button
+                <div
                   key={suggestion.title}
-                  onClick={() => handleSelectSuggestion(suggestion)}
-                  disabled={creatingSuggestion === suggestion.title}
-                  className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 aspect-square transition-all relative"
+                  className="flex items-center w-full rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 p-3 transition-all"
                 >
-                  {creatingSuggestion === suggestion.title ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                  ) : (
-                    <>
-                      <div className="absolute -top-1 -right-1">
-                        <Sparkles className="w-3 h-3 text-blue-500" />
-                      </div>
-                      <span className="text-2xl mb-1">{suggestion.emoji}</span>
-                      <span className="text-xs font-medium text-center line-clamp-2">
-                        {suggestion.title}
-                      </span>
-                    </>
-                  )}
-                </button>
+                  <span className="text-3xl mr-3">{suggestion.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold">{suggestion.title}</span>
+                    <span className="text-xs text-muted-foreground ml-1.5">({suggestion.measure})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <button
+                      onClick={() => handleDismissSuggestion(suggestion.title)}
+                      disabled={creatingSuggestion === suggestion.title}
+                      className="p-1.5 rounded-full text-muted-foreground hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                      disabled={creatingSuggestion === suggestion.title}
+                      className="p-1.5 rounded-full text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                    >
+                      {creatingSuggestion === suggestion.title ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         )}
 
         {!isLoadingRecommendations && recommendedIds.length > 0 && (
-          <p className="text-sm text-blue-600 dark:text-blue-400 text-center mb-3 flex items-center justify-center gap-1">
+          <p className="text-sm text-blue-600 dark:text-blue-400 text-left mb-3 flex items-center justify-start gap-1">
             <Sparkles className="w-3 h-3" />
             Recommended activities highlighted
           </p>

@@ -114,6 +114,8 @@ export interface MessagesContextType {
   markMessagesAsRead: (chatId: string, messageIds: string[]) => Promise<void>;
   clearCoachHistory: () => Promise<void>;
   isClearingCoachHistory: boolean;
+  clearCoachMemory: () => Promise<void>;
+  isClearingCoachMemory: boolean;
 }
 
 export const MessagesContext = createContext<MessagesContextType | undefined>(undefined);

@@ -52,6 +52,7 @@ export default function GeneralInitializer({
   const isWrappedPage = pathname.startsWith("/wrapped");
   const isManageAICoachPage = pathname.startsWith("/manage-ai-coach");
   const isProfilePage = pathname.startsWith("/profile");
+  const isPlanCreationPage = pathname.startsWith("/create-plan");
   const isHomePage = pathname == "/";
 
   const showsBottomNav = isSignedIn
@@ -60,7 +61,8 @@ export default function GeneralInitializer({
     && !isDmsPage
     && !isGetCoachedPage
     && !isWrappedPage
-    && !isManageAICoachPage;
+    && !isManageAICoachPage
+    && !isPlanCreationPage;
 
   const friends = useMemo(() => {
     return [

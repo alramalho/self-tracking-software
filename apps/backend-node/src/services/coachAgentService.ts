@@ -6,7 +6,7 @@ import { ToolLoopAgent, tool } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
-import { format, endOfWeek, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "./activitySummarizer";
 import { toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
@@ -225,6 +225,7 @@ export class CoachAgentService {
 
             Use the planId, activityId, and sessionId values from the plan context above.
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Pause chess for next week", "Reduce gym to 2x/week").
+            IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose sessions a partial week update (e.g for just from Monday-Wednesday) — always cover the full week schedule. Discuss the full week with the user before proposing.
           `,
           inputSchema: z.object({
             planId: z.string().describe("The ID of the plan to modify"),
@@ -285,6 +286,45 @@ export class CoachAgentService {
                 success: false,
                 error: `Plan ${planId} not found or doesn't belong to user`,
               };
+            }
+
+            const planActivityIds = new Set(plan.activities.map((a) => a.id));
+            const invalidOps = operations.filter(
+              (op) => op.type === "add" && !planActivityIds.has(op.activityId)
+            );
+            if (invalidOps.length > 0) {
+              const validActivities = plan.activities
+                .map((a) => `${a.emoji} ${a.title} [${a.id}]`)
+                .join(", ");
+              return {
+                success: false,
+                error: `Some operations reference activities not in this plan. Valid activities for "${plan.goal}": ${validActivities}`,
+              };
+            }
+
+            const addOps = operations.filter((op) => op.type === "add");
+            if (addOps.length > 0) {
+              const dates = addOps.map((op) => parseISO(op.date));
+              const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+              const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+              const weekSun = startOfWeek(minDate, { weekStartsOn: 0 });
+              const weekSat = endOfWeek(minDate, { weekStartsOn: 0 });
+              const allInSameWeek = dates.every((d) => d >= weekSun && d <= weekSat);
+
+              if (!allInSameWeek) {
+                return {
+                  success: false,
+                  error: `All proposed sessions must be within the same week (Sun-Sat).`,
+                };
+              }
+
+              const spanDays = Math.round((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
+              if (spanDays < 4) {
+                return {
+                  success: false,
+                  error: `Proposal only covers ${format(minDate, "EEE MMM d")} to ${format(maxDate, "EEE MMM d")}. Plan modifications must be for a full week (${format(weekSun, "MMM d")} - ${format(weekSat, "MMM d")}). Discuss the complete week schedule with the user before proposing.`,
+                };
+              }
             }
 
             logger.info(
