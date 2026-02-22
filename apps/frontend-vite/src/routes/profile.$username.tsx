@@ -1,3 +1,4 @@
+import { useApiWithAuth } from "@/api";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import AchievementPostCard from "@/components/AchievementPostCard";
@@ -27,6 +28,7 @@ import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useCurrentUser } from "@/contexts/users";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { type ActivityEntry } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { subDays } from "date-fns";
@@ -276,6 +278,36 @@ function ProfilePage() {
   const accountLevel = useAccountLevel(username);
   const themeColors = useThemeColors();
 
+  // Fetch rankings for badges
+  const api = useApiWithAuth();
+  const { data: rankingsData } = useQuery({
+    queryKey: ["rankings"],
+    queryFn: async () => {
+      const res = await api.get("/users/rankings");
+      return res.data as {
+        pointsRanking: Array<{ rank: number; username: string }>;
+        streaksRanking: Array<{ rank: number; username: string }>;
+      };
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const profilePointsRank = useMemo(() => {
+    if (!rankingsData || !profileData?.username) return null;
+    const entry = rankingsData.pointsRanking.find(
+      (r) => r.username === profileData.username
+    );
+    return entry?.rank ?? null;
+  }, [rankingsData, profileData?.username]);
+
+  const profileStreaksRank = useMemo(() => {
+    if (!rankingsData || !profileData?.username) return null;
+    const entry = rankingsData.streaksRanking.find(
+      (r) => r.username === profileData.username
+    );
+    return entry?.rank ?? null;
+  }, [rankingsData, profileData?.username]);
+
   if (isProfileDataLoading) {
     return (
       <div className="flex flex-col items-center min-h-screen p-2 bg-gradient-to-b from-muted to-background">
@@ -462,6 +494,35 @@ function ProfilePage() {
                 <p className="text-muted-foreground text-sm">
                   @{profileData?.username}
                 </p>
+                {/* Ranking badges */}
+                {(profilePointsRank || profileStreaksRank) && (
+                  <div className="flex gap-3 mt-1">
+                    {profileStreaksRank && (
+                      <Link
+                        to="/rankings"
+                        search={{ tab: "streaks" }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      >
+                        {profileStreaksRank <= 3 && (
+                          <span>{profileStreaksRank === 1 ? "🥇" : profileStreaksRank === 2 ? "🥈" : "🥉"}</span>
+                        )}
+                        #{profileStreaksRank} streaks
+                      </Link>
+                    )}
+                    {profilePointsRank && (
+                      <Link
+                        to="/rankings"
+                        search={{ tab: "points" }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      >
+                        {profilePointsRank <= 3 && (
+                          <span>{profilePointsRank === 1 ? "🥇" : profilePointsRank === 2 ? "🥈" : "🥉"}</span>
+                        )}
+                        #{profilePointsRank} points
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Achievement Badges */}

@@ -1842,6 +1842,110 @@ usersRouter.get(
   }
 );
 
+// Get global rankings
+usersRouter.get(
+  "/rankings",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const currentUserId = req.user!.id;
+
+      // Get all non-deleted users with their activity entry counts and plans with progressState
+      const users = await prisma.user.findMany({
+        where: { deletedAt: null, username: { not: null } },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          picture: true,
+          _count: {
+            select: {
+              activityEntries: {
+                where: { deletedAt: null },
+              },
+            },
+          },
+          plans: {
+            where: { deletedAt: null },
+            select: {
+              progressState: true,
+            },
+          },
+        },
+      });
+
+      const scored = users.map((user) => {
+        const activityCount = user._count.activityEntries;
+        let habitBonus = 0;
+        let lifestyleBonus = 0;
+        let bestStreak = 0;
+
+        for (const plan of user.plans) {
+          const ps = plan.progressState as any;
+          if (!ps) continue;
+          if (ps.habitAchievement?.isAchieved) habitBonus += 25;
+          if (ps.lifestyleAchievement?.isAchieved) lifestyleBonus += 100;
+          const streak = ps.achievement?.streak || 0;
+          if (streak > bestStreak) bestStreak = streak;
+        }
+
+        return {
+          id: user.id,
+          username: user.username!,
+          name: user.name,
+          picture: user.picture,
+          totalPoints: activityCount + habitBonus + lifestyleBonus,
+          bestStreak,
+        };
+      });
+
+      // Points ranking
+      const byPoints = [...scored].sort((a, b) => b.totalPoints - a.totalPoints);
+      const pointsRanking = byPoints.slice(0, 10).map((u, i) => ({
+        rank: i + 1,
+        username: u.username,
+        name: u.name,
+        picture: u.picture,
+        totalPoints: u.totalPoints,
+        bestStreak: u.bestStreak,
+      }));
+
+      // Streaks ranking
+      const byStreaks = [...scored]
+        .filter((u) => u.bestStreak > 0)
+        .sort((a, b) => b.bestStreak - a.bestStreak);
+      const streaksRanking = byStreaks.slice(0, 10).map((u, i) => ({
+        rank: i + 1,
+        username: u.username,
+        name: u.name,
+        picture: u.picture,
+        totalPoints: u.totalPoints,
+        bestStreak: u.bestStreak,
+      }));
+
+      // Current user ranks
+      const currentUserData = scored.find((u) => u.id === currentUserId);
+      const pointsRank = byPoints.findIndex((u) => u.id === currentUserId) + 1;
+      const streaksRank =
+        byStreaks.findIndex((u) => u.id === currentUserId) + 1 || null;
+
+      res.json({
+        pointsRanking,
+        streaksRanking,
+        currentUser: {
+          pointsRank: pointsRank || null,
+          streaksRank,
+          totalPoints: currentUserData?.totalPoints || 0,
+          bestStreak: currentUserData?.bestStreak || 0,
+        },
+      });
+    } catch (error) {
+      logger.error("Failed to fetch rankings:", error);
+      res.status(500).json({ error: "Failed to fetch rankings" });
+    }
+  }
+);
+
 // Update daily checkin settings
 usersRouter.post(
   "/user/daily-checkin-settings",
