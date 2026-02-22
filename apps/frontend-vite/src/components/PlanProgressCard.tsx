@@ -1,58 +1,33 @@
-import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan } from "@/contexts/plans";
-import { useSessionMessage, type SessionSnapshot } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { format, isSameWeek, isAfter, startOfDay, isSameDay } from "date-fns";
 import { AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
-  ChevronRight,
   CircleCheck,
   Flame,
   MoveRight,
   Rocket,
-  Sparkles,
   Sprout,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { FireAnimation } from "./FireBadge";
 import { SteppedBarProgress } from "./SteppedBarProgress";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Confetti, type ConfettiRef } from "./ui/confetti";
-
-interface HumanCoach {
-  id: string;
-  ownerId: string;
-  type: "HUMAN";
-  details: {
-    title: string;
-    bio?: string;
-    focusDescription: string;
-  };
-  owner: {
-    id: string;
-    username: string;
-    name: string | null;
-    picture: string | null;
-  };
-}
 
 interface ComingUpSectionProps {
   sessions: any[];
   activities: any[];
   variants: any;
   plan: CompletePlan;
-  coachUsername?: string;
-  onTalkToCoach?: (sessionSnapshot: SessionSnapshot) => void;
 }
 
 const ComingUpSection: React.FC<ComingUpSectionProps> = ({
@@ -60,31 +35,9 @@ const ComingUpSection: React.FC<ComingUpSectionProps> = ({
   activities,
   variants,
   plan,
-  coachUsername,
-  onTalkToCoach,
 }) => {
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-
-  const handleTalkToCoach = () => {
-    if (!selectedSession || !coachUsername || !onTalkToCoach) return;
-
-    const sessionSnapshot: SessionSnapshot = {
-      activityId: selectedSession.activityId,
-      activityTitle: selectedSession.activity.title,
-      activityEmoji: selectedSession.activity.emoji || null,
-      activityMeasure: selectedSession.activity.measure || "",
-      date: new Date(selectedSession.date).toISOString(),
-      quantity: selectedSession.quantity,
-      descriptiveGuide: selectedSession.descriptiveGuide,
-      planId: plan.id,
-      planGoal: plan.goal,
-      planEmoji: plan.emoji || null,
-      coachUsername,
-    };
-
-    onTalkToCoach(sessionSnapshot);
-  };
 
   return (
     <div className="mt-2 pt-2 border-t border-border/50">
@@ -180,16 +133,6 @@ const ComingUpSection: React.FC<ComingUpSectionProps> = ({
                 </div>
               )}
 
-              {/* Talk to coach link */}
-              {coachUsername && onTalkToCoach && (
-                <button
-                  onClick={handleTalkToCoach}
-                  className="mt-2 flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                >
-                  <span>Talk to coach about this</span>
-                  <ChevronRight size={12} />
-                </button>
-              )}
             </div>
           </motion.div>
         )}
@@ -265,24 +208,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const navigate = useNavigate();
   const planProgressData = plan.progress;
   const { activities, activityEntries } = useActivities();
-  const { setPendingSession } = useSessionMessage();
-  const api = useApiWithAuth();
-
-  // Fetch coaches to get coach info for coached plans
-  const { data: humanCoaches } = useQuery({
-    queryKey: ["coaches"],
-    queryFn: async () => {
-      const response = await api.get<HumanCoach[]>("/coaches");
-      return response.data;
-    },
-    enabled: !!(plan as any).coachId && (plan as any).isCoached,
-  });
-
-  // Find the coach for this plan
-  const planCoach = useMemo(() => {
-    if (!humanCoaches || !(plan as any).coachId) return null;
-    return humanCoaches.find((c) => c.id === (plan as any).coachId) || null;
-  }, [humanCoaches, (plan as any).coachId]);
 
   // Get upcoming sessions for SPECIFIC plans
   const upcomingSessions = React.useMemo(() => {
@@ -362,18 +287,14 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       : totalCompletedActivities === totalPlannedActivities;
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
-  const isCoached = plan.isCoached;
 
-  // Calculate total number of animations that will run
   const totalProgressBars =
     1 +
     (!habitIsAchieved ? 1 : 0) +
-    (achievement.streak >= habitMaxValue ? 1 : 0); // week + (habit if not achieved) + (lifestyle if applicable)
-  const totalAnimations = totalProgressBars + (isCoached ? 1 : 0); // + PlanStatus motion if coached
+    (achievement.streak >= habitMaxValue ? 1 : 0);
 
   const handleAnimationComplete = (animationId: string) => {
     if (skipAnimation) {
-      // If skipping animation, call onAnimationDone immediately
       setIsAnimationCompleted(true);
       onAnimationDone?.();
       return;
@@ -383,26 +304,11 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       const newSet = new Set(prev);
       newSet.add(animationId);
 
-      // Check if all progress bar animations are complete
       if (newSet.size >= totalProgressBars) {
         setIsAnimationCompleted(true);
-
-        // If not coached, we're done. If coached, wait for PlanStatus animation
-        if (!isCoached) {
+        setTimeout(() => {
           onAnimationDone?.();
-        } else {
-          // Wait for PlanStatus animation to complete (0.5s)
-          setTimeout(() => {
-            setCompletedAnimations((prev) => {
-              const finalSet = new Set(prev);
-              finalSet.add("planStatus");
-              if (finalSet.size >= totalAnimations) {
-                onAnimationDone?.();
-              }
-              return finalSet;
-            });
-          }, 500);
-        }
+        }, 500);
       }
 
       return newSet;
@@ -447,43 +353,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
           {/* Badges row - beneath the title */}
           <div className="flex items-center gap-2 flex-wrap">
-            {isCoached && (
-              <>
-                {planCoach ? (
-                  <div className="flex items-center gap-1 w-full justify-between">
-                    <div className="flex items-center gap-2 pt-2 pb-4">
-                      <Avatar onClick={() => navigate({ to: `/messages/${planCoach.owner.username}` })} className={cn("w-5 h-5 ring-1 ring-offset-1 ring-offset-card cursor-pointer", variants.ring, variants.veryFadedBg)}>
-                        <AvatarImage src={planCoach.owner.picture || ""} />
-                        <AvatarFallback className="text-[8px]">
-                          {planCoach.owner.name?.[0] || "C"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-xs text-white/70">
-                        Coached by <a href={`/messages/${planCoach.owner.username}`}><span className={cn("font-medium hover:underline cursor-pointer", variants.text)}>{planCoach.owner.name || planCoach.owner.username}</span></a>
-                      </p>
-                    </div>
-                    <div onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })} className="flex items-center gap-1 ml-2 cursor-pointer opacity-70">
-                      <span className="text-xs text-white/70">See full plan</span>
-                      <ChevronRight className="h-3 w-3" />
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      className={cn(
-                        "flex items-center justify-between gap-1.5 px-2 py-1 rounded-full w-fit",
-                        variants.fadedBg
-                      )}
-                    >
-                      <Sparkles size={16} className={variants.text} />
-                      <span className={cn("text-[12px] font-medium", variants.text)}>
-                        Coached
-                      </span>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
             {habitIsAchieved && (
               <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
                 <Sprout size={18} className="text-lime-500" />
@@ -502,95 +371,40 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             )}
           </div>
 
-          {isCoached && (
-            <>
-              {/* <div className="flex flex-col items-center gap-1 py-2">
-                <MessageBubble
-                  direction="left"
-                  className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar>
-                      <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
-                      <AvatarFallback>CN</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col gap-1 flex-1">
-                      <span
-                        className={`text-sm italic ${
-                          isGeneratingCoachMessage || !canGenerateNewMessage
-                            ? "text-muted-foreground/60"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {lastCoachMessage}
-                      </span>
-                      <span className="text-[10px] italic text-muted-foreground/60">
-                        Coach Oli
-                      </span>
-                    </div>
-                    <button
-                      onClick={generateCoachMessage}
-                      disabled={
-                        isGeneratingCoachMessage || !canGenerateNewMessage
-                      }
-                      className={cn(
-                        "p-1 rounded-full transition-all duration-200",
-                        canGenerateNewMessage && !isGeneratingCoachMessage
-                          ? "hover:bg-white/20 text-muted-foreground hover:text-foreground cursor-pointer"
-                          : "text-muted-foreground/30 cursor-not-allowed"
-                      )}
-                      title={
-                        !canGenerateNewMessage
-                          ? "Wait 2 hours between message generations"
-                          : "Generate new coach message"
-                      }
-                    >
-                      <RefreshCw
-                        className={cn(
-                          "h-4 w-4",
-                          isGeneratingCoachMessage && "animate-spin"
-                        )}
-                      />
-                    </button>
-                  </div>
-                </MessageBubble>
-              </div> */}
-              <AnimatePresence>
-                {isAnimationCompleted && (
-                  <motion.div
-                    initial={
-                      skipAnimation
-                        ? { opacity: 1, y: 0 }
-                        : { opacity: 0, y: 20 }
-                    }
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    transition={
-                      skipAnimation
-                        ? { duration: 0 }
-                        : { duration: 0.5, ease: "easeOut" }
-                    }
+          <AnimatePresence>
+            {isAnimationCompleted && (
+              <motion.div
+                initial={
+                  skipAnimation
+                    ? { opacity: 1, y: 0 }
+                    : { opacity: 0, y: 20 }
+                }
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={
+                  skipAnimation
+                    ? { duration: 0 }
+                    : { duration: 0.5, ease: "easeOut" }
+                }
+              >
+                <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
+                  <span className="text-xs text-muted-foreground/80">
+                    This week
+                  </span>
+                  <div
+                    onClick={() => {
+                      navigate({ to: `/plans?selectedPlan=${plan.id}` });
+                    }}
                   >
-                    <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
-                      <span className="text-xs text-muted-foreground/80">
-                        This week
-                      </span>
-                      <div
-                        onClick={() => {
-                          navigate({ to: `/plans?selectedPlan=${plan.id}` });
-                        }}
-                      >
-                        <div className="flex flex-row items-center gap-2">
-                          <PlanStatus plan={plan} />
-                          <MoveRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
+                    <div className="flex flex-row items-center gap-2">
+                      <PlanStatus plan={plan} />
+                      <MoveRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
-          )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Current week progress with animated legend */}
           <div className="space-y-2">
@@ -677,11 +491,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               activities={activities}
               variants={variants}
               plan={plan}
-              coachUsername={planCoach?.owner.username}
-              onTalkToCoach={(sessionSnapshot) => {
-                setPendingSession(sessionSnapshot);
-                navigate({ to: `/messages/${sessionSnapshot.coachUsername}` });
-              }}
             />
           )}
 

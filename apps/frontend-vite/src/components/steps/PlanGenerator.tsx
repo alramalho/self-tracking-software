@@ -78,12 +78,13 @@ const PlanGenerator = () => {
   const handlePlanSelect = async (plan: CompletePlan) => {
     setSelectedPlan(plan);
     // Create a Set of activity IDs to avoid duplicates
-    const activityIds = new Set(plan.activities.map((activity) => activity.id));
+    const activities = plan.activities || [];
+    const activityIds = new Set(activities.map((activity) => activity.id));
 
     // Create activities one by one using the unique IDs
     await Promise.all(
       Array.from(activityIds).map((id) => {
-        const activity = plan.activities.find((a) => a.id === id);
+        const activity = activities.find((a) => a.id === id);
         if (!activity) return;
         return upsertActivity({
           activity: activity,
@@ -98,7 +99,7 @@ const PlanGenerator = () => {
       updates: {
         ...planWithoutProgress,
         planGroup: undefined,
-        activities: plan.activities,
+        activities: activities,
         sessions: plan.sessions,
         milestones: plan.milestones,
       },

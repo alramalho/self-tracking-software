@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
+import { useApiWithAuth } from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
@@ -16,6 +17,7 @@ import {
   ChevronLeft,
   CreditCard,
   GraduationCap,
+  Loader2,
   LogOut,
   Moon,
   MoveRight,
@@ -105,6 +107,10 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
   const navigate = useNavigate();
   const { setDemoAchievementType } = useDemoAchievement();
+  const api = useApiWithAuth();
+  const [triggeringNotification, setTriggeringNotification] = useState<
+    string | null
+  >(null);
 
   const handleLogout = () => {
     signOut();
@@ -601,6 +607,133 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                             </p>
                           </div>
                           <span className="text-2xl">🔄</span>
+                        </div>
+                      </div>
+
+                      {/* Coach Notifications */}
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground px-3">
+                          Coach Notifications
+                        </p>
+                        <div
+                          className={twMerge(
+                            "flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                            triggeringNotification === "week_recap" &&
+                              "opacity-70 pointer-events-none"
+                          )}
+                          onClick={async () => {
+                            setTriggeringNotification("week_recap");
+                            try {
+                              await api.post("/ai/coach/trigger-notification", {
+                                type: "week_recap",
+                              });
+                              toast.success("Week recap sent to coach chat");
+                            } catch (error) {
+                              toast.error("Failed to trigger week recap");
+                              console.error(error);
+                            } finally {
+                              setTriggeringNotification(null);
+                            }
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Trigger Week Recap
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Generate a 7-day activity recap in coach chat
+                            </p>
+                          </div>
+                          {triggeringNotification === "week_recap" ? (
+                            <Loader2
+                              size={20}
+                              className="text-muted-foreground animate-spin"
+                            />
+                          ) : (
+                            <span className="text-2xl">📊</span>
+                          )}
+                        </div>
+                        <div
+                          className={twMerge(
+                            "flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                            triggeringNotification === "pre_activity" &&
+                              "opacity-70 pointer-events-none"
+                          )}
+                          onClick={async () => {
+                            setTriggeringNotification("pre_activity");
+                            try {
+                              await api.post("/ai/coach/trigger-notification", {
+                                type: "pre_activity",
+                              });
+                              toast.success(
+                                "Pre-activity message sent to coach chat"
+                              );
+                            } catch (error) {
+                              toast.error(
+                                "Failed to trigger pre-activity message"
+                              );
+                              console.error(error);
+                            } finally {
+                              setTriggeringNotification(null);
+                            }
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Trigger Pre-Activity
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Generate today's activity rundown in coach chat
+                            </p>
+                          </div>
+                          {triggeringNotification === "pre_activity" ? (
+                            <Loader2
+                              size={20}
+                              className="text-muted-foreground animate-spin"
+                            />
+                          ) : (
+                            <span className="text-2xl">💪</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-foreground px-3 mt-3">
+                          Jobs
+                        </p>
+                        <div
+                          className={twMerge(
+                            "flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                            triggeringNotification === "plan_categorization" &&
+                              "opacity-70 pointer-events-none"
+                          )}
+                          onClick={async () => {
+                            setTriggeringNotification("plan_categorization");
+                            try {
+                              const response = await api.post("/plans/run-categorization");
+                              const data = response.data as { categorized: number; errors: number };
+                              toast.success(`Categorized ${data.categorized} plans${data.errors > 0 ? ` (${data.errors} errors)` : ""}`);
+                            } catch (error) {
+                              toast.error("Failed to run plan categorization");
+                              console.error(error);
+                            } finally {
+                              setTriggeringNotification(null);
+                            }
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Run Plan Categorization
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Categorize all uncategorized plans
+                            </p>
+                          </div>
+                          {triggeringNotification === "plan_categorization" ? (
+                            <Loader2
+                              size={20}
+                              className="text-muted-foreground animate-spin"
+                            />
+                          ) : (
+                            <span className="text-2xl">🏷️</span>
+                          )}
                         </div>
                       </div>
                     </div>

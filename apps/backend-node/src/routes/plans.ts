@@ -10,6 +10,7 @@ import { aiService } from "../services/aiService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
+import { runCategorizationJob } from "../services/planCategorizationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -1305,11 +1306,15 @@ router.post(
 
         const { milestones, sessions, activities, ...plan } = planData;
 
+        const goalChanged =
+          planData.goal !== undefined && planData.goal !== existingPlan.goal;
+
         const updatedPlan = await prisma.plan.update({
           where: { id: planData.id },
           data: {
             ...plan,
             deletedAt: planData.deletedAt,
+            ...(goalChanged && { goalChanged: true }),
             ...(planData.milestones && {
               milestones: {
                 deleteMany: {}, // Clear existing milestones
@@ -2222,6 +2227,23 @@ router.delete(
     } catch (error) {
       logger.error("Error deleting plan:", error);
       res.status(500).json({ error: "Failed to delete plan" });
+    }
+  }
+);
+
+router.post(
+  "/run-categorization",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const result = await runCategorizationJob();
+      res.json(result);
+    } catch (error) {
+      logger.error("Error running plan categorization:", error);
+      res.status(500).json({ error: "Failed to run plan categorization" });
     }
   }
 );

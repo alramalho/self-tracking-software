@@ -690,8 +690,9 @@ router.post(
               reactorPicture: req.user!.picture,
               reactorName: req.user!.name,
               reactorUsername: req.user!.username,
+              batchCategory: "REACTIONS",
             },
-          });
+          }, false);
         }
       }
 
@@ -775,8 +776,9 @@ router.post(
               reactorPicture: req.user!.picture,
               reactorName: req.user!.name,
               reactorUsername: req.user!.username,
+              batchCategory: "REACTIONS",
             },
-          });
+          }, false);
         }
 
         const activityEntryReactions = await prisma.reaction.findMany({

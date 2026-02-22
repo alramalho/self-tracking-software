@@ -2,7 +2,7 @@ import { ActivityEntry, MetricEntry, PrismaClient, User } from "./index";
 
 const prisma = new PrismaClient();
 
-const isDevelopment = () => true; //() => process.env.NODE_ENV === 'development'
+const isDevelopment = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1') || false;
 
 async function generateDummyData() {
   console.info("Generating dummy data...");
@@ -537,7 +537,7 @@ async function generateDummyData() {
 }
 
 async function main() {
-  if (!isDevelopment()) {
+  if (!isDevelopment) {
     console.error(
       "This script is only available in the development environment."
     );

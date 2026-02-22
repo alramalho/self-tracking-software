@@ -6,13 +6,15 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages } from "@/contexts/messages";
+import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, MessageCircle, ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
@@ -55,6 +57,20 @@ function MessagesPage() {
     createCoachChat,
     isCreatingCoachChat,
   } = useAI();
+  const { notifications } = useDataNotifications();
+  const queryClient = useQueryClient();
+
+  // Refetch chats and notifications on mount to reflect read state changes
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["chats"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  }, [queryClient]);
+
+  const hasPendingCoachNotification = !!notifications?.find(
+    (n) =>
+      n.type === "COACH" &&
+      n.status !== "CONCLUDED"
+  );
 
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
@@ -99,6 +115,10 @@ function MessagesPage() {
     chats?.filter(c => c.type === "COACH")
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()) || []
   , [chats]);
+
+  const coachUnreadCount = useMemo(() =>
+    coachChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
+  , [coachChats]);
 
   // Filter chats to show only ONE coach entry and deduplicate direct chats by user
   const displayChats = useMemo(() => {
@@ -251,6 +271,12 @@ function MessagesPage() {
                       {isCreatingCoachChat ? "Starting chat..." : "Your AI assistant"}
                     </p>
                   </div>
+                  {(coachUnreadCount > 0 || hasPendingCoachNotification) && (
+                    <span className="relative flex h-2.5 w-2.5 mr-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                    </span>
+                  )}
                 </button>
               </div>
 

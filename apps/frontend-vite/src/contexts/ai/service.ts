@@ -89,6 +89,46 @@ export async function rejectMetric(
   await api.post(`/ai/messages/${messageId}/reject-metric`);
 }
 
+// Accept a plan proposal from AI
+export async function acceptProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/accept-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
+// Reject a plan proposal from AI
+export async function rejectProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/reject-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
+// Accept an activity log proposal from AI
+export async function acceptActivityLogProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/accept-activity-log-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
+// Reject an activity log proposal from AI
+export async function rejectActivityLogProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/reject-activity-log-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
 // Submit AI satisfaction feedback
 export async function submitAISatisfaction(
   api: AxiosInstance,

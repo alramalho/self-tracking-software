@@ -9,6 +9,10 @@ import {
   submitFeedback,
   acceptMetric,
   rejectMetric,
+  acceptProposal,
+  rejectProposal,
+  acceptActivityLogProposal,
+  rejectActivityLogProposal,
   submitAISatisfaction,
 } from "./service";
 import { AIContext, type AIContextType, type MessageFeedback } from "./types";
@@ -141,6 +145,84 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const acceptProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await acceptProposal(api, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Plan updated!");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to accept proposal");
+      toast.error("Failed to accept proposal");
+    },
+  });
+
+  const rejectProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await rejectProposal(api, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to reject proposal");
+      toast.error("Failed to reject proposal");
+    },
+  });
+
+  const acceptActivityLogProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await acceptActivityLogProposal(api, data);
+    },
+    onSuccess: (_, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.activityLogProposals) return msg;
+            const updated = [...msg.activityLogProposals];
+            updated[proposalIndex] = { ...updated[proposalIndex], status: "accepted" };
+            return { ...msg, activityLogProposals: updated };
+          })
+      );
+      toast.success("Activity logged!");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to log activity");
+      toast.error("Failed to log activity");
+    },
+  });
+
+  const rejectActivityLogProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await rejectActivityLogProposal(api, data);
+    },
+    onSuccess: (_, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.activityLogProposals) return msg;
+            const updated = [...msg.activityLogProposals];
+            updated[proposalIndex] = { ...updated[proposalIndex], status: "rejected" };
+            return { ...msg, activityLogProposals: updated };
+          })
+      );
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to reject activity log");
+      toast.error("Failed to reject activity log");
+    },
+  });
+
   const submitAISatisfactionMutation = useMutation({
     mutationFn: async (data: { liked: boolean; content?: string }) => {
       return await submitAISatisfaction(api, data);
@@ -170,6 +252,10 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isAcceptingMetric: acceptMetricMutation.isPending,
     rejectMetric: rejectMetricMutation.mutateAsync,
     isRejectingMetric: rejectMetricMutation.isPending,
+    acceptProposal: acceptProposalMutation.mutateAsync,
+    rejectProposal: rejectProposalMutation.mutateAsync,
+    acceptActivityLogProposal: acceptActivityLogProposalMutation.mutateAsync,
+    rejectActivityLogProposal: rejectActivityLogProposalMutation.mutateAsync,
     submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
     isSubmittingAISatisfaction: submitAISatisfactionMutation.isPending,
     isUserAIWhitelisted,

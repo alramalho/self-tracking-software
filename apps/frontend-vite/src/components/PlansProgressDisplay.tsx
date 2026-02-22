@@ -1,5 +1,4 @@
 import { usePlans } from "@/contexts/plans";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { cn } from "@/lib/utils";
 import React from "react";
 import { PlanProgressCard } from "./PlanProgressCard";
@@ -16,13 +15,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const { plans, isLoadingPlans } = usePlans();
   const activePlans = plans?.filter(p => !p.deletedAt) ?? [];
 
-  // Sort plans to prioritize coached plans first
-  const sortedPlans = [...activePlans].sort((a, b) => {
-    // Coached plans come first
-    if (a.isCoached && !b.isCoached) return -1;
-    if (!a.isCoached && b.isCoached) return 1;
-    return 0; // Maintain original order for plans of the same type
-  });
+  const sortedPlans = activePlans;
 
   if (isLoadingPlans || !plans) {
     return <div className={cn("w-full flex flex-col gap-4", className)}>Loading...</div>;

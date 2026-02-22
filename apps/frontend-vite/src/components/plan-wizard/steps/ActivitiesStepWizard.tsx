@@ -5,8 +5,10 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import ActivityEditor from "@/components/ActivityEditor";
 import { type Activity } from "@tsw/prisma";
 import api from "@/lib/api";
-import { Dumbbell, Plus, Check, Sparkles } from "lucide-react";
+import { Dumbbell, Plus, Check, Sparkles, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+
+type SuggestedActivity = { title: string; emoji: string; measure: string };
 
 const ActivityItem = ({
   activity,
@@ -49,23 +51,26 @@ const ActivitiesStepWizard = () => {
   const { activities: allActivities } = useActivities();
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
+  const [suggestedNewActivities, setSuggestedNewActivities] = useState<SuggestedActivity[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [creatingSuggestion, setCreatingSuggestion] = useState<string | null>(null);
 
   // Fetch AI recommendations based on goal
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!goal || !allActivities || allActivities.length === 0) return;
+      if (!goal) return;
 
       setIsLoadingRecommendations(true);
       try {
-        const response = await api.post<{ recommendedActivityIds: string[] }>(
-          "/ai/recommend-activities",
-          { planGoal: goal }
-        );
+        const response = await api.post<{
+          recommendedActivityIds: string[];
+          suggestedNewActivities: SuggestedActivity[];
+        }>("/ai/recommend-activities", { planGoal: goal });
         setRecommendedIds(response.data.recommendedActivityIds);
+        setSuggestedNewActivities(response.data.suggestedNewActivities || []);
 
         // Auto-select recommended activities if none are selected yet
-        if (selectedActivities.length === 0 && response.data.recommendedActivityIds.length > 0) {
+        if (selectedActivities.length === 0 && response.data.recommendedActivityIds.length > 0 && allActivities) {
           const recommended = allActivities.filter((a) =>
             response.data.recommendedActivityIds.includes(a.id)
           );
@@ -81,7 +86,27 @@ const ActivitiesStepWizard = () => {
     };
 
     fetchRecommendations();
-  }, [goal, allActivities]);
+  }, [goal]);
+
+  const handleSelectSuggestion = async (suggestion: SuggestedActivity) => {
+    setCreatingSuggestion(suggestion.title);
+    try {
+      const response = await api.post<Activity>("/activities/upsert", {
+        title: suggestion.title,
+        emoji: suggestion.emoji,
+        measure: suggestion.measure,
+      });
+      const created = response.data;
+      setActivities([...selectedActivities, created]);
+      setSuggestedNewActivities((prev) =>
+        prev.filter((s) => s.title !== suggestion.title)
+      );
+    } catch (error) {
+      console.error("Failed to create suggested activity:", error);
+    } finally {
+      setCreatingSuggestion(null);
+    }
+  };
 
   const handleToggleActivity = (activity: Activity) => {
     if (selectedActivities.some((a) => a.id === activity.id)) {
@@ -126,6 +151,40 @@ const ActivitiesStepWizard = () => {
             Finding recommended activities...
           </p>
         )}
+
+        {!isLoadingRecommendations && suggestedNewActivities.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Coach suggestions
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {suggestedNewActivities.map((suggestion) => (
+                <button
+                  key={suggestion.title}
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  disabled={creatingSuggestion === suggestion.title}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 aspect-square transition-all relative"
+                >
+                  {creatingSuggestion === suggestion.title ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  ) : (
+                    <>
+                      <div className="absolute -top-1 -right-1">
+                        <Sparkles className="w-3 h-3 text-blue-500" />
+                      </div>
+                      <span className="text-2xl mb-1">{suggestion.emoji}</span>
+                      <span className="text-xs font-medium text-center line-clamp-2">
+                        {suggestion.title}
+                      </span>
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!isLoadingRecommendations && recommendedIds.length > 0 && (
           <p className="text-sm text-blue-600 dark:text-blue-400 text-center mb-3 flex items-center justify-center gap-1">
             <Sparkles className="w-3 h-3" />

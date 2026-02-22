@@ -3,10 +3,10 @@ import { PrismaClient } from "./index";
 const prisma = new PrismaClient();
 
 // Helper function to check if we're in development
-const isDevelopment = () => true; //() => process.env.NODE_ENV === 'development'
+const isDevelopment = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1') || false;
 
 async function deleteAllData() {
-  if (!isDevelopment()) {
+  if (!isDevelopment) {
     console.error(
       "This script is only available in the development environment."
     );
@@ -50,7 +50,7 @@ async function deleteAllData() {
 }
 
 async function main() {
-  if (!isDevelopment()) {
+  if (!isDevelopment) {
     console.error(
       "This script is only available in the development environment."
     );

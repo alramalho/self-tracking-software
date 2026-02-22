@@ -3,6 +3,8 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
+import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
+import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme/useTheme";
@@ -15,7 +17,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, MoreVertical, Plus, Settings } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
@@ -23,6 +25,7 @@ import ReactMarkdown from "react-markdown";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
+import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
 
 // Helper to format relative dates for dividers
 function formatRelativeDate(date: Date): string {
@@ -59,6 +62,33 @@ function DateDivider({ date }: { date: Date }) {
       <div className="flex-1 h-px bg-border" />
     </div>
   );
+}
+
+function MessageWithReadTracking({
+  message,
+  isOwnMessage,
+  onVisible,
+  children,
+  className,
+}: {
+  message: { id: string; status?: string };
+  isOwnMessage: boolean;
+  onVisible: (messageId: string) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { ref, inView } = useInView({
+    threshold: 0.5,
+    triggerOnce: true,
+  });
+
+  useEffect(() => {
+    if (inView && !isOwnMessage && message.status === "SENT") {
+      onVisible(message.id);
+    }
+  }, [inView, isOwnMessage, message.id, message.status, onVisible]);
+
+  return <div ref={ref} className={className}>{children}</div>;
 }
 
 // WhatsApp-style formatted input preview with visible markers
@@ -186,22 +216,67 @@ function MessageAIPage() {
     isLoadingMessages,
     sendMessage,
     isSendingMessage,
+    pendingStaggeredMessages,
     isLoadingChats,
+    markMessagesAsRead,
+    clearCoachHistory,
+    isClearingCoachHistory,
   } = useMessages();
   const {
     submitFeedback,
     isSubmittingFeedback,
     acceptMetric,
     rejectMetric,
+    acceptProposal,
+    rejectProposal,
+    acceptActivityLogProposal,
+    rejectActivityLogProposal,
     createCoachChat,
     isCreatingCoachChat,
   } = useAI();
   const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
-  const [showChatMenu, setShowChatMenu] = useState(false);
-  const chatMenuRef = useRef<HTMLDivElement>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Debounced mark-as-read tracking
+  const messageQueueRef = useRef<Set<string>>(new Set());
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushReadQueue = useCallback(() => {
+    if (messageQueueRef.current.size > 0 && currentChatId) {
+      const idsToMark = Array.from(messageQueueRef.current);
+      markMessagesAsRead(currentChatId, idsToMark);
+      messageQueueRef.current.clear();
+    }
+  }, [currentChatId, markMessagesAsRead]);
+
+  const queueMessageForRead = useCallback(
+    (messageId: string) => {
+      messageQueueRef.current.add(messageId);
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        flushReadQueue();
+      }, 2000);
+    },
+    [flushReadQueue]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      flushReadQueue();
+    };
+  }, [flushReadQueue]);
 
   const [olderCoachMessages, setOlderCoachMessages] = useState<Message[]>([]);
   const [loadedCoachChatIds, setLoadedCoachChatIds] = useState<string[]>([]);
@@ -270,18 +345,28 @@ function MessageAIPage() {
     setLoadedCoachChatIds([]);
   }, [currentChatId]);
 
-  // Close chat menu when clicking outside
+  // Close menu on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (chatMenuRef.current && !chatMenuRef.current.contains(event.target as Node)) {
-        setShowChatMenu(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
       }
     };
-    if (showChatMenu) {
+    if (showMenu) {
       document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showChatMenu]);
+  }, [showMenu]);
+
+  const handleClearHistory = async () => {
+    try {
+      await clearCoachHistory();
+      setShowClearDialog(false);
+      toast.success("Chat history cleared");
+    } catch {
+      // Error handled by mutation
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -306,6 +391,7 @@ function MessageAIPage() {
     }
 
     setInputValue("");
+    setTimeout(scrollToBottom, 50);
 
     try {
       await sendMessage({ message: messageToSend, chatId: currentChatId, coachVersion: "v2" });
@@ -335,6 +421,42 @@ function MessageAIPage() {
       await rejectMetric(messageId);
     } catch (error) {
       console.error("Failed to reject metric:", error);
+      throw error;
+    }
+  };
+
+  const handleAcceptProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await acceptProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to accept proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await rejectProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to reject proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleAcceptActivityLogProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await acceptActivityLogProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to accept activity log proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectActivityLogProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await rejectActivityLogProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to reject activity log proposal:", error);
       throw error;
     }
   };
@@ -588,20 +710,46 @@ function MessageAIPage() {
                   <p className="text-xs text-muted-foreground">AI Coach</p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate({ to: "/manage-ai-coach" })}
-              >
-                <Settings size={18} />
-              </Button>
+              <div className="relative" ref={menuRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  <EllipsisVertical size={18} />
+                </Button>
+                {showMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      onClick={() => {
+                        setShowMenu(false);
+                        navigate({ to: "/manage-ai-coach" });
+                      }}
+                    >
+                      <Settings size={16} />
+                      Settings
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted transition-colors"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowClearDialog(true);
+                      }}
+                    >
+                      <Trash2 size={16} />
+                      Clear history
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
-          <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-4">
+          <div className="w-full max-w-4xl mx-auto px-4 py-6">
             {hasOlderConversations && (
               <button
                 onClick={handleLoadOlder}
@@ -635,12 +783,27 @@ function MessageAIPage() {
                 const isCoachMessage = message.role === "COACH";
 
                 const prevMessage = allMessages[index - 1];
+                const nextMessage = allMessages[index + 1];
                 const messageDate = new Date(message.createdAt);
                 const showDateDivider = !prevMessage ||
                   !isSameDay(messageDate, new Date(prevMessage.createdAt));
 
+                // Show feedback only on the last coach message before a non-coach message (or end of list)
+                const isLastInCoachGroup = isCoachMessage && (!nextMessage || nextMessage.role !== "COACH");
+
+                const prevIsUser = prevMessage && (prevMessage.role === "USER" || prevMessage.senderId === currentUser?.id);
+                const prevIsCoach = prevMessage && prevMessage.role === "COACH";
+                const isSameSenderAsPrev = (isUserMessage && prevIsUser) || (isCoachMessage && prevIsCoach);
+                const messageSpacing = !prevMessage ? "" : isSameSenderAsPrev && !showDateDivider ? "mt-1" : "mt-4";
+
                 return (
-                  <div key={message.id}>
+                  <MessageWithReadTracking
+                    key={message.id}
+                    message={message}
+                    isOwnMessage={isUserMessage}
+                    onVisible={queueMessageForRead}
+                    className={messageSpacing}
+                  >
                     {showDateDivider && <DateDivider date={messageDate} />}
                     <div
                       className={`flex gap-3 max-w-full overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
@@ -651,14 +814,61 @@ function MessageAIPage() {
                           direction={isUserMessage ? "right" : "left"}
                           className={
                             isUserMessage
-                              ? `bg-muted`
-                              : "bg-transparent pl-0"
+                              ? "bg-muted-foreground/20"
+                              : "bg-muted/60"
                           }
                         >
                           <div className="text-sm whitespace-pre-wrap">
                             {renderMessageContent(message)}
                           </div>
                         </MessageBubble>
+
+                        {isCoachMessage && message.error && (
+                          <div className="flex items-center gap-1 px-1">
+                            <AlertCircle size={12} className="text-red-500" />
+                            <span className="text-xs text-muted-foreground">We are investigating this issue</span>
+                          </div>
+                        )}
+
+                        {isCoachMessage && message.planProposals && message.planProposals.filter((p: any) => p.operations?.length > 0).length > 0 && (
+                          <div className="px-0">
+                            {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => (
+                              <PlanProposalCard
+                                key={`proposal-${message.id}-${idx}`}
+                                messageId={message.id}
+                                proposalIndex={idx}
+                                planGoal={proposal.planGoal}
+                                planEmoji={proposal.planEmoji}
+                                description={proposal.description}
+                                operationCount={proposal.operations?.length || 0}
+                                status={proposal.status}
+                                onAccept={handleAcceptProposal}
+                                onReject={handleRejectProposal}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {isCoachMessage && message.activityLogProposals && message.activityLogProposals.length > 0 && (
+                          <div className="px-0">
+                            {message.activityLogProposals.map((proposal: any, idx: number) => (
+                              <ActivityLogProposalCard
+                                key={`activity-log-${message.id}-${idx}`}
+                                messageId={message.id}
+                                proposalIndex={idx}
+                                activityName={proposal.activityName}
+                                activityEmoji={proposal.activityEmoji}
+                                activityMeasure={proposal.activityMeasure}
+                                quantity={proposal.quantity}
+                                date={proposal.date}
+                                time={proposal.time}
+                                status={proposal.status}
+                                onAccept={handleAcceptActivityLogProposal}
+                                onReject={handleRejectActivityLogProposal}
+                              />
+                            ))}
+                          </div>
+                        )}
 
                         {isCoachMessage && message.toolCalls && message.toolCalls.length > 0 && (
                           <CoachToolCallsCard
@@ -673,7 +883,7 @@ function MessageAIPage() {
                           />
                         )}
 
-                        {isCoachMessage && (
+                        {isLastInCoachGroup && (
                           <MessageFeedback
                             messageId={message.id}
                             existingFeedback={
@@ -689,15 +899,28 @@ function MessageAIPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </MessageWithReadTracking>
                 );
               })
             )}
-            {isSendingMessage && (
-              <div className="flex items-center gap-3 py-2">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <div className="w-4 h-4 rounded-full bg-muted-foreground/50 animate-pulse" />
-                </div>
+            {(isSendingMessage || pendingStaggeredMessages.length > 0) && (
+              <div
+                className="flex items-center gap-3 mt-4 opacity-0"
+                style={{ animation: "typing-appear 0.3s ease-out 1s forwards" }}
+              >
+                <MessageBubble direction="left" className="bg-muted/60">
+                  <div className="flex items-center gap-[5px] px-1 py-1">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="w-[7px] h-[7px] rounded-full bg-muted-foreground/60"
+                        style={{
+                          animation: `typing-dot 1.4s ease-in-out ${1 + i * 0.2}s infinite`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </MessageBubble>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -735,52 +958,39 @@ function MessageAIPage() {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-muted/80 rounded-full px-3 py-2 border border-border">
-              <div className="relative" ref={chatMenuRef}>
-                <button
-                  onClick={() => setShowChatMenu(!showChatMenu)}
-                  className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground"
-                >
-                  <MoreVertical size={18} />
-                </button>
-                {showChatMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50">
-                    <button
-                      onClick={() => {
-                        setShowChatMenu(false);
-                        createCoachChat({ title: null });
-                      }}
-                      disabled={isCreatingCoachChat}
-                      className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-muted transition-colors"
-                    >
-                      <Plus size={16} />
-                      New chat
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-end gap-2 bg-muted/80 rounded-2xl px-3 py-2 border border-border">
               <div className="flex-1 relative">
                 {inputValue && /[*_~]/.test(inputValue) && (
-                  <div className="absolute inset-0 pointer-events-none text-sm flex items-center">
+                  <div className="absolute inset-0 pointer-events-none text-sm">
                     <FormattedInputPreview text={inputValue} />
                   </div>
                 )}
-                <input
+                <textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
                   placeholder={pendingSession ? "Ask about this session..." : "Ask anything"}
+                  rows={1}
                   className={cn(
-                    "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground",
+                    "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground text-sm resize-none max-h-[7.5rem] overflow-y-auto",
                     inputValue && /[*_~]/.test(inputValue) ? "text-transparent caret-foreground" : "text-foreground"
                   )}
-                  disabled={isSendingMessage}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 120) + "px";
+                  }}
                 />
               </div>
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isSendingMessage}
-                className={`p-2 rounded-full transition-colors ${inputValue.trim() && !isSendingMessage
+                className={`p-2 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage
                     ? "bg-foreground text-background hover:bg-foreground/90"
                     : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
                   }`}
@@ -791,6 +1001,16 @@ function MessageAIPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialogOrPopover
+        isOpen={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        onConfirm={handleClearHistory}
+        title="Clear chat history?"
+        description="This will permanently delete all your conversations with Coach Oli and clear its memory of past interactions. This action cannot be undone."
+        confirmText="Clear history"
+        variant="destructive"
+      />
     </div>
   );
 }

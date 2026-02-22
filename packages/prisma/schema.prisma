@@ -57,6 +57,7 @@ model User {
 
   // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
   preferredCoachingHour Int? @default(6) // Default to 6-8am
+  activityRemindersEnabled Boolean @default(false)
 
   // Stripe settings
   stripeCustomerId         String?            @unique
@@ -343,6 +344,10 @@ model Plan {
   progressState        Json?
   progressCalculatedAt DateTime?
 
+  // Categorization
+  category    String?
+  goalChanged Boolean @default(true)
+
   // Pause state
   isPaused     Boolean  @default(false)
   pauseReason  String?
@@ -536,6 +541,7 @@ model Message {
   content   String
   metadata  Json?
   status    MessageStatus @default(SENT)
+  readAt    DateTime?
   createdAt DateTime      @default(now())
 
   // Relations

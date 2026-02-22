@@ -42,12 +42,16 @@ export async function getMessages(
 export async function sendMessage(
   api: AxiosInstance,
   data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }
-): Promise<Message> {
-  const response = await api.post<{ message: MessageApiResponse }>(
+): Promise<Message[]> {
+  const response = await api.post<{ messages?: MessageApiResponse[]; message: MessageApiResponse }>(
     `/chats/${data.chatId}/messages`,
     { message: data.message, coachVersion: data.coachVersion }
   );
-  return deserializeMessage(response.data.message);
+  // New multi-message format (v2) or fallback to single message
+  if (response.data.messages) {
+    return response.data.messages.map(deserializeMessage);
+  }
+  return [deserializeMessage(response.data.message)];
 }
 
 // Create a direct message chat with another user
@@ -68,4 +72,9 @@ export async function markMessagesAsRead(
   messageIds: string[]
 ): Promise<void> {
   await api.post(`/chats/${chatId}/messages/mark-read`, { messageIds });
+}
+
+// Clear all coach chat history and memory
+export async function clearCoachHistory(api: AxiosInstance): Promise<void> {
+  await api.delete("/ai/coach/history");
 }

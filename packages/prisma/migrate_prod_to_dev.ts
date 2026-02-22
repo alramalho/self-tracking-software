@@ -34,7 +34,7 @@ const targetPrisma = new PrismaClient({
   },
 });
 
-const isDevelopment = () => process.env.NODE_ENV === "development";
+const isDevelopment = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1') || false;
 
 /**
  * Get actual column names from a database table
@@ -860,7 +860,7 @@ async function main() {
     process.exit(1);
   }
 
-  if (!isDevelopment()) {
+  if (!isDevelopment) {
     console.error("This script should only be run in development environment");
     process.exit(1);
   }

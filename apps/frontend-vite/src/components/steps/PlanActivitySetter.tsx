@@ -7,8 +7,11 @@ import {
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import type { Activity } from "@tsw/prisma";
-import { AlertCircle, BicepsFlexed } from "lucide-react";
+import { AlertCircle, BicepsFlexed, Sparkles, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
+type SuggestedActivity = { title: string; emoji: string; measure: string };
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
   activities?: Activity[];
@@ -17,6 +20,50 @@ interface PlanActivitySetterResponse extends BaseExtractionResponse {
 function PlanActivitySetter() {
   const { planGoal, completeStep, planActivities } = useOnboarding();
   const api = useApiWithAuth();
+  const [suggestedActivities, setSuggestedActivities] = useState<SuggestedActivity[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [creatingSuggestion, setCreatingSuggestion] = useState<string | null>(null);
+  const [createdFromSuggestions, setCreatedFromSuggestions] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!planGoal) return;
+      setIsLoadingSuggestions(true);
+      try {
+        const response = await api.post<{
+          recommendedActivityIds: string[];
+          suggestedNewActivities: SuggestedActivity[];
+        }>("/ai/recommend-activities", { planGoal });
+        setSuggestedActivities(response.data.suggestedNewActivities || []);
+      } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+    fetchSuggestions();
+  }, [planGoal]);
+
+  const handleSelectSuggestion = async (suggestion: SuggestedActivity) => {
+    setCreatingSuggestion(suggestion.title);
+    try {
+      const response = await api.post<Activity>("/activities/upsert", {
+        title: suggestion.title,
+        emoji: suggestion.emoji,
+        measure: suggestion.measure,
+      });
+      const created = response.data;
+      setCreatedFromSuggestions((prev) => [...prev, created]);
+      setSuggestedActivities((prev) =>
+        prev.filter((s) => s.title !== suggestion.title)
+      );
+    } catch (error) {
+      console.error("Failed to create suggested activity:", error);
+      toast.error("Failed to add activity");
+    } finally {
+      setCreatingSuggestion(null);
+    }
+  };
   const questionChecks = {
     "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.":
       {
@@ -75,8 +122,57 @@ function PlanActivitySetter() {
   };
 
   const handleAccept = async (data: PlanActivitySetterResponse): Promise<void> => {
-    completeStep("plan-activity-selector", { planActivities: data.activities ?? [] });
+    const allActivities = [...createdFromSuggestions, ...(data.activities ?? [])];
+    completeStep("plan-activity-selector", { planActivities: allActivities });
   };
+
+  const renderSuggestions = () => {
+    if (isLoadingSuggestions) {
+      return (
+        <p className="text-sm text-muted-foreground text-center">
+          Finding suggestions...
+        </p>
+      );
+    }
+    if (suggestedActivities.length === 0 && createdFromSuggestions.length === 0) return null;
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+          <Sparkles className="w-3 h-3" />
+          Coach suggestions
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {createdFromSuggestions.map((activity) => (
+            <div
+              key={activity.id}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-sm"
+            >
+              <span>{activity.emoji}</span>
+              <span className="font-medium">{activity.title}</span>
+            </div>
+          ))}
+          {suggestedActivities.map((suggestion) => (
+            <button
+              key={suggestion.title}
+              onClick={() => handleSelectSuggestion(suggestion)}
+              disabled={creatingSuggestion === suggestion.title}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-sm transition-all"
+            >
+              {creatingSuggestion === suggestion.title ? (
+                <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+              ) : (
+                <>
+                  <span>{suggestion.emoji}</span>
+                  <span className="font-medium">{suggestion.title}</span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <DynamicUISuggester<PlanActivitySetterResponse>
@@ -90,7 +186,8 @@ function PlanActivitySetter() {
         emptySubmitButtonText="Suggest"
         onAccept={handleAccept}
         renderChildren={renderExtractedData}
-        placeholder="For example 'reading' --> 'pages' or more generically 'working out' –-> 'sessions'"
+        renderIntermediateComponents={renderSuggestions}
+        placeholder="For example 'reading' --> 'pages' or more generically 'working out' –-> 'sessions'"
         creationMessage="Here's the activities? Can I go ahead and create them?"
       />
     </>

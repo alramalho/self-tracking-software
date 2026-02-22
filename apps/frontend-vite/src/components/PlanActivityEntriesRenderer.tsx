@@ -99,7 +99,7 @@ const PlanActivityEntriesRenderer: React.FC<
     if (entriesOnDate.length === 0) return null;
 
     const intensities = entriesOnDate.map((entry) => {
-      const activityIndex = plan.activities.findIndex(
+      const activityIndex = (plan.activities || []).findIndex(
         (a) => a.id === entry.activityId
       );
 
@@ -192,7 +192,7 @@ const PlanActivityEntriesRenderer: React.FC<
       <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
 
       <BaseHeatmapRenderer
-        activities={plan.activities}
+        activities={plan.activities || []}
         startDate={getDefaultStartDate()}
         endDate={getEndDate()}
         heatmapData={formatEntriesForHeatMap()}

@@ -71,7 +71,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
     if (sessionsOnDate.length === 0) return null;
 
     const intensities = sessionsOnDate.map((session) => {
-      const activityIndex = plan.activities.findIndex(
+      const activityIndex = (plan.activities || []).findIndex(
         (a) => a.id === session.activityId
       );
 
@@ -262,7 +262,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
       <div className="flex justify-center mb-4">{renderSessionViewer()}</div>
 
       <BaseHeatmapRenderer
-        activities={plan.activities}
+        activities={plan.activities || []}
         startDate={getDefaultStartDate()}
         endDate={endDate || (plan.finishingDate ? new Date(plan.finishingDate) : undefined)}
         heatmapData={formatSessionsForHeatMap()}

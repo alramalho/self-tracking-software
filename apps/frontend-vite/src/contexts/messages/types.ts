@@ -36,7 +36,26 @@ export interface Message {
     score: number;
     matchReasons: string[];
   }> | null;
+  planProposals?: Array<{
+    planId: string;
+    planGoal: string;
+    planEmoji: string | null;
+    description: string;
+    operations: unknown[];
+    status: "accepted" | "rejected" | null;
+  }>;
+  activityLogProposals?: Array<{
+    activityId: string;
+    activityName: string;
+    activityEmoji: string;
+    activityMeasure: string;
+    quantity: number;
+    date: string;
+    time?: string;
+    status: "accepted" | "rejected" | null;
+  }>;
   toolCalls?: ToolCall[] | null;
+  error?: boolean;
 }
 
 export type ChatType = "COACH" | "DIRECT" | "GROUP";
@@ -87,11 +106,14 @@ export interface MessagesContextType {
   isLoadingMessages: boolean;
 
   // Mutations
-  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message>;
+  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message[]>;
   isSendingMessage: boolean;
+  pendingStaggeredMessages: Message[];
   createDirectChat: (userId: string) => Promise<Chat>;
   isCreatingDirectChat: boolean;
   markMessagesAsRead: (chatId: string, messageIds: string[]) => Promise<void>;
+  clearCoachHistory: () => Promise<void>;
+  isClearingCoachHistory: boolean;
 }
 
 export const MessagesContext = createContext<MessagesContextType | undefined>(undefined);

@@ -1,0 +1,1 @@
+- never perform `npx prisma migrate dev`, this is not working. Instead, create the sql file manually yourself, synced with prisma.schema, of course
