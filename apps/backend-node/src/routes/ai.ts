@@ -3,8 +3,11 @@ import multer from "multer";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { coachAgentService } from "../services/coachAgentService";
+import { notificationService } from "../services/notificationService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
+import { supermemoryService } from "../services/supermemoryService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -134,6 +137,7 @@ router.get(
               content: msg.content,
               planReplacements,
               metricReplacement,
+              planProposals: metadata.planProposals || [],
               userRecommendations: metadata.userRecommendations || null,
               toolCalls: metadata.toolCalls || null,
               createdAt: msg.createdAt,
@@ -357,6 +361,52 @@ router.post(
     } catch (error) {
       logger.error("Error creating chat:", error);
       res.status(500).json({ error: "Failed to create chat" });
+    }
+  }
+);
+
+// Clear all coach chat history and memory
+router.delete(
+  "/coach/history",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+
+      // Find all coach chats for this user
+      const coachChats = await prisma.chat.findMany({
+        where: { userId: user.id, type: "COACH" },
+        select: { id: true },
+      });
+
+      const chatIds = coachChats.map((c) => c.id);
+
+      if (chatIds.length > 0) {
+        // Delete all messages in these chats (feedback cascades via onDelete)
+        await prisma.message.deleteMany({
+          where: { chatId: { in: chatIds } },
+        });
+
+        // Delete all coach chats
+        await prisma.chat.deleteMany({
+          where: { id: { in: chatIds } },
+        });
+      }
+
+      // Wipe supermemory
+      await supermemoryService.deleteAllMemories(user.id);
+
+      logger.info(
+        `Cleared coach history for user ${user.username}: ${chatIds.length} chats deleted`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error clearing coach history:", error);
+      res.status(500).json({ error: "Failed to clear coach history" });
     }
   }
 );
@@ -1052,6 +1102,485 @@ router.post(
   }
 );
 
+// Accept a plan proposal from AI coach
+router.post(
+  "/messages/:messageId/accept-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.planProposals ||
+        !metadata.planProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.planProposals[proposalIndex];
+
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      // Verify the plan belongs to the user
+      const plan = await prisma.plan.findFirst({
+        where: { id: proposal.planId, userId: user.id, deletedAt: null },
+        include: { activities: true, sessions: true },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      // Execute the operations
+      const changes: Array<{
+        operation: string;
+        sessionId?: string;
+        success: boolean;
+        error?: string;
+      }> = [];
+
+      for (const op of proposal.operations) {
+        try {
+          if (op.type === "add") {
+            const activity = plan.activities.find(
+              (a: any) => a.id === op.activityId
+            );
+            if (!activity) {
+              changes.push({
+                operation: "add",
+                success: false,
+                error: `Activity ${op.activityId} not found in plan`,
+              });
+              continue;
+            }
+
+            const sessionDate = new Date(op.date);
+            const newSession = await prisma.planSession.create({
+              data: {
+                planId: proposal.planId,
+                activityId: op.activityId,
+                date: new Date(
+                  Date.UTC(
+                    sessionDate.getFullYear(),
+                    sessionDate.getMonth(),
+                    sessionDate.getDate()
+                  )
+                ),
+                quantity: op.quantity,
+                descriptiveGuide: op.descriptiveGuide || "",
+                isCoachSuggested: true,
+              },
+            });
+
+            changes.push({
+              operation: "add",
+              sessionId: newSession.id,
+              success: true,
+            });
+          } else if (op.type === "update") {
+            const session = plan.sessions.find(
+              (s: any) => s.id === op.sessionId
+            );
+            if (!session) {
+              changes.push({
+                operation: "update",
+                sessionId: op.sessionId,
+                success: false,
+                error: "Session not found",
+              });
+              continue;
+            }
+
+            const updateData: Record<string, unknown> = {};
+            if (op.date) {
+              const d = new Date(op.date);
+              updateData.date = new Date(
+                Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+              );
+            }
+            if (op.quantity !== undefined) updateData.quantity = op.quantity;
+            if (op.descriptiveGuide !== undefined)
+              updateData.descriptiveGuide = op.descriptiveGuide;
+
+            await prisma.planSession.update({
+              where: { id: op.sessionId },
+              data: updateData,
+            });
+
+            changes.push({
+              operation: "update",
+              sessionId: op.sessionId,
+              success: true,
+            });
+          } else if (op.type === "remove") {
+            const session = plan.sessions.find(
+              (s: any) => s.id === op.sessionId
+            );
+            if (!session) {
+              changes.push({
+                operation: "remove",
+                sessionId: op.sessionId,
+                success: false,
+                error: "Session not found",
+              });
+              continue;
+            }
+
+            await prisma.planSession.delete({
+              where: { id: op.sessionId },
+            });
+
+            changes.push({
+              operation: "remove",
+              sessionId: op.sessionId,
+              success: true,
+            });
+          }
+        } catch (error) {
+          logger.error("Proposal operation failed:", error);
+          changes.push({
+            operation: op.type,
+            sessionId: "sessionId" in op ? op.sessionId : undefined,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      }
+
+      // Update proposal status in metadata
+      metadata.planProposals[proposalIndex].status = "accepted";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      const successCount = changes.filter((c) => c.success).length;
+      logger.info(
+        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount}/${proposal.operations.length} ops successful)`
+      );
+
+      // Conclude week_recap notification if all proposals are now resolved
+      if (metadata.notificationType === "week_recap") {
+        const allResolved = metadata.planProposals.every(
+          (p: any) => !!p.status
+        );
+        if (allResolved) {
+          await prisma.notification.updateMany({
+            where: {
+              userId: user.id,
+              type: "COACH",
+              title: "Weekly Recap",
+              relatedId: message.chatId,
+              status: { not: "CONCLUDED" },
+            },
+            data: {
+              status: "CONCLUDED",
+              concludedAt: new Date(),
+            },
+          });
+          logger.info(
+            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`
+          );
+        }
+      }
+
+      res.json({ success: true, changes });
+    } catch (error) {
+      logger.error("Error accepting plan proposal:", error);
+      res.status(500).json({ error: "Failed to accept plan proposal" });
+    }
+  }
+);
+
+// Reject a plan proposal from AI coach
+router.post(
+  "/messages/:messageId/reject-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.planProposals ||
+        !metadata.planProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      if (metadata.planProposals[proposalIndex].status) {
+        res.status(400).json({
+          error: `Proposal already ${metadata.planProposals[proposalIndex].status}`,
+        });
+        return;
+      }
+
+      metadata.planProposals[proposalIndex].status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} rejected proposal: "${metadata.planProposals[proposalIndex].description}"`
+      );
+
+      // Conclude week_recap notification if all proposals are now resolved
+      if (metadata.notificationType === "week_recap") {
+        const allResolved = metadata.planProposals.every(
+          (p: any) => !!p.status
+        );
+        if (allResolved) {
+          await prisma.notification.updateMany({
+            where: {
+              userId: user.id,
+              type: "COACH",
+              title: "Weekly Recap",
+              relatedId: message.chatId,
+              status: { not: "CONCLUDED" },
+            },
+            data: {
+              status: "CONCLUDED",
+              concludedAt: new Date(),
+            },
+          });
+          logger.info(
+            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`
+          );
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting plan proposal:", error);
+      res.status(500).json({ error: "Failed to reject plan proposal" });
+    }
+  }
+);
+
+// Accept an activity log proposal from AI coach
+router.post(
+  "/messages/:messageId/accept-activity-log-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.activityLogProposals ||
+        !metadata.activityLogProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.activityLogProposals[proposalIndex];
+
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      // Verify the activity belongs to the user
+      const activity = await prisma.activity.findFirst({
+        where: { id: proposal.activityId, userId: user.id, deletedAt: null },
+      });
+
+      if (!activity) {
+        res.status(404).json({ error: "Activity not found" });
+        return;
+      }
+
+      // Check for existing entry on this date
+      const proposalDatetime = new Date(proposal.date + "T" + (proposal.time || "00:00:00") + ".000Z");
+      const existingEntry = await prisma.activityEntry.findFirst({
+        where: {
+          activityId: proposal.activityId,
+          userId: user.id,
+          datetime: proposalDatetime,
+          deletedAt: null,
+        },
+      });
+
+      if (existingEntry) {
+        await prisma.activityEntry.update({
+          where: { id: existingEntry.id },
+          data: {
+            quantity: existingEntry.quantity + proposal.quantity,
+          },
+        });
+      } else {
+        await prisma.activityEntry.create({
+          data: {
+            activityId: proposal.activityId,
+            userId: user.id,
+            quantity: proposal.quantity,
+            datetime: proposalDatetime,
+          },
+        });
+      }
+
+      // Update proposal status in metadata
+      metadata.activityLogProposals[proposalIndex].status = "accepted";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date}`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error accepting activity log proposal:", error);
+      res.status(500).json({ error: "Failed to accept activity log proposal" });
+    }
+  }
+);
+
+// Reject an activity log proposal from AI coach
+router.post(
+  "/messages/:messageId/reject-activity-log-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.activityLogProposals ||
+        !metadata.activityLogProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      if (metadata.activityLogProposals[proposalIndex].status) {
+        res.status(400).json({
+          error: `Proposal already ${metadata.activityLogProposals[proposalIndex].status}`,
+        });
+        return;
+      }
+
+      metadata.activityLogProposals[proposalIndex].status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} rejected activity log proposal: ${metadata.activityLogProposals[proposalIndex].activityEmoji} ${metadata.activityLogProposals[proposalIndex].activityName}`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting activity log proposal:", error);
+      res.status(500).json({ error: "Failed to reject activity log proposal" });
+    }
+  }
+);
+
 // Submit AI overall satisfaction feedback
 router.post(
   "/feedback/ai-satisfaction",
@@ -1138,10 +1667,6 @@ router.post(
         select: { id: true, title: true, emoji: true },
       });
 
-      if (activities.length === 0) {
-        return res.json({ recommendedActivityIds: [] });
-      }
-
       const result = await aiService.recommendActivities(planGoal, activities);
 
       logger.info(
@@ -1152,6 +1677,178 @@ router.post(
     } catch (error) {
       logger.error("Error recommending activities:", error);
       res.status(500).json({ error: "Failed to recommend activities" });
+    }
+  }
+);
+
+// Trigger a coaching notification (week_recap or pre_activity)
+router.post(
+  "/coach/trigger-notification",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { type } = req.body;
+
+      if (!type || !["week_recap", "pre_activity"].includes(type)) {
+        return res
+          .status(400)
+          .json({ error: "type must be 'week_recap' or 'pre_activity'" });
+      }
+
+      // Get or create coach
+      let coach = await prisma.coach.findFirst({
+        where: { ownerId: user.id },
+      });
+
+      if (!coach) {
+        coach = await prisma.coach.create({
+          data: {
+            ownerId: user.id,
+            details: {
+              name: "Coach Oli",
+              bio: "Your personal AI coach helping you achieve your goals",
+            },
+          },
+        });
+      }
+
+      // Get or create the latest coach chat
+      let chat = await prisma.chat.findFirst({
+        where: {
+          userId: user.id,
+          coachId: coach.id,
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      if (!chat) {
+        chat = await prisma.chat.create({
+          data: {
+            userId: user.id,
+            coachId: coach.id,
+            title: null,
+          },
+        });
+      }
+
+      // Fetch user's plans with activities and sessions
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          OR: [
+            { finishingDate: null },
+            { finishingDate: { gt: new Date() } },
+          ],
+        },
+        include: {
+          activities: true,
+          sessions: true,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
+      // Fetch active reminders
+      const reminders = await prisma.reminder.findMany({
+        where: {
+          userId: user.id,
+          status: "PENDING",
+        },
+        orderBy: { triggerAt: "asc" },
+      });
+
+      // Build the internal prompt based on notification type
+      let internalPrompt: string;
+      if (type === "week_recap") {
+        internalPrompt =
+          "Use readActivities for the past 7 days and produce a weekly recap for the user. " +
+          "Highlight what went well, what was missed, and for each missed area use proposePlanModification to suggest a concrete change — " +
+          "e.g. removing upcoming sessions for a plan that's consistently not being followed, or adjusting session quantities. " +
+          "Keep the text concise (3-5 sentences).";
+      } else {
+        internalPrompt =
+          "Use readActivities for the past 1 day to see today's scheduled activities. " +
+          "Give the user a brief rundown of what's on their plate today and a short motivational message. " +
+          "Keep it concise (2-3 sentences).";
+      }
+
+      // Generate the coach response
+      const aiResponse = await coachAgentService.generateResponse({
+        user,
+        message: internalPrompt,
+        conversationHistory: [],
+        plans,
+        reminders,
+      });
+
+      // Save multiple coach messages (one per draft)
+      type DraftType = (typeof aiResponse.draftMessages)[number];
+      const savedMessages: Array<{ coachMsg: Awaited<ReturnType<typeof prisma.message.create>>; draft: DraftType }> = [];
+      for (const draft of aiResponse.draftMessages) {
+        const coachMsg = await prisma.message.create({
+          data: {
+            chatId: chat.id,
+            role: "COACH",
+            content: draft.content,
+            metadata: {
+              planReplacements: draft.planReplacements || [],
+              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+              notificationType: type,
+              ...(draft.toolCalls && {
+                toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
+              }),
+            },
+          },
+        });
+        savedMessages.push({ coachMsg, draft });
+      }
+
+      // Update chat timestamp
+      await prisma.chat.update({
+        where: { id: chat.id },
+        data: { updatedAt: new Date() },
+      });
+
+      // Send push notification using first draft's content
+      const firstDraftContent = aiResponse.draftMessages[0].content;
+      await notificationService.createAndProcessNotification({
+        userId: user.id,
+        title: type === "week_recap" ? "Weekly Recap" : "Today's Plan",
+        message: type === "week_recap" ? "Your week analysis is ready!" : firstDraftContent.substring(0, 200),
+        type: "COACH",
+        relatedId: chat.id,
+        promptTag: type,
+      });
+
+      logger.info(
+        `Triggered ${type} notification for user ${user.username}, chat ${chat.id}, drafts: ${savedMessages.length}`
+      );
+
+      const responseMessages = savedMessages.map(({ coachMsg, draft }) => ({
+        id: coachMsg.id,
+        chatId: coachMsg.chatId,
+        role: coachMsg.role,
+        content: draft.content,
+        planReplacements: draft.planReplacements || [],
+        planProposals: draft.planProposals || [],
+        toolCalls: draft.toolCalls || null,
+        createdAt: coachMsg.createdAt,
+      }));
+
+      res.json({
+        messages: responseMessages,
+        message: responseMessages[responseMessages.length - 1],
+        chatId: chat.id,
+      });
+    } catch (error) {
+      logger.error("Error triggering coach notification:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to trigger coaching notification" });
     }
   }
 );

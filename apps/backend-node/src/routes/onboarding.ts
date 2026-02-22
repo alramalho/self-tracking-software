@@ -5,8 +5,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { perplexityAiService } from "../services/perplexityAiService";
-import { memoryService } from "../services/memoryService";
-import { chatService } from "../services/chatService";
+
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import dedent from "dedent";
@@ -31,16 +30,6 @@ router.post(
       }
 
       logger.info(`Plan goal check for user ${req.user!.id}`);
-
-      const { coach, chat } =
-        await chatService.ensureOnboardingChatAndCoachExist(req.user!.id);
-
-      // Store user message in memory
-      await memoryService.writeMessage({
-        content: message,
-        chatId: chat.id,
-        role: "USER",
-      });
 
       // const conversationHistory = await memoryService.readConversationHistory(
       //   req.user!.id,
@@ -94,16 +83,6 @@ router.post(
       }
 
       logger.info(`Generating plan activities for user ${req.user!.id}`);
-
-      const { coach, chat } =
-        await chatService.ensureOnboardingChatAndCoachExist(req.user!.id);
-
-      // Store user message in memory
-      await memoryService.writeMessage({
-        content: message,
-        chatId: chat.id,
-        role: "USER",
-      });
 
       // Use only the selected plan goal as context, not conversation history
       // This ensures we extract activities for the specific goal the user selected,

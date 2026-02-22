@@ -156,8 +156,9 @@ router.post(
               userPicture: req.user!.picture,
               userName: req.user!.name,
               userUsername: req.user!.username,
+              batchCategory: "FRIEND_POSTS",
             },
-          });
+          }, false);
         }
       }
 
@@ -543,8 +544,9 @@ router.post(
             commenterPicture: req.user!.picture,
             commenterName: req.user!.name,
             commenterUsername: req.user!.username,
+            batchCategory: "COMMENTS",
           },
-        });
+        }, false);
         notifiedUserIds.add(achievementPost.userId);
       }
 
@@ -590,8 +592,9 @@ router.post(
               commenterPicture: req.user!.picture,
               commenterName: req.user!.name,
               commenterUsername: req.user!.username,
+              batchCategory: "MENTIONS",
             },
-          });
+          }, false);
 
           notifiedUserIds.add(mentionedUser.id);
         }

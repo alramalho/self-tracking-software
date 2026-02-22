@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "rm -rf node_modules && rm -rf dist",
     "dev": "tsr generate && vite",
+    "dev:proddb": "tsr generate && vite --mode proddb",
     "gen": "tsr generate",
     "build": "tsr generate && tsc -b && vite build",
     "build:cap": "tsr generate && tsc -b && vite build --mode cap",

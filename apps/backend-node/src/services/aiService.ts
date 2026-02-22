@@ -1241,38 +1241,62 @@ export class AIService {
   async recommendActivities(
     planGoal: string,
     existingActivities: { id: string; title: string; emoji: string | null }[]
-  ): Promise<{ recommendedActivityIds: string[] }> {
-    if (existingActivities.length === 0) {
-      return { recommendedActivityIds: [] };
-    }
-
+  ): Promise<{
+    recommendedActivityIds: string[];
+    suggestedNewActivities: Array<{ title: string; emoji: string; measure: string }>;
+  }> {
     const schema = z.object({
       recommendedActivityIds: z.array(z.string()).describe(
-        "Array of activity IDs that are most relevant to the plan goal"
+        "Array of activity IDs from existing activities that are most relevant to the plan goal"
+      ),
+      suggestedNewActivities: z.array(
+        z.object({
+          title: z.string(),
+          emoji: z.string(),
+          measure: z.string(),
+        })
+      ).describe(
+        "New activities to suggest when existing ones don't fully cover the goal. Max 2-3."
       ),
     });
 
-    const activitiesList = existingActivities
-      .map((a) => `- ID: "${a.id}" | ${a.emoji || ""} ${a.title}`)
-      .join("\n");
+    const activitiesList = existingActivities.length > 0
+      ? existingActivities
+          .map((a) => `- ID: "${a.id}" | ${a.emoji || ""} ${a.title}`)
+          .join("\n")
+      : "(no existing activities)";
 
     const systemPrompt = dedent`
       You are an activity recommendation expert. Given a user's plan goal and their existing activities,
-      select which activities are most relevant to help achieve that goal.
+      select which existing activities are most relevant AND suggest new ones if there's a clear gap.
 
-      Be selective - only recommend activities that clearly relate to the goal.
-      If no activities are relevant, return an empty array.
+      Rules for existing activities:
+      - Be selective - only recommend activities that clearly relate to the goal.
+      - If no existing activities are relevant, return an empty recommendedActivityIds array.
 
-      Return ONLY the activity IDs that are relevant, not all of them.
+      Rules for suggesting new activities:
+      - STRONGLY prefer existing activities. Only suggest new ones when there's a clear gap.
+      - Max 2-3 new suggestions.
+      - Use atomic measures (e.g., 'pages', 'minutes', 'kilometers', NOT 'books' or 'marathons').
+      - Only single measure per activity.
+      - Only suggest ACTIVE, trackable activities. NO passive activities like "Rest", "Recovery", "Sleep".
+      - Keep titles short (1-3 words).
+      - If existing activities already cover the goal well, return an empty suggestedNewActivities array.
+
+      Examples of good new activity suggestions:
+      - 'Running' measured in 'kilometers'
+      - 'Reading' measured in 'pages'
+      - 'Stretching' measured in 'minutes'
+      - 'Meditation' measured in 'minutes'
     `;
 
     const prompt = dedent`
       Plan goal: "${planGoal}"
 
-      Available activities:
+      Existing activities:
       ${activitiesList}
 
-      Select which activity IDs are most relevant to this goal.
+      Select relevant existing activity IDs and suggest new activities only if needed.
     `;
 
     return this.generateStructuredResponse({

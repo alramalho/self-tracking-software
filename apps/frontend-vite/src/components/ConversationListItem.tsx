@@ -100,9 +100,17 @@ export function ConversationListItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
           <span className="font-medium truncate">{displayInfo.name}</span>
-          <span className="text-xs text-muted-foreground flex-shrink-0">
-            {lastMessageTime}
-          </span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!!chat.unreadCount && chat.unreadCount > 0 && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {lastMessageTime}
+            </span>
+          </div>
         </div>
         {chat.lastMessage && (
           <p className="text-sm text-muted-foreground truncate">

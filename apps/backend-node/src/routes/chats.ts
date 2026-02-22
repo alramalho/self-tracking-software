@@ -5,6 +5,7 @@ import { coachAgentService } from "../services/coachAgentService";
 import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { supermemoryService } from "../services/supermemoryService";
 
 const router = Router();
 
@@ -73,18 +74,36 @@ router.get(
       });
 
       // Transform chats to include useful information
+      // Only the latest coach chat should report unread count
+      const latestCoachChatId = chats.find((c) => c.type === "COACH")?.id;
+
       const transformedChats = await Promise.all(
         chats.map(async (chat) => {
           const lastMessage = chat.messages[0];
 
-          // Count unread messages (messages not sent by current user with SENT status)
-          const unreadCount = await prisma.message.count({
-            where: {
-              chatId: chat.id,
-              status: "SENT",
-              senderId: { not: user.id },
-            },
-          });
+          // Count unread messages
+          // For coach chats, use readAt-based counting (only latest chat)
+          // For other chats, use status-based counting
+          let unreadCount = 0;
+          if (chat.type === "COACH") {
+            if (chat.id === latestCoachChatId) {
+              unreadCount = await prisma.message.count({
+                where: {
+                  chatId: chat.id,
+                  role: "COACH",
+                  readAt: null,
+                },
+              });
+            }
+          } else {
+            unreadCount = await prisma.message.count({
+              where: {
+                chatId: chat.id,
+                status: "SENT",
+                senderId: { not: user.id },
+              },
+            });
+          }
 
           return {
             id: chat.id,
@@ -271,10 +290,14 @@ router.get(
                 chatId: msg.chatId,
                 role: msg.role,
                 content: msg.content,
+                status: msg.status,
                 planReplacements,
                 metricReplacement,
+                planProposals: metadata.planProposals || [],
+                activityLogProposals: metadata.activityLogProposals || [],
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
+                error: metadata.error || false,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };
@@ -286,9 +309,11 @@ router.get(
               chatId: msg.chatId,
               role: msg.role,
               content: msg.content,
+              status: msg.status,
               planReplacements: [],
               metricReplacement: null,
               toolCalls: null,
+              error: false,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };
@@ -300,6 +325,7 @@ router.get(
             chatId: msg.chatId,
             role: msg.role,
             content: msg.content,
+            status: msg.status,
             createdAt: msg.createdAt,
             feedback: msg.feedback,
           };
@@ -427,6 +453,7 @@ router.post(
           messageContent: string;
           planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
           metricReplacement?: { textToReplace: string; metricTitle: string; rating: number } | null;
+          planProposals?: Array<{ planId: string; planGoal: string; planEmoji: string | null; description: string; operations: unknown[]; status: null }>;
           userRecommendations?: unknown;
           toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
         };
@@ -444,18 +471,120 @@ router.post(
             orderBy: { triggerAt: "asc" },
           });
 
+          const memoriesContext = await supermemoryService.getProfile(user.id, message);
+
           const v2Response = await coachAgentService.generateResponse({
             user,
             message,
             conversationHistory,
             plans: plans as Array<typeof plans[0] & { sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }> }>,
             reminders,
+            memoriesContext,
           });
-          aiResponse = {
-            messageContent: v2Response.messageContent,
-            planReplacements: v2Response.planReplacements,
-            toolCalls: v2Response.toolCalls,
-          };
+
+          // Save multiple coach messages (one per draft)
+          const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
+          for (const draft of v2Response.draftMessages) {
+            const coachMsg = await prisma.message.create({
+              data: {
+                chatId: chatId,
+                role: "COACH",
+                content: draft.content,
+                metadata: {
+                  planReplacements: draft.planReplacements || [],
+                  planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+                  activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
+                  ...(draft.toolCalls && {
+                    toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
+                  }),
+                  ...(draft.error && { error: true }),
+                },
+              },
+            });
+            savedMessages.push(coachMsg);
+          }
+
+          // Fire-and-forget: store full exchange in long-term memory
+          const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
+          supermemoryService.addMemory(
+            user.id,
+            `user: ${message}\nassistant: ${fullCoachText}`,
+            savedMessages[savedMessages.length - 1].id
+          );
+
+          logger.info(
+            `Coach v2 chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
+          );
+
+          // Generate chat title if this is the first exchange
+          if (!chat.title) {
+            (async () => {
+              try {
+                const titlePrompt = `User: ${message}\nCoach: ${fullCoachText}`;
+                const titleSystemPrompt =
+                  "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
+                  "The title should be clear and concise. Only output the title, nothing else.";
+
+                const generatedTitle = await aiService.generateText({
+                  prompt: titlePrompt,
+                  systemPrompt: titleSystemPrompt,
+                });
+
+                await prisma.chat.update({
+                  where: { id: chatId },
+                  data: { title: generatedTitle.trim() },
+                });
+
+                logger.info(
+                  `Generated title for chat ${chatId}: "${generatedTitle}"`
+                );
+              } catch (error) {
+                logger.error("Error generating chat title:", error);
+              }
+            })();
+          }
+
+          // Resolve plans for response
+          const resolvedMessages = savedMessages.map((coachMsg, idx) => {
+            const draft = v2Response.draftMessages[idx];
+            const resolvedPlanReplacements =
+              draft.planReplacements
+                ?.map((replacement) => {
+                  const plan = plans.find(
+                    (p) =>
+                      p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+                  );
+                  return plan
+                    ? {
+                        textToReplace: replacement.textToReplace,
+                        plan: {
+                          id: plan.id,
+                          goal: plan.goal,
+                          emoji: plan.emoji,
+                        },
+                      }
+                    : null;
+                })
+                .filter(Boolean) || [];
+
+            return {
+              id: coachMsg.id,
+              chatId: coachMsg.chatId,
+              role: coachMsg.role,
+              content: draft.content,
+              planReplacements: resolvedPlanReplacements,
+              planProposals: draft.planProposals || [],
+              activityLogProposals: draft.activityLogProposals || [],
+              toolCalls: draft.toolCalls || null,
+              error: draft.error || false,
+              createdAt: coachMsg.createdAt,
+            };
+          });
+
+          return res.json({
+            messages: resolvedMessages,
+            message: resolvedMessages[resolvedMessages.length - 1],
+          });
         } else {
           // Use the original coach (v1)
           const metrics = await prisma.metric.findMany({
@@ -482,6 +611,7 @@ router.post(
             metadata: {
               planReplacements: aiResponse.planReplacements || [],
               metricReplacement: aiResponse.metricReplacement || null,
+              planProposals: JSON.parse(JSON.stringify(aiResponse.planProposals || [])),
               userRecommendations: aiResponse.userRecommendations || null,
               ...(aiResponse.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(aiResponse.toolCalls)),
@@ -489,6 +619,13 @@ router.post(
             },
           },
         });
+
+        // Fire-and-forget: store exchange in long-term memory
+        supermemoryService.addMemory(
+          user.id,
+          `user: ${message}\nassistant: ${aiResponse.messageContent}`,
+          coachMessage.id
+        );
 
         logger.info(
           `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}..."`
@@ -586,6 +723,7 @@ router.post(
             content: aiResponse.messageContent,
             planReplacements: resolvedPlanReplacements,
             metricReplacement: resolvedMetricReplacement,
+            planProposals: aiResponse.planProposals || [],
             userRecommendations: aiResponse.userRecommendations || null,
             toolCalls: aiResponse.toolCalls || null,
             createdAt: coachMessage.createdAt,
@@ -677,18 +815,66 @@ router.post(
       }
 
       // Update messages to READ status
-      // Only update messages where the current user is NOT the sender
+      // For COACH chats, mark all non-user messages (senderId is null for coach messages)
+      // For other chats, only mark messages not sent by the current user
       const result = await prisma.message.updateMany({
         where: {
           id: { in: messageIds },
           chatId: chatId,
-          senderId: { not: user.id },
+          ...(chat.type === "COACH"
+            ? { role: { not: "USER" } }
+            : { senderId: { not: user.id } }),
           status: "SENT",
         },
         data: {
           status: "READ",
+          readAt: new Date(),
         },
       });
+
+      // Conclude week_recap notifications when their messages are read
+      if (result.count > 0) {
+        const markedMessages = await prisma.message.findMany({
+          where: {
+            id: { in: messageIds },
+            chatId: chatId,
+            status: "READ",
+          },
+          select: { id: true, metadata: true },
+        });
+
+        const weekRecapMessages = markedMessages.filter((msg) => {
+          const metadata = msg.metadata as any;
+          return metadata?.notificationType === "week_recap";
+        });
+
+        for (const msg of weekRecapMessages) {
+          const metadata = msg.metadata as any;
+          const proposals = metadata?.planProposals || [];
+          const hasPendingProposals = proposals.some(
+            (p: any) => !p.status
+          );
+
+          if (!hasPendingProposals) {
+            await prisma.notification.updateMany({
+              where: {
+                userId: user.id,
+                type: "COACH",
+                title: "Weekly Recap",
+                relatedId: chatId,
+                status: { not: "CONCLUDED" },
+              },
+              data: {
+                status: "CONCLUDED",
+                concludedAt: new Date(),
+              },
+            });
+            logger.info(
+              `Concluded week_recap notifications for chat ${chatId}, user ${user.username}`
+            );
+          }
+        }
+      }
 
       logger.info(
         `Marked ${result.count} messages as read in chat ${chatId} for user ${user.username}`

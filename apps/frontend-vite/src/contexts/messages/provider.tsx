@@ -2,7 +2,7 @@ import { useApiWithAuth } from "@/api";
 import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
 import {
   getChats,
@@ -10,6 +10,7 @@ import {
   sendMessage,
   createDirectChat,
   markMessagesAsRead,
+  clearCoachHistory,
 } from "./service";
 import {
   MessagesContext,
@@ -26,6 +27,15 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [pendingStaggeredMessages, setPendingStaggeredMessages] = useState<Message[]>([]);
+  const staggerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Cleanup stagger timers on unmount
+  useEffect(() => {
+    return () => {
+      staggerTimersRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const chats = useQuery({
     queryKey: ["chats"],
@@ -39,6 +49,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       return result;
     },
     enabled: isLoaded && isSignedIn,
+    staleTime: 1000 * 60 * 2,
   });
 
   if (chats.error) {
@@ -54,6 +65,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       return await getMessages(api, currentChatId);
     },
     enabled: isLoaded && isSignedIn && !!currentChatId,
+    staleTime: 1000 * 60 * 2,
   });
 
   if (messages.error) {
@@ -81,28 +93,67 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       // Make the API call
       return await sendMessage(api, data);
     },
-    onSuccess: (responseMessage, { chatId }) => {
-      // Replace the temp message with the actual response or add the response
-      queryClient.setQueryData(
-        ["messages", chatId],
-        (oldMessages: Message[] = []) => {
-          // Filter out temp messages and add the response
-          const filteredMessages = oldMessages.filter(
-            (msg) => !msg.id.startsWith("temp-")
-          );
-          // Check if response message is already in the list
-          const exists = filteredMessages.some(
-            (msg) => msg.id === responseMessage.id
-          );
-          if (exists) {
-            return filteredMessages;
-          }
-          return [...filteredMessages, responseMessage];
-        }
-      );
+    onSuccess: (responseMessages, { chatId }) => {
+      // Clear any existing stagger timers
+      staggerTimersRef.current.forEach(clearTimeout);
+      staggerTimersRef.current = [];
 
-      // Invalidate to ensure cache is fresh (handles race conditions)
-      queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      if (responseMessages.length <= 1) {
+        // Single message — add immediately
+        const msg = responseMessages[0];
+        if (msg) {
+          queryClient.setQueryData(
+            ["messages", chatId],
+            (oldMessages: Message[] = []) => {
+              const exists = oldMessages.some((m) => m.id === msg.id);
+              return exists ? oldMessages : [...oldMessages, msg];
+            }
+          );
+        }
+        queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      } else {
+        // Multiple messages — stagger delivery
+        const [firstMsg, ...rest] = responseMessages;
+
+        // Add first message immediately
+        queryClient.setQueryData(
+          ["messages", chatId],
+          (oldMessages: Message[] = []) => {
+            const exists = oldMessages.some((m) => m.id === firstMsg.id);
+            return exists ? oldMessages : [...oldMessages, firstMsg];
+          }
+        );
+
+        // Queue remaining messages with staggered delays
+        setPendingStaggeredMessages(rest);
+
+        let cumulativeDelay = 0;
+        rest.forEach((msg, idx) => {
+          // Delay based on previous message's word count
+          const prevMsg = idx === 0 ? firstMsg : rest[idx - 1];
+          const wordCount = prevMsg.content.split(/\s+/).length;
+          const delay = Math.min(Math.max(wordCount * 500, 800), 4000);
+          cumulativeDelay += delay;
+
+          const timer = setTimeout(() => {
+            queryClient.setQueryData(
+              ["messages", chatId],
+              (oldMessages: Message[] = []) => {
+                const exists = oldMessages.some((m) => m.id === msg.id);
+                return exists ? oldMessages : [...oldMessages, msg];
+              }
+            );
+            setPendingStaggeredMessages((prev) => prev.filter((m) => m.id !== msg.id));
+
+            // After last message is delivered, invalidate
+            if (idx === rest.length - 1) {
+              queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+            }
+          }, cumulativeDelay);
+
+          staggerTimersRef.current.push(timer);
+        });
+      }
 
       // Update the chat's updatedAt timestamp
       queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
@@ -115,6 +166,11 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     },
     onError: (error, { chatId }) => {
+      // Clear stagger timers on error
+      staggerTimersRef.current.forEach(clearTimeout);
+      staggerTimersRef.current = [];
+      setPendingStaggeredMessages([]);
+
       // Rollback: remove the optimistic user message on error
       queryClient.setQueryData(
         ["messages", chatId],
@@ -161,8 +217,8 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     }) => {
       return await markMessagesAsRead(api, chatId, messageIds);
     },
-    onSuccess: (_, { chatId, messageIds }) => {
-      // Optimistically update the messages in cache
+    onMutate: ({ chatId, messageIds }) => {
+      // Optimistically update messages in cache immediately
       queryClient.setQueryData(
         ["messages", chatId],
         (oldMessages: Message[] = []) => {
@@ -171,10 +227,46 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           );
         }
       );
+      // Optimistically decrement unread count on the chat
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
+        return oldChats.map((chat) => {
+          if (chat.id === chatId) {
+            const newCount = Math.max(0, (chat.unreadCount || 0) - messageIds.length);
+            return { ...chat, unreadCount: newCount };
+          }
+          return chat;
+        });
+      });
+    },
+    onSuccess: (_, { chatId }) => {
       // Invalidate chats to update unread counts
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      // Invalidate notifications so concluded week_recap notifications are reflected
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
+
+  const clearCoachHistoryMutation = useMutation({
+    mutationFn: async () => {
+      await clearCoachHistory(api);
+    },
+    onSuccess: () => {
+      setCurrentChatId(null);
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to clear coach history");
+      toast.error("Failed to clear coach history");
+    },
+  });
+
+  const markMessagesAsReadStable = useCallback(
+    async (chatId: string, messageIds: string[]) => {
+      await markMessagesAsReadMutation.mutateAsync({ chatId, messageIds });
+    },
+    [markMessagesAsReadMutation.mutateAsync]
+  );
 
   const totalUnreadCount = useMemo(() => {
     return (
@@ -192,11 +284,12 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoadingMessages: messages.isLoading,
     sendMessage: sendMessageMutation.mutateAsync,
     isSendingMessage: sendMessageMutation.isPending,
+    pendingStaggeredMessages,
     createDirectChat: createDirectChatMutation.mutateAsync,
     isCreatingDirectChat: createDirectChatMutation.isPending,
-    markMessagesAsRead: async (chatId: string, messageIds: string[]) => {
-      await markMessagesAsReadMutation.mutateAsync({ chatId, messageIds });
-    },
+    markMessagesAsRead: markMessagesAsReadStable,
+    clearCoachHistory: clearCoachHistoryMutation.mutateAsync,
+    isClearingCoachHistory: clearCoachHistoryMutation.isPending,
   };
 
   return (

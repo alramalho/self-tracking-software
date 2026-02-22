@@ -50,6 +50,18 @@ export default function GeneralInitializer({
   const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/");
   const isGetCoachedPage = pathname.startsWith("/get-coached");
   const isWrappedPage = pathname.startsWith("/wrapped");
+  const isManageAICoachPage = pathname.startsWith("/manage-ai-coach");
+  const isProfilePage = pathname.startsWith("/profile");
+  const isHomePage = pathname == "/";
+
+  const showsBottomNav = isSignedIn
+    && !isDownloadPage
+    && !isAiPage
+    && !isDmsPage
+    && !isGetCoachedPage
+    && !isWrappedPage
+    && !isManageAICoachPage;
+
   const friends = useMemo(() => {
     return [
       ...(currentUser?.connectionsFrom
@@ -111,7 +123,7 @@ export default function GeneralInitializer({
       if (
         !hasUpdatedTimezone &&
         currentUser.timezone !==
-          Intl.DateTimeFormat().resolvedOptions().timeZone
+        Intl.DateTimeFormat().resolvedOptions().timeZone
       ) {
         setHasUpdatedTimezone(true);
         updateUser({
@@ -201,9 +213,6 @@ export default function GeneralInitializer({
     );
   }
 
-  const isProfilePage = pathname.startsWith("/profile");
-  const isHomePage = pathname == "/";
-  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage && !isDmsPage && !isGetCoachedPage && !isWrappedPage;
   return (
     <>
       {isOnboardingPage ? (
