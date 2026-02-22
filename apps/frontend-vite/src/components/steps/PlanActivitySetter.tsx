@@ -7,7 +7,7 @@ import {
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import type { Activity } from "@tsw/prisma";
-import { AlertCircle, BicepsFlexed, Sparkles, Loader2 } from "lucide-react";
+import { AlertCircle, BicepsFlexed, Sparkles, Loader2, Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -126,6 +126,10 @@ function PlanActivitySetter() {
     completeStep("plan-activity-selector", { planActivities: allActivities });
   };
 
+  const handleDismissSuggestion = (title: string) => {
+    setSuggestedActivities((prev) => prev.filter((s) => s.title !== title));
+  };
+
   const renderSuggestions = () => {
     if (isLoadingSuggestions) {
       return (
@@ -141,32 +145,51 @@ function PlanActivitySetter() {
           <Sparkles className="w-3 h-3" />
           Coach suggestions
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2">
           {createdFromSuggestions.map((activity) => (
             <div
               key={activity.id}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-sm"
+              className="flex items-center w-full rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 p-3"
             >
-              <span>{activity.emoji}</span>
-              <span className="font-medium">{activity.title}</span>
+              <span className="text-3xl mr-3">{activity.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold">{activity.title}</span>
+                <span className="text-xs text-muted-foreground ml-1.5">({activity.measure})</span>
+              </div>
+              <Check className="w-4 h-4 text-blue-500 ml-2" />
             </div>
           ))}
           {suggestedActivities.map((suggestion) => (
-            <button
+            <div
               key={suggestion.title}
-              onClick={() => handleSelectSuggestion(suggestion)}
-              disabled={creatingSuggestion === suggestion.title}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-sm transition-all"
+              className="flex items-center w-full rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 p-3 transition-all"
             >
-              {creatingSuggestion === suggestion.title ? (
-                <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
-              ) : (
-                <>
-                  <span>{suggestion.emoji}</span>
-                  <span className="font-medium">{suggestion.title}</span>
-                </>
-              )}
-            </button>
+              <span className="text-3xl mr-3">{suggestion.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold">{suggestion.title}</span>
+                <span className="text-xs text-muted-foreground ml-1.5">({suggestion.measure})</span>
+              </div>
+              <div className="flex items-center gap-1.5 ml-2">
+                <button
+                  onClick={() => handleDismissSuggestion(suggestion.title)}
+                  disabled={creatingSuggestion === suggestion.title}
+                  className="p-1.5 rounded-full text-muted-foreground hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  disabled={creatingSuggestion === suggestion.title}
+                  className="p-1.5 rounded-full text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  {creatingSuggestion === suggestion.title ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </div>

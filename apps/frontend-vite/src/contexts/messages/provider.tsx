@@ -11,6 +11,7 @@ import {
   createDirectChat,
   markMessagesAsRead,
   clearCoachHistory,
+  clearCoachMemory,
 } from "./service";
 import {
   MessagesContext,
@@ -261,6 +262,19 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const clearCoachMemoryMutation = useMutation({
+    mutationFn: async () => {
+      await clearCoachMemory(api);
+    },
+    onSuccess: () => {
+      toast.success("Coach memory cleared");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to clear coach memory");
+      toast.error("Failed to clear coach memory");
+    },
+  });
+
   const markMessagesAsReadStable = useCallback(
     async (chatId: string, messageIds: string[]) => {
       await markMessagesAsReadMutation.mutateAsync({ chatId, messageIds });
@@ -290,6 +304,8 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     markMessagesAsRead: markMessagesAsReadStable,
     clearCoachHistory: clearCoachHistoryMutation.mutateAsync,
     isClearingCoachHistory: clearCoachHistoryMutation.isPending,
+    clearCoachMemory: clearCoachMemoryMutation.mutateAsync,
+    isClearingCoachMemory: clearCoachMemoryMutation.isPending,
   };
 
   return (
