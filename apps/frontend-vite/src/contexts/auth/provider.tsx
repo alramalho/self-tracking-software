@@ -1,6 +1,13 @@
 import { authService } from "@/services/auth";
 import { type Session, type User } from "@supabase/supabase-js";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { createContext, useContext, useEffect, useState } from "react";
+
+interface WatchAuthPlugin {
+  sendTokens(options: { accessToken: string; refreshToken: string }): Promise<void>;
+}
+
+const WatchAuth = registerPlugin<WatchAuthPlugin>("WatchAuth");
 
 interface AuthContextType {
   supabaseUser: User | null;
@@ -24,6 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   
+  const sendTokensToWatch = (session: Session | null) => {
+    if (!Capacitor.isNativePlatform() || !session?.access_token || !session?.refresh_token) return;
+    WatchAuth.sendTokens({
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+    }).catch(() => {});
+  };
+
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -31,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data } = await authService.getCurrentUser();
         setUser(data.user);
         setSession(data.session);
+        sendTokensToWatch(data.session);
       } catch (error) {
         console.error("Failed to initialize auth:", error);
       } finally {
@@ -60,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setSession(session);
       setUser(session?.user ?? null);
+      sendTokensToWatch(session);
       setIsLoading(false);
       setIsLoaded(true);
     });
