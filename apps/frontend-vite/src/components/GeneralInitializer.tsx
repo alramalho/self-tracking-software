@@ -101,6 +101,7 @@ export default function GeneralInitializer({
       !isSignedIn &&
       !pathname.startsWith("/signin") &&
       !pathname.startsWith("/signup") &&
+      !pathname.startsWith("/reset-password") &&
       !pathname.startsWith("/download") &&
       !pathname.startsWith("/get-coached")
     ) {
