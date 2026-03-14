@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import { useTheme } from "@/contexts/theme/useTheme";
+import { authService } from "@/services/auth";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import supportAgentWhiteSvg from '../assets/icons/support-agent-white.svg';
@@ -27,6 +28,8 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [showHelpForm, setShowHelpForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const appleSignInSupported =
@@ -83,6 +86,28 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
     } catch (err: any) {
       console.error("Email auth failed:", err);
       setError(err.message || `Failed to ${isSignUp ? 'sign up' : 'sign in'}. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    if (!email) {
+      setError("Please enter your email address.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await authService.resetPasswordForEmail(email);
+      setResetEmailSent(true);
+    } catch (err: any) {
+      console.error("Password reset failed:", err);
+      setError(err.message || "Failed to send reset email. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -158,45 +183,106 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
           </div>
         </div>
 
-        <form onSubmit={handleEmailAuth} className="space-y-4">
-          <div className="space-y-2">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+        {isForgotPassword ? (
+          resetEmailSent ? (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Check your email for a password reset link.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setResetEmailSent(false);
+                }}
+                className="text-xs underline cursor-pointer text-muted-foreground"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? "Please wait..." : "Send Reset Link"}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="underline cursor-pointer"
+                  disabled={isLoading}
+                >
+                  Back to sign in
+                </button>
+              </p>
+            </form>
+          )
+        ) : (
+          <form onSubmit={handleEmailAuth} className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+            <Button
+              type="submit"
               disabled={isLoading}
-              required
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full"
-            size="lg"
-          >
-            {isLoading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
-          </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="underline cursor-pointer"
-              disabled={isLoading}
+              className="w-full"
+              size="lg"
             >
-              {isSignUp ? "Sign in" : "Sign up"}
-            </button>
-          </p>
-        </form>
+              {isLoading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
+            </Button>
+            <div className="flex flex-col items-center gap-1">
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-xs underline cursor-pointer text-muted-foreground"
+                  disabled={isLoading}
+                >
+                  Forgot your password?
+                </button>
+              )}
+              <p className="text-xs text-center text-muted-foreground">
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="underline cursor-pointer"
+                  disabled={isLoading}
+                >
+                  {isSignUp ? "Sign in" : "Sign up"}
+                </button>
+              </p>
+            </div>
+          </form>
+        )}
       </CardContent>
       <div className="p-4 border-t border-border flex justify-center items-center gap-2">
         <img
