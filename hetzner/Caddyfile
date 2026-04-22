@@ -1,0 +1,26 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	@health path /health
+	handle @health {
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		reverse_proxy backend:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up X-Forwarded-For {remote}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
