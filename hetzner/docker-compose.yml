@@ -1,0 +1,45 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/alramalho/tracking-so-backend:latest}
+    container_name: tsw-backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      NODE_ENV: "production"
+    expose:
+      - "3000"
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tsw-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+    depends_on:
+      - backend
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
