@@ -856,6 +856,41 @@ usersRouter.get(
               },
             },
           },
+          sharedActivityEntry: {
+            include: {
+              sharedActivity: {
+                include: {
+                  entries: {
+                    where: {
+                      userId: { in: userIds },
+                      activityEntry: {
+                        deletedAt: null,
+                        activityId: { in: validActivityIds },
+                      },
+                    },
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          username: true,
+                          name: true,
+                          picture: true,
+                        },
+                      },
+                      activityEntry: {
+                        select: {
+                          id: true,
+                          userId: true,
+                          deletedAt: true,
+                          activityId: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 

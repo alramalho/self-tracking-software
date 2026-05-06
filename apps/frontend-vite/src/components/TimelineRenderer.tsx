@@ -1,6 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import AchievementPostCard from "@/components/AchievementPostCard";
+import SharedActivityEntryGroupCard from "@/components/SharedActivityEntryGroupCard";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { usePlans } from "@/contexts/plans";
 import { useTimeline } from "@/contexts/timeline/useTimeline";
@@ -25,7 +26,13 @@ import toast from "react-hot-toast";
 import {
   type TimelineActivityEntry,
   type TimelineAchievementPost,
+  type TimelineUser,
 } from "@/contexts/timeline/service";
+import {
+  getGroupedFeedItemDate,
+  groupSharedActivityItems,
+  type GroupedFeedItem,
+} from "@/utils/sharedActivityGrouping";
 
 interface HumanCoach {
   id: string;
@@ -206,7 +213,6 @@ const TimelineRenderer: React.FC<{
       items.push({ type: "activity", data: entry });
     });
 
-    console.log("timelineData.achievementPosts", timelineData.achievementPosts);
     // Add achievement posts
     (timelineData.achievementPosts || []).forEach((post) => {
       items.push({ type: "achievement", data: post });
@@ -228,44 +234,36 @@ const TimelineRenderer: React.FC<{
     return items;
   }, [timelineData]);
 
+  const groupedTimelineItems = useMemo<
+    Array<GroupedFeedItem<TimelineActivityEntry, TimelineAchievementPost>>
+  >(
+    () =>
+      groupSharedActivityItems<TimelineActivityEntry, TimelineAchievementPost>(
+        mergedTimelineItems
+      ),
+    [mergedTimelineItems]
+  );
+
   // Check if there will be a divider shown (new posts exist AND we have a lastViewedTimelineAt)
   const willShowDivider = useMemo(() => {
-    if (!lastViewedTimelineAt || !mergedTimelineItems.length) return false;
+    if (!lastViewedTimelineAt || !groupedTimelineItems.length) return false;
     const lastViewed = new Date(lastViewedTimelineAt);
 
     // Check if there are any items newer than lastViewed
-    const hasNewItems = mergedTimelineItems.some((item) => {
-      const itemDate =
-        item.type === "activity"
-          ? new Date(item.data.datetime)
-          : new Date(item.data.createdAt);
-      return itemDate > lastViewed;
-    });
+    const hasNewItems = groupedTimelineItems.some((item) => getGroupedFeedItemDate(item) > lastViewed);
 
     // Check if there are any items older than or equal to lastViewed (where divider would appear)
-    const hasOldItems = mergedTimelineItems.some((item) => {
-      const itemDate =
-        item.type === "activity"
-          ? new Date(item.data.datetime)
-          : new Date(item.data.createdAt);
-      return itemDate <= lastViewed;
-    });
+    const hasOldItems = groupedTimelineItems.some((item) => getGroupedFeedItemDate(item) <= lastViewed);
 
     return hasNewItems && hasOldItems;
-  }, [lastViewedTimelineAt, mergedTimelineItems]);
+  }, [lastViewedTimelineAt, groupedTimelineItems]);
 
   // Count new items for badge display
   const newItemsCount = useMemo(() => {
-    if (!lastViewedTimelineAt || !mergedTimelineItems.length) return 0;
+    if (!lastViewedTimelineAt || !groupedTimelineItems.length) return 0;
     const lastViewed = new Date(lastViewedTimelineAt);
-    return mergedTimelineItems.filter((item) => {
-      const itemDate =
-        item.type === "activity"
-          ? new Date(item.data.datetime)
-          : new Date(item.data.createdAt);
-      return itemDate > lastViewed;
-    }).length;
-  }, [lastViewedTimelineAt, mergedTimelineItems]);
+    return groupedTimelineItems.filter((item) => getGroupedFeedItemDate(item) > lastViewed).length;
+  }, [lastViewedTimelineAt, groupedTimelineItems]);
 
   // Update last viewed timestamp when user views timeline
   // If divider exists: wait until user scrolls to it
@@ -512,7 +510,7 @@ const TimelineRenderer: React.FC<{
           Friend&apos;s last activities
         </h2>
         <span className="text-sm text-muted-foreground">
-          ({mergedTimelineItems.length})
+          ({groupedTimelineItems.length})
         </span>
         {newItemsCount > 0 && (
           <Badge variant="destructive" className="text-xs">
@@ -533,42 +531,60 @@ const TimelineRenderer: React.FC<{
             ? new Date(lastViewedTimelineAt)
             : null;
 
-          // Check if there are any new items (newer than lastViewed)
           const hasNewEntries =
             lastViewed &&
-            mergedTimelineItems.some((item) => {
-              const itemDate =
-                item.type === "activity"
-                  ? new Date(item.data.datetime)
-                  : new Date(item.data.createdAt);
-              return itemDate > lastViewed;
-            });
+            groupedTimelineItems.some(
+              (item) => getGroupedFeedItemDate(item) > lastViewed
+            );
 
-          // count the timeline items types
-          console.log(
-            "timeline items types",
-            mergedTimelineItems.reduce((acc: Record<string, number>, item: TimelineItem) => {
-              acc[item.type] = (acc[item.type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          );
-          return mergedTimelineItems.map((item, index) => {
+          const allActivities = [
+            ...(timelineData?.recommendedActivities || []),
+            ...activities,
+          ];
+          const allUsers = [
+            ...(timelineData?.recommendedUsers || []),
+            currentUser,
+          ];
+
+          const getEntryDisplayData = (entry: TimelineActivityEntry) => {
+            const activity = allActivities?.find(
+              (a: Activity) => a.id === entry.activityId
+            );
+            const user = allUsers?.find((u: any) => u?.id === activity?.userId);
+            if (!activity || !user || user.username === null) return null;
+
+            const timelineUser = timelineData?.recommendedUsers?.find(
+              (u) => u.id === user.id
+            );
+            const userPlansProgress =
+              timelineUser?.plans
+                ?.filter((plan) =>
+                  plan.activities?.some((a) => a.id === activity?.id)
+                )
+                .map((plan) => plan.progress) || [];
+
+            return {
+              entry,
+              activity,
+              user: user as TimelineUser,
+              userPlansProgress,
+            };
+          };
+
+          return groupedTimelineItems.map((item) => {
+            const itemDate = getGroupedFeedItemDate(item);
+            const shouldShowDivider =
+              !dividerShown &&
+              hasNewEntries &&
+              lastViewed &&
+              itemDate <= lastViewed;
+
+            if (shouldShowDivider) {
+              dividerShown = true;
+            }
+
             if (item.type === "achievement") {
-              // Render achievement post
               const post = item.data;
-
-              // Check if we should show the divider before this post
-              const postDatetime = new Date(post.createdAt);
-              const shouldShowDivider =
-                !dividerShown &&
-                hasNewEntries &&
-                lastViewed &&
-                postDatetime <= lastViewed;
-
-              if (shouldShowDivider) {
-                dividerShown = true;
-              }
-
               return (
                 <React.Fragment key={`achievement-${post.id}`}>
                   {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
@@ -591,111 +607,174 @@ const TimelineRenderer: React.FC<{
                   </div>
                 </React.Fragment>
               );
-            } else {
-              // Render activity entry
-              const entry = item.data;
-              const allActivities = [
-                ...(timelineData?.recommendedActivities || []),
-                ...activities,
-              ];
-              const activity = allActivities?.find(
-                (a: Activity) => a.id === entry.activityId
-              );
-              const allUsers = [
-                ...(timelineData?.recommendedUsers || []),
-                currentUser,
-              ];
-              const user = allUsers?.find(
-                (u: any) => u.id === activity?.userId
-              );
-              if (!activity || !user || user.username === null) return null;
+            }
 
-              const timelineUser = timelineData?.recommendedUsers?.find(
-                (u) => u.id === user.id
-              );
-              const userPlansProgress =
-                timelineUser?.plans
-                  ?.filter((plan) =>
-                    plan.activities?.some((a) => a.id === activity?.id)
-                  )
-                  .map((plan) => plan.progress) || [];
-
-              const hasImageExpired =
-                entry.imageExpiresAt &&
-                new Date(entry.imageExpiresAt) < new Date();
-              const hasImage = entry.imageUrl && !hasImageExpired;
-              const isCollapsed = collapsedEntries.has(entry.id);
-
-              // Check if we should show the divider before this entry
-              const entryDatetime = new Date(entry.datetime);
-              const shouldShowDivider =
-                !dividerShown &&
-                hasNewEntries &&
-                lastViewed &&
-                entryDatetime <= lastViewed;
-
-              if (shouldShowDivider) {
-                dividerShown = true;
+            if (item.type === "sharedActivity") {
+              const displayItems = item.entries
+                .map(getEntryDisplayData)
+                .filter(Boolean) as NonNullable<ReturnType<typeof getEntryDisplayData>>[];
+              if (displayItems.length < 2) {
+                return (
+                  <React.Fragment key={`shared-activity-fallback-${item.sharedActivityId}`}>
+                    {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
+                    {displayItems.map(({ entry, activity, user, userPlansProgress }) => (
+                      <div key={entry.id} className="col-span-2 sm:col-span-4">
+                        <ActivityEntryPhotoCard
+                          activity={activity}
+                          activityEntry={entry as any}
+                          user={
+                            user as {
+                              username: string;
+                              name: string;
+                              picture: string;
+                              planType: PlanType;
+                            }
+                          }
+                          userPlansProgressData={userPlansProgress}
+                        />
+                      </div>
+                    ))}
+                  </React.Fragment>
+                );
               }
 
+              const isHighlighted = item.entries.some(
+                (entry) => highlightedEntryId === entry.id
+              );
+
               return (
-                <React.Fragment key={`activity-${entry.id}`}>
+                <React.Fragment key={`shared-activity-${item.sharedActivityId}`}>
                   {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
                   <div
                     ref={(el) => {
-                      if (el) {
-                        entryRefs.current.set(entry.id, el);
-                      } else {
-                        entryRefs.current.delete(entry.id);
-                      }
+                      item.entries.forEach((entry) => {
+                        if (el) {
+                          entryRefs.current.set(entry.id, el);
+                        } else {
+                          entryRefs.current.delete(entry.id);
+                        }
+                      });
                     }}
-                    className={`transition-all duration-500 ${
-                      highlightedEntryId === entry.id
-                        ? cn(
-                            "ring-4 ring-opacity-50 rounded-2xl",
-                            variants.ring
-                          )
+                    className={`col-span-2 sm:col-span-4 transition-all duration-500 ${
+                      isHighlighted
+                        ? cn("ring-4 ring-opacity-50 rounded-2xl", variants.ring)
                         : ""
-                    } ${
-                      hasImage
-                        ? "col-span-2 sm:col-span-4"
-                        : isCollapsed
-                        ? "col-span-1"
-                        : "col-span-2 sm:col-span-4"
                     }`}
                   >
-                    <ActivityEntryPhotoCard
-                      key={entry.id}
-                      activity={activity}
-                      activityEntry={entry as any}
-                      user={
-                        user as {
-                          username: string;
-                          name: string;
-                          picture: string;
-                          planType: PlanType;
-                        }
+                    <SharedActivityEntryGroupCard
+                      items={displayItems}
+                      onUserClick={(username) =>
+                        navigate({
+                          to: `/profile/$username`,
+                          params: { username },
+                        })
                       }
-                      userPlansProgressData={userPlansProgress}
-                      isCollapsed={isCollapsed}
-                      onToggleCollapse={() => toggleEntryCollapse(entry.id)}
-                      onAvatarClick={() => {
-                        navigate({
-                          to: `/profile/$username`,
-                          params: { username: user?.username || "" },
-                        });
-                      }}
-                      onUsernameClick={() => {
-                        navigate({
-                          to: `/profile/$username`,
-                          params: { username: user?.username || "" },
-                        });
-                      }}
                     />
+                    <details className="mt-2 rounded-2xl border bg-card/60 p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+                        View individual activity cards
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        {displayItems.map(({ entry, activity, user, userPlansProgress }) => (
+                          <ActivityEntryPhotoCard
+                            key={entry.id}
+                            activity={activity}
+                            activityEntry={entry as any}
+                            user={
+                              user as {
+                                username: string;
+                                name: string;
+                                picture: string;
+                                planType: PlanType;
+                              }
+                            }
+                            userPlansProgressData={userPlansProgress}
+                            isCollapsed={false}
+                            onAvatarClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: user?.username || "" },
+                              });
+                            }}
+                            onUsernameClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: user?.username || "" },
+                              });
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </details>
                   </div>
                 </React.Fragment>
               );
             }
+
+            const entry = item.data;
+            const displayData = getEntryDisplayData(entry);
+            if (!displayData) return null;
+
+            const { activity, user, userPlansProgress } = displayData;
+            const hasImageExpired =
+              entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date();
+            const hasImage = entry.imageUrl && !hasImageExpired;
+            const isCollapsed = collapsedEntries.has(entry.id);
+
+            return (
+              <React.Fragment key={`activity-${entry.id}`}>
+                {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      entryRefs.current.set(entry.id, el);
+                    } else {
+                      entryRefs.current.delete(entry.id);
+                    }
+                  }}
+                  className={`transition-all duration-500 ${
+                    highlightedEntryId === entry.id
+                      ? cn("ring-4 ring-opacity-50 rounded-2xl", variants.ring)
+                      : ""
+                  } ${
+                    hasImage
+                      ? "col-span-2 sm:col-span-4"
+                      : isCollapsed
+                      ? "col-span-1"
+                      : "col-span-2 sm:col-span-4"
+                  }`}
+                >
+                  <ActivityEntryPhotoCard
+                    key={entry.id}
+                    activity={activity}
+                    activityEntry={entry as any}
+                    user={
+                      user as {
+                        username: string;
+                        name: string;
+                        picture: string;
+                        planType: PlanType;
+                      }
+                    }
+                    userPlansProgressData={userPlansProgress}
+                    isCollapsed={isCollapsed}
+                    onToggleCollapse={() => toggleEntryCollapse(entry.id)}
+                    onAvatarClick={() => {
+                      navigate({
+                        to: `/profile/$username`,
+                        params: { username: user?.username || "" },
+                      });
+                    }}
+                    onUsernameClick={() => {
+                      navigate({
+                        to: `/profile/$username`,
+                        params: { username: user?.username || "" },
+                      });
+                    }}
+                  />
+                </div>
+              </React.Fragment>
+            );
           });
         })()}
     </div>

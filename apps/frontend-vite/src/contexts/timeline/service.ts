@@ -36,6 +36,34 @@ export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
         };
       };
     };
+    sharedActivityEntry: {
+      include: {
+        sharedActivity: {
+          include: {
+            entries: {
+              include: {
+                user: {
+                  select: {
+                    id: true;
+                    username: true;
+                    name: true;
+                    picture: true;
+                  };
+                };
+                activityEntry: {
+                  select: {
+                    id: true;
+                    userId: true;
+                    deletedAt: true;
+                    activityId: true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
   };
 }>;
 
