@@ -8,11 +8,19 @@ import React from "react";
 import { toast } from "react-hot-toast";
 import { type TimelineData } from "../timeline/service";
 import { type HydratedUser } from "../users/service";
-import { getActivities, getActivitiyEntries, deleteAchievementPost } from "./service";
+import {
+  deleteAchievementPost,
+  getActivities,
+  getActivitiyEntries,
+  getSharedActivityCandidates,
+  linkSharedActivity,
+  unlinkSharedActivity,
+} from "./service";
 import {
   ActivitiesContext,
   type ActivitiesContextType,
   type ActivityLogData,
+  type LogActivityResponse,
   type ReturnedActivitiesType,
   type ReturnedActivityEntriesType,
 } from "./types";
@@ -67,7 +75,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await api.post("/activities/log-activity", formData);
       return response.data;
     },
-    onSuccess: async (entry, variables) => {
+    onSuccess: async (response: LogActivityResponse, variables) => {
+      const entry = response.entry;
       queryClient.refetchQueries({ queryKey: ["current-user"] });
       queryClient.setQueryData(
         ["activity-entries"],
@@ -654,6 +663,53 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+
+  const getSharedActivityCandidatesMutation = async (activityEntryId: string) => {
+    return getSharedActivityCandidates(api, activityEntryId);
+  };
+
+  const linkSharedActivityMutation = useMutation({
+    mutationFn: async (data: {
+      activityEntryId: string;
+      candidateActivityEntryId: string;
+    }) => {
+      await linkSharedActivity(
+        api,
+        data.activityEntryId,
+        data.candidateActivityEntryId
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Activity linked with your friend!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to link activity`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const unlinkSharedActivityMutation = useMutation({
+    mutationFn: async (activityEntryId: string) => {
+      await unlinkSharedActivity(api, activityEntryId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast.success("Joint activity removed");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to unlink activity`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
     activityEntries: activitiesEntriesQuery.data || [],
@@ -686,6 +742,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     removeCommentFromAchievement: removeCommentFromAchievementMutation.mutateAsync,
     deleteAchievementPost: deleteAchievementPostMutation.mutateAsync,
     isDeletingAchievementPost: deleteAchievementPostMutation.isPending,
+
+    getSharedActivityCandidates: getSharedActivityCandidatesMutation,
+    linkSharedActivity: linkSharedActivityMutation.mutateAsync,
+    unlinkSharedActivity: unlinkSharedActivityMutation.mutateAsync,
 
     updateActivityEntryPhoto: updateActivityEntryPhotoMutation.mutateAsync,
     deleteActivityEntryPhoto: deleteActivityEntryPhotoMutation.mutateAsync,

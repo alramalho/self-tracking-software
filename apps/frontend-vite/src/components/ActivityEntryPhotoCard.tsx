@@ -62,6 +62,15 @@ interface ActivityEntryPhotoCardProps {
   activityEntry: ActivityEntry & {
     reactions: (Reaction & { user: { username: string } })[];
     comments: (Comment & { user: { username: string; picture: string } })[];
+    sharedActivityEntry?: {
+      sharedActivity?: {
+        entries?: {
+          activityEntryId: string;
+          user: { id: string; username: string | null; name?: string | null; picture?: string | null };
+          activityEntry?: { id: string; userId: string; deletedAt?: Date | null };
+        }[];
+      };
+    } | null;
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
   userPlansProgressData: PlanProgressData[];
@@ -334,6 +343,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
 
+  const sharedParticipants =
+    activityEntry.sharedActivityEntry?.sharedActivity?.entries
+      ?.filter(
+        (entry) =>
+          entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
+      )
+      ?.map((entry) => entry.user)
+      ?.filter((participant) => participant.username) ?? [];
+  const sharedParticipantLabel = sharedParticipants
+    .map((participant) => `@${participant.username}`)
+    .join(", ");
+
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
     <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
@@ -374,6 +395,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         <span className="text-xs text-muted-foreground">
           {activityEntry.quantity} {activity.measure}
         </span>
+        {sharedParticipantLabel && (
+          <span className="text-[11px] text-muted-foreground line-clamp-1">
+            with {sharedParticipantLabel}
+          </span>
+        )}
       </div>
       <div className="absolute top-1.5 right-1.5">
         <Maximize2 className="w-3 h-3 text-muted-foreground opacity-30" />
@@ -582,6 +608,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <span className="font-semibold">
                 {activity.title} – {activityEntry.quantity} {activity.measure}
               </span>
+              {sharedParticipantLabel && (
+                <span className="text-xs text-muted-foreground">
+                  with {sharedParticipantLabel}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
                 {getFormattedDate(activityEntry.datetime)}{" "}
                 {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}

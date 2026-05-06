@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import PhotoUploader from "@/components/ui/photo-uploader";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
+import type { SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Info, Loader2 } from "lucide-react";
@@ -18,7 +19,7 @@ interface ActivityPhotoUploaderProps {
     quantity: number;
   };
   onClose: () => void;
-  onSuccess: (entryId: string) => void;
+  onSuccess: (entryId: string, candidates: SharedActivityCandidate[]) => void;
   open: boolean;
 }
 
@@ -36,7 +37,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 
   const handleLogActivity = async () => {
     try {
-      const entry = await submitActivity({
+      const response = await submitActivity({
         activityId: activityData.activityId,
         datetime: activityData.datetime,
         quantity: activityData.quantity,
@@ -44,12 +45,12 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         photo: selectedFile || undefined,
       });
 
-      if (!entry?.id) {
+      if (!response.entry?.id) {
         throw new Error("No entry ID returned");
       }
 
       addToNotificationCount(1, "profile");
-      onSuccess(entry.id);
+      onSuccess(response.entry.id, response.sharedActivityCandidates || []);
     } catch (error: any) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");

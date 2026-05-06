@@ -7,8 +7,9 @@ import {
   type DifficultyLevel,
 } from "@/components/DifficultyLogPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
+import SharedActivityPrompt from "@/components/SharedActivityPrompt";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ActivityLogData } from "@/contexts/activities/types";
+import type { ActivityLogData, SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useMetrics } from "@/contexts/metrics";
 import { usePlans } from "@/contexts/plans";
@@ -28,6 +29,7 @@ function LogPage() {
     activityEntries,
     isLoadingActivities,
     upsertActivityEntry,
+    linkSharedActivity,
   } = useActivities();
   const { metrics } = useMetrics();
   const { plans } = usePlans();
@@ -56,6 +58,8 @@ function LogPage() {
   const [currentActivityLogData, setCurrentActivityLogData] =
     useState<ActivityLogData | null>(null);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+  const [sharedActivityCandidates, setSharedActivityCandidates] = useState<SharedActivityCandidate[]>([]);
+  const [showSharedActivityPrompt, setShowSharedActivityPrompt] = useState(false);
 
   const handleActivityLogSubmit = useCallback(
     (data: ActivityLogData) => {
@@ -85,9 +89,7 @@ function LogPage() {
     setEditingActivity(activity);
   };
 
-  const handleActivityLoggedAndPhotoSkippedOrDone = (entryId: string) => {
-    setShowPhotoUploader(false);
-    setCurrentEntryId(entryId);
+  const continuePostLogFlow = (entryId: string) => {
 
     // Show difficulty popover only for coached plans and if activity was within the past 48 hours
     const isWithin48Hours =
@@ -106,6 +108,39 @@ function LogPage() {
       // Skip to metrics check if not in coached plan or activity is older than 48h
       handleDifficultyDone();
     }
+  };
+
+  const handleActivityLoggedAndPhotoSkippedOrDone = (
+    entryId: string,
+    candidates: SharedActivityCandidate[]
+  ) => {
+    setShowPhotoUploader(false);
+    setCurrentEntryId(entryId);
+    setSharedActivityCandidates(candidates);
+
+    if (candidates.length > 0) {
+      setShowSharedActivityPrompt(true);
+      return;
+    }
+
+    continuePostLogFlow(entryId);
+  };
+
+  const handleSharedActivityPromptDone = () => {
+    setShowSharedActivityPrompt(false);
+    setSharedActivityCandidates([]);
+    if (currentEntryId) {
+      continuePostLogFlow(currentEntryId);
+    }
+  };
+
+  const handleLinkSharedActivity = async (candidateActivityEntryId: string) => {
+    if (!currentEntryId) return;
+    await linkSharedActivity({
+      activityEntryId: currentEntryId,
+      candidateActivityEntryId,
+    });
+    handleSharedActivityPromptDone();
   };
 
   const handleDifficultySubmit = async (difficulty: DifficultyLevel) => {
@@ -210,6 +245,13 @@ function LogPage() {
           )}
         </>
       )}
+
+      <SharedActivityPrompt
+        open={showSharedActivityPrompt}
+        candidates={sharedActivityCandidates}
+        onConfirm={handleLinkSharedActivity}
+        onDismiss={handleSharedActivityPromptDone}
+      />
 
       {/* Difficulty Popover - shown after activity is logged (within 48h) */}
       <DifficultyLogPopover

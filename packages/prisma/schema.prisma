@@ -94,6 +94,8 @@ model User {
 
   // Achievement posts
   achievementPosts AchievementPost[]
+  sharedActivitiesCreated SharedActivity[]      @relation("SharedActivityCreatedBy")
+  sharedActivityEntries   SharedActivityEntry[]
 
   // Level celebration tracking
   celebratedLevelThreshold Int?
@@ -174,8 +176,10 @@ model ActivityEntry {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions Reaction[]
   comments  Comment[]
+  sharedActivityEntry SharedActivityEntry?
 
   @@index([userId, deletedAt])
+  @@index([userId, datetime, deletedAt])
   @@index([deletedAt, createdAt])
   @@index([activityId])
   @@index([createdAt])
@@ -265,6 +269,38 @@ model AchievementImage {
 
   @@index([achievementPostId, sortOrder])
   @@map("achievement_images")
+  @@schema("public")
+}
+
+
+model SharedActivity {
+  id          String                @id @default(cuid())
+  createdAt   DateTime              @default(now())
+  createdById String
+
+  createdBy User                  @relation("SharedActivityCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  entries   SharedActivityEntry[]
+
+  @@index([createdById])
+  @@map("shared_activities")
+  @@schema("public")
+}
+
+model SharedActivityEntry {
+  id               String   @id @default(cuid())
+  sharedActivityId String
+  activityEntryId  String   @unique
+  userId           String
+  confirmedAt      DateTime @default(now())
+
+  sharedActivity SharedActivity @relation(fields: [sharedActivityId], references: [id], onDelete: Cascade)
+  activityEntry  ActivityEntry  @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sharedActivityId, userId])
+  @@index([sharedActivityId])
+  @@index([userId])
+  @@map("shared_activity_entries")
   @@schema("public")
 }
 
