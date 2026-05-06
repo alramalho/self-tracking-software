@@ -165,6 +165,8 @@ model ActivityEntry {
   // Image info
   imageS3Path    String?
   imageUrl       String?
+  imageS3Paths   String[]  @default([])
+  imageUrls      String[]  @default([])
   imageExpiresAt DateTime?
   imageCreatedAt DateTime?
   imageIsPublic  Boolean   @default(false)
