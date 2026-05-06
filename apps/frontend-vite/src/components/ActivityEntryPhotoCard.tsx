@@ -321,7 +321,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
-  const hasImage = !!activityEntry.imageUrl;
+  const imageUrls = Array.from(
+    new Set(
+      [
+        ...((activityEntry as typeof activityEntry & { imageUrls?: string[] })
+          .imageUrls || []),
+        activityEntry.imageUrl,
+      ].filter((url): url is string => !!url)
+    )
+  );
+  const hasImage = imageUrls.length > 0;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
   // Extract first URL from description for link preview
@@ -390,11 +399,28 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       {hasImage && (
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
-            <img
-              src={activityEntry.imageUrl || ""}
-              alt={activity.title}
-              className="w-full h-full max-h-[400px] object-cover rounded-2xl"
-            />
+            {imageUrls.length === 1 ? (
+              <img
+                src={imageUrls[0]}
+                alt={activity.title}
+                className="w-full h-full max-h-[400px] object-cover rounded-2xl"
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-1">
+                {imageUrls.map((imageUrl, index) => (
+                  <img
+                    key={imageUrl}
+                    src={imageUrl}
+                    alt={`${activity.title} proof ${index + 1}`}
+                    className={`w-full object-cover ${
+                      index === 0 && imageUrls.length === 3
+                        ? "col-span-2 max-h-[300px]"
+                        : "aspect-square"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
             <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
               {reactions &&
                 Object.entries(reactions).map(([emoji, usernames]) => {
