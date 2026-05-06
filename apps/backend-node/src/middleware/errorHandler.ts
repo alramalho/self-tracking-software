@@ -8,42 +8,54 @@ export interface CustomError extends Error {
   code?: string;
 }
 
+const shouldSendTelegramNotification = (req: Request, res: Response) => {
+  if (res.statusCode < 500) {
+    return false;
+  }
+
+  // Frontend-reported errors are already logged by /admin/public/log-error.
+  // Forwarding them to Telegram creates noisy alert loops when a client query retries.
+  if (req.path === "/admin/public/log-error") {
+    return false;
+  }
+
+  // Root requests are usually health checks, crawlers, or misrouted frontend probes.
+  if (req.path === "/" || req.originalUrl === "/") {
+    return false;
+  }
+
+  return process.env.BACKEND_5XX_TELEGRAM_ENABLED !== "false";
+};
+
 export const responseMonitor = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const originalSend = res.send;
-  const originalJson = res.json;
-
   const sendTelegramNotification = async () => {
-    if (res.statusCode >= 500) {
-      try {
-        const telegramService = new TelegramService();
-        const authenticatedReq = req as AuthenticatedRequest;
-        const userUsername = authenticatedReq.user?.username || "anonymous";
-        const userId = authenticatedReq.user?.id || "unknown";
+    if (!shouldSendTelegramNotification(req, res)) {
+      return;
+    }
 
-        await telegramService.sendErrorNotification({
-          errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${req.url}`,
-          userUsername,
-          userId,
-        });
-      } catch (telegramError) {
-        logger.error("Failed to send Telegram notification:", telegramError);
-      }
+    try {
+      const telegramService = new TelegramService();
+      const authenticatedReq = req as AuthenticatedRequest;
+      const userUsername = authenticatedReq.user?.username || "anonymous";
+      const userId = authenticatedReq.user?.id || "unknown";
+
+      await telegramService.sendErrorNotification({
+        errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${req.originalUrl || req.url}`,
+        userUsername,
+        userId,
+      });
+    } catch (telegramError) {
+      logger.error("Failed to send Telegram notification:", telegramError);
     }
   };
 
-  res.send = function (body) {
+  res.once("finish", () => {
     sendTelegramNotification();
-    return originalSend.call(this, body);
-  };
-
-  res.json = function (body) {
-    sendTelegramNotification();
-    return originalJson.call(this, body);
-  };
+  });
 
   next();
 };

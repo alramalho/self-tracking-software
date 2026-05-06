@@ -337,11 +337,13 @@ router.post(
       // Log the error
       logger.error("Client Error", { extra: context });
 
-      telegramService.sendErrorNotification({
-        errorMessage: `ERROR IN FRONTEND: ${errorData.error_message}`,
-        userUsername: user?.username || "unknown",
-        userId: user?.id || "unknown",
-      });
+      if (process.env.CLIENT_ERROR_TELEGRAM_ENABLED === "true") {
+        telegramService.sendErrorNotification({
+          errorMessage: `ERROR IN FRONTEND: ${errorData.error_message}`,
+          userUsername: user?.username || "unknown",
+          userId: user?.id || "unknown",
+        });
+      }
 
       res.json({ status: "success" });
     } catch (error) {
