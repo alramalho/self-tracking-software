@@ -1,0 +1,19 @@
+{
+  "pr": 7,
+  "viewport": "390x844 mobile Playwright",
+  "scenario": "Log activity -> Add proof with two dummy local images; seeded two-image entry for profile/history render because local S3 upload is not configured for successful upload.",
+  "screenshots": [
+    "03-add-proof-empty-multi-photo-uploader.png",
+    "04-two-photo-previews-and-upload-cta.png",
+    "05-after-upload-attempt-mobile.png",
+    "07-profile-history-seeded-two-image-entry-mobile.png"
+  ],
+  "video": "demo.webm",
+  "verdict": "partial pass / unclear end-to-end upload due local S3 PermanentRedirect",
+  "notes": [
+    "Uploader accepted two files and showed two previews + Upload 2 photos CTA.",
+    "After upload, sheet closed and no success/failure toast was visible in the captured frame.",
+    "Backend logged S3 PermanentRedirect in local env, so true upload persistence could not be confirmed.",
+    "Seeded local DB entry with two imageUrls rendered as a two-image grid in mobile History."
+  ]
+}
