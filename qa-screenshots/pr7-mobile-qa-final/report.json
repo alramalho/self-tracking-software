@@ -1,0 +1,85 @@
+{
+  "pr": 7,
+  "url": "http://localhost:3001",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "screenshots": [
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/01-add-page-mobile-activity-grid.png",
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/02-log-activity-popover-mobile.png",
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/03-add-proof-empty-multi-photo-uploader.png",
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/04-two-photo-previews-and-upload-cta.png",
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/05-after-upload-attempt-mobile.png",
+    "/tmp/self-tracking-pr7-mobile-qa-final/screenshots/06-profile-after-multi-photo-log-mobile.png"
+  ],
+  "video": "/tmp/self-tracking-pr7-mobile-qa-final/videos/page@01bee6f81de1340ad7802ebd1c9c48e7.webm",
+  "console": [
+    {
+      "type": "warning",
+      "text": "computations created outside a `createRoot` or `render` will never be disposed"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    },
+    {
+      "type": "warning",
+      "text": "[React Grab] v0.0.97 is outdated (latest: v0.1.33)"
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/message-ai.tsx\" will not be code-split and will increase your bundle size:\n- MessageAIPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/manage-ai-coach.tsx\" will not be code-split and will increase your bundle size:\n- ManageAICoachPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/ai.tsx\" will not be code-split and will increase your bundle size:\n- AICoachPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/add.tsx\" will not be code-split and will increase your bundle size:\n- LogPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/messages.index.tsx\" will not be code-split and will increase your bundle size:\n- MessagesPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.hermes/hermes-agent/.worktrees/t_10687d9f/apps/frontend-vite/src/routes/message.$userId.tsx\" will not be code-split and will increase your bundle size:\n- MessageUserPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "error",
+      "text": "[PostHog.js] PostHog was initialized without a token. This likely indicates a misconfiguration. Please check the first argument passed to posthog.init()"
+    },
+    {
+      "type": "warning",
+      "text": "componentWillUpdate has been renamed, and is not recommended for use. See https://react.dev/link/unsafe-component-lifecycles for details.\n\n* Move data fetching code or side effects to componentDidUpdate.\n* Rename componentWillUpdate to UNSAFE_componentWillUpdate to suppress this warning in non-strict mode. In React 18.x, only the UNSAFE_ name will work. To rename all deprecated lifecycles to their new names, you can run `npx react-codemod rename-unsafe-lifecycles` in your project source folder.\n"
+    },
+    {
+      "type": "error",
+      "text": "In HTML, %s cannot be a descendant of <%s>.\nThis will cause a hydration error.%s <div> p \n\n  ...\n    <SafeFragment fallback={null}>\n      <SafeFragment getResetKey={function getResetKey} errorComponent={function ErrorComponent} ...>\n        <SafeFragment fallback={function fallback}>\n          <MatchInnerImpl matchId=\"/signin\">\n            <Lazy>\n              <SignInPage>\n                <AuthLayout>\n                  <div className=\"relative w...\">\n                    <div className=\"w-full ma"
+    },
+    {
+      "type": "error",
+      "text": "<%s> cannot contain a nested %s.\nSee this log for the ancestor stack trace. p <div>"
+    },
+    {
+      "type": "warning",
+      "text": "Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}."
+    },
+    {
+      "type": "error",
+      "text": "Each child in a list should have a unique \"key\" prop.%s%s See https://react.dev/link/warning-keys for more information. \n\nCheck the render method of `SVG`.  It was passed a child from Legend."
+    }
+  ],
+  "responses": [],
+  "observations": [
+    "Multi-photo uploader accepted two dummy images and rendered two previews in the mobile Add proof sheet.",
+    "Profile/timeline proof image selector count after upload: 0."
+  ],
+  "verdict": "unclear"
+}
