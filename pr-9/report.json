@@ -1,0 +1,76 @@
+{
+  "finalUrl": "http://localhost:5174/",
+  "foundJointActivity": true,
+  "detailsVisible": true,
+  "textChecks": {
+    "jointActivity": true,
+    "participantAlice": true,
+    "participantBob": true,
+    "morningRun": true,
+    "km5": true,
+    "km6": true,
+    "helperCopy": true,
+    "individualDetails": true
+  },
+  "consoleIssues": [
+    {
+      "type": "warning",
+      "text": "computations created outside a `createRoot` or `render` will never be disposed"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    },
+    {
+      "type": "warning",
+      "text": "[React Grab] v0.0.97 is outdated (latest: v0.1.33)"
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/message-ai.tsx\" will not be code-split and will increase your bundle size:\n- MessageAIPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/manage-ai-coach.tsx\" will not be code-split and will increase your bundle size:\n- ManageAICoachPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/ai.tsx\" will not be code-split and will increase your bundle size:\n- AICoachPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/add.tsx\" will not be code-split and will increase your bundle size:\n- LogPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/messages.index.tsx\" will not be code-split and will increase your bundle size:\n- MessagesPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "warning",
+      "text": "[tanstack-router] These exports from \"/home/alex/.worktrees/t_26f7b637/apps/frontend-vite/src/routes/message.$userId.tsx\" will not be code-split and will increase your bundle size:\n- MessageUserPage\nFor the best optimization, these items should either have their export statements removed, or be imported from another location that is not a route file."
+    },
+    {
+      "type": "error",
+      "text": "[PostHog.js] PostHog was initialized without a token=[redacted]"
+    },
+    {
+      "type": "warning",
+      "text": "componentWillUpdate has been renamed, and is not recommended for use. See https://react.dev/link/unsafe-component-lifecycles for details.\n\n* Move data fetching code or side effects to componentDidUpdate.\n* Rename componentWillUpdate to UNSAFE_componentWillUpdate to suppress this warning in non-strict mode. In React 18.x, only the UNSAFE_ name will work. To rename all deprecated lifecycles to their new names, you can run `npx react-codemod rename-unsafe-lifecycles` in your project source folder.\n\nPlease update the following components: %s Lottie2"
+    },
+    {
+      "type": "error",
+      "text": "In HTML, %s cannot be a descendant of <%s>.\nThis will cause a hydration error.%s <div> p \n\n  ...\n    <SafeFragment fallback={null}>\n      <SafeFragment getResetKey={function getResetKey} errorComponent={function ErrorComponent} ...>\n        <SafeFragment fallback={function fallback}>\n          <MatchInnerImpl matchId=\"/signin\">\n            <Lazy>\n              <SignInPage>\n                <AuthLayout>\n                  <div className=\"relative w...\">\n                    <div className=\"w-full max...\">\n                      <div>\n                      <div className=\"mx-auto w-fit\">\n                        <SignIn onSuccess={function onSuccess}>\n                          <_c className=\"w-full max...\">\n                            <div ref={null} className=\"bg-card ro...\">\n                              <_c2>\n                              <_c8>\n                              <div className=\"p-4 border...\">\n                                <img>\n>                               <p className=\"text-xs text-muted-foreground\">\n                                  <a>\n                                  <FeedbackPopover onClose={function onClose} open={false}>\n                                    <AppleLikePopover onClose={function handleClose} open={false} title=\"How can we...\">\n>                                     <div className=\"max-w-lg mx-auto hidden\">\n"
+    },
+    {
+      "type": "error",
+      "text": "<%s> cannot contain a nested %s.\nSee this log for the ancestor stack trace. p <div>"
+    }
+  ],
+  "httpErrors": [],
+  "screenshots": [
+    "/tmp/self-tracking-software-pr-screenshots/pr-9/01-signin-mobile.png",
+    "/tmp/self-tracking-software-pr-screenshots/pr-9/02-home-top-mobile.png",
+    "/tmp/self-tracking-software-pr-screenshots/pr-9/03-grouped-card-mobile.png",
+    "/tmp/self-tracking-software-pr-screenshots/pr-9/04-expanded-individual-cards-mobile.png"
+  ]
+}
