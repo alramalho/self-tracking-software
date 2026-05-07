@@ -6,11 +6,48 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
+import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const activityEntryPhotoUpload = upload.fields([
+  { name: "photo", maxCount: 10 },
+  { name: "photos", maxCount: 10 },
+]);
+
+const getUploadedActivityEntryPhotos = (req: AuthenticatedRequest) => {
+  const files = req.files as
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
+
+  return [...(files?.photo || []), ...(files?.photos || [])];
+};
+
+const uploadActivityEntryPhotos = async (
+  photos: Express.Multer.File[],
+  userId: string,
+  activityEntryId: string
+) => {
+  return Promise.all(
+    photos.map(async (photo) => {
+      const photoId = uuidv4();
+      const fileExtension = photo.originalname
+        ? photo.originalname.split(".").pop()
+        : "jpg";
+      const s3Path = `/users/${userId}/activity_entries/${activityEntryId}/photos/${photoId}.${fileExtension}`;
+
+      await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
+
+      return {
+        s3Path,
+        url: s3Service.getPublicUrl(s3Path),
+      };
+    })
+  );
+};
 
 // Get all activities for user
 router.get(
@@ -90,7 +127,7 @@ router.get(
 router.post(
   "/log-activity",
   requireAuth,
-  upload.single("photo"),
+  activityEntryPhotoUpload,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -107,7 +144,7 @@ router.post(
         description,
         timezone,
       } = req.body;
-      const photo = req.file;
+      const photos = getUploadedActivityEntryPhotos(req);
 
       // Check if activity exists and belongs to user
       const activity = await prisma.activity.findFirst({
@@ -157,33 +194,27 @@ router.post(
       }
 
       // Handle photo upload if provided
-      if (photo) {
+      if (photos.length > 0) {
         try {
-          const photoId = uuidv4();
-          const fileExtension = photo.originalname
-            ? photo.originalname.split(".").pop()
-            : "jpg";
-          const s3Path = `/users/${req.user!.id}/activity_entries/${entry.id}/photos/${photoId}.${fileExtension}`;
-
-          // Upload to S3
-          await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
-
-          // Use public URL (bucket policy allows public read for activity_entries photos)
-          const publicUrl = s3Service.getPublicUrl(s3Path);
+          const uploadedImages = await uploadActivityEntryPhotos(
+            photos,
+            req.user!.id,
+            entry.id
+          );
 
           // Update entry with image information
           entry = await prisma.activityEntry.update({
             where: { id: entry.id },
-            data: {
-              imageS3Path: s3Path,
-              imageUrl: publicUrl,
-              imageExpiresAt: null, // No expiration for public URLs
-              imageCreatedAt: new Date(),
-              imageIsPublic: isPublic === "true" || isPublic === true,
-            },
+            data: buildActivityEntryImageUpdate(
+              entry,
+              uploadedImages,
+              isPublic === "true" || isPublic === true
+            ),
           });
 
-          logger.info(`Photo uploaded successfully to S3: ${s3Path}`);
+          logger.info(
+            `${uploadedImages.length} photo(s) uploaded successfully to S3 for activity entry ${entry.id}`
+          );
 
           // Create notifications for connected users about the photo
           const userWithConnections = await prisma.user.findUnique({
@@ -207,7 +238,7 @@ router.post(
             ];
 
             for (const connectedUser of connectedUsers) {
-              const message = `${req.user!.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with a photo 📸!`;
+              const message = `${req.user!.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedImages.length === 1 ? "a photo" : `${uploadedImages.length} photos`} 📸!`;
               await notificationService.createAndProcessNotification({
                 userId: connectedUser.id,
                 message,
@@ -467,17 +498,17 @@ router.put(
 router.put(
   "/activity-entries/:activityEntryId/photo",
   requireAuth,
-  upload.single("photo"),
+  activityEntryPhotoUpload,
   async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<Response | void> => {
     try {
       const { activityEntryId } = req.params;
-      const photo = req.file;
+      const photos = getUploadedActivityEntryPhotos(req);
 
-      if (!photo) {
-        return res.status(400).json({ error: "No photo provided" });
+      if (photos.length === 0) {
+        return res.status(400).json({ error: "No photos provided" });
       }
 
       // Verify ownership
@@ -503,40 +534,21 @@ router.put(
         });
       }
 
-      // Delete old photo from S3 if it exists
-      if (existingEntry.imageS3Path) {
-        try {
-          await s3Service.delete(existingEntry.imageS3Path);
-          logger.info(`Deleted old photo from S3: ${existingEntry.imageS3Path}`);
-        } catch (error) {
-          logger.warn(`Failed to delete old photo from S3: ${existingEntry.imageS3Path}`, error);
-        }
-      }
+      const uploadedImages = await uploadActivityEntryPhotos(
+        photos,
+        req.user!.id,
+        existingEntry.id
+      );
 
-      // Upload new photo
-      const photoId = uuidv4();
-      const fileExtension = photo.originalname
-        ? photo.originalname.split(".").pop()
-        : "jpg";
-      const s3Path = `/users/${req.user!.id}/activity_entries/${existingEntry.id}/photos/${photoId}.${fileExtension}`;
-
-      await s3Service.upload(photo.buffer, s3Path, photo.mimetype);
-
-      // Use public URL
-      const publicUrl = s3Service.getPublicUrl(s3Path);
-
-      // Update entry with new image information
+      // Append new images while preserving existing ones
       const updatedEntry = await prisma.activityEntry.update({
         where: { id: activityEntryId },
-        data: {
-          imageS3Path: s3Path,
-          imageUrl: publicUrl,
-          imageExpiresAt: null,
-          imageCreatedAt: new Date(),
-        },
+        data: buildActivityEntryImageUpdate(existingEntry, uploadedImages),
       });
 
-      logger.info(`Photo updated successfully for activity entry ${activityEntryId}`);
+      logger.info(
+        `${uploadedImages.length} photo(s) added successfully for activity entry ${activityEntryId}`
+      );
 
       res.json(updatedEntry);
     } catch (error) {
@@ -580,16 +592,26 @@ router.delete(
         });
       }
 
-      if (!existingEntry.imageS3Path) {
+      const imageS3Paths = Array.from(
+        new Set([
+          ...((existingEntry as typeof existingEntry & { imageS3Paths?: string[] })
+            .imageS3Paths || []),
+          existingEntry.imageS3Path,
+        ].filter((path): path is string => !!path))
+      );
+
+      if (imageS3Paths.length === 0) {
         return res.status(404).json({ error: "No photo to delete" });
       }
 
-      // Delete photo from S3
-      try {
-        await s3Service.delete(existingEntry.imageS3Path);
-        logger.info(`Deleted photo from S3: ${existingEntry.imageS3Path}`);
-      } catch (error) {
-        logger.warn(`Failed to delete photo from S3: ${existingEntry.imageS3Path}`, error);
+      // Delete photos from S3
+      for (const imageS3Path of imageS3Paths) {
+        try {
+          await s3Service.delete(imageS3Path);
+          logger.info(`Deleted photo from S3: ${imageS3Path}`);
+        } catch (error) {
+          logger.warn(`Failed to delete photo from S3: ${imageS3Path}`, error);
+        }
       }
 
       // Clear image fields
@@ -598,6 +620,8 @@ router.delete(
         data: {
           imageS3Path: null,
           imageUrl: null,
+          imageS3Paths: [],
+          imageUrls: [],
           imageExpiresAt: null,
           imageCreatedAt: null,
         },
