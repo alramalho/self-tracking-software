@@ -14,6 +14,33 @@ export type ActivityEntryWithRelations = Prisma.ActivityEntryGetPayload<{
         };
       };
     };
+    sharedActivityEntry: {
+      include: {
+        sharedActivity: {
+          include: {
+            entries: {
+              include: {
+                user: {
+                  select: {
+                    id: true;
+                    username: true;
+                    name: true;
+                    picture: true;
+                  };
+                };
+                activityEntry: {
+                  select: {
+                    id: true;
+                    userId: true;
+                    deletedAt: true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
     reactions: {
       include: {
         user: {
@@ -45,4 +72,34 @@ export async function deleteAchievementPost(
   achievementPostId: string
 ) {
   await api.delete(`/achievements/${achievementPostId}`);
+}
+
+
+export async function getSharedActivityCandidates(
+  api: AxiosInstance,
+  activityEntryId: string
+) {
+  const response = await api.get(
+    `/activities/activity-entries/${activityEntryId}/shared-candidates`
+  );
+  return response.data.candidates;
+}
+
+export async function linkSharedActivity(
+  api: AxiosInstance,
+  activityEntryId: string,
+  candidateActivityEntryId: string
+) {
+  const response = await api.post(
+    `/activities/activity-entries/${activityEntryId}/shared-link`,
+    { candidateActivityEntryId }
+  );
+  return response.data;
+}
+
+export async function unlinkSharedActivity(api: AxiosInstance, activityEntryId: string) {
+  const response = await api.delete(
+    `/activities/activity-entries/${activityEntryId}/shared-link`
+  );
+  return response.data;
 }

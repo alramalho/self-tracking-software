@@ -9,9 +9,209 @@ import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { scoreSharedActivityCandidate } from "../utils/sharedActivities";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const sharedActivityInclude = {
+  include: {
+    sharedActivity: {
+      include: {
+        entries: {
+          include: {
+            user: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+            activityEntry: {
+              select: { id: true, userId: true, deletedAt: true },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+const activityEntrySocialInclude = {
+  comments: {
+    where: { deletedAt: null },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          picture: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" as const },
+  },
+  reactions: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          picture: true,
+        },
+      },
+    },
+  },
+  sharedActivityEntry: sharedActivityInclude,
+};
+
+async function getAcceptedConnectionIds(userId: string): Promise<string[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      connectionsFrom: { where: { status: "ACCEPTED" }, select: { toId: true } },
+      connectionsTo: { where: { status: "ACCEPTED" }, select: { fromId: true } },
+    },
+  });
+
+  if (!user) return [];
+  return [
+    ...user.connectionsFrom.map((connection) => connection.toId),
+    ...user.connectionsTo.map((connection) => connection.fromId),
+  ];
+}
+
+async function getVisibleActivityIdsForUsers(userIds: string[]): Promise<Set<string>> {
+  if (!userIds.length) return new Set();
+
+  const [activities, publicPlans] = await Promise.all([
+    prisma.activity.findMany({
+      where: { userId: { in: userIds }, deletedAt: null },
+      select: { id: true },
+    }),
+    prisma.plan.findMany({
+      where: {
+        userId: { in: userIds },
+        deletedAt: null,
+        visibility: "PUBLIC",
+      },
+      select: { activities: { select: { id: true } } },
+    }),
+  ]);
+
+  const publicActivityIds = new Set<string>();
+  publicPlans.forEach((plan) => {
+    plan.activities.forEach((activity) => publicActivityIds.add(activity.id));
+  });
+
+  const plannedActivityIds = new Set<string>();
+  const allPlans = await prisma.plan.findMany({
+    where: { userId: { in: userIds }, deletedAt: null },
+    select: { activities: { select: { id: true } } },
+  });
+  allPlans.forEach((plan) => {
+    plan.activities.forEach((activity) => plannedActivityIds.add(activity.id));
+  });
+
+  return new Set(
+    activities
+      .filter((activity) => publicActivityIds.has(activity.id) || !plannedActivityIds.has(activity.id))
+      .map((activity) => activity.id)
+  );
+}
+
+async function findSharedActivityCandidates(activityEntryId: string, userId: string) {
+  const entry = await prisma.activityEntry.findFirst({
+    where: { id: activityEntryId, userId, deletedAt: null, activityId: { not: null } },
+    include: { activity: true, sharedActivityEntry: true },
+  });
+
+  if (!entry?.activity || entry.sharedActivityEntry) return [];
+
+  const connectionIds = await getAcceptedConnectionIds(userId);
+  if (!connectionIds.length) return [];
+
+  const visibleActivityIds = await getVisibleActivityIdsForUsers(connectionIds);
+  if (!visibleActivityIds.size) return [];
+
+  const start = new Date(entry.datetime.getTime() - 3 * 60 * 60 * 1000);
+  const end = new Date(entry.datetime.getTime() + 3 * 60 * 60 * 1000);
+
+  const candidates = await prisma.activityEntry.findMany({
+    where: {
+      userId: { in: connectionIds },
+      deletedAt: null,
+      activityId: { in: Array.from(visibleActivityIds) },
+      datetime: { gte: start, lte: end },
+      sharedActivityEntry: null,
+    },
+    include: {
+      activity: true,
+      user: { select: { id: true, username: true, name: true, picture: true } },
+    },
+    take: 20,
+  });
+
+  return candidates
+    .map((candidate) => ({
+      candidate,
+      score: candidate.activity
+        ? scoreSharedActivityCandidate({
+            sourceTitle: entry.activity!.title,
+            sourceMeasure: entry.activity!.measure,
+            sourceEmoji: entry.activity!.emoji,
+            sourceDatetime: entry.datetime,
+            candidateTitle: candidate.activity.title,
+            candidateMeasure: candidate.activity.measure,
+            candidateEmoji: candidate.activity.emoji,
+            candidateDatetime: candidate.datetime,
+          })
+        : 0,
+    }))
+    .filter(({ score }) => score >= 50)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ candidate, score }) => ({
+      activityEntryId: candidate.id,
+      user: candidate.user,
+      activity: candidate.activity,
+      datetime: candidate.datetime,
+      quantity: candidate.quantity,
+      score,
+    }));
+}
+
+async function canLinkActivityEntries(userId: string, ownEntryId: string, candidateEntryId: string) {
+  const ownEntry = await prisma.activityEntry.findFirst({
+    where: { id: ownEntryId, userId, deletedAt: null, activityId: { not: null } },
+    include: { activity: true },
+  });
+  if (!ownEntry?.activity) return false;
+
+  const connectionIds = await getAcceptedConnectionIds(userId);
+  const candidateEntry = await prisma.activityEntry.findFirst({
+    where: {
+      id: candidateEntryId,
+      userId: { in: connectionIds },
+      deletedAt: null,
+      activityId: { not: null },
+    },
+    include: { activity: true },
+  });
+  if (!candidateEntry?.activityId || !candidateEntry.activity) return false;
+
+  const visibleActivityIds = await getVisibleActivityIdsForUsers([candidateEntry.userId]);
+  if (!visibleActivityIds.has(candidateEntry.activityId)) return false;
+
+  const score = scoreSharedActivityCandidate({
+    sourceTitle: ownEntry.activity.title,
+    sourceMeasure: ownEntry.activity.measure,
+    sourceEmoji: ownEntry.activity.emoji,
+    sourceDatetime: ownEntry.datetime,
+    candidateTitle: candidateEntry.activity.title,
+    candidateMeasure: candidateEntry.activity.measure,
+    candidateEmoji: candidateEntry.activity.emoji,
+    candidateDatetime: candidateEntry.datetime,
+  });
+
+  return score >= 50;
+}
 
 const activityEntryPhotoUpload = upload.fields([
   { name: "photo", maxCount: 10 },
@@ -111,6 +311,7 @@ router.get(
               },
             },
           },
+          sharedActivityEntry: sharedActivityInclude,
         },
         orderBy: { createdAt: "desc" },
       });
@@ -341,7 +542,8 @@ router.post(
         data: { progressCalculatedAt: null },
       });
 
-      res.json(entry);
+      const sharedActivityCandidates = await findSharedActivityCandidates(entry.id, req.user!.id);
+      res.json({ ...entry, entry, sharedActivityCandidates });
     } catch (error) {
       logger.error("Error logging activity:", error);
       res.status(500).json({ error: "Failed to log activity" });
@@ -929,6 +1131,169 @@ router.delete(
     } catch (error) {
       logger.error("Error deleting activity:", error);
       res.status(500).json({ error: "Failed to delete activity" });
+    }
+  }
+);
+
+
+router.get(
+  "/activity-entries/:activityEntryId/shared-candidates",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const candidates = await findSharedActivityCandidates(
+        req.params.activityEntryId,
+        req.user!.id
+      );
+      res.json({ candidates });
+    } catch (error) {
+      logger.error("Error finding shared activity candidates:", error);
+      res.status(500).json({ error: "Failed to find shared activity candidates" });
+    }
+  }
+);
+
+router.post(
+  "/activity-entries/:activityEntryId/shared-link",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+      const { candidateActivityEntryId } = req.body;
+
+      if (!candidateActivityEntryId || typeof candidateActivityEntryId !== "string") {
+        return res.status(400).json({ error: "candidateActivityEntryId is required" });
+      }
+
+      const canLink = await canLinkActivityEntries(
+        req.user!.id,
+        activityEntryId,
+        candidateActivityEntryId
+      );
+      if (!canLink) {
+        return res.status(403).json({ error: "Activity entries cannot be linked" });
+      }
+
+      const [ownLink, candidateLink, candidateEntry] = await Promise.all([
+        prisma.sharedActivityEntry.findUnique({ where: { activityEntryId } }),
+        prisma.sharedActivityEntry.findUnique({ where: { activityEntryId: candidateActivityEntryId } }),
+        prisma.activityEntry.findUnique({ where: { id: candidateActivityEntryId } }),
+      ]);
+
+      if (!candidateEntry) {
+        return res.status(404).json({ error: "Candidate activity entry not found" });
+      }
+
+      if (ownLink && candidateLink && ownLink.sharedActivityId !== candidateLink.sharedActivityId) {
+        return res.status(409).json({ error: "Entries are already linked to different shared activities" });
+      }
+
+      const sharedActivityId =
+        ownLink?.sharedActivityId ||
+        candidateLink?.sharedActivityId ||
+        (await prisma.sharedActivity.create({ data: { createdById: req.user!.id } })).id;
+
+      const duplicateUserLink = await prisma.sharedActivityEntry.findFirst({
+        where: {
+          sharedActivityId,
+          userId: { in: [req.user!.id, candidateEntry.userId] },
+          activityEntryId: { notIn: [activityEntryId, candidateActivityEntryId] },
+        },
+      });
+
+      if (duplicateUserLink) {
+        return res.status(409).json({ error: "User already has an entry in this shared activity" });
+      }
+
+      await prisma.sharedActivityEntry.upsert({
+        where: { activityEntryId },
+        update: { sharedActivityId, userId: req.user!.id },
+        create: { sharedActivityId, activityEntryId, userId: req.user!.id },
+      });
+
+      await prisma.sharedActivityEntry.upsert({
+        where: { activityEntryId: candidateActivityEntryId },
+        update: { sharedActivityId, userId: candidateEntry.userId },
+        create: {
+          sharedActivityId,
+          activityEntryId: candidateActivityEntryId,
+          userId: candidateEntry.userId,
+        },
+      });
+
+      const sharedActivity = await prisma.sharedActivity.findUnique({
+        where: { id: sharedActivityId },
+        include: {
+          entries: {
+            include: {
+              user: { select: { id: true, username: true, name: true, picture: true } },
+              activityEntry: true,
+            },
+          },
+        },
+      });
+
+      await notificationService.createAndProcessNotification({
+        userId: candidateEntry.userId,
+        message: `@${req.user!.username} linked an activity with you`,
+        type: "INFO",
+        relatedId: sharedActivityId,
+        relatedData: {
+          sharedActivityId,
+          activityEntryId,
+          linkedByUsername: req.user!.username,
+          linkedByName: req.user!.name,
+          linkedByPicture: req.user!.picture,
+        },
+      });
+
+      res.json({ sharedActivity });
+    } catch (error) {
+      logger.error("Error linking shared activity:", error);
+      res.status(500).json({ error: "Failed to link shared activity" });
+    }
+  }
+);
+
+router.delete(
+  "/activity-entries/:activityEntryId/shared-link",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const link = await prisma.sharedActivityEntry.findFirst({
+        where: {
+          activityEntryId: req.params.activityEntryId,
+          userId: req.user!.id,
+        },
+      });
+
+      if (!link) {
+        return res.status(404).json({ error: "Shared activity link not found" });
+      }
+
+      await prisma.sharedActivityEntry.delete({ where: { id: link.id } });
+
+      const remaining = await prisma.sharedActivityEntry.count({
+        where: { sharedActivityId: link.sharedActivityId },
+      });
+
+      if (remaining < 2) {
+        await prisma.sharedActivity.delete({ where: { id: link.sharedActivityId } }).catch(() => null);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error unlinking shared activity:", error);
+      res.status(500).json({ error: "Failed to unlink shared activity" });
     }
   }
 );

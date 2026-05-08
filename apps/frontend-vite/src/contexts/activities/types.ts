@@ -6,6 +6,25 @@ export type ReturnedActivityEntriesType = Awaited<
   ReturnType<typeof getActivitiyEntries>
 >;
 export type ReturnedActivitiesType = Awaited<ReturnType<typeof getActivities>>;
+export interface SharedActivityCandidate {
+  activityEntryId: string;
+  user: {
+    id: string;
+    username: string | null;
+    name?: string | null;
+    picture?: string | null;
+  };
+  activity: Activity;
+  datetime: string;
+  quantity: number;
+  score: number;
+}
+
+export interface LogActivityResponse {
+  entry: ActivityEntry;
+  sharedActivityCandidates: SharedActivityCandidate[];
+}
+
 export interface ActivityLogData {
   activityId: string;
   datetime: Date;
@@ -21,7 +40,7 @@ export interface ActivitiesContextType {
   isLoadingActivities: boolean;
   isLoadingActivityEntries: boolean;
 
-  logActivity: (data: ActivityLogData) => Promise<ActivityEntry>;
+  logActivity: (data: ActivityLogData) => Promise<LogActivityResponse>;
   isLoggingActivity: boolean;
 
   upsertActivity: (data: {
@@ -84,6 +103,15 @@ export interface ActivitiesContextType {
     userUsername: string;
   }) => Promise<void>;
   isDeletingAchievementPost: boolean;
+
+  getSharedActivityCandidates: (
+    activityEntryId: string
+  ) => Promise<SharedActivityCandidate[]>;
+  linkSharedActivity: (data: {
+    activityEntryId: string;
+    candidateActivityEntryId: string;
+  }) => Promise<void>;
+  unlinkSharedActivity: (activityEntryId: string) => Promise<void>;
 
   updateActivityEntryPhoto: (data: {
     activityEntryId: string;
