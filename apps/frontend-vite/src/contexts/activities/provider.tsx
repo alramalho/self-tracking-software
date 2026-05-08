@@ -68,8 +68,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         Intl.DateTimeFormat().resolvedOptions().timeZone
       );
 
-      if (data.photo) {
-        formData.append("photo", data.photo);
+      const photos = data.photos || (data.photo ? [data.photo] : []);
+      for (const photo of photos) {
+        formData.append("photos", photo);
       }
 
       const response = await api.post("/activities/log-activity", formData);
@@ -98,7 +99,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       // is available for achievement detection
       await queryClient.refetchQueries({ queryKey: ["plans"] });
 
-      const hasPhoto = !!variables.photo;
+      const hasPhoto = !!variables.photo || !!variables.photos?.length;
       toast.success(
         hasPhoto
           ? "Activity logged with photo successfully!"
@@ -604,9 +605,12 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const updateActivityEntryPhotoMutation = useMutation({
-    mutationFn: async (data: { activityEntryId: string; photo: File }) => {
+    mutationFn: async (data: { activityEntryId: string; photo?: File; photos?: File[] }) => {
       const formData = new FormData();
-      formData.append("photo", data.photo);
+      const photos = data.photos || (data.photo ? [data.photo] : []);
+      for (const photo of photos) {
+        formData.append("photos", photo);
+      }
 
       const response = await api.put(
         `/activities/activity-entries/${data.activityEntryId}/photo`,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import PhotoUploader from "@/components/ui/photo-uploader";
+import MultiPhotoUploader from "@/components/ui/MultiPhotoUploader";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import type { SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
@@ -30,7 +30,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   onSuccess,
   open,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const { logActivity: submitActivity, isLoggingActivity } = useActivities();
   const { addToNotificationCount } = useNotifications();
@@ -42,7 +42,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         datetime: activityData.datetime,
         quantity: activityData.quantity,
         description,
-        photo: selectedFile || undefined,
+        photos: selectedFiles,
       });
 
       if (!response.entry?.id) {
@@ -62,11 +62,9 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       <h2 className="text-2xl font-bold mb-4">📸 Add a proof!</h2>
       <div className="space-y-4">
         <div className="flex justify-center">
-          <PhotoUploader
-            onFileSelect={setSelectedFile}
-            placeholder="Click to upload a photo"
+          <MultiPhotoUploader
+            onFilesChange={setSelectedFiles}
             disabled={isLoggingActivity}
-            className="w-full"
           />
         </div>
         <TextAreaWithVoice
@@ -92,7 +90,9 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           {isLoggingActivity ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : null}
-          {selectedFile ? "Upload" : "Log without photo"}
+          {selectedFiles.length > 0
+            ? `Upload ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}`
+            : "Log without photo"}
         </Button>
       </div>
     </AppleLikePopover>

@@ -31,6 +31,7 @@ export interface ActivityLogData {
   quantity: number;
   description?: string;
   photo?: File;
+  photos?: File[];
 }
 
 export interface ActivitiesContextType {
@@ -114,7 +115,8 @@ export interface ActivitiesContextType {
 
   updateActivityEntryPhoto: (data: {
     activityEntryId: string;
-    photo: File;
+    photo?: File;
+    photos?: File[];
   }) => Promise<ActivityEntry>;
   deleteActivityEntryPhoto: (data: {
     activityEntryId: string;
