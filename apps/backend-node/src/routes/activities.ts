@@ -177,6 +177,65 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
     }));
 }
 
+async function createPendingSharedActivityInvite({
+  inviterActivityEntryId,
+  inviterUserId,
+  inviteeUserId,
+  activityTitle,
+  inviterUsername,
+}: {
+  inviterActivityEntryId: string;
+  inviterUserId: string;
+  inviteeUserId: string;
+  activityTitle: string;
+  inviterUsername?: string | null;
+}) {
+  if (inviterUserId === inviteeUserId) {
+    throw new Error("Cannot invite yourself to a shared activity");
+  }
+
+  const connectionIds = await getAcceptedConnectionIds(inviterUserId);
+  if (!connectionIds.includes(inviteeUserId)) {
+    throw new Error("Selected user is not an accepted connection");
+  }
+
+  const invite = await prisma.sharedActivityInvite.upsert({
+    where: {
+      inviterActivityEntryId_inviteeUserId: {
+        inviterActivityEntryId,
+        inviteeUserId,
+      },
+    },
+    update: {
+      status: "PENDING",
+      respondedAt: null,
+    },
+    create: {
+      inviterActivityEntryId,
+      inviterUserId,
+      inviteeUserId,
+    },
+    include: {
+      invitee: { select: { id: true, username: true, name: true, picture: true } },
+    },
+  });
+
+  await notificationService.createAndProcessNotification({
+    userId: inviteeUserId,
+    message: `${inviterUsername ? `@${inviterUsername}` : "A friend"} wants to log ${activityTitle} with you`,
+    type: "INFO",
+    relatedId: invite.id,
+    relatedData: {
+      sharedActivityInviteId: invite.id,
+      inviterActivityEntryId,
+      inviterUserId,
+      activityTitle,
+    },
+  });
+
+  return invite;
+}
+
 async function canLinkActivityEntries(userId: string, ownEntryId: string, candidateEntryId: string) {
   const ownEntry = await prisma.activityEntry.findFirst({
     where: { id: ownEntryId, userId, deletedAt: null, activityId: { not: null } },
@@ -344,6 +403,7 @@ router.post(
         isPublic,
         description,
         timezone,
+        withUserId,
       } = req.body;
       const photos = getUploadedActivityEntryPhotos(req);
 
@@ -358,6 +418,22 @@ router.post(
 
       if (!activity) {
         return res.status(404).json({ error: "Activity not found" });
+      }
+
+      const normalizedWithUserId =
+        typeof withUserId === "string" && withUserId.trim().length > 0
+          ? withUserId.trim()
+          : undefined;
+
+      if (normalizedWithUserId) {
+        if (normalizedWithUserId === req.user!.id) {
+          return res.status(400).json({ error: "Cannot invite yourself to a shared activity" });
+        }
+
+        const connectionIds = await getAcceptedConnectionIds(req.user!.id);
+        if (!connectionIds.includes(normalizedWithUserId)) {
+          return res.status(400).json({ error: "Selected user is not an accepted connection" });
+        }
       }
 
       // Check if entry already exists for this date
@@ -542,8 +618,24 @@ router.post(
         data: { progressCalculatedAt: null },
       });
 
+      let sharedActivityInvite: Awaited<ReturnType<typeof createPendingSharedActivityInvite>> | null = null;
+      if (normalizedWithUserId) {
+        try {
+          sharedActivityInvite = await createPendingSharedActivityInvite({
+            inviterActivityEntryId: entry.id,
+            inviterUserId: req.user!.id,
+            inviteeUserId: normalizedWithUserId,
+            activityTitle: `${activity.emoji} ${activity.title}`,
+            inviterUsername: req.user!.username,
+          });
+        } catch (error) {
+          logger.warn("Could not create shared activity invite:", error);
+          return res.status(400).json({ error: "Could not invite that user to this activity" });
+        }
+      }
+
       const sharedActivityCandidates = await findSharedActivityCandidates(entry.id, req.user!.id);
-      res.json({ ...entry, entry, sharedActivityCandidates });
+      res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
     } catch (error) {
       logger.error("Error logging activity:", error);
       res.status(500).json({ error: "Failed to log activity" });

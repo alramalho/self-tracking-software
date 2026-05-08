@@ -236,6 +236,7 @@ function LogPage() {
                 activityId: selectedActivity!.id,
                 datetime: currentActivityLogData.datetime,
                 quantity: currentActivityLogData.quantity,
+                withUserId: currentActivityLogData.withUserId,
               }}
               onClose={() => {
                 setShowPhotoUploader(false);
