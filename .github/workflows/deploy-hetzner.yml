@@ -82,7 +82,7 @@ jobs:
           echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           cd ${{ env.REMOTE_DIR }}
           export BACKEND_IMAGE=${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
-          docker compose pull
+          docker compose pull backend
           docker compose up -d
           docker image prune -f
           docker compose ps
