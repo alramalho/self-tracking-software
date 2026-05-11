@@ -17,6 +17,7 @@ interface ActivityPhotoUploaderProps {
     activityId: string;
     datetime: Date;
     quantity: number;
+    withUserId?: string;
   };
   onClose: () => void;
   onSuccess: (entryId: string, candidates: SharedActivityCandidate[]) => void;
@@ -43,6 +44,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         quantity: activityData.quantity,
         description,
         photos: selectedFiles,
+        withUserId: activityData.withUserId,
       });
 
       if (!response.entry?.id) {

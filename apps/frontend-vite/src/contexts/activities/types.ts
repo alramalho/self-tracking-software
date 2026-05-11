@@ -32,6 +32,7 @@ export interface ActivityLogData {
   description?: string;
   photo?: File;
   photos?: File[];
+  withUserId?: string;
 }
 
 export interface ActivitiesContextType {
