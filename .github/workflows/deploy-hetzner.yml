@@ -91,7 +91,7 @@ jobs:
       - name: smoke test
         run: |
           for i in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" https://api-hetzner.tracking.so/health || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://api.tracking.so/health || true)
             echo "attempt $i: HTTP $code"
             [[ "$code" == "200" ]] && exit 0
             sleep 10

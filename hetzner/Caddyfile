@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$API_DOMAIN} {
+api.tracking.so {
 	encode zstd gzip
 
 	@health path /health
