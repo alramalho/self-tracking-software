@@ -67,6 +67,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         "timezone",
         Intl.DateTimeFormat().resolvedOptions().timeZone
       );
+      if (data.withUserId) {
+        formData.append("withUserId", data.withUserId);
+      }
 
       const photos = data.photos || (data.photo ? [data.photo] : []);
       for (const photo of photos) {

@@ -94,8 +94,10 @@ model User {
 
   // Achievement posts
   achievementPosts AchievementPost[]
-  sharedActivitiesCreated SharedActivity[]      @relation("SharedActivityCreatedBy")
-  sharedActivityEntries   SharedActivityEntry[]
+  sharedActivitiesCreated     SharedActivity[]       @relation("SharedActivityCreatedBy")
+  sharedActivityEntries       SharedActivityEntry[]
+  sharedActivityInvitesSent   SharedActivityInvite[]  @relation("SharedActivityInviteInviter")
+  sharedActivityInvitesReceived SharedActivityInvite[] @relation("SharedActivityInviteInvitee")
 
   // Level celebration tracking
   celebratedLevelThreshold Int?
@@ -179,6 +181,7 @@ model ActivityEntry {
   reactions Reaction[]
   comments  Comment[]
   sharedActivityEntry SharedActivityEntry?
+  sharedActivityInvitesInitiated SharedActivityInvite[]
 
   @@index([userId, deletedAt])
   @@index([userId, datetime, deletedAt])
@@ -303,6 +306,26 @@ model SharedActivityEntry {
   @@index([sharedActivityId])
   @@index([userId])
   @@map("shared_activity_entries")
+  @@schema("public")
+}
+
+model SharedActivityInvite {
+  id                     String                     @id @default(cuid())
+  inviterActivityEntryId String
+  inviterUserId          String
+  inviteeUserId          String
+  status                 SharedActivityInviteStatus @default(PENDING)
+  createdAt              DateTime                   @default(now())
+  respondedAt            DateTime?
+
+  inviterActivityEntry ActivityEntry @relation(fields: [inviterActivityEntryId], references: [id], onDelete: Cascade)
+  inviter              User          @relation("SharedActivityInviteInviter", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  invitee              User          @relation("SharedActivityInviteInvitee", fields: [inviteeUserId], references: [id], onDelete: Cascade)
+
+  @@unique([inviterActivityEntryId, inviteeUserId])
+  @@index([inviteeUserId, status])
+  @@index([inviterUserId])
+  @@map("shared_activity_invites")
   @@schema("public")
 }
 
@@ -791,6 +814,14 @@ enum NotificationStatus {
   PROCESSED
   OPENED
   CONCLUDED
+
+  @@schema("public")
+}
+
+enum SharedActivityInviteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 
   @@schema("public")
 }

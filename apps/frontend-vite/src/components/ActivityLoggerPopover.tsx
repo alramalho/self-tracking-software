@@ -1,6 +1,7 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { useCurrentUser } from "@/contexts/users";
 import { type Activity } from "@tsw/prisma";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -12,7 +13,12 @@ interface ActivityLoggerPopoverProps {
   open: boolean;
   onClose: () => void;
   selectedActivity: Activity;
-  onSubmit: (data: { activityId: string; datetime: Date; quantity: number }) => void;
+  onSubmit: (data: {
+    activityId: string;
+    datetime: Date;
+    quantity: number;
+    withUserId?: string;
+  }) => void;
 }
 
 export function ActivityLoggerPopover({
@@ -30,7 +36,18 @@ export function ActivityLoggerPopover({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
+  const [selectedWithUserId, setSelectedWithUserId] = useState<string | undefined>();
+  const { currentUser } = useCurrentUser();
   const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const acceptedFriends = [
+    ...(currentUser?.connectionsFrom || [])
+      .filter((connection) => connection.status === "ACCEPTED")
+      .map((connection) => connection.to),
+    ...(currentUser?.connectionsTo || [])
+      .filter((connection) => connection.status === "ACCEPTED")
+      .map((connection) => connection.from),
+  ].filter((user, index, all) => user && all.findIndex((candidate) => candidate.id === user.id) === index);
 
   // Generate hours and minutes options
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -76,6 +93,7 @@ export function ActivityLoggerPopover({
         activityId: selectedActivity.id,
         datetime,
         quantity,
+        withUserId: selectedWithUserId,
       });
     } finally {
       setIsSubmitting(false);
@@ -204,6 +222,46 @@ export function ActivityLoggerPopover({
               </Button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-center">
+            who did this with you?
+          </h3>
+          {acceptedFriends.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <Button
+                type="button"
+                variant={!selectedWithUserId ? "default" : "secondary"}
+                size="sm"
+                className="shrink-0 rounded-full"
+                onClick={() => setSelectedWithUserId(undefined)}
+              >
+                Just me
+              </Button>
+              {acceptedFriends.map((friend) => (
+                <Button
+                  key={friend.id}
+                  type="button"
+                  variant={selectedWithUserId === friend.id ? "default" : "secondary"}
+                  size="sm"
+                  className="shrink-0 rounded-full"
+                  onClick={() => setSelectedWithUserId(friend.id)}
+                >
+                  {friend.name || `@${friend.username}`}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              Add friends to invite someone while logging.
+            </p>
+          )}
+          {selectedWithUserId && (
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              They’ll get an invite and can accept it when they log their activity.
+            </p>
+          )}
         </div>
 
         <Button
