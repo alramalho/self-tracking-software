@@ -1,9 +1,11 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { useCurrentUser } from "@/contexts/users";
+import type { ReturnedActivityEntriesType } from "@/contexts/activities/types";
 import { type Activity } from "@tsw/prisma";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import Picker from "react-mobile-picker";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +15,7 @@ interface ActivityLoggerPopoverProps {
   open: boolean;
   onClose: () => void;
   selectedActivity: Activity;
+  activityEntries?: ReturnedActivityEntriesType;
   onSubmit: (data: {
     activityId: string;
     datetime: Date;
@@ -21,10 +24,88 @@ interface ActivityLoggerPopoverProps {
   }) => void;
 }
 
+type FriendOption = {
+  id: string;
+  username: string | null;
+  name: string | null;
+  picture: string | null;
+  connectedAt?: Date | string | null;
+};
+
+function getDisplayName(user: {
+  name?: string | null;
+  username?: string | null;
+}) {
+  return user.name || (user.username ? `@${user.username}` : "Unknown user");
+}
+
+function getAvatarFallback(user: {
+  name?: string | null;
+  username?: string | null;
+}) {
+  const source = user.name || user.username || "?";
+  return source.trim().slice(0, 1).toUpperCase();
+}
+
+function chunk<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export function sortFriendsBySharedActivity(
+  friends: FriendOption[],
+  activityEntries: ReturnedActivityEntriesType = []
+) {
+  const statsByUserId = new Map<string, { count: number; latestAt: number }>();
+
+  for (const entry of activityEntries) {
+    const sharedEntries = entry.sharedActivityEntry?.sharedActivity?.entries || [];
+    if (sharedEntries.length < 2) continue;
+
+    const entryTime = new Date(entry.datetime).getTime();
+    for (const sharedEntry of sharedEntries) {
+      const userId = sharedEntry.user?.id;
+      if (!userId || userId === entry.userId || sharedEntry.activityEntry?.deletedAt) {
+        continue;
+      }
+
+      const stats = statsByUserId.get(userId) || { count: 0, latestAt: 0 };
+      stats.count += 1;
+      stats.latestAt = Math.max(stats.latestAt, Number.isNaN(entryTime) ? 0 : entryTime);
+      statsByUserId.set(userId, stats);
+    }
+  }
+
+  return [...friends].sort((a, b) => {
+    const aStats = statsByUserId.get(a.id) || { count: 0, latestAt: 0 };
+    const bStats = statsByUserId.get(b.id) || { count: 0, latestAt: 0 };
+
+    if (aStats.count !== bStats.count) {
+      return bStats.count - aStats.count;
+    }
+
+    if (aStats.latestAt !== bStats.latestAt) {
+      return bStats.latestAt - aStats.latestAt;
+    }
+
+    const aConnectedAt = a.connectedAt ? new Date(a.connectedAt).getTime() : 0;
+    const bConnectedAt = b.connectedAt ? new Date(b.connectedAt).getTime() : 0;
+    if (aConnectedAt !== bConnectedAt) {
+      return bConnectedAt - aConnectedAt;
+    }
+
+    return getDisplayName(a).localeCompare(getDisplayName(b));
+  });
+}
+
 export function ActivityLoggerPopover({
   open,
   onClose,
   selectedActivity,
+  activityEntries = [],
   onSubmit,
 }: ActivityLoggerPopoverProps) {
   const now = new Date();
@@ -40,14 +121,41 @@ export function ActivityLoggerPopover({
   const { currentUser } = useCurrentUser();
   const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  const acceptedFriends = [
-    ...(currentUser?.connectionsFrom || [])
-      .filter((connection) => connection.status === "ACCEPTED")
-      .map((connection) => connection.to),
-    ...(currentUser?.connectionsTo || [])
-      .filter((connection) => connection.status === "ACCEPTED")
-      .map((connection) => connection.from),
-  ].filter((user, index, all) => user && all.findIndex((candidate) => candidate.id === user.id) === index);
+  const acceptedFriends = useMemo(() => {
+    const friends: FriendOption[] = [
+      ...(currentUser?.connectionsFrom || [])
+        .filter((connection) => connection.status === "ACCEPTED")
+        .map((connection): FriendOption => ({
+          id: connection.to.id,
+          username: connection.to.username,
+          name: connection.to.name,
+          picture: connection.to.picture,
+          connectedAt: connection.updatedAt || connection.createdAt,
+        })),
+      ...(currentUser?.connectionsTo || [])
+        .filter((connection) => connection.status === "ACCEPTED")
+        .map((connection): FriendOption => ({
+          id: connection.from.id,
+          username: connection.from.username,
+          name: connection.from.name,
+          picture: connection.from.picture,
+          connectedAt: connection.updatedAt || connection.createdAt,
+        })),
+    ];
+
+    const uniqueFriends = friends.filter(
+      (user, index, all) =>
+        all.findIndex((candidate) => candidate.id === user.id) === index
+    );
+
+    return sortFriendsBySharedActivity(uniqueFriends, activityEntries);
+  }, [activityEntries, currentUser?.connectionsFrom, currentUser?.connectionsTo]);
+
+  const firstWithUserPage = useMemo(() => acceptedFriends.slice(0, 8), [acceptedFriends]);
+  const additionalWithUserPages = useMemo(
+    () => chunk(acceptedFriends.slice(8), 9),
+    [acceptedFriends]
+  );
 
   // Generate hours and minutes options
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -229,27 +337,78 @@ export function ActivityLoggerPopover({
             who did this with you?
           </h3>
           {acceptedFriends.length > 0 ? (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <Button
-                type="button"
-                variant={!selectedWithUserId ? "default" : "secondary"}
-                size="sm"
-                className="shrink-0 rounded-full"
-                onClick={() => setSelectedWithUserId(undefined)}
-              >
-                Just me
-              </Button>
-              {acceptedFriends.map((friend) => (
-                <Button
-                  key={friend.id}
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory -mx-1 px-1">
+              <div className="grid min-w-full shrink-0 snap-start grid-cols-3 grid-rows-3 gap-3 justify-items-center">
+                <button
                   type="button"
-                  variant={selectedWithUserId === friend.id ? "default" : "secondary"}
-                  size="sm"
-                  className="shrink-0 rounded-full"
-                  onClick={() => setSelectedWithUserId(friend.id)}
+                  aria-label="Just me"
+                  title="Just me"
+                  className={`rounded-full p-0.5 transition ${
+                    !selectedWithUserId
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : "opacity-80"
+                  }`}
+                  onClick={() => setSelectedWithUserId(undefined)}
                 >
-                  {friend.name || `@${friend.username}`}
-                </Button>
+                  <Avatar className="h-14 w-14">
+                    <AvatarImage src={currentUser?.picture || "/default-avatar.png"} />
+                    <AvatarFallback>{getAvatarFallback(currentUser || {})}</AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">Just me</span>
+                </button>
+                {firstWithUserPage.map((friend) => {
+                  const displayName = getDisplayName(friend);
+                  return (
+                    <button
+                      key={friend.id}
+                      type="button"
+                      aria-label={displayName}
+                      title={displayName}
+                      className={`rounded-full p-0.5 transition ${
+                        selectedWithUserId === friend.id
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : "opacity-80"
+                      }`}
+                      onClick={() => setSelectedWithUserId(friend.id)}
+                    >
+                      <Avatar className="h-14 w-14">
+                        <AvatarImage src={friend.picture || "/default-avatar.png"} />
+                        <AvatarFallback>{getAvatarFallback(friend)}</AvatarFallback>
+                      </Avatar>
+                      <span className="sr-only">{displayName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {additionalWithUserPages.map((page, pageIndex) => (
+                <div
+                  key={`with-user-page-${pageIndex + 1}`}
+                  className="grid min-w-full shrink-0 snap-start grid-cols-3 grid-rows-3 gap-3 justify-items-center"
+                >
+                  {page.map((friend) => {
+                    const displayName = getDisplayName(friend);
+                    return (
+                      <button
+                        key={friend.id}
+                        type="button"
+                        aria-label={displayName}
+                        title={displayName}
+                        className={`rounded-full p-0.5 transition ${
+                          selectedWithUserId === friend.id
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                            : "opacity-80"
+                        }`}
+                        onClick={() => setSelectedWithUserId(friend.id)}
+                      >
+                        <Avatar className="h-14 w-14">
+                          <AvatarImage src={friend.picture || "/default-avatar.png"} />
+                          <AvatarFallback>{getAvatarFallback(friend)}</AvatarFallback>
+                        </Avatar>
+                        <span className="sr-only">{displayName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               ))}
             </div>
           ) : (

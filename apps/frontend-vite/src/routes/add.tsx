@@ -225,6 +225,7 @@ function LogPage() {
                 setShowActivityLogger(false);
               }}
               selectedActivity={selectedActivity}
+              activityEntries={activityEntries}
               onSubmit={handleActivityLogSubmit}
             />
           )}
