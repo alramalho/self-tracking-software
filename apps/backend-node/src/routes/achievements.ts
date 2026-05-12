@@ -502,6 +502,36 @@ router.post(
   }
 );
 
+// Get comments for achievement post
+router.get(
+  "/:achievementPostId/comments",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { achievementPostId } = req.params;
+
+      const comments = await prisma.comment.findMany({
+        where: {
+          achievementPostId,
+          deletedAt: null,
+        },
+        include: {
+          user: { select: { username: true, picture: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      res.json({ comments });
+    } catch (error) {
+      logger.error("Error getting achievement comments:", error);
+      res.status(500).json({ error: "Failed to get comments" });
+    }
+  }
+);
+
 // Add comment to achievement post
 router.post(
   "/:achievementPostId/comments",

@@ -20,6 +20,8 @@ interface CommentSectionProps {
   fullWidth?: boolean;
   showAllComments?: boolean;
   onToggleShowAll?: (shown: boolean) => void;
+  hasMoreComments?: boolean;
+  onLoadAllComments?: () => Promise<void>;
   isAddingComment?: boolean;
   isRemovingComment?: boolean;
   className?: string;
@@ -66,6 +68,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   fullWidth = false,
   showAllComments: externalShowAllState,
   onToggleShowAll,
+  hasMoreComments = false,
+  onLoadAllComments,
   isAddingComment = false,
   isRemovingComment = false,
   className = "",
@@ -253,8 +257,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     }
   };
 
-  const handleToggleShowAll = () => {
+  const handleToggleShowAll = async () => {
     const newState = !showAllComments;
+    if (newState && hasMoreComments && onLoadAllComments) {
+      await onLoadAllComments();
+    }
     setShowAllComments(newState);
     if (onToggleShowAll) onToggleShowAll(newState);
   };
@@ -272,7 +279,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const commentBg = hasImage ? variants.card.glassBg : "dark:bg-muted/30 bg-gray-200/30";
   const visibleComments = getVisibleComments();
-  const hasHiddenComments = comments.length > 2 && !showAllComments;
+  const hasHiddenComments = (comments.length > 2 || hasMoreComments) && !showAllComments;
 
   if (comments.length === 0 && !currentUser) {
     return null;
@@ -288,7 +295,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
               onClick={handleToggleShowAll}
               className={`w-full text-center py-2 ${commentBg} rounded-lg text-sm text-muted-foreground flex items-center justify-center gap-1 border border-white/20 dark:border-gray-700/20 shadow-sm backdrop-blur-lg`}
             >
-              Show all {comments.length} comments{" "}
+              {comments.length > 2
+                ? `Show all ${comments.length} comments`
+                : "Show all comments"}{" "}
               <ChevronDown className="h-4 w-4" />
             </button>
           )}

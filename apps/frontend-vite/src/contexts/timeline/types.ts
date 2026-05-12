@@ -5,6 +5,9 @@ export interface TimelineContextType {
   timelineData: TimelineData | undefined;
   timelineError: Error | null;
   isLoadingTimeline: boolean;
+  isFetchingNextTimelinePage: boolean;
+  hasMoreTimeline: boolean;
+  fetchNextTimelinePage: () => Promise<unknown>;
 }
 
 export const TimelineContext = createContext<TimelineContextType | undefined>(

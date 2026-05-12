@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Trash2, Pencil, Target, Sprout, Rocket } from "lucide-react";
 import { type TimelineAchievementPost } from "@/contexts/timeline/service";
+import { useApiWithAuth } from "@/api";
 import { type Comment } from "@tsw/prisma";
 import CommentSection from "./CommentSection";
 import { ProgressRing } from "./ProgressRing";
@@ -107,6 +108,7 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   const [replyToUsername, setReplyToUsername] = useState<string | undefined>();
   const [showMedalExplainer, setShowMedalExplainer] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const api = useApiWithAuth();
 
   useEffect(() => {
     setReactions(
@@ -162,9 +164,26 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
   } = useActivities();
 
 
-  const comments = (achievementPost.comments || []) as (Comment & {
+  const [comments, setComments] = useState((achievementPost.comments || []) as (Comment & {
     user: { username: string; picture: string };
-  })[];
+  })[]);
+  const commentsCount =
+    (achievementPost as typeof achievementPost & {
+      _count?: { comments?: number };
+    })._count?.comments ?? comments.length;
+  const hasMoreComments = commentsCount > comments.length;
+
+  useEffect(() => {
+    setComments((achievementPost.comments || []) as (Comment & {
+      user: { username: string; picture: string };
+    })[]);
+  }, [achievementPost.comments]);
+
+  const loadAllComments = useCallback(async () => {
+    if (!hasMoreComments) return;
+    const response = await api.get(`/achievements/${achievementPost.id}/comments`);
+    setComments(response.data.comments || []);
+  }, [achievementPost.id, api, hasMoreComments]);
 
   // JSConfetti instance
   const jsConfettiRef = useRef<JSConfetti | null>(null);
@@ -567,6 +586,8 @@ const AchievementPostCard: React.FC<AchievementPostCardProps> = ({
             hasImage={true}
             showAllComments={showAllComments}
             onToggleShowAll={setShowAllComments}
+            hasMoreComments={hasMoreComments}
+            onLoadAllComments={loadAllComments}
             isAddingComment={false}
             isRemovingComment={isRemovingComment}
             className="[&>div:last-child]:hidden" // Hide the input section, only show comments

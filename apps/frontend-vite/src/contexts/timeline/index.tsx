@@ -3,13 +3,10 @@
 
 import { useApiWithAuth } from "@/api";
 import { useSession } from "@/contexts/auth";
-import { normalizeApiResponse } from "@/utils/dateUtils";
-import { useQuery } from "@tanstack/react-query";
-import type { Activity } from "@tsw/prisma";
-import React from "react";
-import { getTimelineData, type TimelineAchievementPost, type TimelineActivityEntry, type TimelineUser } from "./service";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import React, { useMemo } from "react";
+import { getTimelineData, type TimelineData } from "./service";
 import { TimelineContext, type TimelineContextType } from "./types";
-import { normalizePlanProgress } from "../plans-progress/service";
 
 export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -17,54 +14,47 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const api = useApiWithAuth();
 
-  const timelineQuery = useQuery({
+  const timelineQuery = useInfiniteQuery({
     queryKey: ["timeline"],
-    queryFn: () => getTimelineData(api),
-    select: (data) => ({
-      recommendedActivityEntries: data.recommendedActivityEntries.map(entry =>
-        normalizeApiResponse<TimelineActivityEntry>(entry, [
-          "date",
-          "createdAt",
-          "updatedAt",
-          "deletedAt",
-          "comments.createdAt",
-          "comments.deletedAt",
-          "reactions.createdAt",
-        ])
-      ),
-      recommendedActivities: data.recommendedActivities.map(activity =>
-        normalizeApiResponse<Activity>(activity, [
-          "createdAt",
-          "updatedAt",
-          "deletedAt",
-        ])
-      ),
-      recommendedUsers: data.recommendedUsers.map(user => ({
-        ...normalizeApiResponse<TimelineUser>(user, [
-          "plans.createdAt",
-          "plans.updatedAt",
-          "plans.finishingDate",
-        ]),
-        plans: user.plans.map(plan => ({
-          ...plan,
-          progress: normalizePlanProgress(plan.progress)
-        }))
-      })),
-      achievementPosts: data.achievementPosts.map(achievementPost =>
-        normalizeApiResponse<TimelineAchievementPost>(achievementPost, [
-          "createdAt",
-          "updatedAt",
-          "deletedAt",
-        ])
-      ),
-    }),
+    queryFn: ({ pageParam }) => getTimelineData(api, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
     enabled: isLoaded && isSignedIn,
   });
 
+  const timelineData = useMemo<TimelineData | undefined>(() => {
+    if (!timelineQuery.data?.pages.length) return undefined;
+
+    const activityMap = new Map<string, TimelineData["recommendedActivities"][number]>();
+    const userMap = new Map<string, TimelineData["recommendedUsers"][number]>();
+
+    timelineQuery.data.pages.forEach((page) => {
+      page.recommendedActivities.forEach((activity) => activityMap.set(activity.id, activity));
+      page.recommendedUsers.forEach((user) => userMap.set(user.id, user));
+    });
+
+    return {
+      recommendedActivityEntries: timelineQuery.data.pages.flatMap(
+        (page) => page.recommendedActivityEntries
+      ),
+      recommendedActivities: Array.from(activityMap.values()),
+      recommendedUsers: Array.from(userMap.values()),
+      achievementPosts: timelineQuery.data.pages.flatMap(
+        (page) => page.achievementPosts
+      ),
+      nextCursor:
+        timelineQuery.data.pages[timelineQuery.data.pages.length - 1]
+          ?.nextCursor ?? null,
+    };
+  }, [timelineQuery.data]);
+
   const context: TimelineContextType = {
-    timelineData: timelineQuery.data,
+    timelineData,
     isLoadingTimeline: timelineQuery.isLoading,
     timelineError: timelineQuery.error,
+    isFetchingNextTimelinePage: timelineQuery.isFetchingNextPage,
+    hasMoreTimeline: timelineQuery.hasNextPage,
+    fetchNextTimelinePage: timelineQuery.fetchNextPage,
   };
 
   return (
