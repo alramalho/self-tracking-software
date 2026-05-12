@@ -10,6 +10,10 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { type AchievementsContextType, type CelebrationData, type CreateAchievementPostData, type UpdateAchievementPostData } from "./types";
 import { type TimelineData, type TimelineAchievementPost, normalizeAchievementPost } from "../timeline/service";
 
+type TimelineCache =
+  | TimelineData
+  | { pages: TimelineData[]; pageParams: unknown[] };
+
 export const AchievementsContext = createContext<
   AchievementsContextType | undefined
 >(undefined);
@@ -342,16 +346,28 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({
       const updatedMessage = updatedPost.message;
 
       // Update timeline cache (for own profile - achievementPosts come from timeline)
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) => {
         if (!old) return old;
-        const newAchievementPosts = old.achievementPosts?.map((post) =>
-          post.id === input.achievementPostId
-            ? { ...post, message: updatedMessage, images: updatedImages }
-            : post
-        ) || [];
+        const updatePosts = (posts: TimelineData["achievementPosts"]) =>
+          posts.map((post) =>
+            post.id === input.achievementPostId
+              ? { ...post, message: updatedMessage, images: updatedImages }
+              : post
+          );
+
+        if ("pages" in old) {
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              achievementPosts: updatePosts(page.achievementPosts),
+            })),
+          };
+        }
+
         return {
           ...old,
-          achievementPosts: newAchievementPosts,
+          achievementPosts: updatePosts(old.achievementPosts),
         };
       });
 

@@ -124,9 +124,12 @@ export interface TimelineData {
   recommendedActivities: Activity[];
   recommendedUsers: TimelineUser[];
   achievementPosts: TimelineAchievementPost[];
+  nextCursor?: string | null;
 }
 
-function normalizeActivityEntry(
+export type TimelinePage = TimelineData;
+
+export function normalizeActivityEntry(
   entry: TimelineActivityEntry
 ): TimelineActivityEntry {
   return normalizeApiResponse<TimelineActivityEntry>(entry, [
@@ -179,9 +182,15 @@ export function normalizeAchievementPost(
 }
 
 export async function getTimelineData(
-  api: AxiosInstance
-): Promise<TimelineData> {
-  const response = await api.get<TimelineData>("/users/timeline");
+  api: AxiosInstance,
+  cursor?: string | null
+): Promise<TimelinePage> {
+  const response = await api.get<TimelinePage>("/users/timeline", {
+    params: {
+      limit: 20,
+      ...(cursor ? { cursor } : {}),
+    },
+  });
   const data = response.data;
 
   return {
@@ -191,5 +200,6 @@ export async function getTimelineData(
     recommendedActivities: data.recommendedActivities.map(normalizeActivity),
     recommendedUsers: data.recommendedUsers.map(normalizeUser),
     achievementPosts: (data.achievementPosts || []).map(normalizeAchievementPost),
+    nextCursor: data.nextCursor ?? null,
   };
 }

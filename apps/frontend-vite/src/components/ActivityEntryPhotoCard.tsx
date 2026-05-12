@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type PlanProgressData } from "@/contexts/plans-progress";
 import { useTheme } from "@/contexts/theme/useTheme";
@@ -110,6 +111,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
+  const api = useApiWithAuth();
 
   useEffect(() => {
     setReactions(
@@ -157,7 +159,23 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     isAddingComment,
     isRemovingComment,
   } = useActivities();
-  const comments = activityEntry.comments || [];
+  const [comments, setComments] = useState(activityEntry.comments || []);
+  const commentsCount =
+    (activityEntry as typeof activityEntry & { _count?: { comments?: number } })
+      ._count?.comments ?? comments.length;
+  const hasMoreComments = commentsCount > comments.length;
+
+  useEffect(() => {
+    setComments(activityEntry.comments || []);
+  }, [activityEntry.comments]);
+
+  const loadAllComments = useCallback(async () => {
+    if (!hasMoreComments) return;
+    const response = await api.get(
+      `/activities/activity-entries/${activityEntry.id}/comments`
+    );
+    setComments(response.data.comments || []);
+  }, [activityEntry.id, api, hasMoreComments]);
 
   useEffect(() => {
     if (textRef.current) {
@@ -579,6 +597,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 hasImage={true}
                 showAllComments={showAllComments}
                 onToggleShowAll={setShowAllComments}
+                hasMoreComments={hasMoreComments}
+                onLoadAllComments={loadAllComments}
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
               />
@@ -706,6 +726,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 fullWidth={true}
                 showAllComments={showAllComments}
                 onToggleShowAll={setShowAllComments}
+                hasMoreComments={hasMoreComments}
+                onLoadAllComments={loadAllComments}
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
               />

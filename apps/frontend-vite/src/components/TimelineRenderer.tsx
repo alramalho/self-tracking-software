@@ -48,7 +48,13 @@ const TimelineRenderer: React.FC<{
   onOpenSearch: () => void;
   highlightActivityEntryId?: string;
 }> = ({ onOpenSearch, highlightActivityEntryId }) => {
-  const { timelineData, isLoadingTimeline } = useTimeline();
+  const {
+    timelineData,
+    isLoadingTimeline,
+    isFetchingNextTimelinePage,
+    hasMoreTimeline,
+    fetchNextTimelinePage,
+  } = useTimeline();
   const { currentUser } = useCurrentUser();
   const { plans } = usePlans();
   const navigate = useNavigate();
@@ -95,6 +101,7 @@ const TimelineRenderer: React.FC<{
     new Set()
   );
   const dividerRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [dividerSeen, setDividerSeen] = useState(false);
 
   // Track when user last viewed timeline (localStorage for immediate UI, synced with DB)
@@ -206,7 +213,6 @@ const TimelineRenderer: React.FC<{
       items.push({ type: "activity", data: entry });
     });
 
-    console.log("timelineData.achievementPosts", timelineData.achievementPosts);
     // Add achievement posts
     (timelineData.achievementPosts || []).forEach((post) => {
       items.push({ type: "achievement", data: post });
@@ -227,6 +233,59 @@ const TimelineRenderer: React.FC<{
 
     return items;
   }, [timelineData]);
+
+  const activityById = useMemo(() => {
+    const map = new Map<string, Activity>();
+    [...(timelineData?.recommendedActivities || []), ...activities].forEach(
+      (activity) => {
+        map.set(activity.id, activity);
+      }
+    );
+    return map;
+  }, [activities, timelineData?.recommendedActivities]);
+
+  const userById = useMemo(() => {
+    const map = new Map<string, any>();
+    [...(timelineData?.recommendedUsers || []), currentUser]
+      .filter(Boolean)
+      .forEach((user: any) => {
+        map.set(user.id, user);
+      });
+    return map;
+  }, [currentUser, timelineData?.recommendedUsers]);
+
+  const planProgressByUserAndActivity = useMemo(() => {
+    const map = new Map<string, any[]>();
+
+    (timelineData?.recommendedUsers || []).forEach((user) => {
+      user.plans?.forEach((plan) => {
+        plan.activities?.forEach((activity) => {
+          const key = `${user.id}:${activity.id}`;
+          const existing = map.get(key) || [];
+          map.set(key, [...existing, plan.progress]);
+        });
+      });
+    });
+
+    return map;
+  }, [timelineData?.recommendedUsers]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMoreTimeline) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !isFetchingNextTimelinePage) {
+          fetchNextTimelinePage();
+        }
+      },
+      { rootMargin: "600px" }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [fetchNextTimelinePage, hasMoreTimeline, isFetchingNextTimelinePage]);
 
   // Check if there will be a divider shown (new posts exist AND we have a lastViewedTimelineAt)
   const willShowDivider = useMemo(() => {
@@ -544,14 +603,6 @@ const TimelineRenderer: React.FC<{
               return itemDate > lastViewed;
             });
 
-          // count the timeline items types
-          console.log(
-            "timeline items types",
-            mergedTimelineItems.reduce((acc: Record<string, number>, item: TimelineItem) => {
-              acc[item.type] = (acc[item.type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          );
           return mergedTimelineItems.map((item, index) => {
             if (item.type === "achievement") {
               // Render achievement post
@@ -594,31 +645,15 @@ const TimelineRenderer: React.FC<{
             } else {
               // Render activity entry
               const entry = item.data;
-              const allActivities = [
-                ...(timelineData?.recommendedActivities || []),
-                ...activities,
-              ];
-              const activity = allActivities?.find(
-                (a: Activity) => a.id === entry.activityId
-              );
-              const allUsers = [
-                ...(timelineData?.recommendedUsers || []),
-                currentUser,
-              ];
-              const user = allUsers?.find(
-                (u: any) => u.id === activity?.userId
-              );
+              const activity = entry.activityId
+                ? activityById.get(entry.activityId)
+                : undefined;
+              const user = activity ? userById.get(activity.userId) : undefined;
               if (!activity || !user || user.username === null) return null;
 
-              const timelineUser = timelineData?.recommendedUsers?.find(
-                (u) => u.id === user.id
-              );
               const userPlansProgress =
-                timelineUser?.plans
-                  ?.filter((plan) =>
-                    plan.activities?.some((a) => a.id === activity?.id)
-                  )
-                  .map((plan) => plan.progress) || [];
+                planProgressByUserAndActivity.get(`${user.id}:${activity.id}`) ||
+                [];
 
               const hasImageExpired =
                 entry.imageExpiresAt &&
@@ -698,6 +733,12 @@ const TimelineRenderer: React.FC<{
             }
           });
         })()}
+      <div ref={loadMoreRef} className="col-span-2 sm:col-span-4 h-6" />
+      {isFetchingNextTimelinePage && (
+        <div className="col-span-2 sm:col-span-4 flex justify-center py-4">
+          <RefreshCcw className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 };
