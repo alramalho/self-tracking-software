@@ -1442,6 +1442,36 @@ router.delete(
   }
 );
 
+// Get comments for activity entry
+router.get(
+  "/activity-entries/:activityEntryId/comments",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+
+      const comments = await prisma.comment.findMany({
+        where: {
+          activityEntryId,
+          deletedAt: null,
+        },
+        include: {
+          user: { select: { username: true, picture: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      res.json({ comments });
+    } catch (error) {
+      logger.error("Error getting comments:", error);
+      res.status(500).json({ error: "Failed to get comments" });
+    }
+  }
+);
+
 // Add comment to activity entry
 router.post(
   "/activity-entries/:activityEntryId/comments",

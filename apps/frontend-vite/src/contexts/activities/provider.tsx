@@ -25,6 +25,54 @@ import {
   type ReturnedActivityEntriesType,
 } from "./types";
 
+type TimelineCache =
+  | TimelineData
+  | { pages: TimelineData[]; pageParams: unknown[] };
+
+const updateTimelineActivityEntries = (
+  old: TimelineCache | undefined,
+  updater: (
+    entries: TimelineData["recommendedActivityEntries"]
+  ) => TimelineData["recommendedActivityEntries"]
+) => {
+  if (!old) return old;
+  if ("pages" in old) {
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        recommendedActivityEntries: updater(page.recommendedActivityEntries),
+      })),
+    };
+  }
+  return {
+    ...old,
+    recommendedActivityEntries: updater(old.recommendedActivityEntries),
+  };
+};
+
+const updateTimelineAchievementPosts = (
+  old: TimelineCache | undefined,
+  updater: (
+    posts: TimelineData["achievementPosts"]
+  ) => TimelineData["achievementPosts"]
+) => {
+  if (!old) return old;
+  if ("pages" in old) {
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        achievementPosts: updater(page.achievementPosts),
+      })),
+    };
+  }
+  return {
+    ...old,
+    achievementPosts: updater(old.achievementPosts),
+  };
+};
+
 export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -227,15 +275,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           return old.filter((entry) => entry.id !== id);
         }
       );
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.filter(
-            (entry) => entry.id !== id
-          ),
-        };
-      });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineActivityEntries(old, (entries) =>
+          entries.filter((entry) => entry.id !== id)
+        )
+      );
 
       // Refetch plans to update progress after entry deletion
       await queryClient.refetchQueries({ queryKey: ["plans"] });
@@ -275,19 +319,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map(
-            (entry) => {
-              return entry.id === input.activityEntryId
-                ? { ...entry, reactions: reactions }
-                : entry;
-            }
-          ),
-        };
-      });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineActivityEntries(old, (entries) =>
+          entries.map((entry) =>
+            entry.id === input.activityEntryId
+              ? { ...entry, reactions: reactions }
+              : entry
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -326,19 +366,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data.comments;
     },
     onSuccess: (comments, input) => {
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries?.map(
-            (entry) => {
-              return entry.id === input.activityEntryId
-                ? { ...entry, comments: comments }
-                : entry;
-            }
-          ),
-        };
-      });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineActivityEntries(old, (entries) =>
+          entries.map((entry) =>
+            entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -376,19 +412,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data.comments;
     },
     onSuccess: (comments, input) => {
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map(
-            (entry) => {
-              return entry.id === input.activityEntryId
-                ? { ...entry, comments: comments }
-                : entry;
-            }
-          ),
-        };
-      });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineActivityEntries(old, (entries) =>
+          entries.map((entry) =>
+            entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -430,17 +462,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data.reactions;
     },
     onSuccess: (reactions, input) => {
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          achievementPosts: old.achievementPosts?.map((post) => {
-            return post.id === input.achievementPostId
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineAchievementPosts(old, (posts) =>
+          posts.map((post) =>
+            post.id === input.achievementPostId
               ? { ...post, reactions: reactions }
-              : post;
-          }),
-        };
-      });
+              : post
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -480,17 +510,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data.comments;
     },
     onSuccess: (comments, input) => {
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          achievementPosts: old.achievementPosts?.map((post) => {
-            return post.id === input.achievementPostId
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineAchievementPosts(old, (posts) =>
+          posts.map((post) =>
+            post.id === input.achievementPostId
               ? { ...post, comments: comments }
-              : post;
-          }),
-        };
-      });
+              : post
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -528,17 +556,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data.comments;
     },
     onSuccess: (comments, input) => {
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          achievementPosts: old.achievementPosts?.map((post) => {
-            return post.id === input.achievementPostId
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineAchievementPosts(old, (posts) =>
+          posts.map((post) =>
+            post.id === input.achievementPostId
               ? { ...post, comments: comments }
-              : post;
-          }),
-        };
-      });
+              : post
+          )
+        )
+      );
       queryClient.setQueryData(
         ["user", input.userUsername],
         (old: HydratedUser) => {
@@ -573,15 +599,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (_, input) => {
       // Remove from timeline data
-      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return {
-          ...old,
-          achievementPosts: old.achievementPosts?.filter(
-            (post) => post.id !== input.achievementPostId
-          ),
-        };
-      });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineAchievementPosts(old, (posts) =>
+          posts.filter((post) => post.id !== input.achievementPostId)
+        )
+      );
       // Remove from user data
       queryClient.setQueryData(
         ["user", input.userUsername],

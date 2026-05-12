@@ -185,6 +185,7 @@ model ActivityEntry {
 
   @@index([userId, deletedAt])
   @@index([userId, datetime, deletedAt])
+  @@index([userId, deletedAt, datetime, id])
   @@index([deletedAt, createdAt])
   @@index([activityId])
   @@index([createdAt])
@@ -256,6 +257,7 @@ model AchievementPost {
   @@index([planId])
   @@index([createdAt])
   @@index([deletedAt, createdAt])
+  @@index([userId, deletedAt, createdAt, id])
   @@map("achievement_posts")
   @@schema("public")
 }

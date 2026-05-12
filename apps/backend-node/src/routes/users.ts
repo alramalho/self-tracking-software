@@ -80,6 +80,42 @@ const basicUserInclude = {
   },
 } as const;
 
+const DEFAULT_TIMELINE_LIMIT = 20;
+const MAX_TIMELINE_LIMIT = 30;
+
+type TimelineCursor = {
+  ts: string;
+  id: string;
+};
+
+const encodeTimelineCursor = (cursor: TimelineCursor) =>
+  Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+
+const decodeTimelineCursor = (value: unknown): TimelineCursor | null => {
+  if (!value || typeof value !== "string") return null;
+
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    if (
+      typeof parsed?.ts === "string" &&
+      typeof parsed?.id === "string" &&
+      !Number.isNaN(new Date(parsed.ts).getTime())
+    ) {
+      return { ts: parsed.ts, id: parsed.id };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+const getTimelineLimit = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_TIMELINE_LIMIT;
+  return Math.min(Math.floor(parsed), MAX_TIMELINE_LIMIT);
+};
+
 // Health check
 usersRouter.get("/user-health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
@@ -756,6 +792,7 @@ usersRouter.get(
           recommendedActivities: [],
           recommendedUsers: [],
           achievementPosts: [],
+          nextCursor: null,
         });
         return;
       }
@@ -775,10 +812,14 @@ usersRouter.get(
           recommendedActivities: [],
           recommendedUsers: [],
           achievementPosts: [],
+          nextCursor: null,
         });
         return;
       }
 
+      const limit = getTimelineLimit(req.query.limit);
+      const cursor = decodeTimelineCursor(req.query.cursor);
+      const cursorDate = cursor ? new Date(cursor.ts) : null;
       const userIds = [user.id, ...connections.map((friend) => friend.id)];
       const allUsers = [user, ...connections];
 
@@ -824,41 +865,6 @@ usersRouter.get(
         })
         .map((a) => a.id);
 
-      // Fetch only activity entries for valid activities
-      const filteredActivityEntries = await prisma.activityEntry.findMany({
-        where: {
-          userId: { in: userIds },
-          activityId: { in: validActivityIds },
-          deletedAt: null,
-        },
-        orderBy: [{ datetime: "desc" }, { createdAt: "desc" }],
-        take: 50,
-        include: {
-          activity: true,
-          comments: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: "asc" },
-            include: {
-              user: {
-                select: { id: true, username: true, picture: true },
-              },
-            },
-          },
-          reactions: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  picture: true,
-                  planType: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
       // Get public plan IDs for connected users
       const publicPlanIds = allUsers.flatMap(
         (u) =>
@@ -866,61 +872,190 @@ usersRouter.get(
           []
       );
 
-      // Fetch achievement posts for users with PUBLIC plans OR level-up posts (no plan)
-      const achievementPosts = await prisma.achievementPost.findMany({
-        where: {
-          userId: { in: userIds },
-          deletedAt: null,
-          OR: [
-            { planId: { in: publicPlanIds } },
-            { planId: null, achievementType: "LEVEL_UP" },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              picture: true,
-            },
+      const activityCursorWhere =
+        cursor && cursorDate
+          ? {
+              OR: [
+                { datetime: { lt: cursorDate } },
+                { datetime: cursorDate, id: { lt: cursor.id } },
+              ],
+            }
+          : {};
+
+      const achievementCursorWhere =
+        cursor && cursorDate
+          ? {
+              OR: [
+                { createdAt: { lt: cursorDate } },
+                { createdAt: cursorDate, id: { lt: cursor.id } },
+              ],
+            }
+          : {};
+
+      const [activityCandidates, achievementCandidates] = await Promise.all([
+        prisma.activityEntry.findMany({
+          where: {
+            userId: { in: userIds },
+            activityId: { in: validActivityIds },
+            deletedAt: null,
+            ...activityCursorWhere,
           },
-          plan: {
-            select: {
-              id: true,
-              goal: true,
-              emoji: true,
-              backgroundImageUrl: true,
-            },
-          },
-          images: {
-            orderBy: { sortOrder: "asc" },
-          },
-          comments: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: "asc" },
-            include: {
-              user: {
-                select: { id: true, username: true, picture: true },
+          orderBy: [{ datetime: "desc" }, { id: "desc" }],
+          take: limit + 1,
+          include: {
+            comments: {
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 2,
+              include: {
+                user: {
+                  select: { id: true, username: true, picture: true },
+                },
               },
             },
-          },
-          reactions: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  picture: true,
-                  planType: true,
+            reactions: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                comments: true,
+              },
+            },
+            sharedActivityEntry: {
+              include: {
+                sharedActivity: {
+                  include: {
+                    entries: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            picture: true,
+                          },
+                        },
+                        activityEntry: {
+                          select: { id: true, userId: true, deletedAt: true },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
           },
-        },
+        }),
+        prisma.achievementPost.findMany({
+          where: {
+            userId: { in: userIds },
+            deletedAt: null,
+            OR: [
+              { planId: { in: publicPlanIds } },
+              { planId: null, achievementType: "LEVEL_UP" },
+            ],
+            ...(cursor ? { AND: [achievementCursorWhere] } : {}),
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: limit + 1,
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                picture: true,
+              },
+            },
+            plan: {
+              select: {
+                id: true,
+                goal: true,
+                emoji: true,
+                backgroundImageUrl: true,
+              },
+            },
+            images: {
+              orderBy: { sortOrder: "asc" },
+            },
+            comments: {
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 2,
+              include: {
+                user: {
+                  select: { id: true, username: true, picture: true },
+                },
+              },
+            },
+            reactions: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                comments: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const mergedTimelineItems = [
+        ...activityCandidates.map((entry) => ({
+          type: "activity" as const,
+          id: entry.id,
+          timestamp: entry.datetime,
+          data: {
+            ...entry,
+            comments: [...entry.comments].reverse(),
+          },
+        })),
+        ...achievementCandidates.map((post) => ({
+          type: "achievement" as const,
+          id: post.id,
+          timestamp: post.createdAt,
+          data: {
+            ...post,
+            comments: [...post.comments].reverse(),
+          },
+        })),
+      ].sort((a, b) => {
+        const timeDiff = b.timestamp.getTime() - a.timestamp.getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.id.localeCompare(a.id);
       });
+
+      const pageItems = mergedTimelineItems.slice(0, limit);
+      const hasMoreItems = mergedTimelineItems.length > limit;
+      const lastPageItem = pageItems[pageItems.length - 1];
+      const nextCursor = hasMoreItems && lastPageItem
+        ? encodeTimelineCursor({
+            ts: lastPageItem.timestamp.toISOString(),
+            id: lastPageItem.id,
+          })
+        : null;
+
+      const filteredActivityEntries = pageItems
+        .filter((item) => item.type === "activity")
+        .map((item) => item.data);
+
+      const achievementPosts = pageItems
+        .filter((item) => item.type === "achievement")
+        .map((item) => item.data);
 
       const activityIds = Array.from(
         new Set(
@@ -933,14 +1068,21 @@ usersRouter.get(
         where: { id: { in: activityIds } },
       });
 
-      // Collect all plan IDs from all users
-      const allPlanIds = allUsers.flatMap(
-        (u) => u.plans?.map((p) => p.id) || []
+      const pageActivityIdSet = new Set(activityIds);
+      const pagePlanIds = allUsers.flatMap(
+        (u) =>
+          u.plans
+            ?.filter((plan) =>
+              plan.activities?.some((activity) =>
+                pageActivityIdSet.has(activity.id)
+              )
+            )
+            .map((p) => p.id) || []
       );
 
       // Batch load progress for all plans
       const plansProgress = await plansService.getBatchPlanProgress(
-        allPlanIds,
+        pagePlanIds,
         req.user!.id,
         false // Use cache
       );
@@ -951,10 +1093,14 @@ usersRouter.get(
       // Augment each user's plans with progress data
       const usersWithProgress = allUsers.map((u) => ({
         ...u,
-        plans: u.plans?.map((plan) => ({
-          ...plan,
-          progress: progressMap.get(plan.id),
-        })),
+        plans: u.plans
+          ?.filter((plan) =>
+            plan.activities?.some((activity) => pageActivityIdSet.has(activity.id))
+          )
+          .map((plan) => ({
+            ...plan,
+            progress: progressMap.get(plan.id),
+          })),
       }));
 
       res.json({
@@ -962,6 +1108,7 @@ usersRouter.get(
         recommendedActivities: activities,
         recommendedUsers: usersWithProgress,
         achievementPosts: achievementPosts,
+        nextCursor,
       });
     } catch (error) {
       logger.error("Failed to fetch timeline data:", error);
