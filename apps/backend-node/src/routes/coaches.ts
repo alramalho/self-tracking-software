@@ -107,26 +107,10 @@ router.get(
 );
 
 // List all human coaches (public endpoint for coach selection)
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
-    const coaches = await prisma.coach.findMany({
-      where: {
-        type: "HUMAN",
-      },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            picture: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    res.json(coaches);
+    // Human coach marketplace is hidden while coaching is AI-only in production.
+    res.json([]);
   } catch (error) {
     logger.error("Error fetching coaches:", error);
     res.status(500).json({ error: "Failed to fetch coaches" });

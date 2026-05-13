@@ -65,6 +65,8 @@ const CoachSelectorStepWizard = () => {
     if (!humanCoaches || !currentUser) return humanCoaches;
     return humanCoaches.filter((coach) => coach.ownerId !== currentUser.id);
   }, [humanCoaches, currentUser]);
+  const showHumanCoachSection =
+    isLoading || (availableCoaches && availableCoaches.length > 0);
 
   const handleSelectCoach = (coachId: string | null) => {
     const selectedCoach = coachId
@@ -156,82 +158,78 @@ const CoachSelectorStepWizard = () => {
           </div>
         </button>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 py-2">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Human Coaches */}
-        {isLoading ? (
+        {showHumanCoachSection && (
           <>
-            {[1, 2].map((i) => (
-              <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-            ))}
-          </>
-        ) : (
-          availableCoaches?.map((coach) => {
-            const details = coach.details;
+            <div className="flex items-center gap-3 py-2">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
 
-            return (
-              <button
-                key={coach.id}
-                onClick={() => handleCoachClick(coach)}
-                className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
-              >
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `url(${coach.owner.picture || ""})`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors" />
+            {isLoading ? (
+              <>
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+                ))}
+              </>
+            ) : (
+              availableCoaches?.map((coach) => {
+                const details = coach.details;
 
-                <div className="relative p-4 text-white">
-                  <h3 className="text-lg font-bold mb-2">
-                    {coach.owner.name || coach.owner.username}
-                  </h3>
+                return (
+                  <button
+                    key={coach.id}
+                    onClick={() => handleCoachClick(coach)}
+                    className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
+                  >
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${coach.owner.picture || ""})`,
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors" />
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-white/60">Title</p>
-                      <p className="text-sm font-semibold">{details.title}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-white/60">Focus</p>
-                      <p className="text-sm font-semibold">{details.focusDescription}</p>
-                    </div>
-                    {details.idealPlans && details.idealPlans.length > 0 && (
-                      <div className="col-span-2">
-                        <p className="text-[10px] uppercase tracking-wider text-white/60">Helps with</p>
-                        <p className="text-sm font-semibold">
-                          {details.idealPlans
-                            .slice(0, 3)
-                            .map((p) => `${p.emoji} ${p.title}`)
-                            .join(" · ")}
-                        </p>
+                    <div className="relative p-4 text-white">
+                      <h3 className="text-lg font-bold mb-2">
+                        {coach.owner.name || coach.owner.username}
+                      </h3>
+
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-white/60">Title</p>
+                          <p className="text-sm font-semibold">{details.title}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-white/60">Focus</p>
+                          <p className="text-sm font-semibold">{details.focusDescription}</p>
+                        </div>
+                        {details.idealPlans && details.idealPlans.length > 0 && (
+                          <div className="col-span-2">
+                            <p className="text-[10px] uppercase tracking-wider text-white/60">Helps with</p>
+                            <p className="text-sm font-semibold">
+                              {details.idealPlans
+                                .slice(0, 3)
+                                .map((p) => `${p.emoji} ${p.title}`)
+                                .join(" · ")}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {details.bio && (
-                    <p className="text-xs text-white/70 mt-3 line-clamp-2">{details.bio}</p>
-                  )}
+                      {details.bio && (
+                        <p className="text-xs text-white/70 mt-3 line-clamp-2">{details.bio}</p>
+                      )}
 
-                  <p className="text-[10px] text-white/50 mt-3 italic">
-                    Subject to acceptance by coach
-                  </p>
-                </div>
-              </button>
-            );
-          })
-        )}
-
-        {!isLoading && (!availableCoaches || availableCoaches.length === 0) && (
-          <p className="text-center text-muted-foreground text-sm py-4">
-            No human coaches available yet.
-          </p>
+                      <p className="text-[10px] text-white/50 mt-3 italic">
+                        Subject to acceptance by coach
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </>
         )}
       </div>
 
