@@ -220,7 +220,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
             )}
             <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
               Meet {humanCoach ? (humanCoach.name || humanCoach.username) : "Oli"},
-              <br /> your new personal coach
+              <br /> your new coach
             </h2>
           </div>
           <p className="text-md text-muted-foreground">
@@ -232,9 +232,9 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
               </>
             ) : (
               <>
-                Oli is designed to help you stay on track and motivated.
+                Oli monitors your plan, checks in when it matters, and helps adapt the next week.
                 <br />
-                Here&apos;s some things he can do:
+                Here&apos;s what coaching includes:
               </>
             )}
           </p>
@@ -242,21 +242,21 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
         <div className="space-y-0">
           <CardItem
             icon={<LandPlot className="w-8 h-8 text-blue-500" />}
-            title="Keeping track of your plan state"
+            title="Monitoring your plan state from the homepage"
             onClick={() => setPlanStatePopoverDemoOpen(true)}
           />
           <CardItem
             icon={<Send className="w-8 h-8 text-blue-500" />}
-            title="Outreach to you several times a week"
+            title="Checking in several times a week"
           />
           <CardItem
             icon={<Route className="w-8 h-8 text-blue-500" />}
-            title="Weekly adapting your plan based on achievement"
+            title="Adapting next week's plan based on progress"
             onClick={() => setPlanCreationPopoverDemoOpen(true)}
           />
           <CardItem
             icon={<NotepadText className="w-8 h-8 text-blue-500" />}
-            title="Providing insightful correlations"
+            title="Finding useful patterns in your metrics"
             onClick={() => setMetricAnalysisPopoverDemoOpen(true)}
           />
         </div>
