@@ -22,6 +22,10 @@ import { FireAnimation } from "./FireBadge";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Confetti, type ConfettiRef } from "./ui/confetti";
+import {
+  getCoachPlanInsight,
+  getPlanDomainLabel,
+} from "@/utils/coachPlanDisplay";
 
 interface ComingUpSectionProps {
   sessions: any[];
@@ -258,6 +262,17 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
+  const firstUpcomingSession = upcomingSessions[0];
+  const firstUpcomingActivity = firstUpcomingSession
+    ? activities.find((activity) => activity.id === firstUpcomingSession.activityId)
+    : null;
+  const nextSessionLabel =
+    firstUpcomingSession && firstUpcomingActivity
+      ? `${firstUpcomingActivity.title} on ${format(new Date(firstUpcomingSession.date), "EEE d")}`
+      : null;
+  const coachInsight = getCoachPlanInsight(plan, nextSessionLabel);
+  const domainLabel = getPlanDomainLabel(plan);
+
   const backendProgress = !isDemo ? planProgressData : null;
   const FALLBACK_HABIT_WEEKS = 4;
   const FALLBACK_LIFESTYLE_WEEKS = 9;
@@ -353,6 +368,13 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
           {/* Badges row - beneath the title */}
           <div className="flex items-center gap-2 flex-wrap">
+            {domainLabel && (
+              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-background/60 border border-border/60 w-fit">
+                <span className="text-[12px] font-medium text-muted-foreground">
+                  {domainLabel}
+                </span>
+              </div>
+            )}
             {habitIsAchieved && (
               <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
                 <Sprout size={18} className="text-lime-500" />
@@ -370,6 +392,20 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               </div>
             )}
           </div>
+
+          {coachInsight && (
+            <button
+              onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })}
+              className="rounded-2xl border border-border/60 bg-background/45 px-3 py-2 text-left transition-colors hover:bg-background/65"
+            >
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+                Coach
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                {coachInsight}
+              </p>
+            </button>
+          )}
 
           <AnimatePresence>
             {isAnimationCompleted && (
