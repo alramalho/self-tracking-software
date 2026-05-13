@@ -287,9 +287,9 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
           </div>
 
           <p className="text-md text-muted-foreground font-semibold">
-            Or if you want an in-depth view with custom metrics, you can check
-            the <br />
-            <Target className="w-5 h-5 inline-block mb-1" /> Plans page.
+            For the full plan view, the{" "}
+            <Target className="w-5 h-5 inline-block mb-1" /> Plans page shows
+            Oli&apos;s notes and your current week side by side.
           </p>
 
           <div className="text-left">
