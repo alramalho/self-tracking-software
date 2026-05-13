@@ -182,15 +182,27 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
 
-  // Scroll to the right (today) on mount
+  // Show the current week by default without pinning it to the clipped edge.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+      const cellId = uniqueId
+        ? `heatmap-today-cell-${uniqueId}`
+        : "heatmap-today-cell";
+      const todayCell = document.getElementById(cellId);
+
+      if (todayCell) {
+        todayCell.scrollIntoView({
+          behavior: "auto",
+          block: "nearest",
+          inline: "center",
+        });
+      } else if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft =
+          scrollContainerRef.current.scrollWidth;
       }
     }, 100);
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [heatmapData.length, uniqueId]);
 
   // Use Intersection Observer to detect when today's cell is visible
   useEffect(() => {

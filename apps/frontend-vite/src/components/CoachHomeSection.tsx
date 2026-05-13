@@ -4,7 +4,7 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { useDataNotifications } from "@/contexts/notifications";
 import { useNavigate } from "@tanstack/react-router";
 import { getThemeVariants } from "@/utils/theme";
-import { ChevronRight, MessageCircle } from "lucide-react";
+import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,20 @@ function getCoachInsightText(notification?: {
     .replace(/[#*_`>]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function getRelatedPlanId(notification?: { relatedData: unknown }) {
+  const relatedData = notification?.relatedData;
+  if (
+    relatedData &&
+    typeof relatedData === "object" &&
+    "planId" in relatedData &&
+    typeof relatedData.planId === "string"
+  ) {
+    return relatedData.planId;
+  }
+
+  return null;
 }
 
 export const CoachHomeSection = () => {
@@ -48,10 +62,21 @@ export const CoachHomeSection = () => {
   const plansNeedingAttention = coachedPlans.filter((plan) =>
     ["AT_RISK", "FAILED"].includes(plan.currentWeekState || "")
   );
+  const notificationPlanId = getRelatedPlanId(latestCoachNotification);
+  const reviewPlan =
+    coachedPlans.find((plan) => plan.id === notificationPlanId) ||
+    plansNeedingAttention[0] ||
+    coachedPlans[0];
+  const hasReviewAction =
+    !!latestCoachNotification || plansNeedingAttention.length > 0;
 
   if (coachedPlans.length === 0) {
     return null;
   }
+
+  const openCoachReview = () => {
+    navigate({ to: `/plans?selectedPlan=${reviewPlan.id}` });
+  };
 
   const latestInsight =
     getCoachInsightText(latestCoachNotification) ||
@@ -84,15 +109,18 @@ export const CoachHomeSection = () => {
           </span>
         </div>
         <button
-          onClick={() => navigate({ to: "/message-ai" })}
+          onClick={openCoachReview}
           className="text-sm font-medium flex items-center gap-0.5 text-foreground/50 hover:text-foreground transition-colors"
         >
-          Message Coach
+          {hasReviewAction ? "Review" : "View Plan"}
           <ChevronRight size={14} />
         </button>
       </div>
 
-      <div className="rounded-2xl bg-background/55 backdrop-blur-sm px-4 py-3">
+      <button
+        onClick={openCoachReview}
+        className="rounded-2xl bg-background/55 backdrop-blur-sm px-4 py-3 text-left transition-colors hover:bg-background/70"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-medium text-muted-foreground">
@@ -102,15 +130,14 @@ export const CoachHomeSection = () => {
               {latestInsight}
             </p>
           </div>
-          <button
-            onClick={() => navigate({ to: "/message-ai" })}
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background/70 text-foreground/70 hover:text-foreground transition-colors"
-            aria-label="Open coach analysis"
+          <span
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background/70 text-foreground/70"
+            aria-hidden="true"
           >
-            <MessageCircle size={18} />
-          </button>
+            <ClipboardCheck size={18} />
+          </span>
         </div>
-      </div>
+      </button>
     </div>
   );
 };
