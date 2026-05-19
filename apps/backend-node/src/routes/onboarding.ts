@@ -3,6 +3,7 @@ import { Response, Router } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { classifyActivityCategory } from "../services/activityCategorizationService";
 import { aiService } from "../services/aiService";
 import { perplexityAiService } from "../services/perplexityAiService";
 
@@ -111,12 +112,14 @@ router.post(
         if (existingActivity) {
           createdActivities.push(existingActivity);
         } else {
+          const category = await classifyActivityCategory(activity);
           const newActivity = await prisma.activity.create({
             data: {
               userId: req.user!.id,
               title: activity.title,
               emoji: activity.emoji,
               measure: activity.measure,
+              category,
             },
           });
           createdActivities.push(newActivity);
@@ -314,12 +317,14 @@ async function generatePlan(params: {
           finalActivities.push(existingActivity);
         } else {
           // Create new activity
+          const category = await classifyActivityCategory(activity);
           const newActivity = await prisma.activity.create({
             data: {
               userId: params.userId,
               title: activity.title,
               emoji: activity.emoji || "🎯",
               measure: activity.measure,
+              category,
             },
           });
           activityIdMap[activity.id] = newActivity.id;

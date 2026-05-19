@@ -1702,6 +1702,7 @@ router.post(
                   measure: templateActivity.measure,
                   emoji: templateActivity.emoji,
                   colorHex: templateActivity.colorHex,
+                  category: templateActivity.category ?? "other",
                 },
               });
             })

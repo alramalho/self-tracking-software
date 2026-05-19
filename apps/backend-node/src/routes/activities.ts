@@ -4,6 +4,7 @@ import { ActivityEntry } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import { classifyActivityCategory } from "../services/activityCategorizationService";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
@@ -698,6 +699,7 @@ router.post(
   ): Promise<Response | void> => {
     try {
       let { id, title, measure, emoji, colorHex } = req.body;
+      const category = await classifyActivityCategory({ title, measure, emoji });
 
       if (!id) {
         id = uuidv4();
@@ -711,6 +713,7 @@ router.post(
           measure,
           emoji,
           colorHex,
+          category,
         },
         create: {
           id,
@@ -719,6 +722,7 @@ router.post(
           measure,
           emoji,
           colorHex,
+          category,
         },
       });
 
