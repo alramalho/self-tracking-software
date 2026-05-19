@@ -208,6 +208,7 @@ export async function findAndCreateSharedActivities(
             data: {
               sharedActivityId: existingShared.sharedActivityId,
               activityEntryId: newEntryId,
+              userId,
             },
           });
         }
@@ -215,10 +216,11 @@ export async function findAndCreateSharedActivities(
         // Create new shared activity with both entries
         await prisma.sharedActivity.create({
           data: {
+            createdById: userId,
             entries: {
               create: [
-                { activityEntryId: newEntryId },
-                { activityEntryId: candidate.id },
+                { activityEntryId: newEntryId, userId },
+                { activityEntryId: candidate.id, userId: candidate.userId },
               ],
             },
           },
