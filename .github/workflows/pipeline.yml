@@ -11,10 +11,6 @@ jobs:
     uses: ./.github/workflows/deploy-db.yml
     secrets: inherit
 
-  deploy-backend:
-    uses: ./.github/workflows/deploy-backend.yml
-    secrets: inherit
-
   deploy-frontend:
     uses: ./.github/workflows/deploy-to-vercel.yml
     with:

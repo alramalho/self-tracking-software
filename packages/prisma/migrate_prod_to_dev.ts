@@ -347,38 +347,60 @@ async function migrateData() {
 
     // Step 7: Migrate Activity Entries
     console.info("Migrating activity entries...");
-    const activityEntries = await sourcePrisma.activityEntry.findMany();
+    const sourceActivityEntryColumns = await getTableColumns(sourcePrisma, "activity_entries");
+    const targetActivityEntryColumns = await getTableColumns(targetPrisma, "activity_entries");
+    const commonActivityEntryColumns = new Set(
+      [...sourceActivityEntryColumns].filter((col) => targetActivityEntryColumns.has(col))
+    );
+    const sourceActivityEntrySelect = buildSelectForExistingColumns(commonActivityEntryColumns);
+
+    const activityEntries = await sourcePrisma.activityEntry.findMany({
+      select: sourceActivityEntrySelect as any,
+    });
 
     for (const entry of activityEntries) {
       const { id, ...entryData } = entry;
+      const filteredData = filterToExistingColumns(entryData, commonActivityEntryColumns);
+
       await targetPrisma.activityEntry.upsert({
         where: { id },
         create: {
           id,
-          ...entryData,
-        },
+          ...filteredData,
+        } as any,
         update: {
-          ...entryData,
-        },
+          ...filteredData,
+        } as any,
       });
     }
     console.info(`Migrated ${activityEntries.length} activity entries`);
 
     // Step 8: Migrate Metric Entries
     console.info("Migrating metric entries...");
-    const metricEntries = await sourcePrisma.metricEntry.findMany();
+    const sourceMetricEntryColumns = await getTableColumns(sourcePrisma, "metric_entries");
+    const targetMetricEntryColumns = await getTableColumns(targetPrisma, "metric_entries");
+    const commonMetricEntryColumns = new Set(
+      [...sourceMetricEntryColumns].filter((col) => targetMetricEntryColumns.has(col))
+    );
+    const sourceMetricEntrySelect = buildSelectForExistingColumns(commonMetricEntryColumns);
+
+    const metricEntries = await sourcePrisma.metricEntry.findMany({
+      select: sourceMetricEntrySelect as any,
+    });
 
     for (const entry of metricEntries) {
       const { id, ...entryData } = entry;
+      const filteredData = filterToExistingColumns(entryData, commonMetricEntryColumns);
+
       await targetPrisma.metricEntry.upsert({
         where: { id },
         create: {
           id,
-          ...entryData,
-        },
+          ...filteredData,
+        } as any,
         update: {
-          ...entryData,
-        },
+          ...filteredData,
+        } as any,
       });
     }
     console.info(`Migrated ${metricEntries.length} metric entries`);
