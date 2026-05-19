@@ -855,8 +855,8 @@ function MessageAIPage() {
                             {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => {
                               const plan = plans?.find(p => p.id === proposal.planId);
                               const resolvedOperations: ResolvedOperation[] = (proposal.operations || []).map((op: any) => {
-                                if (op.type === "archive") {
-                                  return { type: "archive" };
+                                if (op.type === "archive" || op.type === "pause") {
+                                  return { type: op.type };
                                 }
 
                                 const activity = plan?.activities?.find((a: any) => a.id === op.activityId)

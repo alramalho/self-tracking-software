@@ -222,10 +222,11 @@ export class CoachAgentService {
             - Add new sessions (provide activityId, date, quantity, descriptiveGuide)
             - Update existing sessions (provide sessionId and fields to update)
             - Remove sessions (provide sessionId)
+            - Pause a plan the user has gone quiet on (provide optional reason)
             - Archive a dormant plan (no extra fields)
 
             Use the planId, activityId, and sessionId values from the plan context above.
-            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
+            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess until you're ready", "Reduce gym to 2x/week").
             IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose sessions a partial week update (e.g for just from Monday-Wednesday) — always cover the full week schedule. Discuss the full week with the user before proposing.
           `,
           inputSchema: z.object({
@@ -271,6 +272,10 @@ export class CoachAgentService {
                   sessionId: z.string().describe("The ID of the session to remove"),
                 }),
                 z.object({
+                  type: z.literal("pause"),
+                  reason: z.string().optional().describe("Why the plan is being paused"),
+                }),
+                z.object({
                   type: z.literal("archive"),
                 }),
               ])
@@ -284,13 +289,13 @@ export class CoachAgentService {
               };
             }
 
-            if (
-              operations.some((op) => op.type === "archive") &&
-              operations.length > 1
-            ) {
+            const hasStandaloneOp = operations.some(
+              (op) => op.type === "archive" || op.type === "pause"
+            );
+            if (hasStandaloneOp && operations.length > 1) {
               return {
                 success: false,
-                error: "Archive must be proposed as a standalone operation",
+                error: "Archive and pause must be proposed as standalone operations",
               };
             }
 
@@ -642,6 +647,21 @@ export class CoachAgentService {
             }
           },
         }),
+
+        skipOutreach: tool({
+          description: dedent`
+            Explicitly decide NOT to reach out to the user right now.
+            Use this when reviewing a user's plan status and concluding that no message is needed — everything is on track, or it's too early to intervene.
+            You MUST call either draftMessages or skipOutreach, never both.
+          `,
+          inputSchema: z.object({
+            reason: z.string().describe("Why no outreach is needed right now"),
+          }),
+          execute: async ({ reason }) => {
+            logger.info(`Coach skipped outreach: ${reason}`);
+            return { skipped: true, reason };
+          },
+        }),
       },
     });
 
@@ -736,6 +756,8 @@ export class CoachAgentService {
       }>;
       toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
     }>;
+    skipped?: boolean;
+    skipReason?: string;
   }> {
     const { user, message, conversationHistory, plans, reminders, memoriesContext } = params;
 
@@ -787,14 +809,22 @@ export class CoachAgentService {
         }
       }
 
+      // Check if agent chose to skip outreach
+      const skipStep = allToolCalls.find((tc) => tc.tool === "skipOutreach");
+      if (skipStep) {
+        return { draftMessages: [], skipped: true, skipReason: (skipStep.result as any)?.reason };
+      }
+
       // Extract draft messages from the draftMessages tool call
       const draftStep = result.steps.flatMap((s) => s.toolCalls || []).find((tc) => tc.toolName === "draftMessages");
       const rawDrafts: Array<{ content: string }> = draftStep
         ? (draftStep as any).input.messages
         : [{ content: result.text }]; // Fallback if tool wasn't called
 
-      // Filter draftMessages out of visible tool calls
-      const visibleToolCalls = allToolCalls.filter((tc) => tc.tool !== "draftMessages");
+      // Filter internal tools out of visible tool calls
+      const visibleToolCalls = allToolCalls.filter(
+        (tc) => tc.tool !== "draftMessages" && tc.tool !== "skipOutreach"
+      );
 
       // Extract plan proposals from tool calls
       const planProposals = visibleToolCalls

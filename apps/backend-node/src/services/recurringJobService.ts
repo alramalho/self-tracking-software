@@ -342,6 +342,12 @@ export class RecurringJobService {
         force: options.force,
       });
 
+    // Auto-accept coach proposals that have been pending for 48+ hours
+    const autoAcceptResults = await coachAssessmentService.autoAcceptExpiredProposals();
+    if (autoAcceptResults.accepted > 0) {
+      logger.info(`Auto-accepted ${autoAcceptResults.accepted} expired coach proposals`);
+    }
+
     logger.info(
       `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${activityReminderResults.sent.length} activity reminders sent, ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
     );

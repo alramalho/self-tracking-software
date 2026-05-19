@@ -1184,12 +1184,12 @@ router.post(
         return;
       }
 
-      if (
-        proposal.operations.some((op: any) => op.type === "archive") &&
-        proposal.operations.length > 1
-      ) {
+      const hasStandaloneOp = proposal.operations.some(
+        (op: any) => op.type === "archive" || op.type === "pause"
+      );
+      if (hasStandaloneOp && proposal.operations.length > 1) {
         res.status(400).json({
-          error: "Archive proposal must not include other operations",
+          error: "Archive and pause proposals must not include other operations",
         });
         return;
       }
@@ -1311,6 +1311,25 @@ router.post(
 
             changes.push({
               operation: "archive",
+              success: true,
+            });
+          } else if (op.type === "pause") {
+            const pauseHistory = ((plan as any).pauseHistory as any[]) || [];
+            pauseHistory.push({
+              pausedAt: new Date().toISOString(),
+              reason: op.reason || "Paused by coach",
+            });
+            await prisma.plan.update({
+              where: { id: proposal.planId },
+              data: {
+                isPaused: true,
+                pauseReason: op.reason || "Paused by coach",
+                pauseHistory,
+              },
+            });
+
+            changes.push({
+              operation: "pause",
               success: true,
             });
           }
