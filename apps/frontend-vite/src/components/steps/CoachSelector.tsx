@@ -1,28 +1,14 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { CoachProfileDrawer } from "@/components/CoachProfileDrawer";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useQuery } from "@tanstack/react-query";
-import { LandPlot, Route, Send, Sparkles } from "lucide-react";
-import React, { useState } from "react";
-
-const CoachingFeatureItem = ({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: string;
-}) => (
-  <div className="flex items-center gap-3">
-    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted">
-      {icon}
-    </div>
-    <p className="text-sm text-muted-foreground">{title}</p>
-  </div>
-);
+import { useState } from "react";
 
 interface CoachDetails {
   title: string;
@@ -61,8 +47,7 @@ const CoachSelector = () => {
       return response.data;
     },
   });
-  const showHumanCoachSection =
-    isLoading || (humanCoaches && humanCoaches.length > 0);
+  const showHumanCoachSection = humanCoaches && humanCoaches.length > 0;
 
   const handleSelectCoach = (coachId: string | null) => {
     // Find the selected coach to pass full info
@@ -91,85 +76,17 @@ const CoachSelector = () => {
     setSelectedCoachForPreview(coach);
     setIsDrawerOpen(true);
   };
-
-  const coachIcon = "/images/jarvis_logo_blue_transparent.png"
-
   return (
-    <div className="w-full max-w-lg space-y-6">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex flex-col items-center gap-2">
-          <Sparkles className="w-16 h-16 text-blue-600" />
-          <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
-            Choose your coach
-          </h2>
-        </div>
-        <p className="text-md text-muted-foreground">
-          All coaches help you build habits with the same powerful features.
-        </p>
-      </div>
-
-      {/* Shared coaching features */}
-      <div className="space-y-3 px-2">
-        <CoachingFeatureItem
-          icon={<LandPlot className="w-5 h-5 text-blue-500" />}
-          title="Track your plan progress"
-        />
-        <CoachingFeatureItem
-          icon={<Send className="w-5 h-5 text-blue-500" />}
-          title="Check-ins several times a week"
-        />
-        <CoachingFeatureItem
-          icon={<Route className="w-5 h-5 text-blue-500" />}
-          title="Weekly plan adjustments based on progress"
-        />
-      </div>
-
-      <div className="space-y-3">
-        {/* AI Coach Option */}
-        <button
+    <div className="w-full max-w-lg space-y-5">
+      <AICoachFeaturePreview>
+        <Button
           onClick={() => handleSelectCoach(null)}
-          className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
+          className="w-full h-12 text-base font-semibold"
         >
-          {/* Gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
-          {/* Subtle pattern overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
-          <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
-
-          {/* Content */}
-          <div className="relative p-4 text-white">
-            {/* Name with icon */}
-            <div className="flex items-center gap-2 mb-2">
-              <img src={coachIcon} alt="AI Coach" className="w-8 h-8 brightness-0 invert" />
-              <h3 className="text-lg font-bold">Oli</h3>
-            </div>
-
-            {/* Specs Grid */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-white/60">
-                  Type
-                </p>
-                <p className="text-sm font-semibold">
-                  AI Coach
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-white/60">
-                  Availability
-                </p>
-                <p className="text-sm font-semibold">
-                  24/7
-                </p>
-              </div>
-            </div>
-
-            <p className="text-xs text-white/70 mt-3">
-              Research-backed guidance with adaptive scheduling
-            </p>
-          </div>
-        </button>
-
+          Continue with Oli
+        </Button>
+      </AICoachFeaturePreview>
+      <div className="space-y-3">
         {showHumanCoachSection && (
           <>
             <div className="flex items-center gap-3 py-2">
