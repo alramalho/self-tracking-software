@@ -53,9 +53,9 @@ export function CoachingTimeSelector({
               className="h-16 w-16"
             />
           </div>
-          <h3 className="text-lg font-semibold">Daily Coaching Time</h3>
+          <h3 className="text-lg font-semibold">Coach Check-in Window</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Choose when you'd like to receive your daily coaching message
+            Choose when proactive coach check-ins should usually arrive
           </p>
         </div>
 

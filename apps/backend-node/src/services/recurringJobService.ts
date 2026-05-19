@@ -7,6 +7,7 @@ import { notificationService } from "./notificationService";
 import { sesService } from "./sesService";
 import { userService } from "./userService";
 import { runCategorizationJob } from "./planCategorizationService";
+import { coachAssessmentService } from "./coachAssessmentService";
 
 interface DailyJobOptions {
   filter_usernames?: string[];
@@ -51,6 +52,8 @@ interface HourlyJobResult {
   activity_reminders_checked: number;
   activity_reminders_sent: string[];
   batched_notifications_sent: string[];
+  autonomous_coach_checked: number;
+  autonomous_coach_sent: number;
 }
 
 export class RecurringJobService {
@@ -320,7 +323,7 @@ export class RecurringJobService {
   private async executeHourlyJob(
     options: HourlyJobOptions = {}
   ): Promise<HourlyJobResult> {
-    logger.info("Starting hourly job execution (reminders only - plan coaching disabled)");
+    logger.info("Starting hourly job execution");
 
     // Process due reminders
     const reminderResults = await this.processDueReminders();
@@ -331,8 +334,22 @@ export class RecurringJobService {
     // Process batched social notifications
     const batchedNotificationResults = await this.processBatchedNotifications();
 
+    // Process autonomous coach assessments. This is feature-flagged and dry-run
+    // by default so production rollout can be staged without changing cron.
+    const coachAssessmentResults =
+      await coachAssessmentService.runAutonomousCoachAssessment({
+        filter_usernames: options.filter_usernames,
+        force: options.force,
+      });
+
+    // Auto-accept coach proposals that have been pending for 48+ hours
+    const autoAcceptResults = await coachAssessmentService.autoAcceptExpiredProposals();
+    if (autoAcceptResults.accepted > 0) {
+      logger.info(`Auto-accepted ${autoAcceptResults.accepted} expired coach proposals`);
+    }
+
     logger.info(
-      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${activityReminderResults.sent.length} activity reminders sent, ${batchedNotificationResults.sent.length} batched notifications sent`
+      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${activityReminderResults.sent.length} activity reminders sent, ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
     );
 
     return {
@@ -344,6 +361,8 @@ export class RecurringJobService {
       activity_reminders_checked: activityReminderResults.checked,
       activity_reminders_sent: activityReminderResults.sent,
       batched_notifications_sent: batchedNotificationResults.sent,
+      autonomous_coach_checked: coachAssessmentResults.users_checked,
+      autonomous_coach_sent: coachAssessmentResults.messages_sent,
     };
   }
 

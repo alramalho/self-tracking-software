@@ -1,16 +1,16 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Archive, Check, Clock, Pause, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 
 export interface ResolvedOperation {
-  date: string;
+  date?: string;
   type: string;
-  quantity: number;
-  activityName: string;
-  activityEmoji: string;
-  activityMeasure: string;
+  quantity?: number;
+  activityName?: string;
+  activityEmoji?: string;
+  activityMeasure?: string;
   descriptiveGuide?: string;
 }
 
@@ -19,8 +19,9 @@ interface PlanProposalCardProps {
   proposalIndex: number;
   planGoal: string;
   planEmoji: string | null;
+  description?: string;
   operations: ResolvedOperation[];
-  status?: "accepted" | "rejected" | null;
+  status?: "accepted" | "rejected" | "auto_accepted" | "auto_accept_failed" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
 }
@@ -30,14 +31,16 @@ export function PlanProposalCard({
   proposalIndex,
   planGoal,
   planEmoji,
+  description,
   operations,
   status,
   onAccept,
   onReject,
 }: PlanProposalCardProps) {
   const themeColors = useThemeColors();
-  const [isAccepted, setIsAccepted] = useState(status === "accepted");
+  const [isAccepted, setIsAccepted] = useState(status === "accepted" || status === "auto_accepted");
   const [isRejected, setIsRejected] = useState(status === "rejected");
+  const isAutoAccepted = status === "auto_accepted";
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAccept = async () => {
@@ -85,7 +88,14 @@ export function PlanProposalCard({
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 opacity-60 mt-2">
         <span className="text-sm text-foreground/70">{compactLabel}</span>
-        <Check size={14} className="text-green-500 flex-shrink-0" />
+        {isAutoAccepted ? (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Clock size={12} className="text-yellow-500" />
+            <span className="text-[10px] text-muted-foreground">auto-applied</span>
+          </div>
+        ) : (
+          <Check size={14} className="text-green-500 flex-shrink-0" />
+        )}
       </div>
     );
   }
@@ -98,17 +108,40 @@ export function PlanProposalCard({
             {planEmoji && <span className="mr-1">{planEmoji}</span>}
             {planGoal}
           </div>
+          {description && (
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {description}
+            </div>
+          )}
           {operations.length > 0 && (
             <div className="mt-1.5 space-y-1">
               {operations.map((op, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs text-foreground/80">
-                  <span>{op.activityEmoji}</span>
-                  <span className="text-muted-foreground">{format(parseISO(op.date), "EEE, MMM d")}</span>
-                  <span className="text-muted-foreground">—</span>
-                  <span>
-                    {op.type === "add" ? "+" : op.type === "remove" ? "-" : ""}
-                    {op.quantity} {op.activityMeasure}
-                  </span>
+                  {op.type === "archive" ? (
+                    <>
+                      <Archive size={13} className="text-muted-foreground" />
+                      <span>Archive plan</span>
+                    </>
+                  ) : op.type === "pause" ? (
+                    <>
+                      <Pause size={13} className="text-muted-foreground" />
+                      <span>Pause plan</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{op.activityEmoji}</span>
+                      {op.date && (
+                        <span className="text-muted-foreground">
+                          {format(parseISO(op.date), "EEE, MMM d")}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">—</span>
+                      <span>
+                        {op.type === "add" ? "+" : op.type === "remove" ? "-" : ""}
+                        {op.quantity} {op.activityMeasure}
+                      </span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

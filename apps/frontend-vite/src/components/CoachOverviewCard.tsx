@@ -10,6 +10,7 @@ import { formatDistance } from "date-fns";
 import { Check, Loader2, MoveRight, X } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
+import ReactMarkdown from "react-markdown";
 import { MessageBubble } from "./MessageBubble";
 import { PlanStatus } from "./PlanProgressCard";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
@@ -22,6 +23,46 @@ interface CoachOverviewCardProps {
   isDemo?: boolean;
   className?: string;
 }
+
+const MarkdownText = ({ children }: { children: string }) => (
+  <ReactMarkdown
+    components={{
+      h1: ({ children }) => (
+        <strong className="block font-semibold">{children}</strong>
+      ),
+      h2: ({ children }) => (
+        <strong className="block font-semibold">{children}</strong>
+      ),
+      h3: ({ children }) => (
+        <strong className="block font-semibold">{children}</strong>
+      ),
+      p: ({ children }) => <span className="block">{children}</span>,
+      strong: ({ children }) => (
+        <strong className="font-semibold">{children}</strong>
+      ),
+      em: ({ children }) => <em>{children}</em>,
+      ul: ({ children }) => (
+        <ul className="list-disc list-inside my-1">{children}</ul>
+      ),
+      ol: ({ children }) => (
+        <ol className="list-decimal list-inside my-1">{children}</ol>
+      ),
+      li: ({ children }) => <li>{children}</li>,
+      a: ({ href, children }) => (
+        <a
+          href={href}
+          className="underline underline-offset-2"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {children}
+        </a>
+      ),
+    }}
+  >
+    {children}
+  </ReactMarkdown>
+);
 
 export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   selectedPlan,
@@ -175,11 +216,13 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1 flex-1">
-              <span className={`text-sm italic opacity-70`}>
-                {hasCoachMessage
-                  ? lastCoachMessage?.message
-                  : selectedPlan.coachNotes}
-              </span>
+              <div className="text-sm italic opacity-70">
+                <MarkdownText>
+                  {hasCoachMessage
+                    ? lastCoachMessage?.message || ""
+                    : selectedPlan.coachNotes || ""}
+                </MarkdownText>
+              </div>
               <div className="flex flex-row items-center justify-between gap-2 mt-1">
                 <span className="text-[10px] italic text-muted-foreground">
                   Coach Oli,{" "}
