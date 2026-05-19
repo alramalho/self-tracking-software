@@ -14,6 +14,7 @@ import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RankingsRouteImport } from './routes/rankings'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -58,6 +59,11 @@ const SigninRoute = SigninRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RankingsRoute = RankingsRouteImport.update({
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/rankings': typeof RankingsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/rankings': typeof RankingsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/rankings': typeof RankingsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/plans'
     | '/rankings'
+    | '/reset-password'
     | '/search'
     | '/signin'
     | '/signout'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/plans'
     | '/rankings'
+    | '/reset-password'
     | '/search'
     | '/signin'
     | '/signout'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/plans'
     | '/rankings'
+    | '/reset-password'
     | '/search'
     | '/signin'
     | '/signout'
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
   RankingsRoute: typeof RankingsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rankings': {
@@ -548,6 +568,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,
   RankingsRoute: RankingsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,

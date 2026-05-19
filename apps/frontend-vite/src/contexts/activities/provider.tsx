@@ -98,9 +98,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.invalidateQueries({ queryKey: ["metrics"] });
       queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
 
-      // Refetch plans and WAIT for it - this ensures fresh progress data
-      // is available for achievement detection
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
+      // Refresh plan progress in the background. Awaiting this kept the
+      // log-activity mutation pending after the activity POST had succeeded,
+      // making the mobile logging flow feel slower than the server response.
+      void queryClient.refetchQueries({ queryKey: ["plans"] });
 
       const hasPhoto = !!variables.photo || !!variables.photos?.length;
       toast.success(
