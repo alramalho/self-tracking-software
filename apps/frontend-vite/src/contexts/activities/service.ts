@@ -60,9 +60,10 @@ export async function getActivities(api: AxiosInstance) {
   return response.data;
 }
 
-export async function getActivitiyEntries(api: AxiosInstance) {
+export async function getActivitiyEntries(api: AxiosInstance, sinceDays = 90) {
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
   const response = await api.get<ActivityEntryWithRelations[]>(
-    "/activities/activity-entries"
+    `/activities/activity-entries?since=${since}`
   );
   return response.data;
 }

@@ -33,7 +33,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
-  const { logActivity: submitActivity, isLoggingActivity } = useActivities();
+  const { logActivity: submitActivity, isLoggingActivity, getSharedActivityCandidates } = useActivities();
   const { addToNotificationCount } = useNotifications();
 
   const handleLogActivity = async () => {
@@ -52,7 +52,16 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       }
 
       addToNotificationCount(1, "profile");
-      onSuccess(response.entry.id, response.sharedActivityCandidates || []);
+
+      // Fetch shared candidates lazily — don't block the log response on this
+      const candidates = response.sharedActivityCandidates || [];
+      if (candidates.length > 0) {
+        onSuccess(response.entry.id, candidates);
+      } else {
+        getSharedActivityCandidates(response.entry.id)
+          .then((lazyCandidates) => onSuccess(response.entry.id, lazyCandidates || []))
+          .catch(() => onSuccess(response.entry.id, []));
+      }
     } catch (error: any) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");

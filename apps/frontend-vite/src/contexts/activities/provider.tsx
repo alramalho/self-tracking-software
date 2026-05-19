@@ -127,9 +127,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await api.post("/activities/log-activity", formData);
       return response.data;
     },
-    onSuccess: async (response: LogActivityResponse, variables) => {
+    onSuccess: (response: LogActivityResponse, variables) => {
       const entry = response.entry;
-      queryClient.refetchQueries({ queryKey: ["current-user"] });
       queryClient.setQueryData(
         ["activity-entries"],
         (old: ReturnedActivityEntriesType) => {
@@ -140,15 +139,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           return [...old, entry];
         }
       );
-      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
-
-      // Refetch plans and WAIT for it - this ensures fresh progress data
-      // is available for achievement detection
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
 
       const hasPhoto = !!variables.photo || !!variables.photos?.length;
       toast.success(
@@ -156,6 +146,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           ? "Activity logged with photo successfully!"
           : "Activity logged successfully!"
       );
+
+      // Background invalidations — none of these block the UI
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["current-user"] });
     },
     onError: (error) => {
       const customErrorMessage = `Failed to log activity`;
@@ -212,16 +211,14 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
       await api.put(`/activities/activity-entries/${data.entry.id}`, payload);
     },
-    onSuccess: async (_, { muteNotification }) => {
-      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
-      queryClient.refetchQueries({ queryKey: ["timeline"] });
-
-      // Refetch plans to update progress after entry update
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
-
+    onSuccess: (_, { muteNotification }) => {
       if (!muteNotification) {
         toast.success("Activity updated successfully!");
       }
+
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
     },
     onError: (error, { muteNotification }) => {
       const customErrorMessage = `Failed to update activity`;
@@ -237,7 +234,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/${data.id}`);
       return data.id;
     },
-    onSuccess: async (id) => {
+    onSuccess: (id) => {
       queryClient.setQueryData(
         ["activities"],
         (old: ReturnedActivitiesType) => {
@@ -246,12 +243,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           return old.filter((activity) => activity.id !== id);
         }
       );
-      queryClient.refetchQueries({ queryKey: ["timeline"] });
-
-      // Refetch plans to update progress after activity deletion
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
 
       toast.success("Activity deleted successfully!");
+
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
     },
     onError: (error) => {
       const customErrorMessage = `Failed to delete activity`;
@@ -264,7 +260,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/activity-entries/${data.id}`);
       return data;
     },
-    onSuccess: async ({ id }) => {
+    onSuccess: ({ id }) => {
       queryClient.setQueryData(
         ["activity-entries"],
         (old: ReturnedActivityEntriesType) => {
@@ -281,10 +277,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       );
 
-      // Refetch plans to update progress after entry deletion
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
-
       toast.success("Activity deleted successfully!");
+
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
     },
     onError: (error) => {
       const customErrorMessage = `Failed to delete activity entry`;

@@ -336,6 +336,11 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const since = req.query.since as string | undefined;
+      const sinceDate = since
+        ? new Date(since)
+        : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
       const entries = await prisma.activityEntry.findMany({
         where: {
           userId: req.user!.id,
@@ -344,6 +349,7 @@ router.get(
           activity: {
             deletedAt: null,
           },
+          datetime: { gte: sinceDate },
         },
         include: {
           comments: {
@@ -470,7 +476,7 @@ router.post(
         });
       }
 
-      // Handle photo upload if provided
+      // Handle photo upload (must complete before response — entry needs image URLs)
       if (photos.length > 0) {
         try {
           const uploadedImages = await uploadActivityEntryPhotos(
@@ -479,7 +485,6 @@ router.post(
             entry.id
           );
 
-          // Update entry with image information
           entry = await prisma.activityEntry.update({
             where: { id: entry.id },
             data: buildActivityEntryImageUpdate(
@@ -492,132 +497,12 @@ router.post(
           logger.info(
             `${uploadedImages.length} photo(s) uploaded successfully to S3 for activity entry ${entry.id}`
           );
-
-          // Create notifications for connected users about the photo
-          const userWithConnections = await prisma.user.findUnique({
-            where: { id: req.user!.id },
-            include: {
-              connectionsFrom: {
-                where: { status: "ACCEPTED" },
-                include: { to: true },
-              },
-              connectionsTo: {
-                where: { status: "ACCEPTED" },
-                include: { from: true },
-              },
-            },
-          });
-
-          if (userWithConnections) {
-            const connectedUsers = [
-              ...userWithConnections.connectionsFrom.map((conn) => conn.to),
-              ...userWithConnections.connectionsTo.map((conn) => conn.from),
-            ];
-
-            for (const connectedUser of connectedUsers) {
-              const message = `${req.user!.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedImages.length === 1 ? "a photo" : `${uploadedImages.length} photos`} 📸!`;
-              await notificationService.createAndProcessNotification({
-                userId: connectedUser.id,
-                message,
-                type: "INFO",
-                relatedId: entry.id,
-                relatedData: {
-                  activityEntryId: entry.id,
-                  userPicture: req.user!.picture,
-                  userName: req.user!.name,
-                  userUsername: req.user!.username,
-                },
-              });
-            }
-          }
         } catch (error) {
           logger.error("Error uploading photo to S3:", error);
-          // Continue without photo - don't fail the entire activity logging
-        }
-      } else {
-        logger.info("No photo provided");
-      }
-
-      // Update user's last active time
-      await prisma.user.update({
-        where: { id: req.user!.id },
-        data: {
-          lastActiveAt: new Date(),
-        },
-      });
-
-      // TODO: Add plan state processing
-      const plans = await prisma.plan.findMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: {
-              id: activityId,
-            },
-          },
-        },
-      });
-
-      // Invalidate progress cache for affected plans
-      if (plans.length > 0) {
-        await plansService.invalidateUserPlanProgressCaches(req.user!.id, [
-          activityId,
-        ]);
-      }
-
-      // Find coached plan and recalculate its state
-      for (const plan of plans) {
-        if (plan.isCoached) {
-          // only coach the coached plan
-          plansService.recalculateCurrentWeekState(plan, req.user!);
-
-          // Schedule post-activity celebration message (30-90 seconds after logging)
-          // Use a random delay to make it feel more natural
-          const delayMs = 30000 + Math.random() * 60000; // 30s to 90s
-          setTimeout(async () => {
-            try {
-              // Fetch fresh plan data with activities
-              const planWithActivities = await prisma.plan.findUnique({
-                where: { id: plan.id },
-                include: { activities: true },
-              });
-
-              if (planWithActivities) {
-                await plansService.processPostActivityCoaching(
-                  req.user!,
-                  planWithActivities,
-                  entry
-                );
-              }
-            } catch (error) {
-              logger.error(
-                `Error in delayed post-activity coaching for user ${req.user!.username}:`,
-                error
-              );
-              // Silently fail - don't affect the user experience
-            }
-          }, delayMs);
-
-          logger.info(
-            `Scheduled post-activity coaching for user ${req.user!.username} in ${Math.round(delayMs / 1000)}s`
-          );
-        } else {
-          logger.info(`Plan '${plan.goal}' is not coached, skipping`);
         }
       }
 
-      // Invalidate progress cache for all plans using this activity
-      // This ensures the next fetch will recompute progress with fresh data
-      await prisma.plan.updateMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: { id: activityId },
-          },
-        },
-        data: { progressCalculatedAt: null },
-      });
-
+      // Handle shared activity invite (must complete before response — may return 400)
       let sharedActivityInvite: Awaited<ReturnType<typeof createPendingSharedActivityInvite>> | null = null;
       if (normalizedWithUserId) {
         try {
@@ -634,8 +519,106 @@ router.post(
         }
       }
 
-      const sharedActivityCandidates = await findSharedActivityCandidates(entry.id, req.user!.id);
-      res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
+      // Respond immediately — defer all non-critical work
+      res.json({ ...entry, entry, sharedActivityInvite });
+
+      // --- Fire-and-forget: notifications, plan processing, cache invalidation ---
+      const user = req.user!;
+      const entryId = entry.id;
+      setImmediate(async () => {
+        try {
+          // Photo notifications
+          if (photos.length > 0) {
+            const userWithConnections = await prisma.user.findUnique({
+              where: { id: user.id },
+              include: {
+                connectionsFrom: {
+                  where: { status: "ACCEPTED" },
+                  include: { to: true },
+                },
+                connectionsTo: {
+                  where: { status: "ACCEPTED" },
+                  include: { from: true },
+                },
+              },
+            });
+
+            if (userWithConnections) {
+              const connectedUsers = [
+                ...userWithConnections.connectionsFrom.map((conn) => conn.to),
+                ...userWithConnections.connectionsTo.map((conn) => conn.from),
+              ];
+
+              const uploadedCount = (entry.imageUrls as string[] | null)?.length || 1;
+              for (const connectedUser of connectedUsers) {
+                const message = `${user.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedCount === 1 ? "a photo" : `${uploadedCount} photos`} 📸!`;
+                await notificationService.createAndProcessNotification({
+                  userId: connectedUser.id,
+                  message,
+                  type: "INFO",
+                  relatedId: entryId,
+                  relatedData: {
+                    activityEntryId: entryId,
+                    userPicture: user.picture,
+                    userName: user.name,
+                    userUsername: user.username,
+                  },
+                });
+              }
+            }
+          }
+
+          // Update user's last active time
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastActiveAt: new Date() },
+          });
+
+          // Plan processing
+          const plans = await prisma.plan.findMany({
+            where: {
+              userId: user.id,
+              activities: { some: { id: activityId } },
+            },
+          });
+
+          if (plans.length > 0) {
+            await plansService.invalidateUserPlanProgressCaches(user.id, [activityId]);
+          }
+
+          for (const plan of plans) {
+            if (plan.isCoached) {
+              plansService.recalculateCurrentWeekState(plan, user);
+
+              const delayMs = 30000 + Math.random() * 60000;
+              setTimeout(async () => {
+                try {
+                  const planWithActivities = await prisma.plan.findUnique({
+                    where: { id: plan.id },
+                    include: { activities: true },
+                  });
+
+                  if (planWithActivities) {
+                    await plansService.processPostActivityCoaching(user, planWithActivities, entry);
+                  }
+                } catch (error) {
+                  logger.error(`Error in delayed post-activity coaching for user ${user.username}:`, error);
+                }
+              }, delayMs);
+            }
+          }
+
+          await prisma.plan.updateMany({
+            where: {
+              userId: user.id,
+              activities: { some: { id: activityId } },
+            },
+            data: { progressCalculatedAt: null },
+          });
+        } catch (error) {
+          logger.error("Error in deferred log-activity work:", error);
+        }
+      });
     } catch (error) {
       logger.error("Error logging activity:", error);
       res.status(500).json({ error: "Failed to log activity" });
