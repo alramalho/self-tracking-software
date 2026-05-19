@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",
+    "@capacitor/geolocation": "^7.1.8",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/local-notifications": "^7.0.3",
     "@capacitor/push-notifications": "^7.0.3",
@@ -63,6 +64,7 @@
     "html-to-image": "^1.11.13",
     "js-confetti": "^0.13.1",
     "lucide-react": "^0.451.0",
+    "mapbox-gl": "^3.24.0",
     "motion": "^12.23.12",
     "posthog-js": "^1.181.0",
     "react": "^19.1.1",
