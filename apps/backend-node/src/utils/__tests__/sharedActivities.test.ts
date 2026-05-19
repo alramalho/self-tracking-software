@@ -3,6 +3,7 @@ import {
   isLikelySharedActivity,
   normalizeActivityLabel,
   scoreSharedActivityCandidate,
+  shouldLookupSharedActivityCandidates,
 } from "../sharedActivities";
 
 describe("shared activity matching", () => {
@@ -50,5 +51,11 @@ describe("shared activity matching", () => {
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-06T14:01:00Z"),
     })).toBe(0);
+  });
+
+  it("skips candidate lookup when the user explicitly selected an invitee", () => {
+    expect(shouldLookupSharedActivityCandidates(undefined)).toBe(true);
+    expect(shouldLookupSharedActivityCandidates("")).toBe(true);
+    expect(shouldLookupSharedActivityCandidates("friend-user-id")).toBe(false);
   });
 });

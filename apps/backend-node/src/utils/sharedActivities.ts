@@ -62,3 +62,7 @@ export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): n
 export function isLikelySharedActivity(input: SharedActivityMatchInput): boolean {
   return scoreSharedActivityCandidate(input) >= 50;
 }
+
+export function shouldLookupSharedActivityCandidates(withUserId?: string | null): boolean {
+  return !withUserId;
+}
