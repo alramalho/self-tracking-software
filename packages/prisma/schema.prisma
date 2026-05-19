@@ -140,6 +140,7 @@ model Activity {
   updatedAt       DateTime            @default(now()) @updatedAt
   colorHex        String?
   deletedAt       DateTime?
+  kind            String              @default("other")
 
   // Relations
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -148,6 +149,7 @@ model Activity {
   plans        Plan[]
 
   @@index([userId, deletedAt])
+  @@index([userId, kind, deletedAt])
   @@index([createdAt])
   @@map("activities")
   @@schema("public")
@@ -175,11 +177,19 @@ model ActivityEntry {
   imageCreatedAt DateTime?
   imageIsPublic  Boolean   @default(false)
 
+  // Live tracking
+  startedAt       DateTime?
+  endedAt         DateTime?
+  isLiveTracked   Boolean   @default(false)
+  distanceMeters  Float?
+  durationSeconds Int?
+
   // Relations
   activity  Activity?  @relation(fields: [activityId], references: [id], onDelete: SetNull)
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reactions Reaction[]
-  comments  Comment[]
+  reactions      Reaction[]
+  comments       Comment[]
+  locationPoints LocationPoint[]
   sharedActivityEntry SharedActivityEntry?
   sharedActivityInvitesInitiated SharedActivityInvite[]
 
@@ -190,6 +200,25 @@ model ActivityEntry {
   @@index([activityId])
   @@index([createdAt])
   @@map("activity_entries")
+  @@schema("public")
+}
+
+model LocationPoint {
+  id              String        @id @default(cuid())
+  activityEntryId String
+  latitude        Float
+  longitude       Float
+  altitude        Float?
+  accuracy        Float?
+  speed           Float?
+  timestamp       DateTime
+  createdAt       DateTime      @default(now())
+
+  activityEntry   ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+
+  @@index([activityEntryId, timestamp])
+  @@index([timestamp])
+  @@map("location_points")
   @@schema("public")
 }
 

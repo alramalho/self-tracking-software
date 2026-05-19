@@ -4,6 +4,7 @@ import { ActivityEntry } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import { classifyActivityKind } from "../services/activityCategorizationService";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
@@ -160,10 +161,12 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
             sourceMeasure: entry.activity!.measure,
             sourceEmoji: entry.activity!.emoji,
             sourceDatetime: entry.datetime,
+            sourceKind: entry.activity!.kind as any,
             candidateTitle: candidate.activity.title,
             candidateMeasure: candidate.activity.measure,
             candidateEmoji: candidate.activity.emoji,
             candidateDatetime: candidate.datetime,
+            candidateKind: candidate.activity.kind as any,
           })
         : 0,
     }))
@@ -266,10 +269,12 @@ async function canLinkActivityEntries(userId: string, ownEntryId: string, candid
     sourceMeasure: ownEntry.activity.measure,
     sourceEmoji: ownEntry.activity.emoji,
     sourceDatetime: ownEntry.datetime,
+    sourceKind: ownEntry.activity.kind as any,
     candidateTitle: candidateEntry.activity.title,
     candidateMeasure: candidateEntry.activity.measure,
     candidateEmoji: candidateEntry.activity.emoji,
     candidateDatetime: candidateEntry.datetime,
+    candidateKind: candidateEntry.activity.kind as any,
   });
 
   return score >= 50;
@@ -698,6 +703,7 @@ router.post(
   ): Promise<Response | void> => {
     try {
       let { id, title, measure, emoji, colorHex } = req.body;
+      const kind = await classifyActivityKind({ title, measure, emoji });
 
       if (!id) {
         id = uuidv4();
@@ -711,6 +717,7 @@ router.post(
           measure,
           emoji,
           colorHex,
+          kind,
         },
         create: {
           id,
@@ -719,6 +726,7 @@ router.post(
           measure,
           emoji,
           colorHex,
+          kind,
         },
       });
 
