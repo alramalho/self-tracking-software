@@ -15,10 +15,8 @@
     "test:ci": "vitest",
     "start": "tsx src/index.ts",
     "db:seed": "dotenv -e .env -- tsx scripts/seed.ts",
-    "update-routes": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/update_allowed_routes.ts",
     "recalculate-user-progress": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/recalculate_user_progress.ts",
     "script:check-str-similarity": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/check_str_similarity.ts",
-    "update-routes:simplified": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/update_allowed_routes.ts --simplify",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "send-telegram-message": "tsx scripts/send_telegram_message.ts"
@@ -98,6 +96,7 @@
     "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^8.44.0",
     "express-list-endpoints": "^7.1.1",
     "jest": "^29.6.0",

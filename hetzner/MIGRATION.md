@@ -19,7 +19,7 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
 - **Production cutover**: `app.tracking.so` now reaches Hetzner through `https://api.tracking.so`; verified `/health` via Caddy and production login/data loading after adding missing `messages.readAt`.
 
 ### Inventory captured (for teardown)
-- **Flightcontrol-managed** (the real prod): ECS cluster + service `fc-web-server-dvrpa1-6ba11x8`, ALB with same name, VPC `fc-self-tracking-software-0nb10m`. Must be torn down **via Flightcontrol dashboard**, not AWS console.
+- **Flightcontrol-managed** (former prod): ECS cluster + service `fc-web-server-dvrpa1-6ba11x8`, ALB with same name, VPC `fc-self-tracking-software-0nb10m`. Must be torn down **via Flightcontrol dashboard**, not AWS console.
 - **CDK-managed remnants**: `TrackingSoftwareInfrastructureStackproductionApiStack070335E4` (WAF only — Fargate code already commented out), parent stack, plus sandbox/dev stacks.
 - **Cron proxy Lambda**: `trackingSoftwareApiCronProxyLambdasandbox` (sandbox only — prod cron is now `node-cron` inside the app)
 - **DNS authority**: `tracking.so` is managed by Namecheap / `registrar-servers.com`, not by the Route53 zone in this AWS account. Old prod record was `api.tracking.so CNAME d1eevim432y2yu.cloudfront.net`; rollback is to restore that CNAME.
@@ -34,13 +34,13 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
   - `AAAA api 2a01:4f9:c014:5c59::1`
 - Recreated Caddy on the box with `API_DOMAIN=api-hetzner.tracking.so, api.tracking.so`; Caddy obtained/served the `api.tracking.so` certificate.
 - Verified `https://api.tracking.so/health` returns 200 with `via: 1.1 Caddy` and no CloudFront headers.
-- Keep AWS/Flightcontrol running for 3-7 days as rollback.
+- Legacy AWS/Flightcontrol backend deploy workflows were removed after cutover. Rollback now requires intentionally restoring old infrastructure/DNS instead of happening through CI.
 
 ### Known post-cutover gaps
 - **APNS key missing from image** — [apple-stuff/AuthKey_MG38JC6M33.p8](../apps/backend-node/apple-stuff/AuthKey_MG38JC6M33.p8) is gitignored, so the deployed image/box does not include it. Backend warns "APNs key file not found… iOS push notifications will not work." Fix later by shipping the file securely to the box/image. Web migration does not depend on this.
 - **Schema drift hotfix** — Hetzner exposed a missing production DB column, `messages.readAt`, used by `/chats`. It was hotfixed in prod and recorded in [20260507163500_add_message_read_at](../packages/prisma/migrations/20260507163500_add_message_read_at/migration.sql).
 
-### AWS teardown (post-cutover, with explicit go-ahead)
+### AWS/Flightcontrol teardown
 1. Stop the Flightcontrol project (Flightcontrol dashboard) — this removes ECS/ALB/VPC/NAT/SGs.
 2. `aws cloudformation delete-stack --stack-name TrackingSoftwareInfrastructureStackproductionApiStack070335E4` (WAF) + parent stack.
 3. Clean up sandbox/dev CDK stacks: `TrackingSoftwareInfrastructureStackdev*`, `TrackingSoftwareInfrastructureStacksandbox*`.
@@ -55,4 +55,4 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
 
 ## Rollback plan
 
-If Hetzner has issues post-cutover: in Namecheap, restore `api.tracking.so CNAME d1eevim432y2yu.cloudfront.net`. AWS resources stay live until teardown, so rollback is "change one DNS record" during that window.
+If Hetzner has issues after teardown, rollback is no longer a one-DNS-record operation. Recreate or re-enable backend infrastructure first, then repoint `api.tracking.so` in Namecheap.
