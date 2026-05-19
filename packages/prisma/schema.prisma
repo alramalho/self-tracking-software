@@ -140,7 +140,7 @@ model Activity {
   updatedAt       DateTime            @default(now()) @updatedAt
   colorHex        String?
   deletedAt       DateTime?
-  category        String              @default("other")
+  kind            String              @default("other")
 
   // Relations
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -149,7 +149,7 @@ model Activity {
   plans        Plan[]
 
   @@index([userId, deletedAt])
-  @@index([userId, category, deletedAt])
+  @@index([userId, kind, deletedAt])
   @@index([createdAt])
   @@map("activities")
   @@schema("public")

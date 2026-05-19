@@ -58,4 +58,54 @@ describe("shared activity matching", () => {
     expect(shouldLookupSharedActivityCandidates("")).toBe(true);
     expect(shouldLookupSharedActivityCandidates("friend-user-id")).toBe(false);
   });
+
+  it("matches cross-language activities with same kind", () => {
+    const input = {
+      sourceTitle: "Correr",
+      sourceMeasure: "km",
+      sourceEmoji: "🏃",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceKind: "running" as const,
+      candidateTitle: "Running",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-06T10:15:00Z"),
+      candidateKind: "running" as const,
+    };
+
+    expect(scoreSharedActivityCandidate(input)).toBeGreaterThanOrEqual(50);
+    expect(isLikelySharedActivity(input)).toBe(true);
+  });
+
+  it("rejects different kinds even with close time", () => {
+    expect(scoreSharedActivityCandidate({
+      sourceTitle: "Gym",
+      sourceMeasure: "minutes",
+      sourceEmoji: "🏋️",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceKind: "gym",
+      candidateTitle: "Running",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-06T10:05:00Z"),
+      candidateKind: "running",
+    })).toBe(0);
+  });
+
+  it("falls back to title matching when either kind is other", () => {
+    const input = {
+      sourceTitle: "Knitting",
+      sourceMeasure: "minutes",
+      sourceEmoji: "🧶",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceKind: "other" as const,
+      candidateTitle: "Knitting",
+      candidateMeasure: "minutes",
+      candidateEmoji: "🧶",
+      candidateDatetime: new Date("2026-05-06T10:10:00Z"),
+      candidateKind: "other" as const,
+    };
+
+    expect(scoreSharedActivityCandidate(input)).toBeGreaterThanOrEqual(50);
+  });
 });
