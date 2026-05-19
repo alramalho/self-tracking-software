@@ -1184,6 +1184,16 @@ router.post(
         return;
       }
 
+      if (
+        proposal.operations.some((op: any) => op.type === "archive") &&
+        proposal.operations.length > 1
+      ) {
+        res.status(400).json({
+          error: "Archive proposal must not include other operations",
+        });
+        return;
+      }
+
       // Execute the operations
       const changes: Array<{
         operation: string;
@@ -1286,6 +1296,21 @@ router.post(
             changes.push({
               operation: "remove",
               sessionId: op.sessionId,
+              success: true,
+            });
+          } else if (op.type === "archive") {
+            await prisma.plan.update({
+              where: { id: proposal.planId },
+              data: {
+                archivedAt: new Date(),
+                isCoached: false,
+                coachSuggestedTimesPerWeek: null,
+                coachNotes: null,
+              },
+            });
+
+            changes.push({
+              operation: "archive",
               success: true,
             });
           }
@@ -1763,6 +1788,7 @@ router.post(
         where: {
           userId: user.id,
           deletedAt: null,
+          archivedAt: null,
           OR: [
             { finishingDate: null },
             { finishingDate: { gt: new Date() } },
@@ -1789,8 +1815,9 @@ router.post(
       if (type === "week_recap") {
         internalPrompt =
           "Use readActivities for the past 7 days and produce a weekly recap for the user. " +
-          "Highlight what went well, what was missed, and for each missed area use proposePlanModification to suggest a concrete change — " +
-          "e.g. removing upcoming sessions for a plan that's consistently not being followed, or adjusting session quantities. " +
+          "If a plan or activity appears missed, also use readActivities for the past 90 days before deciding what to suggest. " +
+          "Highlight what went well and what was missed. Treat sustained absence seriously: if a plan has no meaningful activity for 30+ days, prefer proposePlanModification with an archive operation instead of reducing frequency by one. " +
+          "For short-term misses, suggest a concrete lower-friction change with proposePlanModification, such as removing upcoming sessions or adjusting quantities. " +
           "Keep the text concise (3-5 sentences).";
       } else {
         internalPrompt =

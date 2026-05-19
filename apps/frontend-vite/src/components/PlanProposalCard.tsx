@@ -1,16 +1,16 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Archive, Check, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 
 export interface ResolvedOperation {
-  date: string;
+  date?: string;
   type: string;
-  quantity: number;
-  activityName: string;
-  activityEmoji: string;
-  activityMeasure: string;
+  quantity?: number;
+  activityName?: string;
+  activityEmoji?: string;
+  activityMeasure?: string;
   descriptiveGuide?: string;
 }
 
@@ -19,6 +19,7 @@ interface PlanProposalCardProps {
   proposalIndex: number;
   planGoal: string;
   planEmoji: string | null;
+  description?: string;
   operations: ResolvedOperation[];
   status?: "accepted" | "rejected" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
@@ -30,6 +31,7 @@ export function PlanProposalCard({
   proposalIndex,
   planGoal,
   planEmoji,
+  description,
   operations,
   status,
   onAccept,
@@ -98,17 +100,35 @@ export function PlanProposalCard({
             {planEmoji && <span className="mr-1">{planEmoji}</span>}
             {planGoal}
           </div>
+          {description && (
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {description}
+            </div>
+          )}
           {operations.length > 0 && (
             <div className="mt-1.5 space-y-1">
               {operations.map((op, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs text-foreground/80">
-                  <span>{op.activityEmoji}</span>
-                  <span className="text-muted-foreground">{format(parseISO(op.date), "EEE, MMM d")}</span>
-                  <span className="text-muted-foreground">—</span>
-                  <span>
-                    {op.type === "add" ? "+" : op.type === "remove" ? "-" : ""}
-                    {op.quantity} {op.activityMeasure}
-                  </span>
+                  {op.type === "archive" ? (
+                    <>
+                      <Archive size={13} className="text-muted-foreground" />
+                      <span>Archive plan</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{op.activityEmoji}</span>
+                      {op.date && (
+                        <span className="text-muted-foreground">
+                          {format(parseISO(op.date), "EEE, MMM d")}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">—</span>
+                      <span>
+                        {op.type === "add" ? "+" : op.type === "remove" ? "-" : ""}
+                        {op.quantity} {op.activityMeasure}
+                      </span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

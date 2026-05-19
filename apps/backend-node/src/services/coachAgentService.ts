@@ -222,9 +222,10 @@ export class CoachAgentService {
             - Add new sessions (provide activityId, date, quantity, descriptiveGuide)
             - Update existing sessions (provide sessionId and fields to update)
             - Remove sessions (provide sessionId)
+            - Archive a dormant plan (no extra fields)
 
             Use the planId, activityId, and sessionId values from the plan context above.
-            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Pause chess for next week", "Reduce gym to 2x/week").
+            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
             IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose sessions a partial week update (e.g for just from Monday-Wednesday) — always cover the full week schedule. Discuss the full week with the user before proposing.
           `,
           inputSchema: z.object({
@@ -269,6 +270,9 @@ export class CoachAgentService {
                   type: z.literal("remove"),
                   sessionId: z.string().describe("The ID of the session to remove"),
                 }),
+                z.object({
+                  type: z.literal("archive"),
+                }),
               ])
             ).min(1),
           }),
@@ -277,6 +281,16 @@ export class CoachAgentService {
               return {
                 success: false,
                 error: "This tool cannot be called with empty operations",
+              };
+            }
+
+            if (
+              operations.some((op) => op.type === "archive") &&
+              operations.length > 1
+            ) {
+              return {
+                success: false,
+                error: "Archive must be proposed as a standalone operation",
               };
             }
 
@@ -588,7 +602,7 @@ export class CoachAgentService {
                   }),
                   prisma.planSession.findMany({
                     where: {
-                      plan: { userId: user.id, deletedAt: null },
+                      plan: { userId: user.id, deletedAt: null, archivedAt: null },
                       date: { gte: from, lte: to },
                     },
                     include: {

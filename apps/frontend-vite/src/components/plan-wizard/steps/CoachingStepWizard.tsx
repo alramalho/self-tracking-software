@@ -55,11 +55,12 @@ const CoachingStepWizard = () => {
       id: "coaching",
       value: true,
       title: "Coaching",
-      description: "Get a personalized plan with structured progression",
+      description: "Get a coach that checks in when your plan needs attention",
       icon: Users,
       features: [
         "Specific weekly schedule",
-        "Adapted every week based on performance",
+        "Proactive check-ins for missed, stale, or upcoming work",
+        "Plan changes suggested only when they help",
         "Great for: progressive and clear objective plans",
       ],
       requiresPremium: true,
@@ -88,7 +89,7 @@ const CoachingStepWizard = () => {
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Choose between personalized coaching or self-guided tracking.
+          Choose between autopilot coaching or self-guided tracking.
         </p>
       </div>
 

@@ -37,10 +37,11 @@ const CoachingSelector = () => {
       id: "coaching",
       value: true,
       title: "Coaching",
-      description: "Get a personalized plan with structured progression",
+      description: "Get a coach that checks in when your plan needs attention",
       icon: Users,
       features: [
-        "Adaptation based on week achievement",
+        "Proactive check-ins for missed, stale, or upcoming work",
+        "Plan changes suggested only when they help",
         "AI or Human coached",
         "Great for: progressive and clear objective plans",
       ],
@@ -68,7 +69,7 @@ const CoachingSelector = () => {
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Choose between AI-powered coaching or self-guided tracking.
+          Choose between autopilot coaching or self-guided tracking.
         </p>
       </div>
 

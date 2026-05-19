@@ -855,6 +855,10 @@ function MessageAIPage() {
                             {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => {
                               const plan = plans?.find(p => p.id === proposal.planId);
                               const resolvedOperations: ResolvedOperation[] = (proposal.operations || []).map((op: any) => {
+                                if (op.type === "archive") {
+                                  return { type: "archive" };
+                                }
+
                                 const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
                                   || activities?.find((a: any) => a.id === op.activityId);
                                 return {
@@ -874,6 +878,7 @@ function MessageAIPage() {
                                   proposalIndex={idx}
                                   planGoal={proposal.planGoal}
                                   planEmoji={proposal.planEmoji}
+                                  description={proposal.description}
                                   operations={resolvedOperations}
                                   status={proposal.status}
                                   onAccept={handleAcceptProposal}
