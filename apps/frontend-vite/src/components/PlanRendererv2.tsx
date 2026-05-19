@@ -716,8 +716,9 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
           >
             <Send className={`h-5 w-5 text-muted-foreground`} />
             <span className="text-sm font-medium text-foreground">
-              Sends message every{" "}
-              <span className={`underline`}>{periodLabel}</span>
+              Coach checks in around{" "}
+              <span className={`underline`}>{periodLabel}</span>{" "}
+              when it matters
             </span>
           </div>
           </div>

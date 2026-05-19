@@ -4,6 +4,7 @@ import { Plan as CompletePlan } from "@tsw/prisma/types";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
+import { coachAssessmentService } from "../services/coachAssessmentService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { recurringJobService } from "../services/recurringJobService";
@@ -406,6 +407,32 @@ router.post(
     } catch (error) {
       logger.error("Error in hourly job:", error);
       res.status(500).json({ error: "Failed to run hourly job" });
+    }
+  }
+);
+
+// Run autonomous coach assessment
+router.post(
+  "/run-coach-assessment-job",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const {
+        filter_usernames = [],
+        dry_run = true,
+        force = false,
+      } = req.body;
+
+      const result = await coachAssessmentService.runAutonomousCoachAssessment({
+        filter_usernames,
+        dry_run,
+        force,
+      });
+
+      res.json(result);
+    } catch (error) {
+      logger.error("Error in coach assessment job:", error);
+      res.status(500).json({ error: "Failed to run coach assessment job" });
     }
   }
 );
