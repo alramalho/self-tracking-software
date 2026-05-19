@@ -9,7 +9,10 @@ import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { scoreSharedActivityCandidate } from "../utils/sharedActivities";
+import {
+  scoreSharedActivityCandidate,
+  shouldLookupSharedActivityCandidates,
+} from "../utils/sharedActivities";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -538,38 +541,47 @@ router.post(
         logger.info("No photo provided");
       }
 
-      // Update user's last active time
-      await prisma.user.update({
-        where: { id: req.user!.id },
-        data: {
-          lastActiveAt: new Date(),
-        },
-      });
-
-      // TODO: Add plan state processing
-      const plans = await prisma.plan.findMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: {
-              id: activityId,
+      // Update independent user metadata while fetching affected plans.
+      const [plans] = await Promise.all([
+        prisma.plan.findMany({
+          where: {
+            userId: req.user!.id,
+            deletedAt: null,
+            activities: {
+              some: {
+                id: activityId,
+              },
             },
           },
-        },
-      });
+        }),
+        prisma.user.update({
+          where: { id: req.user!.id },
+          data: {
+            lastActiveAt: new Date(),
+          },
+        }),
+      ]);
 
-      // Invalidate progress cache for affected plans
-      if (plans.length > 0) {
-        await plansService.invalidateUserPlanProgressCaches(req.user!.id, [
-          activityId,
-        ]);
+      // Invalidate progress cache for affected plans. Reuse the plans fetched
+      // above so logging does not do an extra findMany before the updateMany.
+      const affectedPlanIds = plans.map((plan) => plan.id);
+      if (affectedPlanIds.length > 0) {
+        await prisma.plan.updateMany({
+          where: { id: { in: affectedPlanIds } },
+          data: { progressCalculatedAt: null },
+        });
       }
 
       // Find coached plan and recalculate its state
       for (const plan of plans) {
         if (plan.isCoached) {
           // only coach the coached plan
-          plansService.recalculateCurrentWeekState(plan, req.user!);
+          void plansService.recalculateCurrentWeekState(plan, req.user!).catch((error) => {
+            logger.error(
+              `Error recalculating coached plan state for plan ${plan.id}:`,
+              error
+            );
+          });
 
           // Schedule post-activity celebration message (30-90 seconds after logging)
           // Use a random delay to make it feel more natural
@@ -606,18 +618,6 @@ router.post(
         }
       }
 
-      // Invalidate progress cache for all plans using this activity
-      // This ensures the next fetch will recompute progress with fresh data
-      await prisma.plan.updateMany({
-        where: {
-          userId: req.user!.id,
-          activities: {
-            some: { id: activityId },
-          },
-        },
-        data: { progressCalculatedAt: null },
-      });
-
       let sharedActivityInvite: Awaited<ReturnType<typeof createPendingSharedActivityInvite>> | null = null;
       if (normalizedWithUserId) {
         try {
@@ -634,7 +634,9 @@ router.post(
         }
       }
 
-      const sharedActivityCandidates = await findSharedActivityCandidates(entry.id, req.user!.id);
+      const sharedActivityCandidates = shouldLookupSharedActivityCandidates(normalizedWithUserId)
+        ? await findSharedActivityCandidates(entry.id, req.user!.id)
+        : [];
       res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
     } catch (error) {
       logger.error("Error logging activity:", error);
