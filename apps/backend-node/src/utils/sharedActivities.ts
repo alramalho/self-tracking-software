@@ -1,12 +1,16 @@
+import type { ActivityKind } from "../constants/activityCategories";
+
 export interface SharedActivityMatchInput {
   sourceTitle: string;
   sourceMeasure: string;
   sourceEmoji: string;
   sourceDatetime: Date;
+  sourceKind?: ActivityKind;
   candidateTitle: string;
   candidateMeasure: string;
   candidateEmoji: string;
   candidateDatetime: Date;
+  candidateKind?: ActivityKind;
 }
 
 export function normalizeActivityLabel(value: string): string {
@@ -18,12 +22,39 @@ export function normalizeActivityLabel(value: string): string {
     .trim();
 }
 
+function hasSemanticMatchByTitle(input: SharedActivityMatchInput): boolean {
+  const sourceTitle = normalizeActivityLabel(input.sourceTitle);
+  const candidateTitle = normalizeActivityLabel(input.candidateTitle);
+  return (
+    sourceTitle === candidateTitle ||
+    (!!sourceTitle &&
+      !!candidateTitle &&
+      (sourceTitle.includes(candidateTitle) || candidateTitle.includes(sourceTitle))) ||
+    (!!input.sourceEmoji && input.sourceEmoji === input.candidateEmoji)
+  );
+}
+
+function hasSemanticMatch(input: SharedActivityMatchInput): boolean {
+  const bothHaveKind =
+    input.sourceKind &&
+    input.sourceKind !== "other" &&
+    input.candidateKind &&
+    input.candidateKind !== "other";
+
+  if (bothHaveKind) {
+    return input.sourceKind === input.candidateKind;
+  }
+
+  return hasSemanticMatchByTitle(input);
+}
+
 export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): number {
   const minutesApart = Math.abs(
     input.sourceDatetime.getTime() - input.candidateDatetime.getTime()
   ) / 60000;
 
   if (minutesApart > 180) return 0;
+  if (!hasSemanticMatch(input)) return 0;
 
   let score = 0;
   if (minutesApart <= 30) score += 50;
@@ -49,14 +80,7 @@ export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): n
     score += 10;
   }
 
-  const hasSemanticMatch =
-    sourceTitle === candidateTitle ||
-    (sourceTitle &&
-      candidateTitle &&
-      (sourceTitle.includes(candidateTitle) || candidateTitle.includes(sourceTitle))) ||
-    (input.sourceEmoji && input.sourceEmoji === input.candidateEmoji);
-
-  return hasSemanticMatch ? score : 0;
+  return score;
 }
 
 export function isLikelySharedActivity(input: SharedActivityMatchInput): boolean {
