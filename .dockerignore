@@ -9,3 +9,5 @@ backend-node/dist
 *.log
 .DS_Store
 node_modules
+.claude
+scripts/compare-image-gen
