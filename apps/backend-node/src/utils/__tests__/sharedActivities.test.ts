@@ -40,16 +40,29 @@ describe("shared activity matching", () => {
     })).toBe(0);
   });
 
-  it("rejects entries outside the three hour window", () => {
+  it("matches entries on the same day even hours apart", () => {
     expect(scoreSharedActivityCandidate({
       sourceTitle: "Run",
       sourceMeasure: "km",
       sourceEmoji: "🏃",
-      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceDatetime: new Date("2026-05-06T08:00:00Z"),
       candidateTitle: "Run",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
-      candidateDatetime: new Date("2026-05-06T14:01:00Z"),
+      candidateDatetime: new Date("2026-05-06T20:00:00Z"),
+    })).toBeGreaterThanOrEqual(50);
+  });
+
+  it("rejects entries on different days", () => {
+    expect(scoreSharedActivityCandidate({
+      sourceTitle: "Run",
+      sourceMeasure: "km",
+      sourceEmoji: "🏃",
+      sourceDatetime: new Date("2026-05-06T23:00:00Z"),
+      candidateTitle: "Run",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-07T01:00:00Z"),
     })).toBe(0);
   });
 

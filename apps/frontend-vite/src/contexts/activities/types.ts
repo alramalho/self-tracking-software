@@ -18,6 +18,7 @@ export interface SharedActivityCandidate {
   datetime: string;
   quantity: number;
   score: number;
+  imageUrls?: string[];
 }
 
 export interface LogActivityResponse {
@@ -33,6 +34,8 @@ export interface ActivityLogData {
   photo?: File;
   photos?: File[];
   withUserId?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ActivitiesContextType {

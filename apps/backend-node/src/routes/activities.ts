@@ -14,6 +14,7 @@ import {
   scoreSharedActivityCandidate,
   shouldLookupSharedActivityCandidates,
 } from "../utils/sharedActivities";
+import { timezoneFromCoords } from "../utils/timezone";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -134,8 +135,12 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
   const visibleActivityIds = await getVisibleActivityIdsForUsers(connectionIds);
   if (!visibleActivityIds.size) return [];
 
-  const start = new Date(entry.datetime.getTime() - 3 * 60 * 60 * 1000);
-  const end = new Date(entry.datetime.getTime() + 3 * 60 * 60 * 1000);
+  const dayStart = new Date(entry.datetime);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(entry.datetime);
+  dayEnd.setUTCHours(23, 59, 59, 999);
+  const start = dayStart;
+  const end = dayEnd;
 
   const candidates = await prisma.activityEntry.findMany({
     where: {
@@ -162,11 +167,15 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
             sourceEmoji: entry.activity!.emoji,
             sourceDatetime: entry.datetime,
             sourceKind: entry.activity!.kind as any,
+            sourceLatitude: entry.latitude,
+            sourceLongitude: entry.longitude,
             candidateTitle: candidate.activity.title,
             candidateMeasure: candidate.activity.measure,
             candidateEmoji: candidate.activity.emoji,
             candidateDatetime: candidate.datetime,
             candidateKind: candidate.activity.kind as any,
+            candidateLatitude: candidate.latitude,
+            candidateLongitude: candidate.longitude,
           })
         : 0,
     }))
@@ -179,6 +188,7 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
       activity: candidate.activity,
       datetime: candidate.datetime,
       quantity: candidate.quantity,
+      imageUrls: candidate.imageUrls,
       score,
     }));
 }
@@ -270,11 +280,15 @@ async function canLinkActivityEntries(userId: string, ownEntryId: string, candid
     sourceEmoji: ownEntry.activity.emoji,
     sourceDatetime: ownEntry.datetime,
     sourceKind: ownEntry.activity.kind as any,
+    sourceLatitude: ownEntry.latitude,
+    sourceLongitude: ownEntry.longitude,
     candidateTitle: candidateEntry.activity.title,
     candidateMeasure: candidateEntry.activity.measure,
     candidateEmoji: candidateEntry.activity.emoji,
     candidateDatetime: candidateEntry.datetime,
     candidateKind: candidateEntry.activity.kind as any,
+    candidateLatitude: candidateEntry.latitude,
+    candidateLongitude: candidateEntry.longitude,
   });
 
   return score >= 50;
@@ -410,9 +424,17 @@ router.post(
         quantity,
         isPublic,
         description,
-        timezone,
+        timezone: clientTimezone,
+        latitude: rawLat,
+        longitude: rawLng,
         withUserId,
       } = req.body;
+      const latitude = rawLat ? parseFloat(rawLat) : undefined;
+      const longitude = rawLng ? parseFloat(rawLng) : undefined;
+      const timezone =
+        latitude != null && longitude != null
+          ? timezoneFromCoords(latitude, longitude) ?? clientTimezone
+          : clientTimezone;
       const photos = getUploadedActivityEntryPhotos(req);
 
       // Check if activity exists and belongs to user
@@ -474,6 +496,8 @@ router.post(
             datetime: iso_date_string,
             description,
             timezone,
+            latitude: latitude ?? undefined,
+            longitude: longitude ?? undefined,
           },
         });
       }
@@ -642,6 +666,11 @@ router.post(
       const sharedActivityCandidates = shouldLookupSharedActivityCandidates(normalizedWithUserId)
         ? await findSharedActivityCandidates(entry.id, req.user!.id)
         : [];
+      logger.info(`Shared activity candidates for entry ${entry.id}: ${sharedActivityCandidates.length}`, {
+        entryId: entry.id,
+        candidateCount: sharedActivityCandidates.length,
+        candidates: sharedActivityCandidates.map((c: any) => ({ id: c.activityEntryId, score: c.score })),
+      });
       res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
     } catch (error) {
       logger.error("Error logging activity:", error);

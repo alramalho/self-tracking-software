@@ -18,6 +18,8 @@ interface ActivityPhotoUploaderProps {
     datetime: Date;
     quantity: number;
     withUserId?: string;
+    latitude?: number;
+    longitude?: number;
   };
   onClose: () => void;
   onSuccess: (entryId: string, candidates: SharedActivityCandidate[]) => void;
@@ -45,6 +47,8 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         description,
         photos: selectedFiles,
         withUserId: activityData.withUserId,
+        latitude: activityData.latitude,
+        longitude: activityData.longitude,
       });
 
       if (!response.entry?.id) {

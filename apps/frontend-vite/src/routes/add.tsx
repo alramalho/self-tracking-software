@@ -62,10 +62,25 @@ function LogPage() {
   const [showSharedActivityPrompt, setShowSharedActivityPrompt] = useState(false);
 
   const handleActivityLogSubmit = useCallback(
-    (data: ActivityLogData) => {
+    async (data: ActivityLogData) => {
       if (!selectedActivity) return;
 
-      setCurrentActivityLogData(data);
+      let logData = data;
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 3000,
+            maximumAge: 60000,
+          })
+        );
+        logData = {
+          ...data,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+      } catch {}
+
+      setCurrentActivityLogData(logData);
       setShowActivityLogger(false);
       setShowPhotoUploader(true);
     },
@@ -237,6 +252,8 @@ function LogPage() {
                 datetime: currentActivityLogData.datetime,
                 quantity: currentActivityLogData.quantity,
                 withUserId: currentActivityLogData.withUserId,
+                latitude: currentActivityLogData.latitude,
+                longitude: currentActivityLogData.longitude,
               }}
               onClose={() => {
                 setShowPhotoUploader(false);
