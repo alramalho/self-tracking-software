@@ -1,12 +1,11 @@
-import { useTheme } from "@/contexts/theme/useTheme";
 import { cn } from "@/lib/utils";
 import { TIME_PERIODS } from "@/utils/coachingTime";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
-import jarvisLogoLight from "@/assets/icons/jarvis_logo_transparent.png";
-import jarvisLogoDark from "@/assets/icons/jarvis_logo_white_transparent.png";
+import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 
 interface CoachingTimeSelectorProps {
   open: boolean;
@@ -23,7 +22,8 @@ export function CoachingTimeSelector({
 }: CoachingTimeSelectorProps) {
   const [selectedHour, setSelectedHour] = useState(currentStartHour);
   const [isSaving, setIsSaving] = useState(false);
-  const { isLightMode } = useTheme();
+  const { currentUser } = useCurrentUser();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -48,9 +48,9 @@ export function CoachingTimeSelector({
         <div className="text-center mb-2 mt-4">
           <div className="flex justify-center mb-3">
             <img
-              src={isLightMode ? jarvisLogoLight : jarvisLogoDark}
-              alt="Coach Oli"
-              className="h-16 w-16"
+              src={aiCoach.avatar}
+              alt={aiCoach.label}
+              className="h-16 w-16 object-contain"
             />
           </div>
           <h3 className="text-lg font-semibold">Coach Check-in Window</h3>

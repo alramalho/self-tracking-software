@@ -1,0 +1,13 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "label": "gemini-2.5-flash-image",
+  "testIndex": 2,
+  "plan": "Build a meditation habit",
+  "activity": "Guided meditation",
+  "measure": "minutes",
+  "descriptiveGuide": "This 10-minute guided session focuses on body scan awareness. Sit comfortably with your back straight, close your eyes, and slowly move your attention from your toes to the top of your head. Notice sensations without judgment.",
+  "prompt": "Generate an educational illustration for Guided meditation with focus on \"This 10-minute guided session focuses on body scan awareness. Sit comfortably with your back straight, close your eyes, and slowly move your attention from your toes to the top of your head. Notice sensations without judgment.\"",
+  "durationMs": 7396,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:15:42.512Z"
+}

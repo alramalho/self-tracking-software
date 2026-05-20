@@ -66,5 +66,11 @@
 		<string>Choose a photo to share with your activity progress.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>Save a photo to your library.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Your location is used to tag where your activities take place.</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+		<key>NSPrivacyPolicyURL</key>
+		<string>https://tracking.so/privacy</string>
 	</dict>
 </plist>

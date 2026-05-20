@@ -62,7 +62,7 @@ class APIService {
         let fields: [(String, String)] = [
             ("activityId", activityId),
             ("iso_date_string", isoDate),
-            ("quantity", String(quantity)),
+            ("quantity", String(Int(quantity))),
             ("isPublic", "false"),
             ("timezone", timeZone),
         ]

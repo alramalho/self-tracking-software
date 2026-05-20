@@ -1,8 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { type Chat } from "@/contexts/ai/types";
-import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { useNavigate } from "@tanstack/react-router";
 import { Target, Users, Info, Menu } from "lucide-react";
 
@@ -13,16 +14,13 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ chat, currentUserId, onMenuClick }: ChatHeaderProps) {
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
   const themeColors = useThemeColors();
   const navigate = useNavigate();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   // Coach chat header - special treatment like in ai.tsx
   if (chat.type === "COACH") {
-    const coachIcon = isDarkMode
-      ? "/images/jarvis_logo_white_transparent.png"
-      : "/images/jarvis_logo_transparent.png";
-
     return (
       <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto max-w-4xl px-4 py-3">
@@ -39,9 +37,9 @@ export function ChatHeader({ chat, currentUserId, onMenuClick }: ChatHeaderProps
                   <Menu size={20} />
                 </Button>
               )}
-              <img src={coachIcon} alt="Coach Oli" className="w-10 h-10" />
+              <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
               <div>
-                <h1 className="font-semibold text-foreground">Coach Oli</h1>
+                <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
                 <p className="text-xs text-muted-foreground">AI Coach</p>
               </div>
             </div>

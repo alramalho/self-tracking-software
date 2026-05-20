@@ -1,6 +1,6 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Button } from "@/components/ui/button";
-import { Archive, Check, Clock, Pause, X, Loader2 } from "lucide-react";
+import { Archive, Check, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 
@@ -21,7 +21,7 @@ interface PlanProposalCardProps {
   planEmoji: string | null;
   description?: string;
   operations: ResolvedOperation[];
-  status?: "accepted" | "rejected" | "auto_accepted" | "auto_accept_failed" | null;
+  status?: "accepted" | "rejected" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
 }
@@ -38,9 +38,8 @@ export function PlanProposalCard({
   onReject,
 }: PlanProposalCardProps) {
   const themeColors = useThemeColors();
-  const [isAccepted, setIsAccepted] = useState(status === "accepted" || status === "auto_accepted");
+  const [isAccepted, setIsAccepted] = useState(status === "accepted");
   const [isRejected, setIsRejected] = useState(status === "rejected");
-  const isAutoAccepted = status === "auto_accepted";
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAccept = async () => {
@@ -88,14 +87,7 @@ export function PlanProposalCard({
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 opacity-60 mt-2">
         <span className="text-sm text-foreground/70">{compactLabel}</span>
-        {isAutoAccepted ? (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Clock size={12} className="text-yellow-500" />
-            <span className="text-[10px] text-muted-foreground">auto-applied</span>
-          </div>
-        ) : (
-          <Check size={14} className="text-green-500 flex-shrink-0" />
-        )}
+        <Check size={14} className="text-green-500 flex-shrink-0" />
       </div>
     );
   }
@@ -121,11 +113,6 @@ export function PlanProposalCard({
                     <>
                       <Archive size={13} className="text-muted-foreground" />
                       <span>Archive plan</span>
-                    </>
-                  ) : op.type === "pause" ? (
-                    <>
-                      <Pause size={13} className="text-muted-foreground" />
-                      <span>Pause plan</span>
                     </>
                   ) : (
                     <>

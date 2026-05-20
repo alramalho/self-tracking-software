@@ -2,6 +2,7 @@ import { Response, Router } from "express";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAgentService } from "../services/coachAgentService";
+import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -19,6 +20,7 @@ router.get(
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
+      const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
 
       // Fetch all chats where user is involved
       const chats = await prisma.chat.findMany({
@@ -129,7 +131,7 @@ router.get(
                   createdAt: lastMessage.createdAt,
                   // For group chats, we'd need to fetch sender name
                   senderName:
-                    lastMessage.role === "USER" ? user.name : "Coach Oli",
+                    lastMessage.role === "USER" ? user.name : coachPersonality.displayName,
                 }
               : undefined,
           };

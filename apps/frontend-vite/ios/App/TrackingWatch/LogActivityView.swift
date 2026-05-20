@@ -10,10 +10,6 @@ struct LogActivityView: View {
     @State private var errorMessage: String?
 
     private var step: Double {
-        let lower = activity.measure.lowercased()
-        if lower.contains("hour") || lower.contains("km") || lower.contains("mile") {
-            return 0.5
-        }
         return 1
     }
 

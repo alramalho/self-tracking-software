@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAgentService } from "../services/coachAgentService";
+import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
@@ -319,6 +320,7 @@ router.post(
       }
 
       // Get or create coach
+      const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
       let coach = await prisma.coach.findFirst({
         where: { ownerId: user.id },
       });
@@ -328,8 +330,8 @@ router.post(
           data: {
             ownerId: user.id,
             details: {
-              name: "Coach Oli",
-              bio: "Your personal AI coach helping you achieve your goals",
+              name: coachPersonality.displayName,
+              bio: `Your personal AI coach helping you achieve your goals as ${coachPersonality.title}.`,
             },
           },
         });
@@ -1184,12 +1186,12 @@ router.post(
         return;
       }
 
-      const hasStandaloneOp = proposal.operations.some(
-        (op: any) => op.type === "archive" || op.type === "pause"
-      );
-      if (hasStandaloneOp && proposal.operations.length > 1) {
+      if (
+        proposal.operations.some((op: any) => op.type === "archive") &&
+        proposal.operations.length > 1
+      ) {
         res.status(400).json({
-          error: "Archive and pause proposals must not include other operations",
+          error: "Archive proposal must not include other operations",
         });
         return;
       }
@@ -1311,25 +1313,6 @@ router.post(
 
             changes.push({
               operation: "archive",
-              success: true,
-            });
-          } else if (op.type === "pause") {
-            const pauseHistory = ((plan as any).pauseHistory as any[]) || [];
-            pauseHistory.push({
-              pausedAt: new Date().toISOString(),
-              reason: op.reason || "Paused by coach",
-            });
-            await prisma.plan.update({
-              where: { id: proposal.planId },
-              data: {
-                isPaused: true,
-                pauseReason: op.reason || "Paused by coach",
-                pauseHistory,
-              },
-            });
-
-            changes.push({
-              operation: "pause",
               success: true,
             });
           }
@@ -1767,6 +1750,7 @@ router.post(
       }
 
       // Get or create coach
+      const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
       let coach = await prisma.coach.findFirst({
         where: { ownerId: user.id },
       });
@@ -1776,8 +1760,8 @@ router.post(
           data: {
             ownerId: user.id,
             details: {
-              name: "Coach Oli",
-              bio: "Your personal AI coach helping you achieve your goals",
+              name: coachPersonality.displayName,
+              bio: `Your personal AI coach helping you achieve your goals as ${coachPersonality.title}.`,
             },
           },
         });

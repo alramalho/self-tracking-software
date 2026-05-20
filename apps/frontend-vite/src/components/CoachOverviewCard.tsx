@@ -1,8 +1,9 @@
 import { useApiWithAuth } from "@/api";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
-import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
 import { useCoachMessages } from "@/hooks/useCoachMessages";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { type PlanSession } from "@tsw/prisma";
@@ -72,7 +73,8 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { isLightMode } = useTheme();
+  const { currentUser } = useCurrentUser();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const api = useApiWithAuth();
   const {
     upsertPlan,
@@ -217,7 +219,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
         {(hasCoachNotes || hasCoachMessage) && (
           <>
             <Avatar>
-              <AvatarImage src={isLightMode ? "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" : "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvs_logo_white_transparent.png"} />
+              <AvatarImage src={aiCoach.avatar} />
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1 flex-1">
@@ -230,7 +232,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
               </div>
               <div className="flex flex-row items-center justify-between gap-2 mt-1">
                 <span className="text-[10px] italic text-muted-foreground">
-                  Coach Oli,{" "}
+                  {aiCoach.name},{" "}
                   {hasCoachMessage && lastCoachMessage
                     ? formatDistance(lastCoachMessage.createdAt, new Date(), {
                         addSuffix: true,
@@ -258,7 +260,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
               <div className="flex flex-row gap-2">
                 {!hasCoachNotes && !hasCoachMessage && (
                   <Avatar>
-                    <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                    <AvatarImage src={aiCoach.avatar} />
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                 )}

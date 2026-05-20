@@ -1,0 +1,14 @@
+{
+  "model": "google/gemini-3.1-flash-image-preview",
+  "label": "gemini-3.1-flash-image-preview",
+  "testIndex": 1,
+  "promptIndex": 0,
+  "plan": "Run a 10k race",
+  "activity": "Interval Training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 20-minute interval session alternates between 1-minute faster efforts and 2-minute easy recovery jogs. Push during the fast intervals but not to a sprint — aim for a pace where you're breathing hard but in control. Walk if you need to recover.",
+  "imagePrompt": "Instructional sequence illustration of interval running form: two side-by-side figures — one at faster effort with slightly longer stride and stronger arm drive, one at easy recovery jog with shorter stride and relaxed arms. Use arrows to show increased knee drive and arm swing in the faster phase. Clean minimal background, annotated form cues with arrows, no text banners.",
+  "durationMs": 15324,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:41:47.173Z"
+}

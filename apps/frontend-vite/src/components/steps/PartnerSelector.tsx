@@ -1,10 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 "use client";
 
-import { useTheme } from "@/contexts/theme/useTheme";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useNotifications } from "@/hooks/useNotifications";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { PersonStanding, UserRoundPlus } from "lucide-react";
 import React from "react";
 
@@ -61,7 +61,7 @@ const OptionCard = ({
 
 const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
-  const { isDarkMode } = useTheme();
+  const aiCoach = getCoachPersonalityConfig();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
     // Navigation logic is handled by getOnboardingSteps in onboarding.tsx
@@ -103,8 +103,9 @@ const PartnerTypeSelector = () => {
           onClick={() => handlePlanSelect("ai")}
           icon={
             <img
-              src={isDarkMode ? "/images/jarvis_logo_white_transparent.png" : "/images/jarvis_logo_transparent.png"}
-              className="w-9 h-9"
+              src={aiCoach.avatar}
+              alt={aiCoach.label}
+              className="w-9 h-9 object-contain"
             />
           }
           title="AI"

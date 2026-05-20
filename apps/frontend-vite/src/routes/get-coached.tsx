@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth";
 import { usePlans } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import axios from "axios";
@@ -71,6 +73,7 @@ function GetCoachedPage() {
   const navigate = useNavigate();
   const api = useApiWithAuth();
   const { isSignedIn } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { plans, isLoadingPlans } = usePlans();
   const { coach: coachUsername } = Route.useSearch();
 
@@ -78,6 +81,7 @@ function GetCoachedPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const activePlans = useMemo(
     () =>
@@ -131,7 +135,7 @@ function GetCoachedPage() {
     }
     // For AI coach, just navigate to home
     navigate({ to: "/" });
-    toast.success("You're already using Oli as your AI coach!");
+    toast.success(`You're already using ${aiCoach.name} as your AI coach!`);
   };
 
   const handleSelectHumanCoach = (coach: HumanCoach) => {
@@ -541,12 +545,12 @@ function GetCoachedPage() {
         </div>
 
         <div className="space-y-6">
-          <AICoachFeaturePreview>
+          <AICoachFeaturePreview aiCoachPersonality={aiCoach.id}>
             <Button
               onClick={handleSelectAICoach}
               className="w-full h-12 text-base font-semibold"
             >
-              Continue with Oli
+              Continue with {aiCoach.name}
             </Button>
           </AICoachFeaturePreview>
           <div className="space-y-3">

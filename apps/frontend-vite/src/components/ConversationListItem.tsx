@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import { type Chat } from "@/contexts/ai/types";
 import { Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 
 interface ConversationListItemProps {
   chat: Chat;
@@ -19,17 +20,16 @@ export function ConversationListItem({
   onClick,
   currentUserId,
 }: ConversationListItemProps) {
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   // Determine display name and avatar based on chat type
   const getDisplayInfo = () => {
     switch (chat.type) {
       case "COACH":
         return {
-          name: "Coach Oli",
-          avatar: isDarkMode
-            ? "/images/jarvis_logo_white_transparent.png"
-            : "/images/jarvis_logo_transparent.png",
+          name: aiCoach.name,
+          avatar: aiCoach.avatar,
           isCoach: true,
         };
       case "DIRECT":

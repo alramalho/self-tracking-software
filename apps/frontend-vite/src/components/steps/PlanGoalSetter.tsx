@@ -20,6 +20,7 @@ import { InfoCircledIcon } from "@radix-ui/react-icons";
 interface ExtractedPlan {
   goal: string;
   emoji: string;
+  goalReason?: string | null;
 }
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
@@ -63,11 +64,11 @@ function PlanGoalSetter() {
   }, [isUserPremium, waitingForUpgrade, extractedPlans]);
 
   const questionChecks = {
-    "Does the message mention a goal that is minimally concrete and measurable? (E.g. 'Read 12 books a year' instead of 'Read more books')": {
+    "Does the message describe a specific activity or achievable outcome? It should mention WHAT the user wants to do (e.g. 'meditate', 'run a marathon', 'read books'). It does NOT need exact numbers or timeframes — 'regularly', 'daily', 'more' are fine. Reject only if the goal is too abstract to act on (e.g. 'be happier', 'improve myself').": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
-      title: "Make sure it is concrete and measurable",
+      title: "Be specific about what you want",
       description:
-        "It is important that you phrase your goal in an actionable and tangible way.",
+        "Tell us what you want to achieve — feel free to include why it matters to you.",
     },
   };
 
@@ -122,6 +123,11 @@ function PlanGoalSetter() {
               <span className="flex-1 text-gray-900 dark:text-gray-100 italic">
                 {plan.goal}
               </span>
+              {plan.goalReason && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Why: {plan.goalReason}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -156,10 +162,10 @@ function PlanGoalSetter() {
       return;
     }
 
-    // Single plan - proceed directly
     if (data.plans.length === 1) {
       completeStep("plan-goal-setter", {
         planGoal: data.plans[0].goal,
+        planGoalReason: data.plans[0].goalReason ?? null,
         planEmoji: data.plans[0].emoji,
         planType: "specific",
       });
@@ -182,13 +188,13 @@ function PlanGoalSetter() {
     const selectedPlan = extractedPlans[selectedPlanIndex];
     completeStep("plan-goal-setter", {
       planGoal: selectedPlan.goal,
+      planGoalReason: selectedPlan.goalReason ?? null,
       planEmoji: selectedPlan.emoji,
       planType: "specific",
     });
     setShowMultiplePlansPopover(false);
   };
 
-  // For paid users: proceed with selected goal and save the rest for later
   const handleProceedWithSelectedGoal = () => {
     if (selectedPlanIndex === null || !extractedPlans[selectedPlanIndex]) {
       return;
@@ -201,10 +207,10 @@ function PlanGoalSetter() {
       }
     });
 
-    // Proceed with selected goal
     const selectedPlan = extractedPlans[selectedPlanIndex];
     completeStep("plan-goal-setter", {
       planGoal: selectedPlan.goal,
+      planGoalReason: selectedPlan.goalReason ?? null,
       planEmoji: selectedPlan.emoji,
       planType: "specific",
     });
@@ -224,15 +230,15 @@ function PlanGoalSetter() {
         id="plan-goal-setter"
         initialValue={planGoal || undefined}
         headerIcon={<Goal className="w-[10rem] h-[10rem] text-blue-600" />}
-        title="Let's start by creating you a goal"
-        initialMessage="What would you like to achieve?"
+        title="What do you want to achieve?"
+        initialMessage="Describe your goal"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
         onAccept={handleAccept}
         disableEmptySubmit
         renderChildren={renderExtractedData}
         shouldRenderChildren={allAnswered}
-        placeholder="For example, 'I want to read 12 books this year'"
+        placeholder="e.g. Meditate daily to sleep better"
         creationMessage="Do you want to accept this goal?"
       />
 

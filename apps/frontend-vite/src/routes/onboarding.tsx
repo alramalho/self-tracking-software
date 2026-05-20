@@ -6,12 +6,14 @@ import CommunityPartnerFinder from "@/components/steps/CommunityPartnerFinder";
 import PlanActivitySetter from "@/components/steps/PlanActivitySetter";
 import PlanGenerator from "@/components/steps/PlanGenerator";
 import PlanGoalSetter from "@/components/steps/PlanGoalSetter";
+import PlanGoalReasonSetter from "@/components/steps/PlanGoalReasonSetter";
 import PlanProgressInitiator from "@/components/steps/PlanProgressInitiator";
 import PlanTimesPerWeekSelector from "@/components/steps/PlanTimesPerWeekSelector";
 import WelcomeStep from "@/components/steps/WelcomeStep";
 import { OnboardingProvider } from "@/contexts/onboarding/provider";
 import { type OnboardingStep, type OnboardingState } from "@/contexts/onboarding/types";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import { DEFAULT_COACH_PERSONALITY } from "@/lib/coachPersonality";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -43,9 +45,22 @@ const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
   {
     id: "plan-goal-setter",
     component: PlanGoalSetter,
+    next: (state) => {
+      if (state.planGoalReason) return "plan-times-per-week";
+      return "plan-goal-reason";
+    },
+  },
+  {
+    id: "plan-goal-reason",
+    component: PlanGoalReasonSetter,
+    previous: "plan-goal-setter",
   },
   {
     id: "plan-times-per-week",
+    previous: (state) => {
+      if (state.planGoalReason) return "plan-goal-setter";
+      return "plan-goal-reason";
+    },
     component: PlanTimesPerWeekSelector,
   },
   {
@@ -135,6 +150,7 @@ function OnboardingPage() {
     plans: null,
     selectedPlan: null,
     planGoal: null,
+    planGoalReason: null,
     planEmoji: null,
     planActivities: [],
     planProgress: null,
@@ -144,6 +160,7 @@ function OnboardingPage() {
     planTimesPerWeek: 3,
     isPushGranted: false,
     wantsCoaching: null,
+    coachPersonality: DEFAULT_COACH_PERSONALITY,
     selectedCoachId: null,
     selectedCoach: null,
   });

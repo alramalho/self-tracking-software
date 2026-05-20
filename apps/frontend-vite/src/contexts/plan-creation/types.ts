@@ -1,6 +1,7 @@
 import type { Activity, PlanOutlineType, Visibility } from "@tsw/prisma";
 import type { PlanMilestone } from "@tsw/prisma/types";
 import { createContext } from "react";
+import type { CoachPersonality } from "@/lib/coachPersonality";
 
 export interface GeneratedSession {
   date: Date;
@@ -30,6 +31,7 @@ export interface OriginalPlanValues {
   backgroundImageUrl: string | null;
   isCoached: boolean;
   selectedCoachId: string | null;
+  coachPersonality: CoachPersonality;
   visibility: Visibility;
   finishingDate: Date | null;
   activities: Activity[];
@@ -42,11 +44,13 @@ export interface PlanCreationState {
   completedSteps: string[];
   // Plan data
   goal: string | null;
+  goalReason: string | null;
   emoji: string | null;
   backgroundImageUrl: string | null;
   backgroundImageFile: File | null;
   isCoached: boolean;
   selectedCoachId: string | null; // null = AI coach, string = human coach ID
+  coachPersonality: CoachPersonality;
   selectedCoach: HumanCoachInfo | null;
   visibility: Visibility;
   finishingDate: Date | null;
@@ -84,11 +88,13 @@ export interface PlanCreationContextValue {
 
   // Plan data
   goal: string | null;
+  goalReason: string | null;
   emoji: string | null;
   backgroundImageUrl: string | null;
   backgroundImageFile: File | null;
   isCoached: boolean;
   selectedCoachId: string | null;
+  coachPersonality: CoachPersonality;
   selectedCoach: HumanCoachInfo | null;
   visibility: Visibility;
   finishingDate: Date | null;
@@ -107,11 +113,13 @@ export interface PlanCreationContextValue {
 
   // Setters
   setGoal: (goal: string) => void;
+  setGoalReason: (reason: string | null) => void;
   setEmoji: (emoji: string) => void;
   setBackgroundImageUrl: (url: string | null) => void;
   setBackgroundImageFile: (file: File | null) => void;
   setIsCoached: (isCoached: boolean) => void;
   setSelectedCoachId: (coachId: string | null, coachInfo?: HumanCoachInfo | null) => void;
+  setCoachPersonality: (personality: CoachPersonality) => void;
   setVisibility: (visibility: Visibility) => void;
   setFinishingDate: (date: Date | null) => void;
   setActivities: (activities: Activity[]) => void;

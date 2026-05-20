@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 interface ExtractedPlan {
   goal: string;
   emoji: string;
+  goalReason?: string | null;
 }
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
@@ -25,7 +26,7 @@ interface PlanGoalSetterResponse extends BaseExtractionResponse {
 }
 
 const GoalStepWizard = () => {
-  const { goal, setGoal, setEmoji, completeStep } = usePlanCreation();
+  const { goal, setGoal, setGoalReason, setEmoji, completeStep } = usePlanCreation();
   const api = useApiWithAuth();
   const [text, setText] = useState(goal || "");
   const [allAnswered, setAllAnswered] = useState(false);
@@ -55,11 +56,11 @@ const GoalStepWizard = () => {
   }, [isUserPremium, waitingForUpgrade, extractedPlans]);
 
   const questionChecks = {
-    "Does the message mention a goal that is minimally concrete and measurable? (E.g. 'Read 12 books a year' instead of 'Read more books')": {
+    "Does the message describe a specific activity or achievable outcome? It should mention WHAT the user wants to do (e.g. 'meditate', 'run a marathon', 'read books'). It does NOT need exact numbers or timeframes — 'regularly', 'daily', 'more' are fine. Reject only if the goal is too abstract to act on (e.g. 'be happier', 'improve myself').": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
-      title: "Make sure it is concrete and measurable",
+      title: "Be specific about what you want",
       description:
-        "It is important that you phrase your goal in an actionable and tangible way.",
+        "Tell us what you want to achieve — feel free to include why it matters to you.",
     },
   };
 
@@ -108,6 +109,11 @@ const GoalStepWizard = () => {
               <span className="flex-1 text-gray-900 dark:text-gray-100 italic">
                 {plan.goal}
               </span>
+              {plan.goalReason && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Why: {plan.goalReason}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -144,9 +150,11 @@ const GoalStepWizard = () => {
     if (data.plans.length === 1) {
       const plan = data.plans[0];
       setGoal(plan.goal);
+      setGoalReason(plan.goalReason ?? null);
       setEmoji(plan.emoji || "");
       completeStep("goal", {
         goal: plan.goal,
+        goalReason: plan.goalReason ?? null,
         emoji: plan.emoji || "",
       });
       return;
@@ -166,9 +174,11 @@ const GoalStepWizard = () => {
 
     const selectedPlan = extractedPlans[selectedPlanIndex];
     setGoal(selectedPlan.goal);
+    setGoalReason(selectedPlan.goalReason ?? null);
     setEmoji(selectedPlan.emoji || "");
     completeStep("goal", {
       goal: selectedPlan.goal,
+      goalReason: selectedPlan.goalReason ?? null,
       emoji: selectedPlan.emoji || "",
     });
     setShowMultiplePlansPopover(false);
@@ -187,9 +197,11 @@ const GoalStepWizard = () => {
 
     const selectedPlan = extractedPlans[selectedPlanIndex];
     setGoal(selectedPlan.goal);
+    setGoalReason(selectedPlan.goalReason ?? null);
     setEmoji(selectedPlan.emoji || "");
     completeStep("goal", {
       goal: selectedPlan.goal,
+      goalReason: selectedPlan.goalReason ?? null,
       emoji: selectedPlan.emoji || "",
     });
 
@@ -208,15 +220,15 @@ const GoalStepWizard = () => {
         id="plan-goal-wizard"
         initialValue={goal || undefined}
         headerIcon={<Goal className="w-[10rem] h-[10rem] text-blue-600" />}
-        title="What's your goal?"
-        initialMessage="Describe what you want to achieve"
+        title="What do you want to achieve?"
+        initialMessage="Describe your goal"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
         onAccept={handleAccept}
         disableEmptySubmit
         renderChildren={renderExtractedData}
         shouldRenderChildren={allAnswered}
-        placeholder="For example, 'I want to read 12 books this year'"
+        placeholder="e.g. Meditate daily to sleep better"
         creationMessage="Do you want to accept this goal?"
       />
 

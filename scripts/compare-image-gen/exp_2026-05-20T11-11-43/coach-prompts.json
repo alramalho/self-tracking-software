@@ -1,0 +1,47 @@
+[
+  {
+    "plan": "Run a 10k race",
+    "activity": "Easy run",
+    "measure": "minutes",
+    "descriptiveGuide": "Focus on maintaining a conversational pace throughout this 25-minute easy run. Keep your breathing relaxed and your stride short — if you can't hold a conversation, slow down. This builds your aerobic base without stressing your joints.",
+    "imagePrompts": [
+      "Clean instructional illustration of a runner at an easy conversational pace, side view. Show relaxed shoulders, slight forward lean from the ankles, short stride with foot landing under the hips, arms bent at 90 degrees swinging close to the body. Include subtle arrows indicating relaxed arm swing and compact stride. Minimal background, simple form cue annotations, no text banners."
+    ]
+  },
+  {
+    "plan": "Run a 10k race",
+    "activity": "Interval Training",
+    "measure": "minutes",
+    "descriptiveGuide": "This 20-minute interval session alternates between 1-minute faster efforts and 2-minute easy recovery jogs. Push during the fast intervals but not to a sprint — aim for a pace where you're breathing hard but in control. Walk if you need to recover.",
+    "imagePrompts": [
+      "Instructional diagram of interval running phases shown side-by-side: one figure running at a controlled fast pace (slightly longer stride, stronger arm drive, deeper breathing) and one figure jogging easily (shorter stride, relaxed arms). Use arrows to highlight stride length and arm drive differences. Clean minimal background, annotated form cues, no text banners."
+    ]
+  },
+  {
+    "plan": "Build a meditation habit",
+    "activity": "Guided meditation",
+    "measure": "minutes",
+    "descriptiveGuide": "This 10-minute guided session focuses on body scan awareness. Sit comfortably with your back straight, close your eyes, and slowly move your attention from your toes to the top of your head. Notice sensations without judgment.",
+    "imagePrompts": []
+  },
+  {
+    "plan": "Get stronger at the gym",
+    "activity": "Strength training",
+    "measure": "minutes",
+    "descriptiveGuide": "This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.",
+    "imagePrompts": [
+      "Step-by-step squat form illustration: side view of a person performing a barbell back squat showing start (standing), bottom (hips below parallel), and return to standing. Highlight neutral spine, knees tracking over toes, hips moving back, heels grounded. Use arrows to show bar path vertically over midfoot. Clean instructional style, minimal background, annotated form cues, no text banners.",
+      "Instructional illustration combining bench press and bent-over row form. For bench press: side view showing feet flat on floor, slight arch in lower back, bar lowering to mid-chest with elbows at about 45 degrees. For bent-over row: side view showing flat back, hips hinged, bar pulled toward lower ribs, knees slightly bent. Use arrows to show bar path and back alignment. Clean minimal background, annotated form cues, no text banners."
+    ]
+  },
+  {
+    "plan": "Get stronger at the gym",
+    "activity": "Core exercises",
+    "measure": "minutes",
+    "descriptiveGuide": "A 15-minute core circuit: 30-second plank, 15 dead bugs per side, and 15 bird-dogs per side. Repeat 3 rounds with 30 seconds rest between exercises. Keep your lower back pressed into the floor during dead bugs.",
+    "imagePrompts": [
+      "Forearm plank form illustration, side view. Show straight line from head to heels, elbows under shoulders, core engaged, glutes tight. Include subtle highlight on abdominal area and arrows indicating neutral spine alignment. Minimal background, annotated form cues, no text banners.",
+      "Illustration showing dead bug and bird-dog positions side-by-side. For dead bug: person lying on back with lower back pressed into floor, opposite arm and leg extended, core engaged. For bird-dog: quadruped position with opposite arm and leg extended, hips level, neutral spine. Use arrows to show limb extension and highlight stable pelvis. Clean instructional style, minimal background, annotated form cues, no text banners."
+    ]
+  }
+]

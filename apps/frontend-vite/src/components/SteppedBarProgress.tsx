@@ -13,6 +13,7 @@ interface SteppedBarProgressProps {
   color?: string;
   celebration?: string | React.ReactNode;
   skipAnimation?: boolean;
+  compact?: boolean;
 }
 
 export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
@@ -25,10 +26,12 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   onAnimationCompleted,
   onFullyDone,
   skipAnimation = false,
+  compact = false,
 }) => {
-  const [animatedValue, setAnimatedValue] = useState(skipAnimation ? value : 0);
-  const [isFullyDone, setIsFullyDone] = useState(skipAnimation && value >= maxValue);
-  const [shouldCallCompleted, setShouldCallCompleted] = useState(skipAnimation);
+  const effectiveSkipAnimation = skipAnimation || compact;
+  const [animatedValue, setAnimatedValue] = useState(effectiveSkipAnimation ? value : 0);
+  const [isFullyDone, setIsFullyDone] = useState(effectiveSkipAnimation && value >= maxValue);
+  const [shouldCallCompleted, setShouldCallCompleted] = useState(effectiveSkipAnimation);
 
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -36,7 +39,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   });
 
   useEffect(() => {
-    if (skipAnimation) {
+    if (effectiveSkipAnimation) {
       return;
     }
     
@@ -71,40 +74,45 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
     <div ref={ref} className={cn("flex flex-col gap-0", className)}>
       {/* Progress bar */}
       <div className="flex items-center gap-2">
-        <div className="flex gap-1 flex-1">
+        <div className={cn(
+          compact ? "flex flex-wrap gap-1" : "flex gap-1 flex-1"
+        )}>
           {Array.from({ length: maxValue }, (_, index) => (
             <div
               key={index}
               className={cn(
-                "flex-1 h-2 rounded transition-all",
-                index < animatedValue ? color : "bg-background",
+                "rounded transition-all",
+                compact ? "w-3.5 h-3.5" : "flex-1 h-2",
+                index < animatedValue ? color : compact ? "bg-muted-foreground/25" : "bg-background",
                 isFullyDone ? "animate-pulse duration-1300" : "duration-300"
               )}
             />
           ))}
         </div>
-        <span className="text-lg flex-shrink-0">{goal}</span>
+        <span className={cn("flex-shrink-0", compact ? "text-sm" : "text-lg")}>{goal}</span>
       </div>
 
-      <AnimatePresence>
-        {isFullyDone && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            className="flex w-full flex-row items-center justify-between text-xs text-foreground gap-2"
-          >
-            {typeof celebration === "string" ? (
-              <span className="mt-1 text-sm font-normal text-green-600">
-                {celebration}
-              </span>
-            ) : (
-              celebration
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {!compact && (
+        <AnimatePresence>
+          {isFullyDone && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }}
+              className="flex w-full flex-row items-center justify-between text-xs text-foreground gap-2"
+            >
+              {typeof celebration === "string" ? (
+                <span className="mt-1 text-sm font-normal text-green-600">
+                  {celebration}
+                </span>
+              ) : (
+                celebration
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 };

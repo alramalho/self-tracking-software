@@ -1,0 +1,14 @@
+{
+  "model": "openai/gpt-image-2",
+  "label": "gpt-image-2",
+  "testIndex": 3,
+  "promptIndex": 1,
+  "plan": "Get stronger at the gym",
+  "activity": "Strength training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.",
+  "imagePrompt": "Instructional illustration of a flat bench press setup and bottom position: feet planted, slight arch in lower back, shoulder blades retracted, bar path vertically over mid-chest. Include arrows showing wrist stacked over elbows and controlled bar path. Minimal background, clean lines, annotated form cues with arrows, no text banners.",
+  "durationMs": 54946,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:43:28.482Z"
+}

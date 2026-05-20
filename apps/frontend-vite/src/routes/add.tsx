@@ -11,6 +11,7 @@ import SharedActivityPrompt from "@/components/SharedActivityPrompt";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityLogData, SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { useMetrics } from "@/contexts/metrics";
 import { usePlans } from "@/contexts/plans";
 import { createFileRoute } from "@tanstack/react-router";
@@ -60,6 +61,7 @@ function LogPage() {
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [sharedActivityCandidates, setSharedActivityCandidates] = useState<SharedActivityCandidate[]>([]);
   const [showSharedActivityPrompt, setShowSharedActivityPrompt] = useState(false);
+  const geo = useGeolocation();
 
   const handleActivityLogSubmit = useCallback(
     async (data: ActivityLogData) => {
@@ -67,17 +69,14 @@ function LogPage() {
 
       let logData = data;
       try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 3000,
-            maximumAge: 60000,
-          })
-        );
-        logData = {
-          ...data,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        };
+        const pos = await geo.getCurrentPosition();
+        if (pos) {
+          logData = {
+            ...data,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          };
+        }
       } catch {}
 
       setCurrentActivityLogData(logData);

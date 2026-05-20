@@ -2,7 +2,6 @@ import { ConversationListItem } from "@/components/ConversationListItem";
 import UserSearch, { type UserSearchResult } from "@/components/UserSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages } from "@/contexts/messages";
@@ -11,6 +10,7 @@ import { usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, MessageCircle, ArrowLeft } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -42,7 +42,6 @@ export const Route = createFileRoute("/messages/")({
 });
 
 function MessagesPage() {
-  const { isDarkMode } = useTheme();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const api = useApiWithAuth();
@@ -72,9 +71,7 @@ function MessagesPage() {
       n.status !== "CONCLUDED"
   );
 
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   // Fetch all human coaches
   const { data: humanCoaches } = useQuery({
@@ -257,12 +254,12 @@ function MessagesPage() {
                   )}
                 >
                   <Avatar className="w-11 h-11 bg-transparent">
-                    <AvatarImage src={coachIcon} alt="Coach Oli" className="object-contain" />
+                    <AvatarImage src={aiCoach.avatar} alt={aiCoach.label} className="object-contain" />
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">Coach Oli</span>
+                      <span className="font-medium">{aiCoach.name}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         AI
                       </span>

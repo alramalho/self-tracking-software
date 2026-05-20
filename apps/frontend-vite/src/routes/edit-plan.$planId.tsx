@@ -20,6 +20,7 @@ import {
   type PlanCreationState,
 } from "@/contexts/plan-creation";
 import { usePlans } from "@/contexts/plans";
+import { DEFAULT_COACH_PERSONALITY } from "@/lib/coachPersonality";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -219,11 +220,13 @@ function EditPlanPage() {
     currentStep: "overview",
     completedSteps: [],
     goal: null,
+    goalReason: null,
     emoji: null,
     backgroundImageUrl: null,
     backgroundImageFile: null,
     isCoached: false,
     selectedCoachId: null,
+    coachPersonality: DEFAULT_COACH_PERSONALITY,
     selectedCoach: null,
     visibility: "PUBLIC",
     finishingDate: null,

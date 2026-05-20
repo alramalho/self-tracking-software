@@ -1,21 +1,22 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePlans } from "@/contexts/plans";
-import { useTheme } from "@/contexts/theme/useTheme";
 import { useDataNotifications } from "@/contexts/notifications";
+import { useCurrentUser } from "@/contexts/users";
 import { useNavigate } from "@tanstack/react-router";
 import { getThemeVariants } from "@/utils/theme";
 import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 
 function getCoachInsightText(notification?: {
   title: string | null;
   message: string;
-}) {
+}, coachName = "Helly") {
   if (!notification) return null;
 
   if (notification.title === "Weekly Recap") {
-    return "Weekly review is ready. Review Coach Oli's notes for this week.";
+    return `Weekly review is ready. Review ${coachName}'s notes for this week.`;
   }
 
   return notification.message
@@ -42,9 +43,10 @@ export const CoachHomeSection = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { plans } = usePlans();
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const { notifications } = useDataNotifications();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const latestCoachNotification = notifications
     ?.filter((n) => n.type === "COACH" && n.status !== "CONCLUDED")
@@ -79,7 +81,7 @@ export const CoachHomeSection = () => {
   };
 
   const latestInsight =
-    getCoachInsightText(latestCoachNotification) ||
+    getCoachInsightText(latestCoachNotification, aiCoach.name) ||
     (plansNeedingAttention.length > 0
       ? `${plansNeedingAttention[0].goal} needs attention this week.`
       : "Your coached plans are ready. Check the plan cards below for today's next step.");
@@ -88,10 +90,6 @@ export const CoachHomeSection = () => {
     plansNeedingAttention.length > 0
       ? `${coachedPlans.length} coached plans · ${plansNeedingAttention.length} needs attention`
       : `${coachedPlans.length} coached plan${coachedPlans.length === 1 ? "" : "s"} · on track`;
-
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
 
   return (
     <div
@@ -103,9 +101,9 @@ export const CoachHomeSection = () => {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <img src={coachIcon} alt="Coach Oli" className="w-6 h-6 rounded-full" />
+          <img src={aiCoach.avatar} alt={aiCoach.label} className="w-6 h-6 rounded-full object-contain" />
           <span className="text-md font-semibold text-foreground">
-            Coach Oli
+            {aiCoach.name}
           </span>
         </div>
         <button

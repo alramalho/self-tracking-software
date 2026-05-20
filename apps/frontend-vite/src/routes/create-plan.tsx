@@ -2,6 +2,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { WizardContainer } from "@/components/plan-wizard/WizardContainer";
 import BackgroundStepWizard from "@/components/plan-wizard/steps/BackgroundStepWizard";
 import GoalStepWizard from "@/components/plan-wizard/steps/GoalStepWizard";
+import GoalReasonStepWizard from "@/components/plan-wizard/steps/GoalReasonStepWizard";
 import EmojiStepWizard from "@/components/plan-wizard/steps/EmojiStepWizard";
 import TimesPerWeekStepWizard from "@/components/plan-wizard/steps/TimesPerWeekStepWizard";
 import CoachingStepWizard from "@/components/plan-wizard/steps/CoachingStepWizard";
@@ -17,6 +18,7 @@ import {
   type PlanCreationStep,
   type PlanCreationState,
 } from "@/contexts/plan-creation";
+import { DEFAULT_COACH_PERSONALITY } from "@/lib/coachPersonality";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -44,10 +46,23 @@ const getPlanCreationSteps = (_state: PlanCreationState): PlanCreationStep[] => 
   {
     id: "goal",
     component: GoalStepWizard,
+    next: (state) => {
+      if (state.goalReason) return "emoji";
+      return "goal-reason";
+    },
+  },
+  {
+    id: "goal-reason",
+    component: GoalReasonStepWizard,
+    previous: "goal",
   },
   {
     id: "emoji",
     component: EmojiStepWizard,
+    previous: (state) => {
+      if (state.goalReason) return "goal";
+      return "goal-reason";
+    },
   },
   {
     id: "times-per-week",
@@ -167,11 +182,13 @@ function CreatePlanPage() {
     currentStep: "goal",
     completedSteps: [],
     goal: null,
+    goalReason: null,
     emoji: null,
     backgroundImageUrl: null,
     backgroundImageFile: null,
     isCoached: false,
     selectedCoachId: null,
+    coachPersonality: DEFAULT_COACH_PERSONALITY,
     selectedCoach: null,
     visibility: "PUBLIC",
     finishingDate: null,

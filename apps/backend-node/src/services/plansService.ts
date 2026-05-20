@@ -25,6 +25,7 @@ import { withErrorHandling } from "../utils/errorHandling";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
+import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { embeddingService } from "./embeddingService";
 
 function is3DaysOld(date: Date): boolean {
@@ -1254,12 +1255,13 @@ export class PlansService {
       });
 
       if (!coach) {
+        const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
         coach = await prisma.coach.create({
           data: {
             ownerId: user.id,
             details: {
-              name: "Coach Oli",
-              bio: "Your personal AI coach helping you achieve your goals",
+              name: coachPersonality.displayName,
+              bio: `Your personal AI coach helping you achieve your goals as ${coachPersonality.title}.`,
             },
           },
         });
@@ -1304,6 +1306,7 @@ export class PlansService {
       });
 
       // Create and send notification
+      const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
       const notification =
         await notificationService.createAndProcessNotification(
           {
@@ -1313,8 +1316,7 @@ export class PlansService {
             type: "COACH",
             relatedId: plan.id,
             relatedData: {
-              picture:
-                "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+              picture: coachPersonality.avatarPath,
               planId: plan.id,
               activityEntryId: activityEntry.id,
               celebrationType: "post_activity",
@@ -1422,12 +1424,13 @@ export class PlansService {
       });
 
       if (!coach) {
+        const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
         coach = await prisma.coach.create({
           data: {
             ownerId: user.id,
             details: {
-              name: "Coach Oli",
-              bio: "Your personal AI coach helping you achieve your goals",
+              name: coachPersonality.displayName,
+              bio: `Your personal AI coach helping you achieve your goals as ${coachPersonality.title}.`,
             },
           },
         });
@@ -1481,8 +1484,7 @@ export class PlansService {
             type: "COACH",
             relatedId: plan.id,
             relatedData: {
-              picture:
-                "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+              picture: getCoachPersonalityConfig(user.coachPersonality).avatarPath,
               planId: plan.id,
               oldState,
               newState: updatedPlan.currentWeekState,

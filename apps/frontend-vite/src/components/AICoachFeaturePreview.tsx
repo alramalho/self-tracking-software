@@ -8,6 +8,7 @@ import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { type CompletePlan } from "@/contexts/plans";
 import { type PlanProgressData } from "@/contexts/plans-progress";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
+import { getCoachPersonalityConfig, type CoachPersonality } from "@/lib/coachPersonality";
 import {
   BarChart3,
   Home,
@@ -184,11 +185,13 @@ interface HumanCoachInfo {
 interface AICoachFeaturePreviewProps {
   children?: React.ReactNode;
   humanCoach?: HumanCoachInfo | null;
+  aiCoachPersonality?: CoachPersonality;
 }
 
 export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
   children,
   humanCoach,
+  aiCoachPersonality,
 }) => {
   const [planStatePopoverDemoOpen, setPlanStatePopoverDemoOpen] =
     useState(false);
@@ -200,6 +203,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
   const dummyAchievement = {
     streak: 3,
   };
+  const aiCoach = getCoachPersonalityConfig(aiCoachPersonality);
 
   return (
     <>
@@ -214,12 +218,13 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
               />
             ) : (
               <img
-                src="/images/jarvis_logo_blue_transparent.png"
-                className="w-24 h-24"
+                src={aiCoach.avatar}
+                className="w-24 h-24 object-contain"
+                alt={aiCoach.label}
               />
             )}
             <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
-              Meet {humanCoach ? (humanCoach.name || humanCoach.username) : "Oli"},
+              Meet {humanCoach ? (humanCoach.name || humanCoach.username) : aiCoach.name},
               <br /> your new coach
             </h2>
           </div>
@@ -232,7 +237,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
               </>
             ) : (
               <>
-                Oli monitors your plan, checks in when it matters, and helps adapt the next week.
+                {aiCoach.name} monitors your plan, checks in when it matters, and helps adapt the next week.
                 <br />
                 Here&apos;s what coaching includes:
               </>
@@ -273,7 +278,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
       >
         <div className="flex flex-col gap-4 pt-3 text-left space-y-2">
           <p className="text-md text-muted-foreground font-semibold">
-            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage, Oli
+            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage, {aiCoach.name}
             provides you an overview of your plan and current week status.
           </p>
           <div className="w-full text-left">
@@ -289,7 +294,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
           <p className="text-md text-muted-foreground font-semibold">
             For the full plan view, the{" "}
             <Target className="w-5 h-5 inline-block mb-1" /> Plans page shows
-            Oli&apos;s notes and your current week side by side.
+            {aiCoach.name}&apos;s notes and your current week side by side.
           </p>
 
           <div className="text-left">
@@ -320,7 +325,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
       >
         <div className="flex flex-col gap-4 pt-3 ">
           <p className="text-md text-muted-foreground font-semibold text-center">
-            Oli will make sure you&apos;re grounded in achievable goals! You can
+            {aiCoach.name} will make sure you&apos;re grounded in achievable goals! You can
             find weekly notes like this on the{" "}
             <Target className="w-5 h-5 inline-block mb-1" /> Plans page:
           </p>

@@ -1,0 +1,14 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "label": "gemini-2.5-flash-image",
+  "testIndex": 4,
+  "promptIndex": 1,
+  "plan": "Get stronger at the gym",
+  "activity": "Core exercises",
+  "measure": "minutes",
+  "descriptiveGuide": "A 15-minute core circuit: 30-second plank, 15 dead bugs per side, and 15 bird-dogs per side. Repeat 3 rounds with 30 seconds rest between exercises. Keep your lower back pressed into the floor during dead bugs.",
+  "imagePrompt": "Illustration showing dead bug and bird-dog positions side-by-side. For dead bug: person lying on back with lower back pressed into floor, opposite arm and leg extended, core engaged. For bird-dog: quadruped position with opposite arm and leg extended, hips level, neutral spine. Use arrows to show limb extension and highlight stable pelvis. Clean instructional style, minimal background, annotated form cues, no text banners.",
+  "durationMs": 6641,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T11:14:04.678Z"
+}

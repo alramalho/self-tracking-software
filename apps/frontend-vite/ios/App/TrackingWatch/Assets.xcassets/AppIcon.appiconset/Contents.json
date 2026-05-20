@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "AppIcon-1024.png",
       "idiom" : "watch",
       "scale" : "2x",
       "size" : "1024x1024",

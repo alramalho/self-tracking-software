@@ -1,6 +1,8 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { Check, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 
@@ -32,6 +34,8 @@ export function MetricSuggestion({
   const [isRejected, setIsRejected] = useState(status === "rejected");
   const [isLoading, setIsLoading] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
+  const { currentUser } = useCurrentUser();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const getInterpretation = (metricTitle: string, rating: number): string => {
     const lowerTitle = metricTitle.toLowerCase();
@@ -53,39 +57,39 @@ export function MetricSuggestion({
 
     // Common metric interpretations
     if (lowerTitle.includes("happy") || lowerTitle.includes("happiness")) {
-      if (rating >= 4) return `Coach Oli thinks you felt ${getRatingAdjective()} happy today`;
-      if (rating === 3) return "Coach Oli thinks you felt okay today";
-      return `Coach Oli thinks you didn't feel ${getRatingIntensity()} happy today`;
+      if (rating >= 4) return `${aiCoach.name} thinks you felt ${getRatingAdjective()} happy today`;
+      if (rating === 3) return `${aiCoach.name} thinks you felt okay today`;
+      return `${aiCoach.name} thinks you didn't feel ${getRatingIntensity()} happy today`;
     }
 
     if (lowerTitle.includes("energy") || lowerTitle.includes("energetic")) {
-      if (rating >= 4) return `Coach Oli thinks you felt ${getRatingAdjective()} energetic today`;
-      if (rating === 3) return "Oli thinks you had moderate energy today";
-      return `Coach Oli thinks you didn't feel ${getRatingIntensity()} energetic today`;
+      if (rating >= 4) return `${aiCoach.name} thinks you felt ${getRatingAdjective()} energetic today`;
+      if (rating === 3) return `${aiCoach.name} thinks you had moderate energy today`;
+      return `${aiCoach.name} thinks you didn't feel ${getRatingIntensity()} energetic today`;
     }
 
     if (lowerTitle.includes("stress")) {
-      if (rating >= 4) return `Coach Oli thinks you felt ${getRatingAdjective()} stressed today`;
-      if (rating === 3) return "Coac Oli thinks you felt moderately stressed today";
-      return `Coach Oli thinks you felt ${getRatingIntensity()} stressed today`;
+      if (rating >= 4) return `${aiCoach.name} thinks you felt ${getRatingAdjective()} stressed today`;
+      if (rating === 3) return `${aiCoach.name} thinks you felt moderately stressed today`;
+      return `${aiCoach.name} thinks you felt ${getRatingIntensity()} stressed today`;
     }
 
     if (lowerTitle.includes("motivation") || lowerTitle.includes("motivated")) {
-      if (rating >= 4) return `Coach Oli thinks you felt ${getRatingAdjective()} motivated today`;
-      if (rating === 3) return "Coach Oli thinks you felt moderately motivated today";
-      return `Coach Oli thinks you didn't feel ${getRatingIntensity()} motivated today`;
+      if (rating >= 4) return `${aiCoach.name} thinks you felt ${getRatingAdjective()} motivated today`;
+      if (rating === 3) return `${aiCoach.name} thinks you felt moderately motivated today`;
+      return `${aiCoach.name} thinks you didn't feel ${getRatingIntensity()} motivated today`;
     }
 
     if (lowerTitle.includes("focus") || lowerTitle.includes("concentrated")) {
-      if (rating >= 4) return `Coach Oli thinks you were ${getRatingAdjective()} focused today`;
-      if (rating === 3) return "Coach Oli thinks you had moderate focus today";
-      return `Coach Oli thinks you weren't ${getRatingIntensity()} focused today`;
+      if (rating >= 4) return `${aiCoach.name} thinks you were ${getRatingAdjective()} focused today`;
+      if (rating === 3) return `${aiCoach.name} thinks you had moderate focus today`;
+      return `${aiCoach.name} thinks you weren't ${getRatingIntensity()} focused today`;
     }
 
     // Generic fallback
-    if (rating >= 4) return `Coach Oli thinks your ${lowerTitle} was ${getRatingIntensity()} high today`;
-    if (rating === 3) return `Coach Oli thinks your ${lowerTitle} was moderate today`;
-    return `Coach Oli thinks your ${lowerTitle} was ${getRatingIntensity()} high today`;
+    if (rating >= 4) return `${aiCoach.name} thinks your ${lowerTitle} was ${getRatingIntensity()} high today`;
+    if (rating === 3) return `${aiCoach.name} thinks your ${lowerTitle} was moderate today`;
+    return `${aiCoach.name} thinks your ${lowerTitle} was ${getRatingIntensity()} high today`;
   };
 
   const handleClick = (e: React.MouseEvent) => {

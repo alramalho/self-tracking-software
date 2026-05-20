@@ -1,6 +1,7 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { type Activity } from "@tsw/prisma";
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
@@ -34,36 +35,34 @@ export function ActivityLoggerPopover({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
+  const geo = useGeolocation();
   const [locationLabel, setLocationLabel] = useState<string>(
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&zoom=14`
-          );
-          const data = await res.json();
-          const addr = data.address;
-          const area =
-            addr?.suburb ||
-            addr?.neighbourhood ||
-            addr?.city_district;
-          const city =
-            addr?.city || addr?.town || addr?.village;
-          const label = area && city && area !== city
-            ? `${area}, ${city}`
-            : city || area || data.display_name?.split(",")[0];
-          if (label) setLocationLabel(label);
-        } catch {}
-      },
-      () => {},
-      { timeout: 3000, maximumAge: 60000 }
-    );
+    (async () => {
+      const pos = await geo.getCurrentPosition();
+      if (!pos) return;
+      try {
+        const { latitude, longitude } = pos;
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&zoom=14`
+        );
+        const data = await res.json();
+        const addr = data.address;
+        const area =
+          addr?.suburb ||
+          addr?.neighbourhood ||
+          addr?.city_district;
+        const city =
+          addr?.city || addr?.town || addr?.village;
+        const label = area && city && area !== city
+          ? `${area}, ${city}`
+          : city || area || data.display_name?.split(",")[0];
+        if (label) setLocationLabel(label);
+      } catch {}
+    })();
   }, []);
 
   // Generate hours and minutes options

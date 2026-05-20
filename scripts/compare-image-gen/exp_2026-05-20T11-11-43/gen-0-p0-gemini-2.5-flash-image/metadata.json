@@ -1,0 +1,14 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "label": "gemini-2.5-flash-image",
+  "testIndex": 0,
+  "promptIndex": 0,
+  "plan": "Run a 10k race",
+  "activity": "Easy run",
+  "measure": "minutes",
+  "descriptiveGuide": "Focus on maintaining a conversational pace throughout this 25-minute easy run. Keep your breathing relaxed and your stride short — if you can't hold a conversation, slow down. This builds your aerobic base without stressing your joints.",
+  "imagePrompt": "Clean instructional illustration of a runner at an easy conversational pace, side view. Show relaxed shoulders, slight forward lean from the ankles, short stride with foot landing under the hips, arms bent at 90 degrees swinging close to the body. Include subtle arrows indicating relaxed arm swing and compact stride. Minimal background, simple form cue annotations, no text banners.",
+  "durationMs": 7119,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T11:11:58.578Z"
+}

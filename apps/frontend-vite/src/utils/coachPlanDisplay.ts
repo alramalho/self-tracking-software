@@ -86,7 +86,7 @@ export function getCoachPlanInsight(
   if (!plan.isCoached) return null;
 
   if (plan.coachSuggestedTimesPerWeek || plan.suggestedByCoachAt) {
-    return "Coach Oli suggested a plan adjustment. Review it before the next session.";
+    return "Your coach suggested a plan adjustment. Review it before the next session.";
   }
 
   if (plan.coachNotes?.trim()) {
@@ -94,15 +94,15 @@ export function getCoachPlanInsight(
   }
 
   if (plan.currentWeekState === "AT_RISK") {
-    return "This plan needs attention this week. Review the next action with Coach Oli.";
+    return "This plan needs attention this week. Review the next action with your coach.";
   }
 
   if (plan.currentWeekState === "FAILED") {
-    return "This week is off track. Coach Oli can help reset the next session.";
+    return "This week is off track. Your coach can help reset the next session.";
   }
 
   if (plan.currentWeekState === "COMPLETED") {
-    return "Week completed. Coach Oli can help shape the next progression.";
+    return "Week completed. Your coach can help shape the next progression.";
   }
 
   if (nextSessionLabel) {

@@ -701,6 +701,46 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <div
                           className={twMerge(
                             "flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                            triggeringNotification === "coach_assessment" &&
+                              "opacity-70 pointer-events-none"
+                          )}
+                          onClick={async () => {
+                            setTriggeringNotification("coach_assessment");
+                            try {
+                              const response = await api.post("/admin/run-coach-assessment-job", {
+                                force: true,
+                                filter_usernames: [currentUser?.username],
+                              });
+                              const data = response.data as { messages_sent: number; users_checked: number };
+                              toast.success(`Coach assessed ${data.users_checked} user(s), sent ${data.messages_sent} message(s)`);
+                            } catch (error) {
+                              toast.error("Failed to run coach assessment");
+                              console.error(error);
+                            } finally {
+                              setTriggeringNotification(null);
+                            }
+                          }}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Run Coach Assessment
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Trigger autonomous coach check-in for your user
+                            </p>
+                          </div>
+                          {triggeringNotification === "coach_assessment" ? (
+                            <Loader2
+                              size={20}
+                              className="text-muted-foreground animate-spin"
+                            />
+                          ) : (
+                            <span className="text-2xl">🤖</span>
+                          )}
+                        </div>
+                        <div
+                          className={twMerge(
+                            "flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors",
                             triggeringNotification === "plan_categorization" &&
                               "opacity-70 pointer-events-none"
                           )}

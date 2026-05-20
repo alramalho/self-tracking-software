@@ -4,6 +4,7 @@ import { useLogError } from "@/hooks/useLogError";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTimeAgo } from "@/lib/utils";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { getThemeVariants } from "@/utils/theme";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type Notification } from "@tsw/prisma";
@@ -33,6 +34,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   hasUsernameData,
   onClose,
 }) => {
+  const { currentUser } = useCurrentUser();
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const { ref, inView } = useInView({
     threshold: 0.5,
     triggerOnce: true,
@@ -92,8 +95,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         {notification.type === "COACH" && (
           <Avatar>
             <AvatarImage
-              src="/images/jarvis_logo_transparent.png"
-              alt="Coach"
+              src={aiCoach.avatar}
+              alt={aiCoach.label}
             />
             <AvatarFallback>C</AvatarFallback>
           </Avatar>

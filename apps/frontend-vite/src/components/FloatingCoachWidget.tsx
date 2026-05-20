@@ -1,6 +1,7 @@
 import { useDataNotifications } from "@/contexts/notifications";
-import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
@@ -9,7 +10,7 @@ import { useAI } from "@/contexts/ai";
 
 export const FloatingCoachWidget: React.FC = () => {
   const { notifications, concludeNotification } = useDataNotifications();
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
   const { isUserFree } = usePaidPlan();
   const navigate = useNavigate();
   const { isUserAIWhitelisted, createCoachChat } = useAI();
@@ -25,9 +26,7 @@ export const FloatingCoachWidget: React.FC = () => {
       )[0];
   }, [notifications]);
 
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const handleReply = async () => {
     if (!latestCoachNotification) return;
@@ -86,8 +85,8 @@ export const FloatingCoachWidget: React.FC = () => {
               className="relative w-16 h-16 rounded-fullhover:scale-105 transition-all duration-200"
             >
               <img
-                src={coachIcon}
-                alt="AI Coach"
+                src={aiCoach.avatar}
+                alt={aiCoach.label}
                 className="w-16 h-16 rounded-full"
               />
               <motion.div
@@ -125,8 +124,8 @@ export const FloatingCoachWidget: React.FC = () => {
             <div className="max-w-2xl mx-auto space-y-6">
               <div className="flex items-center gap-2">
                 <img
-                  src={coachIcon}
-                  alt="AI Coach"
+                  src={aiCoach.avatar}
+                  alt={aiCoach.label}
                   className="w-7 h-7 rounded-full"
                 />
                 <p className="text-sm text-foreground/90 leading-relaxed font-medium">

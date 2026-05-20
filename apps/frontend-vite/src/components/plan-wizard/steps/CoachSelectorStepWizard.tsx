@@ -1,13 +1,15 @@
 import { useApiWithAuth } from "@/api";
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
+import { AICoachPersonalitySelector } from "@/components/AICoachPersonalitySelector";
 import { CoachProfileDrawer } from "@/components/CoachProfileDrawer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface CoachDetails {
   title: string;
@@ -31,8 +33,8 @@ interface HumanCoach {
 }
 
 const CoachSelectorStepWizard = () => {
-  const { setSelectedCoachId, completeStep } = usePlanCreation();
-  const { currentUser } = useCurrentUser();
+  const { setSelectedCoachId, completeStep, coachPersonality, setCoachPersonality } = usePlanCreation();
+  const { currentUser, updateUser, isUpdatingUser } = useCurrentUser();
   const api = useApiWithAuth();
 
   const [selectedCoachForPreview, setSelectedCoachForPreview] = useState<HumanCoach | null>(null);
@@ -53,7 +55,13 @@ const CoachSelectorStepWizard = () => {
   }, [humanCoaches, currentUser]);
   const showHumanCoachSection = availableCoaches && availableCoaches.length > 0;
 
-  const handleSelectCoach = (coachId: string | null) => {
+  useEffect(() => {
+    if (currentUser?.coachPersonality) {
+      setCoachPersonality(currentUser.coachPersonality);
+    }
+  }, [currentUser?.coachPersonality, setCoachPersonality]);
+
+  const handleSelectCoach = async (coachId: string | null) => {
     const selectedCoach = coachId
       ? availableCoaches?.find((c) => c.id === coachId)
       : null;
@@ -69,6 +77,12 @@ const CoachSelectorStepWizard = () => {
       : null;
 
     setSelectedCoachId(coachId, coachInfo);
+    if (!coachId) {
+      await updateUser({
+        updates: { coachPersonality },
+        muteNotifications: true,
+      });
+    }
     setIsDrawerOpen(false);
     completeStep("coach-selector");
   };
@@ -77,14 +91,22 @@ const CoachSelectorStepWizard = () => {
     setSelectedCoachForPreview(coach);
     setIsDrawerOpen(true);
   };
+  const selectedAICoach = getCoachPersonalityConfig(coachPersonality);
+
   return (
     <div className="w-full max-w-lg space-y-5">
-      <AICoachFeaturePreview>
+      <AICoachFeaturePreview aiCoachPersonality={coachPersonality}>
+        <AICoachPersonalitySelector
+          selectedPersonality={coachPersonality}
+          onSelect={setCoachPersonality}
+          disabled={isUpdatingUser}
+        />
         <Button
           onClick={() => handleSelectCoach(null)}
-          className="w-full h-12 text-base font-semibold"
+          disabled={isUpdatingUser}
+          className="w-full h-12 text-base font-semibold mt-4"
         >
-          Continue with Oli
+          Continue with {selectedAICoach.name}
         </Button>
       </AICoachFeaturePreview>
       <div className="space-y-3 px-2">

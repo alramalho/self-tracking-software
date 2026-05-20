@@ -11,6 +11,7 @@ import { usePostHog } from "posthog-js/react";
 import React, { useCallback, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
+import { DEFAULT_COACH_PERSONALITY, type CoachPersonality } from "@/lib/coachPersonality";
 import { OnboardingContext, type OnboardingContextValue, type OnboardingState, type OnboardingStep } from "./types";
 
 interface OnboardingProviderProps {
@@ -35,6 +36,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       plans: null as CompletePlan[] | null,
       selectedPlan: null as CompletePlan | null,
       planGoal: null as string | null,
+      planGoalReason: null as string | null,
       planEmoji: null as string | null,
       planActivities: [] as Activity[],
       planProgress: null as string | null,
@@ -44,6 +46,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planTimesPerWeek: 3 as number,
       isPushGranted: false,
       wantsCoaching: null as boolean | null,
+      coachPersonality: DEFAULT_COACH_PERSONALITY,
       selectedCoachId: null as string | null,
       selectedCoach: null as { id: string; name: string | null; username: string; picture: string | null; title: string } | null,
     }
@@ -52,6 +55,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     currentStep,
     completedSteps,
     planGoal,
+    planGoalReason,
     planId,
     planEmoji,
     planActivities,
@@ -62,6 +66,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     selectedPlan,
     planTimesPerWeek,
     wantsCoaching,
+    coachPersonality,
     selectedCoachId,
     selectedCoach,
   } = onboardingState;
@@ -114,6 +119,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const setWantsCoaching = (wants: boolean) => {
     setOnboardingState((prevState: OnboardingState) => ({ ...prevState, wantsCoaching: wants }));
+  };
+
+  const setCoachPersonality = (personality: CoachPersonality) => {
+    setOnboardingState((prevState: OnboardingState) => ({ ...prevState, coachPersonality: personality }));
   };
 
   const setSelectedCoachId = (coachId: string | null, coachInfo?: { id: string; name: string | null; username: string; picture: string | null; title: string } | null) => {
@@ -319,6 +328,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     selectedPlan,
     planId,
     planGoal,
+    planGoalReason,
     planEmoji,
     partnerType,
     planActivities,
@@ -326,6 +336,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     planProgress,
     planTimesPerWeek,
     wantsCoaching,
+    coachPersonality,
     selectedCoachId,
     selectedCoach,
     setPlanGoal,
@@ -338,6 +349,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setSelectedPlan,
     setPartnerType,
     setWantsCoaching,
+    setCoachPersonality,
     setSelectedCoachId,
   };
 

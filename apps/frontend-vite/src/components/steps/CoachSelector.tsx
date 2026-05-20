@@ -2,13 +2,16 @@
 
 import { useApiWithAuth } from "@/api";
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
+import { AICoachPersonalitySelector } from "@/components/AICoachPersonalitySelector";
 import { CoachProfileDrawer } from "@/components/CoachProfileDrawer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import { useCurrentUser } from "@/contexts/users";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface CoachDetails {
   title: string;
@@ -32,7 +35,8 @@ interface HumanCoach {
 }
 
 const CoachSelector = () => {
-  const { completeStep, setSelectedCoachId } = useOnboarding();
+  const { completeStep, setSelectedCoachId, coachPersonality, setCoachPersonality } = useOnboarding();
+  const { currentUser, updateUser, isUpdatingUser } = useCurrentUser();
   const api = useApiWithAuth();
 
   // State for coach profile drawer
@@ -49,7 +53,13 @@ const CoachSelector = () => {
   });
   const showHumanCoachSection = humanCoaches && humanCoaches.length > 0;
 
-  const handleSelectCoach = (coachId: string | null) => {
+  useEffect(() => {
+    if (currentUser?.coachPersonality) {
+      setCoachPersonality(currentUser.coachPersonality);
+    }
+  }, [currentUser?.coachPersonality, setCoachPersonality]);
+
+  const handleSelectCoach = async (coachId: string | null) => {
     // Find the selected coach to pass full info
     const selectedCoach = coachId
       ? humanCoaches?.find((c) => c.id === coachId)
@@ -66,9 +76,16 @@ const CoachSelector = () => {
       : null;
 
     setSelectedCoachId(coachId, coachInfo);
+    if (!coachId) {
+      await updateUser({
+        updates: { coachPersonality },
+        muteNotifications: true,
+      });
+    }
     completeStep("coach-selector", {
       selectedCoachId: coachId,
       selectedCoach: coachInfo,
+      coachPersonality,
     });
   };
 
@@ -76,14 +93,22 @@ const CoachSelector = () => {
     setSelectedCoachForPreview(coach);
     setIsDrawerOpen(true);
   };
+  const selectedAICoach = getCoachPersonalityConfig(coachPersonality);
+
   return (
     <div className="w-full max-w-lg space-y-5">
-      <AICoachFeaturePreview>
+      <AICoachFeaturePreview aiCoachPersonality={coachPersonality}>
+        <AICoachPersonalitySelector
+          selectedPersonality={coachPersonality}
+          onSelect={setCoachPersonality}
+          disabled={isUpdatingUser}
+        />
         <Button
           onClick={() => handleSelectCoach(null)}
-          className="w-full h-12 text-base font-semibold"
+          disabled={isUpdatingUser}
+          className="w-full h-12 text-base font-semibold mt-4"
         >
-          Continue with Oli
+          Continue with {selectedAICoach.name}
         </Button>
       </AICoachFeaturePreview>
       <div className="space-y-3">

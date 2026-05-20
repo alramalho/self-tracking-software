@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { coachContextBriefService } from "../coachContextBriefService";
 import { isWithinPreferredCoachWindow } from "../coachAssessmentService";
 
 describe("preferred coach window", () => {
@@ -50,5 +51,74 @@ describe("preferred coach window", () => {
         new Date("2026-05-20T02:30:00.000Z") // 10:30pm ET
       )
     ).toBe(false);
+  });
+});
+
+describe("coach context brief insight picker", () => {
+  const baseBrief = {
+    generatedAt: "2026-05-20T12:00:00.000Z",
+    lookbackDays: 14,
+    planMotivators: [
+      {
+        planId: "plan_1",
+        goal: "Eat better",
+        selectedReason: "Build self-esteem",
+        discardedReasons: ["Have more energy"],
+        coachNotesExcerpt:
+          "Suggested reasons not selected: Have more energy",
+      },
+    ],
+    difficultyPatterns: [
+      {
+        planId: "plan_1",
+        goal: "Eat better",
+        totalReports: 4,
+        easyCount: 0,
+        mediumCount: 1,
+        hardCount: 3,
+        latestDifficulty: "hard",
+        severity: "hard" as const,
+        summary: "3 of the last 4 difficulty reports were hard.",
+      },
+    ],
+    metricsLoggingGap: {
+      metricCount: 3,
+      entriesInLookback: 0,
+      daysSinceLastLog: 21,
+      shouldNudge: true,
+      summary:
+        "The user tracks 3 metrics but has not logged any metric entries for 21 days.",
+    },
+    metricPatterns: [] as [],
+  };
+
+  it("prefers difficulty for plan adjustments", () => {
+    const insight = coachContextBriefService.pickInsightForCandidate({
+      candidate: { type: "PLAN_ADJUSTMENT", planIds: ["plan_1"] },
+      brief: baseBrief,
+    });
+
+    expect(insight?.kind).toBe("difficulty_pattern");
+    expect(insight?.text).toContain("3 of the last 4 difficulty reports");
+  });
+
+  it("prefers the selected goal reason for session prep", () => {
+    const insight = coachContextBriefService.pickInsightForCandidate({
+      candidate: { type: "SESSION_PREP", planIds: ["plan_1"] },
+      brief: baseBrief,
+    });
+
+    expect(insight?.kind).toBe("goal_reason");
+    expect(insight?.text).toContain("build self-esteem");
+  });
+
+  it("uses metrics logging gap for week prep", () => {
+    const insight = coachContextBriefService.pickInsightForCandidate({
+      candidate: { type: "WEEK_PREP", planIds: ["plan_1"] },
+      brief: baseBrief,
+    });
+
+    expect(insight?.kind).toBe("metrics_logging_gap");
+    expect(insight?.text).toContain("not logged any metric entries for 21 days");
   });
 });

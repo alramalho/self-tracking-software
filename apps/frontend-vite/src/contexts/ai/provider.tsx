@@ -154,6 +154,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
         queryKey: ["messages", messagesContext.currentChatId],
       });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["current-user"] });
       toast.success("Plan updated!");
     },
     onError: (error) => {

@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { addDays, addMonths, setHours, setMinutes, startOfDay, endOfDay, format } from "date-fns";
+import { addDays, addMonths, setHours, setMinutes } from "date-fns";
 import { JobType, User, Reminder } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -72,106 +72,6 @@ export class RecurringJobService {
       return userHour === hour;
     } catch (error) {
       logger.error(`Error checking timezone for user ${user.username}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Check if it's currently within the user's preferred 2-hour coaching interval
-   * @param user - User with preferredCoachingHour (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-   * @returns true if current hour is within the 2-hour interval
-   */
-  private isUserPreferredCoachingTime(user: User): boolean {
-    try {
-      const timezone = user.timezone || "UTC";
-      const now = new Date();
-      const userTime = new TZDate(now, timezone);
-      const userHour = userTime.getHours();
-
-      // Default to 6-8am if not set (matches schema default)
-      const preferredStartHour = user.preferredCoachingHour ?? 6;
-
-      // Check if current hour is within the 2-hour interval
-      // e.g., if preferredStartHour is 6, check if userHour is 6 or 7
-      return (
-        userHour >= preferredStartHour && userHour < preferredStartHour + 2
-      );
-    } catch (error) {
-      logger.error(
-        `Error checking coaching time for user ${user.username}:`,
-        error
-      );
-      return false;
-    }
-  }
-
-  /**
-   * Check if a coaching notification was sent to this user in the last 12 hours
-   * This prevents sending multiple coaching messages within the same day
-   * @param userId - User ID to check
-   * @returns true if a coaching notification was sent recently
-   */
-  private async hasRecentCoachingNotification(
-    userId: string
-  ): Promise<boolean> {
-    try {
-      const twelveHoursAgo = new Date();
-      twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
-
-      const recentNotification = await prisma.notification.findFirst({
-        where: {
-          userId: userId,
-          type: "COACH",
-          createdAt: {
-            gte: twelveHoursAgo,
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-      return recentNotification !== null;
-    } catch (error) {
-      logger.error(
-        `Error checking recent coaching notifications for user ${userId}:`,
-        error
-      );
-      // If there's an error checking, assume no recent notification to avoid blocking
-      return false;
-    }
-  }
-
-  private async hasRecentActivityReminderNotification(
-    userId: string
-  ): Promise<boolean> {
-    try {
-      const twentyHoursAgo = new Date();
-      twentyHoursAgo.setHours(twentyHoursAgo.getHours() - 20);
-
-      const recentNotification = await prisma.notification.findFirst({
-        where: {
-          userId,
-          type: "COACH",
-          relatedData: {
-            path: ["type"],
-            equals: "ACTIVITY_REMINDER",
-          },
-          createdAt: {
-            gte: twentyHoursAgo,
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-      return recentNotification !== null;
-    } catch (error) {
-      logger.error(
-        `Error checking recent activity reminder notifications for user ${userId}:`,
-        error
-      );
       return false;
     }
   }
@@ -328,9 +228,6 @@ export class RecurringJobService {
     // Process due reminders
     const reminderResults = await this.processDueReminders();
 
-    // Process activity reminders
-    const activityReminderResults = await this.processActivityReminders();
-
     // Process batched social notifications
     const batchedNotificationResults = await this.processBatchedNotifications();
 
@@ -349,17 +246,17 @@ export class RecurringJobService {
     }
 
     logger.info(
-      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${activityReminderResults.sent.length} activity reminders sent, ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
+      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
     );
 
     return {
-      message: `Processed ${reminderResults.processed} reminders (${reminderResults.sent.length} sent), ${activityReminderResults.sent.length} activity reminders sent, ${batchedNotificationResults.sent.length} batched notifications sent.`,
+      message: `Processed ${reminderResults.processed} reminders (${reminderResults.sent.length} sent), ${batchedNotificationResults.sent.length} batched notifications sent.`,
       started_for_users: [],
       total_users_checked: 0,
       reminders_processed: reminderResults.processed,
       reminders_sent: reminderResults.sent,
-      activity_reminders_checked: activityReminderResults.checked,
-      activity_reminders_sent: activityReminderResults.sent,
+      activity_reminders_checked: 0,
+      activity_reminders_sent: [],
       batched_notifications_sent: batchedNotificationResults.sent,
       autonomous_coach_checked: coachAssessmentResults.users_checked,
       autonomous_coach_sent: coachAssessmentResults.messages_sent,
@@ -503,103 +400,6 @@ export class RecurringJobService {
 
       default:
         return null;
-    }
-  }
-
-  private async processActivityReminders(): Promise<{
-    checked: number;
-    sent: string[];
-  }> {
-    const sent: string[] = [];
-
-    try {
-      const users = await prisma.user.findMany({
-        where: { activityRemindersEnabled: true, deletedAt: null },
-      });
-
-      logger.info(
-        `Checking activity reminders for ${users.length} users`
-      );
-
-      for (const user of users) {
-        try {
-          if (!this.isUserTimezoneHour(user, 20)) continue;
-
-          const hasRecent =
-            await this.hasRecentActivityReminderNotification(user.id);
-          if (hasRecent) {
-            logger.info(
-              `Skipping activity reminder for ${user.username} - recent notification exists`
-            );
-            continue;
-          }
-
-          const timezone = user.timezone || "UTC";
-          const nowInTz = new TZDate(new Date(), timezone);
-          const tomorrowInTz = addDays(nowInTz, 1);
-          const tomorrowStart = startOfDay(tomorrowInTz);
-          const tomorrowEnd = endOfDay(tomorrowInTz);
-
-          const sessions = await prisma.planSession.findMany({
-            where: {
-              date: {
-                gte: tomorrowStart,
-                lte: tomorrowEnd,
-              },
-              plan: {
-                userId: user.id,
-                deletedAt: null,
-                archivedAt: null,
-                isPaused: false,
-              },
-            },
-            include: {
-              activity: true,
-            },
-          });
-
-          if (sessions.length === 0) continue;
-
-          const uniqueActivities = new Map<
-            string,
-            { emoji: string; title: string }
-          >();
-          for (const session of sessions) {
-            if (!uniqueActivities.has(session.activityId)) {
-              uniqueActivities.set(session.activityId, {
-                emoji: session.activity.emoji,
-                title: session.activity.title,
-              });
-            }
-          }
-
-          const activityList = Array.from(uniqueActivities.values())
-            .map((a) => `${a.emoji} ${a.title}`)
-            .join(", ");
-          const message = `Tomorrow: ${activityList}`;
-
-          await notificationService.createAndProcessNotification({
-            userId: user.id,
-            title: "Activity Reminder",
-            message,
-            type: "COACH",
-            relatedData: { type: "ACTIVITY_REMINDER" },
-          });
-
-          sent.push(`${user.username}: ${message}`);
-          logger.info(`Sent activity reminder to ${user.username}: ${message}`);
-        } catch (error) {
-          logger.error(
-            `Failed to process activity reminder for user ${user.username}:`,
-            error
-          );
-        }
-      }
-
-      return { checked: users.length, sent };
-    } catch (error) {
-      logger.error("Error processing activity reminders:", error);
-      return { checked: 0, sent: [] };
     }
   }
 

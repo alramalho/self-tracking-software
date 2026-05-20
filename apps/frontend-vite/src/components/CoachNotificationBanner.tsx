@@ -1,13 +1,14 @@
 import { useDataNotifications } from "@/contexts/notifications";
-import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { formatTimeAgo } from "@/lib/utils";
 import { X } from "lucide-react";
 import React, { useMemo } from "react";
 
 export const CoachNotificationBanner: React.FC = () => {
   const { notifications } = useDataNotifications();
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
   const [dismissedNotifications, setDismissedNotifications] = useLocalStorage<
     string[]
   >("dismissed-coach-notifications", []);
@@ -42,19 +43,16 @@ export const CoachNotificationBanner: React.FC = () => {
     picture?: string;
   } | null;
 
-  const coachIcon =
-    (isDarkMode
-      ? "/public/images/jarvis_logo_white_transparent.png"
-      : "/public/images/jarvis_logo_transparent.png");
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   return (
     <div className="ring-1 ring-border backdrop-blur-md bg-card/30 rounded-3xl py-3 px-4 shadow-sm transition-colors duration-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1">
           <img
-            src={coachIcon}
-            alt="Oli AI Coach"
-            className="w-10 h-10 flex-shrink-0"
+            src={aiCoach.avatar}
+            alt={aiCoach.label}
+            className="w-10 h-10 flex-shrink-0 object-contain"
           />
           <div className="flex-1 min-w-0">
             {latestCoachNotification.title && (

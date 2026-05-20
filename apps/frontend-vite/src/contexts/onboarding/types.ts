@@ -1,6 +1,7 @@
 import type { Activity } from "@tsw/prisma";
 import { createContext } from "react";
 import type { CompletePlan } from "../plans";
+import type { CoachPersonality } from "@/lib/coachPersonality";
 
 export interface OnboardingStep {
   id: string;
@@ -37,6 +38,7 @@ export interface OnboardingContextValue {
   plans: CompletePlan[] | null;
   selectedPlan: CompletePlan | null;
   planGoal: string | null;
+  planGoalReason: string | null;
   planId: string;
   planActivities: Activity[];
   planType: string | null;
@@ -45,6 +47,7 @@ export interface OnboardingContextValue {
   partnerType: "human" | "ai" | null;
   planProgress: string | null;
   wantsCoaching: boolean | null;
+  coachPersonality: CoachPersonality;
   selectedCoachId: string | null; // null = AI coach, string = human coach ID
   selectedCoach: HumanCoachInfo | null; // Full coach info when human coach selected
   setPlanGoal: (goal: string) => void;
@@ -54,6 +57,7 @@ export interface OnboardingContextValue {
   setSelectedPlan: (plan: CompletePlan) => void;
   setPartnerType: (type: "human" | null) => void;
   setWantsCoaching: (wants: boolean) => void;
+  setCoachPersonality: (personality: CoachPersonality) => void;
   setSelectedCoachId: (coachId: string | null, coachInfo?: HumanCoachInfo | null) => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
@@ -69,6 +73,7 @@ export interface OnboardingState {
   plans: CompletePlan[] | null;
   selectedPlan: CompletePlan | null;
   planGoal: string | null;
+  planGoalReason: string | null;
   planEmoji: string | null;
   planActivities: Activity[];
   planProgress: string | null;
@@ -78,6 +83,7 @@ export interface OnboardingState {
   planTimesPerWeek: number;
   isPushGranted: boolean;
   wantsCoaching: boolean | null;
+  coachPersonality: CoachPersonality;
   selectedCoachId: string | null; // null = AI coach, string = human coach ID
   selectedCoach: HumanCoachInfo | null; // Full coach info when human coach selected
 }

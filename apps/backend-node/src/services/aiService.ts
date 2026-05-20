@@ -9,6 +9,7 @@ import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
+import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import type { PlansService } from "./plansService";
 import { planGenerationPipeline } from "./planGenerationPipeline";
 const DEFAULT_WEEKS = 8;
@@ -20,7 +21,7 @@ export class AIService {
 
   constructor(plansService?: PlansService) {
     this.plansService = plansService;
-    this.model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+    this.model = process.env.OPENROUTER_MODEL || "openai/gpt-5.4-mini";
 
     if (!process.env.OPENROUTER_API_KEY || !process.env.HELICONE_API_KEY) {
       throw new Error("OPENROUTER_API_KEY or HELICONE_API_KEY is not set");
@@ -482,9 +483,13 @@ export class AIService {
       })
       .join("\n\n");
 
+    const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
+
     // 4. Build unified system prompt with structured guidance
     const systemPrompt = dedent`
-      You are Coach Oli, a tracking assistant with personality inside tracking.so.
+      You are ${coachPersonality.displayName}, ${coachPersonality.title}, a tracking assistant with personality inside tracking.so.
+
+      ${coachPersonality.systemPrompt}
 
       YOUR CORE PURPOSE: Extract trackable data (emotions, activities) from user messages.
 
@@ -1186,8 +1191,8 @@ export class AIService {
       `\n- Input: "I want to read 12 books and run a marathon" → [{goal: "Read 12 books", emoji: "📚", goalReason: null}, {goal: "Run a marathon", emoji: "🏃", goalReason: null}]` +
       `\n- Input: "I want to meditate daily so I can sleep better and manage my emotions" → [{goal: "Meditate daily", emoji: "🧘", goalReason: "Sleep better and manage emotions"}]` +
       `\n- Input: "I want to get fit because I want to feel confident at the beach" → [{goal: "Get fit", emoji: "💪", goalReason: "Feel confident at the beach"}]` +
-      `\n\nIf the goal is already well phrased, output the same goal.` +
-      `\nIf the goal is already short, concrete, and tangible, output the same goal.`;
+      `\n- Input: "Resume regular meditation practice" → [{goal: "Meditate regularly", emoji: "🧘", goalReason: null}]` +
+      `\n\nALWAYS simplify and shorten the goal. Strip filler words like "resume", "start", "practice", "work on". Focus on the core action + frequency/target.`;
 
     const prompt = `Extract and paraphrase the goals from this input: '${userInput}'`;
 
@@ -1195,6 +1200,25 @@ export class AIService {
       prompt,
       schema,
       systemPrompt,
+    });
+  }
+
+  async suggestGoalReasons(goal: string): Promise<{ reasons: string[] }> {
+    const schema = z.object({
+      reasons: z.array(z.string()),
+    });
+
+    return this.generateStructuredResponse({
+      schema,
+      systemPrompt:
+        `You suggest a few common reasons why someone might want to achieve the goal of "${goal}". ` +
+        `RULES:` +
+        `\n- Each reason must be semantically distinct from the others — no overlapping meanings` +
+        `\n- Keep each reason short and direct, under 8 words` +
+        `\n- Never start with "I want to", "So I can", "To" — just state the outcome directly (e.g. "Sleep better at night", "Feel less anxious")` +
+        `\n- Be specific and grounded, not vague or aspirational — no guru slop like "become more mindful of thoughts and feelings"` +
+        `\n- Fewer high-quality reasons are better than many generic ones`,
+      prompt: `Suggest common reasons someone might want to achieve the goal of "${goal}"`,
     });
   }
 
@@ -1339,8 +1363,11 @@ export class AIService {
         ),
     });
 
+    const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
+
     const systemPrompt =
-      `You are a supportive personal coach sending a ${timeOfDay} to encourage the user. ` +
+      `You are ${coachPersonality.displayName}, ${coachPersonality.title}, sending a ${timeOfDay} to coach the user. ` +
+      `${coachPersonality.systemPrompt} ` +
       `Title: Short, punchy summary (3-5 words) of the week's status or key point ` +
       `Message: Brief, personalized advice (1-2 sentences) that's encouraging but realistic, helping them stay on track ` +
       `` +
@@ -1356,6 +1383,63 @@ export class AIService {
       prompt,
       schema,
       systemPrompt,
+    });
+  }
+
+  async generateCoachAssessmentInterventionMessage(params: {
+    user: User;
+    interventionType:
+      | "WEEK_PREP"
+      | "SESSION_PREP"
+      | "WEEK_RECAP"
+      | "INACTIVITY_CHECKIN"
+      | "CELEBRATION";
+    reason: string;
+    context: string;
+  }): Promise<{ title: string; message: string }> {
+    const coachPersonality = getCoachPersonalityConfig(params.user.coachPersonality);
+    const userName = params.user.name || params.user.username || "there";
+
+    const schema = z.object({
+      title: z.string().describe("A short coach notification title, 2-5 words"),
+      message: z.string().describe("A concise coach message, 1-3 sentences"),
+    });
+
+    const interventionGuidance: Record<typeof params.interventionType, string> = {
+      WEEK_PREP:
+        "Prepare the user for the upcoming week. Focus on what matters, likely friction, and the first concrete action.",
+      SESSION_PREP:
+        "Prepare the user for tomorrow's planned session. Reduce friction and make the next action clear.",
+      WEEK_RECAP:
+        "Give a brief recap of the previous week and one forward-looking next step.",
+      INACTIVITY_CHECKIN:
+        "Check in after a gap without guilt. Make the next small step feel clear.",
+      CELEBRATION:
+        "Acknowledge completed work and reinforce the behavior that led to it.",
+    };
+
+    return this.generateStructuredResponse({
+      schema,
+      systemPrompt: dedent`
+        You are ${coachPersonality.displayName}, ${coachPersonality.title}, proactively coaching a user in tracking.so.
+
+        ${coachPersonality.systemPrompt}
+
+        Write one short, useful proactive coach message.
+        Use the user's name naturally if it helps: ${userName}.
+        If the context includes a selected coach context brief insight, use at most that one personal insight and only if it naturally supports the intervention.
+        Do not mention internal labels like intervention type, metadata, or scoring.
+      `,
+      prompt: dedent`
+        Intervention: ${params.interventionType}
+        Why selected: ${params.reason}
+
+        Guidance:
+        ${interventionGuidance[params.interventionType]}
+
+        Context:
+        ${params.context}
+      `,
     });
   }
 
@@ -1391,10 +1475,13 @@ export class AIService {
         ),
     });
 
+    const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
+
     const systemPrompt =
-      `You are a supportive personal coach sending an IMMEDIATE CELEBRATION right after the user completed an activity. ` +
+      `You are ${coachPersonality.displayName}, ${coachPersonality.title}, sending an IMMEDIATE post-activity message after the user completed an activity. ` +
+      `${coachPersonality.systemPrompt} ` +
       `Title: Short, celebratory (2-4 words) acknowledging what they just did ` +
-      `Message: Congratulate them briefly (1-2 sentences) and ask how it went or how they feel. Be genuine and warm. ` +
+      `Message: Acknowledge completion briefly (1-2 sentences) and ask how it went or how they feel. Be genuine. ` +
       `` +
       `Keep it natural and varied - don't follow a fixed template. This is a moment of celebration! ` +
       `Use their name in the message. Optionally include 🔥, 💪, or ✨ if it feels appropriate.`;
@@ -2169,7 +2256,7 @@ export class AIService {
     try {
       const openrouter = this.getOpenRouterWithUserId();
       const result = await generateText({
-        model: openrouter.chat("openai/gpt-4.1-mini"),
+        model: openrouter.chat("openai/gpt-5.4-mini"),
         messages,
         temperature: 1,
       });

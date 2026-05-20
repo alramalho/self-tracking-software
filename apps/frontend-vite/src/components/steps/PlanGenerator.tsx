@@ -48,6 +48,7 @@ const formatDuration = (weeks: number | null | undefined): string | null => {
 const PlanGenerator = () => {
   const {
     planGoal,
+    planGoalReason,
     plans,
     planActivities,
     planProgress,
@@ -153,6 +154,7 @@ const PlanGenerator = () => {
         "/onboarding/generate-plans",
         {
           plan_goal: planGoal,
+          plan_goal_reason: planGoalReason,
           plan_activities: planActivities,
           plan_progress: planProgress,
           wants_coaching: wantsCoaching,

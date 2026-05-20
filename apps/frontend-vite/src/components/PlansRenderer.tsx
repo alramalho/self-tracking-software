@@ -148,10 +148,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     ) {
       setSelectedPlanId(initialSelectedPlanId);
     } else if (!initialSelectedPlanId && orderedPlans.length > 0 && !selectedPlanId) {
-      // If no initial plan is selected, default to coached plan or first non-expired plan
-      const coachedPlan = orderedPlans.find(plan => plan.isCoached && !isPlanExpired(plan));
-      const firstNonExpiredPlan = orderedPlans.find(plan => !isPlanExpired(plan));
-      const defaultPlan = coachedPlan || firstNonExpiredPlan || orderedPlans[0];
+      const isActive = (plan: CompletePlan) => !isPlanExpired(plan) && !isPlanArchived(plan);
+      const coachedPlan = orderedPlans.find(plan => plan.isCoached && isActive(plan));
+      const firstActivePlan = orderedPlans.find(isActive);
+      const defaultPlan = coachedPlan || firstActivePlan || orderedPlans[0];
       setSelectedPlanId(defaultPlan.id!);
     }
   }, [orderedPlans, initialSelectedPlanId, selectedPlanId]);

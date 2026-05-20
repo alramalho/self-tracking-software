@@ -7,16 +7,23 @@ import {
   User,
 } from "@tsw/prisma";
 import {
+  addDays,
   differenceInCalendarDays,
-  differenceInHours,
+  endOfDay,
+  endOfWeek,
   format,
+  isSameDay,
   startOfDay,
+  startOfWeek,
   subDays,
 } from "date-fns";
 import dedent from "dedent";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { coachAgentService } from "./coachAgentService";
+import { coachContextBriefService } from "./coachContextBriefService";
+import { getCoachPersonalityConfig } from "./coachPersonalityService";
+import { aiService } from "./aiService";
 import { notificationService } from "./notificationService";
 
 type CoachPlan = Plan & { activities: Activity[]; sessions: PlanSession[] };
@@ -47,8 +54,39 @@ interface RunResult {
 }
 
 const AUTONOMOUS_PROMPT_TAG = "autonomous_coach";
-const GLOBAL_COOLDOWN_HOURS = 24;
 const AUTO_ACCEPT_HOURS = 48;
+
+type CoachInterventionType =
+  | "INACTIVITY_ARCHIVE_PROPOSAL"
+  | "INACTIVITY_PAUSE_PROPOSAL"
+  | "PLAN_ADJUSTMENT"
+  | "WEEK_PREP"
+  | "SESSION_PREP"
+  | "WEEK_RECAP"
+  | "INACTIVITY_CHECKIN"
+  | "CELEBRATION";
+
+type CoachInterventionCandidate = {
+  type: CoachInterventionType;
+  reason: string;
+  planIds: string[];
+  sessionIds?: string[];
+  targetDate?: string;
+  targetWeekStart?: string;
+  context: string;
+  usesAgent: boolean;
+};
+
+const INTERVENTION_PRIORITY: CoachInterventionType[] = [
+  "INACTIVITY_ARCHIVE_PROPOSAL",
+  "INACTIVITY_PAUSE_PROPOSAL",
+  "PLAN_ADJUSTMENT",
+  "WEEK_PREP",
+  "SESSION_PREP",
+  "WEEK_RECAP",
+  "INACTIVITY_CHECKIN",
+  "CELEBRATION",
+];
 
 export function isWithinPreferredCoachWindow(
   user: Pick<User, "timezone" | "preferredCoachingHour">,
@@ -278,78 +316,168 @@ export class CoachAssessmentService {
   ): Promise<UserAssessmentResult> {
     const { now, force, dry_run } = options;
 
-    // Guard: preferred window
-    if (!force && !isWithinPreferredCoachWindow(user, now)) {
-      return { userId: user.id, username: user.username, action: "skipped", reason: "Outside preferred window" };
-    }
-
-    // Guard: global cooldown
-    const hoursSinceLast = await this.hoursSinceLastAutonomous(user.id, now);
-    if (!force && hoursSinceLast !== null && hoursSinceLast < GLOBAL_COOLDOWN_HOURS) {
-      return { userId: user.id, username: user.username, action: "skipped", reason: `Global cooldown (${Math.round(hoursSinceLast)}h < ${GLOBAL_COOLDOWN_HOURS}h)` };
-    }
-
-    // Guard: pending proposal
     const recentMessages = await this.getRecentCoachMessages(user.id);
-    if (!force && hasPendingProposal(recentMessages)) {
-      return { userId: user.id, username: user.username, action: "skipped", reason: "Pending proposal exists" };
-    }
+    const pendingProposalExists = hasPendingProposal(recentMessages);
+    const candidates = await this.buildInterventionCandidates(user, now, {
+      force,
+      pendingProposalExists,
+    });
+    const candidate = await this.selectInterventionCandidate(user, candidates);
 
-    // Build context snapshot for the coach agent
-    const contextSummary = await this.buildContextSummary(user, now);
+    if (candidate) {
+      const brief = await coachContextBriefService.buildCoachContextBrief({
+        user,
+        plans: user.plans,
+        now,
+      });
+      const selectedInsight = coachContextBriefService.pickInsightForCandidate({
+        candidate,
+        brief,
+      });
+      candidate.context += coachContextBriefService.formatSelectedInsight(selectedInsight);
+    }
 
     if (dry_run) {
-      return { userId: user.id, username: user.username, action: "skipped", reason: `Dry run. Context: ${contextSummary.substring(0, 200)}` };
+      return {
+        userId: user.id,
+        username: user.username,
+        action: "skipped",
+        reason: candidate
+          ? `Dry run. Would send ${candidate.type}: ${candidate.reason}`
+          : "Dry run. No eligible intervention",
+      };
     }
 
-    // Hand off to the coach agent — it decides what to do
+    if (!candidate) {
+      return {
+        userId: user.id,
+        username: user.username,
+        action: "skipped",
+        reason: "No eligible intervention",
+      };
+    }
+
     const reminders = await prisma.reminder.findMany({
       where: { userId: user.id, status: "PENDING" },
       orderBy: { triggerAt: "asc" },
     });
 
-    const prompt = dedent`
-      You are doing your daily review of this user's plans. Look at the context below and decide whether to reach out.
+    if (candidate.usesAgent) {
+      const aiResponse = await coachAgentService.generateResponse({
+        user,
+        message: this.buildAgentInterventionPrompt(candidate),
+        conversationHistory: recentMessages
+          .slice(0, 8)
+          .reverse()
+          .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+        plans: user.plans,
+        reminders,
+      });
 
-      ${contextSummary}
+      if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
+        return {
+          userId: user.id,
+          username: user.username,
+          action: "agent_skipped",
+          reason: aiResponse.skipReason || "Agent decided no outreach needed",
+        };
+      }
 
-      Guidelines:
-      - If everything is on track, call skipOutreach. Silence is fine.
-      - If a plan has been inactive for 7-13 days, send a short warm check-in. No proposal.
-      - If a plan has been inactive for 14-29 days, propose pausing it with proposePlanModification (single pause operation). Be direct.
-      - If a plan has been inactive for 30+ days, propose archiving it with proposePlanModification (single archive operation).
-      - If 3+ sessions were missed this week, propose reducing the schedule to something realistic.
-      - If the user completed all sessions this week, send a short genuine congratulation. No proposal.
-      - On Mondays, if there was activity last week, do a brief weekly recap (use readActivities for 7 days).
-      - If you propose a change, mention the user has 48 hours to decline before it applies automatically.
-      - Keep messages to 2-3 sentences max. Be opinionated — you're an accountability coach, not a suggestion box.
-    `;
-
-    const aiResponse = await coachAgentService.generateResponse({
-      user,
-      message: prompt,
-      conversationHistory: recentMessages
-        .slice(0, 8)
-        .reverse()
-        .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
-      plans: user.plans,
-      reminders,
-    });
-
-    if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
+      const sent = await this.dispatchCoachDrafts(user, candidate, aiResponse.draftMessages);
       return {
         userId: user.id,
         username: user.username,
-        action: "agent_skipped",
-        reason: aiResponse.skipReason || "Agent decided no outreach needed",
+        action: "sent",
+        reason: `Sent ${candidate.type}`,
+        sentMessageIds: sent.messageIds,
+        notificationId: sent.notificationId,
       };
     }
 
-    // Dispatch messages + notification
-    const { chat } = await this.ensureCoachChat(user);
-    const sentMessageIds: string[] = [];
+    const generated = await aiService.generateCoachAssessmentInterventionMessage({
+      user,
+      interventionType: candidate.type as
+        | "WEEK_PREP"
+        | "SESSION_PREP"
+        | "WEEK_RECAP"
+        | "INACTIVITY_CHECKIN"
+        | "CELEBRATION",
+      reason: candidate.reason,
+      context: candidate.context,
+    });
 
-    for (const draft of aiResponse.draftMessages) {
+    const sent = await this.dispatchCoachDrafts(user, candidate, [
+      { content: generated.message },
+    ], generated.title);
+
+    return {
+      userId: user.id,
+      username: user.username,
+      action: "sent",
+      reason: `Sent ${candidate.type}`,
+      sentMessageIds: sent.messageIds,
+      notificationId: sent.notificationId,
+    };
+  }
+
+  private buildAgentInterventionPrompt(candidate: CoachInterventionCandidate): string {
+    const action =
+      candidate.type === "INACTIVITY_ARCHIVE_PROPOSAL"
+        ? "propose archiving the inactive plan with a single archive operation"
+        : candidate.type === "INACTIVITY_PAUSE_PROPOSAL"
+          ? "propose pausing the inactive plan with a single pause operation"
+          : "propose a realistic plan adjustment for the user's missed or at-risk sessions";
+
+    return dedent`
+      You are doing proactive coach assessment. The system selected this intervention:
+      ${candidate.type}
+
+      Reason:
+      ${candidate.reason}
+
+      Context:
+      ${candidate.context}
+
+      Required action:
+      - ${action}.
+      - Use the available plan modification tool when proposing changes.
+      - Mention that the user has 48 hours to decline before it applies automatically.
+      - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
+      - Keep messages to 2-3 sentences max.
+    `;
+  }
+
+  private async dispatchCoachDrafts(
+    user: User,
+    candidate: CoachInterventionCandidate,
+    drafts: Array<{
+      content: string;
+      planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
+      planProposals?: Array<{
+        planId: string;
+        planGoal: string;
+        planEmoji: string | null;
+        description: string;
+        operations: unknown[];
+        status: null;
+      }>;
+      activityLogProposals?: Array<{
+        activityId: string;
+        activityName: string;
+        activityEmoji: string;
+        activityMeasure: string;
+        quantity: number;
+        date: string;
+        status: null;
+      }>;
+      toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
+    }>,
+    notificationTitle?: string
+  ): Promise<{ messageIds: string[]; notificationId?: string }> {
+    const { chat } = await this.ensureCoachChat(user);
+    const messageIds: string[] = [];
+
+    for (const draft of drafts) {
       const message = await prisma.message.create({
         data: {
           chatId: chat.id,
@@ -358,6 +486,11 @@ export class CoachAssessmentService {
           metadata: JSON.parse(
             JSON.stringify({
               source: AUTONOMOUS_PROMPT_TAG,
+              interventionType: candidate.type,
+              targetDate: candidate.targetDate,
+              targetWeekStart: candidate.targetWeekStart,
+              planIds: candidate.planIds,
+              sessionIds: candidate.sessionIds || [],
               planReplacements: draft.planReplacements || [],
               planProposals: draft.planProposals || [],
               activityLogProposals: draft.activityLogProposals || [],
@@ -366,7 +499,7 @@ export class CoachAssessmentService {
           ),
         },
       });
-      sentMessageIds.push(message.id);
+      messageIds.push(message.id);
     }
 
     await prisma.chat.update({
@@ -374,33 +507,329 @@ export class CoachAssessmentService {
       data: { updatedAt: new Date() },
     });
 
-    const hasProposal = aiResponse.draftMessages.some(
+    const hasProposal = drafts.some(
       (d) => (d.planProposals && d.planProposals.length > 0) || (d.activityLogProposals && d.activityLogProposals.length > 0)
     );
 
     const notification = await notificationService.createAndProcessNotification(
       {
         userId: user.id,
-        title: hasProposal ? "Plan adjustment" : "Coach check-in",
-        message: aiResponse.draftMessages[0]?.content?.substring(0, 200) || "",
+        title: notificationTitle || this.getNotificationTitle(candidate.type, hasProposal),
+        message: drafts[0]?.content?.substring(0, 200) || "",
         type: "COACH",
         relatedId: chat.id,
         promptTag: AUTONOMOUS_PROMPT_TAG,
         relatedData: {
-          type: "AUTONOMOUS_COACH",
-          messageIds: sentMessageIds,
+          type: "COACH_ASSESSMENT",
+          interventionType: candidate.type,
+          targetDate: candidate.targetDate,
+          targetWeekStart: candidate.targetWeekStart,
+          planIds: candidate.planIds,
+          sessionIds: candidate.sessionIds || [],
+          messageIds,
         },
       },
       true
     );
 
+    return { messageIds, notificationId: notification?.id };
+  }
+
+  private getNotificationTitle(type: CoachInterventionType, hasProposal: boolean): string {
+    if (hasProposal) return "Plan adjustment";
+    const titles: Record<CoachInterventionType, string> = {
+      INACTIVITY_ARCHIVE_PROPOSAL: "Plan archive suggestion",
+      INACTIVITY_PAUSE_PROPOSAL: "Plan pause suggestion",
+      PLAN_ADJUSTMENT: "Plan adjustment",
+      WEEK_PREP: "Week prep",
+      SESSION_PREP: "Tomorrow's session",
+      WEEK_RECAP: "Weekly recap",
+      INACTIVITY_CHECKIN: "Coach check-in",
+      CELEBRATION: "Nice work",
+    };
+    return titles[type];
+  }
+
+  private async buildInterventionCandidates(
+    user: CoachUser,
+    now: Date,
+    options: { force: boolean; pendingProposalExists: boolean }
+  ): Promise<CoachInterventionCandidate[]> {
+    const timezone = user.timezone || "UTC";
+    const nowInTz = new TZDate(now, timezone);
+    const localHour = nowInTz.getHours();
+    const localDay = nowInTz.getDay();
+    const currentWeekStart = startOfWeek(nowInTz, { weekStartsOn: 1 });
+    const currentWeekEnd = endOfWeek(nowInTz, { weekStartsOn: 1 });
+    const currentWeekStartKey = format(currentWeekStart, "yyyy-MM-dd");
+    const candidates: CoachInterventionCandidate[] = [];
+
+    const planSummaries = await Promise.all(
+      user.plans.map((plan) => this.buildPlanAssessmentSummary(user, plan, now))
+    );
+
+    for (const summary of planSummaries) {
+      const baseContext = summary.context;
+
+      if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 30) {
+        candidates.push({
+          type: "INACTIVITY_ARCHIVE_PROPOSAL",
+          reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
+          planIds: [summary.plan.id],
+          targetWeekStart: currentWeekStartKey,
+          context: baseContext,
+          usesAgent: true,
+        });
+      } else if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 14) {
+        candidates.push({
+          type: "INACTIVITY_PAUSE_PROPOSAL",
+          reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
+          planIds: [summary.plan.id],
+          targetWeekStart: currentWeekStartKey,
+          context: baseContext,
+          usesAgent: true,
+        });
+      }
+
+      if (
+        !options.pendingProposalExists &&
+        (summary.missedSessionsThisWeek >= 3 ||
+          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || ""))
+      ) {
+        candidates.push({
+          type: "PLAN_ADJUSTMENT",
+          reason: `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`,
+          planIds: [summary.plan.id],
+          targetWeekStart: currentWeekStartKey,
+          context: baseContext,
+          usesAgent: true,
+        });
+      }
+
+      if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 7 && summary.daysSinceLastActivity < 14) {
+        candidates.push({
+          type: "INACTIVITY_CHECKIN",
+          reason: `${summary.plan.goal} has had no activity for ${summary.daysSinceLastActivity} days.`,
+          planIds: [summary.plan.id],
+          targetWeekStart: currentWeekStartKey,
+          context: baseContext,
+          usesAgent: false,
+        });
+      }
+
+      if (summary.totalSessionsThisWeek > 0 && summary.missedSessionsThisWeek === 0 && summary.completedSessionsThisWeek === summary.totalSessionsThisWeek) {
+        candidates.push({
+          type: "CELEBRATION",
+          reason: `${summary.plan.goal} has all planned sessions completed this week.`,
+          planIds: [summary.plan.id],
+          targetWeekStart: currentWeekStartKey,
+          context: baseContext,
+          usesAgent: false,
+        });
+      }
+    }
+
+    if (options.force || this.isWeekPrepTime(user, now)) {
+      const targetWeekStart = startOfWeek(localDay === 0 ? addDays(nowInTz, 1) : nowInTz, { weekStartsOn: 1 });
+      const targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
+      const weekSessions = this.getSessionsBetween(user.plans, targetWeekStart, targetWeekEnd);
+      if (weekSessions.length > 0) {
+        candidates.push({
+          type: "WEEK_PREP",
+          reason: `User has ${weekSessions.length} coached session${weekSessions.length === 1 ? "" : "s"} planned for the coming week.`,
+          planIds: Array.from(new Set(weekSessions.map((s) => s.plan.id))),
+          sessionIds: weekSessions.map((s) => s.session.id),
+          targetWeekStart: format(targetWeekStart, "yyyy-MM-dd"),
+          context: this.buildSessionContext("Upcoming week", weekSessions),
+          usesAgent: false,
+        });
+      }
+    }
+
+    if (options.force || localHour === 20) {
+      const tomorrow = addDays(nowInTz, 1);
+      const tomorrowSessions = this.getSessionsBetween(user.plans, startOfDay(tomorrow), endOfDay(tomorrow));
+      if (tomorrowSessions.length > 0) {
+        candidates.push({
+          type: "SESSION_PREP",
+          reason: `User has ${tomorrowSessions.length} coached session${tomorrowSessions.length === 1 ? "" : "s"} planned tomorrow.`,
+          planIds: Array.from(new Set(tomorrowSessions.map((s) => s.plan.id))),
+          sessionIds: tomorrowSessions.map((s) => s.session.id),
+          targetDate: format(tomorrow, "yyyy-MM-dd"),
+          context: this.buildSessionContext("Tomorrow", tomorrowSessions),
+          usesAgent: false,
+        });
+      }
+    }
+
+    if ((options.force || localDay === 1) && isWithinPreferredCoachWindow(user, now)) {
+      const previousWeekStart = startOfWeek(subDays(nowInTz, 7), { weekStartsOn: 1 });
+      const previousWeekEnd = endOfWeek(previousWeekStart, { weekStartsOn: 1 });
+      const activePlanIds = user.plans.map((p) => p.id);
+      const activityIds = user.plans.flatMap((p) => p.activities.map((a) => a.id));
+      const entries = activityIds.length > 0
+        ? await prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: activityIds },
+              datetime: { gte: previousWeekStart, lte: previousWeekEnd },
+            },
+            include: { activity: true },
+          })
+        : [];
+      if (entries.length > 0) {
+        candidates.push({
+          type: "WEEK_RECAP",
+          reason: `User logged ${entries.length} activit${entries.length === 1 ? "y" : "ies"} last week.`,
+          planIds: activePlanIds,
+          targetWeekStart: format(previousWeekStart, "yyyy-MM-dd"),
+          context: [
+            `Previous week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")}`,
+            `Logged activities: ${entries
+              .map((e) => e.activity ? `${e.activity.emoji} ${e.activity.title}` : null)
+              .filter(Boolean)
+              .join(", ")}`,
+          ].join("\n"),
+          usesAgent: false,
+        });
+      }
+    }
+
+    return candidates;
+  }
+
+  private async selectInterventionCandidate(
+    user: User,
+    candidates: CoachInterventionCandidate[]
+  ): Promise<CoachInterventionCandidate | null> {
+    for (const type of INTERVENTION_PRIORITY) {
+      const matching = candidates.filter((candidate) => candidate.type === type);
+      for (const candidate of matching) {
+        const sent = await this.hasSentIntervention(user.id, candidate);
+        if (!sent) return candidate;
+      }
+    }
+    return null;
+  }
+
+  private async hasSentIntervention(userId: string, candidate: CoachInterventionCandidate): Promise<boolean> {
+    const where: any = {
+      userId,
+      type: "COACH",
+      promptTag: AUTONOMOUS_PROMPT_TAG,
+      relatedData: {
+        path: ["interventionType"],
+        equals: candidate.type,
+      },
+    };
+
+    const existing = await prisma.notification.findFirst({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!existing) return false;
+    const relatedData = existing.relatedData as any;
+    if (candidate.targetDate) {
+      return relatedData?.targetDate === candidate.targetDate;
+    }
+    if (candidate.targetWeekStart) {
+      return relatedData?.targetWeekStart === candidate.targetWeekStart;
+    }
+    return false;
+  }
+
+  private isWeekPrepTime(user: User, now: Date): boolean {
+    const timezone = user.timezone || "UTC";
+    const nowInTz = new TZDate(now, timezone);
+    const localDay = nowInTz.getDay();
+    const localHour = nowInTz.getHours();
+    const preferredStartHour = user.preferredCoachingHour ?? 6;
+    return (localDay === 0 && localHour === 20) || (localDay === 1 && localHour === preferredStartHour);
+  }
+
+  private getSessionsBetween(
+    plans: CoachPlan[],
+    start: Date,
+    end: Date
+  ): Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }> {
+    return plans.flatMap((plan) =>
+      plan.sessions
+        .filter((session) => session.date >= start && session.date <= end)
+        .map((session) => ({
+          plan,
+          session,
+          activity: plan.activities.find((activity) => activity.id === session.activityId)!,
+        }))
+        .filter((item) => item.activity)
+    );
+  }
+
+  private buildSessionContext(
+    label: string,
+    sessions: Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }>
+  ): string {
+    const lines = [`${label} sessions:`];
+    for (const item of sessions) {
+      lines.push(
+        `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`
+      );
+    }
+    return lines.join("\n");
+  }
+
+  private async buildPlanAssessmentSummary(user: User, plan: CoachPlan, now: Date) {
+    const sevenDaysAgo = subDays(now, 7);
+    const thirtyDaysAgo = subDays(now, 30);
+    const ninetyDaysAgo = subDays(now, 90);
+    const activityIds = plan.activities.map((a) => a.id);
+    const entries = activityIds.length > 0
+      ? await prisma.activityEntry.findMany({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+            activityId: { in: activityIds },
+            datetime: { gte: ninetyDaysAgo, lte: now },
+          },
+          orderBy: { datetime: "desc" },
+        })
+      : [];
+
+    const lastEntry = entries[0];
+    const daysSinceLastActivity = lastEntry
+      ? differenceInCalendarDays(now, lastEntry.datetime)
+      : null;
+    const sessionsThisWeek = plan.sessions.filter(
+      (s) => s.date >= startOfDay(sevenDaysAgo) && s.date < startOfDay(now)
+    );
+    const completedSessionsThisWeek = sessionsThisWeek.filter((session) =>
+      entries.some(
+        (entry) =>
+          entry.activityId === session.activityId &&
+          isSameDay(entry.datetime, session.date)
+      )
+    ).length;
+    const missedSessionsThisWeek = sessionsThisWeek.length - completedSessionsThisWeek;
+    const entriesLast7Days = entries.filter((e) => e.datetime >= sevenDaysAgo).length;
+    const entriesLast30Days = entries.filter((e) => e.datetime >= thirtyDaysAgo).length;
+
+    const context = [
+      `Plan: ${plan.emoji || ""} ${plan.goal}`,
+      `Current week state: ${plan.currentWeekState || "unknown"}`,
+      `Last activity: ${daysSinceLastActivity !== null ? `${daysSinceLastActivity} days ago` : "never"}`,
+      `Entries last 7 days: ${entriesLast7Days}`,
+      `Entries last 30 days: ${entriesLast30Days}`,
+      `Recent sessions: ${completedSessionsThisWeek}/${sessionsThisWeek.length} completed, ${missedSessionsThisWeek} missed`,
+    ].join("\n");
+
     return {
-      userId: user.id,
-      username: user.username,
-      action: "sent",
-      reason: hasProposal ? "Sent with proposal" : "Sent check-in",
-      sentMessageIds,
-      notificationId: notification?.id,
+      plan,
+      daysSinceLastActivity,
+      totalSessionsThisWeek: sessionsThisWeek.length,
+      completedSessionsThisWeek,
+      missedSessionsThisWeek,
+      context,
     };
   }
 
@@ -460,15 +889,6 @@ export class CoachAssessmentService {
     return lines.join("\n");
   }
 
-  private async hoursSinceLastAutonomous(userId: string, now: Date): Promise<number | null> {
-    const notification = await prisma.notification.findFirst({
-      where: { userId, type: "COACH", promptTag: AUTONOMOUS_PROMPT_TAG },
-      orderBy: { createdAt: "desc" },
-    });
-    if (!notification) return null;
-    return differenceInHours(now, notification.createdAt);
-  }
-
   private async getRecentCoachMessages(userId: string): Promise<Message[]> {
     const chats = await prisma.chat.findMany({
       where: { userId },
@@ -485,10 +905,14 @@ export class CoachAssessmentService {
   private async ensureCoachChat(user: User) {
     let coach = await prisma.coach.findFirst({ where: { ownerId: user.id } });
     if (!coach) {
+      const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
       coach = await prisma.coach.create({
         data: {
           ownerId: user.id,
-          details: { name: "Coach Oli", bio: "Your personal AI coach helping you achieve your goals" },
+          details: {
+            name: coachPersonality.displayName,
+            bio: `Your personal AI coach helping you achieve your goals as ${coachPersonality.title}.`,
+          },
         },
       });
     }

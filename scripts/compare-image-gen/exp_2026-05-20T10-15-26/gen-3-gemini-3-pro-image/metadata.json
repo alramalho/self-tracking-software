@@ -1,0 +1,13 @@
+{
+  "model": "google/gemini-3-pro-image",
+  "label": "gemini-3-pro-image",
+  "testIndex": 3,
+  "plan": "Get stronger at the gym",
+  "activity": "Strength training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.",
+  "prompt": "Generate an educational illustration for Strength training with focus on \"This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.\"",
+  "durationMs": 28317,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:16:19.564Z"
+}

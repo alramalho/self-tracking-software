@@ -203,7 +203,7 @@ class PerplexityAiService {
 
     try {
       const synthesis = await generateText({
-        model: this.openrouter.chat("openai/gpt-4.1-mini"),
+        model: this.openrouter.chat("openai/gpt-5.4-mini"),
         system: dedent`
           You are a coach synthesizing research findings into actionable guidelines.
           Extract the most relevant and practical information for the user's specific situation.

@@ -15,6 +15,22 @@ import dedent from "dedent";
 
 const router = Router();
 
+router.post(
+  "/suggest-goal-reasons",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { goal } = req.body;
+      if (!goal) return res.status(400).json({ error: "goal is required" });
+      const result = await aiService.suggestGoalReasons(goal);
+      res.json(result);
+    } catch (error) {
+      logger.error("Error suggesting goal reasons:", error);
+      res.status(500).json({ error: "Failed to suggest reasons" });
+    }
+  }
+);
+
 // Check plan goal and validate completeness
 router.post(
   "/check-plan-goal",
@@ -148,7 +164,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { plan_goal, plan_activities, plan_progress, wants_coaching, times_per_week, coach_id } = req.body;
+      const { plan_goal, plan_goal_reason, plan_activities, plan_progress, wants_coaching, times_per_week, coach_id } = req.body;
 
       // For coached mode, activities are optional (the pipeline will generate them)
       if (!plan_goal || !plan_progress) {
@@ -191,15 +207,14 @@ router.post(
         researchFindings: researchResult.guidelines,
         estimatedWeeks: researchResult.estimatedWeeks,
         coachId: coach_id || undefined,
-        isCoached: wants_coaching && !!coach_id,
+        isCoached: !!wants_coaching,
       });
 
       logger.info("Plan generated:", plan.id);
 
-      // Respond immediately — don't wait for images
       res.json({
         message: "Your plan is ready",
-        plans: [plan],
+        plans: [{ ...plan, goalReason: plan_goal_reason || null }],
         activities: plan.activities,
       });
 

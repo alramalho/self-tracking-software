@@ -57,6 +57,7 @@ model User {
 
   // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
   preferredCoachingHour Int? @default(6) // Default to 6-8am
+  coachPersonality CoachPersonality @default(CHAMPION)
   activityRemindersEnabled Boolean @default(false)
 
   // Stripe settings
@@ -410,6 +411,7 @@ model Plan {
   planGroupId                String?
   coachId                    String?
   goal                       String
+  goalReason                 String?
   embedding                  Unsupported("vector(1536)")?
   emoji                      String?
   finishingDate              DateTime?                    @db.Date
@@ -946,6 +948,13 @@ enum ChatType {
 enum CoachType {
   AI
   HUMAN
+
+  @@schema("public")
+}
+
+enum CoachPersonality {
+  CHAMPION
+  STRATEGIST
 
   @@schema("public")
 }

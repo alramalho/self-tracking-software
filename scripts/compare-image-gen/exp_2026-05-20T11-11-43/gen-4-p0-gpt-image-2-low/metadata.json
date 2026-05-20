@@ -1,0 +1,14 @@
+{
+  "model": "openai/gpt-image-2",
+  "label": "gpt-image-2-low",
+  "testIndex": 4,
+  "promptIndex": 0,
+  "plan": "Get stronger at the gym",
+  "activity": "Core exercises",
+  "measure": "minutes",
+  "descriptiveGuide": "A 15-minute core circuit: 30-second plank, 15 dead bugs per side, and 15 bird-dogs per side. Repeat 3 rounds with 30 seconds rest between exercises. Keep your lower back pressed into the floor during dead bugs.",
+  "imagePrompt": "Forearm plank form illustration, side view. Show straight line from head to heels, elbows under shoulders, core engaged, glutes tight. Include subtle highlight on abdominal area and arrows indicating neutral spine alignment. Minimal background, annotated form cues, no text banners.",
+  "durationMs": 27568,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T11:14:17.654Z"
+}

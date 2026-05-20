@@ -14,6 +14,7 @@ import { getCurrentUser } from "../utils/requestContext";
 import Perplexity from "@perplexity-ai/perplexity_ai";
 import dedent from "dedent";
 import { TelegramService } from "./telegramService";
+import { getCoachPersonalityConfig } from "./coachPersonalityService";
 
 interface CoachAgentContext {
   user: User;
@@ -70,6 +71,7 @@ export class CoachAgentService {
   createAgent(context: CoachAgentContext) {
     const { user, plans, reminders, memoriesContext } = context;
     const self = this;
+    const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
 
     // Build plans context for the system prompt
     const plansContext = plans
@@ -96,6 +98,7 @@ export class CoachAgentService {
         const isTimesPerWeek = plan.outlineType === "TIMES_PER_WEEK";
         return dedent`
           Plan: ${plan.emoji || ""} ${plan.goal} [planId: ${plan.id}]
+          ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
@@ -123,7 +126,9 @@ export class CoachAgentService {
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
       instructions: dedent`
-        You are a knowledgeable fitness and habits coach that helps users achieve their fitness and habit goals through evidence-based coaching and plan adjustments.
+        You are ${coachPersonality.displayName}, ${coachPersonality.title}, a knowledgeable fitness and habits coach that helps users achieve their fitness and habit goals through evidence-based coaching and plan adjustments.
+
+        ${coachPersonality.systemPrompt}
 
         CONTEXT
         User: ${user.name || user.username}
@@ -222,11 +227,10 @@ export class CoachAgentService {
             - Add new sessions (provide activityId, date, quantity, descriptiveGuide)
             - Update existing sessions (provide sessionId and fields to update)
             - Remove sessions (provide sessionId)
-            - Pause a plan the user has gone quiet on (provide optional reason)
             - Archive a dormant plan (no extra fields)
 
             Use the planId, activityId, and sessionId values from the plan context above.
-            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess until you're ready", "Reduce gym to 2x/week").
+            IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
             IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose sessions a partial week update (e.g for just from Monday-Wednesday) — always cover the full week schedule. Discuss the full week with the user before proposing.
           `,
           inputSchema: z.object({
@@ -272,10 +276,6 @@ export class CoachAgentService {
                   sessionId: z.string().describe("The ID of the session to remove"),
                 }),
                 z.object({
-                  type: z.literal("pause"),
-                  reason: z.string().optional().describe("Why the plan is being paused"),
-                }),
-                z.object({
                   type: z.literal("archive"),
                 }),
               ])
@@ -289,13 +289,13 @@ export class CoachAgentService {
               };
             }
 
-            const hasStandaloneOp = operations.some(
-              (op) => op.type === "archive" || op.type === "pause"
-            );
-            if (hasStandaloneOp && operations.length > 1) {
+            if (
+              operations.some((op) => op.type === "archive") &&
+              operations.length > 1
+            ) {
               return {
                 success: false,
-                error: "Archive and pause must be proposed as standalone operations",
+                error: "Archive must be proposed as a standalone operation",
               };
             }
 
@@ -647,21 +647,6 @@ export class CoachAgentService {
             }
           },
         }),
-
-        skipOutreach: tool({
-          description: dedent`
-            Explicitly decide NOT to reach out to the user right now.
-            Use this when reviewing a user's plan status and concluding that no message is needed — everything is on track, or it's too early to intervene.
-            You MUST call either draftMessages or skipOutreach, never both.
-          `,
-          inputSchema: z.object({
-            reason: z.string().describe("Why no outreach is needed right now"),
-          }),
-          execute: async ({ reason }) => {
-            logger.info(`Coach skipped outreach: ${reason}`);
-            return { skipped: true, reason };
-          },
-        }),
       },
     });
 
@@ -809,22 +794,14 @@ export class CoachAgentService {
         }
       }
 
-      // Check if agent chose to skip outreach
-      const skipStep = allToolCalls.find((tc) => tc.tool === "skipOutreach");
-      if (skipStep) {
-        return { draftMessages: [], skipped: true, skipReason: (skipStep.result as any)?.reason };
-      }
-
       // Extract draft messages from the draftMessages tool call
       const draftStep = result.steps.flatMap((s) => s.toolCalls || []).find((tc) => tc.toolName === "draftMessages");
       const rawDrafts: Array<{ content: string }> = draftStep
         ? (draftStep as any).input.messages
         : [{ content: result.text }]; // Fallback if tool wasn't called
 
-      // Filter internal tools out of visible tool calls
-      const visibleToolCalls = allToolCalls.filter(
-        (tc) => tc.tool !== "draftMessages" && tc.tool !== "skipOutreach"
-      );
+      // Filter draftMessages out of visible tool calls
+      const visibleToolCalls = allToolCalls.filter((tc) => tc.tool !== "draftMessages");
 
       // Extract plan proposals from tool calls
       const planProposals = visibleToolCalls

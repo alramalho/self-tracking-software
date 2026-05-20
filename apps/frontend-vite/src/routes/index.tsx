@@ -7,13 +7,12 @@ import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import { useAchievements } from "@/contexts/achievements";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import ClientOverviewPopover from "@/components/ClientOverviewPopover";
-import { CoachHomeSection } from "@/components/CoachHomeSection";
+import { HomeCardGrid } from "@/components/home-cards/HomeCardGrid";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import Notifications from "@/components/Notifications";
 import { PendingPlanBanner } from "@/components/PendingPlanBanner";
-import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,7 +29,6 @@ import {
   Search,
   Send,
   Sparkles,
-  Target,
   Users,
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
@@ -47,17 +45,14 @@ import { useSession } from "@/contexts/auth";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
-import { usePlans } from "@/contexts/plans";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { isAfter, isFuture, isToday } from "date-fns";
+import { isFuture } from "date-fns";
 import { useAI } from "@/contexts/ai";
-import { type MetricEntry } from "@tsw/prisma";
-import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 import { useQuery } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
 
@@ -121,23 +116,13 @@ function HomePage() {
   const lastCoachNotification = useMemo(() => {
     return notifications?.filter((n) => n.type === "COACH").sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   }, [notifications]);
-  const { plans } = usePlans();
-  const activePlans = plans?.filter(
-    (plan) =>
-      plan.deletedAt === null &&
-      (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
-  );
-  const { metrics } = useMetrics();
+  const { metrics, entries: metricEntries } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
   const { activityEntries } = useActivities();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isMetricsPopoverOpen, setIsMetricsPopoverOpen] = useState(false);
-  const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
-    "plans-section-collapsed",
-    false
-  );
   const [isClientsCollapsed, setIsClientsCollapsed] = useLocalStorage<boolean>(
     "clients-section-collapsed",
     false
@@ -166,17 +151,6 @@ function HomePage() {
     console.log({VITE_SUPABASE_API_URL: import.meta.env.VITE_SUPABASE_API_URL})
   }, []);
 
-  // Calculate unlogged metrics count
-  const { entries: metricEntries } = useMetrics();
-  const unloggedMetricsCount = metrics?.filter((metric) => {
-    const todaysEntry = metricEntries?.find(
-      (entry: MetricEntry) =>
-        entry.metricId === metric.id && isToday(entry.createdAt)
-    );
-    const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
-    const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
-    return !isLoggedToday && !isSkippedToday;
-  }).length || 0;
   const unopenedNotifications =
     notifications?.filter((n) => {
       // Exclude engagement notifications
@@ -294,10 +268,11 @@ function HomePage() {
             </div>
           </div>
         </div>
-        <div className="space-y-3">
-          <Skeleton className="h-20 w-full rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-lg" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
         </div>
       </div>
     );
@@ -325,31 +300,11 @@ function HomePage() {
           </div>
         </div>
 
-        {/* Plans Section Skeleton */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Skeleton className="w-4 h-4" />
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="w-4 h-4 rounded-full" />
-              </div>
-            </div>
-            <Skeleton className="h-4 w-20" />
-          </div>
-
-          {/* Plan Progress Cards Skeleton */}
-          <div className="space-y-2">
-            <Skeleton className="h-16 w-full rounded-lg" />
-            <Skeleton className="h-16 w-full rounded-lg" />
-          </div>
-        </div>
-
-        {/* Timeline Skeleton */}
-        <div className="space-y-3">
-          <Skeleton className="h-20 w-full rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-lg" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
+          <Skeleton className="aspect-square w-full rounded-3xl" />
         </div>
       </div>
     );
@@ -485,11 +440,9 @@ function HomePage() {
             <PendingPlanBanner />
           </AnimatedSection>
 
-          {!isUserOnFreePlan && isUserAIWhitelisted && (
-            <AnimatedSection delay={0.075}>
-              <CoachHomeSection />
-            </AnimatedSection>
-          )}
+          <AnimatedSection delay={0.075}>
+            <HomeCardGrid onOpenMetricsLog={() => setIsMetricsPopoverOpen(true)} />
+          </AnimatedSection>
 
           {/* My Clients Section - Only shown for coaches */}
           {currentUser?.coachProfile && coachClients && coachClients.length > 0 && (
@@ -571,72 +524,10 @@ function HomePage() {
             </AnimatedSection>
           )}
 
-          {activePlans && activePlans.length > 0 && (
-            <AnimatedSection delay={0.1}>
-              <div className="mb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {activePlans.length > 1 && (
-                      <button
-                        onClick={() => setIsPlansCollapsed((prev) => !prev)}
-                        className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
-                        aria-label={
-                          isPlansCollapsed
-                            ? "Expand streaks"
-                            : "Collapse streaks"
-                        }
-                      >
-                        {isPlansCollapsed ? (
-                          <ChevronRight
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                        ) : (
-                          <ChevronDown
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                        )}
-                      </button>
-                    )}
-                    <Target size={18} className="text-muted-foreground" />
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Your Plans
-                    </h3>
-                    <span className="text-sm text-muted-foreground">
-                      ({activePlans.length})
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => navigate({ to: "/plans" })}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                  >
-                    View Details
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-                <div className="mt-2">
-                  <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
-                </div>
-              </div>
-            </AnimatedSection>
-          )}
         </div>
       </PullToRefresh>
 
-      {metrics && metrics.length > 0 && !isUserOnFreePlan && (
-        <AnimatedSection delay={0.15}>
-          <Button
-            onClick={() => setIsMetricsPopoverOpen(true)}
-            className="w-full"
-            variant="outline"
-          >
-            Log metrics{unloggedMetricsCount > 0 ? ` (${unloggedMetricsCount} missing today)` : ''} {unloggedMetricsCount > 0 && <PulsatingCirclePill variant="yellow" size="md" className="ml-2" />}
-          </Button>
-        </AnimatedSection>
-      )}
-
-      <AnimatedSection delay={0.2}>
+      <AnimatedSection delay={0.15}>
         <div className="mb-6">
           <TimelineRenderer
             onOpenSearch={() => navigate({ to: "/search" })}

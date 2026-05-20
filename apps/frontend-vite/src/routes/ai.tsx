@@ -6,9 +6,10 @@ import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
+import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Send, Target, Loader2, Home, Plus, Menu, X, Pencil, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/ai")({
 
 function AICoachPage() {
   const navigate = useNavigate();
-  const { isDarkMode } = useTheme();
+  const { currentUser } = useCurrentUser();
   const themeColors = useThemeColors();
   const {
     chats,
@@ -48,9 +49,7 @@ function AICoachPage() {
   const [userMessageTimestamps, setUserMessageTimestamps] = useState<number[]>([]);
   const [showSatisfactionPopover, setShowSatisfactionPopover] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -280,9 +279,9 @@ function AICoachPage() {
                 >
                   <Menu size={20} />
                 </button>
-                <img src={coachIcon} alt="Coach Oli" className="w-10 h-10" />
+                <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
                 <div>
-                  <h1 className="font-semibold text-foreground">Coach Oli</h1>
+                  <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
                   <p className="text-xs text-muted-foreground">AI Coach</p>
                 </div>
               </div>
@@ -304,12 +303,12 @@ function AICoachPage() {
           {!currentChatId ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
               <img
-                src={coachIcon}
-                alt="Coach Oli"
+                src={aiCoach.avatar}
+                alt={aiCoach.label}
                 className="w-32 h-32 opacity-70"
               />
               <div className="space-y-2">
-                <h2 className="font-semibold text-2xl">Welcome to Coach Oli</h2>
+                <h2 className="font-semibold text-2xl">Welcome to {aiCoach.name}</h2>
                 <p className="text-muted-foreground max-w-md">
                   Start a conversation with your AI coach to get personalized
                   guidance on your plans and goals.
@@ -343,14 +342,14 @@ function AICoachPage() {
               ) : !messages || messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
                   <img
-                    src={coachIcon}
-                    alt="Coach Oli"
+                    src={aiCoach.avatar}
+                    alt={aiCoach.label}
                     className="w-24 h-24 opacity-50"
                   />
                   <div>
                     <h3 className="font-semibold text-lg">No messages yet</h3>
                     <p className="text-sm text-muted-foreground">
-                      Start a conversation with Coach Oli below!
+                      Start a conversation with {aiCoach.name} below!
                     </p>
                   </div>
                 </div>
@@ -474,7 +473,7 @@ function AICoachPage() {
               {isSendingMessage && (
                 <div className="flex gap-3">
                   <Avatar className="w-10 h-10 flex-shrink-0">
-                    <AvatarImage src={coachIcon} alt="Coach Oli" />
+                    <AvatarImage src={aiCoach.avatar} alt={aiCoach.label} />
                     <AvatarFallback>CO</AvatarFallback>
                   </Avatar>
                   <MessageBubble direction="left" className="bg-muted">
@@ -584,7 +583,7 @@ function AICoachPage() {
           <div className="space-y-2">
             <h2 className="text-xl font-semibold">Are you liking the AI?</h2>
             <p className="text-sm text-muted-foreground">
-              Your feedback helps us improve Coach Oli
+              Your feedback helps us improve {aiCoach.name}
             </p>
           </div>
           <div className="flex gap-3">

@@ -1,0 +1,13 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "label": "gemini-2.5-flash-image",
+  "testIndex": 0,
+  "plan": "Run a 10k race",
+  "activity": "Easy run",
+  "measure": "minutes",
+  "descriptiveGuide": "Focus on maintaining a conversational pace throughout this 25-minute easy run. Keep your breathing relaxed and your stride short — if you can't hold a conversation, slow down. This builds your aerobic base without stressing your joints.",
+  "prompt": "Generate an educational illustration for Easy run with focus on \"Focus on maintaining a conversational pace throughout this 25-minute easy run. Keep your breathing relaxed and your stride short — if you can't hold a conversation, slow down. This builds your aerobic base without stressing your joints.\"",
+  "durationMs": 7580,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:15:33.698Z"
+}

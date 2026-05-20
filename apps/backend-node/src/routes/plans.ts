@@ -68,6 +68,7 @@ const ActivitySchema = z.object({
 const PlanUpsertSchema = z.object({
   id: z.string().optional(), // Present for updates, absent for creates
   goal: z.string().min(1).optional(),
+  goalReason: z.string().nullable().optional(),
   emoji: z.string().optional(),
   finishingDate: z
     .string()
@@ -1384,6 +1385,7 @@ router.post(
               id: planData.id || undefined,
               userId: req.user!.id,
               goal: planData.goal!,
+              goalReason: planData.goalReason ?? null,
               emoji: planData.emoji,
               finishingDate: planData.finishingDate,
               notes: planData.notes,

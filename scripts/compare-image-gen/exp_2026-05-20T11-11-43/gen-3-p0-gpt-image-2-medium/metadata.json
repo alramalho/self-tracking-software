@@ -1,0 +1,14 @@
+{
+  "model": "openai/gpt-image-2",
+  "label": "gpt-image-2-medium",
+  "testIndex": 3,
+  "promptIndex": 0,
+  "plan": "Get stronger at the gym",
+  "activity": "Strength training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.",
+  "imagePrompt": "Step-by-step squat form illustration: side view of a person performing a barbell back squat showing start (standing), bottom (hips below parallel), and return to standing. Highlight neutral spine, knees tracking over toes, hips moving back, heels grounded. Use arrows to show bar path vertically over midfoot. Clean instructional style, minimal background, annotated form cues, no text banners.",
+  "durationMs": 67552,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T11:14:01.292Z"
+}

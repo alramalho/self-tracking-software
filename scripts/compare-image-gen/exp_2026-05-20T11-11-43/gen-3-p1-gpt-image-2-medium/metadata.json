@@ -1,0 +1,14 @@
+{
+  "model": "openai/gpt-image-2",
+  "label": "gpt-image-2-medium",
+  "testIndex": 3,
+  "promptIndex": 1,
+  "plan": "Get stronger at the gym",
+  "activity": "Strength training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 35-minute full-body session covers compound movements: 3 sets of squats, bench press, and bent-over rows. Start with a weight you can lift for 8-10 reps with good form. Rest 90 seconds between sets and focus on controlled movement.",
+  "imagePrompt": "Instructional illustration combining bench press and bent-over row form. For bench press: side view showing feet flat on floor, slight arch in lower back, bar lowering to mid-chest with elbows at about 45 degrees. For bent-over row: side view showing flat back, hips hinged, bar pulled toward lower ribs, knees slightly bent. Use arrows to show bar path and back alignment. Clean minimal background, annotated form cues, no text banners.",
+  "durationMs": 65079,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T11:14:23.164Z"
+}

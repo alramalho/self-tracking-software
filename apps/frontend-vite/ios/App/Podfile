@@ -15,6 +15,7 @@ def capacitor_pods
   pod 'CapacitorPushNotifications', :path => '../../../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications'
   pod 'CapawesomeCapacitorBadge', :path => '../../../../node_modules/.pnpm/@capawesome+capacitor-badge@7.0.1_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-badge'
   pod 'CapgoCapacitorSocialLogin', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-social-login@7.11.12_@capacitor+core@7.4.3/node_modules/@capgo/capacitor-social-login'
+  pod 'CapacitorGeolocation', :path => '../../../../node_modules/.pnpm/@capacitor+geolocation@7.1.8_@capacitor+core@7.4.3/node_modules/@capacitor/geolocation'
 end
 
 target 'App' do

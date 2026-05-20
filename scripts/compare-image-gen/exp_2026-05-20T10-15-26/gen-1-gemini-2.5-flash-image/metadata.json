@@ -1,0 +1,13 @@
+{
+  "model": "google/gemini-2.5-flash-image",
+  "label": "gemini-2.5-flash-image",
+  "testIndex": 1,
+  "plan": "Run a 10k race",
+  "activity": "Interval Training",
+  "measure": "minutes",
+  "descriptiveGuide": "This 20-minute interval session alternates between 1-minute faster efforts and 2-minute easy recovery jogs. Push during the fast intervals but not to a sprint — aim for a pace where you're breathing hard but in control. Walk if you need to recover.",
+  "prompt": "Generate an educational illustration for Interval Training with focus on \"This 20-minute interval session alternates between 1-minute faster efforts and 2-minute easy recovery jogs. Push during the fast intervals but not to a sprint — aim for a pace where you're breathing hard but in control. Walk if you need to recover.\"",
+  "durationMs": 8990,
+  "imageFile": "image.png",
+  "generatedAt": "2026-05-20T10:15:35.116Z"
+}

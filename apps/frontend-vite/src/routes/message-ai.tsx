@@ -7,7 +7,6 @@ import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/contexts/theme/useTheme";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, getMessages, type Message } from "@/contexts/messages";
@@ -28,6 +27,7 @@ import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
 
 // Helper to format relative dates for dividers
 function formatRelativeDate(date: Date): string {
@@ -203,7 +203,6 @@ export const Route = createFileRoute("/message-ai")({
 });
 
 function MessageAIPage() {
-  const { isDarkMode } = useTheme();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const api = useApiWithAuth();
@@ -287,9 +286,7 @@ function MessageAIPage() {
   const [loadedCoachChatIds, setLoadedCoachChatIds] = useState<string[]>([]);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
 
-  const coachIcon = isDarkMode
-    ? "/images/jarvis_logo_white_transparent.png"
-    : "/images/jarvis_logo_transparent.png";
+  const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   // Get all coach chats sorted by date (newest first)
   const coachChats = useMemo(() =>
@@ -708,9 +705,9 @@ function MessageAIPage() {
                 >
                   <ArrowLeft size={20} />
                 </Button>
-                <img src={coachIcon} alt="Coach Oli" className="w-10 h-10" />
+                <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
                 <div>
-                  <h1 className="font-semibold text-foreground">Coach Oli</h1>
+                  <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
                   <p className="text-xs text-muted-foreground">AI Coach</p>
                 </div>
               </div>
@@ -855,8 +852,8 @@ function MessageAIPage() {
                             {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => {
                               const plan = plans?.find(p => p.id === proposal.planId);
                               const resolvedOperations: ResolvedOperation[] = (proposal.operations || []).map((op: any) => {
-                                if (op.type === "archive" || op.type === "pause") {
-                                  return { type: op.type };
+                                if (op.type === "archive") {
+                                  return { type: "archive" };
                                 }
 
                                 const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
@@ -1047,7 +1044,7 @@ function MessageAIPage() {
         onClose={() => setShowClearDialog(false)}
         onConfirm={handleClearMemory}
         title="Clear coach memory?"
-        description="This will erase Coach Oli's memory of past interactions. Your chat history will be kept. This action cannot be undone."
+        description={`This will erase ${aiCoach.name}'s memory of past interactions. Your chat history will be kept. This action cannot be undone.`}
         confirmText="Clear memory"
         variant="destructive"
       />

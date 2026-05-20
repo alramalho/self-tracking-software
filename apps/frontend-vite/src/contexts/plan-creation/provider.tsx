@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { DEFAULT_COACH_PERSONALITY, type CoachPersonality } from "@/lib/coachPersonality";
 import type { Activity, PlanOutlineType, Visibility } from "@tsw/prisma";
 import type { PlanMilestone } from "@tsw/prisma/types";
 import { usePostHog } from "posthog-js/react";
@@ -24,11 +25,13 @@ const getDefaultState = (initialStepId?: string, steps?: PlanCreationStep[]): Pl
   currentStep: initialStepId || steps?.[0]?.id || "goal",
   completedSteps: [],
   goal: null,
+  goalReason: null,
   emoji: null,
   backgroundImageUrl: null,
   backgroundImageFile: null,
   isCoached: false,
   selectedCoachId: null,
+  coachPersonality: DEFAULT_COACH_PERSONALITY,
   selectedCoach: null,
   visibility: "PUBLIC" as Visibility,
   finishingDate: null,
@@ -59,11 +62,13 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     currentStep,
     completedSteps,
     goal,
+    goalReason,
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
     isCoached,
     selectedCoachId,
+    coachPersonality,
     selectedCoach,
     visibility,
     finishingDate,
@@ -223,6 +228,10 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     setState((prev) => ({ ...prev, goal }));
   }, [setState]);
 
+  const setGoalReason = useCallback((goalReason: string | null) => {
+    setState((prev) => ({ ...prev, goalReason }));
+  }, [setState]);
+
   const setEmoji = useCallback((emoji: string) => {
     setState((prev) => ({ ...prev, emoji }));
   }, [setState]);
@@ -249,6 +258,10 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     },
     [setState]
   );
+
+  const setCoachPersonality = useCallback((personality: CoachPersonality) => {
+    setState((prev) => ({ ...prev, coachPersonality: personality }));
+  }, [setState]);
 
   const setVisibility = useCallback((visibility: Visibility) => {
     setState((prev) => ({ ...prev, visibility }));
@@ -304,6 +317,7 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
         backgroundImageUrl: planData.backgroundImageUrl ?? null,
         isCoached: planData.isCoached ?? false,
         selectedCoachId: planData.selectedCoachId ?? null,
+        coachPersonality: planData.coachPersonality ?? DEFAULT_COACH_PERSONALITY,
         visibility: planData.visibility ?? "PUBLIC",
         finishingDate: planData.finishingDate ?? null,
         activities: planData.activities ?? [],
@@ -340,11 +354,13 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
 
     // Plan data
     goal,
+    goalReason,
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
     isCoached,
     selectedCoachId,
+    coachPersonality,
     selectedCoach,
     visibility,
     finishingDate,
@@ -363,11 +379,13 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
 
     // Setters
     setGoal,
+    setGoalReason,
     setEmoji,
     setBackgroundImageUrl,
     setBackgroundImageFile,
     setIsCoached,
     setSelectedCoachId,
+    setCoachPersonality,
     setVisibility,
     setFinishingDate,
     setActivities,

@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 const BackgroundStepWizard = () => {
   const {
     goal,
+    goalReason,
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
@@ -78,6 +79,7 @@ const BackgroundStepWizard = () => {
       // Build the plan object
       const planData = {
         goal: goal || "",
+        goalReason: goalReason || null,
         emoji: emoji || undefined,
         finishingDate: finishingDate || null,
         visibility,
