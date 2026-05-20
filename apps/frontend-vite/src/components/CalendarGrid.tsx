@@ -13,6 +13,7 @@ export interface CalendarSession {
   quantity?: number;
   descriptiveGuide?: string;
   imageUrls?: string[];
+  imagesLoading?: boolean;
 }
 
 export interface CalendarActivity {
@@ -261,6 +262,14 @@ export const CalendarGrid = ({
                 {selectedSession.session.descriptiveGuide}
               </p>
             )}
+
+            {selectedSession.session.imagesLoading &&
+              (!selectedSession.session.imageUrls || selectedSession.session.imageUrls.length === 0) && (
+                <div className="mt-3 flex gap-2">
+                  <div className="h-24 w-32 rounded-lg bg-muted animate-pulse flex-shrink-0" />
+                  <div className="h-24 w-32 rounded-lg bg-muted animate-pulse flex-shrink-0" />
+                </div>
+              )}
 
             {selectedSession.session.imageUrls &&
               selectedSession.session.imageUrls.length > 0 && (

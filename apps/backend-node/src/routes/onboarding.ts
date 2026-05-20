@@ -6,6 +6,8 @@ import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { classifyActivityKind } from "../services/activityCategorizationService";
 import { aiService } from "../services/aiService";
 import { perplexityAiService } from "../services/perplexityAiService";
+import { s3Service } from "../services/s3Service";
+import type { PipelineTraceStep } from "../services/planGenerationPipeline";
 
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -168,11 +170,13 @@ router.post(
       const timesPerWeek = times_per_week || inferTimesPerWeek(plan_progress);
 
       // Do research once using Perplexity
+      const researchT0 = Date.now();
       const researchResult = await perplexityAiService.researchPlan({
         goal: plan_goal,
         experience: plan_progress,
         timesPerWeek,
       });
+      const researchDurationMs = Date.now() - researchT0;
 
       logger.info("Research completed, generating plan...");
 
@@ -192,11 +196,26 @@ router.post(
 
       logger.info("Plan generated:", plan.id);
 
+      // Respond immediately — don't wait for images
       res.json({
         message: "Your plan is ready",
         plans: [plan],
         activities: plan.activities,
       });
+
+      // Wait for images to finish, then upload trace with image URLs
+      const doTraceUpload = async () => {
+        if (plan.imageGeneration) await plan.imageGeneration;
+        await uploadPlanGenerationTrace({
+          userId: req.user!.id,
+          planId: plan.id,
+          params: { plan_goal, plan_progress, times_per_week: timesPerWeek, wants_coaching, coach_id },
+          researchResult,
+          researchDurationMs,
+          plan,
+        });
+      };
+      doTraceUpload().catch(err => logger.warn("Failed to upload plan generation trace", err));
     } catch (error) {
       logger.error("Error generating plans:", error);
       res.status(500).json({ error: "Failed to generate plans" });
@@ -268,8 +287,11 @@ async function generatePlan(params: {
     activityId: string;
     descriptive_guide: string;
     quantity: number;
+    imagePrompts?: string[];
     imageUrls?: string[];
   }[];
+  pipelineTrace?: PipelineTraceStep[];
+  imageGeneration?: Promise<void>;
 }> {
   const finishingDate = new Date();
   finishingDate.setDate(finishingDate.getDate() + params.weeks * 7);
@@ -378,6 +400,8 @@ async function generatePlan(params: {
     coachId: params.coachId,
     isCoached: params.isCoached || false,
     sessions: remappedSessions,
+    pipelineTrace: sessionsResult.trace,
+    imageGeneration: sessionsResult.imageGeneration,
   };
 }
 
@@ -413,6 +437,95 @@ async function generatePlanSummary(params: {
     logger.error("Error generating plan summary:", error);
     return `A ${params.timesPerWeek}x/week plan to help you ${params.goal.toLowerCase()}.`;
   }
+}
+
+async function uploadPlanGenerationTrace(args: {
+  userId: string;
+  planId: string;
+  params: Record<string, unknown>;
+  researchResult: { findings: string; guidelines: string; estimatedWeeks: number | null };
+  researchDurationMs: number;
+  plan: {
+    goal: string;
+    emoji: string;
+    activities: Activity[];
+    sessions: { date: Date; activityId: string; descriptive_guide: string; quantity: number; imageUrls?: string[] }[];
+    estimatedWeeks: number | null;
+    notes: string;
+    pipelineTrace?: PipelineTraceStep[];
+  };
+}) {
+  const { userId, planId, params, researchResult, researchDurationMs, plan } = args;
+  const basePath = `plan-generations/${userId}/${planId}`;
+
+  // Upload session images to S3 and collect their public URLs
+  const imageMap: Record<string, string[]> = {};
+  for (let i = 0; i < plan.sessions.length; i++) {
+    const session = plan.sessions[i];
+    if (!session.imageUrls || session.imageUrls.length === 0) continue;
+
+    const urls: string[] = [];
+    for (let j = 0; j < session.imageUrls.length; j++) {
+      const dataUrl = session.imageUrls[j];
+      try {
+        let buffer: Buffer;
+        let ext = "png";
+        if (dataUrl.startsWith("data:")) {
+          const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (!match) continue;
+          ext = match[1] === "jpeg" ? "jpg" : match[1];
+          buffer = Buffer.from(match[2], "base64");
+        } else if (dataUrl.startsWith("http")) {
+          // Already a URL — just reference it
+          urls.push(dataUrl);
+          continue;
+        } else {
+          continue;
+        }
+        const key = `${basePath}/images/session-${i}-${j}.${ext}`;
+        await s3Service.upload(buffer, key, `image/${ext}`);
+        urls.push(s3Service.getPublicUrl(key));
+      } catch (err) {
+        logger.warn(`Failed to upload trace image session-${i}-${j}`, err);
+      }
+    }
+    if (urls.length > 0) imageMap[`session-${i}`] = urls;
+  }
+
+  // Build the trace JSON
+  const trace = {
+    generatedAt: new Date().toISOString(),
+    userId,
+    planId,
+    input: params,
+    research: {
+      findings: researchResult.findings,
+      guidelines: researchResult.guidelines,
+      estimatedWeeks: researchResult.estimatedWeeks,
+      durationMs: researchDurationMs,
+    },
+    pipeline: plan.pipelineTrace || [],
+    output: {
+      goal: plan.goal,
+      emoji: plan.emoji,
+      estimatedWeeks: plan.estimatedWeeks,
+      notes: plan.notes,
+      activities: plan.activities.map(a => ({ id: a.id, title: a.title, emoji: a.emoji, measure: a.measure })),
+      sessions: plan.sessions.map((s, i) => ({
+        date: s.date,
+        activityId: s.activityId,
+        descriptiveGuide: s.descriptive_guide,
+        quantity: s.quantity,
+        imageUrls: imageMap[`session-${i}`] || s.imageUrls || [],
+      })),
+    },
+  };
+
+  const traceJson = JSON.stringify(trace, null, 2);
+  const traceKey = `${basePath}/trace.json`;
+  await s3Service.upload(Buffer.from(traceJson, "utf-8"), traceKey, "application/json");
+  const traceUrl = s3Service.getPublicUrl(traceKey);
+  logger.info(`Plan generation trace uploaded: ${traceUrl}`);
 }
 
 // Validate plan frequency based on user's experience level

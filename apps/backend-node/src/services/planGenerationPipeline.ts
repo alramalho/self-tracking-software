@@ -17,6 +17,7 @@ export interface ActivityInput {
   title: string;
   measure: string;
   emoji?: string;
+  kind?: string;
 }
 
 export interface PlanGenerationParams {
@@ -37,7 +38,17 @@ export interface GeneratedSession {
   activityId: string;
   descriptiveGuide: string;
   quantity: number;
+  imagePrompts: string[];
   imageUrls: string[];
+}
+
+export interface PipelineTraceStep {
+  stage: string;
+  model: string;
+  prompt: string;
+  systemPrompt?: string;
+  response: unknown;
+  durationMs: number;
 }
 
 export interface PipelineResult {
@@ -45,6 +56,9 @@ export interface PipelineResult {
   // Activities used in the plan (generated from research if none provided)
   activities: ActivityInput[];
   researchFindings?: string;
+  trace: PipelineTraceStep[];
+  // Resolves when background image generation completes (sessions mutated in place)
+  imageGeneration: Promise<void>;
 }
 
 /**
@@ -99,6 +113,7 @@ export class PlanGenerationPipeline {
    */
   async generatePlan(params: PlanGenerationParams): Promise<PipelineResult> {
     const maxWeeks = params.maxWeeks ?? DEFAULT_MAX_WEEKS;
+    const trace: PipelineTraceStep[] = [];
     logger.info(`Starting plan generation pipeline for goal: "${params.goal}" (generating ${maxWeeks} weeks)`);
 
     // Use provided research findings or fall back to defaults
@@ -114,9 +129,10 @@ export class PlanGenerationPipeline {
     if (params.activities && params.activities.length > 0) {
       activities = params.activities;
       logger.info(`Using ${activities.length} provided activities`);
+      trace.push({ stage: "activity-generation", model: "skipped (provided)", prompt: "", response: activities, durationMs: 0 });
     } else {
       try {
-        activities = await this.generateActivities(params, researchFindings);
+        activities = await this.generateActivities(params, researchFindings, trace);
         logger.info(`Activity Generation completed: ${activities.length} (${activities.map(a => `${a.title} (${a.measure})`).join(", ")}) activities`);
       } catch (error) {
         logger.error("Activity Generation failed", error);
@@ -127,7 +143,7 @@ export class PlanGenerationPipeline {
     // Stage 2: Generate sessions for the first N weeks only
     let sessions: GeneratedSession[];
     try {
-      sessions = await this.generateSessions(params, researchFindings, activities, maxWeeks);
+      sessions = await this.generateSessions(params, researchFindings, activities, maxWeeks, trace);
       logger.info(`Session Generation completed: ${sessions.length} sessions for ${maxWeeks} weeks`);
     } catch (error) {
       logger.error("Session Generation failed", error);
@@ -135,19 +151,26 @@ export class PlanGenerationPipeline {
       sessions = this.generateBasicSessions(params, activities, maxWeeks);
     }
 
-    // Stage 3: Generate images for sessions (in parallel, non-blocking)
-    try {
-      sessions = await this.generateSessionImages(sessions, activities);
-      logger.info(`Image Generation completed for ${sessions.length} sessions`);
-    } catch (error) {
-      logger.warn("Image Generation failed, continuing without images", error);
-      // Sessions already have empty imageUrls, so we continue
-    }
+    // Stage 3: Generate images from coach-provided imagePrompts
+    // Returns immediately with imageUrls empty — caller can await imageGeneration if needed
+    const imageGeneration = this.generateImagesFromPrompts(sessions, activities, trace)
+      .then((updated) => {
+        // Mutate sessions in place so the trace upload picks them up
+        for (let i = 0; i < updated.length; i++) {
+          sessions[i].imageUrls = updated[i].imageUrls;
+        }
+        logger.info(`Image Generation completed for ${sessions.length} sessions`);
+      })
+      .catch((error) => {
+        logger.warn("Image Generation failed, continuing without images", error);
+      });
 
-  return {
+    return {
       sessions,
       activities,
       researchFindings,
+      trace,
+      imageGeneration,
     };
   }
 
@@ -185,7 +208,8 @@ export class PlanGenerationPipeline {
    */
   private async generateActivities(
     params: PlanGenerationParams,
-    researchFindings: string
+    researchFindings: string,
+    trace: PipelineTraceStep[]
   ): Promise<ActivityInput[]> {
     const { goal, userAge, experience, timesPerWeek } = params;
     const experienceLevel = this.categorizeExperience(experience);
@@ -199,10 +223,8 @@ export class PlanGenerationPipeline {
       })),
     });
 
-    const result = await generateObject({
-      model: this.openrouter.chat("x-ai/grok-4.1-fast"),
-      schema: ActivitiesSchema,
-      system: dedent`
+    const activityModel = "x-ai/grok-4.1-fast";
+    const activitySystem = dedent`
         You are an expert at designing trackable activities for habit plans.
 
         IMPORTANT GUIDELINES:
@@ -219,8 +241,8 @@ export class PlanGenerationPipeline {
         - The measure field already captures the unit, so don't repeat it in the title
         - Good examples: "Easy run", "Long run", "Core exercises", "Strength training", "Speed work"
         - Bad examples: "Easy run duration", "Long run time", "Core exercise session", "Threshold run intervals"
-      `,
-      prompt: dedent`
+      `;
+    const activityPrompt = dedent`
         Generate activities for this user:
 
         - Goal: "${goal}"
@@ -234,9 +256,17 @@ export class PlanGenerationPipeline {
         Create 2-4 trackable activities that will help them achieve their goal.
         Use IDs like "new_1", "new_2", etc.
         Remember: Keep titles short (2-3 words), no measurement words like "duration" or "time".
-      `,
+      `;
+
+    const t0 = Date.now();
+    const result = await generateObject({
+      model: this.openrouter.chat(activityModel),
+      schema: ActivitiesSchema,
+      system: activitySystem,
+      prompt: activityPrompt,
       temperature: 0.3,
     });
+    trace.push({ stage: "activity-generation", model: activityModel, systemPrompt: activitySystem, prompt: activityPrompt, response: result.object, durationMs: Date.now() - t0 });
 
     logger.info(`Generated ${result.object.activities.length} activities for goal: "${goal}"`);
     return result.object.activities;
@@ -250,7 +280,8 @@ export class PlanGenerationPipeline {
     params: PlanGenerationParams,
     researchFindings: string,
     activities: ActivityInput[],
-    maxWeeks: number
+    maxWeeks: number,
+    trace: PipelineTraceStep[]
   ): Promise<GeneratedSession[]> {
     const { goal, timesPerWeek, experience } = params;
     const experienceLevel = this.categorizeExperience(experience);
@@ -277,14 +308,13 @@ export class PlanGenerationPipeline {
           activity: z.enum(activityOptions).describe(`Pick one of the available activities. The format is "id::title::measure". The measure tells you what unit to use for quantity.`),
           quantity: z.number().describe("Amount in the measure unit from the activity you picked. For 'minutes': 15-60 for beginners. For 'miles': 1-5 for beginners. For 'km': 2-8 for beginners."),
           descriptiveGuide: z.string().describe("2-3 sentences. Reference the quantity with correct measure (e.g. 'This 20-minute session...' or 'These 3 miles...')."),
+          imagePrompts: z.array(z.string()).describe("0-2 prompts for generating accompanying visual aids for this session. Each prompt should describe a specific illustration that adds visual information the text cannot — e.g. body posture/form, movement phases, breathing patterns, progression visualization. Leave empty if the session doesn't benefit from visuals (e.g. reading, journaling). Do NOT repeat the session description as text in the image — the image should show what words can't."),
         })),
       })),
     });
 
-    const result = await generateObject({
-      model: this.openrouter.chat("openai/gpt-5.2-chat"),
-      schema: SessionsSchema,
-      system: dedent`
+    const sessionModel = "openai/gpt-5.2-chat";
+    const sessionSystem = dedent`
         You are a personal coach creating a ${maxWeeks}-week progressive plan.
 
         USER PROFILE (CRITICAL - MUST FOLLOW):
@@ -302,10 +332,17 @@ export class PlanGenerationPipeline {
         - 2-3 sentences explaining what to focus on, with tips for their level
         - Example: "Focus on maintaining a conversational pace throughout. This easy run builds your aerobic base - if you can't talk comfortably, slow down."
 
+        IMAGE PROMPTS (optional visual aids):
+        - For each session, decide if 0-2 accompanying illustrations would help the user
+        - Good image prompts describe visuals that ADD information beyond the text: proper form/posture diagrams, movement phase illustrations, breathing pattern visuals, technique breakdowns
+        - Skip images for sessions where visuals don't help (reading, journaling, rest)
+        - Each prompt should be a self-contained image generation instruction
+        - Style: clean instructional illustration, minimal background, annotated form cues with arrows. No text banners or motivational slogans in the image
+
         RESEARCH-BASED GUIDELINES (use these for starting quantities):
         ${researchFindings}
-      `,
-      prompt: dedent`
+      `;
+    const sessionPrompt = dedent`
         Create a ${maxWeeks}-week plan for a ${experienceLevel} working towards: "${goal}"
 
         AVAILABLE ACTIVITIES (pick from these exact values):
@@ -319,9 +356,17 @@ export class PlanGenerationPipeline {
         - quantity MUST be appropriate for the measure in the activity you picked
 
         Remember: This is a ${experienceLevel} - use appropriate starting quantities from the guidelines.
-      `,
+      `;
+
+    const t0 = Date.now();
+    const result = await generateObject({
+      model: this.openrouter.chat(sessionModel),
+      schema: SessionsSchema,
+      system: sessionSystem,
+      prompt: sessionPrompt,
       temperature: 0.3,
     });
+    trace.push({ stage: "session-generation", model: sessionModel, systemPrompt: sessionSystem, prompt: sessionPrompt, response: result.object, durationMs: Date.now() - t0 });
 
     // Flatten weeks into sessions array, parsing the "id::title::measure" format
     const sessions: GeneratedSession[] = [];
@@ -334,6 +379,7 @@ export class PlanGenerationPipeline {
           activityId,
           quantity: session.quantity,
           descriptiveGuide: session.descriptiveGuide,
+          imagePrompts: session.imagePrompts || [],
           imageUrls: [],
         });
       }
@@ -343,172 +389,95 @@ export class PlanGenerationPipeline {
   }
 
   /**
-   * Generate images for sessions using Gemini Image
-   * Generates unique images per session using the descriptive guide
-   * Only generates images for activities that benefit from instructive illustrations
+   * Generate images from coach-provided imagePrompts (in parallel)
    */
-  private async generateSessionImages(
+  private async generateImagesFromPrompts(
     sessions: GeneratedSession[],
-    activities: ActivityInput[]
+    activities: ActivityInput[],
+    trace: PipelineTraceStep[]
   ): Promise<GeneratedSession[]> {
-    // First, check which activities would benefit from illustrations (in parallel)
-    const uniqueActivityIds = [...new Set(sessions.map(s => s.activityId))];
-    const activityCheckPromises = uniqueActivityIds.map(async (activityId) => {
-      const activity = activities.find(a => a.id === activityId);
-      if (!activity) return { activityId, shouldGenerate: false };
-      const shouldGenerate = await this.shouldGenerateImageForActivity(activity);
-      return { activityId, shouldGenerate };
-    });
+    const t0 = Date.now();
 
-    const checkResults = await Promise.all(activityCheckPromises);
-    const activitiesNeedingImages = new Set(
-      checkResults.filter(r => r.shouldGenerate).map(r => r.activityId)
+    const jobs: { si: number; pi: number; prompt: string; kind?: string }[] = [];
+    for (let si = 0; si < sessions.length; si++) {
+      const activity = activities.find(a => a.id === sessions[si].activityId);
+      for (let pi = 0; pi < sessions[si].imagePrompts.length; pi++) {
+        jobs.push({ si, pi, prompt: sessions[si].imagePrompts[pi], kind: activity?.kind });
+      }
+    }
+
+    if (jobs.length === 0) {
+      trace.push({ stage: "image-generation", model: "skipped", prompt: "no imagePrompts from coach", response: [], durationMs: 0 });
+      return sessions;
+    }
+
+    const results = await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          const imageUrl = await this.generateImage(job.prompt, job.kind);
+          return { ...job, imageUrl };
+        } catch (error) {
+          logger.warn(`Failed to generate image for session ${job.si} prompt ${job.pi}`, error);
+          return { ...job, imageUrl: null as string | null };
+        }
+      })
     );
 
-    // Generate images for each session (in parallel)
-    const sessionImagePromises = sessions.map(async (session, index) => {
-      if (!activitiesNeedingImages.has(session.activityId)) {
-        return { index, imageUrl: null };
-      }
-
-      const activity = activities.find(a => a.id === session.activityId);
-      if (!activity) return { index, imageUrl: null };
-
-      try {
-        const imageUrl = await this.generateImageForSession(activity, session.descriptiveGuide);
-        return { index, imageUrl };
-      } catch (error) {
-        logger.warn(`Failed to generate image for session ${index}`, error);
-        return { index, imageUrl: null };
-      }
+    trace.push({
+      stage: "image-generation",
+      model: "openai/gpt-image-2 (low/medium by kind)",
+      prompt: `${jobs.length} images from coach prompts`,
+      response: results.map(r => ({ session: r.si, kind: r.kind, prompt: r.prompt, hasImage: !!r.imageUrl })),
+      durationMs: Date.now() - t0,
     });
 
-    const imageResults = await Promise.all(sessionImagePromises);
+    const imagesBySession = new Map<number, string[]>();
+    for (const r of results) {
+      if (!r.imageUrl) continue;
+      const urls = imagesBySession.get(r.si) || [];
+      urls.push(r.imageUrl);
+      imagesBySession.set(r.si, urls);
+    }
 
-    // Update sessions with their images
-    return sessions.map((session, index) => {
-      const result = imageResults.find(r => r.index === index);
-      return {
-        ...session,
-        imageUrls: result?.imageUrl ? [result.imageUrl] : [],
-      };
+    return sessions.map((session, i) => ({
+      ...session,
+      imageUrls: imagesBySession.get(i) || [],
+    }));
+  }
+
+  // Gym/boxing/bouldering need medium quality for form detail, everything else is fine at low
+  private static MEDIUM_QUALITY_KINDS = new Set(["gym"]);
+
+  private async generateImage(prompt: string, kind?: string): Promise<string | null> {
+    const quality = PlanGenerationPipeline.MEDIUM_QUALITY_KINDS.has(kind || "") ? "medium" : "low";
+    const apiKey = process.env.AI_GATEWAY_API_KEY;
+    if (!apiKey) {
+      logger.warn("AI_GATEWAY_API_KEY not set, skipping image generation");
+      return null;
+    }
+
+    const { generateImage: genImg } = await import("ai");
+    const { createGateway } = await import("@ai-sdk/gateway");
+    const gw = createGateway({ apiKey });
+
+    const result = await genImg({
+      model: gw.imageModel("openai/gpt-image-2"),
+      prompt,
+      size: "1024x1024",
+      providerOptions: { openai: { quality } },
     });
-  }
 
-  /**
-   * Check if an activity would benefit from an instructive illustration
-   * Defaults to YES for physical activities - only says NO for clearly mental tasks
-   */
-  private async shouldGenerateImageForActivity(activity: ActivityInput): Promise<boolean> {
-    try {
-      const schema = z.object({
-        reasoning: z.string().describe("Thought process on whether this activity would benefit from an instructive illustration"),
-        should_generate: z.boolean().describe("Whether this activity would benefit from an instructive illustration"),
-      });
+    const img = result.images[0];
+    if (!img) return null;
 
-      const result = await generateObject({
-        model: this.openrouter.chat("x-ai/grok-4.1-fast"),
-        schema,
-        system: dedent`
-          You determine whether an activity would benefit from an educational illustration.
-
-          DEFAULT TO YES for anything that sounds physical or could involve body movement.
-
-          DEFINITELY YES (generate image):
-          - Any exercise, training, or workout
-          - Running, jogging, walking
-          - Strength training, weight lifting, bodyweight exercises
-          - Yoga, stretching, mobility work
-          - Sports activities
-          - Breathing exercises, meditation poses
-          - Any activity where form/technique matters
-
-          ONLY SAY NO for clearly non-physical activities:
-          - Reading, studying, writing
-          - Journaling, note-taking
-          - Purely mental tasks (memorization, problem-solving)
-          - Screen time, focus time
-
-          When in doubt, say YES.
-        `,
-        prompt: `Activity: "${activity.title}" (measured in ${activity.measure}). Should this activity have an instructive illustration?`,
-        temperature: 0,
-      });
-
-      logger.info(`Image gate for "${activity.title}": ${result.object.should_generate} - ${result.object.reasoning}`);
-      return result.object.should_generate;
-    } catch (error) {
-      logger.warn(`Error checking if activity needs image: ${activity.title}`, error);
-      // Default to true on error for physical-sounding activities
-      const lowerTitle = activity.title.toLowerCase();
-      return lowerTitle.includes("run") || lowerTitle.includes("train") || lowerTitle.includes("exercise") || lowerTitle.includes("workout");
+    if (img.base64) {
+      return `data:image/png;base64,${img.base64}`;
     }
-  }
-
-  /**
-   * Generate a single instructive illustration for a session using Gemini Image
-   */
-  private async generateImageForSession(
-    activity: ActivityInput,
-    descriptiveGuide: string
-  ): Promise<string | null> {
-    try {
-      const prompt = dedent`
-        Generate an educational illustration for ${activity.title}
-        with focus on "${descriptiveGuide}"
-      `;
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          ...this.getHeaders(),
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          modalities: ["image", "text"],
-          image_config: {
-            aspect_ratio: "4:3",
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.warn(`Image generation API error: ${response.status} - ${errorText}`);
-        return null;
-      }
-
-      const result = await response.json() as {
-        choices?: Array<{
-          message?: {
-            images?: Array<{
-              image_url?: { url?: string };
-            }>;
-          };
-        }>;
-      };
-
-      // Extract image from response
-      const imageUrl = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (imageUrl) {
-        logger.info(`Generated instructive image for session: ${activity.title}`);
-        return imageUrl;
-      }
-
-      logger.warn(`No image in response for session: ${activity.title}`);
-      return null;
-    } catch (error) {
-      logger.error(`Error generating image for session ${activity.title}:`, error);
-      return null;
+    if (img.uint8Array) {
+      return `data:image/png;base64,${Buffer.from(img.uint8Array).toString("base64")}`;
     }
+
+    return null;
   }
 
   private calculateWeekStartDates(weeks: number): string[] {
@@ -553,6 +522,7 @@ export class PlanGenerationPipeline {
           activityId: activity.id,
           descriptiveGuide: `Week ${week + 1}, Session ${sessionNum + 1}: Focus on ${activity.title}`,
           quantity: Math.ceil(progressMultiplier * 10), // Base quantity of 10
+          imagePrompts: [],
           imageUrls: [],
         });
       }

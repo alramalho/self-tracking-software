@@ -1161,18 +1161,18 @@ export class AIService {
 
   // Extract and paraphrase user goals with emoji - handles multiple goals
   async extractPlans(userInput: string): Promise<{
-    plans: Array<{ goal: string; emoji: string }>;
+    plans: Array<{ goal: string; emoji: string; goalReason: string | null }>;
   }> {
     const schema = z.object({
       plans: z.array(
         z.object({
           goal: z.string(),
-          emoji: z.string().length(1).or(z.string().length(2)), // Single emoji (1-2 chars for emoji with variation selector)
+          emoji: z.string().length(1).or(z.string().length(2)),
+          goalReason: z.string().nullable(),
         })
       ),
     });
 
-    // FIXME note to self: coach message and notes still shitty and not in sync with plan state: need to fix
     const systemPrompt =
       `You are a plan coach. Extract and paraphrase goals from user input. ` +
       `Users may mention one or multiple distinct goals in a single message. ` +
@@ -1181,10 +1181,11 @@ export class AIService {
       `\n2. Paraphrase each goal to be short, concrete and tangible` +
       `\n3. Goals should include the achievable result, not timeframe or details` +
       `\n4. Each emoji MUST be exactly ONE emoji character (e.g., 📚, 🏃, 💪) - NEVER multiple emojis` +
+      `\n5. If the user mentions WHY they want to achieve the goal, extract it as goalReason. If no reason is given, set goalReason to null.` +
       `\n\nExamples of correct extraction:` +
-      `\n- Input: "I want to read 12 books and run a marathon" → Two plans: [{goal: "Read 12 books", emoji: "📚"}, {goal: "Run a marathon", emoji: "🏃"}]` +
-      `\n- Input: "I want to become healthier and read 12 books this year" → Two plans: [{goal: "Become healthier", emoji: "💪"}, {goal: "Read 12 books", emoji: "📚"}]` +
-      `\n- Input: "I want to read more books" → One plan: [{goal: "Read 12 books", emoji: "📚"}]` +
+      `\n- Input: "I want to read 12 books and run a marathon" → [{goal: "Read 12 books", emoji: "📚", goalReason: null}, {goal: "Run a marathon", emoji: "🏃", goalReason: null}]` +
+      `\n- Input: "I want to meditate daily so I can sleep better and manage my emotions" → [{goal: "Meditate daily", emoji: "🧘", goalReason: "Sleep better and manage emotions"}]` +
+      `\n- Input: "I want to get fit because I want to feel confident at the beach" → [{goal: "Get fit", emoji: "💪", goalReason: "Feel confident at the beach"}]` +
       `\n\nIf the goal is already well phrased, output the same goal.` +
       `\nIf the goal is already short, concrete, and tangible, output the same goal.`;
 
@@ -1446,6 +1447,8 @@ export class AIService {
       emoji?: string;
     }[];
     researchFindings?: string;
+    trace?: import("./planGenerationPipeline").PipelineTraceStep[];
+    imageGeneration?: Promise<void>;
   }> {
     try {
       const today = new Date();
@@ -1467,11 +1470,12 @@ export class AIService {
         const pipelineResult = await planGenerationPipeline.generatePlan({
           goal: params.goal,
           activities: params.activities?.length > 0
-            ? params.activities.map((a) => ({
+            ? params.activities.map((a: any) => ({
                 id: a.id,
                 title: a.title,
                 measure: a.measure,
                 emoji: a.emoji,
+                kind: a.kind,
               }))
             : [], // Empty array - pipeline will generate activities
           userAge: params.userAge ?? null,
@@ -1495,6 +1499,8 @@ export class AIService {
           })),
           activities: pipelineResult.activities,
           researchFindings: pipelineResult.researchFindings,
+          trace: pipelineResult.trace,
+          imageGeneration: pipelineResult.imageGeneration,
         };
       }
 

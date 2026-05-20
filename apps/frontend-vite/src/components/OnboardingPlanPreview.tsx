@@ -9,6 +9,7 @@ interface Session {
   descriptiveGuide?: string;
   descriptive_guide?: string;
   imageUrls?: string[];
+  imagePrompts?: string[];
 }
 
 interface Activity {
@@ -46,6 +47,7 @@ export const OnboardingPlanPreview = ({
     quantity: session.quantity,
     descriptiveGuide: getDescriptiveGuide(session),
     imageUrls: session.imageUrls,
+    imagesLoading: (session.imagePrompts?.length ?? 0) > 0 && (!session.imageUrls || session.imageUrls.length === 0),
   }));
 
   // Convert activities to CalendarActivity format

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image Gen Comparison</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 24px; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+    select { background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; }
+    .test-case { margin-bottom: 40px; border: 1px solid #222; border-radius: 12px; padding: 20px; background: #111; }
+    .test-header { margin-bottom: 16px; }
+    .test-header h2 { font-size: 1.1rem; color: #7cb3ff; }
+    .test-header .desc { font-size: 0.8rem; color: #888; margin-top: 4px; line-height: 1.5; }
+    .prompt-group { margin-top: 12px; margin-bottom: 12px; }
+    .prompt-label { font-size: 0.75rem; color: #aaa; font-weight: 600; margin-bottom: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: #1a1a1a; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a2a; }
+    .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #222; cursor: pointer; }
+    .card .meta { padding: 10px 12px; }
+    .card .model-name { font-size: 0.85rem; font-weight: 600; color: #ccc; }
+    .card .timing { font-size: 0.75rem; color: #666; margin-top: 2px; }
+    .card .error { font-size: 0.75rem; color: #ff6b6b; margin-top: 4px; }
+    .no-image { display: flex; align-items: center; justify-content: center; aspect-ratio: 4/3; background: #1a1a1a; color: #555; font-size: 0.85rem; }
+    .prompt-block { font-size: 0.75rem; color: #666; background: #0d0d0d; padding: 8px 10px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; word-break: break-word; }
+    #status { font-size: 0.8rem; color: #888; }
+    .no-images-note { font-size: 0.8rem; color: #555; font-style: italic; margin-top: 8px; }
+    .lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Image Generation Comparison</h1>
+  <div class="controls">
+    <label>Experiment: <select id="expSelect"><option value="">Loading...</option></select></label>
+    <span id="status"></span>
+  </div>
+  <div id="content"></div>
+
+  <script>
+    const expSelect = document.getElementById('expSelect');
+    const content = document.getElementById('content');
+    const status = document.getElementById('status');
+
+    const MODELS = [
+      'gemini-2.5-flash-image',
+      'gemini-3-pro-image',
+      'gemini-3.1-flash-image-preview',
+      'gpt-image-2-low',
+      'gpt-image-2-medium',
+    ];
+    const NUM_TESTS = 5;
+    const MAX_PROMPTS = 3;
+
+    async function tryFetchImage(genDir) {
+      for (const ext of ['png', 'jpg', 'jpeg', 'webp']) {
+        try {
+          const resp = await fetch(`${genDir}/image.${ext}`);
+          if (resp.ok && resp.headers.get('content-type')?.startsWith('image')) {
+            const blob = await resp.blob();
+            return URL.createObjectURL(blob);
+          }
+        } catch {}
+      }
+      return null;
+    }
+
+    async function discoverExperiments() {
+      try {
+        const resp = await fetch('./');
+        const html = await resp.text();
+        const matches = html.match(/exp_[0-9T-]+/g);
+        if (matches) return [...new Set(matches)].sort().reverse();
+      } catch {}
+      return [];
+    }
+
+    function showLightbox(src) {
+      const lb = document.createElement('div');
+      lb.className = 'lightbox';
+      lb.innerHTML = `<img src="${src}">`;
+      lb.onclick = () => lb.remove();
+      document.body.appendChild(lb);
+    }
+
+    async function loadExperiment(expName) {
+      content.innerHTML = '';
+      status.textContent = 'Loading...';
+
+      // Load coach prompts
+      let coachData = [];
+      try {
+        const resp = await fetch(`${expName}/coach-prompts.json`);
+        if (resp.ok) coachData = await resp.json();
+      } catch {}
+
+      // For each test case, for each prompt index, load all models
+      for (let i = 0; i < NUM_TESTS; i++) {
+        const session = coachData[i] || {};
+        const imagePrompts = session.imagePrompts || [];
+
+        const div = document.createElement('div');
+        div.className = 'test-case';
+
+        let headerHtml = `
+          <div class="test-header">
+            <h2>${session.plan || 'Test ' + i} / ${session.activity || ''}</h2>
+            <div class="desc">${session.descriptiveGuide || ''}</div>
+          </div>
+        `;
+
+        if (imagePrompts.length === 0) {
+          div.innerHTML = headerHtml + `<div class="no-images-note">Coach decided no images needed for this session</div>`;
+          content.appendChild(div);
+          continue;
+        }
+
+        let promptsHtml = '';
+        for (let pi = 0; pi < imagePrompts.length; pi++) {
+          const cards = [];
+          for (const model of MODELS) {
+            const genDir = `${expName}/gen-${i}-p${pi}-${model}`;
+            try {
+              const metaResp = await fetch(`${genDir}/metadata.json`);
+              if (!metaResp.ok) continue;
+              const meta = await metaResp.json();
+              const imgSrc = await tryFetchImage(genDir);
+              cards.push({ ...meta, imgSrc });
+            } catch {}
+          }
+
+          if (cards.length === 0) continue;
+
+          promptsHtml += `
+            <div class="prompt-group">
+              <div class="prompt-label">Image prompt ${pi + 1}:</div>
+              <div class="prompt-block">${imagePrompts[pi]}</div>
+              <div class="grid" style="margin-top: 12px;">
+                ${cards.map(c => `
+                  <div class="card">
+                    ${c.imgSrc
+                      ? `<img src="${c.imgSrc}" alt="${c.label}" onclick="showLightbox('${c.imgSrc}')">`
+                      : `<div class="no-image">${c.error || 'No image'}</div>`
+                    }
+                    <div class="meta">
+                      <div class="model-name">${c.label}</div>
+                      ${c.durationMs ? `<div class="timing">${(c.durationMs / 1000).toFixed(1)}s</div>` : ''}
+                      ${c.error ? `<div class="error">${c.error}</div>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        div.innerHTML = headerHtml + promptsHtml;
+        content.appendChild(div);
+      }
+
+      status.textContent = 'Loaded';
+    }
+
+    async function init() {
+      const experiments = await discoverExperiments();
+
+      expSelect.innerHTML = '';
+      if (experiments.length === 0) {
+        expSelect.innerHTML = '<option value="">No experiments found</option>';
+        status.textContent = 'Run compare.ts first';
+        return;
+      }
+
+      for (const exp of experiments) {
+        const opt = document.createElement('option');
+        opt.value = exp;
+        opt.textContent = exp;
+        expSelect.appendChild(opt);
+      }
+
+      const params = new URLSearchParams(location.search);
+      const requested = params.get('exp') || location.hash.replace('#', '');
+      const toLoad = experiments.includes(requested) ? requested : experiments[0];
+      expSelect.value = toLoad;
+      loadExperiment(toLoad);
+
+      expSelect.addEventListener('change', () => {
+        if (expSelect.value) loadExperiment(expSelect.value);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
