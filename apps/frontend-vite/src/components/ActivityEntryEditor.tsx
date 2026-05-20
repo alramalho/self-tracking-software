@@ -1,12 +1,15 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import MultiPhotoUploader from "@/components/ui/MultiPhotoUploader";
 import { Textarea } from "@/components/ui/textarea";
+import type { SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
-import { Camera, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Camera, Check, Loader2, Pencil, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Picker from "react-mobile-picker";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -47,6 +50,10 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [showDeletePhotoConfirm, setShowDeletePhotoConfirm] = useState(false);
 
+  const [candidates, setCandidates] = useState<SharedActivityCandidate[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
+
   const {
     upsertActivityEntry,
     isUpsertingActivityEntry,
@@ -57,7 +64,14 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
     isUpdatingActivityEntryPhoto,
     isDeletingActivityEntryPhoto,
     activities,
+    getSharedActivityCandidates,
+    linkSharedActivity,
   } = useActivities();
+
+  useEffect(() => {
+    if (!open) return;
+    getSharedActivityCandidates(activityEntry.id).then(setCandidates).catch(() => {});
+  }, [open, activityEntry.id]);
 
   // Check if entry is within last 7 days (for photo editing)
   const entryCreatedAt = activityEntry.createdAt ? new Date(activityEntry.createdAt) : entryDate;
@@ -338,6 +352,78 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
             <p className="text-xs text-muted-foreground text-center">
               Photos can only be edited within 7 days of the entry
             </p>
+          </div>
+        )}
+
+        {candidates.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-center">
+              Did this with?
+            </h3>
+            <div
+              className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              onTouchMove={(e) => e.stopPropagation()}
+            >
+              {candidates.map((c) => {
+                const isSelected = selectedCandidateId === c.activityEntryId;
+                const uname = c.user.username || "friend";
+                return (
+                  <button
+                    key={c.activityEntryId}
+                    onClick={async () => {
+                      if (isSelected) {
+                        setSelectedCandidateId(null);
+                        return;
+                      }
+                      setSelectedCandidateId(c.activityEntryId);
+                      setIsLinking(true);
+                      try {
+                        await linkSharedActivity({
+                          activityEntryId: activityEntry.id,
+                          candidateActivityEntryId: c.activityEntryId,
+                        });
+                      } catch {
+                        setSelectedCandidateId(null);
+                      } finally {
+                        setIsLinking(false);
+                      }
+                    }}
+                    disabled={isLinking}
+                    className={cn(
+                      "relative flex-shrink-0 snap-center w-28 rounded-2xl border-2 p-3 transition-all",
+                      "flex flex-col items-center gap-2 text-center",
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:bg-accent/50"
+                    )}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 bg-primary rounded-full p-0.5">
+                        <Check className="w-3 h-3 text-primary-foreground" />
+                      </div>
+                    )}
+                    {c.imageUrls?.[0] ? (
+                      <img
+                        src={c.imageUrls[0]}
+                        alt={uname}
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Avatar className="w-14 h-14">
+                        <AvatarImage src={c.user.picture || ""} />
+                        <AvatarFallback>{uname[0]?.toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <span className="text-xs font-medium text-foreground truncate w-full">
+                      {c.user.name || `@${uname}`}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {c.quantity} {c.activity.measure}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

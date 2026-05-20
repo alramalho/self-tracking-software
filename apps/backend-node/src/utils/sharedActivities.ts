@@ -6,11 +6,15 @@ export interface SharedActivityMatchInput {
   sourceEmoji: string;
   sourceDatetime: Date;
   sourceKind?: ActivityKind;
+  sourceLatitude?: number | null;
+  sourceLongitude?: number | null;
   candidateTitle: string;
   candidateMeasure: string;
   candidateEmoji: string;
   candidateDatetime: Date;
   candidateKind?: ActivityKind;
+  candidateLatitude?: number | null;
+  candidateLongitude?: number | null;
 }
 
 export function normalizeActivityLabel(value: string): string {
@@ -20,6 +24,23 @@ export function normalizeActivityLabel(value: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function hasSemanticMatchByTitle(input: SharedActivityMatchInput): boolean {
@@ -48,13 +69,21 @@ function hasSemanticMatch(input: SharedActivityMatchInput): boolean {
   return hasSemanticMatchByTitle(input);
 }
 
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
 export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): number {
+  if (!isSameCalendarDay(input.sourceDatetime, input.candidateDatetime)) return 0;
+  if (!hasSemanticMatch(input)) return 0;
+
   const minutesApart = Math.abs(
     input.sourceDatetime.getTime() - input.candidateDatetime.getTime()
   ) / 60000;
-
-  if (minutesApart > 180) return 0;
-  if (!hasSemanticMatch(input)) return 0;
 
   let score = 0;
   if (minutesApart <= 30) score += 50;
@@ -78,6 +107,32 @@ export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): n
 
   if (input.sourceEmoji && input.sourceEmoji === input.candidateEmoji) {
     score += 10;
+  }
+
+  // Kind match bonus
+  if (
+    input.sourceKind &&
+    input.sourceKind !== "other" &&
+    input.sourceKind === input.candidateKind
+  ) {
+    score += 30;
+  }
+
+  // Location proximity bonus
+  if (
+    input.sourceLatitude != null &&
+    input.sourceLongitude != null &&
+    input.candidateLatitude != null &&
+    input.candidateLongitude != null
+  ) {
+    const km = haversineKm(
+      input.sourceLatitude,
+      input.sourceLongitude,
+      input.candidateLatitude,
+      input.candidateLongitude
+    );
+    if (km <= 1) score += 30;
+    else if (km <= 5) score += 15;
   }
 
   return score;

@@ -166,6 +166,8 @@ model ActivityEntry {
   description String?
   deletedAt   DateTime?
   timezone    String?
+  latitude    Float?
+  longitude   Float?
   difficulty  String?
 
   // Image info
