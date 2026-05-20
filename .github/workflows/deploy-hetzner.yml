@@ -52,7 +52,6 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
