@@ -5,9 +5,10 @@ import { HomeCardShell } from "./HomeCardShell";
 
 interface CoachCardProps {
   attentionCount: number;
+  reviewPlanId?: string;
 }
 
-export const CoachCard = ({ attentionCount }: CoachCardProps) => {
+export const CoachCard = ({ attentionCount, reviewPlanId }: CoachCardProps) => {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
@@ -17,7 +18,15 @@ export const CoachCard = ({ attentionCount }: CoachCardProps) => {
   );
 
   return (
-    <HomeCardShell onClick={() => navigate({ to: "/message-ai" })}>
+    <HomeCardShell
+      onClick={() => {
+        if (attentionCount > 0 && reviewPlanId) {
+          navigate({ to: `/plans?selectedPlan=${reviewPlanId}` });
+          return;
+        }
+        navigate({ to: "/message-ai" });
+      }}
+    >
       <div className="relative w-12 h-12">
         {attentionCount > 0 && (
           <div className="absolute inset-0 rounded-full animate-ping bg-amber-400/30" />

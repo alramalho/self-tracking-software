@@ -1,5 +1,6 @@
 import { usePlans } from "@/contexts/plans";
 import { useMetrics } from "@/contexts/metrics";
+import { useDataNotifications } from "@/contexts/notifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
 import { isAfter } from "date-fns";
@@ -15,6 +16,7 @@ interface HomeCardGridProps {
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { plans } = usePlans();
   const { metrics } = useMetrics();
+  const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
   const { isUserAIWhitelisted } = useAI();
 
@@ -27,16 +29,20 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
 
-  const plansNeedingAttention =
-    activePlans?.filter((plan) =>
-      ["AT_RISK", "FAILED"].includes(plan.currentWeekState || "")
-    ) ?? [];
+  const pendingCoachNotifications = notifications?.filter(
+    (n) => n.type === "COACH" && !n.concludedAt && n.promptTag === "autonomous_coach"
+  ) ?? [];
 
   const cards: React.ReactNode[] = [];
 
   if (!isUserOnFreePlan && isUserAIWhitelisted) {
+    const firstPendingPlanId = (pendingCoachNotifications[0]?.relatedData as any)?.planIds?.[0];
     cards.push(
-      <CoachCard key="coach" attentionCount={plansNeedingAttention.length} />
+      <CoachCard
+        key="coach"
+        attentionCount={pendingCoachNotifications.length}
+        reviewPlanId={firstPendingPlanId}
+      />
     );
   }
 
