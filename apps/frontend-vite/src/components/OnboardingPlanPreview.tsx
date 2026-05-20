@@ -36,8 +36,11 @@ export const OnboardingPlanPreview = ({
   className,
   onSessionSelect,
 }: OnboardingPlanPreviewProps) => {
-  // Convert sessions to CalendarSession format
+  // Convert sessions to CalendarSession format, synthesising an id when the
+  // backend doesn't provide one (e.g. freshly generated plans) so the
+  // CalendarGrid selection logic works.
   const calendarSessions: CalendarSession[] = sessions.map((session) => ({
+    id: `${new Date(session.date).toISOString()}-${session.activityId}`,
     date: session.date,
     activityId: session.activityId,
     quantity: session.quantity,
