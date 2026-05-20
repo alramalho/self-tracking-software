@@ -1,6 +1,7 @@
 import { TelegramService } from "@/services/telegramService";
 import { User } from "@tsw/prisma";
 import { Plan as CompletePlan } from "@tsw/prisma/types";
+import { createClient } from "@supabase/supabase-js";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
@@ -14,6 +15,13 @@ import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "@/services/aiService";
+
+const ADMIN_USERNAMES = ["liocas", "alex"];
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || "http://127.0.0.1:55321",
+  process.env.SUPABASE_ANON_KEY!
+);
 
 const telegramService = new TelegramService();
 interface AdminRequest extends Request {
@@ -31,7 +39,7 @@ const publicRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-// Admin authentication middleware
+// Admin authentication middleware — accepts ADMIN_API_KEY or Supabase JWT from admin users
 const adminAuth = async (
   req: AdminRequest,
   res: Response,
@@ -47,21 +55,30 @@ const adminAuth = async (
     }
 
     const token = authHeader.substring(7);
+
+    // Try ADMIN_API_KEY first
     const adminApiKey = process.env.ADMIN_API_KEY;
-
-    if (!adminApiKey) {
-      logger.error("Admin API key not set in environment");
-      res.status(500).json({ error: "Admin API key not configured" });
+    if (adminApiKey && token === adminApiKey) {
+      req.adminVerified = true;
+      next();
       return;
     }
 
-    if (token !== adminApiKey) {
-      res.status(401).json({ error: "Invalid admin token" });
-      return;
+    // Fall back to Supabase JWT from an admin user
+    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+    if (!error && supabaseUser) {
+      const dbUser = await userService.getUserBySupabaseAuthIdOrEmail(
+        supabaseUser.id,
+        supabaseUser.email!
+      );
+      if (dbUser && ADMIN_USERNAMES.includes(dbUser.username)) {
+        req.adminVerified = true;
+        next();
+        return;
+      }
     }
 
-    req.adminVerified = true;
-    next();
+    res.status(401).json({ error: "Invalid admin token" });
   } catch (error) {
     logger.error("Admin auth error:", error);
     res.status(500).json({ error: "Authentication failed" });
