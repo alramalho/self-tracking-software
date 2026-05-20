@@ -562,6 +562,29 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </div>
       </AnimatedSection>
 
+      {/* AI Coach Overview */}
+      {isPlanCoached(selectedPlan) && !planCoach && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.15 : 0.1}>
+          <div className="mb-6">
+          <CoachOverviewCard
+            selectedPlan={selectedPlan}
+            activities={activities}
+          />
+          <div
+            className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4`}
+            onClick={() => setShowCoachingTimeSelector(true)}
+          >
+            <Send className={`h-5 w-5 text-muted-foreground`} />
+            <span className="text-sm font-medium text-foreground">
+              Coach checks in around{" "}
+              <span className={`underline`}>{periodLabel}</span>{" "}
+              when it matters
+            </span>
+          </div>
+          </div>
+        </AnimatedSection>
+      )}
+
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
         <AnimatedSection delay={backgroundImageUrl ? 0.15 : 0.1}>
           <div className="mb-8">
@@ -702,28 +725,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-      {/* AI Coach Overview (deprecated - will be removed) */}
-      {isPlanCoached(selectedPlan) && !planCoach && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
-          <div className="mb-6">
-          <CoachOverviewCard
-            selectedPlan={selectedPlan}
-            activities={activities}
-          />
-          <div
-            className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4`}
-            onClick={() => setShowCoachingTimeSelector(true)}
-          >
-            <Send className={`h-5 w-5 text-muted-foreground`} />
-            <span className="text-sm font-medium text-foreground">
-              Coach checks in around{" "}
-              <span className={`underline`}>{periodLabel}</span>{" "}
-              when it matters
-            </span>
-          </div>
-          </div>
-        </AnimatedSection>
-      )}
 
       {/* 4. Metrics Insights for Plan Activities */}
       {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (

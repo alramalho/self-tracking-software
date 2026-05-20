@@ -180,14 +180,19 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   };
 
   // Get coach message data
-  const useCoachMessage = shouldUseCoachMessage(selectedPlan);
+  const useCoachMessage = !selectedPlan.coachNotes && shouldUseCoachMessage(selectedPlan);
   const lastCoachMessage = useCoachMessage
     ? getLastCoachMessage()
     : null;
 
-  // Don't render if no coach data to show
-  const hasCoachNotes = !useCoachMessage && selectedPlan.coachNotes;
-  const hasCoachMessage = useCoachMessage && lastCoachMessage;
+  const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
+  const isCoachNotesFresh = selectedPlan.suggestedByCoachAt &&
+    Date.now() - new Date(selectedPlan.suggestedByCoachAt).getTime() < TWO_WEEKS_MS;
+  const isCoachMessageFresh = lastCoachMessage &&
+    Date.now() - lastCoachMessage.createdAt.getTime() < TWO_WEEKS_MS;
+
+  const hasCoachNotes = !useCoachMessage && selectedPlan.coachNotes && isCoachNotesFresh;
+  const hasCoachMessage = useCoachMessage && lastCoachMessage && isCoachMessageFresh;
 
   if (
     !hasCoachNotes &&

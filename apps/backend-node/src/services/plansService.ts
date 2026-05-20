@@ -375,6 +375,13 @@ export class PlansService {
         }
       }
 
+      if (newState !== PlanState.FAILED) {
+        updatePlanData.coachSuggestedTimesPerWeek = null;
+        await prisma.planSession.deleteMany({
+          where: { planId: plan.id, isCoachSuggested: true },
+        });
+      }
+
       const coachNotes = await aiService.generateCoachNotes(
         {
           goal: plan.goal,
