@@ -1,4 +1,5 @@
 import { useApiWithAuth } from "@/api";
+import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,8 +100,7 @@ function GetCoachedPage() {
       return response.data;
     },
   });
-  const showHumanCoachSection =
-    isLoadingCoaches || (humanCoaches && humanCoaches.length > 0);
+  const showHumanCoachSection = humanCoaches && humanCoaches.length > 0;
 
   // Pre-select coach from query param (only for signed-in users)
   useEffect(() => {
@@ -113,8 +113,6 @@ function GetCoachedPage() {
       }
     }
   }, [isSignedIn, coachUsername, humanCoaches, selectedCoach]);
-
-  const coachIcon = "/images/jarvis_logo_blue_transparent.png";
 
   // Find the coach matching the query param (if any)
   const matchedCoachFromUrl = useMemo(() => {
@@ -543,80 +541,15 @@ function GetCoachedPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="flex flex-col items-center gap-2">
-              <Users className="w-20 h-20 text-blue-600" />
-              <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
-                Choose your coach
-              </h2>
-            </div>
-            <p className="text-md text-muted-foreground">
-              All coaches help you build habits with the same powerful features.
-            </p>
-          </div>
-
-          {/* Shared coaching features */}
-          <div className="space-y-3 px-2">
-            <CoachingFeatureItem
-              icon={<LandPlot className="w-5 h-5 text-blue-500" />}
-              title="Track your plan progress"
-            />
-            <CoachingFeatureItem
-              icon={<Send className="w-5 h-5 text-blue-500" />}
-              title="Check-ins several times a week"
-            />
-            <CoachingFeatureItem
-              icon={<RouteIcon className="w-5 h-5 text-blue-500" />}
-              title="Weekly plan adjustments based on progress"
-            />
-          </div>
-
-          <div className="space-y-3">
-            {/* AI Coach Option */}
-            <button
+          <AICoachFeaturePreview>
+            <Button
               onClick={handleSelectAICoach}
-              className="w-full text-left rounded-2xl overflow-hidden relative group cursor-pointer"
+              className="w-full h-12 text-base font-semibold"
             >
-              {/* Gradient background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-700" />
-              {/* Subtle pattern overlay */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
-              <div className="absolute inset-0 group-hover:bg-white/10 transition-colors" />
-
-              {/* Content */}
-              <div className="relative p-4 text-white">
-                {/* Name with icon */}
-                <div className="flex items-center gap-2 mb-2">
-                  <img
-                    src={coachIcon}
-                    alt="AI Coach"
-                    className="w-8 h-8 brightness-0 invert"
-                  />
-                  <h3 className="text-lg font-bold">Oli</h3>
-                </div>
-
-                {/* Specs Grid */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-white/60">
-                      Type
-                    </p>
-                    <p className="text-sm font-semibold">AI Coach</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-white/60">
-                      Availability
-                    </p>
-                    <p className="text-sm font-semibold">24/7</p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-white/70 mt-3">
-                  Research-backed guidance with adaptive scheduling
-                </p>
-              </div>
-            </button>
-
+              Continue with Oli
+            </Button>
+          </AICoachFeaturePreview>
+          <div className="space-y-3">
             {showHumanCoachSection && (
               <>
                 <div className="flex items-center gap-3 py-2">
