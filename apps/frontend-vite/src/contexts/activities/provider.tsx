@@ -115,6 +115,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         "timezone",
         Intl.DateTimeFormat().resolvedOptions().timeZone
       );
+      if (data.latitude != null && data.longitude != null) {
+        formData.append("latitude", data.latitude.toString());
+        formData.append("longitude", data.longitude.toString());
+      }
       if (data.withUserId) {
         formData.append("withUserId", data.withUserId);
       }
