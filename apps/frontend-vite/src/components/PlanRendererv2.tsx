@@ -139,13 +139,12 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
   const lifestyleMax = plan.progress.lifestyleAchievement?.maxValue ?? 9;
 
   return (
-    <div className="rounded-2xl bg-card/70 ring-1 ring-border p-4 space-y-3">
+    <div className="space-y-3">
       <SteppedBarProgress
         value={totalCompleted}
         maxValue={totalPlanned}
         goal={<Flame size={19} className="text-orange-400" />}
         className="w-full"
-        skipAnimation
       />
       {!habitAchieved ? (
         <SteppedBarProgress
@@ -154,7 +153,6 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
           goal={<Sprout size={19} className="text-lime-500" />}
           className="w-full"
           color="bg-lime-400"
-          skipAnimation
         />
       ) : (
         <SteppedBarProgress
@@ -163,7 +161,6 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
           goal={<Rocket size={19} className="text-amber-400" />}
           className="w-full"
           color="bg-amber-400"
-          skipAnimation
         />
       )}
     </div>
