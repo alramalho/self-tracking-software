@@ -8,6 +8,76 @@ import { MessageRole } from "@tsw/prisma";
 import { chatService } from "@/services/chatService";
 
 const router = Router();
+const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
+
+function countPendingCoachActions(metadata: unknown): number {
+  const data = metadata as any;
+  const planProposals = Array.isArray(data?.planProposals) ? data.planProposals : [];
+  const activityLogProposals = Array.isArray(data?.activityLogProposals)
+    ? data.activityLogProposals
+    : [];
+
+  return [...planProposals, ...activityLogProposals].filter(
+    (proposal) => !proposal.status
+  ).length + (data?.metricReplacement && !data.metricReplacement.status ? 1 : 0);
+}
+
+async function withCoachActionCounts<T extends { promptTag: string | null; relatedData: unknown }>(
+  notifications: T[]
+): Promise<T[]> {
+  const coachNotifications = notifications.filter((notification) => {
+    const relatedData = notification.relatedData as any;
+    return (
+      notification.promptTag === AUTONOMOUS_COACH_PROMPT_TAG &&
+      Array.isArray(relatedData?.messageIds)
+    );
+  });
+
+  if (coachNotifications.length === 0) return notifications;
+
+  const messageIds = [
+    ...new Set(
+      coachNotifications.flatMap((notification) => {
+        const relatedData = notification.relatedData as any;
+        return relatedData.messageIds.filter((id: unknown) => typeof id === "string");
+      })
+    ),
+  ];
+
+  if (messageIds.length === 0) return notifications;
+
+  const messages = await prisma.message.findMany({
+    where: { id: { in: messageIds } },
+    select: { id: true, metadata: true },
+  });
+  const pendingActionsByMessageId = new Map(
+    messages.map((message) => [
+      message.id,
+      countPendingCoachActions(message.metadata),
+    ])
+  );
+
+  return notifications.map((notification) => {
+    if (notification.promptTag !== AUTONOMOUS_COACH_PROMPT_TAG) return notification;
+
+    const relatedData = notification.relatedData as any;
+    if (!Array.isArray(relatedData?.messageIds)) return notification;
+
+    const pendingActionCount = relatedData.messageIds.reduce(
+      (count: number, messageId: string) =>
+        count + (pendingActionsByMessageId.get(messageId) ?? 0),
+      0
+    );
+
+    return {
+      ...notification,
+      relatedData: {
+        ...relatedData,
+        pendingActionCount,
+      },
+    };
+  });
+}
 
 // Process scheduled notification
 router.post(
@@ -220,7 +290,7 @@ router.get(
           createdAt: "desc",
         },
       });
-      return res.json(notifications);
+      return res.json(await withCoachActionCounts(notifications));
     } catch (error) {
       logger.error("Error loading notifications:", error);
       res.status(500).json({ error: "Failed to load notifications" });

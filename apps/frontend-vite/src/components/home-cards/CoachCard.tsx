@@ -45,7 +45,7 @@ export const CoachCard = ({
       </div>
       <p className="text-base font-medium text-muted-foreground">
         {attentionCount > 0
-          ? `${attentionCount} plan${attentionCount > 1 ? "s" : ""} need attention`
+          ? `${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`
           : hasActiveCoachedPlans
           ? "All plans on track"
           : "Coach not setup"}

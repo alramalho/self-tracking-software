@@ -595,6 +595,13 @@ export class CoachAssessmentService {
     const hasProposal = drafts.some(
       (d) => (d.planProposals && d.planProposals.length > 0) || (d.activityLogProposals && d.activityLogProposals.length > 0)
     );
+    const pendingActionCount = drafts.reduce(
+      (count, draft) =>
+        count +
+        (draft.planProposals?.filter((proposal) => !proposal.status).length || 0) +
+        (draft.activityLogProposals?.filter((proposal) => !proposal.status).length || 0),
+      0
+    );
 
     const notification = await notificationService.createAndProcessNotification(
       {
@@ -612,6 +619,7 @@ export class CoachAssessmentService {
           planIds: candidate.planIds,
           sessionIds: candidate.sessionIds || [],
           messageIds,
+          pendingActionCount,
         },
       },
       true

@@ -3,6 +3,7 @@ import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
+import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
 import { isAfter } from "date-fns";
 import { CoachCard } from "./CoachCard";
 import { PlanCard } from "./PlanCard";
@@ -30,9 +31,7 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   );
   const activeCoachedPlans = activePlans?.filter((plan) => plan.isCoached) ?? [];
 
-  const pendingCoachNotifications = notifications?.filter(
-    (n) => n.type === "COACH" && !n.concludedAt && n.promptTag === "autonomous_coach"
-  ) ?? [];
+  const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
 
   const cards: React.ReactNode[] = [];
 

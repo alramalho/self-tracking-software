@@ -11,6 +11,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, MessageCircle, ArrowLeft } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -65,9 +66,7 @@ function MessagesPage() {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }, [queryClient]);
 
-  const pendingCoachNotifications = notifications?.filter(
-    (n) => n.type === "COACH" && !n.concludedAt && n.promptTag === "autonomous_coach"
-  ) ?? [];
+  const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
   const hasPendingCoachNotification = pendingCoachNotifications.length > 0;
 
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
@@ -269,7 +268,7 @@ function MessagesPage() {
                       {isCreatingCoachChat
                         ? "Starting chat..."
                         : hasPendingCoachNotification
-                        ? `${pendingCoachNotifications.length} plan${pendingCoachNotifications.length > 1 ? "s" : ""} need attention`
+                        ? `${pendingCoachNotifications.length} coach action${pendingCoachNotifications.length > 1 ? "s" : ""} pending`
                         : "Your AI assistant"}
                     </p>
                   </div>

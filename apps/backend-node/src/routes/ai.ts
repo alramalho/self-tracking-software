@@ -16,6 +16,65 @@ import { prisma } from "../utils/prisma";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
+const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
+
+function hasPendingCoachActions(metadata: unknown): boolean {
+  const data = metadata as any;
+  const planProposals = Array.isArray(data?.planProposals) ? data.planProposals : [];
+  const activityLogProposals = Array.isArray(data?.activityLogProposals)
+    ? data.activityLogProposals
+    : [];
+
+  return [...planProposals, ...activityLogProposals].some(
+    (proposal) => !proposal.status
+  ) || (data?.metricReplacement && !data.metricReplacement.status);
+}
+
+async function concludeResolvedAutonomousCoachNotifications(
+  userId: string,
+  chatId: string,
+  messageId: string
+) {
+  const notifications = await prisma.notification.findMany({
+    where: {
+      userId,
+      type: "COACH",
+      promptTag: AUTONOMOUS_COACH_PROMPT_TAG,
+      relatedId: chatId,
+      status: { not: "CONCLUDED" },
+    },
+  });
+
+  const matchingNotifications = notifications.filter((notification) => {
+    const relatedData = notification.relatedData as any;
+    return Array.isArray(relatedData?.messageIds) && relatedData.messageIds.includes(messageId);
+  });
+
+  for (const notification of matchingNotifications) {
+    const relatedData = notification.relatedData as any;
+    const messageIds = relatedData.messageIds.filter((id: unknown) => typeof id === "string");
+    const messages = await prisma.message.findMany({
+      where: { id: { in: messageIds } },
+      select: { metadata: true },
+    });
+    const hasPendingActions = messages.some((message) =>
+      hasPendingCoachActions(message.metadata)
+    );
+
+    if (!hasPendingActions) {
+      await prisma.notification.update({
+        where: { id: notification.id },
+        data: {
+          status: "CONCLUDED",
+          concludedAt: new Date(),
+        },
+      });
+      logger.info(
+        `Concluded autonomous coach notification ${notification.id} after pending actions were resolved`
+      );
+    }
+  }
+}
 
 router.post(
   "/coach/run-assessment",
@@ -1075,6 +1134,11 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
 
       logger.info(
         `User ${user.username} accepted metric suggestion: ${metric.title} with rating ${rating}/5`
@@ -1142,6 +1206,11 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
 
       logger.info(
         `User ${user.username} rejected metric suggestion: ${metadata.metricReplacement.metricTitle}`
@@ -1361,6 +1430,11 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
 
       const successCount = changes.filter((c) => c.success).length;
       logger.info(
@@ -1451,6 +1525,11 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
 
       logger.info(
         `User ${user.username} rejected proposal: "${metadata.planProposals[proposalIndex].description}"`
