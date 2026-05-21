@@ -71,7 +71,7 @@ const adminAuth = async (
         supabaseUser.id,
         supabaseUser.email!
       );
-      if (dbUser && ADMIN_USERNAMES.includes(dbUser.username)) {
+      if (dbUser?.username && ADMIN_USERNAMES.includes(dbUser.username)) {
         req.adminVerified = true;
         next();
         return;

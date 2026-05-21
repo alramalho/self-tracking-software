@@ -1,5 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
+import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { toast } from "react-hot-toast";
@@ -68,7 +69,10 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onError: (error: any) => {
       const customErrorMessage =
-        error?.response?.data?.error || "Failed to run coach assessment";
+        toDisplayErrorMessage(
+          error?.response?.data?.error,
+          "Failed to run coach assessment"
+        );
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
     },

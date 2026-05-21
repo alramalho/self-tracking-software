@@ -16,6 +16,7 @@ import type { ResolvedOperation } from "@/components/PlanProposalCard";
 import { useSessionMessage } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles } from "lucide-react";
@@ -542,7 +543,10 @@ function MessageAIPage() {
   );
 
   const renderMessageContent = (message: any) => {
-    const content = message.content;
+    const content =
+      typeof message.content === "string"
+        ? message.content
+        : toDisplayErrorMessage(message.content, "");
     const sessionPattern = /\[About: .+?\]\n\n/;
     const sessionMatch = content.match(sessionPattern);
 
@@ -566,7 +570,10 @@ function MessageAIPage() {
   };
 
   const renderCoachContent = (message: any) => {
-    const content = message.content;
+    const content =
+      typeof message.content === "string"
+        ? message.content
+        : toDisplayErrorMessage(message.content, "");
     const parts: (string | JSX.Element)[] = [];
     const replacements: Array<{
       index: number;
