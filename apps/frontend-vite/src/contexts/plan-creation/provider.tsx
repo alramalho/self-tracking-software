@@ -329,7 +329,7 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
         ...getDefaultState(initialStepId, steps),
         ...planData,
         editingPlanId: planId,
-        currentStep: "overview", // For edit mode, start with overview
+        currentStep: planData.currentStep || "overview",
         originalValues,
       }));
     },

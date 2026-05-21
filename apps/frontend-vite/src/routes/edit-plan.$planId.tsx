@@ -24,8 +24,14 @@ import { DEFAULT_COACH_PERSONALITY } from "@/lib/coachPersonality";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { z } from "zod";
+
+const editPlanSearchSchema = z.object({
+  step: z.string().optional(),
+});
 
 export const Route = createFileRoute("/edit-plan/$planId")({
+  validateSearch: editPlanSearchSchema,
   component: EditPlanPage,
 });
 
@@ -157,7 +163,13 @@ const EditPlanStepRenderer = () => {
   );
 };
 
-const EditPlanLoader = ({ planId }: { planId: string }) => {
+const EditPlanLoader = ({
+  planId,
+  initialStepId,
+}: {
+  planId: string;
+  initialStepId?: string;
+}) => {
   const { plans, isLoadingPlans } = usePlans();
   const { initializeForEdit } = usePlanCreation();
   const navigate = useNavigate();
@@ -190,10 +202,11 @@ const EditPlanLoader = ({ planId }: { planId: string }) => {
         quantity: s.quantity,
       })) || [],
       milestones: plan.milestones || [],
+      currentStep: initialStepId || "overview",
     });
 
     setInitialized(true);
-  }, [plans, planId, isLoadingPlans, initializeForEdit, navigate, initialized]);
+  }, [plans, planId, isLoadingPlans, initializeForEdit, navigate, initialized, initialStepId]);
 
   if (isLoadingPlans || !initialized) {
     return (
@@ -215,9 +228,11 @@ const EditPlanLoader = ({ planId }: { planId: string }) => {
 
 function EditPlanPage() {
   const { planId } = Route.useParams();
+  const { step } = Route.useSearch();
+  const initialStepId = step || "overview";
 
   const initialSteps = getEditPlanSteps({
-    currentStep: "overview",
+    currentStep: initialStepId,
     completedSteps: [],
     goal: null,
     goalReason: null,
@@ -242,8 +257,8 @@ function EditPlanPage() {
   });
 
   return (
-    <PlanCreationProvider steps={initialSteps} initialStepId="overview">
-      <EditPlanLoader planId={planId} />
+    <PlanCreationProvider steps={initialSteps} initialStepId={initialStepId}>
+      <EditPlanLoader planId={planId} initialStepId={initialStepId} />
     </PlanCreationProvider>
   );
 }

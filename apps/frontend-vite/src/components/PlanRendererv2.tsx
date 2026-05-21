@@ -32,6 +32,7 @@ import {
   Send,
   Trash2,
   UserPlus,
+  Users,
   BarChart3,
   BarChartHorizontal,
   Activity,
@@ -119,6 +120,19 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       return response.data;
     },
     enabled: !!(selectedPlan as any).coachId && (selectedPlan as any).isCoached,
+  });
+
+  const { data: coachingRecommendation } = useQuery({
+    queryKey: ["coaching-recommendation", selectedPlan.id, selectedPlan.goal],
+    queryFn: async () => {
+      const response = await api.post<{ needsCoaching: boolean }>(
+        "/ai/classify-coaching-need",
+        { planGoal: selectedPlan.goal }
+      );
+      return response.data;
+    },
+    enabled: !!selectedPlan.id && !selectedPlan.isCoached,
+    staleTime: 1000 * 60 * 10,
   });
 
   // Find the coach for this plan
@@ -509,7 +523,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               variant="ghost"
               size="icon"
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-400 hover:text-red-600 hover:bg-red-50"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <Trash2 className="h-6 w-6" />
             </Button>
@@ -524,7 +538,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               variant="ghost"
               size="icon"
               onClick={() => navigate({ to: "/edit-plan/$planId", params: { planId: selectedPlan.id! } })}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <Pencil className="h-6 w-6" />
             </Button>
@@ -534,7 +548,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 size="icon"
                 onClick={handleResumePlan}
                 disabled={isResumingPlan}
-                className="text-green-500 hover:text-green-600 hover:bg-green-50"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 {isResumingPlan ? <Loader2 className="h-6 w-6 animate-spin" /> : <Play className="h-6 w-6" />}
               </Button>
@@ -543,7 +557,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowPausePopover(true)}
-                className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <Pause className="h-6 w-6" />
               </Button>
@@ -552,7 +566,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               variant="ghost"
               size="icon"
               onClick={() => setShowArchiveConfirm(true)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
               title="Archive plan"
             >
               <Archive className="h-6 w-6" />
@@ -561,6 +575,39 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </div>
         </div>
       </AnimatedSection>
+
+      {!isPlanCoached(selectedPlan) && coachingRecommendation?.needsCoaching && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.12 : 0.05}>
+          <div className={`mb-6 rounded-2xl border-2 p-4 ${variants.brightBorder} ${variants.veryFadedBg}`}>
+            <div className="flex items-start gap-3">
+              <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${variants.fadedBg}`}>
+                <Users className={`h-5 w-5 ${variants.text}`} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-foreground">
+                  We recommend coaching for this plan
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This goal looks like it benefits from structure, check-ins, and plan adjustments.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() =>
+                navigate({
+                  to: "/edit-plan/$planId",
+                  params: { planId: selectedPlan.id! },
+                  search: { step: "coaching" },
+                })
+              }
+              className={`mt-4 w-full gap-2 ${themeColors.button.solid}`}
+            >
+              <Users className="h-4 w-4" />
+              Set up coaching
+            </Button>
+          </div>
+        </AnimatedSection>
+      )}
 
       {/* AI Coach Overview */}
       {isPlanCoached(selectedPlan) && !planCoach && (
@@ -725,46 +772,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-
-      {/* 4. Metrics Insights for Plan Activities */}
-      {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.35 : 0.3}>
-          <div className="mb-12">
-          <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            See how this plan's activities correlate with your tracked metrics
-          </p>
-          <div className="space-y-4">
-            {metricsWithEnoughData.map((metric) => (
-              <div key={metric.id}>
-                <MetricInsightsCard
-                  metric={metric}
-                  activities={planActivities}
-                  activityEntries={activityEntries}
-                  metricEntries={metricEntries || []}
-                  onHelpClick={() => setHelpMetricId(metric.id)}
-                />
-                <CorrelationHelpPopover
-                  isOpen={helpMetricId === metric.id}
-                  onClose={() => setHelpMetricId(null)}
-                  metricTitle={metric.title}
-                />
-              </div>
-            ))}
-          </div>
-          <Link to="/insights/dashboard">
-            <div className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4">
-              <Activity className="h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">
-                See full metrics dashboard
-              </span>
-            </div>
-          </Link>
-          </div>
-        </AnimatedSection>
-      )}
-
-      {/* 5. Plan Group Progress */}
+      {/* 4. Plan Group Progress */}
       {selectedPlan.planGroupId && (
         <AnimatedSection delay={backgroundImageUrl ? 0.4 : 0.35}>
           <div className="mb-6">
@@ -821,6 +829,44 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                 </div>
               </div>
             )}
+          </div>
+        </AnimatedSection>
+      )}
+
+      {/* 5. Metrics Insights for Plan Activities */}
+      {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.45 : 0.4}>
+          <div className="mb-12">
+          <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            See how this plan's activities correlate with your tracked metrics
+          </p>
+          <div className="space-y-4">
+            {metricsWithEnoughData.map((metric) => (
+              <div key={metric.id}>
+                <MetricInsightsCard
+                  metric={metric}
+                  activities={planActivities}
+                  activityEntries={activityEntries}
+                  metricEntries={metricEntries || []}
+                  onHelpClick={() => setHelpMetricId(metric.id)}
+                />
+                <CorrelationHelpPopover
+                  isOpen={helpMetricId === metric.id}
+                  onClose={() => setHelpMetricId(null)}
+                  metricTitle={metric.title}
+                />
+              </div>
+            ))}
+          </div>
+          <Link to="/insights/dashboard">
+            <div className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4">
+              <Activity className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                See full metrics dashboard
+              </span>
+            </div>
+          </Link>
           </div>
         </AnimatedSection>
       )}
