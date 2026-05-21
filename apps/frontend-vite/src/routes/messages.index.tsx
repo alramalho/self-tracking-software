@@ -65,11 +65,10 @@ function MessagesPage() {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }, [queryClient]);
 
-  const hasPendingCoachNotification = !!notifications?.find(
-    (n) =>
-      n.type === "COACH" &&
-      n.status !== "CONCLUDED"
-  );
+  const pendingCoachNotifications = notifications?.filter(
+    (n) => n.type === "COACH" && !n.concludedAt && n.promptTag === "autonomous_coach"
+  ) ?? [];
+  const hasPendingCoachNotification = pendingCoachNotifications.length > 0;
 
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
@@ -250,7 +249,9 @@ function MessagesPage() {
                   disabled={isCreatingCoachChat}
                   className={cn(
                     "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
-                    pinnedCoaches.length === 0 ? cn(variants.fadedBg, "border", variants.border) : "hover:bg-muted/50"
+                    hasPendingCoachNotification
+                      ? cn(variants.fadedBg, "border", variants.border)
+                      : "hover:bg-muted/50"
                   )}
                 >
                   <Avatar className="w-11 h-11 bg-transparent">
@@ -265,7 +266,11 @@ function MessagesPage() {
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {isCreatingCoachChat ? "Starting chat..." : "Your AI assistant"}
+                      {isCreatingCoachChat
+                        ? "Starting chat..."
+                        : hasPendingCoachNotification
+                        ? `${pendingCoachNotifications.length} plan${pendingCoachNotifications.length > 1 ? "s" : ""} need attention`
+                        : "Your AI assistant"}
                     </p>
                   </div>
                   {(coachUnreadCount > 0 || hasPendingCoachNotification) && (
