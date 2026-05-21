@@ -22,7 +22,7 @@ export const MetricsCard = ({ onLogClick }: MetricsCardProps) => {
       const entry = entries?.find(
         (e) =>
           e.metricId === metric.id &&
-          isSameDay(new Date(e.date ?? e.createdAt), day)
+          isSameDay(new Date(e.createdAt), day)
       );
       const isLogged = !!(entry && (entry.rating > 0 || entry.skipped));
 
