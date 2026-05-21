@@ -36,6 +36,9 @@ import {
   BarChart3,
   BarChartHorizontal,
   Activity,
+  Flame,
+  Rocket,
+  Sprout,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
@@ -54,6 +57,7 @@ import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
 import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
 import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
 import { FireAnimation } from "./FireBadge";
+import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -104,6 +108,67 @@ interface HumanCoach {
     picture: string | null;
   };
 }
+
+const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
+  const currentWeek = plan.progress?.weeks?.find((week: any) =>
+    isSameWeek(new Date(week.startDate), new Date())
+  );
+
+  if (!currentWeek || !plan.progress?.achievement) return null;
+
+  const totalPlanned =
+    plan.outlineType === "TIMES_PER_WEEK"
+      ? (currentWeek.plannedActivities as number) || 0
+      : ((currentWeek.plannedActivities as any[])?.length || 0);
+
+  const uniqueDays = new Set(
+    (currentWeek.completedActivities || []).map((entry: any) =>
+      format(new Date(entry.datetime || entry.date), "yyyy-MM-dd")
+    )
+  );
+  const totalCompleted = uniqueDays.size;
+  const streak = plan.progress.achievement.streak ?? 0;
+
+  const habitProgress =
+    plan.progress.habitAchievement?.progressValue ?? Math.min(4, streak);
+  const habitMax = plan.progress.habitAchievement?.maxValue ?? 4;
+  const habitAchieved =
+    plan.progress.habitAchievement?.isAchieved || streak >= 4;
+  const lifestyleProgress =
+    plan.progress.lifestyleAchievement?.progressValue ?? Math.min(9, streak);
+  const lifestyleMax = plan.progress.lifestyleAchievement?.maxValue ?? 9;
+
+  return (
+    <div className="rounded-2xl bg-card/70 ring-1 ring-border p-4 space-y-3">
+      <SteppedBarProgress
+        value={totalCompleted}
+        maxValue={totalPlanned}
+        goal={<Flame size={19} className="text-orange-400" />}
+        className="w-full"
+        skipAnimation
+      />
+      {!habitAchieved ? (
+        <SteppedBarProgress
+          value={habitProgress}
+          maxValue={habitMax}
+          goal={<Sprout size={19} className="text-lime-500" />}
+          className="w-full"
+          color="bg-lime-400"
+          skipAnimation
+        />
+      ) : (
+        <SteppedBarProgress
+          value={lifestyleProgress}
+          maxValue={lifestyleMax}
+          goal={<Rocket size={19} className="text-amber-400" />}
+          className="w-full"
+          color="bg-amber-400"
+          skipAnimation
+        />
+      )}
+    </div>
+  );
+};
 
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
@@ -496,7 +561,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       )}
 
       <AnimatedSection delay={backgroundImageUrl ? 0.1 : 0}>
-        <div className="flex flex-row items-start justify-start gap-2 mb-8">
+        <div className="flex flex-row items-start justify-start gap-2 mb-4">
         <span className="text-5xl">{selectedPlan.emoji}</span>
         <div className="flex min-w-0 flex-1 flex-col gap-2 justify-start">
           <div className="flex items-start justify-between gap-3">
@@ -585,6 +650,12 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
             </Button>
           </div>
         </div>
+        </div>
+      </AnimatedSection>
+
+      <AnimatedSection delay={backgroundImageUrl ? 0.12 : 0.05}>
+        <div className="mb-8">
+          <PlanProgressStrip plan={selectedPlan} />
         </div>
       </AnimatedSection>
 

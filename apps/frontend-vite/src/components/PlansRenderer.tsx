@@ -1,14 +1,13 @@
 
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
-import { SteppedBarProgress } from "@/components/SteppedBarProgress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { addMonths, format, isBefore, isSameWeek } from "date-fns";
-import { Archive, ArchiveRestore, BadgeCheck, Flame, Plus, PlusSquare, RefreshCw, Rocket, Sprout, Trash2 } from "lucide-react";
+import { addMonths, isBefore } from "date-fns";
+import { Archive, ArchiveRestore, BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { AnimatePresence, motion } from "framer-motion";
@@ -111,67 +110,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
           </span>
         )}
       </div>
-    </div>
-  );
-};
-
-const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
-  const currentWeek = plan.progress?.weeks?.find((week: any) =>
-    isSameWeek(new Date(week.startDate), new Date())
-  );
-
-  if (!currentWeek || !plan.progress?.achievement) return null;
-
-  const totalPlanned =
-    plan.outlineType === "TIMES_PER_WEEK"
-      ? (currentWeek.plannedActivities as number) || 0
-      : ((currentWeek.plannedActivities as any[])?.length || 0);
-
-  const uniqueDays = new Set(
-    (currentWeek.completedActivities || []).map((entry: any) =>
-      format(new Date(entry.datetime || entry.date), "yyyy-MM-dd")
-    )
-  );
-  const totalCompleted = uniqueDays.size;
-  const streak = plan.progress.achievement.streak ?? 0;
-
-  const habitProgress =
-    plan.progress.habitAchievement?.progressValue ?? Math.min(4, streak);
-  const habitMax = plan.progress.habitAchievement?.maxValue ?? 4;
-  const habitAchieved =
-    plan.progress.habitAchievement?.isAchieved || streak >= 4;
-  const lifestyleProgress =
-    plan.progress.lifestyleAchievement?.progressValue ?? Math.min(9, streak);
-  const lifestyleMax = plan.progress.lifestyleAchievement?.maxValue ?? 9;
-
-  return (
-    <div className="rounded-2xl bg-card/70 ring-1 ring-border p-4 space-y-3">
-      <SteppedBarProgress
-        value={totalCompleted}
-        maxValue={totalPlanned}
-        goal={<Flame size={19} className="text-orange-400" />}
-        className="w-full"
-        skipAnimation
-      />
-      {!habitAchieved ? (
-        <SteppedBarProgress
-          value={habitProgress}
-          maxValue={habitMax}
-          goal={<Sprout size={19} className="text-lime-500" />}
-          className="w-full"
-          color="bg-lime-400"
-          skipAnimation
-        />
-      ) : (
-        <SteppedBarProgress
-          value={lifestyleProgress}
-          maxValue={lifestyleMax}
-          goal={<Rocket size={19} className="text-amber-400" />}
-          className="w-full"
-          color="bg-amber-400"
-          skipAnimation
-        />
-      )}
     </div>
   );
 };
@@ -372,18 +310,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
 
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
-  const activeProgressPlans = orderedPlans.filter(
-    (plan) =>
-      !plan.deletedAt &&
-      !isPlanExpired(plan) &&
-      !isPlanArchived(plan) &&
-      plan.progress?.weeks?.length &&
-      plan.progress?.achievement
-  );
-  const selectedProgressPlan =
-    activeProgressPlans.find((plan) => plan.id === selectedPlanId) ??
-    activeProgressPlans[0];
-
   return (
     <div className="space-y-6">
       <div
@@ -431,8 +357,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
           <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
         </Button>
       </div>
-
-      {selectedProgressPlan && <PlanProgressStrip plan={selectedProgressPlan} />}
 
       {hasExpiredOrArchivedPlans && !showOldPlans && (
         <div className="flex justify-center">
