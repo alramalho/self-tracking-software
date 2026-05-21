@@ -1,6 +1,7 @@
 import { TZDate } from "@date-fns/tz";
 import { Activity, Plan, PlanGroup, PlanState, Prisma } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
@@ -842,7 +843,7 @@ router.get(
           const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
 
           const activityIds = memberPlan.activities.map((a) => a.id);
-          const weeklyActivityCount = await prisma.activityEntry.count({
+          const weeklyActivityEntries = await prisma.activityEntry.findMany({
             where: {
               userId: user.id,
               activityId: { in: activityIds },
@@ -852,7 +853,15 @@ router.get(
               },
               deletedAt: null,
             },
+            select: {
+              datetime: true,
+            },
           });
+          const weeklyActivityCount = new Set(
+            weeklyActivityEntries.map((entry) =>
+              formatInTimeZone(new Date(entry.datetime), timezone, "yyyy-MM-dd")
+            )
+          ).size;
 
           // Calculate target
           let target = memberPlan.timesPerWeek || 0;
