@@ -1,5 +1,6 @@
 
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
+import { PlanProgressCard } from "@/components/PlanProgressCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
@@ -310,6 +311,14 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
 
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
+  const activeProgressPlans = orderedPlans.filter(
+    (plan) =>
+      !plan.deletedAt &&
+      !isPlanExpired(plan) &&
+      !isPlanArchived(plan) &&
+      plan.progress?.weeks?.length &&
+      plan.progress?.achievement
+  );
 
   return (
     <div className="space-y-6">
@@ -358,6 +367,20 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
           <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
         </Button>
       </div>
+
+      {activeProgressPlans.length > 0 && (
+        <div className="space-y-3">
+          {activeProgressPlans.map((plan) => (
+            <PlanProgressCard
+              key={`progress-${plan.id}`}
+              plan={plan}
+              weeks={plan.progress.weeks}
+              achievement={plan.progress.achievement}
+              isExpanded
+            />
+          ))}
+        </div>
+      )}
 
       {hasExpiredOrArchivedPlans && !showOldPlans && (
         <div className="flex justify-center">

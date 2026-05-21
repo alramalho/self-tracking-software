@@ -32,6 +32,9 @@ export const MetricsCard = ({ onLogClick }: MetricsCardProps) => {
       };
     }),
   }));
+  const hasLoggedToday =
+    !!dotGrid?.length &&
+    dotGrid.every((row) => row.days[todayIndex]?.isLogged);
 
   return (
     <HomeCardShell>
@@ -59,7 +62,7 @@ export const MetricsCard = ({ onLogClick }: MetricsCardProps) => {
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={onLogClick} className="w-full">
-        Log
+        {hasLoggedToday ? "Log again" : "Log"}
       </Button>
     </HomeCardShell>
   );
