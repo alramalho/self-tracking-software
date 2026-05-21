@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
 import { Archive, ArchiveRestore, BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -16,7 +16,7 @@ import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
-import { capitalize } from "@/lib/utils";
+import { capitalize, cn } from "@/lib/utils";
 import { twMerge } from "tailwind-merge";
 
 // Helper function to check if a plan is expired
@@ -76,10 +76,16 @@ const PlanCard: React.FC<PlanCardProps> = ({
   };
 
   return (
-    <div className="relative">
+    <div
+      className={twMerge(
+        "relative rounded-lg",
+        isCoached && "ring-2",
+        isCoached && variants.ringBright
+      )}
+    >
       {isCoached && (
         <div className="absolute top-1 right-1 z-10 flex bg-transparent">
-          <BadgeCheck className={`h-4 w-4 ${variants.fadedText}`} />
+          <BadgeCheck className={`h-4 w-4 ${variants.text}`} />
         </div>
       )}
       {isArchived && (
@@ -88,10 +94,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
         </div>
       )}
       <div
-        className={`flex items-center justify-center h-20 rounded-lg ring-2 bg-card cursor-pointer transition-all ${
+        className={`flex items-center justify-center h-20 rounded-lg bg-card cursor-pointer transition-all ${
           isSelected
-            ? `${variants.ringBright} ${variants.veryFadedBg}`
-            : "ring-border hover:ring-muted-foreground/50"
+            ? variants.veryFadedBg
+            : "hover:bg-muted/60"
         }`}
         onClick={handleCardClick}
         style={{ opacity: isInactive ? 0.5 : 1 }}
@@ -307,6 +313,17 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
   return (
     <div className="space-y-6">
+      <div
+        className={twMerge(
+          "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-2",
+          variants.ringBright,
+          variants.veryFadedBg
+        )}
+      >
+        <BadgeCheck className={cn("h-4 w-4", variants.text)} />
+        <span>Coached plans have a themed ring</span>
+      </div>
+
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
         <AnimatePresence mode="popLayout">
           {displayedPlans.map((plan, index) => (
