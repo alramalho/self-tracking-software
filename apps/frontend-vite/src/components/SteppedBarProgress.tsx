@@ -11,6 +11,7 @@ interface SteppedBarProgressProps {
   onAnimationCompleted?: () => void;
   onFullyDone?: () => void;
   color?: string;
+  emptyColor?: string;
   celebration?: string | React.ReactNode;
   skipAnimation?: boolean;
   compact?: boolean;
@@ -23,6 +24,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   className,
   celebration,
   color = "bg-green-500",
+  emptyColor,
   onAnimationCompleted,
   onFullyDone,
   skipAnimation = false,
@@ -83,7 +85,9 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
               className={cn(
                 "rounded transition-all",
                 compact ? "w-3.5 h-3.5" : "flex-1 h-2",
-                index < animatedValue ? color : compact ? "bg-muted-foreground/25" : "bg-background",
+                index < animatedValue
+                  ? color
+                  : emptyColor ?? (compact ? "bg-muted-foreground/25" : "bg-background"),
                 isFullyDone ? "animate-pulse duration-1300" : "duration-300"
               )}
             />
