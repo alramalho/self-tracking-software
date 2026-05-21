@@ -53,6 +53,7 @@ import { PlanCalendarView } from "./PlanCalendarView";
 import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
 import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
 import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
+import { FireAnimation } from "./FireBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -470,6 +471,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
   }, [metrics, metricEntries]);
 
   const backgroundImageUrl = (selectedPlan as any)?.backgroundImageUrl;
+  const selectedPlanStreak = selectedPlan.progress?.achievement?.streak ?? 0;
 
   return (
     <motion.div
@@ -496,8 +498,18 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       <AnimatedSection delay={backgroundImageUrl ? 0.1 : 0}>
         <div className="flex flex-row items-start justify-start gap-2 mb-8">
         <span className="text-5xl">{selectedPlan.emoji}</span>
-        <div className="flex flex-col gap-2 justify-start">
-          <h2 className="text-2xl font-semibold">{selectedPlan.goal}</h2>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 justify-start">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="min-w-0 text-2xl font-semibold">{selectedPlan.goal}</h2>
+            <div
+              className={`flex shrink-0 items-center gap-1 ${
+                selectedPlanStreak === 0 ? "grayscale opacity-50" : ""
+              }`}
+            >
+              <span className="text-lg font-cursive">x{selectedPlanStreak}</span>
+              <FireAnimation height={40} width={40} className="pb-2" />
+            </div>
+          </div>
           <span className="text-sm text-muted-foreground">
             {selectedPlan.outlineType === "TIMES_PER_WEEK"
               ? `${selectedPlan.timesPerWeek} times per week`
