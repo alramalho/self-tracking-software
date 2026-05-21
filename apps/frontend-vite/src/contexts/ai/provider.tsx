@@ -5,6 +5,7 @@ import React from "react";
 import { toast } from "react-hot-toast";
 import {
   createCoachChat,
+  runCoachAssessment,
   updateChatTitle,
   submitFeedback,
   acceptMetric,
@@ -50,6 +51,24 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onError: (error) => {
       const customErrorMessage = `Failed to create chat`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const runCoachAssessmentMutation = useMutation({
+    mutationFn: async () => {
+      return await runCoachAssessment(api);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+    },
+    onError: (error: any) => {
+      const customErrorMessage =
+        error?.response?.data?.error || "Failed to run coach assessment";
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
     },
@@ -246,6 +265,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     // AI-specific functionality
     createCoachChat: createCoachChatMutation.mutateAsync,
     isCreatingCoachChat: createCoachChatMutation.isPending,
+    runCoachAssessment: runCoachAssessmentMutation.mutateAsync,
+    isRunningCoachAssessment: runCoachAssessmentMutation.isPending,
     updateChatTitle: updateChatTitleMutation.mutateAsync,
     isUpdatingChatTitle: updateChatTitleMutation.isPending,
     submitFeedback: submitFeedbackMutation.mutateAsync,

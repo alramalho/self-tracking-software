@@ -35,6 +35,10 @@ export async function createCoachChat(
   return deserializeChat(response.data.chat);
 }
 
+export async function runCoachAssessment(api: AxiosInstance): Promise<void> {
+  await api.post("/ai/coach/run-assessment");
+}
+
 // Update chat title (coach-specific)
 export async function updateChatTitle(
   api: AxiosInstance,

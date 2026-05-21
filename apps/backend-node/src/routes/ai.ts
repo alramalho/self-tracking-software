@@ -3,6 +3,7 @@ import multer from "multer";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { coachAssessmentService } from "../services/coachAssessmentService";
 import { coachAgentService } from "../services/coachAgentService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
@@ -15,6 +16,33 @@ import { prisma } from "../utils/prisma";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
+
+router.post(
+  "/coach/run-assessment",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const result = await coachAssessmentService.runManualCoachAssessmentForUser(user.id);
+
+      if (result.action === "skipped") {
+        return res.status(409).json({ error: result.reason, result });
+      }
+
+      if (result.action === "error") {
+        return res.status(500).json({ error: result.reason, result });
+      }
+
+      res.json({ result });
+    } catch (error) {
+      logger.error("Error running manual coach assessment:", error);
+      res.status(500).json({ error: "Failed to run coach assessment" });
+    }
+  }
+);
 
 // Get coach messages (conversation history)
 router.get(

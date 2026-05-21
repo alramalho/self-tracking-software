@@ -36,6 +36,11 @@ interface RunOptions {
   now?: Date;
 }
 
+interface AssessOptions extends Required<Pick<RunOptions, "dry_run" | "force" | "now">> {
+  bypassDuplicateCheck?: boolean;
+  fallbackCheckin?: boolean;
+}
+
 interface UserAssessmentResult {
   username: string | null;
   userId: string;
@@ -180,6 +185,54 @@ export class CoachAssessmentService {
     };
   }
 
+  async runManualCoachAssessmentForUser(
+    userId: string,
+    options: { now?: Date } = {}
+  ): Promise<UserAssessmentResult> {
+    const user = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null,
+        plans: {
+          some: {
+            isCoached: true,
+            deletedAt: null,
+            archivedAt: null,
+            isPaused: false,
+          },
+        },
+      },
+      include: {
+        plans: {
+          where: {
+            isCoached: true,
+            deletedAt: null,
+            archivedAt: null,
+            isPaused: false,
+          },
+          include: { activities: true, sessions: true },
+        },
+      },
+    });
+
+    if (!user) {
+      return {
+        userId,
+        username: null,
+        action: "skipped",
+        reason: "No active coached plans",
+      };
+    }
+
+    return this.assessUser(user as CoachUser, {
+      dry_run: false,
+      force: true,
+      now: options.now || new Date(),
+      bypassDuplicateCheck: true,
+      fallbackCheckin: true,
+    });
+  }
+
   async autoAcceptExpiredProposals(now: Date = new Date()): Promise<{
     processed: number;
     accepted: number;
@@ -312,17 +365,20 @@ export class CoachAssessmentService {
 
   private async assessUser(
     user: CoachUser,
-    options: Required<Pick<RunOptions, "dry_run" | "force" | "now">>
+    options: AssessOptions
   ): Promise<UserAssessmentResult> {
-    const { now, force, dry_run } = options;
+    const { now, force, dry_run, bypassDuplicateCheck = false, fallbackCheckin = false } = options;
 
     const recentMessages = await this.getRecentCoachMessages(user.id);
     const pendingProposalExists = hasPendingProposal(recentMessages);
     const candidates = await this.buildInterventionCandidates(user, now, {
       force,
       pendingProposalExists,
+      fallbackCheckin,
     });
-    const candidate = await this.selectInterventionCandidate(user, candidates);
+    const candidate = await this.selectInterventionCandidate(user, candidates, {
+      bypassDuplicateCheck,
+    });
 
     if (candidate) {
       const brief = await coachContextBriefService.buildCoachContextBrief({
@@ -375,6 +431,35 @@ export class CoachAssessmentService {
       });
 
       if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
+        if (fallbackCheckin) {
+          const fallbackCandidate: CoachInterventionCandidate = {
+            type: "INACTIVITY_CHECKIN",
+            reason: "User requested a coach assessment from the coach chat.",
+            planIds: user.plans.map((plan) => plan.id),
+            targetDate: format(new TZDate(now, user.timezone || "UTC"), "yyyy-MM-dd"),
+            context: await this.buildContextSummary(user, now),
+            usesAgent: false,
+          };
+          const generated = await aiService.generateCoachAssessmentInterventionMessage({
+            user,
+            interventionType: "INACTIVITY_CHECKIN",
+            reason: fallbackCandidate.reason,
+            context: fallbackCandidate.context,
+          });
+          const sent = await this.dispatchCoachDrafts(user, fallbackCandidate, [
+            { content: generated.message },
+          ], generated.title);
+
+          return {
+            userId: user.id,
+            username: user.username,
+            action: "sent",
+            reason: "Sent manual coach assessment fallback",
+            sentMessageIds: sent.messageIds,
+            notificationId: sent.notificationId,
+          };
+        }
+
         return {
           userId: user.id,
           username: user.username,
@@ -553,7 +638,7 @@ export class CoachAssessmentService {
   private async buildInterventionCandidates(
     user: CoachUser,
     now: Date,
-    options: { force: boolean; pendingProposalExists: boolean }
+    options: { force: boolean; pendingProposalExists: boolean; fallbackCheckin?: boolean }
   ): Promise<CoachInterventionCandidate[]> {
     const timezone = user.timezone || "UTC";
     const nowInTz = new TZDate(now, timezone);
@@ -696,16 +781,29 @@ export class CoachAssessmentService {
       }
     }
 
+    if (options.force && options.fallbackCheckin && candidates.length === 0) {
+      candidates.push({
+        type: "INACTIVITY_CHECKIN",
+        reason: "User requested a coach assessment from the coach chat.",
+        planIds: user.plans.map((plan) => plan.id),
+        targetDate: format(nowInTz, "yyyy-MM-dd"),
+        context: await this.buildContextSummary(user, now),
+        usesAgent: false,
+      });
+    }
+
     return candidates;
   }
 
   private async selectInterventionCandidate(
     user: User,
-    candidates: CoachInterventionCandidate[]
+    candidates: CoachInterventionCandidate[],
+    options: { bypassDuplicateCheck?: boolean } = {}
   ): Promise<CoachInterventionCandidate | null> {
     for (const type of INTERVENTION_PRIORITY) {
       const matching = candidates.filter((candidate) => candidate.type === type);
       for (const candidate of matching) {
+        if (options.bypassDuplicateCheck) return candidate;
         const sent = await this.hasSentIntervention(user.id, candidate);
         if (!sent) return candidate;
       }

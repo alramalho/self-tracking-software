@@ -18,7 +18,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
@@ -223,8 +223,6 @@ function MessageAIPage() {
     markMessagesAsRead,
     clearCoachHistory,
     isClearingCoachHistory,
-    clearCoachMemory,
-    isClearingCoachMemory,
   } = useMessages();
   const {
     submitFeedback,
@@ -237,6 +235,8 @@ function MessageAIPage() {
     rejectActivityLogProposal,
     createCoachChat,
     isCreatingCoachChat,
+    runCoachAssessment,
+    isRunningCoachAssessment,
   } = useAI();
   const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
@@ -360,9 +360,9 @@ function MessageAIPage() {
     }
   }, [showMenu]);
 
-  const handleClearMemory = async () => {
+  const handleClearHistory = async () => {
     try {
-      await clearCoachMemory();
+      await clearCoachHistory();
       setShowClearDialog(false);
     } catch {
       // Error handled by mutation
@@ -398,6 +398,18 @@ function MessageAIPage() {
       await sendMessage({ message: messageToSend, chatId: currentChatId, coachVersion: "v2" });
     } catch (error) {
       console.error("Failed to send message:", error);
+    }
+  };
+
+  const handleRunCoachAssessment = async () => {
+    if (isRunningCoachAssessment) return;
+
+    try {
+      await runCoachAssessment();
+      toast.success("Coach assessment started");
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error("Failed to run coach assessment:", error);
     }
   };
 
@@ -705,60 +717,83 @@ function MessageAIPage() {
                 >
                   <ArrowLeft size={20} />
                 </Button>
-                <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
-                <div>
-                  <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
-                  <p className="text-xs text-muted-foreground">AI Coach</p>
-                </div>
-              </div>
-              <div className="relative" ref={menuRef}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowMenu(!showMenu)}
+                <button
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  onClick={() => navigate({ to: "/manage-ai-coach" })}
                 >
-                  <EllipsisVertical size={18} />
-                </Button>
-                {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-[100] py-1">
-                    <button
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                      onClick={async () => {
-                        setShowMenu(false);
-                        try {
-                          await createCoachChat({ title: null });
-                          toast.success("New conversation started");
-                        } catch {
-                          toast.error("Failed to create conversation");
-                        }
-                      }}
-                      disabled={isCreatingCoachChat}
-                    >
-                      <MessageSquarePlus size={16} />
-                      New conversation
-                    </button>
-                    <button
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                      onClick={() => {
-                        setShowMenu(false);
-                        navigate({ to: "/manage-ai-coach" });
-                      }}
-                    >
-                      <Settings size={16} />
-                      Settings
-                    </button>
-                    <button
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted transition-colors"
-                      onClick={() => {
-                        setShowMenu(false);
-                        setShowClearDialog(true);
-                      }}
-                    >
-                      <Eraser size={16} />
-                      Clear memory
-                    </button>
+                  <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
+                  <div className="text-left">
+                    <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
+                    <p className="text-xs text-muted-foreground">AI Coach</p>
                   </div>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {!isLoadingMessages && allMessages.length === 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRunCoachAssessment}
+                    disabled={isRunningCoachAssessment}
+                    className="gap-2"
+                  >
+                    {isRunningCoachAssessment ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={15} />
+                    )}
+                    Assess
+                  </Button>
                 )}
+                <div className="relative" ref={menuRef}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowMenu(!showMenu)}
+                  >
+                    <EllipsisVertical size={18} />
+                  </Button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-[100] py-1">
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                        onClick={async () => {
+                          setShowMenu(false);
+                          try {
+                            await createCoachChat({ title: null });
+                            toast.success("New conversation started");
+                          } catch {
+                            toast.error("Failed to create conversation");
+                          }
+                        }}
+                      disabled={isCreatingCoachChat || isClearingCoachHistory}
+                      >
+                        <MessageSquarePlus size={16} />
+                        New conversation
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                        onClick={() => {
+                          setShowMenu(false);
+                          navigate({ to: "/manage-ai-coach" });
+                        }}
+                      >
+                        <Settings size={16} />
+                        Settings
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted transition-colors"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowClearDialog(true);
+                        }}
+                      >
+                        <Eraser size={16} />
+                        Clear messages
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -790,9 +825,21 @@ function MessageAIPage() {
                 <div>
                   <h3 className="font-semibold text-lg">No messages yet</h3>
                   <p className="text-sm text-muted-foreground">
-                    Send a message to start the conversation
+                    Run an assessment to get a first read on your coached plans.
                   </p>
                 </div>
+                <Button
+                  onClick={handleRunCoachAssessment}
+                  disabled={isRunningCoachAssessment}
+                  className="gap-2"
+                >
+                  {isRunningCoachAssessment ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={16} />
+                  )}
+                  Run coach assessment
+                </Button>
               </div>
             ) : (
               allMessages.map((message: any, index: number) => {
@@ -995,10 +1042,10 @@ function MessageAIPage() {
                 </button>
               </div>
             )}
-            <div className="flex items-end gap-2 bg-muted/80 rounded-2xl px-3 py-2 border border-border">
+            <div className="flex items-end gap-3 bg-muted/80 rounded-3xl px-4 py-3 border border-border">
               <div className="flex-1 relative">
                 {inputValue && /[*_~]/.test(inputValue) && (
-                  <div className="absolute inset-0 pointer-events-none text-sm">
+                  <div className="absolute inset-0 pointer-events-none text-base">
                     <FormattedInputPreview text={inputValue} />
                   </div>
                 )}
@@ -1014,7 +1061,7 @@ function MessageAIPage() {
                   placeholder={pendingSession ? "Ask about this session..." : "Ask anything"}
                   rows={1}
                   className={cn(
-                    "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground text-sm resize-none max-h-[7.5rem] overflow-y-auto",
+                    "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground text-base resize-none max-h-[7.5rem] overflow-y-auto",
                     inputValue && /[*_~]/.test(inputValue) ? "text-transparent caret-foreground" : "text-foreground"
                   )}
                   onInput={(e) => {
@@ -1027,12 +1074,12 @@ function MessageAIPage() {
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isSendingMessage}
-                className={`p-2 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage
+                className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage
                     ? "bg-foreground text-background hover:bg-foreground/90"
                     : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
                   }`}
               >
-                <Send size={16} />
+                <Send size={18} />
               </button>
             </div>
           </div>
@@ -1042,10 +1089,10 @@ function MessageAIPage() {
       <ConfirmDialogOrPopover
         isOpen={showClearDialog}
         onClose={() => setShowClearDialog(false)}
-        onConfirm={handleClearMemory}
-        title="Clear coach memory?"
-        description={`This will erase ${aiCoach.name}'s memory of past interactions. Your chat history will be kept. This action cannot be undone.`}
-        confirmText="Clear memory"
+        onConfirm={handleClearHistory}
+        title="Clear coach messages?"
+        description={`This will delete your coach chat history and erase ${aiCoach.name}'s memory of past interactions. This action cannot be undone.`}
+        confirmText="Clear messages"
         variant="destructive"
       />
     </div>
