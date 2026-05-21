@@ -20,6 +20,7 @@ data_migration
 
 apps/backend-node/.env.prod
 PERSONAL_NOTES.md
+AGENTS.md
 
 .env
 
