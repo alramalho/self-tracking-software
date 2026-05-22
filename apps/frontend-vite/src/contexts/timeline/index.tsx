@@ -8,6 +8,25 @@ import React, { useMemo } from "react";
 import { getTimelineData, type TimelineData } from "./service";
 import { TimelineContext, type TimelineContextType } from "./types";
 
+export const getTimelineNextPageParam = (
+  lastPage: TimelineData,
+  allPages: TimelineData[]
+) => {
+  const nextCursor = lastPage.nextCursor || undefined;
+  if (!nextCursor) return undefined;
+
+  const returnedItems =
+    lastPage.recommendedActivityEntries.length + lastPage.achievementPosts.length;
+  if (returnedItems === 0) return undefined;
+
+  const previousPages = allPages.slice(0, -1);
+  if (previousPages.some((page) => page.nextCursor === nextCursor)) {
+    return undefined;
+  }
+
+  return nextCursor;
+};
+
 export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -18,7 +37,7 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["timeline"],
     queryFn: ({ pageParam }) => getTimelineData(api, pageParam),
     initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    getNextPageParam: getTimelineNextPageParam,
     enabled: isLoaded && isSignedIn,
   });
 
@@ -53,6 +72,7 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoadingTimeline: timelineQuery.isLoading,
     timelineError: timelineQuery.error,
     isFetchingNextTimelinePage: timelineQuery.isFetchingNextPage,
+    isFetchNextTimelinePageError: timelineQuery.isFetchNextPageError,
     hasMoreTimeline: timelineQuery.hasNextPage,
     fetchNextTimelinePage: timelineQuery.fetchNextPage,
   };

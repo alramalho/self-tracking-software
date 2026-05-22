@@ -52,6 +52,7 @@ const TimelineRenderer: React.FC<{
     timelineData,
     isLoadingTimeline,
     isFetchingNextTimelinePage,
+    isFetchNextTimelinePageError,
     hasMoreTimeline,
     fetchNextTimelinePage,
   } = useTimeline();
@@ -271,7 +272,7 @@ const TimelineRenderer: React.FC<{
   }, [timelineData?.recommendedUsers]);
 
   useEffect(() => {
-    if (!loadMoreRef.current || !hasMoreTimeline) return;
+    if (!loadMoreRef.current || !hasMoreTimeline || isFetchNextTimelinePageError) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -285,7 +286,12 @@ const TimelineRenderer: React.FC<{
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [fetchNextTimelinePage, hasMoreTimeline, isFetchingNextTimelinePage]);
+  }, [
+    fetchNextTimelinePage,
+    hasMoreTimeline,
+    isFetchingNextTimelinePage,
+    isFetchNextTimelinePageError,
+  ]);
 
   // Check if there will be a divider shown (new posts exist AND we have a lastViewedTimelineAt)
   const willShowDivider = useMemo(() => {
@@ -737,6 +743,24 @@ const TimelineRenderer: React.FC<{
       {isFetchingNextTimelinePage && (
         <div className="col-span-2 sm:col-span-4 flex justify-center py-4">
           <RefreshCcw className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {isFetchNextTimelinePageError && !isFetchingNextTimelinePage && (
+        <div className="col-span-2 sm:col-span-4 flex flex-col items-center gap-2 py-4 text-center text-xs text-muted-foreground">
+          <span>Couldn&apos;t load more timeline items.</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() => fetchNextTimelinePage()}
+          >
+            <RefreshCcw className="w-3 h-3 mr-2" /> Try again
+          </Button>
+        </div>
+      )}
+      {!hasMoreTimeline && !isFetchingNextTimelinePage && mergedTimelineItems.length > 0 && (
+        <div className="col-span-2 sm:col-span-4 py-4 text-center text-xs text-muted-foreground">
+          You&apos;re all caught up
         </div>
       )}
     </div>
