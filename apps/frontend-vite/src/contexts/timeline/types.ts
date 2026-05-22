@@ -6,6 +6,7 @@ export interface TimelineContextType {
   timelineError: Error | null;
   isLoadingTimeline: boolean;
   isFetchingNextTimelinePage: boolean;
+  isFetchNextTimelinePageError: boolean;
   hasMoreTimeline: boolean;
   fetchNextTimelinePage: () => Promise<unknown>;
 }
