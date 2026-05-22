@@ -128,7 +128,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         formData.append("photos", photo);
       }
 
-      const response = await api.post("/activities/log-activity", formData);
+      const response = await api.post("/activities/log-activity", formData, {
+        onUploadProgress: (progressEvent) => {
+          if (!data.onUploadProgress || !progressEvent.total) return;
+          data.onUploadProgress(
+            Math.min(
+              100,
+              Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            )
+          );
+        },
+      });
       return response.data;
     },
     onSuccess: async (response: LogActivityResponse, variables) => {

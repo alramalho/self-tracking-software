@@ -36,6 +36,7 @@ export interface ActivityLogData {
   withUserId?: string;
   latitude?: number;
   longitude?: number;
+  onUploadProgress?: (percent: number) => void;
 }
 
 export interface ActivitiesContextType {
