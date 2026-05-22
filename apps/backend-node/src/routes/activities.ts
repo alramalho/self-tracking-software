@@ -330,6 +330,78 @@ const uploadActivityEntryPhotos = async (
   );
 };
 
+const notifyConnectionsAboutActivityPhotos = async ({
+  user,
+  activity,
+  entry,
+  quantity,
+  uploadedImageCount,
+}: {
+  user: NonNullable<AuthenticatedRequest["user"]>;
+  activity: { title: string; emoji: string; measure: string };
+  entry: ActivityEntry;
+  quantity: string | number;
+  uploadedImageCount: number;
+}) => {
+  const startedAt = Date.now();
+  try {
+    const userWithConnections = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: { to: true },
+        },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: { from: true },
+        },
+      },
+    });
+
+    if (!userWithConnections) return;
+
+    const connectedUsersById = new Map(
+      [
+        ...userWithConnections.connectionsFrom.map((conn) => conn.to),
+        ...userWithConnections.connectionsTo.map((conn) => conn.from),
+      ].map((connectedUser) => [connectedUser.id, connectedUser])
+    );
+    const connectedUsers = Array.from(connectedUsersById.values());
+
+    if (connectedUsers.length === 0) return;
+
+    const message = `${user.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedImageCount === 1 ? "a photo" : `${uploadedImageCount} photos`} 📸!`;
+
+    await Promise.all(
+      connectedUsers.map((connectedUser) =>
+        notificationService.createAndProcessNotification({
+          userId: connectedUser.id,
+          message,
+          type: "INFO",
+          relatedId: entry.id,
+          relatedData: {
+            activityEntryId: entry.id,
+            userPicture: user.picture,
+            userName: user.name,
+            userUsername: user.username,
+          },
+        })
+      )
+    );
+
+    logger.info(
+      `Photo activity notifications processed for ${connectedUsers.length} connection(s) in ${Date.now() - startedAt}ms`,
+      { activityEntryId: entry.id }
+    );
+  } catch (error) {
+    logger.error(
+      `Error processing photo activity notifications for entry ${entry.id}:`,
+      error
+    );
+  }
+};
+
 // Get all activities for user
 router.get(
   "/",
@@ -436,6 +508,7 @@ router.post(
           ? timezoneFromCoords(latitude, longitude) ?? clientTimezone
           : clientTimezone;
       const photos = getUploadedActivityEntryPhotos(req);
+      let uploadedImageCount = 0;
 
       // Check if activity exists and belongs to user
       const activity = await prisma.activity.findFirst({
@@ -524,44 +597,7 @@ router.post(
           logger.info(
             `${uploadedImages.length} photo(s) uploaded successfully to S3 for activity entry ${entry.id}`
           );
-
-          // Create notifications for connected users about the photo
-          const userWithConnections = await prisma.user.findUnique({
-            where: { id: req.user!.id },
-            include: {
-              connectionsFrom: {
-                where: { status: "ACCEPTED" },
-                include: { to: true },
-              },
-              connectionsTo: {
-                where: { status: "ACCEPTED" },
-                include: { from: true },
-              },
-            },
-          });
-
-          if (userWithConnections) {
-            const connectedUsers = [
-              ...userWithConnections.connectionsFrom.map((conn) => conn.to),
-              ...userWithConnections.connectionsTo.map((conn) => conn.from),
-            ];
-
-            for (const connectedUser of connectedUsers) {
-              const message = `${req.user!.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedImages.length === 1 ? "a photo" : `${uploadedImages.length} photos`} 📸!`;
-              await notificationService.createAndProcessNotification({
-                userId: connectedUser.id,
-                message,
-                type: "INFO",
-                relatedId: entry.id,
-                relatedData: {
-                  activityEntryId: entry.id,
-                  userPicture: req.user!.picture,
-                  userName: req.user!.name,
-                  userUsername: req.user!.username,
-                },
-              });
-            }
-          }
+          uploadedImageCount = uploadedImages.length;
         } catch (error) {
           logger.error("Error uploading photo to S3:", error);
           // Continue without photo - don't fail the entire activity logging
@@ -672,6 +708,16 @@ router.post(
         candidates: sharedActivityCandidates.map((c: any) => ({ id: c.activityEntryId, score: c.score })),
       });
       res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
+
+      if (uploadedImageCount > 0) {
+        void notifyConnectionsAboutActivityPhotos({
+          user: req.user!,
+          activity,
+          entry,
+          quantity,
+          uploadedImageCount,
+        });
+      }
     } catch (error) {
       logger.error("Error logging activity:", error);
       res.status(500).json({ error: "Failed to log activity" });

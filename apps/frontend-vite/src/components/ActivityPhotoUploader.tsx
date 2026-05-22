@@ -35,11 +35,13 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const { logActivity: submitActivity, isLoggingActivity } = useActivities();
   const { addToNotificationCount } = useNotifications();
 
   const handleLogActivity = async () => {
     try {
+      setUploadProgress(selectedFiles.length > 0 ? 0 : null);
       const response = await submitActivity({
         activityId: activityData.activityId,
         datetime: activityData.datetime,
@@ -49,6 +51,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         withUserId: activityData.withUserId,
         latitude: activityData.latitude,
         longitude: activityData.longitude,
+        onUploadProgress: setUploadProgress,
       });
 
       if (!response.entry?.id) {
@@ -60,7 +63,21 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     } catch (error: any) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");
+    } finally {
+      setUploadProgress(null);
     }
+  };
+
+  const getSubmitLabel = () => {
+    if (isLoggingActivity && selectedFiles.length > 0) {
+      return uploadProgress != null && uploadProgress < 100
+        ? `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}… ${uploadProgress}%`
+        : "Saving activity…";
+    }
+
+    return selectedFiles.length > 0
+      ? `Upload ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}`
+      : "Log without photo";
   };
 
   return (
@@ -96,9 +113,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           {isLoggingActivity ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : null}
-          {selectedFiles.length > 0
-            ? `Upload ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}`
-            : "Log without photo"}
+          {getSubmitLabel()}
         </Button>
       </div>
     </AppleLikePopover>
