@@ -1,4 +1,5 @@
 import { CoachToolCallsCard } from "@/components/CoachToolCallsCard";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
 import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
@@ -413,6 +414,24 @@ function MessageAIPage() {
       console.error("Failed to run coach assessment:", error);
     }
   };
+
+  const handleSpeechTranscription = useCallback((transcript: string) => {
+    const cleanTranscript = transcript.trim();
+    if (!cleanTranscript) return;
+
+    setInputValue((currentValue) => {
+      const trimmedCurrentValue = currentValue.trimEnd();
+      return trimmedCurrentValue
+        ? `${trimmedCurrentValue} ${cleanTranscript}`
+        : cleanTranscript;
+    });
+  }, []);
+
+  const handleSpeechUnavailable = useCallback(() => {
+    toast.error(
+      "Voice input needs Chrome/Edge speech recognition, or a server transcription endpoint for this browser."
+    );
+  }, []);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -1078,9 +1097,19 @@ function MessageAIPage() {
                   }}
                 />
               </div>
+              <SpeechInput
+                aria-label="Dictate message"
+                className="h-9 w-9 p-0 flex-shrink-0"
+                disabled={isSendingMessage}
+                onTranscriptionChange={handleSpeechTranscription}
+                onUnsupportedClick={handleSpeechUnavailable}
+                size="icon"
+                variant="ghost"
+              />
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isSendingMessage}
+                aria-label="Send message"
                 className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage
                     ? "bg-foreground text-background hover:bg-foreground/90"
                     : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"

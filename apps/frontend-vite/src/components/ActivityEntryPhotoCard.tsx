@@ -34,6 +34,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
+import ImageZoomDialog from "./ImageZoomDialog";
 import LinkifiedText from "./LinkifiedText";
 import LinkPreview from "./LinkPreview";
 import { ProgressRing } from "./ProgressRing";
@@ -137,6 +138,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     {}
   );
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
@@ -360,6 +362,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImage = imageUrls.length > 0;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
+  const openImageZoom = useCallback(
+    (event: React.MouseEvent, imageUrl: string) => {
+      event.stopPropagation();
+      setSelectedImageUrl(imageUrl);
+    },
+    []
+  );
+
   // Extract first URL from description for link preview
   const firstUrl = useMemo(
     () => extractFirstUrl(activityEntry.description),
@@ -444,24 +454,42 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
             {imageUrls.length === 1 ? (
-              <img
-                src={imageUrls[0]}
-                alt={activity.title}
-                className="w-full h-full max-h-[400px] object-cover rounded-2xl"
-              />
+              <button
+                aria-label={`Open ${activity.title} photo`}
+                className="block w-full cursor-zoom-in overflow-hidden rounded-2xl"
+                onClick={(event) => openImageZoom(event, imageUrls[0])}
+                type="button"
+              >
+                <img
+                  src={imageUrls[0]}
+                  alt={activity.title}
+                  className="w-full h-full max-h-[400px] object-cover rounded-2xl"
+                />
+              </button>
             ) : (
               <div className="grid grid-cols-2 gap-1">
                 {imageUrls.map((imageUrl, index) => (
-                  <img
-                    key={imageUrl}
-                    src={imageUrl}
-                    alt={`${activity.title} proof ${index + 1}`}
-                    className={`w-full object-cover ${
+                  <button
+                    aria-label={`Open ${activity.title} proof ${index + 1}`}
+                    className={`w-full cursor-zoom-in overflow-hidden ${
                       index === 0 && imageUrls.length === 3
-                        ? "col-span-2 max-h-[300px]"
+                        ? "col-span-2"
                         : "aspect-square"
                     }`}
-                  />
+                    key={imageUrl}
+                    onClick={(event) => openImageZoom(event, imageUrl)}
+                    type="button"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`${activity.title} proof ${index + 1}`}
+                      className={`w-full object-cover ${
+                        index === 0 && imageUrls.length === 3
+                          ? "max-h-[300px]"
+                          : "h-full"
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
             )}
@@ -784,6 +812,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
           badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
           userPlansProgressData={userPlansProgressData}
+        />
+      )}
+      {selectedImageUrl && (
+        <ImageZoomDialog
+          alt={`${activity.title} proof photo`}
+          open={Boolean(selectedImageUrl)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedImageUrl(null);
+            }
+          }}
+          src={selectedImageUrl}
         />
       )}
     </motion.div>
