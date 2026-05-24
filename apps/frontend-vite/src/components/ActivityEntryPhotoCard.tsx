@@ -58,6 +58,14 @@ const getFormattedDate = (date: Date) => {
 
   return format(date, "MMM d");
 };
+type SharedActivityCardEntry = {
+  activityEntry: ActivityEntry & {
+    imageUrls?: string[];
+  };
+  activity: Activity;
+  user: { username: string; name: string | null; picture: string | null; planType: PlanType };
+};
+
 interface ActivityEntryPhotoCardProps {
   activity: Activity;
   activityEntry: ActivityEntry & {
@@ -75,6 +83,7 @@ interface ActivityEntryPhotoCardProps {
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
   userPlansProgressData: PlanProgressData[];
+  sharedActivityEntries?: SharedActivityCardEntry[];
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
@@ -106,6 +115,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEntry,
   user,
   userPlansProgressData,
+  sharedActivityEntries = [],
   isCollapsed = false,
   onToggleCollapse,
 }) => {
@@ -348,14 +358,26 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
+  const getEntryImageUrls = (
+    entry: ActivityEntry & { imageUrls?: string[] }
+  ) => {
+    if (entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date()) {
+      return [];
+    }
+
+    return [
+      ...(entry.imageUrls || []),
+      entry.imageUrl,
+    ].filter((url): url is string => !!url);
+  };
+
   const imageUrls = Array.from(
-    new Set(
-      [
-        ...((activityEntry as typeof activityEntry & { imageUrls?: string[] })
-          .imageUrls || []),
-        activityEntry.imageUrl,
-      ].filter((url): url is string => !!url)
-    )
+    new Set([
+      ...getEntryImageUrls(activityEntry as typeof activityEntry & { imageUrls?: string[] }),
+      ...sharedActivityEntries.flatMap(({ activityEntry }) =>
+        getEntryImageUrls(activityEntry)
+      ),
+    ])
   );
   const hasImage = imageUrls.length > 0;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
@@ -370,17 +392,23 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
 
-  const sharedParticipants =
-    activityEntry.sharedActivityEntry?.sharedActivity?.entries
+  const sharedParticipants = [
+    ...sharedActivityEntries.map(({ user }) => user),
+    ...(activityEntry.sharedActivityEntry?.sharedActivity?.entries
       ?.filter(
         (entry) =>
           entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
       )
-      ?.map((entry) => entry.user)
-      ?.filter((participant) => participant.username) ?? [];
-  const sharedParticipantLabel = sharedParticipants
-    .map((participant) => `@${participant.username}`)
-    .join(", ");
+      ?.map((entry) => entry.user) ?? []),
+  ].filter((participant) => participant.username);
+  const sharedParticipantLabel = Array.from(
+    new Set(sharedParticipants.map((participant) => `@${participant.username}`))
+  ).join(", ");
+  const isMergedJointActivity = sharedActivityEntries.length > 0;
+  const activitySummaryRows = [
+    { activityEntry, activity, user },
+    ...sharedActivityEntries,
+  ];
 
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
@@ -651,13 +679,42 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     className: "drop-shadow-sm",
                   })} */}
               </div>
-              <span className="font-semibold">
-                {activity.title} – {activityEntry.quantity} {activity.measure}
-              </span>
-              {sharedParticipantLabel && (
-                <span className="text-xs text-muted-foreground">
-                  with {sharedParticipantLabel}
-                </span>
+              {isMergedJointActivity ? (
+                <div className="mt-1 space-y-1.5">
+                  <div className="inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Joint activity
+                  </div>
+                  <div className="space-y-1">
+                    {activitySummaryRows.map((row) => (
+                      <div
+                        key={row.activityEntry.id}
+                        className="flex items-center gap-1.5 rounded-xl bg-muted/35 px-2 py-1 text-xs"
+                      >
+                        <span className="text-base leading-none">{row.activity.emoji}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          <span className="font-medium text-muted-foreground">
+                            @{row.user.username}
+                          </span>{" "}
+                          <span className="font-semibold text-foreground">
+                            {row.activity.title} – {row.activityEntry.quantity}{" "}
+                            {row.activity.measure}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="font-semibold">
+                    {activity.title} – {activityEntry.quantity} {activity.measure}
+                  </span>
+                  {sharedParticipantLabel && (
+                    <span className="text-xs text-muted-foreground">
+                      with {sharedParticipantLabel}
+                    </span>
+                  )}
+                </>
               )}
               <span className="text-xs text-muted-foreground">
                 {getFormattedDate(activityEntry.datetime)}{" "}
