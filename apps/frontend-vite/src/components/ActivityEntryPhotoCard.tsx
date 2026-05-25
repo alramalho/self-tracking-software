@@ -82,7 +82,7 @@ interface ActivityEntryPhotoCardProps {
       };
     } | null;
   };
-  user: { username: string; name: string; picture: string; planType: PlanType };
+  user: { id?: string; username: string; name: string; picture: string; planType: PlanType };
   userPlansProgressData: PlanProgressData[];
   editable?: boolean;
   onEditClick?: () => void;
@@ -139,7 +139,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   }, [activityEntry.reactions]);
   const { currentUser } = useCurrentUser();
   const currentUserUsername = currentUser?.username;
-  const isOwnActivityEntry = currentUser?.username === user.username;
+  const isOwnActivityEntry = Boolean(
+    currentUser?.id === activityEntry.userId ||
+      (!activityEntry.userId && currentUser?.username === user.username)
+  );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
@@ -409,36 +412,99 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const sharedParticipantLabel = sharedParticipants
     .map((participant) => `@${participant.username}`)
     .join(", ");
+  const mergedAvatarUsers = [
+    {
+      id: user.id || activityEntry.userId,
+      username: user.username,
+      name: user.name,
+      picture: user.picture,
+    },
+    ...sharedParticipants,
+  ].filter(
+    (participant, index, participants) =>
+      participant.username &&
+      participants.findIndex((candidate) => candidate.username === participant.username) === index
+  );
+  const isMergedActivity = mergedAvatarUsers.length > 1;
+  const avatarFallback = (name?: string | null, username?: string | null) =>
+    (name || username || "U")[0]?.toUpperCase();
 
-  // Collapsed minimal view for cards without images
-  const collapsedCardContent = (
-    <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
-      <div className="relative flex-shrink-0">
+  const renderAvatarCluster = (size: "sm" | "md") => {
+    const avatarSize = size === "sm" ? "w-6 h-6" : "w-8 h-8";
+    const ringSize = size === "sm" ? 20 : 32;
+    const ringStroke = size === "sm" ? 1.5 : 2;
+    const overlap = size === "sm" ? "-ml-2" : "-ml-3";
+    const boxShadow = `0 0 0 ${size === "sm" ? 1 : 2}px ${
+      isLightMode ? "white" : "black"
+    }, 0 0 0 ${size === "sm" ? 3 : 5}px ${accountLevel.currentLevel?.color}`;
+
+    if (!isMergedActivity) {
+      return (
         <ProgressRing
-          size={20}
-          strokeWidth={1.5}
+          size={ringSize}
+          strokeWidth={ringStroke}
           percentage={accountLevel.percentage}
           currentLevel={accountLevel.currentLevel}
           atLeastBronze={accountLevel.atLeastBronze}
           badge={false}
-          badgeSize={20}
+          badgeSize={ringSize}
         >
           <Avatar
-            className="w-6 h-6"
-            style={{
-              boxShadow: `0 0 0 1px ${
-                isLightMode ? "white" : "black"
-              }, 0 0 0 3px ${accountLevel.currentLevel?.color}`,
-            }}
+            className={avatarSize}
+            style={{ boxShadow }}
             onClick={(e) => {
               e.stopPropagation();
               onAvatarClick?.();
             }}
           >
             <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-            <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+            <AvatarFallback>{avatarFallback(user.name, user.username)}</AvatarFallback>
           </Avatar>
         </ProgressRing>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        aria-label={`Merged activity with ${mergedAvatarUsers
+          .map((participant) => `@${participant.username}`)
+          .join(", ")}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAvatarClick?.();
+        }}
+        className="flex items-center pl-1"
+      >
+        {mergedAvatarUsers.slice(0, 3).map((participant, index) => (
+          <Avatar
+            key={participant.username || participant.id || index}
+            className={`${avatarSize} ${index > 0 ? overlap : ""} border-2 border-background shadow-sm`}
+            style={{ zIndex: mergedAvatarUsers.length - index }}
+          >
+            <AvatarImage
+              src={participant.picture || ""}
+              alt={participant.name || participant.username || "participant"}
+            />
+            <AvatarFallback>{avatarFallback(participant.name, participant.username)}</AvatarFallback>
+          </Avatar>
+        ))}
+        {mergedAvatarUsers.length > 3 && (
+          <span
+            className={`${avatarSize} ${overlap} inline-flex items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-semibold shadow-sm`}
+          >
+            +{mergedAvatarUsers.length - 3}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  // Collapsed minimal view for cards without images
+  const collapsedCardContent = (
+    <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
+      <div className="relative flex-shrink-0">
+        {renderAvatarCluster("sm")}
       </div>
       <div className="relative flex-shrink-0">
         <span className="text-3xl leading-none">{activity.emoji}</span>
@@ -641,29 +707,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2">
-            <div className="relative">
-              <ProgressRing
-                size={32}
-                strokeWidth={2}
-                percentage={accountLevel.percentage}
-                currentLevel={accountLevel.currentLevel}
-                atLeastBronze={accountLevel.atLeastBronze}
-                badge={false}
-                badgeSize={32}
-              >
-                <Avatar
-                  className="w-8 h-8"
-                  style={{
-                    boxShadow: `0 0 0 2px ${
-                      isLightMode ? "white" : "black"
-                    }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
-                  }}
-                  onClick={onAvatarClick}
-                >
-                  <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-                  <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-                </Avatar>
-              </ProgressRing>
+            <div className="relative flex-shrink-0">
+              {renderAvatarCluster("md")}
             </div>
             <span className="text-5xl h-full text-muted-foreground">
               {activity.emoji}
@@ -768,7 +813,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         )}
 
         <div>
-          {editable && onEditClick && (
+          {editable && isOwnActivityEntry && onEditClick && (
             <button
               onClick={onEditClick}
               className="absolute top-2 right-2 p-1 bg-card/80 rounded-full shadow-md hover:bg-muted"
