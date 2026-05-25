@@ -123,17 +123,33 @@ const TimelineRenderer: React.FC<{
     }
   }, [dbLastSeenTimelineAt]);
 
+  const entryHasRenderableImage = (entry: TimelineActivityEntry) => {
+    const hasUnexpiredImage = (
+      imageUrl?: string | null,
+      imageExpiresAt?: Date | string | null
+    ) => Boolean(imageUrl && (!imageExpiresAt || new Date(imageExpiresAt) > new Date()));
+
+    return Boolean(
+      hasUnexpiredImage(entry.imageUrl, entry.imageExpiresAt) ||
+        (entry.imageUrls && entry.imageUrls.length > 0) ||
+        entry.sharedActivityEntry?.sharedActivity?.entries?.some(
+          (sharedEntry) =>
+            !sharedEntry.activityEntry?.deletedAt &&
+            (hasUnexpiredImage(
+              sharedEntry.activityEntry?.imageUrl,
+              sharedEntry.activityEntry?.imageExpiresAt
+            ) ||
+              Boolean(sharedEntry.activityEntry?.imageUrls?.length))
+        )
+    );
+  };
+
   // Initialize collapsed state for entries without images
   useEffect(() => {
     if (timelineData?.recommendedActivityEntries) {
       const entriesWithoutImages = new Set(
         timelineData.recommendedActivityEntries
-          .filter(
-            (entry) =>
-              !entry.imageUrl ||
-              (entry.imageExpiresAt &&
-                new Date(entry.imageExpiresAt) < new Date())
-          )
+          .filter((entry) => !entryHasRenderableImage(entry))
           .map((entry) => entry.id)
       );
       setCollapsedEntries(entriesWithoutImages);
@@ -666,10 +682,7 @@ const TimelineRenderer: React.FC<{
                 planProgressByUserAndActivity.get(`${user.id}:${activity.id}`) ||
                 [];
 
-              const hasImageExpired =
-                entry.imageExpiresAt &&
-                new Date(entry.imageExpiresAt) < new Date();
-              const hasImage = entry.imageUrl && !hasImageExpired;
+              const hasImage = entryHasRenderableImage(entry);
               const isCollapsed = collapsedEntries.has(entry.id);
 
               // Check if we should show the divider before this entry
