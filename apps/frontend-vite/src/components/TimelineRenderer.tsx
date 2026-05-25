@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
+import { shouldRenderSharedActivityEntry } from "@/lib/timelineItems";
 import { cn } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -207,10 +208,14 @@ const TimelineRenderer: React.FC<{
   const mergedTimelineItems = useMemo(() => {
     if (!timelineData) return [];
 
+    const renderedSharedActivityIds = new Set<string>();
     const items: TimelineItem[] = [];
 
-    // Add activity entries
+    // Add activity entries, but collapse joint activities into one card.
     (timelineData.recommendedActivityEntries || []).forEach((entry) => {
+      if (!shouldRenderSharedActivityEntry(entry, renderedSharedActivityIds)) {
+        return;
+      }
       items.push({ type: "activity", data: entry });
     });
 

@@ -64,11 +64,20 @@ interface ActivityEntryPhotoCardProps {
     reactions: (Reaction & { user: { username: string } })[];
     comments: (Comment & { user: { username: string; picture: string } })[];
     sharedActivityEntry?: {
+      sharedActivityId?: string | null;
       sharedActivity?: {
+        id?: string | null;
         entries?: {
           activityEntryId: string;
           user: { id: string; username: string | null; name?: string | null; picture?: string | null };
-          activityEntry?: { id: string; userId: string; deletedAt?: Date | null };
+          activityEntry?: {
+            id: string;
+            userId: string;
+            deletedAt?: Date | null;
+            imageUrl?: string | null;
+            imageUrls?: string[];
+            imageExpiresAt?: Date | null;
+          } | null;
         }[];
       };
     } | null;
@@ -354,10 +363,29 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         ...((activityEntry as typeof activityEntry & { imageUrls?: string[] })
           .imageUrls || []),
         activityEntry.imageUrl,
+        ...(
+          activityEntry.sharedActivityEntry?.sharedActivity?.entries
+            ?.filter((entry) =>
+              entry.activityEntryId !== activityEntry.id &&
+              !entry.activityEntry?.deletedAt &&
+              (!entry.activityEntry?.imageExpiresAt ||
+                new Date(entry.activityEntry.imageExpiresAt) > new Date())
+            )
+            ?.flatMap((entry) => [
+              ...(entry.activityEntry?.imageUrls || []),
+              entry.activityEntry?.imageUrl,
+            ]) || []
+        ),
       ].filter((url): url is string => !!url)
     )
   );
   const hasImage = imageUrls.length > 0;
+  const hasSharedActivity = Boolean(
+    activityEntry.sharedActivityEntry?.sharedActivity?.entries?.some(
+      (entry) => entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
+    )
+  );
+  const hasDenseMediaLayout = imageUrls.length > 1 || hasSharedActivity;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
   // Extract first URL from description for link preview
@@ -370,14 +398,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
 
-  const sharedParticipants =
-    activityEntry.sharedActivityEntry?.sharedActivity?.entries
-      ?.filter(
-        (entry) =>
-          entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
-      )
-      ?.map((entry) => entry.user)
-      ?.filter((participant) => participant.username) ?? [];
+  const sharedEntries =
+    activityEntry.sharedActivityEntry?.sharedActivity?.entries?.filter(
+      (entry) => !entry.activityEntry?.deletedAt
+    ) ?? [];
+  const sharedParticipants = sharedEntries
+    .filter((entry) => entry.activityEntryId !== activityEntry.id)
+    .map((entry) => entry.user)
+    .filter((participant) => participant.username) ?? [];
   const sharedParticipantLabel = sharedParticipants
     .map((participant) => `@${participant.username}`)
     .join(", ");
@@ -465,20 +493,24 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 ))}
               </div>
             )}
-            <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
+            <div className="absolute top-2 left-2 flex max-w-[calc(100%-1rem)] flex-wrap items-start gap-1.5 z-30">
               {reactions &&
                 Object.entries(reactions).map(([emoji, usernames]) => {
                   return (
                     <button
                       key={emoji}
                       onClick={() => handleReactionClick(emoji)}
-                      className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                      className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full shadow-md transition-all gap-1.5 pointer-events-auto ${
+                        hasDenseMediaLayout
+                          ? "px-2 py-1 text-xs"
+                          : "px-3 py-1.5 text-sm gap-2"
+                      } ${
                         usernames.includes(currentUserUsername || "")
                           ? variants.card.selected.glassBg
                           : variants.card.glassBg
                       }`}
                     >
-                      <span className="text-base">{emoji}</span>
+                      <span className={hasDenseMediaLayout ? "text-sm" : "text-base"}>{emoji}</span>
                       {showUserList[emoji] ? (
                         <span className="text-foreground font-medium">
                           {formatUserList(usernames)}
