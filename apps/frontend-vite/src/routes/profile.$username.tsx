@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { shouldRenderSharedActivityEntry } from "@/lib/timelineItems";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useCurrentUser } from "@/contexts/users";
 import { ShineBorder } from "@/components/ui/shine-border";
@@ -162,8 +163,13 @@ function ProfilePage() {
   const achievementPosts = profileData?.achievementPosts || [];
   
   const historyItems = useMemo(() => {
+    const renderedSharedActivityIds = new Set<string>();
+    const visibleActivityEntries = activityEntries.filter((entry) =>
+      shouldRenderSharedActivityEntry(entry, renderedSharedActivityIds)
+    );
+
     const items = [
-      ...activityEntries.map(entry => ({ type: 'activity' as const, date: new Date(entry.datetime), data: entry })),
+      ...visibleActivityEntries.map(entry => ({ type: 'activity' as const, date: new Date(entry.datetime), data: entry })),
       ...achievementPosts.map(post => ({ type: 'achievement' as const, date: new Date(post.createdAt), data: post }))
     ];
     return items.sort((a, b) => b.date.getTime() - a.date.getTime());

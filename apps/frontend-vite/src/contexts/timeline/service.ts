@@ -36,6 +36,36 @@ export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
         };
       };
     };
+    sharedActivityEntry: {
+      include: {
+        sharedActivity: {
+          include: {
+            entries: {
+              include: {
+                user: {
+                  select: {
+                    id: true;
+                    username: true;
+                    name: true;
+                    picture: true;
+                  };
+                };
+                activityEntry: {
+                  select: {
+                    id: true;
+                    userId: true;
+                    deletedAt: true;
+                    imageUrl: true;
+                    imageUrls: true;
+                    imageExpiresAt: true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
   };
 }>;
 
@@ -140,6 +170,11 @@ export function normalizeActivityEntry(
     "comments.createdAt",
     "comments.deletedAt",
     "reactions.createdAt",
+    "sharedActivityEntry.createdAt",
+    "sharedActivityEntry.sharedActivity.createdAt",
+    "sharedActivityEntry.sharedActivity.entries.createdAt",
+    "sharedActivityEntry.sharedActivity.entries.activityEntry.deletedAt",
+    "sharedActivityEntry.sharedActivity.entries.activityEntry.imageExpiresAt",
   ]);
 }
 
