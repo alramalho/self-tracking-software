@@ -80,10 +80,12 @@ const ParticipantAvatar = ({
   user,
   size = "md",
   isLightMode,
+  onClick,
 }: {
   user: ActivityCardUser;
   size?: "sm" | "md";
   isLightMode: boolean;
+  onClick?: (user: ActivityCardUser) => void;
 }) => {
   const accountLevel = useAccountLevel(user.username || undefined);
   const ringSize = size === "sm" ? 28 : 36;
@@ -102,11 +104,16 @@ const ParticipantAvatar = ({
       badgeSize={ringSize}
     >
       <Avatar
-        className={avatarSize}
+        className={`${avatarSize} ${onClick ? "cursor-pointer" : ""}`}
         style={{
           boxShadow: `0 0 0 2px ${
             isLightMode ? "white" : "black"
           }, 0 0 0 ${outerRing}px ${accountLevel.currentLevel?.color}`,
+        }}
+        onClick={(event) => {
+          if (!onClick) return;
+          event.stopPropagation();
+          onClick(user);
         }}
       >
         <AvatarImage src={user.picture || ""} alt={user.name || ""} />
@@ -116,17 +123,37 @@ const ParticipantAvatar = ({
   );
 };
 
-const ParticipantName = ({ user }: { user: ActivityCardUser }) => {
+const ParticipantName = ({
+  user,
+  onClick,
+}: {
+  user: ActivityCardUser;
+  onClick?: (user: ActivityCardUser) => void;
+}) => {
   const accountLevel = useAccountLevel(user.username || undefined);
 
   return (
-    <span style={{ color: accountLevel.currentLevel?.color }}>
+    <span
+      className={onClick ? "cursor-pointer hover:underline" : ""}
+      style={{ color: accountLevel.currentLevel?.color }}
+      onClick={(event) => {
+        if (!onClick) return;
+        event.stopPropagation();
+        onClick(user);
+      }}
+    >
       @{user.username}
     </span>
   );
 };
 
-const ParticipantNameList = ({ users }: { users: ActivityCardUser[] }) => {
+const ParticipantNameList = ({
+  users,
+  onParticipantClick,
+}: {
+  users: ActivityCardUser[];
+  onParticipantClick?: (user: ActivityCardUser) => void;
+}) => {
   const uniqueUsers = users.filter(
     (participant, index, list) =>
       participant.username &&
@@ -142,7 +169,7 @@ const ParticipantNameList = ({ users }: { users: ActivityCardUser[] }) => {
               {index === uniqueUsers.length - 1 ? " and " : ", "}
             </span>
           )}
-          <ParticipantName user={participant} />
+          <ParticipantName user={participant} onClick={onParticipantClick} />
         </React.Fragment>
       ))}
     </>
@@ -183,6 +210,7 @@ interface ActivityEntryPhotoCardProps {
   onEditClick?: () => void;
   onAvatarClick?: () => void;
   onUsernameClick?: () => void;
+  onParticipantClick?: (username: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -206,6 +234,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onAvatarClick,
   onEditClick,
   onUsernameClick,
+  onParticipantClick,
   activity,
   activityEntry,
   user,
@@ -254,6 +283,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     (plan) => plan.lifestyleAchievement.isAchieved
   );
   const accountLevel = useAccountLevel(user.username || undefined);
+  const handleParticipantClick = useCallback(
+    (participant: ActivityCardUser) => {
+      if (participant.username) {
+        onParticipantClick?.(participant.username);
+      }
+    },
+    [onParticipantClick]
+  );
 
   const [showAllComments, setShowAllComments] = useState(false);
   const {
@@ -554,6 +591,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               user={participant}
               size="sm"
               isLightMode={isLightMode}
+              onClick={handleParticipantClick}
             />
           ))
         ) : (
@@ -586,7 +624,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-semibold text-foreground line-clamp-1">
           {isMergedJointActivity ? (
-            <ParticipantNameList users={jointParticipants} />
+            <ParticipantNameList
+              users={jointParticipants}
+              onParticipantClick={handleParticipantClick}
+            />
           ) : (
             activity.title
           )}
@@ -791,11 +832,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       key={participant.username}
                       user={participant}
                       isLightMode={isLightMode}
+                      onClick={handleParticipantClick}
                     />
                   ))}
                 </div>
                 <div className="min-w-0 text-sm font-semibold">
-                  <ParticipantNameList users={jointParticipants} />
+                  <ParticipantNameList
+                    users={jointParticipants}
+                    onParticipantClick={handleParticipantClick}
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">

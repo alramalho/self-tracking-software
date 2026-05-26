@@ -934,6 +934,24 @@ function ProfilePage() {
                             userPlansProgressData={profileData.plans.map(
                               (plan) => plan.progress
                             )}
+                            onAvatarClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: profileData.username || "" },
+                              });
+                            }}
+                            onUsernameClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: profileData.username || "" },
+                              });
+                            }}
+                            onParticipantClick={(username) => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username },
+                              });
+                            }}
                           />
                         );
                       } else {
