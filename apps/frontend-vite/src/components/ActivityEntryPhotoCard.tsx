@@ -58,6 +58,17 @@ const getFormattedDate = (date: Date) => {
 
   return format(date, "MMM d");
 };
+
+const formatUsernameList = (usernames: string[]) => {
+  const uniqueNames = Array.from(new Set(usernames.filter(Boolean)));
+  if (uniqueNames.length === 0) return "";
+  if (uniqueNames.length === 1) return uniqueNames[0];
+  if (uniqueNames.length === 2) return `${uniqueNames[0]} and ${uniqueNames[1]}`;
+  return `${uniqueNames.slice(0, -1).join(", ")}, and ${
+    uniqueNames[uniqueNames.length - 1]
+  }`;
+};
+
 type SharedActivityCardEntry = {
   activityEntry: ActivityEntry & {
     imageUrls?: string[];
@@ -390,25 +401,35 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   if (!activity || !activityEntry) return null;
 
-  const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
-
-  const sharedParticipants = [
-    ...sharedActivityEntries.map(({ user }) => user),
-    ...(activityEntry.sharedActivityEntry?.sharedActivity?.entries
-      ?.filter(
-        (entry) =>
-          entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
-      )
-      ?.map((entry) => entry.user) ?? []),
-  ].filter((participant) => participant.username);
-  const sharedParticipantLabel = Array.from(
-    new Set(sharedParticipants.map((participant) => `@${participant.username}`))
-  ).join(", ");
   const isMergedJointActivity = sharedActivityEntries.length > 0;
   const activitySummaryRows = [
     { activityEntry, activity, user },
     ...sharedActivityEntries,
   ];
+  const jointParticipantLabel = formatUsernameList(
+    activitySummaryRows.map((row) => `@${row.user.username}`)
+  );
+  const sharedParticipants = (
+    isMergedJointActivity
+      ? []
+      : activityEntry.sharedActivityEntry?.sharedActivity?.entries
+          ?.filter(
+            (entry) =>
+              entry.activityEntryId !== activityEntry.id &&
+              !entry.activityEntry?.deletedAt
+          )
+          ?.map((entry) => entry.user) ?? []
+  ).filter((participant) => participant.username);
+  const sharedParticipantLabel = formatUsernameList(
+    sharedParticipants.map((participant) => `@${participant.username}`)
+  );
+  const mergedActivityLabel = formatUsernameList(
+    activitySummaryRows.map(
+      (row) =>
+        `${row.activity.emoji} ${row.activity.title} (${row.activityEntry.quantity} ${row.activity.measure})`
+    )
+  );
+  const mergedEmojiRows = activitySummaryRows.slice(0, 3);
 
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
@@ -439,16 +460,42 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
           </Avatar>
         </ProgressRing>
+        {isMergedJointActivity &&
+          sharedActivityEntries.slice(0, 2).map((row, index) => (
+            <Avatar
+              key={row.user.username}
+              className="absolute -bottom-1 w-5 h-5 border-2 border-background"
+              style={{ left: 14 + index * 12 }}
+            >
+              <AvatarImage src={row.user.picture || ""} alt={row.user.name || ""} />
+              <AvatarFallback>{(row.user.name || row.user.username || "U")[0]}</AvatarFallback>
+            </Avatar>
+          ))}
       </div>
       <div className="relative flex-shrink-0">
-        <span className="text-3xl leading-none">{activity.emoji}</span>
+        {isMergedJointActivity ? (
+          <div className="flex -space-x-1">
+            {mergedEmojiRows.map((row) => (
+              <span
+                key={row.activityEntry.id}
+                className="text-2xl leading-none drop-shadow-sm"
+              >
+                {row.activity.emoji}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-3xl leading-none">{activity.emoji}</span>
+        )}
       </div>
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-semibold text-foreground line-clamp-1">
-          {activity.title}
+          {isMergedJointActivity ? jointParticipantLabel : activity.title}
         </span>
         <span className="text-xs text-muted-foreground">
-          {activityEntry.quantity} {activity.measure}
+          {isMergedJointActivity
+            ? mergedActivityLabel
+            : `${activityEntry.quantity} ${activity.measure}`}
         </span>
         {sharedParticipantLabel && (
           <span className="text-[11px] text-muted-foreground line-clamp-1">
@@ -660,10 +707,34 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
                 </Avatar>
               </ProgressRing>
+              {isMergedJointActivity &&
+                sharedActivityEntries.slice(0, 2).map((row, index) => (
+                  <Avatar
+                    key={row.user.username}
+                    className="absolute -bottom-1 w-7 h-7 border-2 border-background"
+                    style={{ left: 22 + index * 16 }}
+                  >
+                    <AvatarImage src={row.user.picture || ""} alt={row.user.name || ""} />
+                    <AvatarFallback>{(row.user.name || row.user.username || "U")[0]}</AvatarFallback>
+                  </Avatar>
+                ))}
             </div>
-            <span className="text-5xl h-full text-muted-foreground">
-              {activity.emoji}
-            </span>
+            {isMergedJointActivity ? (
+              <div className="flex -space-x-3 pr-1">
+                {mergedEmojiRows.map((row) => (
+                  <span
+                    key={row.activityEntry.id}
+                    className="text-4xl h-full text-muted-foreground drop-shadow-sm"
+                  >
+                    {row.activity.emoji}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-5xl h-full text-muted-foreground">
+                {activity.emoji}
+              </span>
+            )}
             <div className="flex flex-col">
               <div className="flex items-center gap-1 flex-row flex-nowrap">
                 <span
@@ -671,7 +742,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   onClick={onUsernameClick}
                   style={{ color: accountLevel.currentLevel?.color }}
                 >
-                  @{user.username}
+                  {isMergedJointActivity ? jointParticipantLabel : `@${user.username}`}
                 </span>
                 {/* {accountLevel.atLeastBronze &&
                   accountLevel.currentLevel?.getIcon({
@@ -696,7 +767,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                             @{row.user.username}
                           </span>{" "}
                           <span className="font-semibold text-foreground">
-                            {row.activity.title} – {row.activityEntry.quantity}{" "}
+                            {row.activity.title} - {row.activityEntry.quantity}{" "}
                             {row.activity.measure}
                           </span>
                         </span>
@@ -707,7 +778,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               ) : (
                 <>
                   <span className="font-semibold">
-                    {activity.title} – {activityEntry.quantity} {activity.measure}
+                    {activity.title} - {activityEntry.quantity} {activity.measure}
                   </span>
                   {sharedParticipantLabel && (
                     <span className="text-xs text-muted-foreground">
