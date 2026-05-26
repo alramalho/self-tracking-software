@@ -24,10 +24,31 @@ function hasPendingCoachActions(metadata: unknown): boolean {
   const activityLogProposals = Array.isArray(data?.activityLogProposals)
     ? data.activityLogProposals
     : [];
+  const planCreationProposals = Array.isArray(data?.planCreationProposals)
+    ? data.planCreationProposals
+    : [];
 
-  return [...planProposals, ...activityLogProposals].some(
+  return [...planProposals, ...activityLogProposals, ...planCreationProposals].some(
     (proposal) => !proposal.status
   ) || (data?.metricReplacement && !data.metricReplacement.status);
+}
+
+async function ensureSingleCoachedPlan(
+  tx: any,
+  userId: string,
+  planId: string,
+  isCoached: boolean
+): Promise<void> {
+  if (!isCoached) return;
+  await tx.plan.updateMany({
+    where: {
+      userId,
+      deletedAt: null,
+      id: { not: planId },
+      isCoached: true,
+    },
+    data: { isCoached: false },
+  });
 }
 
 async function concludeResolvedAutonomousCoachNotifications(
@@ -226,6 +247,7 @@ router.get(
               planReplacements,
               metricReplacement,
               planProposals: metadata.planProposals || [],
+              planCreationProposals: metadata.planCreationProposals || [],
               userRecommendations: metadata.userRecommendations || null,
               toolCalls: metadata.toolCalls || null,
               createdAt: msg.createdAt,
@@ -292,6 +314,7 @@ router.get(
                 planReplacements,
                 metricReplacement,
                 userRecommendations: parsed.userRecommendations || null,
+                planCreationProposals: parsed.planCreationProposals || [],
                 toolCalls: parsed.toolCalls || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
@@ -1412,6 +1435,32 @@ router.post(
               operation: "archive",
               success: true,
             });
+          } else if (op.type === "update_plan") {
+            const updateData: Record<string, unknown> = {};
+            if (op.goal !== undefined) updateData.goal = op.goal;
+            if (op.goalReason !== undefined) updateData.goalReason = op.goalReason;
+            if (op.outlineType !== undefined) updateData.outlineType = op.outlineType;
+            if (op.timesPerWeek !== undefined) updateData.timesPerWeek = op.timesPerWeek;
+            if (op.isCoached !== undefined) updateData.isCoached = op.isCoached;
+            if (op.goal !== undefined) updateData.goalChanged = true;
+
+            await prisma.$transaction(async (tx) => {
+              await tx.plan.update({
+                where: { id: proposal.planId },
+                data: updateData,
+              });
+              await ensureSingleCoachedPlan(
+                tx,
+                user.id,
+                proposal.planId,
+                op.isCoached === true
+              );
+            });
+
+            changes.push({
+              operation: "update_plan",
+              success: true,
+            });
           }
         } catch (error) {
           logger.error("Proposal operation failed:", error);
@@ -1564,6 +1613,190 @@ router.post(
     } catch (error) {
       logger.error("Error rejecting plan proposal:", error);
       res.status(500).json({ error: "Failed to reject plan proposal" });
+    }
+  }
+);
+
+// Accept a plan creation proposal from AI coach
+router.post(
+  "/messages/:messageId/accept-plan-creation-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.planCreationProposals ||
+        !metadata.planCreationProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Plan creation proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.planCreationProposals[proposalIndex];
+
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      const plan = await prisma.$transaction(async (tx) => {
+        const activityIds: string[] = [];
+        for (const activity of proposal.activities || []) {
+          const existing = await tx.activity.findFirst({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              title: { equals: activity.title, mode: "insensitive" },
+            },
+          });
+
+          const savedActivity = existing || await tx.activity.create({
+            data: {
+              userId: user.id,
+              title: activity.title,
+              measure: activity.measure || "sessions",
+              emoji: activity.emoji || "📋",
+              kind: activity.kind || "other",
+            },
+          });
+          activityIds.push(savedActivity.id);
+        }
+
+        const newPlan = await tx.plan.create({
+          data: {
+            userId: user.id,
+            goal: proposal.goal,
+            goalReason: proposal.goalReason || null,
+            emoji: proposal.emoji || "🎯",
+            outlineType: proposal.timesPerWeek ? "TIMES_PER_WEEK" : "SPECIFIC",
+            timesPerWeek: proposal.timesPerWeek || null,
+            isCoached: true,
+            activities: activityIds.length > 0
+              ? { connect: activityIds.map((id) => ({ id })) }
+              : undefined,
+          },
+          include: { activities: true, sessions: true },
+        });
+
+        await ensureSingleCoachedPlan(tx, user.id, newPlan.id, true);
+        return newPlan;
+      });
+
+      metadata.planCreationProposals[proposalIndex].status = "accepted";
+      metadata.planCreationProposals[proposalIndex].planId = plan.id;
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
+
+      logger.info(
+        `User ${user.username} accepted plan creation proposal: "${proposal.goal}"`
+      );
+
+      res.json({ success: true, plan });
+    } catch (error) {
+      logger.error("Error accepting plan creation proposal:", error);
+      res.status(500).json({ error: "Failed to accept plan creation proposal" });
+    }
+  }
+);
+
+// Reject a plan creation proposal from AI coach
+router.post(
+  "/messages/:messageId/reject-plan-creation-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.planCreationProposals ||
+        !metadata.planCreationProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Plan creation proposal not found" });
+        return;
+      }
+
+      if (metadata.planCreationProposals[proposalIndex].status) {
+        res.status(400).json({
+          error: `Proposal already ${metadata.planCreationProposals[proposalIndex].status}`,
+        });
+        return;
+      }
+
+      metadata.planCreationProposals[proposalIndex].status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
+
+      logger.info(
+        `User ${user.username} rejected plan creation proposal: "${metadata.planCreationProposals[proposalIndex].goal}"`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting plan creation proposal:", error);
+      res.status(500).json({ error: "Failed to reject plan creation proposal" });
     }
   }
 );
@@ -1957,6 +2190,7 @@ router.post(
             metadata: {
               planReplacements: draft.planReplacements || [],
               planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+              planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
               notificationType: type,
               ...(draft.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
@@ -1995,6 +2229,7 @@ router.post(
         content: draft.content,
         planReplacements: draft.planReplacements || [],
         planProposals: draft.planProposals || [],
+        planCreationProposals: draft.planCreationProposals || [],
         toolCalls: draft.toolCalls || null,
         createdAt: coachMsg.createdAt,
       }));

@@ -65,6 +65,7 @@ type CoachInterventionType =
   | "INACTIVITY_ARCHIVE_PROPOSAL"
   | "INACTIVITY_PAUSE_PROPOSAL"
   | "PLAN_ADJUSTMENT"
+  | "COACH_SETUP"
   | "WEEK_PREP"
   | "SESSION_PREP"
   | "WEEK_RECAP"
@@ -193,19 +194,10 @@ export class CoachAssessmentService {
       where: {
         id: userId,
         deletedAt: null,
-        plans: {
-          some: {
-            isCoached: true,
-            deletedAt: null,
-            archivedAt: null,
-            isPaused: false,
-          },
-        },
       },
       include: {
         plans: {
           where: {
-            isCoached: true,
             deletedAt: null,
             archivedAt: null,
             isPaused: false,
@@ -220,17 +212,92 @@ export class CoachAssessmentService {
         userId,
         username: null,
         action: "skipped",
-        reason: "No active coached plans",
+        reason: "User not found",
       };
     }
 
-    return this.assessUser(user as CoachUser, {
+    const coachedPlans = user.plans.filter((plan) => plan.isCoached);
+    if (coachedPlans.length === 0) {
+      return this.runCoachSetupCheckin(user as CoachUser, options.now || new Date());
+    }
+
+    return this.assessUser({ ...(user as CoachUser), plans: coachedPlans }, {
       dry_run: false,
       force: true,
       now: options.now || new Date(),
       bypassDuplicateCheck: true,
       fallbackCheckin: true,
     });
+  }
+
+  private async runCoachSetupCheckin(
+    user: CoachUser,
+    now: Date
+  ): Promise<UserAssessmentResult> {
+    const recentMessages = await this.getRecentCoachMessages(user.id);
+    const reminders = await prisma.reminder.findMany({
+      where: { userId: user.id, status: "PENDING" },
+      orderBy: { triggerAt: "asc" },
+    });
+
+    const activePlanSummary = user.plans.length > 0
+      ? user.plans
+          .map((plan) => `- ${plan.emoji || ""} ${plan.goal}${plan.outlineType === "TIMES_PER_WEEK" && plan.timesPerWeek ? ` (${plan.timesPerWeek}x/week)` : ""}`)
+          .join("\n")
+      : "No active plans.";
+
+    const aiResponse = await coachAgentService.generateResponse({
+      user,
+      message: dedent`
+        The user manually ran a coach assessment, but they have no active coached plans.
+
+        This is a setup moment, not an error.
+
+        Active plans:
+        ${activePlanSummary}
+
+        Required behavior:
+        - Speak as the coach in first person. Do not say "No active coach plans".
+        - If there are active plans, inspect whether any goal is vague, purely frequency-based, or missing a measurable outcome.
+        - When you critique or ask about an existing plan, include that plan's exact goal text from Active plans in your message so the UI can link it.
+        - If a plan is vague, ask whether they want to turn that exact plan into a clearer goal.
+        - Also offer creating a new coached plan if none of the existing plans should change.
+        - If there are no active plans, ask what measurable goal they want coached first.
+        - Sound natural and conversational. Avoid corporate phrases like "To coach you effectively".
+        - Do not use em dashes. Use commas, periods, or parentheses instead.
+        - Ask at most one crisp question. Do not propose a setup tool until the user gives a concrete target or confirms what to change.
+      `,
+      conversationHistory: recentMessages
+        .slice(0, 8)
+        .reverse()
+        .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+      plans: user.plans,
+      reminders,
+    });
+
+    const candidate: CoachInterventionCandidate = {
+      type: "COACH_SETUP",
+      reason: "User requested a coach assessment without an active coached plan.",
+      planIds: user.plans.map((plan) => plan.id),
+      targetDate: format(new TZDate(now, user.timezone || "UTC"), "yyyy-MM-dd"),
+      context: activePlanSummary,
+      usesAgent: true,
+    };
+
+    const drafts = aiResponse.draftMessages.length > 0
+      ? aiResponse.draftMessages
+      : [{ content: "I do not have a coached plan set up for you yet. Do you want to tighten one of your current plans into a measurable goal, or create a new coached plan?" }];
+
+    const sent = await this.dispatchCoachDrafts(user, candidate, drafts, "Coach setup");
+
+    return {
+      userId: user.id,
+      username: user.username,
+      action: "sent",
+      reason: "Sent coach setup check-in",
+      sentMessageIds: sent.messageIds,
+      notificationId: sent.notificationId,
+    };
   }
 
   async autoAcceptExpiredProposals(now: Date = new Date()): Promise<{
@@ -380,14 +447,14 @@ export class CoachAssessmentService {
       bypassDuplicateCheck,
     });
 
-    if (candidate) {
+    if (candidate && candidate.type !== "COACH_SETUP") {
       const brief = await coachContextBriefService.buildCoachContextBrief({
         user,
         plans: user.plans,
         now,
       });
       const selectedInsight = coachContextBriefService.pickInsightForCandidate({
-        candidate,
+        candidate: candidate as any,
         brief,
       });
       candidate.context += coachContextBriefService.formatSelectedInsight(selectedInsight);
@@ -546,6 +613,15 @@ export class CoachAssessmentService {
         operations: unknown[];
         status: null;
       }>;
+      planCreationProposals?: Array<{
+        goal: string;
+        goalReason: string | null;
+        emoji: string | null;
+        timesPerWeek: number | null;
+        activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        description: string;
+        status: null;
+      }>;
       activityLogProposals?: Array<{
         activityId: string;
         activityName: string;
@@ -578,6 +654,7 @@ export class CoachAssessmentService {
               sessionIds: candidate.sessionIds || [],
               planReplacements: draft.planReplacements || [],
               planProposals: draft.planProposals || [],
+              planCreationProposals: draft.planCreationProposals || [],
               activityLogProposals: draft.activityLogProposals || [],
               ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
             })
@@ -594,11 +671,13 @@ export class CoachAssessmentService {
 
     const hasProposal = drafts.some(
       (d) => (d.planProposals && d.planProposals.length > 0) || (d.activityLogProposals && d.activityLogProposals.length > 0)
+        || (d.planCreationProposals && d.planCreationProposals.length > 0)
     );
     const pendingActionCount = drafts.reduce(
       (count, draft) =>
         count +
         (draft.planProposals?.filter((proposal) => !proposal.status).length || 0) +
+        (draft.planCreationProposals?.filter((proposal) => !proposal.status).length || 0) +
         (draft.activityLogProposals?.filter((proposal) => !proposal.status).length || 0),
       0
     );
@@ -634,6 +713,7 @@ export class CoachAssessmentService {
       INACTIVITY_ARCHIVE_PROPOSAL: "Plan archive suggestion",
       INACTIVITY_PAUSE_PROPOSAL: "Plan pause suggestion",
       PLAN_ADJUSTMENT: "Plan adjustment",
+      COACH_SETUP: "Coach setup",
       WEEK_PREP: "Week prep",
       SESSION_PREP: "Tomorrow's session",
       WEEK_RECAP: "Weekly recap",
