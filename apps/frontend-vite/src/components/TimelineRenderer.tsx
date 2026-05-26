@@ -801,6 +801,12 @@ const TimelineRenderer: React.FC<{
                           params: { username: user?.username || "" },
                         });
                       }}
+                      onParticipantClick={(username) => {
+                        navigate({
+                          to: `/profile/$username`,
+                          params: { username },
+                        });
+                      }}
                     />
                   </div>
                 </React.Fragment>
