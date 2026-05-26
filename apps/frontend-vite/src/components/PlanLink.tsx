@@ -22,6 +22,9 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
   const [showPreview, setShowPreview] = useState(false);
 
   const plan = useMemo(() => plans?.find((p) => p.id === planId), [plans, planId]);
+  const displayStartsWithEmoji = Boolean(
+    emoji && displayText.trim().startsWith(emoji)
+  );
 
   // Get upcoming sessions (next 7 days)
   const upcomingSessions = useMemo(() => {
@@ -68,11 +71,11 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
         className={`inline-flex items-center gap-1.5 font-medium cursor-pointer rounded-md px-2 py-0.5 transition-all text-foreground/90 ${themeColors.fadedBg} hover:${themeColors.bg}`}
         onClick={handleClick}
       >
-        {emoji ? (
+        {emoji && !displayStartsWithEmoji ? (
           <span className="text-base leading-none">{emoji}</span>
-        ) : (
+        ) : !emoji ? (
           <Target size={14} className="flex-shrink-0" />
-        )}
+        ) : null}
         <span>{displayText}</span>
       </span>
 
