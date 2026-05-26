@@ -4,6 +4,7 @@ import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
 import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
+import { PlanCreationProposalCard } from "@/components/PlanCreationProposalCard";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Button } from "@/components/ui/button";
@@ -232,6 +233,8 @@ function MessageAIPage() {
     rejectMetric,
     acceptProposal,
     rejectProposal,
+    acceptPlanCreationProposal,
+    rejectPlanCreationProposal,
     acceptActivityLogProposal,
     rejectActivityLogProposal,
     createCoachChat,
@@ -453,6 +456,24 @@ function MessageAIPage() {
       await rejectProposal({ messageId, proposalIndex });
     } catch (error) {
       console.error("Failed to reject proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleAcceptPlanCreationProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await acceptPlanCreationProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to accept plan creation proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectPlanCreationProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await rejectPlanCreationProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to reject plan creation proposal:", error);
       throw error;
     }
   };
@@ -909,6 +930,15 @@ function MessageAIPage() {
                                 if (op.type === "archive") {
                                   return { type: "archive" };
                                 }
+                                if (op.type === "update_plan") {
+                                  return {
+                                    type: "update_plan",
+                                    goal: op.goal,
+                                    goalReason: op.goalReason,
+                                    timesPerWeek: op.timesPerWeek,
+                                    isCoached: op.isCoached,
+                                  };
+                                }
 
                                 const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
                                   || activities?.find((a: any) => a.id === op.activityId);
@@ -937,6 +967,27 @@ function MessageAIPage() {
                                 />
                               );
                             })}
+                          </div>
+                        )}
+
+                        {isCoachMessage && message.planCreationProposals && message.planCreationProposals.length > 0 && (
+                          <div className="px-0">
+                            {message.planCreationProposals.map((proposal: any, idx: number) => (
+                              <PlanCreationProposalCard
+                                key={`plan-creation-${message.id}-${idx}`}
+                                messageId={message.id}
+                                proposalIndex={idx}
+                                goal={proposal.goal}
+                                goalReason={proposal.goalReason}
+                                emoji={proposal.emoji}
+                                timesPerWeek={proposal.timesPerWeek}
+                                activities={proposal.activities}
+                                description={proposal.description}
+                                status={proposal.status}
+                                onAccept={handleAcceptPlanCreationProposal}
+                                onReject={handleRejectPlanCreationProposal}
+                              />
+                            ))}
                           </div>
                         )}
 

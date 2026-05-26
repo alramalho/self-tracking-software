@@ -99,6 +99,7 @@ export class CoachAgentService {
         return dedent`
           Plan: ${plan.emoji || ""} ${plan.goal} [planId: ${plan.id}]
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
+          Coaching: ${plan.isCoached ? "coached" : "not coached yet"}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
@@ -125,6 +126,7 @@ export class CoachAgentService {
 
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
+      temperature: 0.8,
       instructions: dedent`
         You are ${coachPersonality.displayName}, ${coachPersonality.title}, a knowledgeable fitness and habits coach that helps users achieve their fitness and habit goals through evidence-based coaching and plan adjustments.
 
@@ -146,14 +148,18 @@ export class CoachAgentService {
         - Research first, then advise. Web search results override your assumptions
         - Be direct, succint and realistic. If a goal is unrealistic given constraints, say so
         - Suggesting the user adjust their goal is better than setting them up to fail
-        - Any capability not provided by the available tools is not available to you (e.g. create a plan).
+        - If no plan is coached yet, treat that as setup, not an error. Ask whether the user wants to tighten an existing plan or create a new coached plan.
+        - When a plan goal is vague or purely frequency-based, mention that plan by its exact goal text from USER'S PLANS so it can be linked in the UI.
+        - If the user gives a concrete measurable goal, use proposePlanCreation for a new goal or proposePlanModification with update_plan for an existing plan.
+        - Any capability not provided by the available tools is not available to you.
 
         RULES
         - Never modify sessions or reminders without user confirmation
-        - Keep responses concise
+        - Keep responses concise, relaxed, and natural. Avoid stiff phrases like "concrete, measurable outcome" unless the user used them first.
         - You MUST use the draftMessages tool to send your response. Never respond with plain text.
         - Each message should focus on one topic/thought. Use multiple messages only when covering distinct points.
         - No markdown headers (#). No numbered lists. Keep it conversational like texting.
+        - Do not use em dashes. Use commas, periods, or parentheses instead.
         
       `,
       tools: {
@@ -228,10 +234,11 @@ export class CoachAgentService {
             - Update existing sessions (provide sessionId and fields to update)
             - Remove sessions (provide sessionId)
             - Archive a dormant plan (no extra fields)
+            - Tighten plan setup (provide update_plan with a clearer goal, optional reason, optional frequency, and optional coaching flag)
 
             Use the planId, activityId, and sessionId values from the plan context above.
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
-            IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose sessions a partial week update (e.g for just from Monday-Wednesday) — always cover the full week schedule. Discuss the full week with the user before proposing.
+            IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
           `,
           inputSchema: z.object({
             planId: z.string().describe("The ID of the plan to modify"),
@@ -278,6 +285,14 @@ export class CoachAgentService {
                 z.object({
                   type: z.literal("archive"),
                 }),
+                z.object({
+                  type: z.literal("update_plan"),
+                  goal: z.string().optional().describe("Clearer measurable plan goal"),
+                  goalReason: z.string().optional().nullable().describe("Why this plan matters to the user"),
+                  outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
+                  timesPerWeek: z.number().positive().optional(),
+                  isCoached: z.boolean().optional().describe("Set true when the user wants this plan coached"),
+                }),
               ])
             ).min(1),
           }),
@@ -296,6 +311,14 @@ export class CoachAgentService {
               return {
                 success: false,
                 error: "Archive must be proposed as a standalone operation",
+              };
+            }
+
+            const setupOps = operations.filter((op) => op.type === "update_plan");
+            if (setupOps.length > 1 || (setupOps.length === 1 && operations.length > 1)) {
+              return {
+                success: false,
+                error: "Plan setup updates must be proposed as a standalone operation",
               };
             }
 
@@ -358,6 +381,44 @@ export class CoachAgentService {
                 planEmoji: plan.emoji,
                 description,
                 operations,
+              },
+            };
+          },
+        }),
+
+        proposePlanCreation: tool({
+          description: dedent`
+            Propose creating a new coached plan. The user can accept or reject the proposal with one click.
+            Use this only after the user gives a concrete goal or clearly asks for a new plan.
+            Prefer measurable goals with a clear outcome, e.g. "Run 20 km under 2 hours" or "Reach 80 kg with low body fat".
+          `,
+          inputSchema: z.object({
+            goal: z.string().describe("Short, concrete, measurable goal"),
+            goalReason: z.string().optional().nullable().describe("Why the goal matters, if known"),
+            emoji: z.string().optional().describe("Single emoji for the plan"),
+            timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
+            activities: z.array(z.object({
+              title: z.string().describe("Activity title, e.g. Easy run"),
+              measure: z.string().describe("Tracking unit, e.g. km, minutes, reps"),
+              emoji: z.string().describe("Single emoji for the activity"),
+              kind: z.string().optional().describe("Activity kind/category"),
+            })).min(1).max(5).optional(),
+            description: z.string().optional().describe("Short human-readable description"),
+          }),
+          execute: async ({ goal, goalReason, emoji, timesPerWeek, activities, description }) => {
+            logger.info(
+              `Plan creation proposed for ${user.id}: "${goal}" (${activities?.length || 0} activities)`
+            );
+
+            return {
+              success: true,
+              proposal: {
+                goal,
+                goalReason: goalReason || null,
+                emoji: emoji || "🎯",
+                timesPerWeek: timesPerWeek || null,
+                activities: activities || [],
+                description: description || `Create coached plan: ${goal}`,
               },
             };
           },
@@ -730,6 +791,15 @@ export class CoachAgentService {
         operations: unknown[];
         status: null;
       }>;
+      planCreationProposals?: Array<{
+        goal: string;
+        goalReason: string | null;
+        emoji: string | null;
+        timesPerWeek: number | null;
+        activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        description: string;
+        status: null;
+      }>;
       activityLogProposals?: Array<{
         activityId: string;
         activityName: string;
@@ -833,6 +903,20 @@ export class CoachAgentService {
           status: null as null,
         }));
 
+      const planCreationProposals = visibleToolCalls
+        .filter(
+          (tc) =>
+            tc.tool === "proposePlanCreation" &&
+            tc.result &&
+            typeof tc.result === "object" &&
+            (tc.result as any).success &&
+            (tc.result as any).proposal
+        )
+        .map((tc) => ({
+          ...(tc.result as any).proposal,
+          status: null as null,
+        }));
+
       // Build draft messages with metadata distributed across them
       const plansList = plans.map((p) => ({ id: p.id, goal: p.goal, emoji: p.emoji }));
       const draftMessages = rawDrafts.map((draft, idx) => {
@@ -845,6 +929,8 @@ export class CoachAgentService {
           planReplacements: planReplacements.length > 0 ? planReplacements : undefined,
           // Plan proposals on the LAST message
           planProposals: isLast && planProposals.length > 0 ? planProposals : undefined,
+          // Plan creation proposals on the LAST message
+          planCreationProposals: isLast && planCreationProposals.length > 0 ? planCreationProposals : undefined,
           // Activity log proposals on the LAST message
           activityLogProposals: isLast && activityLogProposals.length > 0 ? activityLogProposals : undefined,
           // Tool calls on the FIRST message (excluding draftMessages)
