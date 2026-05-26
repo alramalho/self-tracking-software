@@ -646,7 +646,9 @@ usersRouter.post(
                             },
                           },
                           activityEntry: {
-                            select: { id: true, userId: true, deletedAt: true },
+                            include: {
+                              activity: true,
+                            },
                           },
                         },
                       },
@@ -943,7 +945,9 @@ usersRouter.get(
                           },
                         },
                         activityEntry: {
-                          select: { id: true, userId: true, deletedAt: true },
+                          include: {
+                            activity: true,
+                          },
                         },
                       },
                     },

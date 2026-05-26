@@ -69,6 +69,86 @@ const formatUsernameList = (usernames: string[]) => {
   }`;
 };
 
+type ActivityCardUser = {
+  username: string;
+  name?: string | null;
+  picture?: string | null;
+  planType?: PlanType;
+};
+
+const ParticipantAvatar = ({
+  user,
+  size = "md",
+  isLightMode,
+}: {
+  user: ActivityCardUser;
+  size?: "sm" | "md";
+  isLightMode: boolean;
+}) => {
+  const accountLevel = useAccountLevel(user.username || undefined);
+  const ringSize = size === "sm" ? 28 : 36;
+  const avatarSize = size === "sm" ? "w-6 h-6" : "w-8 h-8";
+  const ringWidth = size === "sm" ? 1.5 : 2;
+  const outerRing = size === "sm" ? 3 : 5;
+
+  return (
+    <ProgressRing
+      size={ringSize}
+      strokeWidth={ringWidth}
+      percentage={accountLevel.percentage}
+      currentLevel={accountLevel.currentLevel}
+      atLeastBronze={accountLevel.atLeastBronze}
+      badge={false}
+      badgeSize={ringSize}
+    >
+      <Avatar
+        className={avatarSize}
+        style={{
+          boxShadow: `0 0 0 2px ${
+            isLightMode ? "white" : "black"
+          }, 0 0 0 ${outerRing}px ${accountLevel.currentLevel?.color}`,
+        }}
+      >
+        <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+        <AvatarFallback>{(user.name || user.username || "U")[0]}</AvatarFallback>
+      </Avatar>
+    </ProgressRing>
+  );
+};
+
+const ParticipantName = ({ user }: { user: ActivityCardUser }) => {
+  const accountLevel = useAccountLevel(user.username || undefined);
+
+  return (
+    <span style={{ color: accountLevel.currentLevel?.color }}>
+      @{user.username}
+    </span>
+  );
+};
+
+const ParticipantNameList = ({ users }: { users: ActivityCardUser[] }) => {
+  const uniqueUsers = users.filter(
+    (participant, index, list) =>
+      participant.username &&
+      list.findIndex((item) => item.username === participant.username) === index
+  );
+
+  return (
+    <>
+      {uniqueUsers.map((participant, index) => (
+        <React.Fragment key={participant.username}>
+          {index > 0 && (
+            <span className="text-muted-foreground">
+              {index === uniqueUsers.length - 1 ? " and " : ", "}
+            </span>
+          )}
+          <ParticipantName user={participant} />
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
 type SharedActivityCardEntry = {
   activityEntry: ActivityEntry & {
     imageUrls?: string[];
@@ -87,7 +167,11 @@ interface ActivityEntryPhotoCardProps {
         entries?: {
           activityEntryId: string;
           user: { id: string; username: string | null; name?: string | null; picture?: string | null };
-          activityEntry?: { id: string; userId: string; deletedAt?: Date | null };
+          activityEntry?: (ActivityEntry & {
+            imageUrls?: string[];
+            activity?: Activity | null;
+            deletedAt?: Date | null;
+          }) | null;
         }[];
       };
     } | null;
@@ -382,10 +466,40 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     ].filter((url): url is string => !!url);
   };
 
+  const embeddedSharedActivityEntries = (
+    activityEntry.sharedActivityEntry?.sharedActivity?.entries || []
+  )
+    .filter(
+      (entry) =>
+        entry.activityEntryId !== activityEntry.id &&
+        !entry.activityEntry?.deletedAt &&
+        entry.user.username &&
+        entry.activityEntry?.activity
+    )
+    .map((entry) => ({
+      activityEntry: entry.activityEntry as ActivityEntry & { imageUrls?: string[] },
+      activity: entry.activityEntry!.activity as Activity,
+      user: {
+        username: entry.user.username as string,
+        name: entry.user.name ?? null,
+        picture: entry.user.picture ?? null,
+        planType: user.planType,
+      },
+    }));
+
+  const allSharedActivityEntries = Array.from(
+    new Map(
+      [...sharedActivityEntries, ...embeddedSharedActivityEntries].map((entry) => [
+        entry.activityEntry.id,
+        entry,
+      ])
+    ).values()
+  );
+
   const imageUrls = Array.from(
     new Set([
       ...getEntryImageUrls(activityEntry as typeof activityEntry & { imageUrls?: string[] }),
-      ...sharedActivityEntries.flatMap(({ activityEntry }) =>
+      ...allSharedActivityEntries.flatMap(({ activityEntry }) =>
         getEntryImageUrls(activityEntry)
       ),
     ])
@@ -401,14 +515,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   if (!activity || !activityEntry) return null;
 
-  const isMergedJointActivity = sharedActivityEntries.length > 0;
+  const isMergedJointActivity = allSharedActivityEntries.length > 0;
   const activitySummaryRows = [
     { activityEntry, activity, user },
-    ...sharedActivityEntries,
+    ...allSharedActivityEntries,
   ];
-  const jointParticipantLabel = formatUsernameList(
-    activitySummaryRows.map((row) => `@${row.user.username}`)
-  );
+  const jointParticipants = activitySummaryRows.map((row) => row.user);
   const sharedParticipants = (
     isMergedJointActivity
       ? []
@@ -434,43 +546,26 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
     <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
-      <div className="relative flex-shrink-0">
-        <ProgressRing
-          size={20}
-          strokeWidth={1.5}
-          percentage={accountLevel.percentage}
-          currentLevel={accountLevel.currentLevel}
-          atLeastBronze={accountLevel.atLeastBronze}
-          badge={false}
-          badgeSize={20}
-        >
-          <Avatar
-            className="w-6 h-6"
-            style={{
-              boxShadow: `0 0 0 1px ${
-                isLightMode ? "white" : "black"
-              }, 0 0 0 3px ${accountLevel.currentLevel?.color}`,
-            }}
+      <div className="relative flex flex-shrink-0 -space-x-1.5">
+        {isMergedJointActivity ? (
+          jointParticipants.slice(0, 3).map((participant) => (
+            <ParticipantAvatar
+              key={participant.username}
+              user={participant}
+              size="sm"
+              isLightMode={isLightMode}
+            />
+          ))
+        ) : (
+          <div
             onClick={(e) => {
               e.stopPropagation();
               onAvatarClick?.();
             }}
           >
-            <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-            <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-          </Avatar>
-        </ProgressRing>
-        {isMergedJointActivity &&
-          sharedActivityEntries.slice(0, 2).map((row, index) => (
-            <Avatar
-              key={row.user.username}
-              className="absolute -bottom-1 w-5 h-5 border-2 border-background"
-              style={{ left: 14 + index * 12 }}
-            >
-              <AvatarImage src={row.user.picture || ""} alt={row.user.name || ""} />
-              <AvatarFallback>{(row.user.name || row.user.username || "U")[0]}</AvatarFallback>
-            </Avatar>
-          ))}
+            <ParticipantAvatar user={user} size="sm" isLightMode={isLightMode} />
+          </div>
+        )}
       </div>
       <div className="relative flex-shrink-0">
         {isMergedJointActivity ? (
@@ -478,7 +573,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             {mergedEmojiRows.map((row) => (
               <span
                 key={row.activityEntry.id}
-                className="text-2xl leading-none drop-shadow-sm"
+                className="text-xl leading-none drop-shadow-sm"
               >
                 {row.activity.emoji}
               </span>
@@ -490,7 +585,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       </div>
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-semibold text-foreground line-clamp-1">
-          {isMergedJointActivity ? jointParticipantLabel : activity.title}
+          {isMergedJointActivity ? (
+            <ParticipantNameList users={jointParticipants} />
+          ) : (
+            activity.title
+          )}
         </span>
         <span className="text-xs text-muted-foreground">
           {isMergedJointActivity
@@ -683,116 +782,110 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       )}
       <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center space-x-2">
-            <div className="relative">
-              <ProgressRing
-                size={32}
-                strokeWidth={2}
-                percentage={accountLevel.percentage}
-                currentLevel={accountLevel.currentLevel}
-                atLeastBronze={accountLevel.atLeastBronze}
-                badge={false}
-                badgeSize={32}
-              >
-                <Avatar
-                  className="w-8 h-8"
-                  style={{
-                    boxShadow: `0 0 0 2px ${
-                      isLightMode ? "white" : "black"
-                    }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
-                  }}
-                  onClick={onAvatarClick}
-                >
-                  <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-                  <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-                </Avatar>
-              </ProgressRing>
-              {isMergedJointActivity &&
-                sharedActivityEntries.slice(0, 2).map((row, index) => (
-                  <Avatar
-                    key={row.user.username}
-                    className="absolute -bottom-1 w-7 h-7 border-2 border-background"
-                    style={{ left: 22 + index * 16 }}
-                  >
-                    <AvatarImage src={row.user.picture || ""} alt={row.user.name || ""} />
-                    <AvatarFallback>{(row.user.name || row.user.username || "U")[0]}</AvatarFallback>
-                  </Avatar>
-                ))}
-            </div>
-            {isMergedJointActivity ? (
-              <div className="flex -space-x-3 pr-1">
-                {mergedEmojiRows.map((row) => (
-                  <span
-                    key={row.activityEntry.id}
-                    className="text-4xl h-full text-muted-foreground drop-shadow-sm"
-                  >
-                    {row.activity.emoji}
-                  </span>
-                ))}
+          {isMergedJointActivity ? (
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex flex-shrink-0 -space-x-2">
+                  {jointParticipants.slice(0, 3).map((participant) => (
+                    <ParticipantAvatar
+                      key={participant.username}
+                      user={participant}
+                      isLightMode={isLightMode}
+                    />
+                  ))}
+                </div>
+                <div className="min-w-0 text-sm font-semibold">
+                  <ParticipantNameList users={jointParticipants} />
+                </div>
               </div>
-            ) : (
+              <div className="space-y-1.5">
+                <div className="inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Joint activity
+                </div>
+                <div className="space-y-1">
+                  {activitySummaryRows.map((row) => (
+                    <div
+                      key={row.activityEntry.id}
+                      className="flex items-center gap-2 rounded-xl bg-muted/35 px-2 py-1 text-xs"
+                    >
+                      <span className="text-base leading-none">{row.activity.emoji}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium text-muted-foreground">
+                          @{row.user.username}
+                        </span>{" "}
+                        <span className="font-semibold text-foreground">
+                          {row.activity.title} - {row.activityEntry.quantity}{" "}
+                          {row.activity.measure}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {getFormattedDate(activityEntry.datetime)}{" "}
+                {activityEntry.timezone && `- 📍 ${activityEntry.timezone}`}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <ProgressRing
+                  size={32}
+                  strokeWidth={2}
+                  percentage={accountLevel.percentage}
+                  currentLevel={accountLevel.currentLevel}
+                  atLeastBronze={accountLevel.atLeastBronze}
+                  badge={false}
+                  badgeSize={32}
+                >
+                  <Avatar
+                    className="w-8 h-8"
+                    style={{
+                      boxShadow: `0 0 0 2px ${
+                        isLightMode ? "white" : "black"
+                      }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
+                    }}
+                    onClick={onAvatarClick}
+                  >
+                    <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+                    <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+                  </Avatar>
+                </ProgressRing>
+              </div>
               <span className="text-5xl h-full text-muted-foreground">
                 {activity.emoji}
               </span>
-            )}
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 flex-row flex-nowrap">
-                <span
-                  className="text-sm text-muted-foreground hover:underline cursor-pointer"
-                  onClick={onUsernameClick}
-                  style={{ color: accountLevel.currentLevel?.color }}
-                >
-                  {isMergedJointActivity ? jointParticipantLabel : `@${user.username}`}
-                </span>
-                {/* {accountLevel.atLeastBronze &&
-                  accountLevel.currentLevel?.getIcon({
-                    size: 16,
-                    className: "drop-shadow-sm",
-                  })} */}
-              </div>
-              {isMergedJointActivity ? (
-                <div className="mt-1 space-y-1.5">
-                  <div className="inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Joint activity
-                  </div>
-                  <div className="space-y-1">
-                    {activitySummaryRows.map((row) => (
-                      <div
-                        key={row.activityEntry.id}
-                        className="flex items-center gap-1.5 rounded-xl bg-muted/35 px-2 py-1 text-xs"
-                      >
-                        <span className="text-base leading-none">{row.activity.emoji}</span>
-                        <span className="min-w-0 flex-1 truncate">
-                          <span className="font-medium text-muted-foreground">
-                            @{row.user.username}
-                          </span>{" "}
-                          <span className="font-semibold text-foreground">
-                            {row.activity.title} - {row.activityEntry.quantity}{" "}
-                            {row.activity.measure}
-                          </span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="font-semibold">
-                    {activity.title} - {activityEntry.quantity} {activity.measure}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 flex-row flex-nowrap">
+                  <span
+                    className="text-sm text-muted-foreground hover:underline cursor-pointer"
+                    onClick={onUsernameClick}
+                    style={{ color: accountLevel.currentLevel?.color }}
+                  >
+                    @{user.username}
                   </span>
-                  {sharedParticipantLabel && (
-                    <span className="text-xs text-muted-foreground">
-                      with {sharedParticipantLabel}
-                    </span>
-                  )}
-                </>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {getFormattedDate(activityEntry.datetime)}{" "}
-                {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}
-              </span>
+                  {/* {accountLevel.atLeastBronze &&
+                    accountLevel.currentLevel?.getIcon({
+                      size: 16,
+                      className: "drop-shadow-sm",
+                    })} */}
+                </div>
+                <span className="font-semibold">
+                  {activity.title} - {activityEntry.quantity} {activity.measure}
+                </span>
+                {sharedParticipantLabel && (
+                  <span className="text-xs text-muted-foreground">
+                    with {sharedParticipantLabel}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {getFormattedDate(activityEntry.datetime)}{" "}
+                  {activityEntry.timezone && `- 📍 ${activityEntry.timezone}`}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Non-image posts: link preview (if link exists) */}
