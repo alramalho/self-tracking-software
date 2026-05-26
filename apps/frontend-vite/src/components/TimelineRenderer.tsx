@@ -224,6 +224,9 @@ const TimelineRenderer: React.FC<{
       if (seenEntryIds.has(entry.id)) return;
 
       const sharedEntries = (entry as any).sharedActivityEntry?.sharedActivity?.entries || [];
+      const sharedEntryIds = sharedEntries
+        .map((sharedEntry: any) => sharedEntry.activityEntryId)
+        .filter(Boolean) as string[];
       const visibleGroupEntries = sharedEntries
         .map((sharedEntry: any) => entryById.get(sharedEntry.activityEntryId))
         .filter(Boolean) as TimelineActivityEntry[];
@@ -237,6 +240,7 @@ const TimelineRenderer: React.FC<{
       });
 
       entries.forEach((groupEntry) => seenEntryIds.add(groupEntry.id));
+      sharedEntryIds.forEach((entryId) => seenEntryIds.add(entryId));
       items.push({ type: "activity", data: { primary: entries[0], entries } });
     });
 
