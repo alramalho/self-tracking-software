@@ -113,6 +113,24 @@ export async function rejectProposal(
   });
 }
 
+export async function acceptPlanCreationProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/accept-plan-creation-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
+export async function rejectPlanCreationProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/reject-plan-creation-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
 // Accept an activity log proposal from AI
 export async function acceptActivityLogProposal(
   api: AxiosInstance,

@@ -34,6 +34,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
+import ImageZoomDialog from "./ImageZoomDialog";
 import LinkifiedText from "./LinkifiedText";
 import LinkPreview from "./LinkPreview";
 import { ProgressRing } from "./ProgressRing";
@@ -274,6 +275,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
+  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
   const { data: ownerUser } = useUser({ username: user.username || "" });
   const { isLightMode } = useTheme();
   const habitAchieved = userPlansProgressData?.some(
@@ -659,24 +661,50 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
             {imageUrls.length === 1 ? (
-              <img
-                src={imageUrls[0]}
-                alt={activity.title}
-                className="w-full h-full max-h-[400px] object-cover rounded-2xl"
-              />
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setZoomedImageUrl(imageUrls[0]);
+                }}
+                className="group relative block w-full cursor-zoom-in overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                aria-label={`Open ${activity.title} photo`}
+              >
+                <img
+                  src={imageUrls[0]}
+                  alt={activity.title}
+                  className="w-full h-full max-h-[400px] object-cover rounded-2xl transition-transform duration-200 group-hover:scale-[1.01]"
+                />
+                <span className="absolute right-2 top-2 rounded-full bg-black/45 p-2 text-white opacity-0 shadow-md backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <Maximize2 className="h-4 w-4" />
+                </span>
+              </button>
             ) : (
               <div className="grid grid-cols-2 gap-1">
                 {imageUrls.map((imageUrl, index) => (
-                  <img
+                  <button
                     key={imageUrl}
-                    src={imageUrl}
-                    alt={`${activity.title} proof ${index + 1}`}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setZoomedImageUrl(imageUrl);
+                    }}
                     className={`w-full object-cover ${
                       index === 0 && imageUrls.length === 3
                         ? "col-span-2 max-h-[300px]"
                         : "aspect-square"
-                    }`}
-                  />
+                    } group relative cursor-zoom-in overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80`}
+                    aria-label={`Open ${activity.title} photo ${index + 1}`}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`${activity.title} proof ${index + 1}`}
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                    />
+                    <span className="absolute right-2 top-2 rounded-full bg-black/45 p-1.5 text-white opacity-0 shadow-md backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -1050,6 +1078,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
           badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
           userPlansProgressData={userPlansProgressData}
+        />
+      )}
+      {zoomedImageUrl && (
+        <ImageZoomDialog
+          open={!!zoomedImageUrl}
+          onOpenChange={(open) => {
+            if (!open) {
+              setZoomedImageUrl(null);
+            }
+          }}
+          src={zoomedImageUrl}
+          alt={`${activity.title} photo`}
         />
       )}
     </motion.div>

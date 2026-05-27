@@ -13,6 +13,8 @@ import {
   rejectMetric,
   acceptProposal,
   rejectProposal,
+  acceptPlanCreationProposal,
+  rejectPlanCreationProposal,
   acceptActivityLogProposal,
   rejectActivityLogProposal,
   submitAISatisfaction,
@@ -203,6 +205,41 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const acceptPlanCreationProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await acceptPlanCreationProposal(api, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      toast.success("Plan created!");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to create plan");
+      toast.error("Failed to create plan");
+    },
+  });
+
+  const rejectPlanCreationProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await rejectPlanCreationProposal(api, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to reject plan creation");
+      toast.error("Failed to reject plan creation");
+    },
+  });
+
   const acceptActivityLogProposalMutation = useMutation({
     mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
       return await acceptActivityLogProposal(api, data);
@@ -281,6 +318,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isRejectingMetric: rejectMetricMutation.isPending,
     acceptProposal: acceptProposalMutation.mutateAsync,
     rejectProposal: rejectProposalMutation.mutateAsync,
+    acceptPlanCreationProposal: acceptPlanCreationProposalMutation.mutateAsync,
+    rejectPlanCreationProposal: rejectPlanCreationProposalMutation.mutateAsync,
     acceptActivityLogProposal: acceptActivityLogProposalMutation.mutateAsync,
     rejectActivityLogProposal: rejectActivityLogProposalMutation.mutateAsync,
     submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
