@@ -1428,6 +1428,8 @@ export class AIService {
         Write one short, useful proactive coach message.
         Use the user's name naturally if it helps: ${userName}.
         If the context includes a selected coach context brief insight, use at most that one personal insight and only if it naturally supports the intervention.
+        When saying the user logged, did, trained, or practiced something recently/lately, rely only on recent activity logs in the context. Active plans are goals, not proof of recent activity.
+        Do not call an activity recent if its plan context says zero entries in the last 30 days.
         Do not mention internal labels like intervention type, metadata, or scoring.
       `,
       prompt: dedent`

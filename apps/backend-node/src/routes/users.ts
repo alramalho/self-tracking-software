@@ -654,13 +654,8 @@ usersRouter.post(
                             },
                           },
                           activityEntry: {
-                            select: {
-                              id: true,
-                              userId: true,
-                              deletedAt: true,
-                              imageUrl: true,
-                              imageUrls: true,
-                              imageExpiresAt: true,
+                            include: {
+                              activity: true,
                             },
                           },
                         },
@@ -962,13 +957,8 @@ usersRouter.get(
                           },
                         },
                         activityEntry: {
-                          select: {
-                            id: true,
-                            userId: true,
-                            deletedAt: true,
-                            imageUrl: true,
-                            imageUrls: true,
-                            imageExpiresAt: true,
+                          include: {
+                            activity: true,
                           },
                         },
                       },
