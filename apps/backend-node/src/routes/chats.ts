@@ -296,6 +296,7 @@ router.get(
                 planReplacements,
                 metricReplacement,
                 planProposals: metadata.planProposals || [],
+                planCreationProposals: metadata.planCreationProposals || [],
                 activityLogProposals: metadata.activityLogProposals || [],
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
@@ -456,6 +457,7 @@ router.post(
           planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
           metricReplacement?: { textToReplace: string; metricTitle: string; rating: number } | null;
           planProposals?: Array<{ planId: string; planGoal: string; planEmoji: string | null; description: string; operations: unknown[]; status: null }>;
+          planCreationProposals?: Array<{ goal: string; goalReason: string | null; emoji: string | null; timesPerWeek: number | null; activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>; description: string; status: null }>;
           userRecommendations?: unknown;
           toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
         };
@@ -495,6 +497,7 @@ router.post(
                 metadata: {
                   planReplacements: draft.planReplacements || [],
                   planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+                  planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
                   activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
                   ...(draft.toolCalls && {
                     toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
@@ -576,6 +579,7 @@ router.post(
               content: draft.content,
               planReplacements: resolvedPlanReplacements,
               planProposals: draft.planProposals || [],
+              planCreationProposals: draft.planCreationProposals || [],
               activityLogProposals: draft.activityLogProposals || [],
               toolCalls: draft.toolCalls || null,
               error: draft.error || false,
@@ -614,6 +618,7 @@ router.post(
               planReplacements: aiResponse.planReplacements || [],
               metricReplacement: aiResponse.metricReplacement || null,
               planProposals: JSON.parse(JSON.stringify(aiResponse.planProposals || [])),
+              planCreationProposals: JSON.parse(JSON.stringify(aiResponse.planCreationProposals || [])),
               userRecommendations: aiResponse.userRecommendations || null,
               ...(aiResponse.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(aiResponse.toolCalls)),
@@ -726,6 +731,7 @@ router.post(
             planReplacements: resolvedPlanReplacements,
             metricReplacement: resolvedMetricReplacement,
             planProposals: aiResponse.planProposals || [],
+            planCreationProposals: aiResponse.planCreationProposals || [],
             userRecommendations: aiResponse.userRecommendations || null,
             toolCalls: aiResponse.toolCalls || null,
             createdAt: coachMessage.createdAt,

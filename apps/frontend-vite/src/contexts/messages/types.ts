@@ -44,6 +44,15 @@ export interface Message {
     operations: unknown[];
     status: "accepted" | "rejected" | null;
   }>;
+  planCreationProposals?: Array<{
+    goal: string;
+    goalReason: string | null;
+    emoji: string | null;
+    timesPerWeek: number | null;
+    activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+    description: string;
+    status: "accepted" | "rejected" | null;
+  }>;
   activityLogProposals?: Array<{
     activityId: string;
     activityName: string;

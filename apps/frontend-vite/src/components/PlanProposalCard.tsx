@@ -12,6 +12,10 @@ export interface ResolvedOperation {
   activityEmoji?: string;
   activityMeasure?: string;
   descriptiveGuide?: string;
+  goal?: string;
+  goalReason?: string | null;
+  timesPerWeek?: number;
+  isCoached?: boolean;
 }
 
 interface PlanProposalCardProps {
@@ -113,6 +117,15 @@ export function PlanProposalCard({
                     <>
                       <Archive size={13} className="text-muted-foreground" />
                       <span>Archive plan</span>
+                    </>
+                  ) : op.type === "update_plan" ? (
+                    <>
+                      <span>🎯</span>
+                      <span>
+                        {op.goal ? `Update goal to "${op.goal}"` : "Update plan setup"}
+                        {op.timesPerWeek ? ` · ${op.timesPerWeek}x/week` : ""}
+                        {op.isCoached ? " · coached" : ""}
+                      </span>
                     </>
                   ) : (
                     <>
