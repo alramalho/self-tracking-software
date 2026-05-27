@@ -122,17 +122,33 @@ const TimelineRenderer: React.FC<{
     }
   }, [dbLastSeenTimelineAt]);
 
+  const entryHasRenderableImage = (entry: TimelineActivityEntry) => {
+    const hasUnexpiredImage = (
+      imageUrl?: string | null,
+      imageExpiresAt?: Date | string | null
+    ) => Boolean(imageUrl && (!imageExpiresAt || new Date(imageExpiresAt) > new Date()));
+
+    return Boolean(
+      hasUnexpiredImage(entry.imageUrl, entry.imageExpiresAt) ||
+        (entry.imageUrls && entry.imageUrls.length > 0) ||
+        entry.sharedActivityEntry?.sharedActivity?.entries?.some(
+          (sharedEntry) =>
+            !sharedEntry.activityEntry?.deletedAt &&
+            (hasUnexpiredImage(
+              sharedEntry.activityEntry?.imageUrl,
+              sharedEntry.activityEntry?.imageExpiresAt
+            ) ||
+              Boolean(sharedEntry.activityEntry?.imageUrls?.length))
+        )
+    );
+  };
+
   // Initialize collapsed state for entries without images
   useEffect(() => {
     if (timelineData?.recommendedActivityEntries) {
       const entriesWithoutImages = new Set(
         timelineData.recommendedActivityEntries
-          .filter(
-            (entry) =>
-              !entry.imageUrl ||
-              (entry.imageExpiresAt &&
-                new Date(entry.imageExpiresAt) < new Date())
-          )
+          .filter((entry) => !entryHasRenderableImage(entry))
           .map((entry) => entry.id)
       );
       setCollapsedEntries(entriesWithoutImages);
@@ -200,18 +216,48 @@ const TimelineRenderer: React.FC<{
   }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
   // Merge achievement posts with activity entries and sort by date
+  type TimelineActivityGroup = {
+    primary: TimelineActivityEntry;
+    entries: TimelineActivityEntry[];
+  };
+
   type TimelineItem =
-    | { type: "activity"; data: TimelineActivityEntry }
+    | { type: "activity"; data: TimelineActivityGroup }
     | { type: "achievement"; data: TimelineAchievementPost };
 
   const mergedTimelineItems = useMemo(() => {
     if (!timelineData) return [];
 
     const items: TimelineItem[] = [];
+    const activityEntries = timelineData.recommendedActivityEntries || [];
+    const entryById = new Map(activityEntries.map((entry) => [entry.id, entry]));
+    const seenEntryIds = new Set<string>();
 
-    // Add activity entries
-    (timelineData.recommendedActivityEntries || []).forEach((entry) => {
-      items.push({ type: "activity", data: entry });
+    // Add activity entries, collapsing visible entries from the same shared activity
+    // into one card. This mirrors the multi-photo card instead of rendering
+    // duplicate "with @..." cards back-to-back.
+    activityEntries.forEach((entry) => {
+      if (seenEntryIds.has(entry.id)) return;
+
+      const sharedEntries = (entry as any).sharedActivityEntry?.sharedActivity?.entries || [];
+      const sharedEntryIds = sharedEntries
+        .map((sharedEntry: any) => sharedEntry.activityEntryId)
+        .filter(Boolean) as string[];
+      const visibleGroupEntries = sharedEntries
+        .map((sharedEntry: any) => entryById.get(sharedEntry.activityEntryId))
+        .filter(Boolean) as TimelineActivityEntry[];
+
+      const entries = Array.from(
+        new Map([entry, ...visibleGroupEntries].map((groupEntry) => [groupEntry.id, groupEntry])).values()
+      ).sort((a, b) => {
+        const timeDiff = new Date(b.datetime).getTime() - new Date(a.datetime).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.id.localeCompare(a.id);
+      });
+
+      entries.forEach((groupEntry) => seenEntryIds.add(groupEntry.id));
+      sharedEntryIds.forEach((entryId) => seenEntryIds.add(entryId));
+      items.push({ type: "activity", data: { primary: entries[0], entries } });
     });
 
     // Add achievement posts
@@ -223,11 +269,11 @@ const TimelineRenderer: React.FC<{
     items.sort((a, b) => {
       const dateA =
         a.type === "activity"
-          ? new Date(a.data.datetime)
+          ? new Date(a.data.primary.datetime)
           : new Date(a.data.createdAt);
       const dateB =
         b.type === "activity"
-          ? new Date(b.data.datetime)
+          ? new Date(b.data.primary.datetime)
           : new Date(b.data.createdAt);
       return dateB.getTime() - dateA.getTime();
     });
@@ -302,7 +348,7 @@ const TimelineRenderer: React.FC<{
     const hasNewItems = mergedTimelineItems.some((item) => {
       const itemDate =
         item.type === "activity"
-          ? new Date(item.data.datetime)
+          ? new Date(item.data.primary.datetime)
           : new Date(item.data.createdAt);
       return itemDate > lastViewed;
     });
@@ -311,7 +357,7 @@ const TimelineRenderer: React.FC<{
     const hasOldItems = mergedTimelineItems.some((item) => {
       const itemDate =
         item.type === "activity"
-          ? new Date(item.data.datetime)
+          ? new Date(item.data.primary.datetime)
           : new Date(item.data.createdAt);
       return itemDate <= lastViewed;
     });
@@ -326,7 +372,7 @@ const TimelineRenderer: React.FC<{
     return mergedTimelineItems.filter((item) => {
       const itemDate =
         item.type === "activity"
-          ? new Date(item.data.datetime)
+          ? new Date(item.data.primary.datetime)
           : new Date(item.data.createdAt);
       return itemDate > lastViewed;
     }).length;
@@ -604,7 +650,7 @@ const TimelineRenderer: React.FC<{
             mergedTimelineItems.some((item) => {
               const itemDate =
                 item.type === "activity"
-                  ? new Date(item.data.datetime)
+                  ? new Date(item.data.primary.datetime)
                   : new Date(item.data.createdAt);
               return itemDate > lastViewed;
             });
@@ -649,23 +695,59 @@ const TimelineRenderer: React.FC<{
                 </React.Fragment>
               );
             } else {
-              // Render activity entry
-              const entry = item.data;
+              // Render activity entry or merged joint-activity group
+              const group = item.data;
+              const entry = group.primary;
               const activity = entry.activityId
                 ? activityById.get(entry.activityId)
                 : undefined;
               const user = activity ? userById.get(activity.userId) : undefined;
               if (!activity || !user || user.username === null) return null;
 
+              const sharedActivityEntries = group.entries
+                .filter((groupEntry) => groupEntry.id !== entry.id)
+                .map((groupEntry) => {
+                  const groupActivity = groupEntry.activityId
+                    ? activityById.get(groupEntry.activityId)
+                    : undefined;
+                  const groupUser = groupActivity
+                    ? userById.get(groupActivity.userId)
+                    : undefined;
+
+                  if (!groupActivity || !groupUser || groupUser.username === null) {
+                    return null;
+                  }
+
+                  return {
+                    activityEntry: groupEntry as any,
+                    activity: groupActivity,
+                    user: groupUser as {
+                      username: string;
+                      name: string;
+                      picture: string;
+                      planType: PlanType;
+                    },
+                  };
+                })
+                .filter(Boolean) as {
+                  activityEntry: TimelineActivityEntry;
+                  activity: Activity;
+                  user: { username: string; name: string; picture: string; planType: PlanType };
+                }[];
+
               const userPlansProgress =
                 planProgressByUserAndActivity.get(`${user.id}:${activity.id}`) ||
                 [];
 
-              const hasImageExpired =
-                entry.imageExpiresAt &&
-                new Date(entry.imageExpiresAt) < new Date();
-              const hasImage = entry.imageUrl && !hasImageExpired;
-              const isCollapsed = collapsedEntries.has(entry.id);
+              const hasImage = group.entries.some((groupEntry) =>
+                entryHasRenderableImage(groupEntry)
+              );
+              const isCollapsed = group.entries.every((groupEntry) =>
+                collapsedEntries.has(groupEntry.id)
+              );
+              const isHighlighted = group.entries.some(
+                (groupEntry) => groupEntry.id === highlightedEntryId
+              );
 
               // Check if we should show the divider before this entry
               const entryDatetime = new Date(entry.datetime);
@@ -684,14 +766,16 @@ const TimelineRenderer: React.FC<{
                   {shouldShowDivider && <AllCaughtUpDivider ref={dividerRef} />}
                   <div
                     ref={(el) => {
-                      if (el) {
-                        entryRefs.current.set(entry.id, el);
-                      } else {
-                        entryRefs.current.delete(entry.id);
-                      }
+                      group.entries.forEach((groupEntry) => {
+                        if (el) {
+                          entryRefs.current.set(groupEntry.id, el);
+                        } else {
+                          entryRefs.current.delete(groupEntry.id);
+                        }
+                      });
                     }}
                     className={`transition-all duration-500 ${
-                      highlightedEntryId === entry.id
+                      isHighlighted
                         ? cn(
                             "ring-4 ring-opacity-50 rounded-2xl",
                             variants.ring
@@ -718,6 +802,7 @@ const TimelineRenderer: React.FC<{
                         }
                       }
                       userPlansProgressData={userPlansProgress}
+                      sharedActivityEntries={sharedActivityEntries}
                       isCollapsed={isCollapsed}
                       onToggleCollapse={() => toggleEntryCollapse(entry.id)}
                       onAvatarClick={() => {
@@ -730,6 +815,12 @@ const TimelineRenderer: React.FC<{
                         navigate({
                           to: `/profile/$username`,
                           params: { username: user?.username || "" },
+                        });
+                      }}
+                      onParticipantClick={(username) => {
+                        navigate({
+                          to: `/profile/$username`,
+                          params: { username },
                         });
                       }}
                     />

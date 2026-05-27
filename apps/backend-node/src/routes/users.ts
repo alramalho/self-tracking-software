@@ -608,15 +608,23 @@ usersRouter.post(
               activityId: { not: null },
               activity: { deletedAt: null },
             },
+            orderBy: [{ datetime: "desc" }, { id: "desc" }],
+            take: 40,
             include: {
               activity: true,
               comments: {
                 where: { deletedAt: null },
-                orderBy: { createdAt: "asc" },
+                orderBy: { createdAt: "desc" },
+                take: 2,
                 include: {
                   user: {
                     select: { id: true, username: true, picture: true },
                   },
+                },
+              },
+              _count: {
+                select: {
+                  comments: true,
                 },
               },
               reactions: {
@@ -646,7 +654,9 @@ usersRouter.post(
                             },
                           },
                           activityEntry: {
-                            select: { id: true, userId: true, deletedAt: true },
+                            include: {
+                              activity: true,
+                            },
                           },
                         },
                       },
@@ -690,6 +700,10 @@ usersRouter.post(
       // Augment each plan with progress data and add coach profile
       const userWithProgress = {
         ...user,
+        activityEntries: user.activityEntries.map((entry) => ({
+          ...entry,
+          comments: [...entry.comments].reverse(),
+        })),
         plans: user.plans.map((plan) => ({
           ...plan,
           progress: progressMap.get(plan.id),
@@ -901,7 +915,7 @@ usersRouter.get(
             ...activityCursorWhere,
           },
           orderBy: [{ datetime: "desc" }, { id: "desc" }],
-          take: limit + 1,
+          take: limit * 2 + 1,
           include: {
             comments: {
               where: { deletedAt: null },
@@ -943,7 +957,9 @@ usersRouter.get(
                           },
                         },
                         activityEntry: {
-                          select: { id: true, userId: true, deletedAt: true },
+                          include: {
+                            activity: true,
+                          },
                         },
                       },
                     },
@@ -1039,8 +1055,20 @@ usersRouter.get(
         return b.id.localeCompare(a.id);
       });
 
-      const pageItems = mergedTimelineItems.slice(0, limit);
-      const hasMoreItems = mergedTimelineItems.length > limit;
+      const renderedSharedActivityIds = new Set<string>();
+      const visibleMergedTimelineItems = mergedTimelineItems.filter((item) => {
+        if (item.type !== "activity") return true;
+        const sharedActivityId =
+          item.data.sharedActivityEntry?.sharedActivityId ||
+          item.data.sharedActivityEntry?.sharedActivity?.id;
+        if (!sharedActivityId) return true;
+        if (renderedSharedActivityIds.has(sharedActivityId)) return false;
+        renderedSharedActivityIds.add(sharedActivityId);
+        return true;
+      });
+
+      const pageItems = visibleMergedTimelineItems.slice(0, limit);
+      const hasMoreItems = visibleMergedTimelineItems.length > limit;
       const lastPageItem = pageItems[pageItems.length - 1];
       const nextCursor = hasMoreItems && lastPageItem
         ? encodeTimelineCursor({
