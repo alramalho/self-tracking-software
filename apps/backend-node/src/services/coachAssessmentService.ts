@@ -595,6 +595,7 @@ export class CoachAssessmentService {
       - Use the available plan modification tool when proposing changes.
       - Mention that the user has 48 hours to decline before it applies automatically.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
+      - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
       - Keep messages to 2-3 sentences max.
     `;
   }
@@ -1025,9 +1026,36 @@ export class CoachAssessmentService {
     const ninetyDaysAgo = subDays(now, 90);
     const userDayOfWeek = new TZDate(now, user.timezone || "UTC").getDay();
     const lines: string[] = [];
+    const recentEntries = await prisma.activityEntry.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: null,
+        activityId: { not: null },
+        activity: { deletedAt: null },
+        datetime: { gte: thirtyDaysAgo, lte: now },
+      },
+      include: {
+        activity: { select: { title: true, emoji: true, measure: true } },
+      },
+      orderBy: { datetime: "desc" },
+      take: 12,
+    });
 
     lines.push(`Today: ${format(now, "yyyy-MM-dd (EEEE)")}`);
     lines.push(`Day of week: ${userDayOfWeek === 1 ? "Monday (recap day)" : format(now, "EEEE")}`);
+    lines.push("Grounding rule: Only activities listed under recent activity logs may be described as logged recently/lately. Active plans alone are not activity history.");
+    lines.push(
+      recentEntries.length > 0
+        ? `Recent activity logs last 30 days: ${recentEntries
+            .map((entry) =>
+              entry.activity
+                ? `${format(entry.datetime, "yyyy-MM-dd")} ${entry.activity.emoji} ${entry.activity.title}`
+                : null
+            )
+            .filter(Boolean)
+            .join("; ")}`
+        : "Recent activity logs last 30 days: none"
+    );
     lines.push("");
 
     for (const plan of user.plans) {

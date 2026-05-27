@@ -6,7 +6,7 @@ import { ToolLoopAgent, tool } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
-import { format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "./activitySummarizer";
 import { toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
@@ -22,6 +22,7 @@ interface CoachAgentContext {
   reminders: Reminder[];
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   memoriesContext?: string | null;
+  recentActivityContext?: string | null;
 }
 
 export class CoachAgentService {
@@ -69,7 +70,7 @@ export class CoachAgentService {
    * Create the coach agent with tools bound to the current context
    */
   createAgent(context: CoachAgentContext) {
-    const { user, plans, reminders, memoriesContext } = context;
+    const { user, plans, reminders, memoriesContext, recentActivityContext } = context;
     const self = this;
     const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
 
@@ -139,6 +140,8 @@ export class CoachAgentService {
 
         ${plansContext ? `USER'S PLANS:\n${plansContext}` : "No active plans."}
 
+        ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : ""}
+
         ${remindersContext ? `USER'S REMINDERS:\n${remindersContext}` : "No active reminders."}
 
         ${memoriesContext ? `LONG-TERM MEMORY (key facts about this user):\n${memoriesContext}` : ""}
@@ -152,6 +155,9 @@ export class CoachAgentService {
         - When a plan goal is vague or purely frequency-based, mention that plan by its exact goal text from USER'S PLANS so it can be linked in the UI.
         - If the user gives a concrete measurable goal, use proposePlanCreation for a new goal or proposePlanModification with update_plan for an existing plan.
         - Any capability not provided by the available tools is not available to you.
+        - When saying the user logged, did, trained, or practiced something recently/lately, rely only on RECENT ACTIVITY FACTS or readActivities output. Active plans and long-term memory are not recent activity evidence.
+        - If an activity only appears in a plan, describe it as a goal/planned activity, not something the user has logged.
+        - "Recently" and "lately" mean inside the recent activity lookback unless the readActivities tool returns a different date range.
 
         RULES
         - Never modify sessions or reminders without user confirmation
@@ -714,6 +720,74 @@ export class CoachAgentService {
     return agent;
   }
 
+  private async buildRecentActivityContext(
+    user: User,
+    now: Date,
+    days = 30
+  ): Promise<string> {
+    const from = startOfDay(subDays(now, days));
+    const entries = await prisma.activityEntry.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: null,
+        activityId: { not: null },
+        activity: { deletedAt: null },
+        datetime: { gte: from, lte: now },
+      },
+      include: {
+        activity: {
+          select: { title: true, emoji: true, measure: true },
+        },
+      },
+      orderBy: { datetime: "desc" },
+      take: 20,
+    });
+
+    if (entries.length === 0) {
+      return `Lookback: last ${days} days. No activity entries were logged in this window. Do not call any plan activity recent unless readActivities returns newer data.`;
+    }
+
+    const counts = new Map<string, { title: string; emoji: string; count: number }>();
+    for (const entry of entries) {
+      if (!entry.activity) continue;
+      const key = entry.activity.title.toLowerCase();
+      const current = counts.get(key) || {
+        title: entry.activity.title,
+        emoji: entry.activity.emoji,
+        count: 0,
+      };
+      current.count += 1;
+      counts.set(key, current);
+    }
+
+    const summary = Array.from(counts.values())
+      .map((activity) => `${activity.emoji} ${activity.title}: ${activity.count}`)
+      .join(", ");
+    const lines = entries.slice(0, 12).map((entry) => {
+      const activity = entry.activity;
+      const daysAgo = differenceInCalendarDays(now, entry.datetime);
+      const relativeLabel =
+        daysAgo >= 0 && daysAgo < 7
+          ? daysAgo === 0
+            ? "today"
+            : daysAgo === 1
+              ? "yesterday"
+              : `${format(entry.datetime, "EEE")}, ${daysAgo} days ago`
+          : null;
+      const dateLabel = relativeLabel
+        ? `${format(entry.datetime, "yyyy-MM-dd")} (${relativeLabel})`
+        : format(entry.datetime, "yyyy-MM-dd");
+      return `- ${dateLabel}: ${activity?.emoji || ""} ${activity?.title || "Unknown"} (${entry.quantity} ${activity?.measure || "units"})`;
+    });
+
+    return [
+      `Lookback: last ${days} days.`,
+      `Logged activity counts: ${summary || "none"}.`,
+      "Most recent entries:",
+      ...lines,
+    ].join("\n");
+  }
+
   /**
    * Extract plan references from the message text
    * Looks for patterns like "plan goal" or emoji + text that match user's plans
@@ -815,6 +889,10 @@ export class CoachAgentService {
     skipReason?: string;
   }> {
     const { user, message, conversationHistory, plans, reminders, memoriesContext } = params;
+    const recentActivityContext = await this.buildRecentActivityContext(
+      user,
+      new Date()
+    );
 
     const agent = this.createAgent({
       user,
@@ -822,6 +900,7 @@ export class CoachAgentService {
       reminders,
       conversationHistory,
       memoriesContext,
+      recentActivityContext,
     });
 
     try {

@@ -20,8 +20,8 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles } from "lucide-react";
-import { format } from "date-fns";
+import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays } from "lucide-react";
+import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import ReactMarkdown from "react-markdown";
@@ -64,6 +64,188 @@ function DateDivider({ date }: { date: Date }) {
       <div className="flex-1 h-px bg-border" />
       <span className="text-xs text-muted-foreground">{formatRelativeDate(date)}</span>
       <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
+
+function formatCoachVisibleDate(date: Date): string {
+  const today = new Date();
+  const diffDays = differenceInCalendarDays(today, date);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays <= 6) {
+    return `${format(date, "EEE")}, ${diffDays} days ago`;
+  }
+  if (date.getFullYear() === today.getFullYear()) {
+    return format(date, "d MMM");
+  }
+  return format(date, "d MMMM yyyy");
+}
+
+function sanitizePlanDisplayText(text: string, emoji?: string | null): string {
+  let cleaned = text.trim();
+  while (emoji && cleaned.startsWith(emoji)) {
+    cleaned = cleaned.slice(emoji.length).trimStart();
+  }
+  return cleaned || text.trim();
+}
+
+type VisibleActivity = {
+  id: string;
+  emoji: string;
+  title: string;
+  quantity: number;
+  measure: string;
+  datetime: Date;
+};
+
+type VisibleSession = {
+  id: string;
+  emoji: string;
+  title: string;
+  date: Date;
+};
+
+function CoachContextIsland({
+  coachName,
+  expanded,
+  onToggle,
+  recentActivities,
+  coachedPlans,
+  upcomingSessions,
+}: {
+  coachName: string;
+  expanded: boolean;
+  onToggle: () => void;
+  recentActivities: VisibleActivity[];
+  coachedPlans: Array<{ id: string; goal: string; emoji?: string | null }>;
+  upcomingSessions: VisibleSession[];
+}) {
+  const preview =
+    recentActivities.length > 0
+      ? recentActivities
+          .slice(0, 3)
+          .map((activity) => `${activity.emoji} ${activity.title}`)
+          .join(" · ")
+      : "No recent activity logs";
+
+  return (
+    <div className="flex-shrink-0 bg-background/95 border-b border-border">
+      <div className="w-full max-w-4xl mx-auto px-4 py-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full rounded-2xl border border-border bg-card/80 px-3 py-2 text-left shadow-sm"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+              <Eye size={15} className="text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-foreground">
+                What {coachName} can see
+              </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {preview}
+              </div>
+            </div>
+            <ChevronDown
+              size={16}
+              className={cn(
+                "text-muted-foreground transition-transform",
+                expanded && "rotate-180"
+              )}
+            />
+          </div>
+        </button>
+
+        {expanded && (
+          <div className="mt-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3">
+            <div>
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Recent logs
+              </div>
+              {recentActivities.length > 0 ? (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {recentActivities.slice(0, 8).map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="min-w-[116px] rounded-xl bg-muted/80 p-2 text-center"
+                    >
+                      <div className="text-xl leading-none">{activity.emoji}</div>
+                      <div className="mt-1 truncate text-sm font-medium text-foreground">
+                        {activity.title}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {formatCoachVisibleDate(activity.datetime)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  No recent activity logs are available.
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl bg-muted/60 px-3 py-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Coached plans
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {coachedPlans.length > 0 ? (
+                    coachedPlans.slice(0, 5).map((plan) => (
+                      <span
+                        key={plan.id}
+                        className="inline-flex max-w-full items-center gap-1 rounded-md bg-background/70 px-2 py-1 text-xs"
+                      >
+                        <span>{plan.emoji || "📋"}</span>
+                        <span className="truncate">{plan.goal}</span>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      No active coached plans.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-muted/60 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <CalendarDays size={13} />
+                  Upcoming
+                </div>
+                <div className="mt-1 space-y-1">
+                  {upcomingSessions.length > 0 ? (
+                    upcomingSessions.slice(0, 3).map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center gap-1.5 text-xs text-foreground"
+                      >
+                        <span>{session.emoji}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {session.title}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatCoachVisibleDate(session.date)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      No scheduled sessions soon.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -209,7 +391,7 @@ function MessageAIPage() {
   const navigate = useNavigate();
   const api = useApiWithAuth();
   const { plans } = usePlans();
-  const { activities } = useActivities();
+  const { activities, activityEntries } = useActivities();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const {
@@ -245,6 +427,7 @@ function MessageAIPage() {
   const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [showCoachContext, setShowCoachContext] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -299,6 +482,64 @@ function MessageAIPage() {
     , [chats]);
 
   const currentChat = chats?.find((chat) => chat.id === currentChatId);
+
+  const recentActivities = useMemo<VisibleActivity[]>(() => {
+    const activitiesById = new Map(
+      (activities || []).map((activity: any) => [activity.id, activity])
+    );
+    return (activityEntries || [])
+      .map((entry: any) => {
+        const activity = activitiesById.get(entry.activityId);
+        if (!activity) return null;
+        return {
+          id: entry.id,
+          emoji: activity.emoji || "📌",
+          title: activity.title,
+          quantity: entry.quantity,
+          measure: activity.measure,
+          datetime: new Date(entry.datetime),
+        };
+      })
+      .filter((activity): activity is VisibleActivity => activity !== null)
+      .sort((a, b) => b.datetime.getTime() - a.datetime.getTime())
+      .slice(0, 12);
+  }, [activities, activityEntries]);
+
+  const coachedPlans = useMemo(
+    () =>
+      (plans || [])
+        .filter((plan: any) => plan.isCoached && !plan.archivedAt && !plan.deletedAt)
+        .map((plan: any) => ({
+          id: plan.id,
+          goal: plan.goal,
+          emoji: plan.emoji,
+        })),
+    [plans]
+  );
+
+  const upcomingSessions = useMemo<VisibleSession[]>(() => {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysFromNow = new Date(now);
+    sevenDaysFromNow.setDate(now.getDate() + 7);
+
+    return (plans || [])
+      .flatMap((plan: any) =>
+        (plan.sessions || []).map((session: any) => {
+          const activity = plan.activities?.find((a: any) => a.id === session.activityId);
+          return {
+            id: session.id,
+            emoji: activity?.emoji || "📌",
+            title: activity?.title || plan.goal,
+            date: new Date(session.date),
+          };
+        })
+      )
+      .filter((session) => session.date >= today && session.date <= sevenDaysFromNow)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 8);
+  }, [plans]);
 
   // Auto-select most recent coach chat or create one
   useEffect(() => {
@@ -668,7 +909,10 @@ function MessageAIPage() {
               <PlanLink
                 key={`plan-${idx}`}
                 planId={replacement.plan.id}
-                displayText={replacement.textToReplace}
+                displayText={sanitizePlanDisplayText(
+                  replacement.textToReplace,
+                  replacement.plan.emoji
+                )}
                 emoji={replacement.plan.emoji || undefined}
               />
             ),
@@ -826,6 +1070,15 @@ function MessageAIPage() {
             </div>
           </div>
         </div>
+
+        <CoachContextIsland
+          coachName={aiCoach.name}
+          expanded={showCoachContext}
+          onToggle={() => setShowCoachContext((value) => !value)}
+          recentActivities={recentActivities}
+          coachedPlans={coachedPlans}
+          upcomingSessions={upcomingSessions}
+        />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>

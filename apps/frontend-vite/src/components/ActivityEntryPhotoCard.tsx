@@ -59,6 +59,132 @@ const getFormattedDate = (date: Date) => {
 
   return format(date, "MMM d");
 };
+
+const formatUsernameList = (usernames: string[]) => {
+  const uniqueNames = Array.from(new Set(usernames.filter(Boolean)));
+  if (uniqueNames.length === 0) return "";
+  if (uniqueNames.length === 1) return uniqueNames[0];
+  if (uniqueNames.length === 2) return `${uniqueNames[0]} and ${uniqueNames[1]}`;
+  return `${uniqueNames.slice(0, -1).join(", ")}, and ${
+    uniqueNames[uniqueNames.length - 1]
+  }`;
+};
+
+type ActivityCardUser = {
+  username: string;
+  name?: string | null;
+  picture?: string | null;
+  planType?: PlanType;
+};
+
+const ParticipantAvatar = ({
+  user,
+  size = "md",
+  isLightMode,
+  onClick,
+}: {
+  user: ActivityCardUser;
+  size?: "sm" | "md";
+  isLightMode: boolean;
+  onClick?: (user: ActivityCardUser) => void;
+}) => {
+  const accountLevel = useAccountLevel(user.username || undefined);
+  const ringSize = size === "sm" ? 28 : 36;
+  const avatarSize = size === "sm" ? "w-6 h-6" : "w-8 h-8";
+  const ringWidth = size === "sm" ? 1.5 : 2;
+  const outerRing = size === "sm" ? 3 : 5;
+
+  return (
+    <ProgressRing
+      size={ringSize}
+      strokeWidth={ringWidth}
+      percentage={accountLevel.percentage}
+      currentLevel={accountLevel.currentLevel}
+      atLeastBronze={accountLevel.atLeastBronze}
+      badge={false}
+      badgeSize={ringSize}
+    >
+      <Avatar
+        className={`${avatarSize} ${onClick ? "cursor-pointer" : ""}`}
+        style={{
+          boxShadow: `0 0 0 2px ${
+            isLightMode ? "white" : "black"
+          }, 0 0 0 ${outerRing}px ${accountLevel.currentLevel?.color}`,
+        }}
+        onClick={(event) => {
+          if (!onClick) return;
+          event.stopPropagation();
+          onClick(user);
+        }}
+      >
+        <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+        <AvatarFallback>{(user.name || user.username || "U")[0]}</AvatarFallback>
+      </Avatar>
+    </ProgressRing>
+  );
+};
+
+const ParticipantName = ({
+  user,
+  onClick,
+}: {
+  user: ActivityCardUser;
+  onClick?: (user: ActivityCardUser) => void;
+}) => {
+  const accountLevel = useAccountLevel(user.username || undefined);
+
+  return (
+    <span
+      className={onClick ? "cursor-pointer hover:underline" : ""}
+      style={{ color: accountLevel.currentLevel?.color }}
+      onClick={(event) => {
+        if (!onClick) return;
+        event.stopPropagation();
+        onClick(user);
+      }}
+    >
+      @{user.username}
+    </span>
+  );
+};
+
+const ParticipantNameList = ({
+  users,
+  onParticipantClick,
+}: {
+  users: ActivityCardUser[];
+  onParticipantClick?: (user: ActivityCardUser) => void;
+}) => {
+  const uniqueUsers = users.filter(
+    (participant, index, list) =>
+      participant.username &&
+      list.findIndex((item) => item.username === participant.username) === index
+  );
+
+  return (
+    <>
+      {uniqueUsers.map((participant, index) => (
+        <React.Fragment key={participant.username}>
+          {index > 0 && (
+            <span className="text-muted-foreground">
+              {index === uniqueUsers.length - 1 ? " and " : ", "}
+            </span>
+          )}
+          <ParticipantName user={participant} onClick={onParticipantClick} />
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
+type SharedActivityCardEntry = {
+  activityEntry: ActivityEntry & {
+    imageUrls?: string[];
+  };
+  activity: Activity;
+  user: { username: string; name: string | null; picture: string | null; planType: PlanType };
+};
+
 interface ActivityEntryPhotoCardProps {
   activity: Activity;
   activityEntry: ActivityEntry & {
@@ -69,17 +195,23 @@ interface ActivityEntryPhotoCardProps {
         entries?: {
           activityEntryId: string;
           user: { id: string; username: string | null; name?: string | null; picture?: string | null };
-          activityEntry?: { id: string; userId: string; deletedAt?: Date | null };
+          activityEntry?: (ActivityEntry & {
+            imageUrls?: string[];
+            activity?: Activity | null;
+            deletedAt?: Date | null;
+          }) | null;
         }[];
       };
     } | null;
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
   userPlansProgressData: PlanProgressData[];
+  sharedActivityEntries?: SharedActivityCardEntry[];
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
   onUsernameClick?: () => void;
+  onParticipantClick?: (username: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -103,10 +235,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onAvatarClick,
   onEditClick,
   onUsernameClick,
+  onParticipantClick,
   activity,
   activityEntry,
   user,
   userPlansProgressData,
+  sharedActivityEntries = [],
   isCollapsed = false,
   onToggleCollapse,
 }) => {
@@ -151,6 +285,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     (plan) => plan.lifestyleAchievement.isAchieved
   );
   const accountLevel = useAccountLevel(user.username || undefined);
+  const handleParticipantClick = useCallback(
+    (participant: ActivityCardUser) => {
+      if (participant.username) {
+        onParticipantClick?.(participant.username);
+      }
+    },
+    [onParticipantClick]
+  );
 
   const [showAllComments, setShowAllComments] = useState(false);
   const {
@@ -350,14 +492,56 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
-  const imageUrls = Array.from(
-    new Set(
-      [
-        ...((activityEntry as typeof activityEntry & { imageUrls?: string[] })
-          .imageUrls || []),
-        activityEntry.imageUrl,
-      ].filter((url): url is string => !!url)
+  const getEntryImageUrls = (
+    entry: ActivityEntry & { imageUrls?: string[] }
+  ) => {
+    if (entry.imageExpiresAt && new Date(entry.imageExpiresAt) < new Date()) {
+      return [];
+    }
+
+    return [
+      ...(entry.imageUrls || []),
+      entry.imageUrl,
+    ].filter((url): url is string => !!url);
+  };
+
+  const embeddedSharedActivityEntries = (
+    activityEntry.sharedActivityEntry?.sharedActivity?.entries || []
+  )
+    .filter(
+      (entry) =>
+        entry.activityEntryId !== activityEntry.id &&
+        !entry.activityEntry?.deletedAt &&
+        entry.user.username &&
+        entry.activityEntry?.activity
     )
+    .map((entry) => ({
+      activityEntry: entry.activityEntry as ActivityEntry & { imageUrls?: string[] },
+      activity: entry.activityEntry!.activity as Activity,
+      user: {
+        username: entry.user.username as string,
+        name: entry.user.name ?? null,
+        picture: entry.user.picture ?? null,
+        planType: user.planType,
+      },
+    }));
+
+  const allSharedActivityEntries = Array.from(
+    new Map(
+      [...sharedActivityEntries, ...embeddedSharedActivityEntries].map((entry) => [
+        entry.activityEntry.id,
+        entry,
+      ])
+    ).values()
+  );
+
+  const imageUrls = Array.from(
+    new Set([
+      ...getEntryImageUrls(activityEntry as typeof activityEntry & { imageUrls?: string[] }),
+      ...allSharedActivityEntries.flatMap(({ activityEntry }) =>
+        getEntryImageUrls(activityEntry)
+      ),
+    ])
   );
   const hasImage = imageUrls.length > 0;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
@@ -370,59 +554,90 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   if (!activity || !activityEntry) return null;
 
-  const trimmedActivityTitle = activity.title.length > 10 ? activity.title.slice(0, 10) + "..." : activity.title;
-
-  const sharedParticipants =
-    activityEntry.sharedActivityEntry?.sharedActivity?.entries
-      ?.filter(
-        (entry) =>
-          entry.activityEntryId !== activityEntry.id && !entry.activityEntry?.deletedAt
-      )
-      ?.map((entry) => entry.user)
-      ?.filter((participant) => participant.username) ?? [];
-  const sharedParticipantLabel = sharedParticipants
-    .map((participant) => `@${participant.username}`)
-    .join(", ");
+  const isMergedJointActivity = allSharedActivityEntries.length > 0;
+  const activitySummaryRows = [
+    { activityEntry, activity, user },
+    ...allSharedActivityEntries,
+  ];
+  const jointParticipants = activitySummaryRows.map((row) => row.user);
+  const sharedParticipants = (
+    isMergedJointActivity
+      ? []
+      : activityEntry.sharedActivityEntry?.sharedActivity?.entries
+          ?.filter(
+            (entry) =>
+              entry.activityEntryId !== activityEntry.id &&
+              !entry.activityEntry?.deletedAt
+          )
+          ?.map((entry) => entry.user) ?? []
+  ).filter((participant) => participant.username);
+  const sharedParticipantLabel = formatUsernameList(
+    sharedParticipants.map((participant) => `@${participant.username}`)
+  );
+  const mergedActivityLabel = formatUsernameList(
+    activitySummaryRows.map(
+      (row) =>
+        `${row.activity.emoji} ${row.activity.title} (${row.activityEntry.quantity} ${row.activity.measure})`
+    )
+  );
+  const mergedEmojiRows = activitySummaryRows.slice(0, 3);
 
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
     <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
-      <div className="relative flex-shrink-0">
-        <ProgressRing
-          size={20}
-          strokeWidth={1.5}
-          percentage={accountLevel.percentage}
-          currentLevel={accountLevel.currentLevel}
-          atLeastBronze={accountLevel.atLeastBronze}
-          badge={false}
-          badgeSize={20}
-        >
-          <Avatar
-            className="w-6 h-6"
-            style={{
-              boxShadow: `0 0 0 1px ${
-                isLightMode ? "white" : "black"
-              }, 0 0 0 3px ${accountLevel.currentLevel?.color}`,
-            }}
+      <div className="relative flex flex-shrink-0 -space-x-1.5">
+        {isMergedJointActivity ? (
+          jointParticipants.slice(0, 3).map((participant) => (
+            <ParticipantAvatar
+              key={participant.username}
+              user={participant}
+              size="sm"
+              isLightMode={isLightMode}
+              onClick={handleParticipantClick}
+            />
+          ))
+        ) : (
+          <div
             onClick={(e) => {
               e.stopPropagation();
               onAvatarClick?.();
             }}
           >
-            <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-            <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-          </Avatar>
-        </ProgressRing>
+            <ParticipantAvatar user={user} size="sm" isLightMode={isLightMode} />
+          </div>
+        )}
       </div>
       <div className="relative flex-shrink-0">
-        <span className="text-3xl leading-none">{activity.emoji}</span>
+        {isMergedJointActivity ? (
+          <div className="flex -space-x-1">
+            {mergedEmojiRows.map((row) => (
+              <span
+                key={row.activityEntry.id}
+                className="text-xl leading-none drop-shadow-sm"
+              >
+                {row.activity.emoji}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-3xl leading-none">{activity.emoji}</span>
+        )}
       </div>
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-semibold text-foreground line-clamp-1">
-          {activity.title}
+          {isMergedJointActivity ? (
+            <ParticipantNameList
+              users={jointParticipants}
+              onParticipantClick={handleParticipantClick}
+            />
+          ) : (
+            activity.title
+          )}
         </span>
         <span className="text-xs text-muted-foreground">
-          {activityEntry.quantity} {activity.measure}
+          {isMergedJointActivity
+            ? mergedActivityLabel
+            : `${activityEntry.quantity} ${activity.measure}`}
         </span>
         {sharedParticipantLabel && (
           <span className="text-[11px] text-muted-foreground line-clamp-1">
@@ -636,63 +851,114 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       )}
       <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center space-x-2">
-            <div className="relative">
-              <ProgressRing
-                size={32}
-                strokeWidth={2}
-                percentage={accountLevel.percentage}
-                currentLevel={accountLevel.currentLevel}
-                atLeastBronze={accountLevel.atLeastBronze}
-                badge={false}
-                badgeSize={32}
-              >
-                <Avatar
-                  className="w-8 h-8"
-                  style={{
-                    boxShadow: `0 0 0 2px ${
-                      isLightMode ? "white" : "black"
-                    }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
-                  }}
-                  onClick={onAvatarClick}
-                >
-                  <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-                  <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-                </Avatar>
-              </ProgressRing>
-            </div>
-            <span className="text-5xl h-full text-muted-foreground">
-              {activity.emoji}
-            </span>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 flex-row flex-nowrap">
-                <span
-                  className="text-sm text-muted-foreground hover:underline cursor-pointer"
-                  onClick={onUsernameClick}
-                  style={{ color: accountLevel.currentLevel?.color }}
-                >
-                  @{user.username}
-                </span>
-                {/* {accountLevel.atLeastBronze &&
-                  accountLevel.currentLevel?.getIcon({
-                    size: 16,
-                    className: "drop-shadow-sm",
-                  })} */}
+          {isMergedJointActivity ? (
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex flex-shrink-0 -space-x-2">
+                  {jointParticipants.slice(0, 3).map((participant) => (
+                    <ParticipantAvatar
+                      key={participant.username}
+                      user={participant}
+                      isLightMode={isLightMode}
+                      onClick={handleParticipantClick}
+                    />
+                  ))}
+                </div>
+                <div className="min-w-0 text-sm font-semibold">
+                  <ParticipantNameList
+                    users={jointParticipants}
+                    onParticipantClick={handleParticipantClick}
+                  />
+                </div>
               </div>
-              <span className="font-semibold">
-                {activity.title} – {activityEntry.quantity} {activity.measure}
-              </span>
-              {sharedParticipantLabel && (
-                <span className="text-xs text-muted-foreground">
-                  with {sharedParticipantLabel}
-                </span>
-              )}
+              <div className="space-y-1.5">
+                <div className="inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Joint activity
+                </div>
+                <div className="space-y-1">
+                  {activitySummaryRows.map((row) => (
+                    <div
+                      key={row.activityEntry.id}
+                      className="flex items-center gap-2 rounded-xl bg-muted/35 px-2 py-1 text-xs"
+                    >
+                      <span className="text-base leading-none">{row.activity.emoji}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium text-muted-foreground">
+                          @{row.user.username}
+                        </span>{" "}
+                        <span className="font-semibold text-foreground">
+                          {row.activity.title} - {row.activityEntry.quantity}{" "}
+                          {row.activity.measure}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <span className="text-xs text-muted-foreground">
                 {getFormattedDate(activityEntry.datetime)}{" "}
-                {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}
+                {activityEntry.timezone && `- 📍 ${activityEntry.timezone}`}
               </span>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <ProgressRing
+                  size={32}
+                  strokeWidth={2}
+                  percentage={accountLevel.percentage}
+                  currentLevel={accountLevel.currentLevel}
+                  atLeastBronze={accountLevel.atLeastBronze}
+                  badge={false}
+                  badgeSize={32}
+                >
+                  <Avatar
+                    className="w-8 h-8"
+                    style={{
+                      boxShadow: `0 0 0 2px ${
+                        isLightMode ? "white" : "black"
+                      }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
+                    }}
+                    onClick={onAvatarClick}
+                  >
+                    <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+                    <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+                  </Avatar>
+                </ProgressRing>
+              </div>
+              <span className="text-5xl h-full text-muted-foreground">
+                {activity.emoji}
+              </span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 flex-row flex-nowrap">
+                  <span
+                    className="text-sm text-muted-foreground hover:underline cursor-pointer"
+                    onClick={onUsernameClick}
+                    style={{ color: accountLevel.currentLevel?.color }}
+                  >
+                    @{user.username}
+                  </span>
+                  {/* {accountLevel.atLeastBronze &&
+                    accountLevel.currentLevel?.getIcon({
+                      size: 16,
+                      className: "drop-shadow-sm",
+                    })} */}
+                </div>
+                <span className="font-semibold">
+                  {activity.title} - {activityEntry.quantity} {activity.measure}
+                </span>
+                {sharedParticipantLabel && (
+                  <span className="text-xs text-muted-foreground">
+                    with {sharedParticipantLabel}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {getFormattedDate(activityEntry.datetime)}{" "}
+                  {activityEntry.timezone && `- 📍 ${activityEntry.timezone}`}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Non-image posts: link preview (if link exists) */}
