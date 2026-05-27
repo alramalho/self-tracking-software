@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import { shouldRenderSharedActivityEntry } from "@/lib/timelineItems";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useCurrentUser } from "@/contexts/users";
 import { ShineBorder } from "@/components/ui/shine-border";
@@ -163,15 +162,39 @@ function ProfilePage() {
   const achievementPosts = profileData?.achievementPosts || [];
   
   const historyItems = useMemo(() => {
-    const renderedSharedActivityIds = new Set<string>();
-    const visibleActivityEntries = activityEntries.filter((entry) =>
-      shouldRenderSharedActivityEntry(entry, renderedSharedActivityIds)
-    );
+    const items: Array<
+      | { type: "activity"; date: Date; data: (typeof activityEntries)[number] }
+      | { type: "achievement"; date: Date; data: (typeof achievementPosts)[number] }
+    > = [];
+    const seenActivityEntryIds = new Set<string>();
 
-    const items = [
-      ...visibleActivityEntries.map(entry => ({ type: 'activity' as const, date: new Date(entry.datetime), data: entry })),
-      ...achievementPosts.map(post => ({ type: 'achievement' as const, date: new Date(post.createdAt), data: post }))
-    ];
+    activityEntries.forEach((entry) => {
+      if (seenActivityEntryIds.has(entry.id)) return;
+
+      seenActivityEntryIds.add(entry.id);
+      const sharedEntries =
+        (entry as any).sharedActivityEntry?.sharedActivity?.entries || [];
+      sharedEntries.forEach((sharedEntry: any) => {
+        if (sharedEntry.activityEntryId) {
+          seenActivityEntryIds.add(sharedEntry.activityEntryId);
+        }
+      });
+
+      items.push({
+        type: "activity",
+        date: new Date(entry.datetime),
+        data: entry,
+      });
+    });
+
+    achievementPosts.forEach((post) => {
+      items.push({
+        type: "achievement",
+        date: new Date(post.createdAt),
+        data: post,
+      });
+    });
+
     return items.sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [activityEntries, achievementPosts]);
 
@@ -940,6 +963,24 @@ function ProfilePage() {
                             userPlansProgressData={profileData.plans.map(
                               (plan) => plan.progress
                             )}
+                            onAvatarClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: profileData.username || "" },
+                              });
+                            }}
+                            onUsernameClick={() => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username: profileData.username || "" },
+                              });
+                            }}
+                            onParticipantClick={(username) => {
+                              navigate({
+                                to: `/profile/$username`,
+                                params: { username },
+                              });
+                            }}
                           />
                         );
                       } else {
