@@ -8,7 +8,7 @@ import HeatMap from "@uiw/react-heat-map";
 import { format, subDays, differenceInDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { Brush, ChevronDown, ChevronRight, Lock } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 
@@ -182,27 +182,48 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
 
-  // Show the current week by default without pinning it to the clipped edge.
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
+  const scrollTodayIntoHeatmapView = useCallback(
+    (behavior: ScrollBehavior = "auto") => {
+      const scrollContainer = scrollContainerRef.current;
+      if (!scrollContainer) return;
+
       const cellId = uniqueId
         ? `heatmap-today-cell-${uniqueId}`
         : "heatmap-today-cell";
       const todayCell = document.getElementById(cellId);
 
       if (todayCell) {
-        todayCell.scrollIntoView({
-          behavior: "auto",
-          block: "nearest",
-          inline: "center",
+        const cellRect = todayCell.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetLeft =
+          scrollContainer.scrollLeft +
+          cellRect.left -
+          containerRect.left -
+          scrollContainer.clientWidth / 2 +
+          cellRect.width / 2;
+        const maxLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+
+        scrollContainer.scrollTo({
+          left: Math.max(0, Math.min(targetLeft, maxLeft)),
+          behavior,
         });
-      } else if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollLeft =
-          scrollContainerRef.current.scrollWidth;
+      } else {
+        scrollContainer.scrollTo({
+          left: scrollContainer.scrollWidth,
+          behavior,
+        });
       }
+    },
+    [uniqueId]
+  );
+
+  // Show the current week by default without changing the page's vertical scroll.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      scrollTodayIntoHeatmapView();
     }, 100);
     return () => clearTimeout(timeoutId);
-  }, [heatmapData.length, uniqueId]);
+  }, [heatmapData.length, scrollTodayIntoHeatmapView]);
 
   // Use Intersection Observer to detect when today's cell is visible
   useEffect(() => {
@@ -238,17 +259,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
 
   // Scroll to today's cell when user clicks the arrow button
   const scrollToToday = () => {
-    const cellId = uniqueId
-      ? `heatmap-today-cell-${uniqueId}`
-      : "heatmap-today-cell";
-    const todayCell = document.getElementById(cellId);
-    if (todayCell) {
-      todayCell.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
-    }
+    scrollTodayIntoHeatmapView("smooth");
   };
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix(isLightMode);
