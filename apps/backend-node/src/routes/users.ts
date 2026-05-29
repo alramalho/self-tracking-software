@@ -82,6 +82,8 @@ const basicUserInclude = {
 
 const DEFAULT_TIMELINE_LIMIT = 20;
 const MAX_TIMELINE_LIMIT = 30;
+const HABIT_BONUS_POINTS = 25;
+const LIFESTYLE_BONUS_POINTS = 100;
 
 type TimelineCursor = {
   ts: string;
@@ -115,6 +117,59 @@ const getTimelineLimit = (value: unknown) => {
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_TIMELINE_LIMIT;
   return Math.min(Math.floor(parsed), MAX_TIMELINE_LIMIT);
 };
+
+async function getAccountStats(userId: string) {
+  const [totalActivitiesLogged, plans] = await Promise.all([
+    prisma.activityEntry.count({
+      where: {
+        userId,
+        deletedAt: null,
+        activityId: { not: null },
+        activity: {
+          deletedAt: null,
+        },
+      },
+    }),
+    prisma.plan.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+      },
+      select: {
+        progressState: true,
+      },
+    }),
+  ]);
+
+  let habitCount = 0;
+  let lifestyleCount = 0;
+  let bestStreak = 0;
+
+  for (const plan of plans) {
+    const progressState = plan.progressState as any;
+    if (!progressState) continue;
+
+    if (progressState.habitAchievement?.isAchieved) habitCount += 1;
+    if (progressState.lifestyleAchievement?.isAchieved) lifestyleCount += 1;
+
+    const streak = progressState.achievement?.streak || 0;
+    if (streak > bestStreak) bestStreak = streak;
+  }
+
+  const habitBonus = habitCount * HABIT_BONUS_POINTS;
+  const lifestyleBonus = lifestyleCount * LIFESTYLE_BONUS_POINTS;
+
+  return {
+    totalActivitiesLogged,
+    habitCount,
+    lifestyleCount,
+    habitBonus,
+    lifestyleBonus,
+    bonusPoints: habitBonus + lifestyleBonus,
+    totalPoints: totalActivitiesLogged + habitBonus + lifestyleBonus,
+    bestStreak,
+  };
+}
 
 // Health check
 usersRouter.get("/user-health", (_req: Request, res: Response) => {
@@ -680,6 +735,8 @@ usersRouter.post(
         return;
       }
 
+      const accountStats = await getAccountStats(user.id);
+
       // If viewing another user's profile, filter out private plans
       const isOwnProfile = user.id === req.user!.id;
       if (!isOwnProfile) {
@@ -708,6 +765,7 @@ usersRouter.post(
           ...plan,
           progress: progressMap.get(plan.id),
         })),
+        accountStats,
         // Extract the first (and only) human coach profile if exists
         coachProfile: user.coaches?.[0] || null,
       };

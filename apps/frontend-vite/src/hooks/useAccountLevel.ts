@@ -100,24 +100,35 @@ export function useAccountLevel(username?: string) {
 
   return useMemo(() => {
     const ACCOUNT_LEVELS = getAccountLevels(isDarkMode);
+    const accountStats = (profileData as any)?.accountStats;
 
     // Calculate total activities logged
-    const totalActivitiesLogged = profileData?.activityEntries?.length || 0;
+    const totalActivitiesLogged =
+      accountStats?.totalActivitiesLogged ??
+      profileData?.activityEntries?.length ??
+      0;
 
     // Calculate bonus points from plans
     const activePlans =
       profileData?.plans?.filter((plan) => !plan.deletedAt) || [];
-    const habitCount = activePlans.filter(
-      (plan) => plan.progress.habitAchievement.isAchieved
-    ).length;
-    const lifestyleCount = activePlans.filter(
-      (plan) => plan.progress.lifestyleAchievement.isAchieved
-    ).length;
-    const habitBonus = habitCount * HABIT_BONUS_POINTS;
-    const lifestyleBonus = lifestyleCount * LIFESTYLE_BONUS_POINTS;
-    const bonusPoints = habitBonus + lifestyleBonus;
+    const habitCount =
+      accountStats?.habitCount ??
+      activePlans.filter((plan) => plan.progress.habitAchievement.isAchieved)
+        .length;
+    const lifestyleCount =
+      accountStats?.lifestyleCount ??
+      activePlans.filter(
+        (plan) => plan.progress.lifestyleAchievement.isAchieved
+      ).length;
+    const habitBonus =
+      accountStats?.habitBonus ?? habitCount * HABIT_BONUS_POINTS;
+    const lifestyleBonus =
+      accountStats?.lifestyleBonus ??
+      lifestyleCount * LIFESTYLE_BONUS_POINTS;
+    const bonusPoints = accountStats?.bonusPoints ?? habitBonus + lifestyleBonus;
 
-    const totalPoints = totalActivitiesLogged + bonusPoints;
+    const totalPoints =
+      accountStats?.totalPoints ?? totalActivitiesLogged + bonusPoints;
 
     // Find current level
     let currentLevel: AccountLevel | null = null;

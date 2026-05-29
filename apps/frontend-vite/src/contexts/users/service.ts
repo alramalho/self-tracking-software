@@ -177,6 +177,18 @@ type FullUserApiResponseBase = Prisma.UserGetPayload<{
 
 type FullUserApiResponse = Omit<FullUserApiResponseBase, "plans"> & {
   plans: Array<FullUserApiResponseBase["plans"][number] & { progress: any }>;
+  accountStats?: AccountStats;
+};
+
+export type AccountStats = {
+  totalActivitiesLogged: number;
+  habitCount: number;
+  lifestyleCount: number;
+  habitBonus: number;
+  lifestyleBonus: number;
+  bonusPoints: number;
+  totalPoints: number;
+  bestStreak: number;
 };
 
 // Coach profile type for human coaches
@@ -202,6 +214,7 @@ export type HydratedUser = Omit<FullUserApiResponseBase, "plans"> & {
   plans: Array<
     FullUserApiResponseBase["plans"][number] & { progress: PlanProgressData }
   >;
+  accountStats?: AccountStats;
   coachProfile?: CoachProfile | null;
 };
 
