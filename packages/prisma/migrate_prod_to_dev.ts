@@ -53,6 +53,22 @@ async function getTableColumns(
   return new Set(columns.map((col) => col.column_name));
 }
 
+async function tableExists(
+  prismaClient: PrismaClient,
+  tableName: string
+): Promise<boolean> {
+  const result = await prismaClient.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_name = ${tableName}
+    ) as "exists"
+  `;
+
+  return result[0]?.exists ?? false;
+}
+
 /**
  * Filter an object to only include keys that exist as columns in the database
  */
@@ -69,6 +85,14 @@ function filterToExistingColumns<T extends Record<string, any>>(
   }
 
   return filtered;
+}
+
+function hasUsableString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function makeFallbackEmail(userId: string): string {
+  return `${userId}@missing-email.tracking-so.local`;
 }
 
 /**
@@ -137,6 +161,12 @@ async function confirmMigration(): Promise<boolean> {
 async function clearTargetDatabase() {
   console.info("Clearing target database...");
 
+  if (!(await tableExists(targetPrisma, "users"))) {
+    throw new Error(
+      "Target database schema is missing. Run `pnpm --dir packages/prisma db:push` before migrating data."
+    );
+  }
+
   // Clear in reverse dependency order to avoid foreign key constraints
   const tables = [
     "message_feedback",
@@ -167,6 +197,11 @@ async function clearTargetDatabase() {
 
   for (const table of tables) {
     try {
+      if (!(await tableExists(targetPrisma, table))) {
+        console.info(`Skipping ${table}; table does not exist in target`);
+        continue;
+      }
+
       await targetPrisma.$executeRawUnsafe(`DELETE FROM "${table}"`);
       console.info(`Cleared ${table}`);
     } catch (error) {
@@ -198,23 +233,35 @@ async function migrateData() {
 
     // First pass: Upsert all users without referral relationships
     for (const user of users) {
-      const { id, referredById, ...userData } = user;
+      const { id, referredById, ...userData } = user as Record<string, any>;
 
       // Filter userData to only include fields that exist in both source and target
       const commonColumns = new Set(
         [...sourceUserColumns].filter((col) => targetUserColumns.has(col))
       );
       const filteredData = filterToExistingColumns(userData, commonColumns);
+      const createData: Record<string, any> = { ...filteredData };
+      const updateData: Record<string, any> = { ...filteredData };
+
+      if (targetUserColumns.has("email")) {
+        if (!hasUsableString(createData.email)) {
+          createData.email = makeFallbackEmail(id);
+        }
+
+        if (!hasUsableString(updateData.email)) {
+          delete updateData.email;
+        }
+      }
 
       await targetPrisma.user.upsert({
         where: { id },
         create: {
           id,
-          ...filteredData,
+          ...createData,
           ...(commonColumns.has("referredById") ? { referredById: null } : {}), // Will be updated in second pass
         } as any,
         update: {
-          ...filteredData,
+          ...updateData,
           ...(commonColumns.has("referredById") ? { referredById: null } : {}), // Will be updated in second pass
         } as any,
       });
@@ -223,10 +270,11 @@ async function migrateData() {
     // Second pass: Update referral relationships (only if the field exists)
     if (targetUserColumns.has("referredById")) {
       for (const user of users) {
-        if ((user as any).referredById) {
+        const { id, referredById } = user as Record<string, any>;
+        if (referredById) {
           await targetPrisma.user.update({
             where: { id },
-            data: { referredById: (user as any).referredById },
+            data: { referredById },
           });
         }
       }
@@ -359,7 +407,7 @@ async function migrateData() {
     });
 
     for (const entry of activityEntries) {
-      const { id, ...entryData } = entry;
+      const { id, ...entryData } = entry as Record<string, any>;
       const filteredData = filterToExistingColumns(entryData, commonActivityEntryColumns);
 
       await targetPrisma.activityEntry.upsert({
@@ -517,7 +565,7 @@ async function migrateData() {
     });
 
     for (const achievementPost of achievementPosts) {
-      const { id, ...achievementPostData } = achievementPost;
+      const { id, ...achievementPostData } = achievementPost as Record<string, any>;
 
       // Filter data to only include fields that exist in both source and target
       const commonColumns = new Set(
@@ -674,7 +722,7 @@ async function migrateData() {
     });
 
     for (const chat of chats) {
-      const { id, ...chatData } = chat;
+      const { id, ...chatData } = chat as Record<string, any>;
 
       // Filter chatData to only include fields that exist in both source and target
       const commonColumns = new Set(
@@ -776,47 +824,61 @@ async function migrateData() {
     console.info(`Migrated ${recommendations.length} recommendations`);
 
     console.info("Migrating feedback...");
-    const feedbacks = await sourcePrisma.feedback.findMany();
+    const canMigrateFeedback =
+      (await tableExists(sourcePrisma, "feedback")) &&
+      (await tableExists(targetPrisma, "feedback"));
+    if (canMigrateFeedback) {
+      const feedbacks = await sourcePrisma.feedback.findMany();
 
-    for (const feedback of feedbacks) {
-      const { id, ...feedbackData } = feedback;
-      await targetPrisma.feedback.upsert({
-        where: { id },
-        create: {
-          id,
-          ...feedbackData,
-          metadata: feedback.metadata as any, // Handle JsonValue type
-        },
-        update: {
-          ...feedbackData,
-          metadata: feedback.metadata as any, // Handle JsonValue type
-        },
-      });
+      for (const feedback of feedbacks) {
+        const { id, ...feedbackData } = feedback;
+        await targetPrisma.feedback.upsert({
+          where: { id },
+          create: {
+            id,
+            ...feedbackData,
+            metadata: feedback.metadata as any, // Handle JsonValue type
+          },
+          update: {
+            ...feedbackData,
+            metadata: feedback.metadata as any, // Handle JsonValue type
+          },
+        });
+      }
+      console.info(`Migrated ${feedbacks.length} feedback entries`);
+    } else {
+      console.info("Skipping feedback; source or target table does not exist");
     }
-    console.info(`Migrated ${feedbacks.length} feedback entries`);
 
     // Step 19: Migrate Job Runs
     console.info("Migrating job runs...");
-    const jobRuns = await sourcePrisma.jobRun.findMany();
+    const canMigrateJobRuns =
+      (await tableExists(sourcePrisma, "job_runs")) &&
+      (await tableExists(targetPrisma, "job_runs"));
+    if (canMigrateJobRuns) {
+      const jobRuns = await sourcePrisma.jobRun.findMany();
 
-    for (const jobRun of jobRuns) {
-      const { id, ...jobRunData } = jobRun;
-      await targetPrisma.jobRun.upsert({
-        where: { id },
-        create: {
-          id,
-          ...jobRunData,
-          input: jobRun.input as any, // Handle JsonValue type
-          output: jobRun.output as any, // Handle JsonValue type
-        },
-        update: {
-          ...jobRunData,
-          input: jobRun.input as any, // Handle JsonValue type
-          output: jobRun.output as any, // Handle JsonValue type
-        },
-      });
+      for (const jobRun of jobRuns) {
+        const { id, ...jobRunData } = jobRun;
+        await targetPrisma.jobRun.upsert({
+          where: { id },
+          create: {
+            id,
+            ...jobRunData,
+            input: jobRun.input as any, // Handle JsonValue type
+            output: jobRun.output as any, // Handle JsonValue type
+          },
+          update: {
+            ...jobRunData,
+            input: jobRun.input as any, // Handle JsonValue type
+            output: jobRun.output as any, // Handle JsonValue type
+          },
+        });
+      }
+      console.info(`Migrated ${jobRuns.length} job runs`);
+    } else {
+      console.info("Skipping job runs; source or target table does not exist");
     }
-    console.info(`Migrated ${jobRuns.length} job runs`);
 
     // Post-processing: Impersonate user by swapping supabaseAuthId
     const { impersonateUser } = parseArgs();
