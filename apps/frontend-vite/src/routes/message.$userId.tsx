@@ -388,6 +388,7 @@ function MessageUserPage() {
                       <div className="flex flex-col gap-1 max-w-full overflow-visible">
                         <MessageBubble
                           direction={isUserMessage ? "right" : "left"}
+                          timestamp={message.createdAt}
                           className={isUserMessage ? "bg-muted" : ""}
                         >
                           <div className="text-sm whitespace-pre-wrap">

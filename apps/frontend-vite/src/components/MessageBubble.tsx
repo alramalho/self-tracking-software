@@ -3,12 +3,21 @@ import { cn } from "@/lib/utils";
 interface MessageBubbleProps {
   direction: "left" | "right";
   className?: string;
+  timestamp?: Date | string | null;
   children: React.ReactNode;
+}
+
+function formatMessageTime(timestamp: Date | string): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function MessageBubble({
   direction,
   className,
+  timestamp,
   children
 }: MessageBubbleProps) {
   return (
@@ -20,6 +29,11 @@ export function MessageBubble({
       )}
     >
       {children}
+      {timestamp ? (
+        <div className="mt-1 text-right text-[10px] leading-none text-muted-foreground/70">
+          {formatMessageTime(timestamp)}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -91,6 +91,63 @@ function sanitizePlanDisplayText(text: string, emoji?: string | null): string {
   return cleaned || text.trim();
 }
 
+function isActiveVisiblePlan(plan: any): boolean {
+  return Boolean(
+    !plan.deletedAt &&
+      !plan.archivedAt &&
+      !plan.isPaused &&
+      (!plan.finishingDate || new Date(plan.finishingDate) > new Date())
+  );
+}
+
+type CitationSource = {
+  citationLabel: string;
+  title?: string;
+  url: string;
+};
+
+function getCitationSources(toolCalls?: any[] | null): CitationSource[] {
+  const sources: CitationSource[] = [];
+  const seenUrls = new Set<string>();
+  let fallbackIndex = 1;
+
+  for (const toolCall of toolCalls || []) {
+    if (toolCall.tool !== "webSearch" || !toolCall.result?.results) continue;
+    for (const result of toolCall.result.results as any[]) {
+      if (!result.url || seenUrls.has(result.url)) {
+        fallbackIndex += 1;
+        continue;
+      }
+      const citationLabel =
+        result.citationLabel ||
+        (result.citationIndex ? `[${result.citationIndex}]` : `[${fallbackIndex}]`);
+      fallbackIndex += 1;
+      seenUrls.add(result.url);
+      sources.push({
+        citationLabel,
+        title: result.title,
+        url: result.url,
+      });
+    }
+  }
+
+  return sources;
+}
+
+function CitationPill({ source }: { source: CitationSource }) {
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={source.title || source.url}
+      className="mx-0.5 inline-flex h-5 min-w-5 translate-y-[-1px] items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold leading-none text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground"
+    >
+      {source.citationLabel.replace(/^\[|\]$/g, "")}
+    </a>
+  );
+}
+
 type VisibleActivity = {
   id: string;
   emoji: string;
@@ -112,14 +169,19 @@ function CoachContextIsland({
   expanded,
   onToggle,
   recentActivities,
-  coachedPlans,
+  activePlans,
   upcomingSessions,
 }: {
   coachName: string;
   expanded: boolean;
   onToggle: () => void;
   recentActivities: VisibleActivity[];
-  coachedPlans: Array<{ id: string; goal: string; emoji?: string | null }>;
+  activePlans: Array<{
+    id: string;
+    goal: string;
+    emoji?: string | null;
+    isCoached?: boolean;
+  }>;
   upcomingSessions: VisibleSession[];
 }) {
   const preview =
@@ -193,22 +255,31 @@ function CoachContextIsland({
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded-xl bg-muted/60 px-3 py-2">
                 <div className="text-xs font-medium text-muted-foreground">
-                  Coached plans
+                  Active plans
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {coachedPlans.length > 0 ? (
-                    coachedPlans.slice(0, 5).map((plan) => (
+                  {activePlans.length > 0 ? (
+                    activePlans.slice(0, 5).map((plan) => (
                       <span
                         key={plan.id}
                         className="inline-flex max-w-full items-center gap-1 rounded-md bg-background/70 px-2 py-1 text-xs"
                       >
                         <span>{plan.emoji || "📋"}</span>
                         <span className="truncate">{plan.goal}</span>
+                        {plan.isCoached ? (
+                          <span
+                            className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
+                            title="Coach can actively work on this plan"
+                          >
+                            <Sparkles size={9} />
+                            coached
+                          </span>
+                        ) : null}
                       </span>
                     ))
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      No active coached plans.
+                      No active plans.
                     </span>
                   )}
                 </div>
@@ -505,14 +576,15 @@ function MessageAIPage() {
       .slice(0, 12);
   }, [activities, activityEntries]);
 
-  const coachedPlans = useMemo(
+  const activePlans = useMemo(
     () =>
       (plans || [])
-        .filter((plan: any) => plan.isCoached && !plan.archivedAt && !plan.deletedAt)
+        .filter(isActiveVisiblePlan)
         .map((plan: any) => ({
           id: plan.id,
           goal: plan.goal,
           emoji: plan.emoji,
+          isCoached: plan.isCoached,
         })),
     [plans]
   );
@@ -842,6 +914,7 @@ function MessageAIPage() {
       length: number;
       component: JSX.Element;
     }> = [];
+    const citationSources = getCitationSources(message.toolCalls);
 
     if (message.metricReplacement) {
       const index = content.indexOf(message.metricReplacement.textToReplace);
@@ -882,6 +955,8 @@ function MessageAIPage() {
             `"${emoji} `,
             `"${emoji}`,
             `"`,
+            `${emoji} `,
+            `${emoji}`,
           ].filter(p => p.length > 0);
 
           for (const prefix of prefixPatterns) {
@@ -920,6 +995,27 @@ function MessageAIPage() {
         }
       });
     }
+
+    citationSources.forEach((source, idx) => {
+      let searchFrom = 0;
+      while (searchFrom < content.length) {
+        const index = content.indexOf(source.citationLabel, searchFrom);
+        if (index === -1) break;
+        const overlaps = replacements.some(
+          (replacement) =>
+            index < replacement.index + replacement.length &&
+            index + source.citationLabel.length > replacement.index
+        );
+        if (!overlaps) {
+          replacements.push({
+            index,
+            length: source.citationLabel.length,
+            component: <CitationPill key={`citation-${idx}-${index}`} source={source} />,
+          });
+        }
+        searchFrom = index + source.citationLabel.length;
+      }
+    });
 
     replacements.sort((a, b) => a.index - b.index);
 
@@ -1076,7 +1172,7 @@ function MessageAIPage() {
           expanded={showCoachContext}
           onToggle={() => setShowCoachContext((value) => !value)}
           recentActivities={recentActivities}
-          coachedPlans={coachedPlans}
+          activePlans={activePlans}
           upcomingSessions={upcomingSessions}
         />
 
@@ -1157,6 +1253,7 @@ function MessageAIPage() {
                       <div className="flex flex-col gap-1 max-w-full overflow-visible">
                         <MessageBubble
                           direction={isUserMessage ? "right" : "left"}
+                          timestamp={message.createdAt}
                           className={
                             isUserMessage
                               ? "bg-muted-foreground/20"
@@ -1268,6 +1365,7 @@ function MessageAIPage() {
                         {isCoachMessage && message.toolCalls && message.toolCalls.length > 0 && (
                           <CoachToolCallsCard
                             toolCalls={message.toolCalls}
+                            content={message.content}
                             plans={plans?.map(p => ({ id: p.id, goal: p.goal, emoji: p.emoji }))}
                           />
                         )}

@@ -32,6 +32,8 @@ interface WebSearchResult {
   title: string;
   snippet: string;
   url: string;
+  citationIndex?: number;
+  citationLabel?: string;
 }
 
 interface OGData {
@@ -51,20 +53,33 @@ interface CoachToolCallsCardProps {
     emoji?: string | null;
   }>;
   className?: string;
+  content?: string;
 }
 
 // Extract unique sources from web search tool calls
-function extractSources(toolCalls: ToolCall[]): WebSearchResult[] {
+function extractSources(toolCalls: ToolCall[], content?: string): WebSearchResult[] {
+  if (!content) return [];
+
+  const citedLabels = new Set(
+    Array.from(content.matchAll(/\[(\d+)\]/g)).map((match) => `[${match[1]}]`)
+  );
+  if (citedLabels.size === 0) return [];
+
   const sources: WebSearchResult[] = [];
   const seenUrls = new Set<string>();
+  let fallbackIndex = 1;
 
   for (const tc of toolCalls) {
     if (tc.tool === "webSearch" && tc.result?.results) {
       const results = tc.result.results as WebSearchResult[];
       for (const result of results) {
+        const citationLabel =
+          result.citationLabel || (result.citationIndex ? `[${result.citationIndex}]` : `[${fallbackIndex}]`);
+        fallbackIndex += 1;
+        if (!citedLabels.has(citationLabel)) continue;
         if (result.url && !seenUrls.has(result.url)) {
           seenUrls.add(result.url);
-          sources.push(result);
+          sources.push({ ...result, citationLabel });
         }
       }
     }
@@ -123,6 +138,11 @@ const SourceCard: React.FC<{ source: WebSearchResult; ogData?: OGData }> = ({ so
       <div className="p-3">
         {/* Site info */}
         <div className="flex items-center gap-2 mb-1.5">
+          {source.citationLabel && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
+              {source.citationLabel.replace(/^\[|\]$/g, "")}
+            </span>
+          )}
           <img
             src={faviconUrl}
             alt=""
@@ -216,7 +236,7 @@ const SourcesPill: React.FC<{ sources: WebSearchResult[] }> = ({ sources }) => {
         >
           <Search className="h-3 w-3" />
           <StackedFavicons sources={sources} />
-          <span>{sources.length} source{sources.length !== 1 ? "s" : ""}</span>
+          <span>{sources.length} cited source{sources.length !== 1 ? "s" : ""}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -248,6 +268,7 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
   toolCalls,
   plans = [],
   className,
+  content,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -262,7 +283,7 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
   const webSearches = toolCalls.filter((tc) => tc.tool === "webSearch");
 
   // Extract sources from web searches
-  const sources = useMemo(() => extractSources(toolCalls), [toolCalls]);
+  const sources = useMemo(() => extractSources(toolCalls, content), [toolCalls, content]);
 
   if (planAdaptations.length === 0 && reminderOperations.length === 0 && sources.length === 0) {
     return null;
