@@ -434,6 +434,7 @@ function AICoachPage() {
                       <div className="flex flex-col gap-1 max-w-full overflow-visible">
                         <MessageBubble
                           direction={message.role === "USER" ? "right" : "left"}
+                          timestamp={message.createdAt}
                           className={
                             message.role === "USER"
                               ? `bg-muted`

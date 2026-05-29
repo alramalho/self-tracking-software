@@ -25,6 +25,15 @@ interface CoachAgentContext {
   recentActivityContext?: string | null;
 }
 
+function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
+  return (
+    !plan.deletedAt &&
+    !plan.archivedAt &&
+    !plan.isPaused &&
+    (!plan.finishingDate || plan.finishingDate > now)
+  );
+}
+
 export class CoachAgentService {
   private perplexity: Perplexity | null = null;
   private telegram = new TelegramService();
@@ -70,7 +79,14 @@ export class CoachAgentService {
    * Create the coach agent with tools bound to the current context
    */
   createAgent(context: CoachAgentContext) {
-    const { user, plans, reminders, memoriesContext, recentActivityContext } = context;
+    const {
+      user,
+      plans: allPlans,
+      reminders,
+      memoriesContext,
+      recentActivityContext,
+    } = context;
+    const plans = allPlans.filter((plan) => isActiveCoachPlan(plan));
     const self = this;
     const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
 
@@ -98,7 +114,8 @@ export class CoachAgentService {
 
         const isTimesPerWeek = plan.outlineType === "TIMES_PER_WEEK";
         return dedent`
-          Plan: ${plan.emoji || ""} ${plan.goal} [planId: ${plan.id}]
+          Plan: ${plan.goal} [planId: ${plan.id}]
+          Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
           Coaching: ${plan.isCoached ? "coached" : "not coached yet"}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
@@ -125,6 +142,8 @@ export class CoachAgentService {
           .join("\n")
       : null;
 
+    let nextCitationIndex = 1;
+
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
       temperature: 0.8,
@@ -149,7 +168,7 @@ export class CoachAgentService {
         GUIDELINES
         - Ask clarifying questions before making changes: current experience, constraints, things to avoid
         - Research first, then advise. Web search results override your assumptions
-        - Be direct, succint and realistic. If a goal is unrealistic given constraints, say so
+        - Be direct, concise, and realistic. If a goal is unrealistic given constraints, say so
         - Suggesting the user adjust their goal is better than setting them up to fail
         - If no plan is coached yet, treat that as setup, not an error. Ask whether the user wants to tighten an existing plan or create a new coached plan.
         - When a plan goal is vague or purely frequency-based, mention that plan by its exact goal text from USER'S PLANS so it can be linked in the UI.
@@ -158,10 +177,16 @@ export class CoachAgentService {
         - When saying the user logged, did, trained, or practiced something recently/lately, rely only on RECENT ACTIVITY FACTS or readActivities output. Active plans and long-term memory are not recent activity evidence.
         - If an activity only appears in a plan, describe it as a goal/planned activity, not something the user has logged.
         - "Recently" and "lately" mean inside the recent activity lookback unless the readActivities tool returns a different date range.
+        - Use webSearch only when fresh outside knowledge materially changes the answer.
+        - If you rely on a webSearch result, cite it inline with that result's citationLabel, like [1]. Cite only the sources you actually used.
 
         RULES
         - Never modify sessions or reminders without user confirmation
-        - Keep responses concise, relaxed, and natural. Avoid stiff phrases like "concrete, measurable outcome" unless the user used them first.
+        - Sound like a sharp friend texting, not a report. Prefer plain words over coaching jargon.
+        - Default to 1-2 short messages. Only use a third message when a tool proposal needs a separate confirmation.
+        - Keep each message to 1-2 short sentences. Do not stack multiple critiques in one reply.
+        - Make one point, then ask one natural next-step question if needed.
+        - Avoid stiff phrases like "concrete, measurable outcome", "frequency alone is not a strategy", or "serious coached plan" unless the user used them first.
         - You MUST use the draftMessages tool to send your response. Never respond with plain text.
         - Each message should focus on one topic/thought. Use multiple messages only when covering distinct points.
         - No markdown headers (#). No numbered lists. Keep it conversational like texting.
@@ -173,8 +198,8 @@ export class CoachAgentService {
           description: "Send your response as chat messages. Always use this to reply.",
           inputSchema: z.object({
             messages: z.array(z.object({
-              content: z.string().describe("A short chat message (1-3 sentences)"),
-            })).min(1).max(5),
+              content: z.string().describe("A short chat message (1-2 sentences)"),
+            })).min(1).max(3),
           }),
           execute: async ({ messages }) => ({ success: true, count: messages.length }),
         }),
@@ -203,11 +228,16 @@ export class CoachAgentService {
                 max_tokens_per_page: 512,
               });
 
-              const results = searchResults.results.map((result) => ({
-                title: result.title,
-                snippet: result.snippet?.substring(0, 300) || "",
-                url: result.url,
-              }));
+              const results = searchResults.results.map((result) => {
+                const citationIndex = nextCitationIndex++;
+                return {
+                  citationIndex,
+                  citationLabel: `[${citationIndex}]`,
+                  title: result.title,
+                  snippet: result.snippet?.substring(0, 300) || "",
+                  url: result.url,
+                };
+              });
 
               logger.info(
                 `Web search for "${query}" returned ${results.length} results`
@@ -216,6 +246,8 @@ export class CoachAgentService {
               return {
                 success: true as const,
                 query,
+                citationInstruction:
+                  "If you use a result in your final answer, cite it inline with its citationLabel.",
                 results,
               };
             } catch (error) {
@@ -674,7 +706,16 @@ export class CoachAgentService {
                   }),
                   prisma.planSession.findMany({
                     where: {
-                      plan: { userId: user.id, deletedAt: null, archivedAt: null },
+                      plan: {
+                        userId: user.id,
+                        deletedAt: null,
+                        archivedAt: null,
+                        isPaused: false,
+                        OR: [
+                          { finishingDate: null },
+                          { finishingDate: { gt: now } },
+                        ],
+                      },
                       date: { gte: from, lte: to },
                     },
                     include: {
@@ -889,6 +930,7 @@ export class CoachAgentService {
     skipReason?: string;
   }> {
     const { user, message, conversationHistory, plans, reminders, memoriesContext } = params;
+    const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
     const recentActivityContext = await this.buildRecentActivityContext(
       user,
       new Date()
@@ -896,7 +938,7 @@ export class CoachAgentService {
 
     const agent = this.createAgent({
       user,
-      plans,
+      plans: activePlans,
       reminders,
       conversationHistory,
       memoriesContext,
@@ -997,7 +1039,7 @@ export class CoachAgentService {
         }));
 
       // Build draft messages with metadata distributed across them
-      const plansList = plans.map((p) => ({ id: p.id, goal: p.goal, emoji: p.emoji }));
+      const plansList = activePlans.map((p) => ({ id: p.id, goal: p.goal, emoji: p.emoji }));
       const draftMessages = rawDrafts.map((draft, idx) => {
         const planReplacements = this.extractPlanReplacements(draft.content, plansList);
         const isFirst = idx === 0;

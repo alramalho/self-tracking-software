@@ -94,6 +94,15 @@ const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "CELEBRATION",
 ];
 
+function activePlanWhere(now: Date) {
+  return {
+    deletedAt: null,
+    archivedAt: null,
+    isPaused: false,
+    OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
+  };
+}
+
 export function isWithinPreferredCoachWindow(
   user: Pick<User, "timezone" | "preferredCoachingHour">,
   now: Date = new Date()
@@ -141,9 +150,7 @@ export class CoachAssessmentService {
         plans: {
           some: {
             isCoached: true,
-            deletedAt: null,
-            archivedAt: null,
-            isPaused: false,
+            ...activePlanWhere(now),
           },
         },
       },
@@ -151,9 +158,7 @@ export class CoachAssessmentService {
         plans: {
           where: {
             isCoached: true,
-            deletedAt: null,
-            archivedAt: null,
-            isPaused: false,
+            ...activePlanWhere(now),
           },
           include: { activities: true, sessions: true },
         },
@@ -190,6 +195,7 @@ export class CoachAssessmentService {
     userId: string,
     options: { now?: Date } = {}
   ): Promise<UserAssessmentResult> {
+    const now = options.now || new Date();
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
@@ -198,9 +204,7 @@ export class CoachAssessmentService {
       include: {
         plans: {
           where: {
-            deletedAt: null,
-            archivedAt: null,
-            isPaused: false,
+            ...activePlanWhere(now),
           },
           include: { activities: true, sessions: true },
         },
@@ -218,13 +222,13 @@ export class CoachAssessmentService {
 
     const coachedPlans = user.plans.filter((plan) => plan.isCoached);
     if (coachedPlans.length === 0) {
-      return this.runCoachSetupCheckin(user as CoachUser, options.now || new Date());
+      return this.runCoachSetupCheckin(user as CoachUser, now);
     }
 
     return this.assessUser({ ...(user as CoachUser), plans: coachedPlans }, {
       dry_run: false,
       force: true,
-      now: options.now || new Date(),
+      now,
       bypassDuplicateCheck: true,
       fallbackCheckin: true,
     });
@@ -596,7 +600,8 @@ export class CoachAssessmentService {
       - Mention that the user has 48 hours to decline before it applies automatically.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
       - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
-      - Keep messages to 2-3 sentences max.
+      - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
+      - Sound natural, like a sharp friend texting. Avoid stacked critiques and coaching jargon.
     `;
   }
 
