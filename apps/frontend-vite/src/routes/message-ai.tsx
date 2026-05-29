@@ -102,11 +102,25 @@ function isActiveVisiblePlan(plan: any): boolean {
 
 type CitationSource = {
   citationLabel: string;
+  displayCitationLabel: string;
   title?: string;
   url: string;
 };
 
-function getCitationSources(toolCalls?: any[] | null): CitationSource[] {
+function getCitationSources(content: string, toolCalls?: any[] | null): CitationSource[] {
+  const citedLabelsInOrder = Array.from(content.matchAll(/\[(\d+)\]/g)).map(
+    (match) => `[${match[1]}]`
+  );
+  if (citedLabelsInOrder.length === 0) return [];
+
+  const citedLabels = new Set(citedLabelsInOrder);
+  const displayLabels = new Map<string, string>();
+  citedLabelsInOrder.forEach((label) => {
+    if (!displayLabels.has(label)) {
+      displayLabels.set(label, `[${displayLabels.size + 1}]`);
+    }
+  });
+
   const sources: CitationSource[] = [];
   const seenUrls = new Set<string>();
   let fallbackIndex = 1;
@@ -122,9 +136,11 @@ function getCitationSources(toolCalls?: any[] | null): CitationSource[] {
         result.citationLabel ||
         (result.citationIndex ? `[${result.citationIndex}]` : `[${fallbackIndex}]`);
       fallbackIndex += 1;
+      if (!citedLabels.has(citationLabel)) continue;
       seenUrls.add(result.url);
       sources.push({
         citationLabel,
+        displayCitationLabel: displayLabels.get(citationLabel) || citationLabel,
         title: result.title,
         url: result.url,
       });
@@ -141,9 +157,9 @@ function CitationPill({ source }: { source: CitationSource }) {
       target="_blank"
       rel="noopener noreferrer"
       title={source.title || source.url}
-      className="mx-0.5 inline-flex h-5 min-w-5 translate-y-[-1px] items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold leading-none text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground"
+      className="mx-0.5 inline-flex h-5 min-w-5 translate-y-[-1px] items-center justify-center rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold leading-none text-primary hover:bg-primary/25"
     >
-      {source.citationLabel.replace(/^\[|\]$/g, "")}
+      {source.displayCitationLabel.replace(/^\[|\]$/g, "")}
     </a>
   );
 }
@@ -914,7 +930,7 @@ function MessageAIPage() {
       length: number;
       component: JSX.Element;
     }> = [];
-    const citationSources = getCitationSources(message.toolCalls);
+    const citationSources = getCitationSources(content, message.toolCalls);
 
     if (message.metricReplacement) {
       const index = content.indexOf(message.metricReplacement.textToReplace);

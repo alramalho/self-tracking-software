@@ -34,6 +34,7 @@ interface WebSearchResult {
   url: string;
   citationIndex?: number;
   citationLabel?: string;
+  displayCitationLabel?: string;
 }
 
 interface OGData {
@@ -60,10 +61,17 @@ interface CoachToolCallsCardProps {
 function extractSources(toolCalls: ToolCall[], content?: string): WebSearchResult[] {
   if (!content) return [];
 
-  const citedLabels = new Set(
-    Array.from(content.matchAll(/\[(\d+)\]/g)).map((match) => `[${match[1]}]`)
+  const citedLabelsInOrder = Array.from(content.matchAll(/\[(\d+)\]/g)).map(
+    (match) => `[${match[1]}]`
   );
-  if (citedLabels.size === 0) return [];
+  const citedLabels = new Set(citedLabelsInOrder);
+  if (citedLabelsInOrder.length === 0) return [];
+  const displayLabels = new Map<string, string>();
+  citedLabelsInOrder.forEach((label) => {
+    if (!displayLabels.has(label)) {
+      displayLabels.set(label, `[${displayLabels.size + 1}]`);
+    }
+  });
 
   const sources: WebSearchResult[] = [];
   const seenUrls = new Set<string>();
@@ -79,7 +87,11 @@ function extractSources(toolCalls: ToolCall[], content?: string): WebSearchResul
         if (!citedLabels.has(citationLabel)) continue;
         if (result.url && !seenUrls.has(result.url)) {
           seenUrls.add(result.url);
-          sources.push({ ...result, citationLabel });
+          sources.push({
+            ...result,
+            citationLabel,
+            displayCitationLabel: displayLabels.get(citationLabel) || citationLabel,
+          });
         }
       }
     }
@@ -138,9 +150,9 @@ const SourceCard: React.FC<{ source: WebSearchResult; ogData?: OGData }> = ({ so
       <div className="p-3">
         {/* Site info */}
         <div className="flex items-center gap-2 mb-1.5">
-          {source.citationLabel && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
-              {source.citationLabel.replace(/^\[|\]$/g, "")}
+          {(source.displayCitationLabel || source.citationLabel) && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold text-primary">
+              {(source.displayCitationLabel || source.citationLabel || "").replace(/^\[|\]$/g, "")}
             </span>
           )}
           <img
