@@ -55,24 +55,24 @@ export const CoachHomeSection = () => {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )[0];
 
-  const activePlans = plans?.filter(
-    (plan) =>
-      plan.deletedAt === null &&
-      (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
-  );
-  const coachedPlans = activePlans?.filter((plan) => plan.isCoached) ?? [];
-  const plansNeedingAttention = coachedPlans.filter((plan) =>
+  const activePlans =
+    plans?.filter(
+      (plan) =>
+        plan.deletedAt === null &&
+        (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
+    ) ?? [];
+  const plansNeedingAttention = activePlans.filter((plan) =>
     ["AT_RISK", "FAILED"].includes(plan.currentWeekState || "")
   );
   const notificationPlanId = getRelatedPlanId(latestCoachNotification);
   const reviewPlan =
-    coachedPlans.find((plan) => plan.id === notificationPlanId) ||
+    activePlans.find((plan) => plan.id === notificationPlanId) ||
     plansNeedingAttention[0] ||
-    coachedPlans[0];
+    activePlans[0];
   const hasReviewAction =
     !!latestCoachNotification || plansNeedingAttention.length > 0;
 
-  if (coachedPlans.length === 0) {
+  if (activePlans.length === 0) {
     return null;
   }
 
@@ -88,8 +88,8 @@ export const CoachHomeSection = () => {
 
   const coachSummary =
     plansNeedingAttention.length > 0
-      ? `${coachedPlans.length} coached plans · ${plansNeedingAttention.length} needs attention`
-      : `${coachedPlans.length} coached plan${coachedPlans.length === 1 ? "" : "s"} · on track`;
+      ? `${activePlans.length} plans · ${plansNeedingAttention.length} needs attention`
+      : `${activePlans.length} plan${activePlans.length === 1 ? "" : "s"} · on track`;
 
   return (
     <div

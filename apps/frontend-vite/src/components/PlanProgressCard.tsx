@@ -7,14 +7,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { format, isSameWeek, isAfter, startOfDay, isSameDay } from "date-fns";
 import { AnimatePresence } from "framer-motion";
 import {
-  AlertTriangle,
   CircleCheck,
   Flame,
   MoveRight,
   Rocket,
   Sprout,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
 import React, { useRef, useState } from "react";
@@ -26,6 +23,7 @@ import {
   getCoachPlanInsight,
   getPlanDomainLabel,
 } from "@/utils/coachPlanDisplay";
+import { getPlanStateVisuals } from "@/utils/planState";
 
 interface ComingUpSectionProps {
   sessions: any[];
@@ -146,37 +144,19 @@ const ComingUpSection: React.FC<ComingUpSectionProps> = ({
 };
 
 export const PlanStatus = ({ plan }: { plan: CompletePlan }) => {
-  if (!plan?.currentWeekState) {
+  const visuals = getPlanStateVisuals(plan?.currentWeekState);
+  if (!visuals) {
     return null;
   }
-  const statusConfig = {
-    ON_TRACK: {
-      icon: <TrendingUp className="h-5 w-5 text-green-500" />,
-      message: "On track!",
-    },
-    AT_RISK: {
-      icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
-      message: "At risk",
-    },
-    FAILED: {
-      icon: <TrendingDown className="h-5 w-5 text-red-500" />,
-      message: "Off track!",
-    },
-    COMPLETED: {
-      icon: <CircleCheck className="h-5 w-5 text-green-500" />,
-      message: "Week completed!",
-    },
-  };
-
-  const config = statusConfig[plan.currentWeekState];
+  const { Icon } = visuals;
 
   return (
     <div className="flex items-center gap-2">
-      {config.icon}
+      <Icon className={cn("h-5 w-5", visuals.colorClass)} />
       <span
         className={`text-sm font-medium italic text-muted-foreground uppercase animate-pulse`}
       >
-        {config.message}
+        {visuals.message}
       </span>
     </div>
   );
