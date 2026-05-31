@@ -435,6 +435,8 @@ router.post(
           where: {
             userId: user.id,
             deletedAt: null,
+            archivedAt: null,
+            isPaused: false,
             OR: [
               { finishingDate: null },
               { finishingDate: { gt: new Date() } },
