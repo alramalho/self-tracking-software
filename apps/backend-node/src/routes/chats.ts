@@ -301,6 +301,7 @@ router.get(
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
                 error: metadata.error || false,
+                source: metadata.source || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };

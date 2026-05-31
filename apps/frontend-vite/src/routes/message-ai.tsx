@@ -3,6 +3,13 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
+import { CalendarGrid } from "@/components/CalendarGrid";
+import {
+  computeGridCells,
+  isActiveVisiblePlan,
+  type GridData,
+} from "@/utils/ghostGrid";
+import { AnimatePresence, motion } from "framer-motion";
 import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
 import { PlanCreationProposalCard } from "@/components/PlanCreationProposalCard";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
@@ -91,15 +98,6 @@ function sanitizePlanDisplayText(text: string, emoji?: string | null): string {
   return cleaned || text.trim();
 }
 
-function isActiveVisiblePlan(plan: any): boolean {
-  return Boolean(
-    !plan.deletedAt &&
-      !plan.archivedAt &&
-      !plan.isPaused &&
-      (!plan.finishingDate || new Date(plan.finishingDate) > new Date())
-  );
-}
-
 type CitationSource = {
   citationLabel: string;
   displayCitationLabel: string;
@@ -173,20 +171,14 @@ type VisibleActivity = {
   datetime: Date;
 };
 
-type VisibleSession = {
-  id: string;
-  emoji: string;
-  title: string;
-  date: Date;
-};
-
 function CoachContextIsland({
   coachName,
   expanded,
   onToggle,
   recentActivities,
   activePlans,
-  upcomingSessions,
+  gridData,
+  isCompletedOnDay,
 }: {
   coachName: string;
   expanded: boolean;
@@ -198,7 +190,8 @@ function CoachContextIsland({
     emoji?: string | null;
     isCoached?: boolean;
   }>;
-  upcomingSessions: VisibleSession[];
+  gridData: GridData;
+  isCompletedOnDay: (activityId: string, day: Date) => boolean;
 }) {
   const preview =
     recentActivities.length > 0
@@ -238,8 +231,17 @@ function CoachContextIsland({
           </div>
         </button>
 
-        {expanded && (
-          <div className="mt-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3">
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              key="coach-context-expanded"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="mt-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3">
             <div>
               <div className="mb-2 text-xs font-medium text-muted-foreground">
                 Recent logs
@@ -268,70 +270,63 @@ function CoachContextIsland({
               )}
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded-xl bg-muted/60 px-3 py-2">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Active plans
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {activePlans.length > 0 ? (
-                    activePlans.slice(0, 5).map((plan) => (
-                      <span
-                        key={plan.id}
-                        className="inline-flex max-w-full items-center gap-1 rounded-md bg-background/70 px-2 py-1 text-xs"
-                      >
-                        <span>{plan.emoji || "📋"}</span>
-                        <span className="truncate">{plan.goal}</span>
-                        {plan.isCoached ? (
-                          <span
-                            className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
-                            title="Coach can actively work on this plan"
-                          >
-                            <Sparkles size={9} />
-                            coached
-                          </span>
-                        ) : null}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      No active plans.
-                    </span>
-                  )}
-                </div>
+            <div className="rounded-xl bg-muted/60 px-3 py-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                Active plans
               </div>
-
-              <div className="rounded-xl bg-muted/60 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <CalendarDays size={13} />
-                  Upcoming
-                </div>
-                <div className="mt-1 space-y-1">
-                  {upcomingSessions.length > 0 ? (
-                    upcomingSessions.slice(0, 3).map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center gap-1.5 text-xs text-foreground"
-                      >
-                        <span>{session.emoji}</span>
-                        <span className="min-w-0 flex-1 truncate">
-                          {session.title}
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {activePlans.length > 0 ? (
+                  activePlans.slice(0, 5).map((plan) => (
+                    <span
+                      key={plan.id}
+                      className="inline-flex max-w-full items-center gap-1 rounded-md bg-background/70 px-2 py-1 text-xs"
+                    >
+                      <span>{plan.emoji || "📋"}</span>
+                      <span className="truncate">{plan.goal}</span>
+                      {plan.isCoached ? (
+                        <span
+                          className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
+                          title="Coach can actively work on this plan"
+                        >
+                          <Sparkles size={9} />
+                          coached
                         </span>
-                        <span className="text-muted-foreground">
-                          {formatCoachVisibleDate(session.date)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-muted-foreground">
-                      No scheduled sessions soon.
-                    </div>
-                  )}
-                </div>
+                      ) : null}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    No active plans.
+                  </span>
+                )}
               </div>
             </div>
-          </div>
-        )}
+
+            <div className="rounded-xl bg-muted/60 px-3 py-2">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CalendarDays size={13} />
+                Upcoming sessions
+              </div>
+              {gridData.scheduledSessions.length > 0 ||
+              gridData.ghostCells.length > 0 ? (
+                <CalendarGrid
+                  sessions={gridData.scheduledSessions}
+                  activities={gridData.activities}
+                  ghostCells={gridData.ghostCells}
+                  isCompletedOnDay={isCompletedOnDay}
+                  showLegend={false}
+                  weekLabels={{ week1: "This week", week2: "Next week" }}
+                />
+              ) : (
+                <div className="text-xs text-muted-foreground">
+                  No upcoming sessions.
+                </div>
+              )}
+            </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -605,29 +600,20 @@ function MessageAIPage() {
     [plans]
   );
 
-  const upcomingSessions = useMemo<VisibleSession[]>(() => {
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(now.getDate() + 7);
+  const gridData = useMemo<GridData>(
+    () => computeGridCells(plans, new Date()),
+    [plans]
+  );
 
-    return (plans || [])
-      .flatMap((plan: any) =>
-        (plan.sessions || []).map((session: any) => {
-          const activity = plan.activities?.find((a: any) => a.id === session.activityId);
-          return {
-            id: session.id,
-            emoji: activity?.emoji || "📌",
-            title: activity?.title || plan.goal,
-            date: new Date(session.date),
-          };
-        })
-      )
-      .filter((session) => session.date >= today && session.date <= sevenDaysFromNow)
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .slice(0, 8);
-  }, [plans]);
+  const isCompletedOnDay = useCallback(
+    (activityId: string, day: Date) =>
+      (activityEntries || []).some(
+        (entry) =>
+          entry.activityId === activityId &&
+          isSameDay(new Date(entry.datetime), day)
+      ),
+    [activityEntries]
+  );
 
   // Auto-select most recent coach chat or create one
   useEffect(() => {
@@ -1189,7 +1175,8 @@ function MessageAIPage() {
           onToggle={() => setShowCoachContext((value) => !value)}
           recentActivities={recentActivities}
           activePlans={activePlans}
-          upcomingSessions={upcomingSessions}
+          gridData={gridData}
+          isCompletedOnDay={isCompletedOnDay}
         />
 
         {/* Messages */}
@@ -1267,6 +1254,14 @@ function MessageAIPage() {
                         }`}
                     >
                       <div className="flex flex-col gap-1 max-w-full overflow-visible">
+                        {isCoachMessage &&
+                          message.source === "autonomous_coach" &&
+                          !prevIsCoach && (
+                            <div className="flex items-center gap-1 px-1 text-[11px] font-medium text-primary">
+                              <Sparkles size={11} />
+                              Coach assessment
+                            </div>
+                          )}
                         <MessageBubble
                           direction={isUserMessage ? "right" : "left"}
                           timestamp={message.createdAt}

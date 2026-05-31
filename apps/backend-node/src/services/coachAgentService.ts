@@ -144,6 +144,9 @@ export class CoachAgentService {
 
     let nextCitationIndex = 1;
 
+    const userFirstName =
+      (user.name || "").trim().split(/\s+/)[0] || user.username;
+
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
       temperature: 0.8,
@@ -153,7 +156,7 @@ export class CoachAgentService {
         ${coachPersonality.systemPrompt}
 
         CONTEXT
-        User: ${user.name || user.username}
+        User: ${userFirstName}
         Today: ${format(today, "yyyy-MM-dd (EEEE)")}
         Current week ends: ${format(thisWeekEnd, "yyyy-MM-dd")} (Saturday)
 

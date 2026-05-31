@@ -33,24 +33,6 @@ function hasPendingCoachActions(metadata: unknown): boolean {
   ) || (data?.metricReplacement && !data.metricReplacement.status);
 }
 
-async function ensureSingleCoachedPlan(
-  tx: any,
-  userId: string,
-  planId: string,
-  isCoached: boolean
-): Promise<void> {
-  if (!isCoached) return;
-  await tx.plan.updateMany({
-    where: {
-      userId,
-      deletedAt: null,
-      id: { not: planId },
-      isCoached: true,
-    },
-    data: { isCoached: false },
-  });
-}
-
 async function concludeResolvedAutonomousCoachNotifications(
   userId: string,
   chatId: string,
@@ -1446,17 +1428,9 @@ router.post(
             if (op.isCoached !== undefined) updateData.isCoached = op.isCoached;
             if (op.goal !== undefined) updateData.goalChanged = true;
 
-            await prisma.$transaction(async (tx) => {
-              await tx.plan.update({
-                where: { id: proposal.planId },
-                data: updateData,
-              });
-              await ensureSingleCoachedPlan(
-                tx,
-                user.id,
-                proposal.planId,
-                op.isCoached === true
-              );
+            await prisma.plan.update({
+              where: { id: proposal.planId },
+              data: updateData,
             });
 
             changes.push({
@@ -1706,7 +1680,6 @@ router.post(
           include: { activities: true, sessions: true },
         });
 
-        await ensureSingleCoachedPlan(tx, user.id, newPlan.id, true);
         return newPlan;
       });
 

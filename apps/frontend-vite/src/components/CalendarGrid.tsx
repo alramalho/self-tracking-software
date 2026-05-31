@@ -5,6 +5,7 @@ import { format, startOfWeek, addDays, isSameDay, isBefore, startOfDay } from "d
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, Pencil } from "lucide-react";
+import type { GhostCell } from "@/utils/ghostGrid";
 
 export interface CalendarSession {
   id?: string;
@@ -26,6 +27,8 @@ export interface CalendarActivity {
 interface CalendarGridProps {
   sessions: CalendarSession[];
   activities: CalendarActivity[];
+  /** Non-committed cells (frequency-plan suggestions + overflow) rendered muted, by day. */
+  ghostCells?: GhostCell[];
   className?: string;
   /** Function to check if an activity is completed on a day. If not provided, completion indicators won't show */
   isCompletedOnDay?: (activityId: string, day: Date) => boolean;
@@ -42,6 +45,7 @@ interface CalendarGridProps {
 export const CalendarGrid = ({
   sessions,
   activities,
+  ghostCells = [],
   className,
   isCompletedOnDay,
   onSessionSelect,
@@ -50,6 +54,7 @@ export const CalendarGrid = ({
   weekLabels = { week1: "This week", week2: "Next week" },
 }: CalendarGridProps) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedGhostDay, setSelectedGhostDay] = useState<Date | null>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Derive selectedSession from props to always have fresh data
@@ -80,11 +85,16 @@ export const CalendarGrid = ({
     });
   };
 
+  const getGhostsForDay = (day: Date) => {
+    return ghostCells.filter((cell) => isSameDay(cell.date, day));
+  };
+
   const getActivity = (activityId: string) => {
     return activities.find((a) => a.id === activityId);
   };
 
   const handleSessionClick = (session: CalendarSession, activity: CalendarActivity) => {
+    setSelectedGhostDay(null);
     const isCurrentlySelected = selectedSessionId === session.id;
 
     if (isCurrentlySelected) {
@@ -93,6 +103,11 @@ export const CalendarGrid = ({
       setSelectedSessionId(session.id || null);
       onSessionSelect?.(session, activity);
     }
+  };
+
+  const handleGhostDayClick = (day: Date) => {
+    setSelectedSessionId(null);
+    setSelectedGhostDay((prev) => (prev && isSameDay(prev, day) ? null : day));
   };
 
   const handleDayClick = (day: Date) => {
@@ -115,19 +130,26 @@ export const CalendarGrid = ({
 
   const DayCell = ({ day }: { day: Date }) => {
     const daySessions = getSessionsForDay(day);
+    const dayGhosts = getGhostsForDay(day);
     const isToday = isSameDay(day, today);
     const isPast = isBefore(startOfDay(day), startOfDay(today));
     const hasSession = daySessions.length > 0;
+    const hasGhost = dayGhosts.length > 0;
+    const isGhostSelected = !!selectedGhostDay && isSameDay(selectedGhostDay, day);
 
     return (
       <div
-        onClick={() => hasSession && handleDayClick(day)}
+        onClick={() => {
+          if (hasSession) handleDayClick(day);
+          else if (hasGhost) handleGhostDayClick(day);
+        }}
         className={cn(
           "flex flex-col items-center p-1 min-h-[72px] rounded-lg border transition-all",
           isToday && cn(variants.brightBorder, variants.veryFadedBg),
-          !isToday && "border-border bg-card",
+          isGhostSelected && !isToday && cn(variants.brightBorder, variants.veryFadedBg),
+          !isToday && !isGhostSelected && "border-border bg-card",
           isPast && !isToday && "opacity-50",
-          hasSession && !isPast && "cursor-pointer hover:border-muted-foreground/50"
+          (hasSession || hasGhost) && !isPast && "cursor-pointer hover:border-muted-foreground/50"
         )}
       >
         <span
@@ -177,6 +199,29 @@ export const CalendarGrid = ({
               </button>
             );
           })}
+          {dayGhosts.map((cell, idx) => {
+            const activity = getActivity(cell.activityId);
+            const isOverflow = cell.kind === "overflow";
+
+            return (
+              <span
+                key={`ghost-${cell.planId}-${idx}`}
+                title={
+                  isOverflow
+                    ? "Won't fit in the days left this week"
+                    : "Suggested — any day works"
+                }
+                className={cn(
+                  "text-lg leading-none rounded-md p-0.5 border border-dashed",
+                  isOverflow
+                    ? "border-red-400/70 bg-red-100 dark:bg-red-900/30"
+                    : variants.brightBorder
+                )}
+              >
+                <span className="opacity-40">{activity?.emoji || "📋"}</span>
+              </span>
+            );
+          })}
         </div>
       </div>
     );
@@ -204,6 +249,66 @@ export const CalendarGrid = ({
     <div className={cn("w-full space-y-4", className)}>
       <WeekRow days={week1} label={weekLabels.week1} />
       <WeekRow days={week2} label={weekLabels.week2} />
+
+      {/* Ghost (suggested session) explanation */}
+      <AnimatePresence mode="wait">
+        {selectedGhostDay &&
+          (() => {
+            const ghosts = getGhostsForDay(selectedGhostDay);
+            if (ghosts.length === 0) return null;
+            const hasOverflow = ghosts.some((g) => g.kind === "overflow");
+            const acts = Array.from(new Set(ghosts.map((g) => g.activityId)))
+              .map(getActivity)
+              .filter(Boolean) as CalendarActivity[];
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className={cn(
+                  "p-4 rounded-xl border",
+                  variants.brightBorder,
+                  variants.veryFadedBg
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">
+                      {acts.map((a) => a.emoji || "📋").join(" ") || "📋"}
+                    </span>
+                    <div>
+                      <h4 className="text-left font-semibold text-foreground">
+                        Suggested session
+                      </h4>
+                      <p className="text-left text-sm text-muted-foreground">
+                        {format(selectedGhostDay, "EEEE, MMM d")}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedGhostDay(null)}
+                    className="p-1 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+                <p className="mt-3 text-sm text-foreground text-left">
+                  {acts.map((a) => a.title).join(" & ") || "This plan"} has a weekly
+                  target rather than fixed days, so it isn't tied to this date — log
+                  it whenever works. These dashed markers spread your remaining
+                  sessions across the open days so you can see whether they fit.
+                </p>
+                {hasOverflow && (
+                  <p className="mt-2 text-sm text-left text-red-500">
+                    ⚠️ More sessions remain than days left this week — some won't fit
+                    unless you double up.
+                  </p>
+                )}
+              </motion.div>
+            );
+          })()}
+      </AnimatePresence>
 
       {/* Selected session detail */}
       <AnimatePresence mode="wait">

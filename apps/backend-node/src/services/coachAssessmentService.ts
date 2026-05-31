@@ -70,7 +70,8 @@ type CoachInterventionType =
   | "SESSION_PREP"
   | "WEEK_RECAP"
   | "INACTIVITY_CHECKIN"
-  | "CELEBRATION";
+  | "CELEBRATION"
+  | "STATUS_REVIEW";
 
 type CoachInterventionCandidate = {
   type: CoachInterventionType;
@@ -149,7 +150,6 @@ export class CoachAssessmentService {
           : {}),
         plans: {
           some: {
-            isCoached: true,
             ...activePlanWhere(now),
           },
         },
@@ -157,7 +157,6 @@ export class CoachAssessmentService {
       include: {
         plans: {
           where: {
-            isCoached: true,
             ...activePlanWhere(now),
           },
           include: { activities: true, sessions: true },
@@ -220,18 +219,78 @@ export class CoachAssessmentService {
       };
     }
 
-    const coachedPlans = user.plans.filter((plan) => plan.isCoached);
-    if (coachedPlans.length === 0) {
-      return this.runCoachSetupCheckin(user as CoachUser, now);
+    const coachUser = user as CoachUser;
+    if (coachUser.plans.length === 0) {
+      return this.runCoachSetupCheckin(coachUser, now);
     }
 
-    return this.assessUser({ ...(user as CoachUser), plans: coachedPlans }, {
-      dry_run: false,
-      force: true,
-      now,
-      bypassDuplicateCheck: true,
-      fallbackCheckin: true,
+    // Manual assessment is a fresh introductory status review: call the coach
+    // brain directly instead of going through the proactive intervention picker.
+    const reminders = await prisma.reminder.findMany({
+      where: { userId: user.id, status: "PENDING" },
+      orderBy: { triggerAt: "asc" },
     });
+
+    const aiResponse = await coachAgentService.generateResponse({
+      user,
+      message: this.buildStatusReviewPrompt(),
+      conversationHistory: [],
+      plans: coachUser.plans,
+      reminders,
+    });
+
+    logger.info(
+      `[coach-assessment] manual status review user=${user.username} plans=${coachUser.plans.length} drafts=${aiResponse.draftMessages.length} skipped=${aiResponse.skipped}`
+    );
+
+    if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
+      return {
+        userId: user.id,
+        username: user.username,
+        action: "agent_skipped",
+        reason: aiResponse.skipReason || "Agent produced no assessment",
+      };
+    }
+
+    const candidate: CoachInterventionCandidate = {
+      type: "STATUS_REVIEW",
+      reason: "User requested a coach assessment.",
+      planIds: coachUser.plans.map((p) => p.id),
+      context: "",
+      usesAgent: true,
+    };
+
+    const sent = await this.dispatchCoachDrafts(
+      user,
+      candidate,
+      aiResponse.draftMessages,
+      "Coach assessment"
+    );
+
+    return {
+      userId: user.id,
+      username: user.username,
+      action: "sent",
+      reason: "Sent STATUS_REVIEW",
+      sentMessageIds: sent.messageIds,
+      notificationId: sent.notificationId,
+    };
+  }
+
+  private buildStatusReviewPrompt(): string {
+    return dedent`
+      You are doing an introductory status check-in with the user. This is a fresh
+      assessment — do not treat it as a continuation of a prior conversation.
+
+      Required:
+      - Open with a brief read on where they stand across their active plans, using
+        USER'S PLANS + RECENT ACTIVITY FACTS only.
+      - Give a one-line status-vs-goal take per meaningful plan (on track / slipping / strong).
+      - End with one concrete, realistic next step, or a single question to align focus.
+      - Use 2-3 short messages. Keep each to 1-2 short sentences. Sound like a sharp
+        friend texting, not a report.
+      - Don't invent activity the user hasn't logged. If a plan has no recent activity, say so plainly.
+    `;
   }
 
   private async runCoachSetupCheckin(
@@ -450,6 +509,12 @@ export class CoachAssessmentService {
     const candidate = await this.selectInterventionCandidate(user, candidates, {
       bypassDuplicateCheck,
     });
+
+    logger.info(
+      `[coach-assessment] user=${user.username} historyMessages=${recentMessages.length} bypassDuplicateCheck=${bypassDuplicateCheck} candidates=[${candidates
+        .map((c) => c.type)
+        .join(",")}] selected=${candidate?.type ?? "none"}`
+    );
 
     if (candidate && candidate.type !== "COACH_SETUP") {
       const brief = await coachContextBriefService.buildCoachContextBrief({
@@ -725,6 +790,7 @@ export class CoachAssessmentService {
       WEEK_RECAP: "Weekly recap",
       INACTIVITY_CHECKIN: "Coach check-in",
       CELEBRATION: "Nice work",
+      STATUS_REVIEW: "Coach assessment",
     };
     return titles[type];
   }
@@ -1110,7 +1176,7 @@ export class CoachAssessmentService {
 
   private async getRecentCoachMessages(userId: string): Promise<Message[]> {
     const chats = await prisma.chat.findMany({
-      where: { userId },
+      where: { userId, type: "COACH" },
       select: { id: true },
     });
     if (chats.length === 0) return [];

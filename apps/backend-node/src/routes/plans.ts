@@ -122,32 +122,6 @@ async function markUserRecommendationsOutdated(userId: string): Promise<void> {
   }
 }
 
-/**
- * Ensure only one plan is coached at a time
- * If isCoached is being set to true, uncoach all other plans
- */
-async function ensureSingleCoachedPlan(
-  tx: any,
-  userId: string,
-  planId: string,
-  isCoached: boolean
-): Promise<void> {
-  if (isCoached) {
-    // Uncoach all other plans for this user
-    await tx.plan.updateMany({
-      where: {
-        userId,
-        deletedAt: null,
-        id: { not: planId },
-        isCoached: true,
-      },
-      data: {
-        isCoached: false,
-      },
-    });
-  }
-}
-
 // Get user's plans
 router.get(
   "/",
@@ -1449,11 +1423,6 @@ router.post(
             },
           });
 
-          // Ensure only one plan is coached at a time
-          if (planData.isCoached) {
-            await ensureSingleCoachedPlan(tx, req.user!.id, newPlan.id, true);
-          }
-
           return newPlan;
         });
 
@@ -1771,7 +1740,7 @@ router.post(
             },
           });
 
-          // Note: isCoached is false for plan group joins, no need to call ensureSingleCoachedPlan
+          // Note: joined plan-group plans start uncoached
         }
 
         // Create or update member record

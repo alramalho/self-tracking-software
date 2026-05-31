@@ -65,6 +65,8 @@ export interface Message {
   }>;
   toolCalls?: ToolCall[] | null;
   error?: boolean;
+  /** Origin tag, e.g. "autonomous_coach" for proactive coach assessment messages. */
+  source?: string | null;
 }
 
 export type ChatType = "COACH" | "DIRECT" | "GROUP";

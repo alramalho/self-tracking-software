@@ -1,0 +1,153 @@
+import { addDays, isBefore, startOfDay, startOfWeek } from "date-fns";
+import type { PlanState } from "@tsw/prisma";
+import type { CompletePlan } from "@/contexts/plans";
+import type { CalendarActivity, CalendarSession } from "@/components/CalendarGrid";
+
+export type GhostCellKind = "ghost" | "overflow";
+
+export interface GhostCell {
+  date: Date;
+  activityId: string;
+  planId: string;
+  kind: GhostCellKind;
+  state: PlanState | null;
+}
+
+export interface GridData {
+  /** SPECIFIC plans' real sessions — flow through CalendarGrid's `sessions` prop. */
+  scheduledSessions: CalendarSession[];
+  /** TIMES_PER_WEEK ghosts + overflow — flow through CalendarGrid's `ghostCells` prop. */
+  ghostCells: GhostCell[];
+  /** Union of activities across all plans, for emoji/title lookup. */
+  activities: CalendarActivity[];
+}
+
+/** Active, visible (non-archived, non-paused, not finished) plan. */
+export function isActiveVisiblePlan(plan: CompletePlan): boolean {
+  return Boolean(
+    !plan.deletedAt &&
+      !plan.archivedAt &&
+      !plan.isPaused &&
+      (!plan.finishingDate || new Date(plan.finishingDate) > new Date())
+  );
+}
+
+/**
+ * Pick `n` evenly-spread indices in `[0, m-1]`. Deterministic for a given (n, m).
+ * Distinct when `n <= m`.
+ */
+function evenSpreadIndices(n: number, m: number): number[] {
+  const indices: number[] = [];
+  for (let i = 0; i < n; i++) {
+    indices.push(Math.min(m - 1, Math.floor(((i + 0.5) * m) / n)));
+  }
+  return indices;
+}
+
+function placeGhosts(
+  openDays: Date[],
+  count: number,
+  base: Omit<GhostCell, "date" | "kind">,
+  out: GhostCell[]
+): void {
+  const m = openDays.length;
+  if (count <= 0 || m === 0) return;
+
+  if (count <= m) {
+    for (const idx of evenSpreadIndices(count, m)) {
+      out.push({ ...base, date: openDays[idx], kind: "ghost" });
+    }
+    return;
+  }
+
+  // count > m: every open day gets a ghost, the surplus stacks on the last day.
+  for (const day of openDays) {
+    out.push({ ...base, date: day, kind: "ghost" });
+  }
+  for (let i = 0; i < count - m; i++) {
+    out.push({ ...base, date: openDays[m - 1], kind: "overflow" });
+  }
+}
+
+/**
+ * Build the 2-week grid view across all active plans. Pure & client-side.
+ *
+ * - SPECIFIC plans contribute their real dated sessions (scheduled).
+ * - TIMES_PER_WEEK plans contribute ghost cells spread across the remaining open
+ *   days. This week's count comes from the server-computed
+ *   `currentWeekStats.numActiveDaysLeftInTheWeek` (already nets out completed
+ *   days); next week's count is the full `timesPerWeek`. When more ghosts are
+ *   needed than open days remain, the surplus renders as `overflow` — which is
+ *   exactly the condition the backend reports as `FAILED`.
+ */
+export function computeGridCells(
+  plans: CompletePlan[] | undefined,
+  today: Date
+): GridData {
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+  const windowEnd = addDays(weekStart, 14); // exclusive
+  const todayStart = startOfDay(today);
+
+  const week1Days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const week2Days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, 7 + i));
+  const week1Open = week1Days.filter((d) => !isBefore(startOfDay(d), todayStart));
+
+  const scheduledSessions: CalendarSession[] = [];
+  const ghostCells: GhostCell[] = [];
+  const activityMap = new Map<string, CalendarActivity>();
+
+  for (const plan of (plans ?? []).filter(isActiveVisiblePlan)) {
+    for (const a of plan.activities ?? []) {
+      if (!activityMap.has(a.id)) {
+        activityMap.set(a.id, {
+          id: a.id,
+          title: a.title,
+          emoji: a.emoji ?? undefined,
+          measure: a.measure ?? undefined,
+        });
+      }
+    }
+
+    if (plan.outlineType === "SPECIFIC") {
+      for (const s of plan.sessions ?? []) {
+        const date = new Date(s.date);
+        if (date >= weekStart && date < windowEnd) {
+          scheduledSessions.push({
+            id: s.id,
+            date,
+            activityId: s.activityId,
+            quantity: s.quantity,
+            descriptiveGuide: s.descriptiveGuide ?? undefined,
+            imageUrls: s.imageUrls ?? undefined,
+          });
+        }
+      }
+      continue;
+    }
+
+    if (plan.outlineType === "TIMES_PER_WEEK") {
+      const activityId = plan.activities?.[0]?.id;
+      if (!activityId || !plan.timesPerWeek) continue;
+
+      const base = {
+        activityId,
+        planId: plan.id,
+        state: plan.currentWeekState ?? null,
+      };
+
+      const stats = plan.progress?.currentWeekStats;
+      const week1Count =
+        stats?.numActiveDaysLeftInTheWeek ??
+        Math.max(0, plan.timesPerWeek - (stats?.daysCompletedThisWeek ?? 0));
+
+      placeGhosts(week1Open, week1Count, base, ghostCells);
+      placeGhosts(week2Days, plan.timesPerWeek, base, ghostCells);
+    }
+  }
+
+  return {
+    scheduledSessions,
+    ghostCells,
+    activities: Array.from(activityMap.values()),
+  };
+}
