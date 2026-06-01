@@ -601,8 +601,8 @@ function MessageAIPage() {
   );
 
   const gridData = useMemo<GridData>(
-    () => computeGridCells(plans, new Date()),
-    [plans]
+    () => computeGridCells(plans, new Date(), activityEntries || []),
+    [plans, activityEntries]
   );
 
   const isCompletedOnDay = useCallback(

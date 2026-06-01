@@ -134,22 +134,27 @@ export const CalendarGrid = ({
     const isToday = isSameDay(day, today);
     const isPast = isBefore(startOfDay(day), startOfDay(today));
     const hasSession = daySessions.length > 0;
-    const hasGhost = dayGhosts.length > 0;
+    const hasSuggestion = dayGhosts.some(
+      (c) => c.kind === "ghost" || c.kind === "overflow"
+    );
     const isGhostSelected = !!selectedGhostDay && isSameDay(selectedGhostDay, day);
 
     return (
       <div
         onClick={() => {
           if (hasSession) handleDayClick(day);
-          else if (hasGhost) handleGhostDayClick(day);
+          else if (hasSuggestion) handleGhostDayClick(day);
         }}
         className={cn(
           "flex flex-col items-center p-1 min-h-[72px] rounded-lg border transition-all",
-          isToday && cn(variants.brightBorder, variants.veryFadedBg),
-          isGhostSelected && !isToday && cn(variants.brightBorder, variants.veryFadedBg),
-          !isToday && !isGhostSelected && "border-border bg-card",
-          isPast && !isToday && "opacity-50",
-          (hasSession || hasGhost) && !isPast && "cursor-pointer hover:border-muted-foreground/50"
+          // Today: outline only (no fill) so it stays distinct from the selected day.
+          isToday ? variants.brightBorder : "border-border",
+          // Selected day: filled + ring.
+          isGhostSelected
+            ? cn(variants.veryFadedBg, "ring-2", variants.ring)
+            : !isToday && "bg-card",
+          isPast && !isToday && !isGhostSelected && "opacity-50",
+          (hasSession || hasSuggestion) && !isPast && "cursor-pointer hover:border-muted-foreground/50"
         )}
       >
         <span
@@ -201,8 +206,24 @@ export const CalendarGrid = ({
           })}
           {dayGhosts.map((cell, idx) => {
             const activity = getActivity(cell.activityId);
-            const isOverflow = cell.kind === "overflow";
+            const emoji = activity?.emoji || "📋";
 
+            if (cell.kind === "completed") {
+              return (
+                <span
+                  key={`done-${cell.activityId}-${idx}`}
+                  title={`${activity?.title || "Activity"} — done`}
+                  className="relative text-lg leading-none rounded-md p-0.5 bg-green-100 dark:bg-green-900/30"
+                >
+                  {emoji}
+                  <span className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
+                    <Check className="w-2 h-2 text-white" />
+                  </span>
+                </span>
+              );
+            }
+
+            const isOverflow = cell.kind === "overflow";
             return (
               <span
                 key={`ghost-${cell.planId}-${idx}`}
@@ -218,7 +239,7 @@ export const CalendarGrid = ({
                     : variants.brightBorder
                 )}
               >
-                <span className="opacity-40">{activity?.emoji || "📋"}</span>
+                <span className="opacity-40">{emoji}</span>
               </span>
             );
           })}
@@ -254,7 +275,9 @@ export const CalendarGrid = ({
       <AnimatePresence mode="wait">
         {selectedGhostDay &&
           (() => {
-            const ghosts = getGhostsForDay(selectedGhostDay);
+            const ghosts = getGhostsForDay(selectedGhostDay).filter(
+              (g) => g.kind === "ghost" || g.kind === "overflow"
+            );
             if (ghosts.length === 0) return null;
             const hasOverflow = ghosts.some((g) => g.kind === "overflow");
             const acts = Array.from(new Set(ghosts.map((g) => g.activityId)))
