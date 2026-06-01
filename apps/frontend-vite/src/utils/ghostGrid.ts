@@ -1,9 +1,14 @@
-import { addDays, isBefore, startOfDay, startOfWeek } from "date-fns";
+import { addDays, format, isBefore, startOfDay, startOfWeek } from "date-fns";
 import type { PlanState } from "@tsw/prisma";
 import type { CompletePlan } from "@/contexts/plans";
 import type { CalendarActivity, CalendarSession } from "@/components/CalendarGrid";
 
-export type GhostCellKind = "ghost" | "overflow";
+export type GhostCellKind = "ghost" | "overflow" | "completed";
+
+export interface CompletedEntry {
+  activityId: string | null;
+  datetime: Date | string;
+}
 
 export interface GhostCell {
   date: Date;
@@ -82,7 +87,8 @@ function placeGhosts(
  */
 export function computeGridCells(
   plans: CompletePlan[] | undefined,
-  today: Date
+  today: Date,
+  completedEntries: CompletedEntry[] = []
 ): GridData {
   const weekStart = startOfWeek(today, { weekStartsOn: 0 });
   const windowEnd = addDays(weekStart, 14); // exclusive
@@ -143,6 +149,30 @@ export function computeGridCells(
       placeGhosts(week1Open, week1Count, base, ghostCells);
       placeGhosts(week2Days, plan.timesPerWeek, base, ghostCells);
     }
+  }
+
+  // Completed activity logs — show what was actually done. Skip days that already
+  // have a scheduled session for that activity (those render their own check).
+  const dayKey = (d: Date) => format(d, "yyyy-MM-dd");
+  const scheduledKeys = new Set(
+    scheduledSessions.map((s) => `${s.activityId}|${dayKey(new Date(s.date))}`)
+  );
+  const completedKeys = new Set<string>();
+  for (const entry of completedEntries) {
+    if (!entry.activityId) continue;
+    const date = new Date(entry.datetime);
+    if (date < weekStart || date >= windowEnd) continue;
+    if (!activityMap.has(entry.activityId)) continue;
+    const key = `${entry.activityId}|${dayKey(date)}`;
+    if (scheduledKeys.has(key) || completedKeys.has(key)) continue;
+    completedKeys.add(key);
+    ghostCells.push({
+      date,
+      activityId: entry.activityId,
+      planId: "completed",
+      kind: "completed",
+      state: null,
+    });
   }
 
   return {
