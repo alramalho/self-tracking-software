@@ -8,11 +8,13 @@ export const useUnifiedProfileData = (username?: string) => {
   const { currentUser, isLoadingCurrentUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = useCurrentUser();
   const { activities, activityEntries, isLoadingActivities, isLoadingActivityEntries } = useActivities();
   const { plans, isLoadingPlans } = usePlans();
-  const { timelineData, isLoadingTimeline } = useTimeline();
+  const { timelineData } = useTimeline();
 
   // For external users, use the existing useUser hook
-  // Only call useUser when we have a username and it's not the current user
-  const shouldFetchExternalUser = !!username && username !== currentUser?.username;
+  // Only call useUser after the current user has loaded, otherwise /profile/:username
+  // briefly treats the signed-in user's own profile as an external profile.
+  const shouldFetchExternalUser =
+    !!username && !!currentUser && username !== currentUser.username;
   const { data: externalUserData, isLoading: isLoadingExternalUser } = useUser(
     shouldFetchExternalUser ? { username } : { username: "" }
   );
@@ -44,11 +46,11 @@ export const useUnifiedProfileData = (username?: string) => {
   // Loading states
   const isLoading = useMemo(() => {
     if (isOwnProfile) {
-      return isLoadingCurrentUser || isLoadingActivities || isLoadingActivityEntries || isLoadingPlans || isLoadingTimeline;
+      return isLoadingCurrentUser || isLoadingActivities || isLoadingActivityEntries || isLoadingPlans;
     } else {
-      return isLoadingExternalUser;
+      return isLoadingCurrentUser || isLoadingExternalUser;
     }
-  }, [isOwnProfile, isLoadingCurrentUser, isLoadingActivities, isLoadingActivityEntries, isLoadingPlans, isLoadingTimeline, isLoadingExternalUser]);
+  }, [isOwnProfile, isLoadingCurrentUser, isLoadingActivities, isLoadingActivityEntries, isLoadingPlans, isLoadingExternalUser]);
 
   return {
     profileData,

@@ -175,7 +175,8 @@ router.get(
       const plansProgress = await plansService.getBatchPlanProgress(
         planIds,
         req.user!.id,
-        false // Use cache
+        false, // Use cache
+        { staleWhileRevalidate: true }
       );
 
       // Create progress map for fast lookup

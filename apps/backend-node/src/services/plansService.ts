@@ -556,7 +556,8 @@ export class PlansService {
   async getBatchPlanProgress(
     planIds: string[],
     userId: string,
-    forceRecompute: boolean = false
+    forceRecompute: boolean = false,
+    options: { staleWhileRevalidate?: boolean } = {}
   ): Promise<PlanProgressData[]> {
     const plans = await prisma.plan.findMany({
       where: { id: { in: planIds } },
@@ -577,15 +578,35 @@ export class PlansService {
 
     let cachedCount = 0;
     let computedCount = 0;
+    let revalidatingCount = 0;
 
     const progressPromises = Promise.all(
       plans.map(async (plan) => {
+        const hasExpiredCache =
+          !!plan.progressCalculatedAt && is3DaysOld(plan.progressCalculatedAt);
         const shouldRecompute =
           !plan.progressCalculatedAt ||
           forceRecompute ||
-          is3DaysOld(plan.progressCalculatedAt);
+          hasExpiredCache;
 
         if (shouldRecompute) {
+          if (
+            options.staleWhileRevalidate &&
+            !forceRecompute &&
+            hasExpiredCache &&
+            plan.progressState
+          ) {
+            cachedCount++;
+            revalidatingCount++;
+            void this.computePlanProgress(plan, user).catch((error) => {
+              logger.error(
+                `Background progress refresh failed for plan ${plan.id}:`,
+                error
+              );
+            });
+            return this.getPlanProgress(plan, user);
+          }
+
           computedCount++;
           return this.computePlanProgress(plan, user);
         } else {
@@ -597,7 +618,7 @@ export class PlansService {
 
     const results = await progressPromises;
     logger.info(
-      `Batch progress: ${cachedCount} cached, ${computedCount} computed (${plans.length} total)`
+      `Batch progress: ${cachedCount} cached, ${computedCount} computed, ${revalidatingCount} revalidating (${plans.length} total)`
     );
     return results;
   }
