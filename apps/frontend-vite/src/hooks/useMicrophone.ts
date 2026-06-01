@@ -35,7 +35,7 @@ export const useMicrophone = () => {
         }
 
         const mimeTypes = ["audio/webm", "audio/ogg", "audio/mp4", "audio/wav"];
-        let selectedType = mimeTypes.find((type) =>
+        const selectedType = mimeTypes.find((type) =>
           MediaRecorder.isTypeSupported(type)
         );
 

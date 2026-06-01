@@ -32,7 +32,7 @@ export function ConversationListItem({
           avatar: aiCoach.avatar,
           isCoach: true,
         };
-      case "DIRECT":
+      case "DIRECT": {
         // Find the other participant (not current user)
         const otherParticipant = chat.participants?.find(
           (p) => p.userId !== currentUserId
@@ -48,6 +48,7 @@ export function ConversationListItem({
             .slice(0, 2) || "?",
           isCoach: false,
         };
+      }
       case "GROUP":
         return {
           name: chat.title || chat.planGroupName || "Group Chat",

@@ -72,12 +72,8 @@ export class PlanGenerationPipeline {
   private openrouter: OpenRouterProvider;
 
   constructor() {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not set");
-    }
-
     this.openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
+      apiKey: process.env.OPENROUTER_API_KEY || "missing-openrouter-api-key",
       baseURL: process.env.HELICONE_API_KEY
         ? "https://openrouter.helicone.ai/api/v1"
         : undefined,
@@ -112,6 +108,10 @@ export class PlanGenerationPipeline {
    * Research should be done externally via perplexityAiService and passed in.
    */
   async generatePlan(params: PlanGenerationParams): Promise<PipelineResult> {
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error("OPENROUTER_API_KEY is required to generate plans");
+    }
+
     const maxWeeks = params.maxWeeks ?? DEFAULT_MAX_WEEKS;
     const trace: PipelineTraceStep[] = [];
     logger.info(`Starting plan generation pipeline for goal: "${params.goal}" (generating ${maxWeeks} weeks)`);

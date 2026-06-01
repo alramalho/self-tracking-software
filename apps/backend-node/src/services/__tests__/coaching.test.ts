@@ -21,6 +21,8 @@ const testUserId1 = "test-coach-user-1";
 const testUserId2 = "test-coach-user-2";
 const testUserId3 = "test-coach-user-3";
 const testUserId4 = "test-coach-user-4";
+const describeIfAiIntegrationEnabled =
+  process.env.RUN_AI_INTEGRATION_TESTS === "true" ? describe : describe.skip;
 
 interface TestScenario {
   name: string;
@@ -101,6 +103,7 @@ async function createTestScenario(scenario: TestScenario): Promise<{
         userId: scenario.userId,
         activityId: createdActivities[0].id,
         date: entryDate,
+        datetime: entryDate,
         quantity: 1,
       },
     });
@@ -256,7 +259,7 @@ async function evaluateCoachNotes(
   }
 }
 
-describe("Coaching Messages Tests", () => {
+describeIfAiIntegrationEnabled("Coaching Messages Tests", () => {
   beforeAll(async () => {
     // Create test users
     const users = [testUserId1, testUserId2, testUserId3, testUserId4];
@@ -576,7 +579,7 @@ describe("Coaching Messages Tests", () => {
   });
 });
 
-describe("Coach Notes Tests", () => {
+describeIfAiIntegrationEnabled("Coach Notes Tests", () => {
   beforeAll(async () => {
     // Create test users
     const users = [testUserId1, testUserId2, testUserId3, testUserId4];

@@ -24,7 +24,9 @@ export class AIService {
     this.model = process.env.OPENROUTER_MODEL || "openai/gpt-5.4-mini";
 
     if (!process.env.OPENROUTER_API_KEY || !process.env.HELICONE_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY or HELICONE_API_KEY is not set");
+      logger.warn(
+        "OPENROUTER_API_KEY or HELICONE_API_KEY is not set - AI calls will fail until credentials are configured"
+      );
     }
   }
 

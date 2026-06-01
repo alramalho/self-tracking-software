@@ -77,7 +77,9 @@ function LogPage() {
             longitude: pos.longitude,
           };
         }
-      } catch {}
+      } catch {
+        // Geolocation is optional for manual activity logging.
+      }
 
       setCurrentActivityLogData(logData);
       setShowActivityLogger(false);

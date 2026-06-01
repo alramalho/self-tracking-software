@@ -78,7 +78,7 @@ const MultiPhotoUploader: React.FC<MultiPhotoUploaderProps> = ({
       }
 
       setIsProcessing(true);
-      let toastId = toast.loading("Processing images...");
+      const toastId = toast.loading("Processing images...");
 
       try {
         const processedFiles: File[] = [];

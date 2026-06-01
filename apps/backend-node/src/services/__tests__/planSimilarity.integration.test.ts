@@ -9,6 +9,10 @@ const testUserId1 = "cmev4pw6x0000yz1sefkbyy1l";
 const testUserId2 = "cmf55cdau0001yy1injs56d1y";
 const testUserId3 = "cmf55nb160000yw1t6rwa2fuc";
 const testUserId4 = "cmf59yhp30000yu1h1nkji9fr";
+const describeIfPlanSimilarityIntegrationEnabled =
+  process.env.RUN_PLAN_SIMILARITY_INTEGRATION_TESTS === "true"
+    ? describe
+    : describe.skip;
 // TODO: these activities are not being used for anything rn, just match based on plan similarity
 async function createTestPlanWithActivities(
   userId: string,
@@ -105,7 +109,7 @@ async function getMostSimilarPlan(
   }
 }
 
-describe("Plan Similarity Integration Tests", () => {
+describeIfPlanSimilarityIntegrationEnabled("Plan Similarity Integration Tests", () => {
   beforeAll(async () => {
     // Create test users
     const users = [testUserId1, testUserId2, testUserId3, testUserId4];

@@ -61,7 +61,9 @@ export function ActivityLoggerPopover({
           ? `${area}, ${city}`
           : city || area || data.display_name?.split(",")[0];
         if (label) setLocationLabel(label);
-      } catch {}
+      } catch {
+        // Location labels are best-effort only.
+      }
     })();
   }, []);
 

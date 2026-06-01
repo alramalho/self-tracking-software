@@ -433,11 +433,12 @@ export const SeasonRunningGraph: React.FC<SeasonRunningGraphProps> = ({
     };
   };
 
-  const visibleImages = useMemo(() => {
-    if (selectedImages.length === 0) return [];
-    const passed = selectedImages.filter(img => img.dayIndex <= exactDayPosition);
-    return passed.slice(-3).reverse();
-  }, [selectedImages, exactDayPosition]);
+  const visibleImages = selectedImages.length === 0
+    ? []
+    : selectedImages
+        .filter((img) => img.dayIndex <= exactDayPosition)
+        .slice(-3)
+        .reverse();
 
   const newestImage = visibleImages[0] || null;
 
