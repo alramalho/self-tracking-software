@@ -30,10 +30,15 @@ export async function getChats(api: AxiosInstance): Promise<Chat[]> {
 // Get messages for any chat type
 export async function getMessages(
   api: AxiosInstance,
-  chatId: string
+  chatId: string,
+  options?: { includeCoachHistory?: boolean }
 ): Promise<Message[]> {
+  const params = options?.includeCoachHistory
+    ? { includeCoachHistory: "true" }
+    : undefined;
   const response = await api.get<{ messages: MessageApiResponse[] }>(
-    `/chats/${chatId}/messages`
+    `/chats/${chatId}/messages`,
+    { params }
   );
   return response.data.messages.map(deserializeMessage);
 }

@@ -8,6 +8,7 @@ export interface ToolCall {
 
 export interface Message {
   id: string;
+  chatId?: string;
   role: "USER" | "COACH" | "SYSTEM";
   content: string;
   status?: "SENT" | "READ";

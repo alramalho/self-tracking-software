@@ -63,9 +63,12 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     queryFn: async () => {
       if (!currentChatId) return [];
       console.log("fetching messages for chat", currentChatId);
-      return await getMessages(api, currentChatId);
+      const currentChat = chats.data?.find((chat) => chat.id === currentChatId);
+      return await getMessages(api, currentChatId, {
+        includeCoachHistory: currentChat?.type === "COACH",
+      });
     },
-    enabled: isLoaded && isSignedIn && !!currentChatId,
+    enabled: isLoaded && isSignedIn && !!currentChatId && !!chats.data,
     staleTime: 1000 * 60 * 2,
   });
 
