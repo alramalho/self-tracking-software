@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { Activity, Plan, PlanGroup, PlanState, Prisma } from "@tsw/prisma";
+import { Activity, MessageRole, Plan, PlanGroup, PlanState, Prisma } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Response, Router } from "express";
@@ -16,6 +16,7 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
+const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -41,6 +42,54 @@ const PlanBulkUpdateSchema = z.object({
     })
   ),
 });
+
+function hasPlanProposalChanges(proposal: any): boolean {
+  const patch = proposal?.patch;
+  return !!(
+    proposal?.operations?.length ||
+    patch?.archive ||
+    patch?.plan ||
+    patch?.sessions?.upsert?.length ||
+    patch?.sessions?.deleteIds?.length ||
+    patch?.milestones?.upsert?.length ||
+    patch?.milestones?.deleteIds?.length
+  );
+}
+
+function hasPendingPlanProposalForPlan(metadata: unknown, planId: string): boolean {
+  const data = metadata as any;
+  const planProposals = Array.isArray(data?.planProposals)
+    ? data.planProposals
+    : [];
+
+  return planProposals.some(
+    (proposal: any) =>
+      proposal?.planId === planId &&
+      !proposal?.status &&
+      hasPlanProposalChanges(proposal)
+  );
+}
+
+function isCoachActionMessageForPlan(metadata: unknown, planId: string): boolean {
+  const data = metadata as any;
+  return (
+    data?.source === AUTONOMOUS_COACH_PROMPT_TAG &&
+    Array.isArray(data?.planIds) &&
+    data.planIds.includes(planId)
+  );
+}
+
+function isSameCoachActionGroup(a: unknown, b: unknown): boolean {
+  const first = a as any;
+  const second = b as any;
+
+  return (
+    first?.source === second?.source &&
+    first?.interventionType === second?.interventionType &&
+    (first?.targetDate || null) === (second?.targetDate || null) &&
+    (first?.targetWeekStart || null) === (second?.targetWeekStart || null)
+  );
+}
 
 // Zod validation schemas
 const SessionSchema = z.object({
@@ -82,7 +131,6 @@ const PlanUpsertSchema = z.object({
   durationType: z.enum(["HABIT", "LIFESTYLE", "CUSTOM"]).optional(),
   outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
   timesPerWeek: z.number().positive().optional(),
-  isCoached: z.boolean().optional(),
   coachId: z.string().nullable().optional(),
   activities: z.array(ActivitySchema).optional(),
   sessions: z.array(SessionSchema).optional(),
@@ -643,6 +691,93 @@ router.post(
   }
 );
 
+// Get pending coach action messages for a single plan.
+router.get(
+  "/:planId/coach-action-messages",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const userId = req.user!.id;
+
+      const plan = await prisma.plan.findFirst({
+        where: { id: planId, userId, deletedAt: null },
+        select: { id: true },
+      });
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const recentCoachMessages = await prisma.message.findMany({
+        where: {
+          role: MessageRole.COACH,
+          chat: { userId },
+        },
+        include: { feedback: true },
+        orderBy: { createdAt: "desc" },
+        take: 80,
+      });
+
+      const planMessages = recentCoachMessages.filter((message) =>
+        isCoachActionMessageForPlan(message.metadata, planId)
+      );
+      const latestPendingMessage = planMessages.find((message) =>
+        hasPendingPlanProposalForPlan(message.metadata, planId)
+      );
+
+      if (!latestPendingMessage) {
+        return res.json({ messages: [] });
+      }
+
+      const latestCreatedAt = latestPendingMessage.createdAt.getTime();
+      const groupMessages = planMessages
+        .filter((message) => {
+          const createdAt = message.createdAt.getTime();
+          const isNearLatest =
+            Math.abs(latestCreatedAt - createdAt) <= 10 * 60 * 1000;
+          return (
+            isNearLatest &&
+            isSameCoachActionGroup(
+              message.metadata,
+              latestPendingMessage.metadata
+            )
+          );
+        })
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .slice(-3);
+
+      const messages = groupMessages.map((message) => {
+        const metadata = (message.metadata || {}) as any;
+        return {
+          id: message.id,
+          chatId: message.chatId,
+          role: message.role,
+          content: message.content,
+          status: message.status,
+          createdAt: message.createdAt,
+          source: metadata.source || null,
+          planProposals: metadata.planProposals || [],
+          planCreationProposals: metadata.planCreationProposals || [],
+          activityLogProposals: metadata.activityLogProposals || [],
+          toolCalls: metadata.toolCalls || null,
+          feedback: message.feedback,
+        };
+      });
+
+      return res.json({ messages });
+    } catch (error) {
+      logger.error("Error fetching plan coach action messages:", error);
+      return res
+        .status(500)
+        .json({ error: "Failed to fetch coach action messages" });
+    }
+  }
+);
+
 // Get progress for single plan (cached)
 router.get(
   "/:planId/progress",
@@ -804,12 +939,7 @@ router.get(
           const user = member.user;
           const memberPlan = member.plan;
 
-          // Check if this is a coached plan
-          // Coached = user is PLUS AND plan has isCoached flag set
-          let isCoached = false;
-          if (user.planType === "PLUS") {
-            isCoached = (memberPlan as any).isCoached || false;
-          }
+          const hasCoachAutomation = user.planType === "PLUS";
 
           // Get current week's activity count
           const timezone = user.timezone || "UTC";
@@ -851,7 +981,7 @@ router.get(
 
           // Determine status - use currentWeekState as-is (can be null)
           let status: PlanState | null = null;
-          if (isCoached) {
+          if (hasCoachAutomation) {
             status = memberPlan.currentWeekState;
           }
 
@@ -863,7 +993,7 @@ router.get(
             planId: memberPlan.id,
             weeklyActivityCount,
             target,
-            isCoached,
+            hasCoachAutomation,
             status,
           };
         })
@@ -1376,7 +1506,6 @@ router.post(
               durationType: planData.durationType,
               outlineType: planData.outlineType || "SPECIFIC",
               timesPerWeek: planData.timesPerWeek,
-              isCoached: planData.isCoached || false,
               coachId: planData.coachId || null,
               backgroundImageUrl: planData.backgroundImageUrl,
 
@@ -1700,7 +1829,6 @@ router.post(
               durationType: templatePlan.durationType,
               outlineType: templatePlan.outlineType,
               timesPerWeek: templatePlan.timesPerWeek,
-              isCoached: false, // Default to not coached when joining a plan group
               planGroupId: planGroup.id,
               // Connect to the newly created activities
               activities: {
@@ -1741,7 +1869,7 @@ router.post(
             },
           });
 
-          // Note: joined plan-group plans start uncoached
+          // Note: joined plan-group plans keep the same structure as the template plan
         }
 
         // Create or update member record

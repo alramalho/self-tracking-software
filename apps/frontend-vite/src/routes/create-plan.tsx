@@ -6,7 +6,6 @@ import GoalReasonStepWizard from "@/components/plan-wizard/steps/GoalReasonStepW
 import EmojiStepWizard from "@/components/plan-wizard/steps/EmojiStepWizard";
 import TimesPerWeekStepWizard from "@/components/plan-wizard/steps/TimesPerWeekStepWizard";
 import CoachingStepWizard from "@/components/plan-wizard/steps/CoachingStepWizard";
-import CoachSelectorStepWizard from "@/components/plan-wizard/steps/CoachSelectorStepWizard";
 import VisibilityStepWizard from "@/components/plan-wizard/steps/VisibilityStepWizard";
 import DurationStepWizard from "@/components/plan-wizard/steps/DurationStepWizard";
 import ActivitiesStepWizard from "@/components/plan-wizard/steps/ActivitiesStepWizard";
@@ -33,8 +32,8 @@ export const Route = createFileRoute("/create-plan")({
  * 1. goal - What you want to achieve (AI extracts goal + emoji)
  * 2. emoji - Visual representation (pre-filled from goal extraction)
  * 3. times-per-week - How often to work on this
- * 4. coaching - Coached (SPECIFIC) vs Self-Guided (TIMES_PER_WEEK)
- * 5. coach-selector - Choose AI or human coach (only if coached)
+ * 4. coaching - Choose flexible target (TIMES_PER_WEEK) vs scheduled sessions (SPECIFIC)
+ * 5. visibility - Who can see the plan
  * 6. visibility - Who can see the plan
  * 7. duration - Target finishing date (optional)
  * 8. activities - Select activities to track (with AI recommendations)
@@ -71,24 +70,12 @@ const getPlanCreationSteps = (_state: PlanCreationState): PlanCreationStep[] => 
   {
     id: "coaching",
     component: CoachingStepWizard,
-    next: (state) => {
-      if (state.isCoached) return "coach-selector";
-      return "visibility";
-    },
-  },
-  {
-    id: "coach-selector",
-    component: CoachSelectorStepWizard,
     next: "visibility",
-    previous: "coaching",
   },
   {
     id: "visibility",
     component: VisibilityStepWizard,
-    previous: (state) => {
-      if (state.isCoached) return "coach-selector";
-      return "coaching";
-    },
+    previous: "coaching",
   },
   {
     id: "duration",
@@ -98,8 +85,7 @@ const getPlanCreationSteps = (_state: PlanCreationState): PlanCreationStep[] => 
     id: "activities",
     component: ActivitiesStepWizard,
     next: (state) => {
-      // Only go to outline step if coached (SPECIFIC plan)
-      if (state.isCoached) return "outline";
+      if (state.outlineType === "SPECIFIC") return "outline";
       return "milestones";
     },
   },
@@ -112,8 +98,7 @@ const getPlanCreationSteps = (_state: PlanCreationState): PlanCreationStep[] => 
     id: "milestones",
     component: MilestonesStepWizard,
     previous: (state) => {
-      // Go back to outline if coached, otherwise activities
-      if (state.isCoached) return "outline";
+      if (state.outlineType === "SPECIFIC") return "outline";
       return "activities";
     },
   },
@@ -186,7 +171,6 @@ function CreatePlanPage() {
     emoji: null,
     backgroundImageUrl: null,
     backgroundImageFile: null,
-    isCoached: false,
     selectedCoachId: null,
     coachPersonality: DEFAULT_COACH_PERSONALITY,
     selectedCoach: null,

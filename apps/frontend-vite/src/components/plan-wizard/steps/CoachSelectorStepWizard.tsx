@@ -1,6 +1,5 @@
 import { useApiWithAuth } from "@/api";
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
-import { AICoachPersonalitySelector } from "@/components/AICoachPersonalitySelector";
 import { CoachProfileDrawer } from "@/components/CoachProfileDrawer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -95,12 +94,11 @@ const CoachSelectorStepWizard = () => {
 
   return (
     <div className="w-full max-w-lg space-y-5">
-      <AICoachFeaturePreview aiCoachPersonality={coachPersonality}>
-        <AICoachPersonalitySelector
-          selectedPersonality={coachPersonality}
-          onSelect={setCoachPersonality}
-          disabled={isUpdatingUser}
-        />
+      <AICoachFeaturePreview
+        aiCoachPersonality={coachPersonality}
+        onCoachPersonalitySelect={setCoachPersonality}
+        coachPersonalityDisabled={isUpdatingUser}
+      >
         <Button
           onClick={() => handleSelectCoach(null)}
           disabled={isUpdatingUser}

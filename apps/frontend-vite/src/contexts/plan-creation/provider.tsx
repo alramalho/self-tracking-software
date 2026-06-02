@@ -29,14 +29,13 @@ const getDefaultState = (initialStepId?: string, steps?: PlanCreationStep[]): Pl
   emoji: null,
   backgroundImageUrl: null,
   backgroundImageFile: null,
-  isCoached: false,
   selectedCoachId: null,
   coachPersonality: DEFAULT_COACH_PERSONALITY,
   selectedCoach: null,
   visibility: "PUBLIC" as Visibility,
   finishingDate: null,
   activities: [],
-  outlineType: "TIMES_PER_WEEK" as PlanOutlineType, // Default to self-guided
+  outlineType: "TIMES_PER_WEEK" as PlanOutlineType,
   timesPerWeek: 3, // Default to 3 times per week
   generatedSessions: [],
   milestones: [],
@@ -66,7 +65,6 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
-    isCoached,
     selectedCoachId,
     coachPersonality,
     selectedCoach,
@@ -244,10 +242,6 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     setState((prev) => ({ ...prev, backgroundImageFile: file }));
   }, [setState]);
 
-  const setIsCoached = useCallback((isCoached: boolean) => {
-    setState((prev) => ({ ...prev, isCoached }));
-  }, [setState]);
-
   const setSelectedCoachId = useCallback(
     (coachId: string | null, coachInfo?: HumanCoachInfo | null) => {
       setState((prev) => ({
@@ -315,12 +309,12 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
         goal: planData.goal ?? null,
         emoji: planData.emoji ?? null,
         backgroundImageUrl: planData.backgroundImageUrl ?? null,
-        isCoached: planData.isCoached ?? false,
         selectedCoachId: planData.selectedCoachId ?? null,
         coachPersonality: planData.coachPersonality ?? DEFAULT_COACH_PERSONALITY,
         visibility: planData.visibility ?? "PUBLIC",
         finishingDate: planData.finishingDate ?? null,
         activities: planData.activities ?? [],
+        outlineType: planData.outlineType ?? "TIMES_PER_WEEK",
         timesPerWeek: planData.timesPerWeek ?? null,
         milestones: planData.milestones ?? [],
       };
@@ -358,7 +352,6 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
-    isCoached,
     selectedCoachId,
     coachPersonality,
     selectedCoach,
@@ -383,7 +376,6 @@ export const PlanCreationProvider: React.FC<PlanCreationProviderProps> = ({
     setEmoji,
     setBackgroundImageUrl,
     setBackgroundImageFile,
-    setIsCoached,
     setSelectedCoachId,
     setCoachPersonality,
     setVisibility,

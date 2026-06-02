@@ -191,9 +191,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
               const userPlans =
                 recommendedPlans?.filter((plan) => plan.userId === user.id) ||
                 [];
-              // Find coached plan, or fallback to newest plan
               const plan =
-                userPlans.find((p: any) => p.isCoached) ||
                 userPlans.sort((a, b) => {
                   return (
                     new Date(b.createdAt).getTime() -
@@ -317,9 +315,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                 const userPlans =
                   recommendedPlans?.filter((plan) => plan.userId === user.id) ||
                   [];
-                // Find coached plan, or fallback to newest plan
                 const plan =
-                  userPlans.find((p: any) => p.isCoached) ||
                   userPlans.sort((a, b) => {
                     return (
                       new Date(b.createdAt).getTime() -

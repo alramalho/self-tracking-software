@@ -84,7 +84,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
     picture: member.picture,
     completed: member.weeklyActivityCount,
     target: member.target,
-    isCoached: member.isCoached,
+    hasCoachAutomation: member.hasCoachAutomation,
     status: member.status,
     userId: member.userId,
   }));
@@ -110,7 +110,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
               <span className="text-muted-foreground">Target:</span>
               <span className="font-medium">{data.target}</span>
             </div>
-            {data.isCoached && (
+            {data.hasCoachAutomation && (
               <div className="pt-1 mt-1 border-t">
                 <Badge
                   variant="outline"
@@ -242,8 +242,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
               {chartData.map((entry, index) => {
                 const STATUS_COLORS = getStatusColors(cssColors.mutedForeground);
                 let fillColor = variants.hex;
-                if (entry.isCoached) {
-                  // For coached plans, use status-based colors
+                if (entry.hasCoachAutomation) {
                   if (entry.status && entry.status in STATUS_COLORS) {
                     fillColor = STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS];
                   } else if (entry.status === null) {

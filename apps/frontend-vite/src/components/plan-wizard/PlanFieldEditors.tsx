@@ -2,6 +2,7 @@ import NumberInput from "@/components/NumberInput";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { EmojiInput } from "@/components/ui/emoji-input";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { type Activity } from "@tsw/prisma";
 import {
@@ -160,6 +161,8 @@ export function PlanCoachingModeEditor({
   onBlockedPremium?: () => void;
   compact?: boolean;
 }) {
+  const variants = useThemeColors();
+
   if (compact) {
     return (
       <div className="grid grid-cols-2 gap-2">
@@ -202,9 +205,9 @@ export function PlanCoachingModeEditor({
               onChange(option.value);
             }}
             className={cn(
-              "w-full rounded-xl border-2 p-6 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30",
+              "w-full rounded-xl border-2 p-6 text-left transition-all duration-200 hover:bg-muted/50",
               isSelected || isRecommended
-                ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
+                ? `${variants.card.selected.border} ${variants.card.selected.bg}`
                 : "border-border"
             )}
           >
@@ -218,7 +221,7 @@ export function PlanCoachingModeEditor({
                     {option.title}
                   </h3>
                   {isRecommended && (
-                    <span className="text-xs font-medium text-blue-600 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                    <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", variants.text, variants.veryFadedBg)}>
                       Recommended
                     </span>
                   )}
@@ -235,7 +238,7 @@ export function PlanCoachingModeEditor({
                 <ul className="mt-3 space-y-1">
                   {option.features.map((feature, idx) => (
                     <li key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <Check className={cn("w-4 h-4 flex-shrink-0", variants.text)} />
                       {feature}
                     </li>
                   ))}
@@ -269,14 +272,14 @@ export function PlanOutlineTypeEditor({
         variant={value === "TIMES_PER_WEEK" ? "default" : "outline"}
         onClick={() => onChange("TIMES_PER_WEEK")}
       >
-        Times/week
+        Flexible target
       </Button>
       <Button
         type="button"
         variant={value === "SPECIFIC" ? "default" : "outline"}
         onClick={() => onChange("SPECIFIC")}
       >
-        Specific
+        Scheduled sessions
       </Button>
     </div>
   );
@@ -369,6 +372,8 @@ export function ActivityPickerGrid({
   onToggle: (activity: ActivityPickerActivity) => void;
   onAddNew: () => void;
 }) {
+  const variants = useThemeColors();
+
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
       {activities.map((activity) => {
@@ -382,22 +387,22 @@ export function ActivityPickerGrid({
             className={cn(
               "flex flex-col items-center justify-center p-4 rounded-lg border-2 aspect-square transition-all relative",
               isSelected
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                ? `${variants.card.selected.border} ${variants.card.selected.bg}`
                 : isRecommended
-                  ? "border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-500 bg-input"
+                  ? `border-dashed ${variants.border} ${variants.card.glassBg}`
                   : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-input"
             )}
           >
             {isRecommended && !isSelected && (
               <div className="absolute -top-1 -right-1">
-                <Check className="w-3 h-3 text-blue-500" />
+                <Check className={cn("w-3 h-3", variants.text)} />
               </div>
             )}
             <span className="text-2xl mb-1">{activity.emoji}</span>
             <span className="text-xs font-medium text-center line-clamp-2">
               {activity.title}
             </span>
-            {isSelected && <Check className="w-4 h-4 text-blue-500 mt-1" />}
+            {isSelected && <Check className={cn("w-4 h-4 mt-1", variants.text)} />}
           </button>
         );
       })}

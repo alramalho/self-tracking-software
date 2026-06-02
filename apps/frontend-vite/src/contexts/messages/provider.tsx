@@ -8,6 +8,7 @@ import {
   getChats,
   getMessages,
   sendMessage,
+  rewriteMessage,
   createDirectChat,
   markMessagesAsRead,
   clearCoachHistory,
@@ -210,6 +211,76 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const rewriteMessageMutation = useMutation({
+    mutationFn: async (data: { chatId: string; messageId: string; message: string }) => {
+      staggerTimersRef.current.forEach(clearTimeout);
+      staggerTimersRef.current = [];
+      setPendingStaggeredMessages([]);
+
+      return await rewriteMessage(api, data);
+    },
+    onMutate: async ({ chatId, messageId, message }) => {
+      await queryClient.cancelQueries({ queryKey: ["messages", chatId] });
+      const previousMessages = queryClient.getQueryData<Message[]>([
+        "messages",
+        chatId,
+      ]);
+
+      queryClient.setQueryData(
+        ["messages", chatId],
+        (oldMessages: Message[] = []) => {
+          const targetIndex = oldMessages.findIndex((msg) => msg.id === messageId);
+          if (targetIndex === -1) return oldMessages;
+
+          return oldMessages.slice(0, targetIndex + 1).map((msg, index) =>
+            index === targetIndex
+              ? {
+                  ...msg,
+                  content: message,
+                  userAction: null,
+                }
+              : msg
+          );
+        }
+      );
+
+      return { previousMessages };
+    },
+    onSuccess: (responseMessages, { chatId, messageId }) => {
+      queryClient.setQueryData(
+        ["messages", chatId],
+        (oldMessages: Message[] = []) => {
+          const targetIndex = oldMessages.findIndex((msg) => msg.id === messageId);
+          const retainedMessages =
+            targetIndex === -1 ? oldMessages : oldMessages.slice(0, targetIndex);
+          return [...retainedMessages, ...responseMessages];
+        }
+      );
+
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
+        return oldChats.map((chat) => {
+          if (chat.id === chatId) {
+            return { ...chat, updatedAt: new Date() };
+          }
+          return chat;
+        });
+      });
+      queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+    onError: (error, { chatId }, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          ["messages", chatId],
+          context.previousMessages
+        );
+      }
+      const customErrorMessage = `Failed to edit message`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   const createDirectChatMutation = useMutation({
     mutationFn: async (userId: string) => {
       return await createDirectChat(api, userId);
@@ -322,7 +393,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     messages: messages.data,
     isLoadingMessages: messages.isLoading,
     sendMessage: sendMessageMutation.mutateAsync,
+    rewriteMessage: rewriteMessageMutation.mutateAsync,
     isSendingMessage: sendMessageMutation.isPending,
+    isRewritingMessage: rewriteMessageMutation.isPending,
     pendingStaggeredMessages,
     createDirectChat: createDirectChatMutation.mutateAsync,
     isCreatingDirectChat: createDirectChatMutation.isPending,

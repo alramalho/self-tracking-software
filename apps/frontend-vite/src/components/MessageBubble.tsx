@@ -4,6 +4,7 @@ interface MessageBubbleProps {
   direction: "left" | "right";
   className?: string;
   timestamp?: Date | string | null;
+  tailPosition?: "top" | "bottom";
   children: React.ReactNode;
 }
 
@@ -18,13 +19,17 @@ export function MessageBubble({
   direction,
   className,
   timestamp,
+  tailPosition = "bottom",
   children
 }: MessageBubbleProps) {
   return (
     <div
       className={cn(
         "w-fit rounded-3xl p-3 px-4 bg-muted max-w-full",
-        direction === "left" ? "rounded-bl-none" : "rounded-br-none",
+        direction === "left" && tailPosition === "top" && "rounded-tl-none",
+        direction === "left" && tailPosition === "bottom" && "rounded-bl-none",
+        direction === "right" && tailPosition === "top" && "rounded-tr-none",
+        direction === "right" && tailPosition === "bottom" && "rounded-br-none",
         className
       )}
     >

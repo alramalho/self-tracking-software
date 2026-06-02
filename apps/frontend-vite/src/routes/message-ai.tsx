@@ -3,6 +3,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
+import { UserActionCard } from "@/components/UserActionCard";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import {
   computeGridCells,
@@ -23,11 +24,12 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import type { ResolvedOperation } from "@/components/PlanProposalCard";
 import { useSessionMessage } from "@/contexts/session-message";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useClipboard } from "@/hooks/useClipboard";
 import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays } from "lucide-react";
+import { Send, Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
@@ -112,7 +114,6 @@ function resolveLegacyOperation(op: any, plan: any, activities: any[] = []): Res
       goal: op.goal,
       goalReason: op.goalReason,
       timesPerWeek: op.timesPerWeek,
-      isCoached: op.isCoached,
     };
   }
 
@@ -140,7 +141,6 @@ function resolvePatchOperations(patch: any, plan: any, activities: any[] = []): 
       goal: patch.plan.goal,
       goalReason: patch.plan.goalReason,
       timesPerWeek: patch.plan.timesPerWeek,
-      isCoached: patch.plan.isCoached,
     });
   }
 
@@ -296,7 +296,6 @@ function CoachContextIsland({
     id: string;
     goal: string;
     emoji?: string | null;
-    isCoached?: boolean;
   }>;
   gridData: GridData;
   isCompletedOnDay: (activityId: string, day: Date) => boolean;
@@ -391,15 +390,6 @@ function CoachContextIsland({
                     >
                       <span>{plan.emoji || "📋"}</span>
                       <span className="truncate">{plan.goal}</span>
-                      {plan.isCoached ? (
-                        <span
-                          className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
-                          title="Coach can actively work on this plan"
-                        >
-                          <Sparkles size={9} />
-                          coached
-                        </span>
-                      ) : null}
                     </span>
                   ))
                 ) : (
@@ -585,6 +575,7 @@ function MessageAIPage() {
   const { activities, activityEntries } = useActivities();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const [, copyToClipboard] = useClipboard();
   const {
     chats,
     currentChatId,
@@ -592,7 +583,9 @@ function MessageAIPage() {
     messages,
     isLoadingMessages,
     sendMessage,
+    rewriteMessage,
     isSendingMessage,
+    isRewritingMessage,
     pendingStaggeredMessages,
     isLoadingChats,
     markMessagesAsRead,
@@ -608,6 +601,7 @@ function MessageAIPage() {
     rejectProposal,
     acceptPlanCreationProposal,
     rejectPlanCreationProposal,
+    proposePlanCreationChanges,
     acceptActivityLogProposal,
     rejectActivityLogProposal,
     createCoachChat,
@@ -617,6 +611,12 @@ function MessageAIPage() {
   } = useAI();
   const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
+  const [editingMessage, setEditingMessage] = useState<{
+    id: string;
+    content: string;
+  } | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [activeActionMessageId, setActiveActionMessageId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showCoachContext, setShowCoachContext] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -699,7 +699,6 @@ function MessageAIPage() {
           id: plan.id,
           goal: plan.goal,
           emoji: plan.emoji,
-          isCoached: plan.isCoached,
         })),
     [plans]
   );
@@ -784,7 +783,28 @@ function MessageAIPage() {
   }, [allMessages.length, currentChatId, isLoadingMessages, scrollToBottom]);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || isSendingMessage || !currentChatId) {
+    if (!inputValue.trim() || isSendingMessage || isRewritingMessage || !currentChatId) {
+      return;
+    }
+
+    if (editingMessage) {
+      const messageToSend = inputValue.trim();
+      const messageId = editingMessage.id;
+      setInputValue("");
+      setEditingMessage(null);
+      setTimeout(scrollToBottom, 50);
+
+      try {
+        await rewriteMessage({
+          chatId: currentChatId,
+          messageId,
+          message: messageToSend,
+        });
+      } catch (error) {
+        console.error("Failed to edit message:", error);
+        setEditingMessage(editingMessage);
+        setInputValue(messageToSend);
+      }
       return;
     }
 
@@ -824,6 +844,42 @@ function MessageAIPage() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const getMessageCopyText = (message: any) => {
+    if (message.userAction) {
+      const diffs = message.userAction.diffs || [];
+      return [
+        message.userAction.title || message.content,
+        ...diffs.map(
+          (diff: any) => `${diff.label}: ${diff.oldValue} -> ${diff.newValue}`
+        ),
+        message.userAction.note ? `Note: ${message.userAction.note}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    return typeof message.content === "string" ? message.content : "";
+  };
+
+  const handleCopyMessage = async (message: any) => {
+    const text = getMessageCopyText(message);
+    if (!text) return;
+
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      setCopiedMessageId(message.id);
+      setTimeout(() => {
+        setCopiedMessageId((current) => (current === message.id ? null : current));
+      }, 1200);
+    }
+  };
+
+  const toggleCoachMessageActions = (messageId: string) => {
+    setActiveActionMessageId((current) =>
+      current === messageId ? null : messageId
+    );
   };
 
   const handleAcceptMetric = async (messageId: string, metricId: string, rating: number) => {
@@ -881,17 +937,17 @@ function MessageAIPage() {
   };
 
   const handleProposePlanCreationChanges = async (
-    _messageId: string,
-    _proposalIndex: number,
-    changeRequest: string
+    messageId: string,
+    proposalIndex: number,
+    requestedProposal: unknown,
+    note?: string | null
   ) => {
-    if (!currentChatId) return;
-
     try {
-      await sendMessage({
-        message: changeRequest,
-        chatId: currentChatId,
-        coachVersion: "v2",
+      await proposePlanCreationChanges({
+        messageId,
+        proposalIndex,
+        requestedProposal,
+        note: note || null,
       });
       setTimeout(scrollToBottom, 100);
     } catch (error) {
@@ -1298,7 +1354,7 @@ function MessageAIPage() {
                 <div>
                   <h3 className="font-semibold text-lg">No messages yet</h3>
                   <p className="text-sm text-muted-foreground">
-                    Run an assessment to get a first read on your coached plans.
+                    Run an assessment to get a first read on your active plans.
                   </p>
                 </div>
                 <Button
@@ -1332,6 +1388,17 @@ function MessageAIPage() {
                 const prevIsCoach = prevMessage && prevMessage.role === "COACH";
                 const isSameSenderAsPrev = (isUserMessage && prevIsUser) || (isCoachMessage && prevIsCoach);
                 const messageSpacing = !prevMessage ? "" : isSameSenderAsPrev && !showDateDivider ? "mt-1" : "mt-4";
+                const canEditMessage =
+                  isUserMessage &&
+                  message.role === "USER" &&
+                  !message.userAction &&
+                  typeof message.content === "string" &&
+                  !message.id.startsWith("temp-");
+                const canCopyMessage = !!getMessageCopyText(message);
+                const showActionRow = isUserMessage
+                  ? canCopyMessage || canEditMessage
+                  : activeActionMessageId === message.id &&
+                    (canCopyMessage || isLastInCoachGroup);
 
                 return (
                   <MessageWithReadTracking
@@ -1359,19 +1426,107 @@ function MessageAIPage() {
                               Coach assessment
                             </div>
                           )}
-                        <MessageBubble
-                          direction={isUserMessage ? "right" : "left"}
-                          timestamp={message.createdAt}
-                          className={
-                            isUserMessage
-                              ? "bg-muted-foreground/20"
-                              : "bg-muted/60"
+                        <div
+                          className={cn(
+                            "flex items-end gap-1",
+                            isCoachMessage && "cursor-pointer"
+                          )}
+                          onClick={
+                            isCoachMessage
+                              ? () => toggleCoachMessageActions(message.id)
+                              : undefined
                           }
                         >
-                          <div className="text-sm whitespace-pre-wrap">
-                            {renderMessageContent(message)}
-                          </div>
-                        </MessageBubble>
+                          {isUserMessage && message.userAction ? (
+                            <UserActionCard
+                              action={message.userAction}
+                              timestamp={message.createdAt}
+                            />
+                          ) : (
+                            <MessageBubble
+                              direction={isUserMessage ? "right" : "left"}
+                              timestamp={message.createdAt}
+                              className={
+                                isUserMessage
+                                  ? "bg-muted-foreground/20"
+                                  : "bg-muted/60"
+                              }
+                            >
+                              <div className="text-sm whitespace-pre-wrap">
+                                {renderMessageContent(message)}
+                              </div>
+                            </MessageBubble>
+                          )}
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {showActionRow && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                              animate={{ height: "auto", opacity: 1, marginTop: 4 }}
+                              exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                              transition={{ duration: 0.16, ease: "easeOut" }}
+                              className={cn(
+                                "overflow-hidden",
+                                isUserMessage ? "self-end" : "self-start"
+                              )}
+                            >
+                              <div className="flex items-center gap-1 px-1">
+                                {canCopyMessage && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleCopyMessage(message);
+                                    }}
+                                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                    title="Copy"
+                                    aria-label="Copy message"
+                                  >
+                                    {copiedMessageId === message.id ? (
+                                      <Check size={17} />
+                                    ) : (
+                                      <Copy size={17} />
+                                    )}
+                                  </button>
+                                )}
+                                {canEditMessage && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      if (pendingSession) clearPendingSession();
+                                      setEditingMessage({
+                                        id: message.id,
+                                        content: message.content,
+                                      });
+                                      setInputValue(message.content);
+                                    }}
+                                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                    title="Edit and resend from here"
+                                    aria-label="Edit and resend from here"
+                                  >
+                                    <Pencil size={17} />
+                                  </button>
+                                )}
+                                {isLastInCoachGroup && (
+                                  <MessageFeedback
+                                    messageId={message.id}
+                                    existingFeedback={
+                                      message.feedback && message.feedback.length > 0
+                                        ? message.feedback[0]
+                                        : null
+                                    }
+                                    onSubmitFeedback={async (data) => {
+                                      await submitFeedback(data);
+                                    }}
+                                    isSubmitting={isSubmittingFeedback}
+                                    className="mt-0"
+                                  />
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
                         {isCoachMessage && message.error && (
                           <div className="flex items-center gap-1 px-1">
@@ -1418,7 +1573,6 @@ function MessageAIPage() {
                                 goal={proposal.goal}
                                 goalReason={proposal.goalReason}
                                 emoji={proposal.emoji}
-                                isCoached={proposal.isCoached}
                                 outlineType={proposal.outlineType}
                                 timesPerWeek={proposal.timesPerWeek}
                                 activities={proposal.activities}
@@ -1469,28 +1623,13 @@ function MessageAIPage() {
                             recommendations={message.userRecommendations}
                           />
                         )}
-
-                        {isLastInCoachGroup && (
-                          <MessageFeedback
-                            messageId={message.id}
-                            existingFeedback={
-                              message.feedback && message.feedback.length > 0
-                                ? message.feedback[0]
-                                : null
-                            }
-                            onSubmitFeedback={async (data) => {
-                              await submitFeedback(data);
-                            }}
-                            isSubmitting={isSubmittingFeedback}
-                          />
-                        )}
                       </div>
                     </div>
                   </MessageWithReadTracking>
                 );
               })
             )}
-            {(isSendingMessage || pendingStaggeredMessages.length > 0) && (
+            {(isSendingMessage || isRewritingMessage || pendingStaggeredMessages.length > 0) && (
               <div
                 className="flex items-center gap-3 mt-4 opacity-0"
                 style={{ animation: "typing-appear 0.3s ease-out 1s forwards" }}
@@ -1517,6 +1656,29 @@ function MessageAIPage() {
         {/* Input */}
         <div className="flex-shrink-0 pb-4 pt-2">
           <div className="w-full max-w-4xl mx-auto px-4 space-y-2">
+            {editingMessage && (
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/70 px-3 py-2">
+                <Pencil size={15} className="text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-foreground">
+                    Editing old message
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    Sending will discard this message and everything after it.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingMessage(null);
+                    setInputValue("");
+                  }}
+                  className="rounded-md p-1 transition-colors hover:bg-muted"
+                >
+                  <X size={16} className="text-muted-foreground" />
+                </button>
+              </div>
+            )}
             {pendingSession && (
               <div className={cn(
                 "flex items-center gap-3 p-3 rounded-xl border",
@@ -1561,7 +1723,13 @@ function MessageAIPage() {
                       handleSend();
                     }
                   }}
-                  placeholder={pendingSession ? "Ask about this session..." : "Ask anything"}
+                  placeholder={
+                    editingMessage
+                      ? "Edit and resend..."
+                      : pendingSession
+                        ? "Ask about this session..."
+                        : "Ask anything"
+                  }
                   rows={1}
                   className={cn(
                     "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground text-base resize-none max-h-[7.5rem] overflow-y-auto",
@@ -1576,13 +1744,17 @@ function MessageAIPage() {
               </div>
               <button
                 onClick={handleSend}
-                disabled={!inputValue.trim() || isSendingMessage}
-                className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage
+                disabled={!inputValue.trim() || isSendingMessage || isRewritingMessage}
+                className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage && !isRewritingMessage
                     ? "bg-foreground text-background hover:bg-foreground/90"
                     : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
                   }`}
               >
-                <Send size={18} />
+                {isRewritingMessage ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
               </button>
             </div>
           </div>

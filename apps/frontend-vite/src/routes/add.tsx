@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityLogData, SharedActivityCandidate } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useMetrics } from "@/contexts/metrics";
 import { usePlans } from "@/contexts/plans";
 import { createFileRoute } from "@tanstack/react-router";
@@ -34,6 +35,7 @@ function LogPage() {
   } = useActivities();
   const { metrics } = useMetrics();
   const { plans } = usePlans();
+  const { isUserPremium } = usePaidPlan();
 
   const sortedActivities = [...activities].sort((a, b) => {
     const aEntryCount = activityEntries.filter(
@@ -105,21 +107,22 @@ function LogPage() {
 
   const continuePostLogFlow = (entryId: string) => {
 
-    // Show difficulty popover only for coached plans and if activity was within the past 48 hours
+    // Show difficulty popover only for paid coach automation and recent activity.
     const isWithin48Hours =
       currentActivityLogData &&
       differenceInHours(new Date(), currentActivityLogData.datetime) < 48;
 
-    const isInCoachedPlan = plans?.some(
+    const isInActivePlan = plans?.some(
       (p) =>
-        p.isCoached &&
+        !p.deletedAt &&
+        !p.archivedAt &&
         p.activities?.some((a) => a.id === selectedActivity?.id)
     ) ?? false;
 
-    if (isWithin48Hours && isInCoachedPlan) {
+    if (isUserPremium && isWithin48Hours && isInActivePlan) {
       setShowDifficultyPopover(true);
     } else {
-      // Skip to metrics check if not in coached plan or activity is older than 48h
+      // Skip to metrics check if coach automation is not active or activity is older than 48h.
       handleDifficultyDone();
     }
   };

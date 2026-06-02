@@ -29,8 +29,6 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       !plan.archivedAt &&
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
-  const activeCoachedPlans = activePlans?.filter((plan) => plan.isCoached) ?? [];
-
   const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
 
   const cards: React.ReactNode[] = [];
@@ -41,7 +39,7 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       <CoachCard
         key="coach"
         attentionCount={pendingCoachNotifications.length}
-        activeCoachedPlanCount={activeCoachedPlans.length}
+        activePlanCount={activePlans?.length ?? 0}
         reviewPlanId={firstPendingPlanId}
       />
     );

@@ -29,12 +29,12 @@ export interface OriginalPlanValues {
   goal: string | null;
   emoji: string | null;
   backgroundImageUrl: string | null;
-  isCoached: boolean;
   selectedCoachId: string | null;
   coachPersonality: CoachPersonality;
   visibility: Visibility;
   finishingDate: Date | null;
   activities: Activity[];
+  outlineType: PlanOutlineType;
   timesPerWeek: number | null;
   milestones: PlanMilestone[];
 }
@@ -48,7 +48,6 @@ export interface PlanCreationState {
   emoji: string | null;
   backgroundImageUrl: string | null;
   backgroundImageFile: File | null;
-  isCoached: boolean;
   selectedCoachId: string | null; // null = AI coach, string = human coach ID
   coachPersonality: CoachPersonality;
   selectedCoach: HumanCoachInfo | null;
@@ -92,7 +91,6 @@ export interface PlanCreationContextValue {
   emoji: string | null;
   backgroundImageUrl: string | null;
   backgroundImageFile: File | null;
-  isCoached: boolean;
   selectedCoachId: string | null;
   coachPersonality: CoachPersonality;
   selectedCoach: HumanCoachInfo | null;
@@ -117,7 +115,6 @@ export interface PlanCreationContextValue {
   setEmoji: (emoji: string) => void;
   setBackgroundImageUrl: (url: string | null) => void;
   setBackgroundImageFile: (file: File | null) => void;
-  setIsCoached: (isCoached: boolean) => void;
   setSelectedCoachId: (coachId: string | null, coachInfo?: HumanCoachInfo | null) => void;
   setCoachPersonality: (personality: CoachPersonality) => void;
   setVisibility: (visibility: Visibility) => void;

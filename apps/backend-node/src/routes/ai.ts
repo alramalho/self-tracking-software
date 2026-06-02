@@ -22,6 +22,125 @@ const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
 const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
 
+const planCreationProposalChangesSchema = z.object({
+  proposalIndex: z.number(),
+  requestedProposal: z.object({
+    goal: z.string().optional(),
+    goalReason: z.string().nullable().optional(),
+    emoji: z.string().nullable().optional(),
+    outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).nullable().optional(),
+    timesPerWeek: z.number().nullable().optional(),
+    finishingDate: z.string().nullable().optional(),
+    activities: z
+      .array(
+        z.object({
+          title: z.string(),
+          measure: z.string(),
+          emoji: z.string(),
+          kind: z.string().nullable().optional(),
+        })
+      )
+      .optional(),
+    milestones: z
+      .array(
+        z.object({
+          description: z.string(),
+          date: z.string().nullable().optional(),
+          criteria: z.string().nullable().optional(),
+        })
+      )
+      .optional(),
+    sessions: z
+      .array(
+        z.object({
+          activityTitle: z.string(),
+          date: z.string(),
+          quantity: z.number().nullable().optional(),
+          descriptiveGuide: z.string().nullable().optional(),
+        })
+      )
+      .optional(),
+  }),
+  note: z.string().nullable().optional(),
+});
+
+function formatPlanCreationValue(field: string, value: unknown): string {
+  if (field === "outlineType") {
+    return value === "SPECIFIC" ? "Specific sessions" : value === "TIMES_PER_WEEK" ? "Times per week" : "Not set";
+  }
+  if (field === "timesPerWeek") {
+    return typeof value === "number" ? `${value}x/week` : "Not set";
+  }
+  if (field === "finishingDate") {
+    return typeof value === "string" && value ? value : "No end date";
+  }
+  if (field === "goalReason") {
+    return typeof value === "string" && value.trim() ? value : "No reason";
+  }
+  if (field === "activities" && Array.isArray(value)) {
+    return value.length > 0
+      ? value.map((activity: any) => `${activity.emoji || "📋"} ${activity.title} (${activity.measure || "sessions"})`).join(", ")
+      : "None";
+  }
+  if (field === "sessions" && Array.isArray(value)) {
+    return value.length > 0 ? `${value.length} dated session${value.length === 1 ? "" : "s"}` : "None";
+  }
+  if (field === "milestones" && Array.isArray(value)) {
+    return value.length > 0 ? `${value.length} milestone${value.length === 1 ? "" : "s"}` : "None";
+  }
+  if (typeof value === "string" && value.trim()) return value;
+  return "Not set";
+}
+
+function normalizePlanCreationProposal(proposal: any) {
+  const sessions = Array.isArray(proposal.sessions) ? proposal.sessions : [];
+  const outlineType =
+    sessions.length > 0 || !proposal.timesPerWeek
+      ? proposal.outlineType || "SPECIFIC"
+      : "TIMES_PER_WEEK";
+
+  return {
+    goal: proposal.goal || "",
+    goalReason: proposal.goalReason || null,
+    emoji: proposal.emoji || "🎯",
+    outlineType,
+    timesPerWeek: proposal.timesPerWeek ?? null,
+    finishingDate: proposal.finishingDate ?? null,
+    activities: Array.isArray(proposal.activities) ? proposal.activities : [],
+    milestones: Array.isArray(proposal.milestones) ? proposal.milestones : [],
+    sessions,
+  };
+}
+
+function buildPlanCreationDiffs(originalProposal: any, requestedProposal: any) {
+  const fields = [
+    { key: "goal", label: "Goal" },
+    { key: "goalReason", label: "Why" },
+    { key: "emoji", label: "Emoji" },
+    { key: "outlineType", label: "Plan type" },
+    { key: "timesPerWeek", label: "Frequency" },
+    { key: "finishingDate", label: "Finishing date" },
+    { key: "activities", label: "Activities" },
+    { key: "milestones", label: "Milestones" },
+    { key: "sessions", label: "Sessions" },
+  ];
+
+  return fields.flatMap(({ key, label }) => {
+    const oldValue = (originalProposal as any)[key];
+    const newValue = (requestedProposal as any)[key];
+    if (JSON.stringify(oldValue ?? null) === JSON.stringify(newValue ?? null)) {
+      return [];
+    }
+    return [
+      {
+        label,
+        oldValue: formatPlanCreationValue(key, oldValue),
+        newValue: formatPlanCreationValue(key, newValue),
+      },
+    ];
+  });
+}
+
 function hasPendingCoachActions(metadata: unknown): boolean {
   const data = metadata as any;
   const planProposals = Array.isArray(data?.planProposals) ? data.planProposals : [];
@@ -1575,12 +1694,9 @@ router.post(
           }));
 
         const outlineType =
-          proposal.outlineType ||
-          (sessionCreates.length > 0
-            ? "SPECIFIC"
-            : proposal.timesPerWeek
-              ? "TIMES_PER_WEEK"
-              : "SPECIFIC");
+          sessionCreates.length > 0 || !proposal.timesPerWeek
+            ? proposal.outlineType || "SPECIFIC"
+            : "TIMES_PER_WEEK";
 
         const newPlan = await tx.plan.create({
           data: {
@@ -1594,7 +1710,6 @@ router.post(
               outlineType === "TIMES_PER_WEEK"
                 ? proposal.timesPerWeek || null
                 : null,
-            isCoached: proposal.isCoached ?? true,
             activities: activityIds.length > 0
               ? { connect: activityIds.map((id) => ({ id })) }
               : undefined,
@@ -1700,6 +1815,266 @@ router.post(
     } catch (error) {
       logger.error("Error rejecting plan creation proposal:", error);
       res.status(500).json({ error: "Failed to reject plan creation proposal" });
+    }
+  }
+);
+
+router.post(
+  "/messages/:messageId/propose-plan-creation-changes",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const parsed = planCreationProposalChangesSchema.safeParse(req.body);
+
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid plan creation change request" });
+        return;
+      }
+
+      const { proposalIndex, requestedProposal: requestedPatch, note } = parsed.data;
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id || message.chat.type !== "COACH") {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.planCreationProposals ||
+        !metadata.planCreationProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Plan creation proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.planCreationProposals[proposalIndex];
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      const originalProposal = normalizePlanCreationProposal(proposal);
+      const requestedProposal = normalizePlanCreationProposal({
+        ...proposal,
+        ...requestedPatch,
+        activities: requestedPatch.activities ?? proposal.activities,
+        milestones: requestedPatch.milestones ?? proposal.milestones,
+        sessions: requestedPatch.sessions ?? proposal.sessions,
+      });
+      const diffs = buildPlanCreationDiffs(originalProposal, requestedProposal);
+
+      metadata.planCreationProposals[proposalIndex].status = "changes_requested";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      const history = await prisma.message.findMany({
+        where: { chatId: message.chatId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      history.reverse();
+
+      const actionTitle = "User proposed changes on plan";
+      const userActionMessage = await prisma.message.create({
+        data: {
+          chatId: message.chatId,
+          role: "USER",
+          content: actionTitle,
+          senderId: user.id,
+          metadata: {
+            userAction: {
+              type: "PLAN_CREATION_CHANGES_PROPOSED",
+              title: actionTitle,
+              originalProposal,
+              requestedProposal,
+              diffs,
+              note: note?.trim() || null,
+              proposalMessageId: messageId,
+              proposalIndex,
+            },
+          },
+        },
+      });
+
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          archivedAt: null,
+          isPaused: false,
+          OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
+        },
+        include: {
+          activities: true,
+          sessions: true,
+          milestones: true,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
+      const reminders = await prisma.reminder.findMany({
+        where: {
+          userId: user.id,
+          status: "PENDING",
+        },
+        orderBy: { triggerAt: "asc" },
+      });
+
+      const internalPrompt = [
+        "The user proposed changes to a pending plan creation proposal.",
+        "This is a structured UI action, not a normal chat message. Review the requested version and respond briefly.",
+        "If the requested version is good, use proposePlanCreation to send back an updated plan creation proposal matching it.",
+        "If you disagree, explain what you would change and optionally send a better proposal.",
+        "",
+        `Original proposal:\n${JSON.stringify(originalProposal, null, 2)}`,
+        "",
+        `Requested proposal:\n${JSON.stringify(requestedProposal, null, 2)}`,
+        diffs.length > 0
+          ? `\nChanged fields:\n${diffs
+              .map((diff) => `- ${diff.label}: ${diff.oldValue} -> ${diff.newValue}`)
+              .join("\n")}`
+          : "\nChanged fields: none",
+        note?.trim() ? `\nUser note:\n${note.trim()}` : "",
+      ].join("\n");
+
+      const conversationHistory = history.map((msg) => ({
+        role: msg.role === "USER" ? "user" : "assistant",
+        content: msg.content,
+      })) as Array<{ role: "user" | "assistant"; content: string }>;
+
+      const memoriesContext = await supermemoryService.getProfile(
+        user.id,
+        internalPrompt
+      );
+
+      const aiResponse = await coachAgentService.generateResponse({
+        user,
+        message: internalPrompt,
+        conversationHistory,
+        plans,
+        reminders,
+        memoriesContext,
+      });
+
+      type DraftType = (typeof aiResponse.draftMessages)[number];
+      const savedMessages: Array<{
+        coachMsg: Awaited<ReturnType<typeof prisma.message.create>>;
+        draft: DraftType;
+      }> = [];
+
+      for (const draft of aiResponse.draftMessages) {
+        const coachMsg = await prisma.message.create({
+          data: {
+            chatId: message.chatId,
+            role: "COACH",
+            content: draft.content,
+            metadata: {
+              planReplacements: draft.planReplacements || [],
+              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+              planCreationProposals: JSON.parse(
+                JSON.stringify(draft.planCreationProposals || [])
+              ),
+              activityLogProposals: JSON.parse(
+                JSON.stringify(draft.activityLogProposals || [])
+              ),
+              ...(draft.toolCalls && {
+                toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
+              }),
+              ...(draft.error && { error: true }),
+            },
+          },
+        });
+        savedMessages.push({ coachMsg, draft });
+      }
+
+      await prisma.chat.update({
+        where: { id: message.chatId },
+        data: { updatedAt: new Date() },
+      });
+
+      const fullCoachText = aiResponse.draftMessages
+        .map((draft) => draft.content)
+        .join("\n");
+      supermemoryService.addMemory(
+        user.id,
+        `user: ${internalPrompt}\nassistant: ${fullCoachText}`,
+        savedMessages[savedMessages.length - 1]?.coachMsg.id || userActionMessage.id
+      );
+
+      const resolvedMessages = savedMessages.map(({ coachMsg, draft }) => {
+        const resolvedPlanReplacements =
+          draft.planReplacements
+            ?.map((replacement) => {
+              const plan = plans.find(
+                (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+              );
+              return plan
+                ? {
+                    textToReplace: replacement.textToReplace,
+                    plan: {
+                      id: plan.id,
+                      goal: plan.goal,
+                      emoji: plan.emoji,
+                    },
+                  }
+                : null;
+            })
+            .filter(Boolean) || [];
+
+        return {
+          id: coachMsg.id,
+          chatId: coachMsg.chatId,
+          role: coachMsg.role,
+          content: draft.content,
+          planReplacements: resolvedPlanReplacements,
+          planProposals: draft.planProposals || [],
+          planCreationProposals: draft.planCreationProposals || [],
+          activityLogProposals: draft.activityLogProposals || [],
+          toolCalls: draft.toolCalls || null,
+          error: draft.error || false,
+          createdAt: coachMsg.createdAt,
+        };
+      });
+
+      const serializedUserActionMessage = {
+        id: userActionMessage.id,
+        chatId: userActionMessage.chatId,
+        role: userActionMessage.role,
+        content: userActionMessage.content,
+        userAction: (userActionMessage.metadata as any)?.userAction,
+        createdAt: userActionMessage.createdAt,
+        senderId: user.id,
+        senderName: user.name,
+        senderPicture: user.picture,
+      };
+
+      logger.info(
+        `User ${user.username} proposed changes to plan creation proposal: "${proposal.goal}"`
+      );
+
+      res.json({
+        messages: [serializedUserActionMessage, ...resolvedMessages],
+        message: resolvedMessages[resolvedMessages.length - 1] || serializedUserActionMessage,
+      });
+    } catch (error) {
+      logger.error("Error proposing plan creation changes:", error);
+      res.status(500).json({ error: "Failed to propose plan creation changes" });
     }
   }
 );

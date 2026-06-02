@@ -11,6 +11,7 @@ export type CompletePlan = PlanWithRelations & {
 export interface PlansContextType {
   plans: (CompletePlan & { progress: PlanProgressData })[] | undefined;
   isLoadingPlans: boolean;
+  isFetchingPlans: boolean;
   updatePlans: (data: {
     updates: Array<{ planId: string; updates: Prisma.PlanUpdateInput }>;
     muteNotifications?: boolean;

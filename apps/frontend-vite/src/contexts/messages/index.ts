@@ -3,7 +3,15 @@ import { MessagesContext } from "./types";
 
 export { MessagesProvider } from "./provider";
 export { getMessages } from "./service";
-export type { Chat, Message, ChatType, ChatParticipant, MessagesContextType } from "./types";
+export type {
+  Chat,
+  Message,
+  ChatType,
+  ChatParticipant,
+  MessagesContextType,
+  UserAction,
+  UserActionDiff,
+} from "./types";
 
 export const useMessages = () => {
   const context = useContext(MessagesContext);

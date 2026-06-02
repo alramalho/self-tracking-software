@@ -70,13 +70,13 @@ const TimelineRenderer: React.FC<{
   const themeColors = useThemeColors();
   const api = useApiWithAuth();
 
-  // Check if user has any coached plan
+  // Check if user has any plan connected to a human coach.
   const coachedPlan = useMemo(() =>
-    plans?.find((plan: any) => plan.isCoached && !plan.deletedAt),
+    plans?.find((plan: any) => plan.coachId && !plan.deletedAt),
     [plans]
   );
 
-  // Fetch coaches to get coach info for coached plans
+  // Fetch coaches to get coach info for coach-linked plans.
   const { data: humanCoaches } = useQuery({
     queryKey: ["coaches"],
     queryFn: async () => {
@@ -86,7 +86,7 @@ const TimelineRenderer: React.FC<{
     enabled: !!(coachedPlan as any)?.coachId,
   });
 
-  // Find the coach for the coached plan
+  // Find the coach for the linked plan.
   const planCoach = useMemo(() => {
     if (!humanCoaches || !(coachedPlan as any)?.coachId) return null;
     return humanCoaches.find((c) => c.id === (coachedPlan as any).coachId) || null;
@@ -539,7 +539,7 @@ const TimelineRenderer: React.FC<{
   if (!friends?.length) {
     return (
       <div className="flex flex-col items-center gap-8 text-center pt-2">
-        {/* Show Coach Card if user has coached plan, otherwise show Get Coached Banner */}
+        {/* Show Get Coached banner if no plan is connected to a human coach. */}
         {!coachedPlan && (
           <button
             onClick={() => navigate({ to: "/get-coached", search: { coach: "" } })}

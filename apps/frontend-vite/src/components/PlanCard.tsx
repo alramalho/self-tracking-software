@@ -2,12 +2,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { BadgeCheck, GripHorizontal, Pencil, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { GripHorizontal, Pencil, Trash2 } from "lucide-react";
+import React, { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
@@ -36,17 +35,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
   dragHandleProps,
 }) => {
   const { plans, deletePlan } = usePlans();
-  const { isUserPremium } = usePaidPlan();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
-  const isCoached = isUserPremium && (plan as any).isCoached;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  useEffect(() => {
-    console.log({ isCoached });
-  }, [isCoached]);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -146,12 +139,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
         </div>
 
         <div className="absolute top-2 right-2 flex gap-1 items-center justify-end">
-          {isCoached && (
-            <div className="flex items-center justify-center gap-1 mr-2">
-              <span className="text-sm text-muted-foreground">Coached</span>
-              <BadgeCheck className={cn("h-5 w-5", variants.text)} />
-            </div>
-          )}
           {!hideInviteButton && (
             <InviteButton
               planId={plan.id!}

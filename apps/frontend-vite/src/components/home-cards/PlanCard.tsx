@@ -1,8 +1,5 @@
 import { type CompletePlan } from "@/contexts/plans";
 import { SteppedBarProgress } from "@/components/SteppedBarProgress";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { cn } from "@/lib/utils";
-import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
 import { format, isSameWeek } from "date-fns";
 import type { PlanProgressData } from "@tsw/prisma/types";
@@ -18,8 +15,6 @@ interface PlanCardProps {
 
 export const PlanCard = ({ plan }: PlanCardProps) => {
   const navigate = useNavigate();
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
 
   const { weeks, achievement } = plan.progress;
 
@@ -51,11 +46,7 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
   return (
     <HomeCardShell
       onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })}
-      className={cn(
-        "ring-0",
-        plan.isCoached && "ring-2",
-        plan.isCoached && variants.ringBright
-      )}
+      className="ring-0"
     >
       <div>
         <span className="text-2xl">{emoji}</span>

@@ -15,7 +15,6 @@ export interface ResolvedOperation {
   goal?: string;
   goalReason?: string | null;
   timesPerWeek?: number;
-  isCoached?: boolean;
   milestoneDescription?: string;
   milestoneDate?: string;
   milestoneProgress?: number | null;
@@ -128,7 +127,6 @@ export function PlanProposalCard({
                       <span>
                         {op.goal ? `Update goal to "${op.goal}"` : "Update plan setup"}
                         {op.timesPerWeek ? ` · ${op.timesPerWeek}x/week` : ""}
-                        {op.isCoached ? " · coached" : ""}
                       </span>
                     </>
                   ) : op.type === "add_milestone" ||

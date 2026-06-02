@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   DraftActivitiesEditor,
-  PlanCoachingModeEditor,
   PlanDurationEditor,
   PlanEmojiEditor,
   PlanFrequencyEditor,
@@ -23,6 +22,7 @@ import {
   Info,
   Loader2,
   Plus,
+  RefreshCw,
   Smile,
   X,
 } from "lucide-react";
@@ -50,13 +50,27 @@ type PlanCreationSession = {
   descriptiveGuide?: string | null;
 };
 
+type PlanCreationRequestedProposal = {
+  goal: string;
+  goalReason: string | null;
+  emoji: string;
+  outlineType: "SPECIFIC" | "TIMES_PER_WEEK";
+  timesPerWeek: number | null;
+  finishingDate: string | null;
+  activities: Array<{
+    title: string;
+    measure: string;
+    emoji: string;
+    kind: string | null;
+  }>;
+};
+
 interface PlanCreationProposalCardProps {
   messageId: string;
   proposalIndex: number;
   goal: string;
   goalReason?: string | null;
   emoji?: string | null;
-  isCoached?: boolean | null;
   outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
   timesPerWeek?: number | null;
   activities?: PlanCreationActivity[];
@@ -64,10 +78,15 @@ interface PlanCreationProposalCardProps {
   milestones?: PlanCreationMilestone[];
   sessions?: PlanCreationSession[];
   description?: string;
-  status?: "accepted" | "rejected" | null;
+  status?: "accepted" | "rejected" | "changes_requested" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
-  onProposeChanges: (messageId: string, proposalIndex: number, changeRequest: string) => Promise<void>;
+  onProposeChanges: (
+    messageId: string,
+    proposalIndex: number,
+    requestedProposal: PlanCreationRequestedProposal,
+    note?: string | null
+  ) => Promise<void>;
 }
 
 interface ReviewRowProps {
@@ -124,11 +143,35 @@ const ReviewRow = ({ icon, label, value, detail, onClick }: ReviewRowProps) => {
 const fieldClassName =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-foreground/40";
 
+const normalizeDraft = (data: {
+  goal: string;
+  goalReason: string;
+  emoji: string;
+  outlineType: "SPECIFIC" | "TIMES_PER_WEEK";
+  timesPerWeek: number | null;
+  finishingDate: Date | null;
+  activities: PlanCreationActivity[];
+}) => ({
+  goal: data.goal.trim(),
+  goalReason: data.goalReason.trim() || null,
+  emoji: data.emoji.trim() || "🎯",
+  outlineType: data.outlineType,
+  timesPerWeek: data.timesPerWeek || null,
+  finishingDate: data.finishingDate ? format(data.finishingDate, "yyyy-MM-dd") : null,
+  activities: data.activities
+    .map((activity) => ({
+      title: activity.title.trim(),
+      measure: activity.measure.trim() || "sessions",
+      emoji: activity.emoji.trim() || "📋",
+      kind: activity.kind || null,
+    }))
+    .filter((activity) => activity.title.length > 0),
+});
+
 type ProposalEditor =
   | "goal"
   | "emoji"
   | "planType"
-  | "coaching"
   | "frequency"
   | "finishingDate"
   | "activities"
@@ -140,7 +183,6 @@ export function PlanCreationProposalCard({
   goal,
   goalReason,
   emoji,
-  isCoached,
   outlineType,
   timesPerWeek,
   activities = [],
@@ -157,24 +199,22 @@ export function PlanCreationProposalCard({
   const { activities: allActivities } = useActivities();
   const [isAccepted, setIsAccepted] = useState(status === "accepted");
   const [isRejected, setIsRejected] = useState(status === "rejected");
+  const [isChangesRequested, setIsChangesRequested] = useState(
+    status === "changes_requested"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isProposingChanges, setIsProposingChanges] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeEditor, setActiveEditor] = useState<ProposalEditor | null>(null);
   const hasScheduledSessions = sessions.length > 0;
-  const effectiveIsCoached = isCoached ?? true;
   const effectiveOutlineType =
-    outlineType ||
-    (hasScheduledSessions
-      ? "SPECIFIC"
-      : timesPerWeek
-        ? "TIMES_PER_WEEK"
-        : "SPECIFIC");
+    hasScheduledSessions || !timesPerWeek
+      ? outlineType || "SPECIFIC"
+      : "TIMES_PER_WEEK";
   const visibleMilestones = milestones.filter((milestone) => milestone.description?.trim());
   const [draftGoal, setDraftGoal] = useState(goal || "");
   const [draftGoalReason, setDraftGoalReason] = useState(goalReason || "");
   const [draftEmoji, setDraftEmoji] = useState(emoji || "🎯");
-  const [draftIsCoached, setDraftIsCoached] = useState(effectiveIsCoached);
   const [draftOutlineType, setDraftOutlineType] = useState<"SPECIFIC" | "TIMES_PER_WEEK">(
     effectiveOutlineType
   );
@@ -189,38 +229,10 @@ export function PlanCreationProposalCard({
   );
   const [draftNote, setDraftNote] = useState("");
 
-  const normalizeDraft = (data: {
-    goal: string;
-    goalReason: string;
-    emoji: string;
-    isCoached: boolean;
-    outlineType: "SPECIFIC" | "TIMES_PER_WEEK";
-    timesPerWeek: number | null;
-    finishingDate: Date | null;
-    activities: PlanCreationActivity[];
-  }) => ({
-    goal: data.goal.trim(),
-    goalReason: data.goalReason.trim() || null,
-    emoji: data.emoji.trim() || "🎯",
-    isCoached: data.isCoached,
-    outlineType: data.outlineType,
-    timesPerWeek: data.timesPerWeek || null,
-    finishingDate: data.finishingDate ? format(data.finishingDate, "yyyy-MM-dd") : null,
-    activities: data.activities
-      .map((activity) => ({
-        title: activity.title.trim(),
-        measure: activity.measure.trim() || "sessions",
-        emoji: activity.emoji.trim() || "📋",
-        kind: activity.kind || null,
-      }))
-      .filter((activity) => activity.title.length > 0),
-  });
-
   const originalDraft = normalizeDraft({
     goal,
     goalReason: goalReason || "",
     emoji: emoji || "🎯",
-    isCoached: effectiveIsCoached,
     outlineType: effectiveOutlineType,
     timesPerWeek: timesPerWeek || null,
     finishingDate: finishingDate ? parseISO(finishingDate) : null,
@@ -231,7 +243,6 @@ export function PlanCreationProposalCard({
     goal: draftGoal,
     goalReason: draftGoalReason,
     emoji: draftEmoji,
-    isCoached: draftIsCoached,
     outlineType: draftOutlineType,
     timesPerWeek: draftTimesPerWeek,
     finishingDate: draftFinishingDate,
@@ -274,35 +285,13 @@ export function PlanCreationProposalCard({
   const handleProposeChanges = async () => {
     setIsProposingChanges(true);
     try {
-      const activitiesText =
-        currentDraft.activities.length > 0
-          ? currentDraft.activities
-              .map((activity) => `${activity.emoji} ${activity.title} (${activity.measure})`)
-              .join(", ")
-          : "None";
-
-      const changeRequest = [
-        "Please review these changes to the plan proposal before creating it.",
-        "",
-        `Original proposal: ${emoji || "🎯"} ${goal}`,
-        "",
-        "Requested version:",
-        `- Goal: ${currentDraft.goal || "Not set"}`,
-        `- Why: ${currentDraft.goalReason || "not set"}`,
-        `- Emoji: ${currentDraft.emoji}`,
-        `- Coaching: ${currentDraft.isCoached ? "AI coached" : "self-guided"}`,
-        `- Plan type: ${currentDraft.outlineType === "SPECIFIC" ? "specific sessions" : "times per week"}`,
-        `- Frequency: ${currentDraft.timesPerWeek ? `${currentDraft.timesPerWeek}x/week` : "not set"}`,
-        `- Finishing date: ${currentDraft.finishingDate || "no end date"}`,
-        `- Activities: ${activitiesText}`,
-        draftNote.trim() ? `- Extra note: ${draftNote.trim()}` : null,
-        "",
-        "If you agree, send back an updated plan creation proposal. If you do not, tell me what you would change.",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      await onProposeChanges(messageId, proposalIndex, changeRequest);
+      await onProposeChanges(
+        messageId,
+        proposalIndex,
+        currentDraft,
+        draftNote.trim() || null
+      );
+      setIsChangesRequested(true);
       setIsDrawerOpen(false);
     } finally {
       setIsProposingChanges(false);
@@ -313,7 +302,6 @@ export function PlanCreationProposalCard({
     goal: "Edit Goal",
     emoji: "Edit Emoji",
     planType: "Edit Plan Type",
-    coaching: "Edit Coaching",
     frequency: "Edit Frequency",
     finishingDate: "Edit Date",
     activities: "Edit Activities",
@@ -321,14 +309,13 @@ export function PlanCreationProposalCard({
   };
 
   const closeEditor = () => setActiveEditor(null);
-  const isResolved = isAccepted || isRejected;
+  const isResolved = isAccepted || isRejected || isChangesRequested;
   const openEditor = (editor: ProposalEditor) =>
     isResolved ? undefined : () => setActiveEditor(editor);
   const isTallEditor =
     activeEditor === "activities" ||
     activeEditor === "note" ||
-    activeEditor === "goal" ||
-    activeEditor === "coaching";
+    activeEditor === "goal";
 
   const editorDrawer = (
     <AppleLikePopover
@@ -388,13 +375,6 @@ export function PlanCreationProposalCard({
             <PlanOutlineTypeEditor
               value={draftOutlineType}
               onChange={setDraftOutlineType}
-            />
-          )}
-
-          {activeEditor === "coaching" && (
-            <PlanCoachingModeEditor
-              value={draftIsCoached}
-              onChange={setDraftIsCoached}
             />
           )}
 
@@ -493,17 +473,6 @@ export function PlanCreationProposalCard({
                 : "This is frequency-based, but the weekly cadence still needs to be set."
             }
             onClick={openEditor("planType")}
-          />
-          <ReviewRow
-            icon={<Info className="h-5 w-5 text-muted-foreground" />}
-            label="Coaching"
-            value={draftIsCoached ? "AI coached" : "Self-guided"}
-            detail={
-              draftIsCoached
-                ? "The plan will appear in coach context after accepting."
-                : "The plan will be created without active AI coaching."
-            }
-            onClick={openEditor("coaching")}
           />
           <ReviewRow
             icon={<CalendarCheck className="h-5 w-5 text-muted-foreground" />}
@@ -610,10 +579,20 @@ export function PlanCreationProposalCard({
         </div>
 
         <div className="shrink-0 border-t border-border bg-background px-1 pt-4">
-          {isAccepted || isRejected ? (
+          {isResolved ? (
             <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/40 py-3 text-sm text-muted-foreground">
-              {isAccepted ? <Check size={16} className="text-green-500" /> : <X size={16} className="text-red-500" />}
-              {isAccepted ? "Plan proposal accepted" : "Plan proposal rejected"}
+              {isAccepted ? (
+                <Check size={16} className="text-green-500" />
+              ) : isChangesRequested ? (
+                <RefreshCw size={16} className="text-primary" />
+              ) : (
+                <X size={16} className="text-red-500" />
+              )}
+              {isAccepted
+                ? "Plan proposal accepted"
+                : isChangesRequested
+                  ? "Changes proposed"
+                  : "Plan proposal rejected"}
             </div>
           ) : (
             <div className="flex gap-2">
@@ -690,6 +669,23 @@ export function PlanCreationProposalCard({
     );
   }
 
+  if (isChangesRequested) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setIsDrawerOpen(true)}
+          className="mt-2 flex w-full items-center gap-2 rounded-lg bg-muted/30 px-3 py-2 text-left opacity-70"
+        >
+          <span className="flex-1 text-sm text-foreground/70">{compactLabel}</span>
+          <RefreshCw size={14} className="flex-shrink-0 text-primary" />
+        </button>
+        {reviewDrawer}
+        {editorDrawer}
+      </>
+    );
+  }
+
   return (
     <>
       <div className={`mt-2 w-full rounded-lg px-3 py-2.5 ${themeColors.fadedBg}`}>
@@ -710,7 +706,6 @@ export function PlanCreationProposalCard({
               </div>
             )}
             <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-              <span>{effectiveIsCoached ? "AI coached" : "Self-guided"}</span>
               <span>
                 {effectiveOutlineType === "SPECIFIC" ? "specific" : "times/week"}
               </span>

@@ -1,7 +1,12 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 import { type MessageFeedback } from "./types";
-import { type Chat, deserializeChat } from "@/contexts/messages/service";
+import {
+  type Chat,
+  type Message,
+  deserializeChat,
+  deserializeMessage,
+} from "@/contexts/messages/service";
 
 type MessageFeedbackApiResponse = Omit<
   MessageFeedback,
@@ -129,6 +134,26 @@ export async function rejectPlanCreationProposal(
   await api.post(`/ai/messages/${data.messageId}/reject-plan-creation-proposal`, {
     proposalIndex: data.proposalIndex,
   });
+}
+
+export async function proposePlanCreationChanges(
+  api: AxiosInstance,
+  data: {
+    messageId: string;
+    proposalIndex: number;
+    requestedProposal: unknown;
+    note?: string | null;
+  }
+): Promise<Message[]> {
+  const response = await api.post<{ messages: any[] }>(
+    `/ai/messages/${data.messageId}/propose-plan-creation-changes`,
+    {
+      proposalIndex: data.proposalIndex,
+      requestedProposal: data.requestedProposal,
+      note: data.note || null,
+    }
+  );
+  return response.data.messages.map(deserializeMessage);
 }
 
 // Accept an activity log proposal from AI

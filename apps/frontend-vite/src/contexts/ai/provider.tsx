@@ -15,11 +15,12 @@ import {
   rejectProposal,
   acceptPlanCreationProposal,
   rejectPlanCreationProposal,
+  proposePlanCreationChanges,
   acceptActivityLogProposal,
   rejectActivityLogProposal,
   submitAISatisfaction,
 } from "./service";
-import { AIContext, type AIContextType, type MessageFeedback } from "./types";
+import { AIContext, type AIContextType } from "./types";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, type Chat, type Message } from "@/contexts/messages";
 
@@ -240,6 +241,47 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const proposePlanCreationChangesMutation = useMutation({
+    mutationFn: async (data: {
+      messageId: string;
+      proposalIndex: number;
+      requestedProposal: unknown;
+      note?: string | null;
+    }) => {
+      return await proposePlanCreationChanges(api, data);
+    },
+    onSuccess: (newMessages, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) => {
+          const updatedMessages = oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.planCreationProposals) return msg;
+            const updatedProposals = [...msg.planCreationProposals];
+            updatedProposals[proposalIndex] = {
+              ...updatedProposals[proposalIndex],
+              status: "changes_requested",
+            };
+            return { ...msg, planCreationProposals: updatedProposals };
+          });
+
+          const existingIds = new Set(updatedMessages.map((msg) => msg.id));
+          return [
+            ...updatedMessages,
+            ...newMessages.filter((msg) => !existingIds.has(msg.id)),
+          ];
+        }
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to propose plan changes");
+      toast.error("Failed to propose plan changes");
+    },
+  });
+
   const acceptActivityLogProposalMutation = useMutation({
     mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
       return await acceptActivityLogProposal(api, data);
@@ -320,6 +362,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     rejectProposal: rejectProposalMutation.mutateAsync,
     acceptPlanCreationProposal: acceptPlanCreationProposalMutation.mutateAsync,
     rejectPlanCreationProposal: rejectPlanCreationProposalMutation.mutateAsync,
+    proposePlanCreationChanges: proposePlanCreationChangesMutation.mutateAsync,
     acceptActivityLogProposal: acceptActivityLogProposalMutation.mutateAsync,
     rejectActivityLogProposal: rejectActivityLogProposalMutation.mutateAsync,
     submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
