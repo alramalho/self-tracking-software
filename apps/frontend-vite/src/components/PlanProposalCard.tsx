@@ -1,8 +1,8 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { Button } from "@/components/ui/button";
-import { Archive, Check, X, Loader2 } from "lucide-react";
+import { Archive, Check, X, Loader2, Flag, CalendarDays } from "lucide-react";
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 export interface ResolvedOperation {
   date?: string;
@@ -16,6 +16,10 @@ export interface ResolvedOperation {
   goalReason?: string | null;
   timesPerWeek?: number;
   isCoached?: boolean;
+  milestoneDescription?: string;
+  milestoneDate?: string;
+  milestoneProgress?: number | null;
+  milestoneCriteria?: unknown;
 }
 
 interface PlanProposalCardProps {
@@ -127,17 +131,49 @@ export function PlanProposalCard({
                         {op.isCoached ? " · coached" : ""}
                       </span>
                     </>
+                  ) : op.type === "add_milestone" ||
+                    op.type === "update_milestone" ||
+                    op.type === "delete_milestone" ? (
+                    <>
+                      <Flag size={13} className="text-muted-foreground" />
+                      <span>
+                        {op.type === "add_milestone"
+                          ? "Add milestone"
+                          : op.type === "delete_milestone"
+                            ? "Remove milestone"
+                            : "Update milestone"}
+                        {op.milestoneDescription
+                          ? `: ${op.milestoneDescription}`
+                          : ""}
+                        {op.milestoneProgress !== undefined && op.milestoneProgress !== null
+                          ? ` · ${op.milestoneProgress}%`
+                          : ""}
+                      </span>
+                      {op.milestoneDate && (
+                        <span className="text-muted-foreground">
+                          {format(new Date(op.milestoneDate), "MMM d")}
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <>
-                      <span>{op.activityEmoji}</span>
+                      {op.type === "delete_session" ? (
+                        <CalendarDays size={13} className="text-muted-foreground" />
+                      ) : (
+                        <span>{op.activityEmoji}</span>
+                      )}
                       {op.date && (
                         <span className="text-muted-foreground">
-                          {format(parseISO(op.date), "EEE, MMM d")}
+                          {format(new Date(op.date), "EEE, MMM d")}
                         </span>
                       )}
                       <span className="text-muted-foreground">—</span>
                       <span>
-                        {op.type === "add" ? "+" : op.type === "remove" ? "-" : ""}
+                        {op.type === "add" || op.type === "add_session"
+                          ? "+"
+                          : op.type === "remove" || op.type === "delete_session"
+                            ? "-"
+                            : ""}
                         {op.quantity} {op.activityMeasure}
                       </span>
                     </>

@@ -466,6 +466,7 @@ router.post(
           include: {
             activities: true,
             ...(useV2Coach && { sessions: true }),
+            ...(useV2Coach && { milestones: true }),
           },
           orderBy: [{ createdAt: "desc" }],
         });
@@ -479,8 +480,26 @@ router.post(
           messageContent: string;
           planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
           metricReplacement?: { textToReplace: string; metricTitle: string; rating: number } | null;
-          planProposals?: Array<{ planId: string; planGoal: string; planEmoji: string | null; description: string; operations: unknown[]; status: null }>;
-          planCreationProposals?: Array<{ goal: string; goalReason: string | null; emoji: string | null; timesPerWeek: number | null; activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>; description: string; status: null }>;
+          planProposals?: Array<{ planId: string; planGoal: string; planEmoji: string | null; description: string; patch: unknown; operations?: unknown[]; status: null }>;
+          planCreationProposals?: Array<{
+            goal: string;
+            goalReason: string | null;
+            emoji: string | null;
+            isCoached?: boolean | null;
+            outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
+            timesPerWeek: number | null;
+            activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+            finishingDate?: string | null;
+            milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
+            sessions?: Array<{
+              activityTitle: string;
+              date: string;
+              quantity?: number | null;
+              descriptiveGuide?: string | null;
+            }>;
+            description: string;
+            status: null;
+          }>;
           userRecommendations?: unknown;
           toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
         };
@@ -504,7 +523,10 @@ router.post(
             user,
             message,
             conversationHistory,
-            plans: plans as Array<typeof plans[0] & { sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }> }>,
+            plans: plans as Array<typeof plans[0] & {
+              sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
+              milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
+            }>,
             reminders,
             memoriesContext,
           });

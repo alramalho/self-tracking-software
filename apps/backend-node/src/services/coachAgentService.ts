@@ -4,11 +4,11 @@ import {
 } from "@openrouter/ai-sdk-provider";
 import { ToolLoopAgent, hasToolCall, tool } from "ai";
 import { z } from "zod/v4";
-import { Plan, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
+import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "./activitySummarizer";
-import { toMidnightUTCDate } from "../utils/date";
+import { getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
 import Perplexity from "@perplexity-ai/perplexity_ai";
@@ -18,7 +18,7 @@ import { getCoachPersonalityConfig } from "./coachPersonalityService";
 
 interface CoachAgentContext {
   user: User;
-  plans: (Plan & { activities: Activity[]; sessions: PlanSession[] })[];
+  plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
   reminders: Reminder[];
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   memoriesContext?: string | null;
@@ -112,6 +112,16 @@ export class CoachAgentService {
           .map(([date, sessions]) => `    ${date}: ${sessions.join(", ")}`)
           .join("\n");
 
+        const milestonesStr = (plan.milestones || [])
+          .map((milestone) => {
+            const progress =
+              milestone.progress === null || milestone.progress === undefined
+                ? "not set"
+                : `${milestone.progress}%`;
+            return `    ${format(new Date(milestone.date), "yyyy-MM-dd")}: ${milestone.description} (${progress}) [milestoneId: ${milestone.id}]`;
+          })
+          .join("\n");
+
         const isTimesPerWeek = plan.outlineType === "TIMES_PER_WEEK";
         return dedent`
           Plan: ${plan.goal} [planId: ${plan.id}]
@@ -121,6 +131,8 @@ export class CoachAgentService {
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
+          Milestones:
+          ${milestonesStr || "    No milestones set"}
         `;
       })
       .join("\n\n");
@@ -152,7 +164,7 @@ export class CoachAgentService {
       temperature: 0.8,
       stopWhen: hasToolCall("draftMessages"),
       instructions: dedent`
-        You are ${coachPersonality.displayName}, ${coachPersonality.title}, a knowledgeable fitness and habits coach that helps users achieve their fitness and habit goals through evidence-based coaching and plan adjustments.
+        You are ${coachPersonality.displayName}, ${coachPersonality.title}, a general-purpose coach. You can help with planning, learning, work, health, habits, relationships, decisions, creative projects, and any other topic the user brings up.
 
         ${coachPersonality.systemPrompt}
 
@@ -161,7 +173,7 @@ export class CoachAgentService {
         Today: ${format(today, "yyyy-MM-dd (EEEE)")}
         Current week ends: ${format(thisWeekEnd, "yyyy-MM-dd")} (Saturday)
 
-        ${plansContext ? `USER'S PLANS:\n${plansContext}` : "No active plans."}
+        ${plansContext ? `TRACKING.SO PLAN CONTEXT (optional, use only when relevant):\n${plansContext}` : "No active plans."}
 
         ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : ""}
 
@@ -176,7 +188,9 @@ export class CoachAgentService {
         - Suggesting the user adjust their goal is better than setting them up to fail
         - If no plan is coached yet, treat that as setup, not an error. Ask whether the user wants to tighten an existing plan or create a new coached plan.
         - When a plan goal is vague or purely frequency-based, mention that plan by its exact goal text from USER'S PLANS so it can be linked in the UI.
-        - If the user gives a concrete measurable goal, use proposePlanCreation for a new goal or proposePlanModification with update_plan for an existing plan.
+        - If the user gives a concrete measurable goal, use proposePlanCreation for a new goal or proposePlanModification with patch.plan for an existing plan.
+        - For plan creation, explicitly decide whether it is self-guided or AI coached, and whether it is frequency-based (TIMES_PER_WEEK) or session-based (SPECIFIC). If you choose SPECIFIC, include dated sessions or clearly tell the user sessions still need setup.
+        - For plan creation goalReason, capture only the user's inner motivation or desired personal outcome, such as confidence, independence, career mobility, health, identity, or a specific life reason. Do not use logistics, availability, employment status, schedule, or constraints as goalReason. If the user has not shared a real why, leave goalReason null.
         - Any capability not provided by the available tools is not available to you.
         - When saying the user logged, did, trained, or practiced something recently/lately, rely only on RECENT ACTIVITY FACTS or readActivities output. Active plans and long-term memory are not recent activity evidence.
         - If an activity only appears in a plan, describe it as a goal/planned activity, not something the user has logged.
@@ -193,6 +207,7 @@ export class CoachAgentService {
         - Avoid stiff phrases like "concrete, measurable outcome", "frequency alone is not a strategy", or "serious coached plan" unless the user used them first.
         - Do not say you updated, switched, set, or changed a plan unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this..."
         - Do not use update_plan as a cosmetic rename. It should represent a meaningful plan setup change, such as goal, reason, coaching status, outline type, or weekly frequency.
+        - When you propose creating or updating a plan, be transparent about the setup: say whether it will be self-guided or AI coached, whether it is times/week or specific dated sessions, which activities are included, and whether milestones, finishing date, and sessions are included now or need setup after accepting.
         - For bigger rebuilds, especially new activity mixes like strength plus running, work in two stages: first confirm the target and weekly split, then propose the plan or sessions that actually encode it.
         - If the existing plan cannot represent the new activity mix or schedule, prefer proposing a new coached plan after confirmation instead of only renaming the old plan.
         - You MUST use the draftMessages tool to send your response. Never respond with plain text.
@@ -214,7 +229,7 @@ export class CoachAgentService {
 
         webSearch: tool({
           description:
-            "Search the web for information about training, fitness, habits, health, or any topic relevant to helping the user achieve their goals. Use this to find evidence-based recommendations.",
+            "Search the web for current or specialized information on any topic relevant to the user's question. Use this when fresh outside knowledge materially improves coaching, planning, scheduling, learning, technical, health, fitness, or other advice.",
           inputSchema: z.object({
             query: z
               .string()
@@ -274,17 +289,21 @@ export class CoachAgentService {
 
         proposePlanModification: tool({
           description: dedent`
-            Propose modifications to a user's plan sessions. The user will be able to accept or reject the proposal with one click.
+            Propose a typed patch to a user's plan. The user will be able to accept or reject the proposal with one click.
             You can propose to:
-            - Add new sessions (provide activityId, date, quantity, descriptiveGuide)
-            - Update existing sessions (provide sessionId and fields to update)
-            - Remove sessions (provide sessionId)
-            - Archive a dormant plan (no extra fields)
-            - Tighten plan setup (provide update_plan with a clearer goal, optional reason, optional frequency, and optional coaching flag)
+            - Tighten plan setup with patch.plan
+            - Add or update sessions with patch.sessions.upsert
+            - Remove sessions with patch.sessions.deleteIds
+            - Add or update milestones with patch.milestones.upsert
+            - Remove milestones with patch.milestones.deleteIds
+            - Archive a dormant plan with patch.archive
 
-            Use the planId, activityId, and sessionId values from the plan context above.
+            Use the planId, activityId, sessionId, and milestoneId values from the plan context above.
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
+            IMPORTANT: Omitted fields mean "leave unchanged". Do not provide full relation arrays. Use upsert/deleteIds only.
+            IMPORTANT: Archive must be standalone. Do not combine archive with other patch fields.
             IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
+            IMPORTANT: Milestone progress is a 0-100 number. Propose milestone changes only when they make the user's plan clearer or easier to follow.
           `,
           inputSchema: z.object({
             planId: z.string().describe("The ID of the plan to modify"),
@@ -293,78 +312,64 @@ export class CoachAgentService {
               .describe(
                 "Short human-readable description of the proposal (e.g. 'Pause chess for next week')"
               ),
-            operations: z.array(
-              z.union([
-                z.object({
-                  type: z.literal("add"),
-                  activityId: z
-                    .string()
-                    .describe("The ID of the activity for this session"),
-                  date: z
-                    .string()
-                    .describe("The date for the session (YYYY-MM-DD format)"),
-                  quantity: z
-                    .number()
-                    .describe("The quantity/amount for this session"),
-                  descriptiveGuide: z
-                    .string()
-                    .optional()
-                    .describe("Optional description or guide for the session"),
-                }),
-                z.object({
-                  type: z.literal("update"),
-                  sessionId: z.string().describe("The ID of the session to update"),
-                  date: z
-                    .string()
-                    .optional()
-                    .describe("New date (YYYY-MM-DD format)"),
-                  quantity: z.number().optional().describe("New quantity"),
-                  descriptiveGuide: z
-                    .string()
-                    .optional()
-                    .describe("New description"),
-                }),
-                z.object({
-                  type: z.literal("remove"),
-                  sessionId: z.string().describe("The ID of the session to remove"),
-                }),
-                z.object({
-                  type: z.literal("archive"),
-                }),
-                z.object({
-                  type: z.literal("update_plan"),
-                  goal: z.string().optional().describe("Clearer measurable plan goal"),
-                  goalReason: z.string().optional().nullable().describe("Why this plan matters to the user"),
-                  outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
-                  timesPerWeek: z.number().positive().optional(),
-                  isCoached: z.boolean().optional().describe("Set true when the user wants this plan coached"),
-                }),
-              ])
-            ).min(1),
+            patch: z.object({
+              archive: z.literal(true).optional(),
+              plan: z.object({
+                goal: z.string().optional().describe("Clearer measurable plan goal"),
+                goalReason: z.string().optional().nullable().describe("Why this plan matters to the user"),
+                outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
+                timesPerWeek: z.number().positive().nullable().optional(),
+                isCoached: z.boolean().optional().describe("Set true when the user wants this plan coached"),
+              }).optional(),
+              sessions: z.object({
+                upsert: z.array(z.object({
+                  id: z.string().optional().describe("Existing sessionId. Omit to create a new session."),
+                  activityId: z.string().optional().describe("Required for new sessions. Optional for updates."),
+                  date: z.string().optional().describe("YYYY-MM-DD date"),
+                  quantity: z.number().positive().optional(),
+                  descriptiveGuide: z.string().optional(),
+                })).optional(),
+                deleteIds: z.array(z.string()).optional().describe("Existing sessionIds to delete"),
+              }).optional(),
+              milestones: z.object({
+                upsert: z.array(z.object({
+                  id: z.string().optional().describe("Existing milestoneId. Omit to create a new milestone."),
+                  description: z.string().optional(),
+                  date: z.string().optional().describe("YYYY-MM-DD date"),
+                  progress: z.number().min(0).max(100).nullable().optional(),
+                  criteria: z.string().nullable().optional(),
+                })).optional(),
+                deleteIds: z.array(z.string()).optional().describe("Existing milestoneIds to delete"),
+              }).optional(),
+            }),
           }),
-          execute: async ({ planId, description, operations }) => {
-            if (operations.length === 0) {
+          execute: async ({ planId, description, patch }) => {
+            const hasChanges = !!(
+              patch.archive ||
+              patch.plan ||
+              patch.sessions?.upsert?.length ||
+              patch.sessions?.deleteIds?.length ||
+              patch.milestones?.upsert?.length ||
+              patch.milestones?.deleteIds?.length
+            );
+            if (!hasChanges) {
               return {
                 success: false,
-                error: "This tool cannot be called with empty operations",
+                error: "This tool cannot be called with an empty patch",
               };
             }
 
             if (
-              operations.some((op) => op.type === "archive") &&
-              operations.length > 1
+              patch.archive &&
+              (patch.plan ||
+                patch.sessions?.upsert?.length ||
+                patch.sessions?.deleteIds?.length ||
+                patch.milestones?.upsert?.length ||
+                patch.milestones?.deleteIds?.length)
             ) {
               return {
                 success: false,
-                error: "Archive must be proposed as a standalone operation",
-              };
-            }
-
-            const setupOps = operations.filter((op) => op.type === "update_plan");
-            if (setupOps.length > 1 || (setupOps.length === 1 && operations.length > 1)) {
-              return {
-                success: false,
-                error: "Plan setup updates must be proposed as a standalone operation",
+                error: "Archive must be proposed as a standalone patch",
               };
             }
 
@@ -377,10 +382,14 @@ export class CoachAgentService {
             }
 
             const planActivityIds = new Set(plan.activities.map((a) => a.id));
-            const invalidOps = operations.filter(
-              (op) => op.type === "add" && !planActivityIds.has(op.activityId)
-            );
-            if (invalidOps.length > 0) {
+            const sessionUpserts = patch.sessions?.upsert || [];
+            const invalidActivityIds = sessionUpserts
+              .map((session) => session.activityId)
+              .filter(
+                (activityId): activityId is string =>
+                  !!activityId && !planActivityIds.has(activityId)
+              );
+            if (invalidActivityIds.length > 0) {
               const validActivities = plan.activities
                 .map((a) => `${a.emoji} ${a.title} [${a.id}]`)
                 .join(", ");
@@ -390,9 +399,56 @@ export class CoachAgentService {
               };
             }
 
-            const addOps = operations.filter((op) => op.type === "add");
-            if (addOps.length > 0) {
-              const dates = addOps.map((op) => parseISO(op.date));
+            const sessionIds = new Set(plan.sessions.map((session) => session.id));
+            const invalidSessionIds = [
+              ...(patch.sessions?.deleteIds || []),
+              ...sessionUpserts
+                .map((session) => session.id)
+                .filter((id): id is string => !!id),
+            ].filter((sessionId) => !sessionIds.has(sessionId));
+            if (invalidSessionIds.length > 0) {
+              return {
+                success: false,
+                error: `Some session IDs do not belong to this plan: ${invalidSessionIds.join(", ")}`,
+              };
+            }
+
+            const milestoneIds = new Set(plan.milestones.map((milestone) => milestone.id));
+            const milestoneUpserts = patch.milestones?.upsert || [];
+            const invalidMilestoneIds = [
+              ...(patch.milestones?.deleteIds || []),
+              ...milestoneUpserts
+                .map((milestone) => milestone.id)
+                .filter((id): id is string => !!id),
+            ].filter((milestoneId) => !milestoneIds.has(milestoneId));
+            if (invalidMilestoneIds.length > 0) {
+              return {
+                success: false,
+                error: `Some milestone IDs do not belong to this plan: ${invalidMilestoneIds.join(", ")}`,
+              };
+            }
+
+            const newSessions = sessionUpserts.filter((session) => !session.id);
+            const incompleteNewSession = newSessions.find(
+              (session) => !session.activityId || !session.date || !session.quantity
+            );
+            if (incompleteNewSession) {
+              return {
+                success: false,
+                error: "New sessions require activityId, date, and quantity",
+              };
+            }
+
+            const newMilestone = milestoneUpserts.find((milestone) => !milestone.id);
+            if (newMilestone && (!newMilestone.description || !newMilestone.date)) {
+              return {
+                success: false,
+                error: "New milestones require description and date",
+              };
+            }
+
+            if (newSessions.length > 0) {
+              const dates = newSessions.map((session) => parseISO(session.date!));
               const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
               const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
               const weekSun = startOfWeek(minDate, { weekStartsOn: 0 });
@@ -416,7 +472,7 @@ export class CoachAgentService {
             }
 
             logger.info(
-              `Plan modification proposed for ${planId}: "${description}" (${operations.length} operations)`
+              `Plan modification proposed for ${planId}: "${description}"`
             );
 
             return {
@@ -426,7 +482,7 @@ export class CoachAgentService {
                 planGoal: plan.goal,
                 planEmoji: plan.emoji,
                 description,
-                operations,
+                patch,
               },
             };
           },
@@ -434,14 +490,16 @@ export class CoachAgentService {
 
         proposePlanCreation: tool({
           description: dedent`
-            Propose creating a new coached plan. The user can accept or reject the proposal with one click.
-            Use this only after the user gives a concrete goal or clearly asks for a new plan.
-            Prefer measurable goals with a clear outcome, e.g. "Run 20 km under 2 hours" or "Reach 80 kg with low body fat".
+            Propose creating a new tracked plan. The user can accept or reject the proposal with one click.
+            Use this only after the user clearly asks for a new tracked/coached plan or agrees to turn the conversation into one.
+            Prefer goals that are clear enough to track, but do not force every coaching conversation into a plan.
           `,
           inputSchema: z.object({
             goal: z.string().describe("Short, concrete, measurable goal"),
-            goalReason: z.string().optional().nullable().describe("Why the goal matters, if known"),
+            goalReason: z.string().optional().nullable().describe("The user's inner motivation or desired personal outcome, if known. Do not put logistics, schedule, employment status, or constraints here."),
             emoji: z.string().optional().describe("Single emoji for the plan"),
+            isCoached: z.boolean().optional().describe("Whether the plan should be actively AI coached. Use false for self-guided plans."),
+            outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
             activities: z.array(z.object({
               title: z.string().describe("Activity title, e.g. Easy run"),
@@ -449,9 +507,33 @@ export class CoachAgentService {
               emoji: z.string().describe("Single emoji for the activity"),
               kind: z.string().optional().describe("Activity kind/category"),
             })).min(1).max(5).optional(),
+            finishingDate: z.string().optional().nullable().describe("Optional plan end date in YYYY-MM-DD format"),
+            milestones: z.array(z.object({
+              description: z.string().describe("Milestone description"),
+              date: z.string().describe("Milestone date in YYYY-MM-DD format"),
+              criteria: z.string().optional().nullable().describe("Optional completion criteria"),
+            })).max(6).optional(),
+            sessions: z.array(z.object({
+              activityTitle: z.string().describe("Activity title matching one of the proposed activities"),
+              date: z.string().describe("Session date in YYYY-MM-DD format"),
+              quantity: z.number().positive().optional().describe("Session quantity using the activity measure"),
+              descriptiveGuide: z.string().optional().nullable().describe("Short session guidance"),
+            })).max(21).optional(),
             description: z.string().optional().describe("Short human-readable description"),
           }),
-          execute: async ({ goal, goalReason, emoji, timesPerWeek, activities, description }) => {
+          execute: async ({
+            goal,
+            goalReason,
+            emoji,
+            isCoached,
+            outlineType,
+            timesPerWeek,
+            activities,
+            finishingDate,
+            milestones,
+            sessions,
+            description,
+          }) => {
             logger.info(
               `Plan creation proposed for ${user.id}: "${goal}" (${activities?.length || 0} activities)`
             );
@@ -462,9 +544,16 @@ export class CoachAgentService {
                 goal,
                 goalReason: goalReason || null,
                 emoji: emoji || "🎯",
+                isCoached: isCoached ?? true,
+                outlineType:
+                  outlineType ||
+                  ((sessions?.length || 0) > 0 ? "SPECIFIC" : "TIMES_PER_WEEK"),
                 timesPerWeek: timesPerWeek || null,
                 activities: activities || [],
-                description: description || `Create coached plan: ${goal}`,
+                finishingDate: finishingDate || null,
+                milestones: milestones || [],
+                sessions: sessions || [],
+                description: description || `Create tracked plan: ${goal}`,
               },
             };
           },
@@ -772,29 +861,50 @@ export class CoachAgentService {
   private async buildRecentActivityContext(
     user: User,
     now: Date,
+    plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[],
     days = 30
   ): Promise<string> {
     const from = startOfDay(subDays(now, days));
-    const entries = await prisma.activityEntry.findMany({
-      where: {
-        userId: user.id,
-        deletedAt: null,
-        activityId: { not: null },
-        activity: { deletedAt: null },
-        datetime: { gte: from, lte: now },
-      },
-      include: {
-        activity: {
-          select: { title: true, emoji: true, measure: true },
+    const { start: previousWeekStart, end: previousWeekEnd } =
+      getPreviousCoachWeekBounds(now, user.timezone);
+    const planActivityIds = Array.from(
+      new Set(plans.flatMap((plan) => plan.activities.map((activity) => activity.id)))
+    );
+    const [entries, previousWeekEntries] = await Promise.all([
+      prisma.activityEntry.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          activityId: { not: null },
+          activity: { deletedAt: null },
+          datetime: { gte: from, lte: now },
         },
-      },
-      orderBy: { datetime: "desc" },
-      take: 20,
-    });
-
-    if (entries.length === 0) {
-      return `Lookback: last ${days} days. No activity entries were logged in this window. Do not call any plan activity recent unless readActivities returns newer data.`;
-    }
+        include: {
+          activity: {
+            select: { title: true, emoji: true, measure: true },
+          },
+        },
+        orderBy: { datetime: "desc" },
+        take: 20,
+      }),
+      planActivityIds.length > 0
+        ? prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: planActivityIds },
+              activity: { deletedAt: null },
+              datetime: { gte: previousWeekStart, lte: previousWeekEnd },
+            },
+            include: {
+              activity: {
+                select: { title: true, emoji: true, measure: true },
+              },
+            },
+            orderBy: { datetime: "asc" },
+          })
+        : Promise.resolve([]),
+    ]);
 
     const counts = new Map<string, { title: string; emoji: string; count: number }>();
     for (const entry of entries) {
@@ -829,10 +939,39 @@ export class CoachAgentService {
       return `- ${dateLabel}: ${activity?.emoji || ""} ${activity?.title || "Unknown"} (${entry.quantity} ${activity?.measure || "units"})`;
     });
 
+    const previousWeekRollups = plans.map((plan) => {
+      const planActivityIds = new Set(plan.activities.map((activity) => activity.id));
+      const planEntries = previousWeekEntries.filter(
+        (entry) =>
+          entry.activityId &&
+          planActivityIds.has(entry.activityId)
+      );
+      const target = plan.outlineType === "TIMES_PER_WEEK" && plan.timesPerWeek
+        ? `${planEntries.length}/${plan.timesPerWeek}`
+        : `${planEntries.length}`;
+      const entriesText = planEntries.length > 0
+        ? planEntries
+            .map((entry) =>
+              entry.activity
+                ? `${format(entry.datetime, "yyyy-MM-dd")} ${entry.activity.emoji} ${entry.activity.title}`
+                : `${format(entry.datetime, "yyyy-MM-dd")} unknown activity`
+            )
+            .join("; ")
+        : "none";
+
+      return `- ${plan.emoji || ""} ${plan.goal}: ${target} linked activity entries. Entries: ${entriesText}.`;
+    });
+
     return [
       `Lookback: last ${days} days.`,
       `Logged activity counts: ${summary || "none"}.`,
-      "Most recent entries:",
+      `Previous completed week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")} (Sunday-Saturday).`,
+      "Times-per-week completion rule: every logged activity entry linked to a times-per-week plan counts as one completion, regardless of whether the activity measure is sessions, km, minutes, or something else.",
+      "Plan weekly rollups:",
+      ...(previousWeekRollups.length > 0 ? previousWeekRollups : ["- none"]),
+      entries.length > 0
+        ? "Most recent entries:"
+        : "Most recent entries: none. Do not call any plan activity recent unless readActivities returns newer data.",
       ...lines,
     ].join("\n");
   }
@@ -898,7 +1037,7 @@ export class CoachAgentService {
     user: User;
     message: string;
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
-    plans: (Plan & { activities: Activity[]; sessions: PlanSession[] })[];
+    plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
     reminders: Reminder[];
     memoriesContext?: string | null;
   }): Promise<{
@@ -911,15 +1050,26 @@ export class CoachAgentService {
         planGoal: string;
         planEmoji: string | null;
         description: string;
-        operations: unknown[];
+        patch: unknown;
+        operations?: unknown[];
         status: null;
       }>;
       planCreationProposals?: Array<{
         goal: string;
         goalReason: string | null;
         emoji: string | null;
+        isCoached?: boolean | null;
+        outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
         activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        finishingDate?: string | null;
+        milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
+        sessions?: Array<{
+          activityTitle: string;
+          date: string;
+          quantity?: number | null;
+          descriptiveGuide?: string | null;
+        }>;
         description: string;
         status: null;
       }>;
@@ -941,7 +1091,8 @@ export class CoachAgentService {
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
     const recentActivityContext = await this.buildRecentActivityContext(
       user,
-      new Date()
+      new Date(),
+      activePlans
     );
 
     const agent = this.createAgent({

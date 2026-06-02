@@ -3,6 +3,7 @@ import {
   Activity,
   Message,
   Plan,
+  PlanMilestone,
   PlanSession,
   User,
 } from "@tsw/prisma";
@@ -10,14 +11,13 @@ import {
   addDays,
   differenceInCalendarDays,
   endOfDay,
-  endOfWeek,
   format,
   isSameDay,
   startOfDay,
-  startOfWeek,
   subDays,
 } from "date-fns";
 import dedent from "dedent";
+import { getCoachWeekBounds, getPreviousCoachWeekBounds } from "../utils/date";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { coachAgentService } from "./coachAgentService";
@@ -25,8 +25,17 @@ import { coachContextBriefService } from "./coachContextBriefService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { aiService } from "./aiService";
 import { notificationService } from "./notificationService";
+import {
+  executePlanProposalPatch,
+  getProposalPatch,
+  PlanProposalPatch,
+} from "./planProposalPatchService";
 
-type CoachPlan = Plan & { activities: Activity[]; sessions: PlanSession[] };
+type CoachPlan = Plan & {
+  activities: Activity[];
+  sessions: PlanSession[];
+  milestones: PlanMilestone[];
+};
 type CoachUser = User & { plans: CoachPlan[] };
 
 interface RunOptions {
@@ -60,6 +69,14 @@ interface RunResult {
 
 const AUTONOMOUS_PROMPT_TAG = "autonomous_coach";
 const AUTO_ACCEPT_HOURS = 48;
+const MILESTONE_AUTO_ACCEPT_NOTE =
+  "Milestone changes require explicit user confirmation";
+
+function patchContainsMilestoneChanges(patch: PlanProposalPatch): boolean {
+  return !!(
+    patch.milestones?.upsert?.length || patch.milestones?.deleteIds?.length
+  );
+}
 
 type CoachInterventionType =
   | "INACTIVITY_ARCHIVE_PROPOSAL"
@@ -159,7 +176,7 @@ export class CoachAssessmentService {
           where: {
             ...activePlanWhere(now),
           },
-          include: { activities: true, sessions: true },
+          include: { activities: true, sessions: true, milestones: true },
         },
       },
     });
@@ -205,7 +222,7 @@ export class CoachAssessmentService {
           where: {
             ...activePlanWhere(now),
           },
-          include: { activities: true, sessions: true },
+          include: { activities: true, sessions: true, milestones: true },
         },
       },
     });
@@ -392,6 +409,7 @@ export class CoachAssessmentService {
       for (let i = 0; i < proposals.length; i++) {
         const proposal = proposals[i];
         if (proposal.status) continue;
+        if (proposal.autoAcceptNote === MILESTONE_AUTO_ACCEPT_NOTE) continue;
 
         processed++;
         changed = true;
@@ -399,7 +417,7 @@ export class CoachAssessmentService {
         try {
           const plan = await prisma.plan.findFirst({
             where: { id: proposal.planId, deletedAt: null },
-            include: { activities: true, sessions: true },
+            include: { activities: true, sessions: true, milestones: true },
           });
 
           if (!plan) {
@@ -408,7 +426,19 @@ export class CoachAssessmentService {
             continue;
           }
 
-          await this.executeProposalOperations(plan, proposal.operations);
+          const patch = getProposalPatch(proposal);
+          if (patchContainsMilestoneChanges(patch)) {
+            proposals[i].autoAcceptNote = MILESTONE_AUTO_ACCEPT_NOTE;
+            logger.info(
+              `Skipped auto-accept for milestone proposal "${proposal.description}" on plan "${plan.goal}"`
+            );
+            continue;
+          }
+
+          await executePlanProposalPatch({
+            planId: proposal.planId,
+            patch,
+          });
           proposals[i].status = "auto_accepted";
           proposals[i].autoAcceptedAt = now.toISOString();
           accepted++;
@@ -644,7 +674,7 @@ export class CoachAssessmentService {
   private buildAgentInterventionPrompt(candidate: CoachInterventionCandidate): string {
     const action =
       candidate.type === "INACTIVITY_ARCHIVE_PROPOSAL"
-        ? "propose archiving the inactive plan with a single archive operation"
+        ? "propose archiving the inactive plan with patch.archive"
         : candidate.type === "INACTIVITY_PAUSE_PROPOSAL"
           ? "propose pausing the inactive plan with a single pause operation"
           : "propose a realistic plan adjustment for the user's missed or at-risk sessions";
@@ -663,6 +693,7 @@ export class CoachAssessmentService {
       - ${action}.
       - Use the available plan modification tool when proposing changes.
       - Mention that the user has 48 hours to decline before it applies automatically.
+      - When proposing plan creation or updates, state what will be set immediately and what still needs setup: coaching mode, times/week vs dated sessions, activities, milestones, finishing date, and sessions.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
       - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
       - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
@@ -681,15 +712,26 @@ export class CoachAssessmentService {
         planGoal: string;
         planEmoji: string | null;
         description: string;
-        operations: unknown[];
+        patch: unknown;
+        operations?: unknown[];
         status: null;
       }>;
       planCreationProposals?: Array<{
         goal: string;
         goalReason: string | null;
         emoji: string | null;
+        isCoached?: boolean | null;
+        outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
         activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        finishingDate?: string | null;
+        milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
+        sessions?: Array<{
+          activityTitle: string;
+          date: string;
+          quantity?: number | null;
+          descriptiveGuide?: string | null;
+        }>;
         description: string;
         status: null;
       }>;
@@ -804,8 +846,7 @@ export class CoachAssessmentService {
     const nowInTz = new TZDate(now, timezone);
     const localHour = nowInTz.getHours();
     const localDay = nowInTz.getDay();
-    const currentWeekStart = startOfWeek(nowInTz, { weekStartsOn: 1 });
-    const currentWeekEnd = endOfWeek(nowInTz, { weekStartsOn: 1 });
+    const { start: currentWeekStart } = getCoachWeekBounds(now, timezone);
     const currentWeekStartKey = format(currentWeekStart, "yyyy-MM-dd");
     const candidates: CoachInterventionCandidate[] = [];
 
@@ -875,8 +916,7 @@ export class CoachAssessmentService {
     }
 
     if (options.force || this.isWeekPrepTime(user, now)) {
-      const targetWeekStart = startOfWeek(localDay === 0 ? addDays(nowInTz, 1) : nowInTz, { weekStartsOn: 1 });
-      const targetWeekEnd = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
+      const { start: targetWeekStart, end: targetWeekEnd } = getCoachWeekBounds(now, timezone);
       const weekSessions = this.getSessionsBetween(user.plans, targetWeekStart, targetWeekEnd);
       if (weekSessions.length > 0) {
         candidates.push({
@@ -908,8 +948,8 @@ export class CoachAssessmentService {
     }
 
     if ((options.force || localDay === 1) && isWithinPreferredCoachWindow(user, now)) {
-      const previousWeekStart = startOfWeek(subDays(nowInTz, 7), { weekStartsOn: 1 });
-      const previousWeekEnd = endOfWeek(previousWeekStart, { weekStartsOn: 1 });
+      const { start: previousWeekStart, end: previousWeekEnd } =
+        getPreviousCoachWeekBounds(now, timezone);
       const activePlanIds = user.plans.map((p) => p.id);
       const activityIds = user.plans.flatMap((p) => p.activities.map((a) => a.id));
       const entries = activityIds.length > 0

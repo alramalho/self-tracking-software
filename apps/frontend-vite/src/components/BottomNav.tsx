@@ -128,7 +128,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/")) || isActiveRoute("/") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/") ? "hidden" : ""
             )}>
               Home
             </span>
@@ -171,7 +171,7 @@ const BottomNav = () => {
               isDesktop
                 ? "text-sm"
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/plans")) || isActiveRoute("/plans") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/plans") ? "hidden" : ""
             )}>
               Plans
             </span>
@@ -226,7 +226,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/add")) || isActiveRoute("/add") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/add") ? "hidden" : ""
             )}>
               Add
             </span>
@@ -269,7 +269,7 @@ const BottomNav = () => {
               isDesktop
                 ? "text-sm"
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/insights")) || isActiveRoute("/insights") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/insights") ? "hidden" : ""
             )}>
               Metrics
             </span>
@@ -312,7 +312,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              (!isDesktop && !isActiveRoute("/profile")) || isActiveRoute("/profile") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/profile") ? "hidden" : ""
             )}>
               Profile
             </span>

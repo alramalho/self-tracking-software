@@ -71,6 +71,7 @@ if (ENVIRONMENT === "development") {
   allowedOrigins.push("http://localhost:5173");
   allowedOrigins.push("http://localhost:5174");
   allowedOrigins.push("http://localhost:4173");
+  allowedOrigins.push("https://tracking-so.localhost");
   // Capacitor iOS/Android WebView origins
   allowedOrigins.push("capacitor://localhost");
   allowedOrigins.push("http://localhost");

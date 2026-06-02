@@ -170,131 +170,135 @@ function MessagesPage() {
     navigate({ to: "/message/$userId", params: { userId: coach.ownerId } });
   };
 
+  const otherDisplayChats = useMemo(() => {
+    return displayChats.filter((chat) => {
+      if (chat.type === "COACH") return false;
+      if (chat.type === "DIRECT") {
+        const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
+        const isCoachUser = pinnedCoaches.some(({ coach }) => coach.ownerId === otherParticipant?.userId);
+        if (isCoachUser) return false;
+      }
+      return true;
+    });
+  }, [currentUser?.id, displayChats, pinnedCoaches]);
+
   return (
-    <div className="flex h-screen bg-background relative z-50 overflow-hidden">
-      <div className="flex-1 flex flex-col w-full max-w-full">
-        {/* Header */}
-        <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-b border-border">
-          <div className="px-4 py-3 space-y-3">
-            {/* Title row with back button */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate({ to: "/" })}
-              >
-                <ArrowLeft size={18} />
-              </Button>
-              <h1 className="text-xl font-semibold">Messages</h1>
-            </div>
+    <div className="relative z-50 flex h-[100dvh] w-full overflow-hidden bg-background md:h-full">
+      <div className="flex min-h-0 w-full">
+        <section className="flex min-h-0 w-full flex-col md:w-[420px] md:max-w-[420px] md:flex-shrink-0 md:border-r md:border-border/80">
+          {/* Header */}
+          <div className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-lg md:bg-background/95">
+            <div className="space-y-3 px-4 py-3 md:px-5 md:py-5">
+              {/* Title row with back button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => navigate({ to: "/" })}
+                >
+                  <ArrowLeft size={18} />
+                </Button>
+                <h1 className="text-xl font-semibold">Messages</h1>
+              </div>
 
-            {/* User Search */}
-            <UserSearch onUserClick={handleUserSelect} emptyMessage="No friends found" />
+              {/* User Search */}
+              <UserSearch onUserClick={handleUserSelect} emptyMessage="No friends found" />
+            </div>
           </div>
-        </div>
 
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoadingChats ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              {/* Pinned Section - Coaches from plans + AI Coach */}
-              <div className="p-3 space-y-2">
-                {/* Pinned Human Coaches from Plans */}
-                {pinnedCoaches.map(({ coach, plan }) => (
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoadingChats ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {/* Pinned Section - Coaches from plans + AI Coach */}
+                <div className="p-3 space-y-2">
+                  {/* Pinned Human Coaches from Plans */}
+                  {pinnedCoaches.map(({ coach, plan }) => (
+                    <button
+                      key={`${coach.id}-${plan.id}`}
+                      onClick={() => handleCoachClick(coach)}
+                      className={cn(
+                        "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
+                        variants.fadedBg,
+                        "border",
+                        variants.border,
+                        "hover:opacity-80"
+                      )}
+                    >
+                      <Avatar className="w-11 h-11">
+                        <AvatarImage src={coach.owner.picture || undefined} alt={coach.owner.name || coach.owner.username} />
+                        <AvatarFallback>
+                          {coach.owner.name?.[0] || coach.owner.username[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{coach.owner.name || coach.owner.username}</span>
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground")}>
+                            Coach
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {plan.emoji || "📋"} {plan.goal}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+
+                  {/* AI Coach - Always available */}
                   <button
-                    key={`${coach.id}-${plan.id}`}
-                    onClick={() => handleCoachClick(coach)}
+                    onClick={() => {
+                      if (coachChats[0]) {
+                        navigate({ to: "/message-ai" });
+                      } else {
+                        handleStartAIChat();
+                      }
+                    }}
+                    disabled={isCreatingCoachChat}
                     className={cn(
                       "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
-                      variants.fadedBg,
-                      "border",
-                      variants.border,
-                      "hover:opacity-80"
+                      hasPendingCoachNotification
+                        ? cn(variants.fadedBg, "border", variants.border)
+                        : "hover:bg-muted/50"
                     )}
                   >
-                    <Avatar className="w-11 h-11">
-                      <AvatarImage src={coach.owner.picture || undefined} alt={coach.owner.name || coach.owner.username} />
-                      <AvatarFallback>
-                        {coach.owner.name?.[0] || coach.owner.username[0]}
-                      </AvatarFallback>
+                    <Avatar className="w-11 h-11 bg-transparent">
+                      <AvatarImage src={aiCoach.avatar} alt={aiCoach.label} className="object-contain" />
+                      <AvatarFallback>AI</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{coach.owner.name || coach.owner.username}</span>
-                        <span className={cn("text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground")}>
-                          Coach
+                        <span className="font-medium">{aiCoach.name}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          AI
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {plan.emoji || "📋"} {plan.goal}
+                      <p className="text-sm text-muted-foreground">
+                        {isCreatingCoachChat
+                          ? "Starting chat..."
+                          : hasPendingCoachNotification
+                          ? `${pendingCoachNotifications.length} coach action${pendingCoachNotifications.length > 1 ? "s" : ""} pending`
+                          : "Your AI assistant"}
                       </p>
                     </div>
-                  </button>
-                ))}
-
-                {/* AI Coach - Always available */}
-                <button
-                  onClick={() => {
-                    if (coachChats[0]) {
-                      navigate({ to: "/message-ai" });
-                    } else {
-                      handleStartAIChat();
-                    }
-                  }}
-                  disabled={isCreatingCoachChat}
-                  className={cn(
-                    "w-full p-3 flex items-center gap-3 rounded-3xl transition-colors text-left",
-                    hasPendingCoachNotification
-                      ? cn(variants.fadedBg, "border", variants.border)
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <Avatar className="w-11 h-11 bg-transparent">
-                    <AvatarImage src={aiCoach.avatar} alt={aiCoach.label} className="object-contain" />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{aiCoach.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                        AI
+                    {(coachUnreadCount > 0 || hasPendingCoachNotification) && (
+                      <span className="relative flex h-2.5 w-2.5 mr-1">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
                       </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {isCreatingCoachChat
-                        ? "Starting chat..."
-                        : hasPendingCoachNotification
-                        ? `${pendingCoachNotifications.length} coach action${pendingCoachNotifications.length > 1 ? "s" : ""} pending`
-                        : "Your AI assistant"}
-                    </p>
-                  </div>
-                  {(coachUnreadCount > 0 || hasPendingCoachNotification) && (
-                    <span className="relative flex h-2.5 w-2.5 mr-1">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
-                    </span>
-                  )}
-                </button>
-              </div>
+                    )}
+                  </button>
+                </div>
 
-              <div className="h-px bg-border mx-3" />
+                <div className="h-px bg-border mx-3" />
 
-              {/* Other conversations */}
-              {displayChats
-                .filter((chat) => {
-                  if (chat.type === "COACH") return false;
-                  if (chat.type === "DIRECT") {
-                    const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
-                    const isCoachUser = pinnedCoaches.some(({ coach }) => coach.ownerId === otherParticipant?.userId);
-                    if (isCoachUser) return false;
-                  }
-                  return true;
-                })
-                .map((chat) => (
+                {/* Other conversations */}
+                {otherDisplayChats.map((chat) => (
                   <ConversationListItem
                     key={chat.id}
                     chat={chat}
@@ -304,26 +308,31 @@ function MessagesPage() {
                   />
                 ))}
 
-              {/* Empty state for no other conversations */}
-              {displayChats.filter((chat) => {
-                if (chat.type === "COACH") return false;
-                if (chat.type === "DIRECT") {
-                  const otherParticipant = chat.participants?.find(p => p.userId !== currentUser?.id);
-                  const isCoachUser = pinnedCoaches.some(({ coach }) => coach.ownerId === otherParticipant?.userId);
-                  if (isCoachUser) return false;
-                }
-                return true;
-              }).length === 0 && (
-                <div className="flex flex-col items-center justify-center text-center p-6 pt-12">
-                  <MessageCircle size={32} className="text-muted-foreground mb-3 opacity-50" />
-                  <p className="text-sm text-muted-foreground">
-                    Search for someone above to start a conversation
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                {/* Empty state for no other conversations */}
+                {otherDisplayChats.length === 0 && (
+                  <div className="flex flex-col items-center justify-center text-center p-6 pt-12">
+                    <MessageCircle size={32} className="text-muted-foreground mb-3 opacity-50" />
+                    <p className="text-sm text-muted-foreground">
+                      Search for someone above to start a conversation
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        <aside className="hidden min-w-0 flex-1 bg-muted/20 md:flex md:items-center md:justify-center">
+          <div className="flex flex-col items-center text-center text-muted-foreground">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-border bg-card">
+              <MessageCircle size={28} />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">No conversation selected</h2>
+            <p className="mt-1 max-w-xs text-sm">
+              Open a message from the list to continue the conversation.
+            </p>
+          </div>
+        </aside>
       </div>
     </div>
   );

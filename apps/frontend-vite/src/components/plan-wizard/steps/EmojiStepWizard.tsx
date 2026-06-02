@@ -1,7 +1,7 @@
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { Button } from "@/components/ui/button";
-import { EmojiInput } from "@/components/ui/emoji-input";
+import { PlanEmojiEditor } from "@/components/plan-wizard/PlanFieldEditors";
 import { Smile } from "lucide-react";
 
 const EmojiStepWizard = () => {
@@ -27,13 +27,7 @@ const EmojiStepWizard = () => {
         </p>
       </div>
 
-      <div className="px-2 flex justify-center">
-        <EmojiInput
-          value={emoji || ""}
-          onChange={setEmoji}
-          placeholder="Pick an emoji"
-        />
-      </div>
+      <PlanEmojiEditor value={emoji || ""} onChange={setEmoji} />
 
       <div className="px-2">
         <Button onClick={handleContinue} className="w-full" disabled={!canContinue}>

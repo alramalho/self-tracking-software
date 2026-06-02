@@ -4,6 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_API_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const legacyLocalOrigins = new Set([
+  "http://tracking-so.localhost",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ]);

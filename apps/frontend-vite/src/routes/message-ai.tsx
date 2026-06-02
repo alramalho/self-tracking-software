@@ -89,6 +89,115 @@ function formatCoachVisibleDate(date: Date): string {
   return format(date, "d MMMM yyyy");
 }
 
+function hasProposalChanges(proposal: any): boolean {
+  const patch = proposal.patch;
+  return !!(
+    proposal.operations?.length ||
+    patch?.archive ||
+    patch?.plan ||
+    patch?.sessions?.upsert?.length ||
+    patch?.sessions?.deleteIds?.length ||
+    patch?.milestones?.upsert?.length ||
+    patch?.milestones?.deleteIds?.length
+  );
+}
+
+function resolveLegacyOperation(op: any, plan: any, activities: any[] = []): ResolvedOperation {
+  if (op.type === "archive") {
+    return { type: "archive" };
+  }
+  if (op.type === "update_plan") {
+    return {
+      type: "update_plan",
+      goal: op.goal,
+      goalReason: op.goalReason,
+      timesPerWeek: op.timesPerWeek,
+      isCoached: op.isCoached,
+    };
+  }
+
+  const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
+    || activities?.find((a: any) => a.id === op.activityId);
+  return {
+    date: op.date,
+    type: op.type,
+    quantity: op.quantity,
+    activityName: activity?.title || "Activity",
+    activityEmoji: activity?.emoji || "📋",
+    activityMeasure: activity?.measure || "",
+    descriptiveGuide: op.descriptiveGuide,
+  };
+}
+
+function resolvePatchOperations(patch: any, plan: any, activities: any[] = []): ResolvedOperation[] {
+  const resolved: ResolvedOperation[] = [];
+
+  if (!patch) return resolved;
+  if (patch.archive) resolved.push({ type: "archive" });
+  if (patch.plan) {
+    resolved.push({
+      type: "update_plan",
+      goal: patch.plan.goal,
+      goalReason: patch.plan.goalReason,
+      timesPerWeek: patch.plan.timesPerWeek,
+      isCoached: patch.plan.isCoached,
+    });
+  }
+
+  for (const session of patch.sessions?.upsert || []) {
+    const existing = plan?.sessions?.find((item: any) => item.id === session.id);
+    const activityId = session.activityId || existing?.activityId;
+    const activity = plan?.activities?.find((a: any) => a.id === activityId)
+      || activities?.find((a: any) => a.id === activityId);
+    resolved.push({
+      type: session.id ? "update_session" : "add_session",
+      date: session.date || existing?.date,
+      quantity: session.quantity || existing?.quantity,
+      activityName: activity?.title || "Activity",
+      activityEmoji: activity?.emoji || "📋",
+      activityMeasure: activity?.measure || "",
+      descriptiveGuide: session.descriptiveGuide,
+    });
+  }
+
+  for (const sessionId of patch.sessions?.deleteIds || []) {
+    const existing = plan?.sessions?.find((item: any) => item.id === sessionId);
+    const activity = plan?.activities?.find((a: any) => a.id === existing?.activityId)
+      || activities?.find((a: any) => a.id === existing?.activityId);
+    resolved.push({
+      type: "delete_session",
+      date: existing?.date,
+      quantity: existing?.quantity,
+      activityName: activity?.title || "Session",
+      activityEmoji: activity?.emoji || "📋",
+      activityMeasure: activity?.measure || "",
+    });
+  }
+
+  for (const milestone of patch.milestones?.upsert || []) {
+    const existing = plan?.milestones?.find((item: any) => item.id === milestone.id);
+    resolved.push({
+      type: milestone.id ? "update_milestone" : "add_milestone",
+      milestoneDescription: milestone.description || existing?.description || "Milestone",
+      milestoneDate: milestone.date || existing?.date,
+      milestoneProgress: milestone.progress ?? existing?.progress,
+      milestoneCriteria: milestone.criteria ?? existing?.criteria,
+    });
+  }
+
+  for (const milestoneId of patch.milestones?.deleteIds || []) {
+    const existing = plan?.milestones?.find((item: any) => item.id === milestoneId);
+    resolved.push({
+      type: "delete_milestone",
+      milestoneDescription: existing?.description || "Milestone",
+      milestoneDate: existing?.date,
+      milestoneProgress: existing?.progress,
+    });
+  }
+
+  return resolved;
+}
+
 function sanitizePlanDisplayText(text: string, emoji?: string | null): string {
   let cleaned = text.trim();
   while (emoji && cleaned.startsWith(emoji)) {
@@ -315,6 +424,8 @@ function CoachContextIsland({
                   isCompletedOnDay={isCompletedOnDay}
                   showLegend={false}
                   weekLabels={{ week1: "This week", week2: "Next week" }}
+                  selectedSessionDisplay="card"
+                  allDaysSelectable
                 />
               ) : (
                 <div className="text-xs text-muted-foreground">
@@ -765,6 +876,26 @@ function MessageAIPage() {
       await rejectPlanCreationProposal({ messageId, proposalIndex });
     } catch (error) {
       console.error("Failed to reject plan creation proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleProposePlanCreationChanges = async (
+    _messageId: string,
+    _proposalIndex: number,
+    changeRequest: string
+  ) => {
+    if (!currentChatId) return;
+
+    try {
+      await sendMessage({
+        message: changeRequest,
+        chatId: currentChatId,
+        coachVersion: "v2",
+      });
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error("Failed to propose plan creation changes:", error);
       throw error;
     }
   };
@@ -1249,41 +1380,21 @@ function MessageAIPage() {
                           </div>
                         )}
 
-                        {isCoachMessage && message.planProposals && message.planProposals.filter((p: any) => p.operations?.length > 0).length > 0 && (
+                        {isCoachMessage && message.planProposals && message.planProposals.filter(hasProposalChanges).length > 0 && (
                           <div className="px-0">
-                            {message.planProposals.filter((p: any) => p.operations?.length > 0).map((proposal: any, idx: number) => {
+                            {message.planProposals.map((proposal: any, originalIndex: number) => ({ proposal, originalIndex })).filter(({ proposal }: any) => hasProposalChanges(proposal)).map(({ proposal, originalIndex }: any) => {
                               const plan = plans?.find(p => p.id === proposal.planId);
-                              const resolvedOperations: ResolvedOperation[] = (proposal.operations || []).map((op: any) => {
-                                if (op.type === "archive") {
-                                  return { type: "archive" };
-                                }
-                                if (op.type === "update_plan") {
-                                  return {
-                                    type: "update_plan",
-                                    goal: op.goal,
-                                    goalReason: op.goalReason,
-                                    timesPerWeek: op.timesPerWeek,
-                                    isCoached: op.isCoached,
-                                  };
-                                }
-
-                                const activity = plan?.activities?.find((a: any) => a.id === op.activityId)
-                                  || activities?.find((a: any) => a.id === op.activityId);
-                                return {
-                                  date: op.date,
-                                  type: op.type,
-                                  quantity: op.quantity,
-                                  activityName: activity?.title || "Activity",
-                                  activityEmoji: activity?.emoji || "📋",
-                                  activityMeasure: activity?.measure || "",
-                                  descriptiveGuide: op.descriptiveGuide,
-                                };
-                              });
+                              const resolvedOperations: ResolvedOperation[] =
+                                proposal.patch
+                                  ? resolvePatchOperations(proposal.patch, plan, activities || [])
+                                  : (proposal.operations || []).map((op: any) =>
+                                      resolveLegacyOperation(op, plan, activities || [])
+                                    );
                               return (
                                 <PlanProposalCard
-                                  key={`proposal-${message.id}-${idx}`}
+                                  key={`proposal-${message.id}-${originalIndex}`}
                                   messageId={message.id}
-                                  proposalIndex={idx}
+                                  proposalIndex={originalIndex}
                                   planGoal={proposal.planGoal}
                                   planEmoji={proposal.planEmoji}
                                   description={proposal.description}
@@ -1307,12 +1418,18 @@ function MessageAIPage() {
                                 goal={proposal.goal}
                                 goalReason={proposal.goalReason}
                                 emoji={proposal.emoji}
+                                isCoached={proposal.isCoached}
+                                outlineType={proposal.outlineType}
                                 timesPerWeek={proposal.timesPerWeek}
                                 activities={proposal.activities}
+                                finishingDate={proposal.finishingDate}
+                                milestones={proposal.milestones}
+                                sessions={proposal.sessions}
                                 description={proposal.description}
                                 status={proposal.status}
                                 onAccept={handleAcceptPlanCreationProposal}
                                 onReject={handleRejectPlanCreationProposal}
+                                onProposeChanges={handleProposePlanCreationChanges}
                               />
                             ))}
                           </div>
