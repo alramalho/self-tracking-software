@@ -414,6 +414,16 @@ router.post(
           senderId: user.id,
         },
       });
+      const serializedUserMessage = {
+        id: userMessage.id,
+        chatId: userMessage.chatId,
+        role: userMessage.role,
+        content: userMessage.content,
+        createdAt: userMessage.createdAt,
+        senderId: user.id,
+        senderName: user.name,
+        senderPicture: user.picture,
+      };
 
       // Update chat's updatedAt timestamp
       await prisma.chat.update({
@@ -512,6 +522,11 @@ router.post(
             savedMessages.push(coachMsg);
           }
 
+          await prisma.chat.update({
+            where: { id: chatId },
+            data: { updatedAt: new Date() },
+          });
+
           // Fire-and-forget: store full exchange in long-term memory
           const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
           supermemoryService.addMemory(
@@ -591,7 +606,8 @@ router.post(
           });
 
           return res.json({
-            messages: resolvedMessages,
+            userMessage: serializedUserMessage,
+            messages: [serializedUserMessage, ...resolvedMessages],
             message: resolvedMessages[resolvedMessages.length - 1],
           });
         } else {
@@ -628,6 +644,11 @@ router.post(
               }),
             },
           },
+        });
+
+        await prisma.chat.update({
+          where: { id: chatId },
+          data: { updatedAt: new Date() },
         });
 
         // Fire-and-forget: store exchange in long-term memory
@@ -725,20 +746,24 @@ router.post(
           }
         }
 
+        const serializedCoachMessage = {
+          id: coachMessage.id,
+          chatId: coachMessage.chatId,
+          role: coachMessage.role,
+          content: aiResponse.messageContent,
+          planReplacements: resolvedPlanReplacements,
+          metricReplacement: resolvedMetricReplacement,
+          planProposals: aiResponse.planProposals || [],
+          planCreationProposals: aiResponse.planCreationProposals || [],
+          userRecommendations: aiResponse.userRecommendations || null,
+          toolCalls: aiResponse.toolCalls || null,
+          createdAt: coachMessage.createdAt,
+        };
+
         return res.json({
-          message: {
-            id: coachMessage.id,
-            chatId: coachMessage.chatId,
-            role: coachMessage.role,
-            content: aiResponse.messageContent,
-            planReplacements: resolvedPlanReplacements,
-            metricReplacement: resolvedMetricReplacement,
-            planProposals: aiResponse.planProposals || [],
-            planCreationProposals: aiResponse.planCreationProposals || [],
-            userRecommendations: aiResponse.userRecommendations || null,
-            toolCalls: aiResponse.toolCalls || null,
-            createdAt: coachMessage.createdAt,
-          },
+          userMessage: serializedUserMessage,
+          messages: [serializedUserMessage, serializedCoachMessage],
+          message: serializedCoachMessage,
         });
       }
 
@@ -775,16 +800,9 @@ router.post(
       }
 
       res.json({
-        message: {
-          id: userMessage.id,
-          chatId: userMessage.chatId,
-          role: userMessage.role,
-          content: userMessage.content,
-          createdAt: userMessage.createdAt,
-          senderId: user.id,
-          senderName: user.name,
-          senderPicture: user.picture,
-        },
+        userMessage: serializedUserMessage,
+        messages: [serializedUserMessage],
+        message: serializedUserMessage,
       });
     } catch (error) {
       logger.error("Error sending message:", error);
