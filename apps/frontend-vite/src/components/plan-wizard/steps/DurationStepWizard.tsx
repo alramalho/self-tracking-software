@@ -1,8 +1,8 @@
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Calendar, XCircle } from "lucide-react";
+import { PlanDurationEditor } from "@/components/plan-wizard/PlanFieldEditors";
+import { Calendar } from "lucide-react";
 
 const DurationStepWizard = () => {
   const { finishingDate, setFinishingDate, completeStep } = usePlanCreation();
@@ -25,39 +25,7 @@ const DurationStepWizard = () => {
         </p>
       </div>
 
-      <div className="space-y-4 px-2">
-        <div className="flex items-center gap-2">
-          <DatePicker
-            id="date-picker-trigger"
-            selected={finishingDate || undefined}
-            onSelect={(date: Date | undefined) => {
-              setFinishingDate(date || null);
-            }}
-            disablePastDates={true}
-            className="flex-1"
-          />
-          {finishingDate && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setFinishingDate(null)}
-            >
-              <XCircle className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-
-        {finishingDate && (
-          <p className="text-sm text-muted-foreground text-center">
-            Target: {finishingDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        )}
-      </div>
+      <PlanDurationEditor value={finishingDate} onChange={setFinishingDate} />
 
       <div className="px-2">
         <Button onClick={handleContinue} className="w-full">

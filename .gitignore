@@ -27,3 +27,5 @@ AGENTS.md
 apps/backend-node/apple-stuff/*
 
 .mcp.json
+
+.claude/worktrees/*

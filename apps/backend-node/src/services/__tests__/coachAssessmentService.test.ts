@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { format } from "date-fns";
+import { getPreviousCoachWeekBounds } from "../../utils/date";
 import { coachContextBriefService } from "../coachContextBriefService";
 import { isWithinPreferredCoachWindow } from "../coachAssessmentService";
+
+describe("coach assessment week bounds", () => {
+  it("uses Sunday as the first day for previous-week recaps", () => {
+    const { start, end } = getPreviousCoachWeekBounds(
+      new Date("2026-06-01T11:24:00.000Z"),
+      "Europe/Berlin"
+    );
+
+    expect(format(start, "yyyy-MM-dd")).toBe("2026-05-24");
+    expect(format(end, "yyyy-MM-dd")).toBe("2026-05-30");
+  });
+});
 
 describe("preferred coach window", () => {
   it("returns true within the 2-hour preferred interval", () => {

@@ -1,7 +1,7 @@
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { Button } from "@/components/ui/button";
-import NumberInput from "@/components/NumberInput";
+import { PlanFrequencyEditor } from "@/components/plan-wizard/PlanFieldEditors";
 import { CalendarCheck } from "lucide-react";
 
 const TimesPerWeekStepWizard = () => {
@@ -27,15 +27,7 @@ const TimesPerWeekStepWizard = () => {
         </p>
       </div>
 
-      <div className="px-2 py-8">
-        <NumberInput
-          value={timesPerWeek || 3}
-          onChange={setTimesPerWeek}
-          min={1}
-          max={7}
-          title="times per week"
-        />
-      </div>
+      <PlanFrequencyEditor value={timesPerWeek || 3} onChange={setTimesPerWeek} />
 
       <div className="px-2">
         <Button onClick={handleContinue} className="w-full">

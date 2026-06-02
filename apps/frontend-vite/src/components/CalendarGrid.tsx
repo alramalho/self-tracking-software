@@ -2,7 +2,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { format, startOfWeek, addDays, isSameDay, isBefore, startOfDay } from "date-fns";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, Pencil } from "lucide-react";
 import type { GhostCell } from "@/utils/ghostGrid";
@@ -40,6 +40,10 @@ interface CalendarGridProps {
   showLegend?: boolean;
   /** Custom week labels */
   weekLabels?: { week1: string; week2: string };
+  /** How selected scheduled sessions are shown below the grid */
+  selectedSessionDisplay?: "detail" | "card";
+  /** Allows days without sessions or suggestions to be selected visually */
+  allDaysSelectable?: boolean;
 }
 
 export const CalendarGrid = ({
@@ -52,9 +56,12 @@ export const CalendarGrid = ({
   onSessionEdit,
   showLegend = true,
   weekLabels = { week1: "This week", week2: "Next week" },
+  selectedSessionDisplay = "detail",
+  allDaysSelectable = false,
 }: CalendarGridProps) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedGhostDay, setSelectedGhostDay] = useState<Date | null>(null);
+  const [selectedEmptyDay, setSelectedEmptyDay] = useState<Date | null>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Derive selectedSession from props to always have fresh data
@@ -72,6 +79,12 @@ export const CalendarGrid = ({
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+
+  const formatSessionCardDate = (date: Date) => {
+    if (isSameDay(date, today)) return "Today";
+    if (isSameDay(date, addDays(today, 1))) return "Tomorrow";
+    return format(date, "EEEE, MMM d");
+  };
 
   // Generate 2 weeks of days
   const days = Array.from({ length: 14 }, (_, i) => addDays(weekStart, i));
@@ -93,8 +106,65 @@ export const CalendarGrid = ({
     return activities.find((a) => a.id === activityId);
   };
 
+  const getGhostDisplay = (cell: GhostCell) => {
+    const activity = getActivity(cell.activityId);
+    return {
+      title: cell.title || activity?.title || "This plan",
+      emoji: cell.emoji || activity?.emoji || "📋",
+    };
+  };
+
+  const getCompletedItemsForDay = (day: Date) => {
+    const scheduledCompleted = getSessionsForDay(day)
+      .filter((session) => isCompletedOnDay?.(session.activityId, day) ?? false)
+      .map((session) => {
+        const activity = getActivity(session.activityId);
+        return activity
+          ? {
+              key: `scheduled-${session.id || session.activityId}`,
+              title: activity.title,
+              emoji: activity.emoji || "📋",
+            }
+          : null;
+      })
+      .filter(Boolean) as Array<{ key: string; title: string; emoji: string }>;
+
+    const flexibleCompleted = getGhostsForDay(day)
+      .filter((cell) => cell.kind === "completed")
+      .map((cell, index) => {
+        const display = getGhostDisplay(cell);
+        return {
+          key: `completed-${cell.activityId}-${index}`,
+          title: display.title,
+          emoji: display.emoji,
+        };
+      });
+
+    const seen = new Set<string>();
+    return [...scheduledCompleted, ...flexibleCompleted].filter((item) => {
+      if (seen.has(item.title)) return false;
+      seen.add(item.title);
+      return true;
+    });
+  };
+
+  const getSelectedEmptyDayMessage = (
+    day: Date,
+    completedItems: Array<{ key: string; title: string; emoji: string }>
+  ) => {
+    if (completedItems.length > 0) return null;
+    if (isBefore(startOfDay(day), startOfDay(today))) {
+      return "Nothing done.";
+    }
+    if (isSameDay(day, today)) {
+      return "Nothing planned today.";
+    }
+    return "Nothing planned.";
+  };
+
   const handleSessionClick = (session: CalendarSession, activity: CalendarActivity) => {
     setSelectedGhostDay(null);
+    setSelectedEmptyDay(null);
     const isCurrentlySelected = selectedSessionId === session.id;
 
     if (isCurrentlySelected) {
@@ -107,6 +177,7 @@ export const CalendarGrid = ({
 
   const handleGhostDayClick = (day: Date) => {
     setSelectedSessionId(null);
+    setSelectedEmptyDay(null);
     setSelectedGhostDay((prev) => (prev && isSameDay(prev, day) ? null : day));
   };
 
@@ -121,10 +192,18 @@ export const CalendarGrid = ({
         if (isCurrentlySelected) {
           setSelectedSessionId(null);
         } else {
+          setSelectedGhostDay(null);
+          setSelectedEmptyDay(null);
           setSelectedSessionId(firstSession.id || null);
           onSessionSelect?.(firstSession, activity);
         }
       }
+    } else if (getGhostsForDay(day).some((c) => c.kind === "ghost" || c.kind === "overflow")) {
+      handleGhostDayClick(day);
+    } else if (allDaysSelectable) {
+      setSelectedSessionId(null);
+      setSelectedGhostDay(null);
+      setSelectedEmptyDay((prev) => (prev && isSameDay(prev, day) ? null : day));
     }
   };
 
@@ -138,23 +217,26 @@ export const CalendarGrid = ({
       (c) => c.kind === "ghost" || c.kind === "overflow"
     );
     const isGhostSelected = !!selectedGhostDay && isSameDay(selectedGhostDay, day);
+    const isSessionSelected =
+      !!selectedSession &&
+      isSameDay(new Date(selectedSession.session.date), day);
+    const isEmptySelected = !!selectedEmptyDay && isSameDay(selectedEmptyDay, day);
+    const isSelectedDay = isSessionSelected || isGhostSelected || isEmptySelected;
 
     return (
       <div
-        onClick={() => {
-          if (hasSession) handleDayClick(day);
-          else if (hasSuggestion) handleGhostDayClick(day);
-        }}
+        onClick={() => handleDayClick(day)}
         className={cn(
           "flex flex-col items-center p-1 min-h-[72px] rounded-lg border transition-all",
           // Today: outline only (no fill) so it stays distinct from the selected day.
-          isToday ? variants.brightBorder : "border-border",
+          isToday || isSelectedDay ? variants.brightBorder : "border-border",
           // Selected day: filled + ring.
-          isGhostSelected
+          isSelectedDay
             ? cn(variants.veryFadedBg, "ring-2", variants.ring)
             : !isToday && "bg-card",
-          isPast && !isToday && !isGhostSelected && "opacity-50",
-          (hasSession || hasSuggestion) && !isPast && "cursor-pointer hover:border-muted-foreground/50"
+          isPast && !isToday && !isSelectedDay && "opacity-50",
+          (hasSession || hasSuggestion || allDaysSelectable) &&
+            "cursor-pointer hover:border-muted-foreground/50"
         )}
       >
         <span
@@ -197,8 +279,8 @@ export const CalendarGrid = ({
               >
                 {activity.emoji || "📋"}
                 {isCompleted && (
-                  <span className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-                    <Check className="w-2 h-2 text-white" />
+                  <span className="absolute -top-1.5 -right-1.5">
+                    <Check className="w-3.5 h-3.5 text-green-500 drop-shadow-sm" strokeWidth={3} />
                   </span>
                 )}
               </button>
@@ -206,7 +288,7 @@ export const CalendarGrid = ({
           })}
           {dayGhosts.map((cell, idx) => {
             const activity = getActivity(cell.activityId);
-            const emoji = activity?.emoji || "📋";
+            const display = getGhostDisplay(cell);
 
             if (cell.kind === "completed") {
               return (
@@ -215,9 +297,9 @@ export const CalendarGrid = ({
                   title={`${activity?.title || "Activity"} — done`}
                   className="relative text-lg leading-none rounded-md p-0.5 bg-green-100 dark:bg-green-900/30"
                 >
-                  {emoji}
-                  <span className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-                    <Check className="w-2 h-2 text-white" />
+                  {display.emoji}
+                  <span className="absolute -top-1.5 -right-1.5">
+                    <Check className="w-3.5 h-3.5 text-green-500 drop-shadow-sm" strokeWidth={3} />
                   </span>
                 </span>
               );
@@ -229,8 +311,8 @@ export const CalendarGrid = ({
                 key={`ghost-${cell.planId}-${idx}`}
                 title={
                   isOverflow
-                    ? "Won't fit in the days left this week"
-                    : "Suggested — any day works"
+                    ? `${display.title} won't fit in the days left this week`
+                    : `${display.title} — flexible weekly slot`
                 }
                 className={cn(
                   "text-lg leading-none rounded-md p-0.5 border border-dashed",
@@ -239,7 +321,7 @@ export const CalendarGrid = ({
                     : variants.brightBorder
                 )}
               >
-                <span className="opacity-40">{emoji}</span>
+                <span className="opacity-40">{display.emoji}</span>
               </span>
             );
           })}
@@ -280,9 +362,16 @@ export const CalendarGrid = ({
             );
             if (ghosts.length === 0) return null;
             const hasOverflow = ghosts.some((g) => g.kind === "overflow");
-            const acts = Array.from(new Set(ghosts.map((g) => g.activityId)))
-              .map(getActivity)
-              .filter(Boolean) as CalendarActivity[];
+            const displays = Array.from(
+              new Map(
+                ghosts.map((ghost) => [
+                  ghost.planId,
+                  getGhostDisplay(ghost),
+                ])
+              ).values()
+            );
+            const label = displays.map((display) => display.title).join(" & ");
+            const singular = displays.length === 1;
 
             return (
               <motion.div
@@ -298,11 +387,11 @@ export const CalendarGrid = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">
-                      {acts.map((a) => a.emoji || "📋").join(" ") || "📋"}
+                      {displays.map((display) => display.emoji).join(" ") || "📋"}
                     </span>
                     <div>
                       <h4 className="text-left font-semibold text-foreground">
-                        Suggested session
+                        Flexible weekly slot
                       </h4>
                       <p className="text-left text-sm text-muted-foreground">
                         {format(selectedGhostDay, "EEEE, MMM d")}
@@ -317,10 +406,14 @@ export const CalendarGrid = ({
                   </button>
                 </div>
                 <p className="mt-3 text-sm text-foreground text-left">
-                  {acts.map((a) => a.title).join(" & ") || "This plan"} has a weekly
-                  target rather than fixed days, so it isn't tied to this date — log
-                  it whenever works. These dashed markers spread your remaining
-                  sessions across the open days so you can see whether they fit.
+                  {label || "This plan"} {singular ? "has" : "have"} a weekly
+                  target rather than fixed days.{" "}
+                  {singular ? "This marker is" : "These markers are"} a suggested
+                  open day for{" "}
+                  {singular
+                    ? "one of your remaining weekly sessions."
+                    : "remaining weekly sessions."}{" "}
+                  Log any activity from {singular ? "this plan" : "these plans"} whenever it works.
                 </p>
                 {hasOverflow && (
                   <p className="mt-2 text-sm text-left text-red-500">
@@ -335,7 +428,78 @@ export const CalendarGrid = ({
 
       {/* Selected session detail */}
       <AnimatePresence mode="wait">
-        {selectedSession && (
+        {selectedEmptyDay &&
+          (() => {
+            const completedItems = getCompletedItemsForDay(selectedEmptyDay);
+            const selectedEmptyDayMessage = getSelectedEmptyDayMessage(
+              selectedEmptyDay,
+              completedItems
+            );
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-2"
+              >
+                {selectedEmptyDayMessage && (
+                  <div className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+                    {selectedEmptyDayMessage}
+                  </div>
+                )}
+                {completedItems.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {completedItems.map((item) => (
+                      <div
+                        key={item.key}
+                        className="relative min-w-[116px] rounded-xl bg-muted/80 p-2 text-center"
+                      >
+                        <Check
+                          className="absolute right-2 top-2 h-5 w-5 -translate-y-1/2 text-green-500"
+                          strokeWidth={3}
+                        />
+                        <div className="text-xl leading-none">{item.emoji}</div>
+                        <div className="mt-1 truncate text-sm font-medium text-foreground">
+                          {item.title}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">
+                          Done
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })()}
+
+        {selectedSession && selectedSessionDisplay === "card" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex gap-2 overflow-x-auto pb-1"
+          >
+            <div className="relative min-w-[116px] rounded-xl bg-muted/80 p-2 text-center">
+              <Check
+                className="absolute right-2 top-1/2 h-5 w-5 -translate-y-1/2 text-green-500"
+                strokeWidth={3}
+              />
+              <div className="text-xl leading-none">
+                {selectedSession.activity.emoji || "📋"}
+              </div>
+              <div className="mt-1 truncate text-sm font-medium text-foreground">
+                {selectedSession.activity.title}
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                {formatSessionCardDate(new Date(selectedSession.session.date))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {selectedSession && selectedSessionDisplay === "detail" && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

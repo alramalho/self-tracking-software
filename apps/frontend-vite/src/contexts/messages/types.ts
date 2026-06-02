@@ -42,17 +42,29 @@ export interface Message {
     planGoal: string;
     planEmoji: string | null;
     description: string;
-    operations: unknown[];
+    patch?: unknown;
+    operations?: unknown[];
     status: "accepted" | "rejected" | null;
   }>;
   planCreationProposals?: Array<{
     goal: string;
     goalReason: string | null;
     emoji: string | null;
+    isCoached?: boolean | null;
+    outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
     timesPerWeek: number | null;
     activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+    finishingDate?: string | null;
+    milestones?: Array<{ description: string; date?: string | null; criteria?: string | null }>;
+    sessions?: Array<{
+      activityTitle: string;
+      date: string;
+      quantity?: number | null;
+      descriptiveGuide?: string | null;
+    }>;
     description: string;
     status: "accepted" | "rejected" | null;
+    planId?: string;
   }>;
   activityLogProposals?: Array<{
     activityId: string;

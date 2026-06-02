@@ -58,7 +58,7 @@ export default function GeneralInitializer({
   const showsBottomNav = isSignedIn
     && !isDownloadPage
     && !isAiPage
-    && !isDmsPage
+    && (!isDmsPage || isDesktop)
     && !isGetCoachedPage
     && !isWrappedPage
     && !isManageAICoachPage

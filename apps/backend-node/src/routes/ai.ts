@@ -7,6 +7,10 @@ import { coachAssessmentService } from "../services/coachAssessmentService";
 import { coachAgentService } from "../services/coachAgentService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
+import {
+  executePlanProposalPatch,
+  getProposalPatch,
+} from "../services/planProposalPatchService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
@@ -1282,7 +1286,6 @@ router.post(
       // Verify the plan belongs to the user
       const plan = await prisma.plan.findFirst({
         where: { id: proposal.planId, userId: user.id, deletedAt: null },
-        include: { activities: true, sessions: true },
       });
 
       if (!plan) {
@@ -1290,164 +1293,12 @@ router.post(
         return;
       }
 
-      if (
-        proposal.operations.some((op: any) => op.type === "archive") &&
-        proposal.operations.length > 1
-      ) {
-        res.status(400).json({
-          error: "Archive proposal must not include other operations",
-        });
-        return;
-      }
-
-      // Execute the operations
-      const changes: Array<{
-        operation: string;
-        sessionId?: string;
-        success: boolean;
-        error?: string;
-      }> = [];
-
-      for (const op of proposal.operations) {
-        try {
-          if (op.type === "add") {
-            const activity = plan.activities.find(
-              (a: any) => a.id === op.activityId
-            );
-            if (!activity) {
-              changes.push({
-                operation: "add",
-                success: false,
-                error: `Activity ${op.activityId} not found in plan`,
-              });
-              continue;
-            }
-
-            const sessionDate = new Date(op.date);
-            const newSession = await prisma.planSession.create({
-              data: {
-                planId: proposal.planId,
-                activityId: op.activityId,
-                date: new Date(
-                  Date.UTC(
-                    sessionDate.getFullYear(),
-                    sessionDate.getMonth(),
-                    sessionDate.getDate()
-                  )
-                ),
-                quantity: op.quantity,
-                descriptiveGuide: op.descriptiveGuide || "",
-                isCoachSuggested: true,
-              },
-            });
-
-            changes.push({
-              operation: "add",
-              sessionId: newSession.id,
-              success: true,
-            });
-          } else if (op.type === "update") {
-            const session = plan.sessions.find(
-              (s: any) => s.id === op.sessionId
-            );
-            if (!session) {
-              changes.push({
-                operation: "update",
-                sessionId: op.sessionId,
-                success: false,
-                error: "Session not found",
-              });
-              continue;
-            }
-
-            const updateData: Record<string, unknown> = {};
-            if (op.date) {
-              const d = new Date(op.date);
-              updateData.date = new Date(
-                Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
-              );
-            }
-            if (op.quantity !== undefined) updateData.quantity = op.quantity;
-            if (op.descriptiveGuide !== undefined)
-              updateData.descriptiveGuide = op.descriptiveGuide;
-
-            await prisma.planSession.update({
-              where: { id: op.sessionId },
-              data: updateData,
-            });
-
-            changes.push({
-              operation: "update",
-              sessionId: op.sessionId,
-              success: true,
-            });
-          } else if (op.type === "remove") {
-            const session = plan.sessions.find(
-              (s: any) => s.id === op.sessionId
-            );
-            if (!session) {
-              changes.push({
-                operation: "remove",
-                sessionId: op.sessionId,
-                success: false,
-                error: "Session not found",
-              });
-              continue;
-            }
-
-            await prisma.planSession.delete({
-              where: { id: op.sessionId },
-            });
-
-            changes.push({
-              operation: "remove",
-              sessionId: op.sessionId,
-              success: true,
-            });
-          } else if (op.type === "archive") {
-            await prisma.plan.update({
-              where: { id: proposal.planId },
-              data: {
-                archivedAt: new Date(),
-                isCoached: false,
-                coachSuggestedTimesPerWeek: null,
-                coachNotes: null,
-              },
-            });
-
-            changes.push({
-              operation: "archive",
-              success: true,
-            });
-          } else if (op.type === "update_plan") {
-            const updateData: Record<string, unknown> = {};
-            if (op.goal !== undefined) updateData.goal = op.goal;
-            if (op.goalReason !== undefined) updateData.goalReason = op.goalReason;
-            if (op.outlineType !== undefined) updateData.outlineType = op.outlineType;
-            if (op.timesPerWeek !== undefined) updateData.timesPerWeek = op.timesPerWeek;
-            if (op.isCoached !== undefined) updateData.isCoached = op.isCoached;
-            if (op.goal !== undefined) updateData.goalChanged = true;
-
-            await prisma.plan.update({
-              where: { id: proposal.planId },
-              data: updateData,
-            });
-
-            changes.push({
-              operation: "update_plan",
-              success: true,
-            });
-          }
-        } catch (error) {
-          logger.error("Proposal operation failed:", error);
-          changes.push({
-            operation: op.type,
-            sessionId: "sessionId" in op ? op.sessionId : undefined,
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
-      }
+      const patch = getProposalPatch(proposal);
+      const { changes } = await executePlanProposalPatch({
+        planId: proposal.planId,
+        userId: user.id,
+        patch,
+      });
 
       // Update proposal status in metadata
       metadata.planProposals[proposalIndex].status = "accepted";
@@ -1463,7 +1314,7 @@ router.post(
 
       const successCount = changes.filter((c) => c.success).length;
       logger.info(
-        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount}/${proposal.operations.length} ops successful)`
+        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount} changes successful)`
       );
 
       // Conclude week_recap notification if all proposals are now resolved
@@ -1643,6 +1494,7 @@ router.post(
 
       const plan = await prisma.$transaction(async (tx) => {
         const activityIds: string[] = [];
+        const activityIdsByTitle = new Map<string, string>();
         for (const activity of proposal.activities || []) {
           const existing = await tx.activity.findFirst({
             where: {
@@ -1662,7 +1514,73 @@ router.post(
             },
           });
           activityIds.push(savedActivity.id);
+          activityIdsByTitle.set(activity.title.toLowerCase(), savedActivity.id);
         }
+
+        const sessionCreates: Array<{
+          activityId: string;
+          date: string;
+          quantity: number;
+          descriptiveGuide: string;
+        }> = [];
+
+        for (const session of proposal.sessions || []) {
+          let activityId = activityIdsByTitle.get(
+            String(session.activityTitle || "").toLowerCase()
+          );
+
+          if (!activityId && session.activityTitle) {
+            const existing = await tx.activity.findFirst({
+              where: {
+                userId: user.id,
+                deletedAt: null,
+                title: { equals: session.activityTitle, mode: "insensitive" },
+              },
+            });
+
+            const savedActivity = existing || await tx.activity.create({
+              data: {
+                userId: user.id,
+                title: session.activityTitle,
+                measure: "sessions",
+                emoji: "📋",
+                kind: "other",
+              },
+            });
+
+            activityId = savedActivity.id;
+            if (!activityIds.includes(activityId)) {
+              activityIds.push(activityId);
+            }
+            activityIdsByTitle.set(session.activityTitle.toLowerCase(), activityId);
+          }
+
+          if (activityId && session.date) {
+            sessionCreates.push({
+              activityId,
+              date: session.date,
+              quantity: session.quantity || 1,
+              descriptiveGuide: session.descriptiveGuide || "",
+            });
+          }
+        }
+
+        const milestoneCreates = (proposal.milestones || [])
+          .filter((milestone: any) => milestone.description && milestone.date)
+          .map((milestone: any) => ({
+            description: milestone.description,
+            date: milestone.date,
+            criteria: milestone.criteria || undefined,
+            progress: milestone.progress ?? 0,
+          }));
+
+        const outlineType =
+          proposal.outlineType ||
+          (sessionCreates.length > 0
+            ? "SPECIFIC"
+            : proposal.timesPerWeek
+              ? "TIMES_PER_WEEK"
+              : "SPECIFIC");
 
         const newPlan = await tx.plan.create({
           data: {
@@ -1670,14 +1588,24 @@ router.post(
             goal: proposal.goal,
             goalReason: proposal.goalReason || null,
             emoji: proposal.emoji || "🎯",
-            outlineType: proposal.timesPerWeek ? "TIMES_PER_WEEK" : "SPECIFIC",
-            timesPerWeek: proposal.timesPerWeek || null,
-            isCoached: true,
+            finishingDate: proposal.finishingDate || null,
+            outlineType,
+            timesPerWeek:
+              outlineType === "TIMES_PER_WEEK"
+                ? proposal.timesPerWeek || null
+                : null,
+            isCoached: proposal.isCoached ?? true,
             activities: activityIds.length > 0
               ? { connect: activityIds.map((id) => ({ id })) }
               : undefined,
+            sessions: sessionCreates.length > 0
+              ? { create: sessionCreates }
+              : undefined,
+            milestones: milestoneCreates.length > 0
+              ? { create: milestoneCreates }
+              : undefined,
           },
-          include: { activities: true, sessions: true },
+          include: { activities: true, sessions: true, milestones: true },
         });
 
         return newPlan;
@@ -2116,6 +2044,7 @@ router.post(
         include: {
           activities: true,
           sessions: true,
+          milestones: true,
         },
         orderBy: [{ createdAt: "desc" }],
       });
@@ -2135,8 +2064,8 @@ router.post(
         internalPrompt =
           "Use readActivities for the past 7 days and produce a weekly recap for the user. " +
           "If a plan or activity appears missed, also use readActivities for the past 90 days before deciding what to suggest. " +
-          "Highlight what went well and what was missed. Treat sustained absence seriously: if a plan has no meaningful activity for 30+ days, prefer proposePlanModification with an archive operation instead of reducing frequency by one. " +
-          "For short-term misses, suggest a concrete lower-friction change with proposePlanModification, such as removing upcoming sessions or adjusting quantities. " +
+          "Highlight what went well and what was missed. Treat sustained absence seriously: if a plan has no meaningful activity for 30+ days, prefer proposePlanModification with patch.archive instead of reducing frequency by one. " +
+          "For short-term misses, suggest a concrete lower-friction patch with proposePlanModification, such as removing upcoming sessions or adjusting quantities. " +
           "Keep the text concise (3-5 sentences).";
       } else {
         internalPrompt =

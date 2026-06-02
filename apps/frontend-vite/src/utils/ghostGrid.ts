@@ -14,6 +14,8 @@ export interface GhostCell {
   date: Date;
   activityId: string;
   planId: string;
+  title?: string;
+  emoji?: string | null;
   kind: GhostCellKind;
   state: PlanState | null;
 }
@@ -78,12 +80,13 @@ function placeGhosts(
  * Build the 2-week grid view across all active plans. Pure & client-side.
  *
  * - SPECIFIC plans contribute their real dated sessions (scheduled).
- * - TIMES_PER_WEEK plans contribute ghost cells spread across the remaining open
- *   days. This week's count comes from the server-computed
- *   `currentWeekStats.numActiveDaysLeftInTheWeek` (already nets out completed
- *   days); next week's count is the full `timesPerWeek`. When more ghosts are
- *   needed than open days remain, the surplus renders as `overflow` — which is
- *   exactly the condition the backend reports as `FAILED`.
+ * - TIMES_PER_WEEK plans contribute plan-level ghost cells spread across the
+ *   remaining open days. This week's count uses the lower of server-computed
+ *   remaining days and fresh local completions, so a just-logged activity does
+ *   not leave a stale placeholder behind. Next week's count is the full
+ *   `timesPerWeek`. When more ghosts are needed than open days remain, the
+ *   surplus renders as `overflow` — which is exactly the condition the backend
+ *   reports as `FAILED`.
  */
 export function computeGridCells(
   plans: CompletePlan[] | undefined,
@@ -101,6 +104,7 @@ export function computeGridCells(
   const scheduledSessions: CalendarSession[] = [];
   const ghostCells: GhostCell[] = [];
   const activityMap = new Map<string, CalendarActivity>();
+  const dayKey = (d: Date) => format(d, "yyyy-MM-dd");
 
   for (const plan of (plans ?? []).filter(isActiveVisiblePlan)) {
     for (const a of plan.activities ?? []) {
@@ -134,26 +138,45 @@ export function computeGridCells(
     if (plan.outlineType === "TIMES_PER_WEEK") {
       const activityId = plan.activities?.[0]?.id;
       if (!activityId || !plan.timesPerWeek) continue;
+      const planActivityIds = new Set(plan.activities?.map((a) => a.id) ?? []);
+      const completedDaysThisWeek = new Set(
+        completedEntries
+          .filter((entry) => {
+            if (!entry.activityId || !planActivityIds.has(entry.activityId)) return false;
+            const date = new Date(entry.datetime);
+            return date >= weekStart && date < addDays(weekStart, 7);
+          })
+          .map((entry) => dayKey(new Date(entry.datetime)))
+      );
+      const week1OpenForPlan = week1Open.filter(
+        (day) => !completedDaysThisWeek.has(dayKey(day))
+      );
 
       const base = {
         activityId,
         planId: plan.id,
+        title: plan.goal,
+        emoji: plan.emoji,
         state: plan.currentWeekState ?? null,
       };
 
       const stats = plan.progress?.currentWeekStats;
+      const localWeek1Count = Math.max(
+        0,
+        plan.timesPerWeek - completedDaysThisWeek.size
+      );
       const week1Count =
-        stats?.numActiveDaysLeftInTheWeek ??
-        Math.max(0, plan.timesPerWeek - (stats?.daysCompletedThisWeek ?? 0));
+        stats?.numActiveDaysLeftInTheWeek == null
+          ? localWeek1Count
+          : Math.min(stats.numActiveDaysLeftInTheWeek, localWeek1Count);
 
-      placeGhosts(week1Open, week1Count, base, ghostCells);
+      placeGhosts(week1OpenForPlan, week1Count, base, ghostCells);
       placeGhosts(week2Days, plan.timesPerWeek, base, ghostCells);
     }
   }
 
   // Completed activity logs — show what was actually done. Skip days that already
   // have a scheduled session for that activity (those render their own check).
-  const dayKey = (d: Date) => format(d, "yyyy-MM-dd");
   const scheduledKeys = new Set(
     scheduledSessions.map((s) => `${s.activityId}|${dayKey(new Date(s.date))}`)
   );
