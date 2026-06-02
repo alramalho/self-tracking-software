@@ -30,9 +30,13 @@ const ReactionsList: React.FC<ReactionsListProps> = ({
 
   const isOverlay = variant === "overlay";
 
+  const layoutClass = vertical
+    ? "grid grid-flow-col grid-rows-[repeat(4,max-content)] auto-cols-max"
+    : "flex flex-wrap";
+
   return (
     <div
-      className={`flex gap-2 ${vertical ? "flex-col" : "flex-wrap"} ${isOverlay ? "justify-center" : ""} ${isOverlay ? "" : "mb-3"}`}
+      className={`${layoutClass} gap-2 ${isOverlay ? "justify-center" : ""} ${isOverlay ? "" : "mb-3"}`}
     >
       {Object.entries(reactions).map(([emoji, usernames]) => {
         const isSelected = usernames.includes(currentUsername || "");

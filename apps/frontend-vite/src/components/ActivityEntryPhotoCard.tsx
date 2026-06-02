@@ -708,7 +708,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 ))}
               </div>
             )}
-            <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
+            <div className="absolute top-2 left-2 z-30 grid grid-flow-col grid-rows-[repeat(4,max-content)] auto-cols-max items-start gap-2">
               {reactions &&
                 Object.entries(reactions).map(([emoji, usernames]) => {
                   return (
