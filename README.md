@@ -67,7 +67,7 @@ pnpm --filter backend-node dev
 pnpm --filter frontend-vite dev
 ```
 
-Backend health should be available at `http://localhost:3000/health`. Vite will print the frontend URL, usually `http://localhost:5173`.
+After copying `apps/backend-node/.env.example`, backend health should be available at `http://localhost:8000/health` (or the port you set in `apps/backend-node/.env`). Vite will print the frontend URL, usually `http://localhost:5173`.
 
 ### Readiness checks vs. app startup
 
