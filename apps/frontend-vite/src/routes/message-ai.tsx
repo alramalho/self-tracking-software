@@ -17,7 +17,7 @@ import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Button } from "@/components/ui/button";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
-import { useMessages, getMessages, type Message } from "@/contexts/messages";
+import { useMessages, type Message } from "@/contexts/messages";
 import { usePlans } from "@/contexts/plans";
 import { useActivities } from "@/contexts/activities/useActivities";
 import type { ResolvedOperation } from "@/components/PlanProposalCard";
@@ -27,12 +27,11 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays } from "lucide-react";
+import { Send, Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import ReactMarkdown from "react-markdown";
-import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
@@ -471,7 +470,6 @@ export const Route = createFileRoute("/message-ai")({
 function MessageAIPage() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
-  const api = useApiWithAuth();
   const { plans } = usePlans();
   const { activities, activityEntries } = useActivities();
   const themeColors = useThemeColors();
@@ -552,10 +550,6 @@ function MessageAIPage() {
     };
   }, [flushReadQueue]);
 
-  const [olderCoachMessages, setOlderCoachMessages] = useState<Message[]>([]);
-  const [loadedCoachChatIds, setLoadedCoachChatIds] = useState<string[]>([]);
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
-
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
 
   // Get all coach chats sorted by date (newest first)
@@ -563,8 +557,6 @@ function MessageAIPage() {
     chats?.filter(c => c.type === "COACH")
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()) || []
     , [chats]);
-
-  const currentChat = chats?.find((chat) => chat.id === currentChatId);
 
   const recentActivities = useMemo<VisibleActivity[]>(() => {
     const activitiesById = new Map(
@@ -620,52 +612,22 @@ function MessageAIPage() {
   useEffect(() => {
     if (isLoadingChats) return;
 
-    if (coachChats.length > 0 && !currentChatId) {
+    const currentChatIsCoach =
+      !!currentChatId && coachChats.some((chat) => chat.id === currentChatId);
+
+    if (coachChats.length > 0 && !currentChatIsCoach) {
       setCurrentChatId(coachChats[0].id);
     } else if (coachChats.length === 0 && !isCreatingCoachChat) {
       createCoachChat({ title: null });
     }
   }, [coachChats, currentChatId, isLoadingChats, isCreatingCoachChat, setCurrentChatId, createCoachChat]);
 
-  // Check if there are older coach conversations to load
-  const hasOlderConversations = currentChat?.type === "COACH" &&
-    loadedCoachChatIds.length < coachChats.length - 1;
-
-  // Merge current messages with older loaded messages
+  // Coach messages include previous coach chats so visible context matches coach memory.
   const allMessages = useMemo(() => {
-    const combined = [...olderCoachMessages, ...(messages || [])];
-    return combined.sort((a, b) =>
+    return [...(messages || [])].sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-  }, [messages, olderCoachMessages]);
-
-  // Load older coach conversation
-  const handleLoadOlder = useCallback(async () => {
-    if (isLoadingOlder || !currentChat) return;
-
-    const loadedIds = new Set([currentChatId, ...loadedCoachChatIds]);
-    const nextChat = coachChats.find(c => !loadedIds.has(c.id));
-
-    if (!nextChat) return;
-
-    setIsLoadingOlder(true);
-    try {
-      const olderMessages = await getMessages(api, nextChat.id);
-      setOlderCoachMessages(prev => [...olderMessages, ...prev]);
-      setLoadedCoachChatIds(prev => [...prev, nextChat.id]);
-    } catch (error) {
-      console.error("Failed to load older messages:", error);
-      toast.error("Failed to load older conversations");
-    } finally {
-      setIsLoadingOlder(false);
-    }
-  }, [api, coachChats, currentChatId, currentChat, isLoadingOlder, loadedCoachChatIds]);
-
-  // Reset older messages state when switching chats
-  useEffect(() => {
-    setOlderCoachMessages([]);
-    setLoadedCoachChatIds([]);
-  }, [currentChatId]);
+  }, [messages]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -1196,20 +1158,6 @@ function MessageAIPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
           <div className="w-full max-w-4xl mx-auto px-4 py-6">
-            {hasOlderConversations && (
-              <button
-                onClick={handleLoadOlder}
-                disabled={isLoadingOlder}
-                className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isLoadingOlder ? (
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : (
-                  "Load older conversations"
-                )}
-              </button>
-            )}
-
             {isLoadingMessages ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -1259,7 +1207,11 @@ function MessageAIPage() {
                     key={message.id}
                     message={message}
                     isOwnMessage={isUserMessage}
-                    onVisible={queueMessageForRead}
+                    onVisible={
+                      message.chatId === currentChatId
+                        ? queueMessageForRead
+                        : () => undefined
+                    }
                     className={messageSpacing}
                   >
                     {showDateDivider && <DateDivider date={messageDate} />}

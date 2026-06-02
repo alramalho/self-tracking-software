@@ -159,6 +159,7 @@ router.get(
     try {
       const user = req.user!;
       const { chatId } = req.params;
+      const includeCoachHistory = req.query.includeCoachHistory === "true";
 
       // Verify user has access to this chat
       const chat = await prisma.chat.findFirst({
@@ -195,11 +196,20 @@ router.get(
         return res.status(404).json({ error: "Chat not found" });
       }
 
-      // Fetch all messages for this chat
+      // Fetch all messages for this chat. The AI coach can use long-term memory
+      // across coach chats, so the frontend can request the same visible timeline.
       const messages = await prisma.message.findMany({
-        where: {
-          chatId: chatId,
-        },
+        where:
+          chat.type === "COACH" && includeCoachHistory
+            ? {
+                chat: {
+                  userId: user.id,
+                  type: "COACH",
+                },
+              }
+            : {
+                chatId: chatId,
+              },
         include: {
           feedback: true,
           sender: {
