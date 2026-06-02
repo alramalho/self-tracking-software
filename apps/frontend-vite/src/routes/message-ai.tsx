@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { Send, Loader2, ArrowLeft, Target, X, Settings, AlertCircle, EllipsisVertical, Trash2, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import ReactMarkdown from "react-markdown";
 import { useApiWithAuth } from "@/api";
@@ -514,6 +514,7 @@ function MessageAIPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initiallyScrolledChatIdRef = useRef<string | null>(null);
 
   // Debounced mark-as-read tracking
   const messageQueueRef = useRef<Set<string>>(new Set());
@@ -688,13 +689,26 @@ function MessageAIPage() {
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = messagesContainerRef.current;
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior });
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!currentChatId || isLoadingMessages || allMessages.length === 0) {
+      return;
+    }
+
+    const isInitialScroll = initiallyScrolledChatIdRef.current !== currentChatId;
+    scrollToBottom(isInitialScroll ? "auto" : "smooth");
+    initiallyScrolledChatIdRef.current = currentChatId;
+  }, [allMessages.length, currentChatId, isLoadingMessages, scrollToBottom]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isSendingMessage || !currentChatId) {
