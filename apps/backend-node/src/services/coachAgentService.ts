@@ -127,7 +127,6 @@ export class CoachAgentService {
           Plan: ${plan.goal} [planId: ${plan.id}]
           Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
-          Coaching: ${plan.isCoached ? "coached" : "not coached yet"}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
@@ -186,10 +185,10 @@ export class CoachAgentService {
         - Research first, then advise. Web search results override your assumptions
         - Be direct, concise, and realistic. If a goal is unrealistic given constraints, say so
         - Suggesting the user adjust their goal is better than setting them up to fail
-        - If no plan is coached yet, treat that as setup, not an error. Ask whether the user wants to tighten an existing plan or create a new coached plan.
+        - The coach can see and help with every active plan. If there are no active plans, treat that as setup, not an error.
         - When a plan goal is vague or purely frequency-based, mention that plan by its exact goal text from USER'S PLANS so it can be linked in the UI.
         - If the user gives a concrete measurable goal, use proposePlanCreation for a new goal or proposePlanModification with patch.plan for an existing plan.
-        - For plan creation, explicitly decide whether it is self-guided or AI coached, and whether it is frequency-based (TIMES_PER_WEEK) or session-based (SPECIFIC). If you choose SPECIFIC, include dated sessions or clearly tell the user sessions still need setup.
+        - For plan creation, explicitly decide whether it is frequency-based (TIMES_PER_WEEK) or session-based (SPECIFIC). If you choose SPECIFIC, include dated sessions or clearly tell the user sessions still need setup.
         - For plan creation goalReason, capture only the user's inner motivation or desired personal outcome, such as confidence, independence, career mobility, health, identity, or a specific life reason. Do not use logistics, availability, employment status, schedule, or constraints as goalReason. If the user has not shared a real why, leave goalReason null.
         - Any capability not provided by the available tools is not available to you.
         - When saying the user logged, did, trained, or practiced something recently/lately, rely only on RECENT ACTIVITY FACTS or readActivities output. Active plans and long-term memory are not recent activity evidence.
@@ -206,10 +205,10 @@ export class CoachAgentService {
         - Make one point, then ask one natural next-step question if needed.
         - Avoid stiff phrases like "concrete, measurable outcome", "frequency alone is not a strategy", or "serious coached plan" unless the user used them first.
         - Do not say you updated, switched, set, or changed a plan unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this..."
-        - Do not use update_plan as a cosmetic rename. It should represent a meaningful plan setup change, such as goal, reason, coaching status, outline type, or weekly frequency.
-        - When you propose creating or updating a plan, be transparent about the setup: say whether it will be self-guided or AI coached, whether it is times/week or specific dated sessions, which activities are included, and whether milestones, finishing date, and sessions are included now or need setup after accepting.
+        - Do not use update_plan as a cosmetic rename. It should represent a meaningful plan setup change, such as goal, reason, outline type, weekly frequency, sessions, milestones, activities, or date.
+        - When you propose creating or updating a plan, be transparent about the setup: say whether it is times/week or specific dated sessions, which activities are included, and whether milestones, finishing date, and sessions are included now or need setup after accepting.
         - For bigger rebuilds, especially new activity mixes like strength plus running, work in two stages: first confirm the target and weekly split, then propose the plan or sessions that actually encode it.
-        - If the existing plan cannot represent the new activity mix or schedule, prefer proposing a new coached plan after confirmation instead of only renaming the old plan.
+        - If the existing plan cannot represent the new activity mix or schedule, prefer proposing a new plan after confirmation instead of only renaming the old plan.
         - You MUST use the draftMessages tool to send your response. Never respond with plain text.
         - Each message should focus on one topic/thought. Use multiple messages only when covering distinct points.
         - No markdown headers (#). No numbered lists. Keep it conversational like texting.
@@ -319,7 +318,6 @@ export class CoachAgentService {
                 goalReason: z.string().optional().nullable().describe("Why this plan matters to the user"),
                 outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
                 timesPerWeek: z.number().positive().nullable().optional(),
-                isCoached: z.boolean().optional().describe("Set true when the user wants this plan coached"),
               }).optional(),
               sessions: z.object({
                 upsert: z.array(z.object({
@@ -491,14 +489,13 @@ export class CoachAgentService {
         proposePlanCreation: tool({
           description: dedent`
             Propose creating a new tracked plan. The user can accept or reject the proposal with one click.
-            Use this only after the user clearly asks for a new tracked/coached plan or agrees to turn the conversation into one.
+            Use this only after the user clearly asks for a new tracked plan or agrees to turn the conversation into one.
             Prefer goals that are clear enough to track, but do not force every coaching conversation into a plan.
           `,
           inputSchema: z.object({
             goal: z.string().describe("Short, concrete, measurable goal"),
             goalReason: z.string().optional().nullable().describe("The user's inner motivation or desired personal outcome, if known. Do not put logistics, schedule, employment status, or constraints here."),
             emoji: z.string().optional().describe("Single emoji for the plan"),
-            isCoached: z.boolean().optional().describe("Whether the plan should be actively AI coached. Use false for self-guided plans."),
             outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
             activities: z.array(z.object({
@@ -525,7 +522,6 @@ export class CoachAgentService {
             goal,
             goalReason,
             emoji,
-            isCoached,
             outlineType,
             timesPerWeek,
             activities,
@@ -544,7 +540,6 @@ export class CoachAgentService {
                 goal,
                 goalReason: goalReason || null,
                 emoji: emoji || "🎯",
-                isCoached: isCoached ?? true,
                 outlineType:
                   outlineType ||
                   ((sessions?.length || 0) > 0 ? "SPECIFIC" : "TIMES_PER_WEEK"),
@@ -1058,7 +1053,6 @@ export class CoachAgentService {
         goal: string;
         goalReason: string | null;
         emoji: string | null;
-        isCoached?: boolean | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
         activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;

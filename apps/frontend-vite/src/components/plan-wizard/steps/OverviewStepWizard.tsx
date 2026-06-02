@@ -14,7 +14,7 @@ import {
   Dumbbell,
   Flag,
   CalendarCheck,
-  Users,
+  Route,
   Loader2,
   Pencil,
 } from "lucide-react";
@@ -64,9 +64,6 @@ const OverviewStepWizard = () => {
     emoji,
     backgroundImageUrl,
     backgroundImageFile,
-    isCoached,
-    selectedCoach,
-    selectedCoachId,
     visibility,
     finishingDate,
     activities,
@@ -111,7 +108,6 @@ const OverviewStepWizard = () => {
         backgroundImageUrl: finalBackgroundImageUrl || null,
         outlineType,
         timesPerWeek: outlineType === "TIMES_PER_WEEK" ? timesPerWeek : null,
-        isCoached,
         activities,
         sessions,
         milestones: milestones.filter((m) => m.description?.trim()),
@@ -170,7 +166,7 @@ const OverviewStepWizard = () => {
       goal: goal !== originalValues.goal,
       emoji: emoji !== originalValues.emoji,
       backgroundImage: backgroundImageUrl !== originalValues.backgroundImageUrl || !!backgroundImageFile,
-      coaching: isCoached !== originalValues.isCoached || selectedCoachId !== originalValues.selectedCoachId,
+      structure: outlineType !== originalValues.outlineType,
       visibility: visibility !== originalValues.visibility,
       duration: compareDates(finishingDate, originalValues.finishingDate),
       activities: compareArrays(activities, originalValues.activities, "id"),
@@ -179,7 +175,7 @@ const OverviewStepWizard = () => {
     };
   }, [
     originalValues, goal, emoji, backgroundImageUrl, backgroundImageFile,
-    isCoached, selectedCoachId, visibility, finishingDate, activities, timesPerWeek, milestones
+    outlineType, visibility, finishingDate, activities, timesPerWeek, milestones
   ]);
 
   return (
@@ -219,17 +215,11 @@ const OverviewStepWizard = () => {
           isChanged={changes.timesPerWeek}
         />
         <OverviewCard
-          icon={<Users className="w-5 h-5 text-muted-foreground" />}
-          label="Coaching"
-          value={
-            isCoached
-              ? selectedCoach
-                ? selectedCoach.name || selectedCoach.username
-                : "AI Coach"
-              : "Self-guided"
-          }
+          icon={<Route className="w-5 h-5 text-muted-foreground" />}
+          label="Plan Type"
+          value={outlineType === "SPECIFIC" ? "Scheduled sessions" : "Flexible target"}
           onClick={() => goToStep("coaching")}
-          isChanged={changes.coaching}
+          isChanged={changes.structure}
         />
         <OverviewCard
           icon={<Eye className="w-5 h-5 text-muted-foreground" />}

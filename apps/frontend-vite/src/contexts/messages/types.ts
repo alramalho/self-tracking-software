@@ -6,6 +6,23 @@ export interface ToolCall {
   result: Record<string, unknown>;
 }
 
+export interface UserActionDiff {
+  label: string;
+  oldValue: string;
+  newValue: string;
+}
+
+export interface UserAction {
+  type: "PLAN_CREATION_CHANGES_PROPOSED";
+  title: string;
+  diffs: UserActionDiff[];
+  note?: string | null;
+  originalProposal?: unknown;
+  requestedProposal?: unknown;
+  proposalMessageId?: string;
+  proposalIndex?: number;
+}
+
 export interface Message {
   id: string;
   chatId?: string;
@@ -50,7 +67,6 @@ export interface Message {
     goal: string;
     goalReason: string | null;
     emoji: string | null;
-    isCoached?: boolean | null;
     outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
     timesPerWeek: number | null;
     activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
@@ -63,7 +79,7 @@ export interface Message {
       descriptiveGuide?: string | null;
     }>;
     description: string;
-    status: "accepted" | "rejected" | null;
+    status: "accepted" | "rejected" | "changes_requested" | null;
     planId?: string;
   }>;
   activityLogProposals?: Array<{
@@ -77,6 +93,7 @@ export interface Message {
     status: "accepted" | "rejected" | null;
   }>;
   toolCalls?: ToolCall[] | null;
+  userAction?: UserAction | null;
   error?: boolean;
   /** Origin tag, e.g. "autonomous_coach" for proactive coach assessment messages. */
   source?: string | null;
@@ -131,7 +148,9 @@ export interface MessagesContextType {
 
   // Mutations
   sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message[]>;
+  rewriteMessage: (data: { chatId: string; messageId: string; message: string }) => Promise<Message[]>;
   isSendingMessage: boolean;
+  isRewritingMessage: boolean;
   pendingStaggeredMessages: Message[];
   createDirectChat: (userId: string) => Promise<Chat>;
   isCreatingDirectChat: boolean;

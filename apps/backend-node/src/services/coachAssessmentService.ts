@@ -329,7 +329,7 @@ export class CoachAssessmentService {
     const aiResponse = await coachAgentService.generateResponse({
       user,
       message: dedent`
-        The user manually ran a coach assessment, but they have no active coached plans.
+        The user manually ran a coach assessment, but they have no active plans.
 
         This is a setup moment, not an error.
 
@@ -338,11 +338,7 @@ export class CoachAssessmentService {
 
         Required behavior:
         - Speak as the coach in first person. Do not say "No active coach plans".
-        - If there are active plans, inspect whether any goal is vague, purely frequency-based, or missing a measurable outcome.
-        - When you critique or ask about an existing plan, include that plan's exact goal text from Active plans in your message so the UI can link it.
-        - If a plan is vague, ask whether they want to turn that exact plan into a clearer goal.
-        - Also offer creating a new coached plan if none of the existing plans should change.
-        - If there are no active plans, ask what measurable goal they want coached first.
+        - Ask what measurable plan they want to create first.
         - Sound natural and conversational. Avoid corporate phrases like "To coach you effectively".
         - Do not use em dashes. Use commas, periods, or parentheses instead.
         - Ask at most one crisp question. Do not propose a setup tool until the user gives a concrete target or confirms what to change.
@@ -357,7 +353,7 @@ export class CoachAssessmentService {
 
     const candidate: CoachInterventionCandidate = {
       type: "COACH_SETUP",
-      reason: "User requested a coach assessment without an active coached plan.",
+      reason: "User requested a coach assessment without an active plan.",
       planIds: user.plans.map((plan) => plan.id),
       targetDate: format(new TZDate(now, user.timezone || "UTC"), "yyyy-MM-dd"),
       context: activePlanSummary,
@@ -366,7 +362,7 @@ export class CoachAssessmentService {
 
     const drafts = aiResponse.draftMessages.length > 0
       ? aiResponse.draftMessages
-      : [{ content: "I do not have a coached plan set up for you yet. Do you want to tighten one of your current plans into a measurable goal, or create a new coached plan?" }];
+      : [{ content: "I do not see an active plan yet. What measurable goal do you want to start with?" }];
 
     const sent = await this.dispatchCoachDrafts(user, candidate, drafts, "Coach setup");
 
@@ -514,7 +510,6 @@ export class CoachAssessmentService {
           where: { id: plan.id },
           data: {
             archivedAt: new Date(),
-            isCoached: false,
             coachSuggestedTimesPerWeek: null,
             coachNotes: null,
           },
@@ -693,7 +688,7 @@ export class CoachAssessmentService {
       - ${action}.
       - Use the available plan modification tool when proposing changes.
       - Mention that the user has 48 hours to decline before it applies automatically.
-      - When proposing plan creation or updates, state what will be set immediately and what still needs setup: coaching mode, times/week vs dated sessions, activities, milestones, finishing date, and sessions.
+      - When proposing plan creation or updates, state what will be set immediately and what still needs setup: times/week vs dated sessions, activities, milestones, finishing date, and sessions.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
       - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
       - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
@@ -720,7 +715,6 @@ export class CoachAssessmentService {
         goal: string;
         goalReason: string | null;
         emoji: string | null;
-        isCoached?: boolean | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
         activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;

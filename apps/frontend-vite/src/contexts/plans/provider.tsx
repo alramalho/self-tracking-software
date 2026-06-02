@@ -4,7 +4,7 @@ import { useLogError } from "@/hooks/useLogError";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Prisma, type Activity, type PlanSession } from "@tsw/prisma";
 import { type PlanMilestone } from "@tsw/prisma/types";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { toast } from "react-hot-toast";
 import { normalizePlanProgress } from "../plans-progress/service";
 import {
@@ -25,7 +25,6 @@ import {
   type CompletePlan,
   type PlansContextType,
 } from "./types";
-import { useCurrentUser } from "@/contexts/users";
 
 export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -34,8 +33,6 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
-  const { currentUser } = useCurrentUser();
-  const hasRunCoachingCheckRef = useRef(false);
 
   const plans = useQuery({
     queryKey: ["plans"],
@@ -289,43 +286,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
-  // Safety check: Remove coaching flags from all plans if user is on FREE plan
-  useEffect(() => {
-    // Only run once when plans are loaded and user data is available
-    if (
-      !hasRunCoachingCheckRef.current &&
-      plans.data &&
-      currentUser &&
-      !plans.isLoading
-    ) {
-      const isFreePlan = currentUser.planType === "FREE";
-
-      if (isFreePlan) {
-        const coachedPlans = plans.data.filter((plan) => plan.isCoached);
-
-        if (coachedPlans.length > 0) {
-          console.warn(
-            `Found ${coachedPlans.length} coached plan(s) for FREE user. Removing coaching flags...`
-          );
-
-          // Build updates to remove coaching from all coached plans
-          const updates = coachedPlans.map((plan) => ({
-            planId: plan.id,
-            updates: { isCoached: false } as Prisma.PlanUpdateInput,
-          }));
-
-          // Silently update the plans without showing toast notifications
-          updatePlansMutation.mutate({ updates, muteNotifications: true });
-
-          hasRunCoachingCheckRef.current = true;
-        }
-      }
-    }
-  }, [plans.data, plans.isLoading, currentUser, updatePlansMutation]);
-
   const context: PlansContextType = {
     plans: plans.data as CompletePlan[] | undefined,
     isLoadingPlans: plans.isLoading,
+    isFetchingPlans: plans.isFetching,
     updatePlans: updatePlansMutation.mutateAsync,
     isUpdatingPlans: updatePlansMutation.isPending,
     upsertPlan: upsertPlanMutation.mutateAsync,

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { cn } from "@/lib/utils";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +21,7 @@ interface MessageFeedbackProps {
     additionalComments?: string;
   }) => Promise<void>;
   isSubmitting: boolean;
+  className?: string;
 }
 
 const NEGATIVE_FEEDBACK_OPTIONS = [
@@ -35,6 +37,7 @@ export const MessageFeedback: React.FC<MessageFeedbackProps> = ({
   existingFeedback,
   onSubmitFeedback,
   isSubmitting,
+  className,
 }) => {
   const [showNegativeFeedbackPopup, setShowNegativeFeedbackPopup] =
     useState(false);
@@ -83,7 +86,7 @@ export const MessageFeedback: React.FC<MessageFeedbackProps> = ({
 
   return (
     <>
-      <div className="flex gap-1 items-center mt-1">
+      <div className={cn("flex gap-1 items-center mt-1", className)}>
         <button
           onClick={handlePositiveFeedback}
           disabled={isSubmitting || !!existingFeedback}

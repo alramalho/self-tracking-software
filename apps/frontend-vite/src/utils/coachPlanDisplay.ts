@@ -83,8 +83,6 @@ export function getCoachPlanInsight(
   plan: CompletePlan,
   nextSessionLabel?: string | null
 ) {
-  if (!plan.isCoached) return null;
-
   if (plan.coachSuggestedTimesPerWeek || plan.suggestedByCoachAt) {
     return "Your coach suggested a plan adjustment. Review it before the next session.";
   }
@@ -106,7 +104,7 @@ export function getCoachPlanInsight(
   }
 
   if (nextSessionLabel) {
-    return `Next coached session: ${nextSessionLabel}.`;
+    return `Next session: ${nextSessionLabel}.`;
   }
 
   return null;

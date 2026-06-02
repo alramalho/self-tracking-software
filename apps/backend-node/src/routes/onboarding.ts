@@ -207,7 +207,6 @@ router.post(
         researchFindings: researchResult.guidelines,
         estimatedWeeks: researchResult.estimatedWeeks,
         coachId: coach_id || undefined,
-        isCoached: !!wants_coaching,
       });
 
       logger.info("Plan generated:", plan.id);
@@ -284,7 +283,6 @@ async function generatePlan(params: {
   researchFindings: string;
   estimatedWeeks: number | null;
   coachId?: string;
-  isCoached?: boolean;
 }): Promise<{
   id: string;
   userId: string;
@@ -296,7 +294,6 @@ async function generatePlan(params: {
   internalNotes: string;
   estimatedWeeks: number | null;
   coachId?: string;
-  isCoached: boolean;
   sessions: {
     date: Date;
     activityId: string;
@@ -413,7 +410,6 @@ async function generatePlan(params: {
     internalNotes: `[Perplexity Research Guidelines]\n\n${params.researchFindings}`,
     estimatedWeeks: params.estimatedWeeks,
     coachId: params.coachId,
-    isCoached: params.isCoached || false,
     sessions: remappedSessions,
     pipelineTrace: sessionsResult.trace,
     imageGeneration: sessionsResult.imageGeneration,

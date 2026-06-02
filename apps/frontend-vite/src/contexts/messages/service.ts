@@ -59,6 +59,17 @@ export async function sendMessage(
   return [deserializeMessage(response.data.message)];
 }
 
+export async function rewriteMessage(
+  api: AxiosInstance,
+  data: { chatId: string; messageId: string; message: string }
+): Promise<Message[]> {
+  const response = await api.post<{ messages: MessageApiResponse[] }>(
+    `/chats/${data.chatId}/messages/${data.messageId}/rewrite`,
+    { message: data.message }
+  );
+  return response.data.messages.map(deserializeMessage);
+}
+
 // Create a direct message chat with another user
 export async function createDirectChat(
   api: AxiosInstance,

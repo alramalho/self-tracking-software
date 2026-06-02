@@ -5,22 +5,22 @@ import { HomeCardShell } from "./HomeCardShell";
 
 interface CoachCardProps {
   attentionCount: number;
-  activeCoachedPlanCount: number;
+  activePlanCount: number;
   reviewPlanId?: string;
 }
 
 export const CoachCard = ({
   attentionCount,
-  activeCoachedPlanCount,
+  activePlanCount,
   reviewPlanId,
 }: CoachCardProps) => {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
-  const hasActiveCoachedPlans = activeCoachedPlanCount > 0;
+  const hasActivePlans = activePlanCount > 0;
   const avatar = getCoachAvatar(
     currentUser?.coachPersonality,
-    attentionCount > 0 ? "thinking" : hasActiveCoachedPlans ? "coachSmiling" : "sad"
+    attentionCount > 0 ? "thinking" : hasActivePlans ? "coachSmiling" : "sad"
   );
 
   return (
@@ -46,9 +46,9 @@ export const CoachCard = ({
       <p className="text-base font-medium text-muted-foreground">
         {attentionCount > 0
           ? `${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`
-          : hasActiveCoachedPlans
-          ? "All plans on track"
-          : "Coach not setup"}
+          : hasActivePlans
+          ? "No coach actions pending"
+          : "No active plans"}
       </p>
     </HomeCardShell>
   );

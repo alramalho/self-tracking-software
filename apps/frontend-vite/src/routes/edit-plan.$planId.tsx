@@ -5,7 +5,6 @@ import GoalStepWizard from "@/components/plan-wizard/steps/GoalStepWizard";
 import EmojiStepWizard from "@/components/plan-wizard/steps/EmojiStepWizard";
 import TimesPerWeekStepWizard from "@/components/plan-wizard/steps/TimesPerWeekStepWizard";
 import CoachingStepWizard from "@/components/plan-wizard/steps/CoachingStepWizard";
-import CoachSelectorStepWizard from "@/components/plan-wizard/steps/CoachSelectorStepWizard";
 import VisibilityStepWizard from "@/components/plan-wizard/steps/VisibilityStepWizard";
 import DurationStepWizard from "@/components/plan-wizard/steps/DurationStepWizard";
 import ActivitiesStepWizard from "@/components/plan-wizard/steps/ActivitiesStepWizard";
@@ -64,17 +63,8 @@ const getEditPlanSteps = (_state: PlanCreationState): PlanCreationStep[] => [
   {
     id: "coaching",
     component: CoachingStepWizard,
-    next: (state) => {
-      if (state.isCoached) return "coach-selector";
-      return "overview";
-    },
-    previous: "overview",
-  },
-  {
-    id: "coach-selector",
-    component: CoachSelectorStepWizard,
     next: "overview",
-    previous: "coaching",
+    previous: "overview",
   },
   {
     id: "visibility",
@@ -92,7 +82,7 @@ const getEditPlanSteps = (_state: PlanCreationState): PlanCreationStep[] => [
     id: "activities",
     component: ActivitiesStepWizard,
     next: (state) => {
-      if (state.isCoached) return "outline";
+      if (state.outlineType === "SPECIFIC") return "outline";
       return "overview";
     },
     previous: "overview",
@@ -189,7 +179,6 @@ const EditPlanLoader = ({
       goal: plan.goal,
       emoji: plan.emoji || null,
       backgroundImageUrl: plan.backgroundImageUrl || null,
-      isCoached: plan.isCoached || false,
       visibility: plan.visibility,
       finishingDate: plan.finishingDate ? new Date(plan.finishingDate) : null,
       activities: plan.activities || [],
@@ -239,7 +228,6 @@ function EditPlanPage() {
     emoji: null,
     backgroundImageUrl: null,
     backgroundImageFile: null,
-    isCoached: false,
     selectedCoachId: null,
     coachPersonality: DEFAULT_COACH_PERSONALITY,
     selectedCoach: null,

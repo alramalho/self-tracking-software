@@ -334,12 +334,17 @@ router.get(
           }
 
           // USER messages
+          const metadata =
+            msg.metadata && typeof msg.metadata === "object"
+              ? (msg.metadata as any)
+              : null;
           return {
             id: msg.id,
             chatId: msg.chatId,
             role: msg.role,
             content: msg.content,
             status: msg.status,
+            userAction: metadata?.userAction || null,
             createdAt: msg.createdAt,
             feedback: msg.feedback,
           };
@@ -485,7 +490,6 @@ router.post(
             goal: string;
             goalReason: string | null;
             emoji: string | null;
-            isCoached?: boolean | null;
             outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
             timesPerWeek: number | null;
             activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
@@ -839,6 +843,223 @@ router.post(
     } catch (error) {
       logger.error("Error sending message:", error);
       res.status(500).json({ error: "Failed to send message" });
+    }
+  }
+);
+
+router.post(
+  "/:chatId/messages/:messageId/rewrite",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { chatId, messageId } = req.params;
+      const { message } = req.body;
+
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: user.id,
+          type: "COACH",
+        },
+      });
+
+      if (!chat) {
+        return res.status(404).json({ error: "Chat not found" });
+      }
+
+      const targetMessage = await prisma.message.findFirst({
+        where: {
+          id: messageId,
+          chatId,
+          role: "USER",
+          senderId: user.id,
+        },
+      });
+
+      if (!targetMessage) {
+        return res.status(404).json({ error: "Editable message not found" });
+      }
+
+      const targetMetadata = targetMessage.metadata as any;
+      if (targetMetadata?.userAction) {
+        return res.status(400).json({ error: "Action messages cannot be edited" });
+      }
+
+      const history = await prisma.message.findMany({
+        where: {
+          chatId,
+          createdAt: { lt: targetMessage.createdAt },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      history.reverse();
+
+      await prisma.message.deleteMany({
+        where: {
+          chatId,
+          createdAt: { gte: targetMessage.createdAt },
+        },
+      });
+
+      const userMessage = await prisma.message.create({
+        data: {
+          chatId,
+          role: "USER",
+          content: message,
+          senderId: user.id,
+        },
+      });
+
+      const serializedUserMessage = {
+        id: userMessage.id,
+        chatId: userMessage.chatId,
+        role: userMessage.role,
+        content: userMessage.content,
+        createdAt: userMessage.createdAt,
+        senderId: user.id,
+        senderName: user.name,
+        senderPicture: user.picture,
+      };
+
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          archivedAt: null,
+          isPaused: false,
+          OR: [
+            { finishingDate: null },
+            { finishingDate: { gt: new Date() } },
+          ],
+        },
+        include: {
+          activities: true,
+          sessions: true,
+          milestones: true,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
+      const reminders = await prisma.reminder.findMany({
+        where: {
+          userId: user.id,
+          status: "PENDING",
+        },
+        orderBy: { triggerAt: "asc" },
+      });
+
+      const conversationHistory = history.map((msg) => ({
+        role: msg.role === "USER" ? "user" : "assistant",
+        content: msg.content,
+      })) as Array<{ role: "user" | "assistant"; content: string }>;
+
+      const memoriesContext = await supermemoryService.getProfile(user.id, message);
+
+      const v2Response = await coachAgentService.generateResponse({
+        user,
+        message,
+        conversationHistory,
+        plans: plans as Array<typeof plans[0] & {
+          sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
+          milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
+        }>,
+        reminders,
+        memoriesContext,
+      });
+
+      const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
+      for (const draft of v2Response.draftMessages) {
+        const coachMsg = await prisma.message.create({
+          data: {
+            chatId,
+            role: "COACH",
+            content: draft.content,
+            metadata: {
+              planReplacements: draft.planReplacements || [],
+              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+              planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
+              activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
+              ...(draft.toolCalls && {
+                toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
+              }),
+              ...(draft.error && { error: true }),
+            },
+          },
+        });
+        savedMessages.push(coachMsg);
+      }
+
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      });
+
+      const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
+      if (savedMessages.length > 0) {
+        supermemoryService.addMemory(
+          user.id,
+          `user: ${message}\nassistant: ${fullCoachText}`,
+          savedMessages[savedMessages.length - 1].id
+        );
+      }
+
+      logger.info(
+        `Coach message rewritten - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
+      );
+
+      const resolvedMessages = savedMessages.map((coachMsg, idx) => {
+        const draft = v2Response.draftMessages[idx];
+        const resolvedPlanReplacements =
+          draft.planReplacements
+            ?.map((replacement) => {
+              const plan = plans.find(
+                (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+              );
+              return plan
+                ? {
+                    textToReplace: replacement.textToReplace,
+                    plan: {
+                      id: plan.id,
+                      goal: plan.goal,
+                      emoji: plan.emoji,
+                    },
+                  }
+                : null;
+            })
+            .filter(Boolean) || [];
+
+        return {
+          id: coachMsg.id,
+          chatId: coachMsg.chatId,
+          role: coachMsg.role,
+          content: draft.content,
+          planReplacements: resolvedPlanReplacements,
+          planProposals: draft.planProposals || [],
+          planCreationProposals: draft.planCreationProposals || [],
+          activityLogProposals: draft.activityLogProposals || [],
+          toolCalls: draft.toolCalls || null,
+          error: draft.error || false,
+          createdAt: coachMsg.createdAt,
+        };
+      });
+
+      return res.json({
+        userMessage: serializedUserMessage,
+        messages: [serializedUserMessage, ...resolvedMessages],
+        message: resolvedMessages[resolvedMessages.length - 1] || serializedUserMessage,
+      });
+    } catch (error) {
+      logger.error("Error rewriting message:", error);
+      res.status(500).json({ error: "Failed to rewrite message" });
     }
   }
 );

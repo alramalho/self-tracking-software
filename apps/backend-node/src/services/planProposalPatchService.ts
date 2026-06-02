@@ -14,7 +14,6 @@ const PlanScalarPatchSchema = z
     goalReason: z.string().nullable().optional(),
     outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
     timesPerWeek: z.number().positive().nullable().optional(),
-    isCoached: z.boolean().optional(),
   })
   .strict();
 
@@ -140,7 +139,6 @@ function convertLegacyOperationsToPatch(operations: any[]): PlanProposalPatch {
         ...(op.goalReason !== undefined && { goalReason: op.goalReason }),
         ...(op.outlineType !== undefined && { outlineType: op.outlineType }),
         ...(op.timesPerWeek !== undefined && { timesPerWeek: op.timesPerWeek }),
-        ...(op.isCoached !== undefined && { isCoached: op.isCoached }),
       };
       continue;
     }
@@ -232,7 +230,6 @@ export async function executePlanProposalPatch(params: {
         where: { id: planId },
         data: {
           archivedAt: new Date(),
-          isCoached: false,
           coachSuggestedTimesPerWeek: null,
           coachNotes: null,
         },
@@ -259,9 +256,6 @@ export async function executePlanProposalPatch(params: {
       }
       if (patch.plan.timesPerWeek !== undefined) {
         updateData.timesPerWeek = patch.plan.timesPerWeek;
-      }
-      if (patch.plan.isCoached !== undefined) {
-        updateData.isCoached = patch.plan.isCoached;
       }
 
       if (Object.keys(updateData).length > 0) {

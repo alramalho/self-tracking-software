@@ -7,8 +7,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
-import { Archive, ArchiveRestore, BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { Archive, ArchiveRestore, Loader2, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import Divider from "./Divider";
@@ -16,7 +16,7 @@ import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
-import { capitalize, cn } from "@/lib/utils";
+import { capitalize } from "@/lib/utils";
 import { twMerge } from "tailwind-merge";
 
 // Helper function to check if a plan is expired
@@ -34,14 +34,9 @@ export const isPlanArchived = (plan: {
   return !!plan.archivedAt;
 };
 
-// Function to sort plans: coached first, then by creation date (newest first)
+// Function to sort plans by creation date (newest first)
 const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
-    // Coached plans always come first
-    if (a.isCoached && !b.isCoached) return -1;
-    if (!a.isCoached && b.isCoached) return 1;
-
-    // If both are coached or both are not coached, sort by creation date
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };
@@ -49,17 +44,17 @@ const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
 interface PlanCardProps {
   plan: CompletePlan;
   isSelected: boolean;
+  isLoading?: boolean;
   onSelect: (planId: string) => void;
   onInactivePlanClick?: (plan: CompletePlan) => void;
-  isCoached?: boolean;
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isSelected,
+  isLoading = false,
   onSelect,
   onInactivePlanClick,
-  isCoached = false,
 }) => {
   const isExpired = isPlanExpired(plan);
   const isArchived = isPlanArchived(plan);
@@ -78,23 +73,16 @@ const PlanCard: React.FC<PlanCardProps> = ({
   return (
     <div
       className={twMerge(
-        "relative rounded-lg",
-        isCoached && "ring-2",
-        isCoached && variants.ringBright
+        "relative rounded-lg"
       )}
     >
-      {isCoached && (
-        <div className="absolute top-1 right-1 z-10 flex bg-transparent">
-          <BadgeCheck className={`h-4 w-4 ${variants.text}`} />
-        </div>
-      )}
       {isArchived && (
         <div className="absolute top-1 left-1 z-10 flex bg-transparent">
           <Archive className={`h-4 w-4 ${variants.fadedText}`} />
         </div>
       )}
       <div
-        className={`flex items-center justify-center h-20 rounded-lg bg-card cursor-pointer transition-all ${
+        className={`relative flex items-center justify-center h-20 rounded-lg bg-card cursor-pointer overflow-hidden transition-all ${
           isSelected
             ? variants.veryFadedBg
             : "hover:bg-muted/60"
@@ -103,11 +91,29 @@ const PlanCard: React.FC<PlanCardProps> = ({
         style={{ opacity: isInactive ? 0.5 : 1 }}
       >
         {plan.emoji ? (
-          <span className="text-5xl">{plan.emoji}</span>
+          <span
+            className={`text-5xl transition-opacity duration-200 ${
+              isLoading ? "opacity-35" : "opacity-100"
+            }`}
+          >
+            {plan.emoji}
+          </span>
         ) : (
-          <span className="text-xl text-muted-foreground font-medium">
+          <span
+            className={`text-xl text-muted-foreground font-medium transition-opacity duration-200 ${
+              isLoading ? "opacity-35" : "opacity-100"
+            }`}
+          >
             {plan.goal.substring(0, 2).toUpperCase()}
           </span>
+        )}
+        {isLoading && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            aria-label="Loading plan"
+          >
+            <Loader2 className={`h-6 w-6 animate-spin ${variants.text}`} />
+          </div>
         )}
       </div>
     </div>
@@ -123,44 +129,62 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
   scrollTo,
 }) => {
-  const { plans, isLoadingPlans, upsertPlan, deletePlan, archivePlan, unarchivePlan, isArchivingPlan, isUnarchivingPlan } = usePlans();
+  const { plans, isLoadingPlans, isFetchingPlans, upsertPlan, deletePlan, archivePlan, unarchivePlan, isArchivingPlan, isUnarchivingPlan } = usePlans();
   const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
   const navigate = useNavigate();
 
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
-    initialSelectedPlanId || null
+  const [selectedPlanId, setSelectedPlanId] = useState<
+    string | null | undefined
+  >(
+    initialSelectedPlanId
   );
-  const [orderedPlans, setOrderedPlans] = useState<CompletePlan[]>([]);
   const [showOldPlans, setShowOldPlans] = useState(false);
   const [inactivePlanPopover, setInactivePlanPopover] = useState<CompletePlan | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
   const [showPlanLimitPopover, setShowPlanLimitPopover] = useState(false);
+  const [settlingPlanId, setSettlingPlanId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (plans) {
-      // Sort plans by creation date
-      setOrderedPlans(sortPlansByDate(plans as CompletePlan[]));
-    }
+  const orderedPlans = useMemo(() => {
+    return plans ? sortPlansByDate(plans as CompletePlan[]) : [];
   }, [plans]);
 
   useEffect(() => {
-    if (
-      initialSelectedPlanId &&
-      orderedPlans.some((plan) => plan.id === initialSelectedPlanId)
-    ) {
-      setSelectedPlanId(initialSelectedPlanId);
-    } else if (!initialSelectedPlanId && orderedPlans.length > 0 && !selectedPlanId) {
-      const isActive = (plan: CompletePlan) => !isPlanExpired(plan) && !isPlanArchived(plan);
-      const coachedPlan = orderedPlans.find(plan => plan.isCoached && isActive(plan));
-      const firstActivePlan = orderedPlans.find(isActive);
-      const defaultPlan = coachedPlan || firstActivePlan || orderedPlans[0];
-      setSelectedPlanId(defaultPlan.id!);
+    setSelectedPlanId(initialSelectedPlanId);
+  }, [initialSelectedPlanId]);
+
+  const selectedPlan = useMemo(() => {
+    if (selectedPlanId === null) return null;
+
+    const explicitPlan = selectedPlanId
+      ? orderedPlans.find((plan) => plan.id === selectedPlanId)
+      : null;
+
+    if (explicitPlan) return explicitPlan;
+
+    const firstActivePlan = orderedPlans.find(
+      (plan) => !isPlanExpired(plan) && !isPlanArchived(plan)
+    );
+
+    return firstActivePlan || orderedPlans[0] || null;
+  }, [orderedPlans, selectedPlanId]);
+
+  const activeSelectedPlanId = selectedPlan?.id ?? null;
+
+  useEffect(() => {
+    if (!activeSelectedPlanId) {
+      setSettlingPlanId(null);
+      return;
     }
-  }, [orderedPlans, initialSelectedPlanId, selectedPlanId]);
+
+    setSettlingPlanId(activeSelectedPlanId);
+    const timeoutId = window.setTimeout(() => {
+      setSettlingPlanId(null);
+    }, 450);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSelectedPlanId]);
 
   if (isLoadingPlans) {
     return (
@@ -232,7 +256,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   }
 
   const handlePlanSelect = (planId: string) => {
-    if (selectedPlanId === planId) {
+    if (activeSelectedPlanId === planId) {
       setSelectedPlanId(null);
     } else {
       setSelectedPlanId(planId);
@@ -312,39 +336,30 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
   return (
     <div className="space-y-6">
-      <div
-        className={twMerge(
-          "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-2",
-          variants.ringBright,
-          variants.veryFadedBg
-        )}
-      >
-        <BadgeCheck className={cn("h-4 w-4", variants.text)} />
-        <span>Coached plans have a themed ring</span>
-      </div>
-
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
         <AnimatePresence mode="popLayout">
           {displayedPlans.map((plan, index) => (
             <motion.div
               key={plan.id}
               layout
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{
                 layout: { type: "spring", stiffness: 350, damping: 25 },
                 opacity: { duration: 0.2 },
-                scale: { duration: 0.2 },
                 delay: isPlanExpired(plan) && !showOldPlans ? 0 : index * 0.03
               }}
             >
               <PlanCard
                 plan={plan}
-                isSelected={selectedPlanId === plan.id}
+                isSelected={activeSelectedPlanId === plan.id}
+                isLoading={
+                  activeSelectedPlanId === plan.id &&
+                  (settlingPlanId === plan.id || isFetchingPlans)
+                }
                 onSelect={handlePlanSelect}
                 onInactivePlanClick={handleInactivePlanClick}
-                isCoached={plan.isCoached}
               />
             </motion.div>
           ))}
@@ -387,12 +402,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       <Divider />
 
       <AnimatePresence mode="wait">
-        {selectedPlanId && orderedPlans.find((p) => p.id === selectedPlanId) && (
+        {selectedPlan && (
           <PlanRendererv2
-            key={selectedPlanId}
-            selectedPlan={
-              orderedPlans.find((p) => p.id === selectedPlanId)! as CompletePlan
-            }
+            key={selectedPlan.id}
+            selectedPlan={selectedPlan as CompletePlan}
             scrollTo={scrollTo}
           />
         )}

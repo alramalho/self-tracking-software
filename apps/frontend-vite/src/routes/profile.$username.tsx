@@ -879,11 +879,6 @@ function ProfilePage() {
                     profileActivePlans.length > 0 &&
                     [...profileActivePlans]
                       .sort((a, b) => {
-                        // Coached plans always come first
-                        if (a.isCoached && !b.isCoached) return -1;
-                        if (!a.isCoached && b.isCoached) return 1;
-
-                        // If both are coached or both are not coached, sort by creation date
                         return (
                           new Date(b.createdAt).getTime() -
                           new Date(a.createdAt).getTime()

@@ -84,7 +84,7 @@ export const CoachHomeSection = () => {
     getCoachInsightText(latestCoachNotification, aiCoach.name) ||
     (plansNeedingAttention.length > 0
       ? `${plansNeedingAttention[0].goal} needs attention this week.`
-      : "Your coached plans are ready. Check the plan cards below for today's next step.");
+      : "Your active plans are ready. Check the plan cards below for today's next step.");
 
   const coachSummary =
     plansNeedingAttention.length > 0

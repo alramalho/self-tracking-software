@@ -10,9 +10,9 @@ export const CollapsibleSelfUserCard: React.FC = () => {
     return null;
   }
 
-  // Find coached plan, or fallback to newest plan
-  const firstPlan = (plans?.find((p: any) => p.isCoached)) ||
-    plans?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const firstPlan = plans
+    ? [...plans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    : undefined;
 
   return (
     <div>

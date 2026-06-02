@@ -88,7 +88,6 @@ function GetCoachedPage() {
       plans?.filter(
         (plan) =>
           plan.deletedAt === null &&
-          !plan.isCoached &&
           (plan.finishingDate === null ||
             isAfter(plan.finishingDate, new Date()))
       ) || [],

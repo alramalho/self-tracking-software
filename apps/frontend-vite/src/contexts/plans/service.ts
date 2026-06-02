@@ -2,6 +2,7 @@ import { Prisma } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
+import { type Message } from "../messages/types";
 import { normalizePlanProgress } from "../plans-progress/service";
 
 type PlanWithRelationsBase = Prisma.PlanGetPayload<{
@@ -122,6 +123,10 @@ type PlanGroupMemberInvitationApiResponse = Omit<
   invitedBy: PlanGroupMemberInvitationPayload["invitedBy"];
 };
 
+type PlanCoachActionMessageApiResponse = Omit<Message, "createdAt"> & {
+  createdAt: string;
+};
+
 const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
   const activities =
     (plan as unknown as { activities?: PlanWithRelationsBase["activities"] })
@@ -178,6 +183,19 @@ export async function fetchPlan(
   const query = options?.includeActivities ? "?includeActivities=true" : "";
   const response = await api.get<PlanApiResponse>(`/plans/${id}${query}`);
   return deserializePlan(response.data);
+}
+
+export async function getPlanCoachActionMessages(
+  api: AxiosInstance,
+  planId: string
+): Promise<Message[]> {
+  const response = await api.get<{
+    messages: PlanCoachActionMessageApiResponse[];
+  }>(`/plans/${planId}/coach-action-messages`);
+
+  return response.data.messages.map((message) =>
+    normalizeApiResponse<Message>(message, ["createdAt"])
+  );
 }
 
 export async function updatePlans(
@@ -242,7 +260,7 @@ export interface PlanGroupMemberProgress {
   planId: string;
   weeklyActivityCount: number;
   target: number;
-  isCoached: boolean;
+  hasCoachAutomation: boolean;
   status: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED" | null;
 }
 

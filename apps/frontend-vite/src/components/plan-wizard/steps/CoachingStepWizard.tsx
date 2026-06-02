@@ -1,77 +1,64 @@
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
+import { Button } from "@/components/ui/button";
+import {
+  PlanOutlineTypeEditor,
+  type PlanOutlineChoice,
+} from "@/components/plan-wizard/PlanFieldEditors";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
-import { PlanCoachingModeEditor } from "@/components/plan-wizard/PlanFieldEditors";
-import api from "@/lib/api";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
 import { Route } from "lucide-react";
-import { useEffect, useState } from "react";
 
 const CoachingStepWizard = () => {
-  const { goal, isCoached, setIsCoached, setOutlineType, completeStep } = usePlanCreation();
+  const { outlineType, setOutlineType, completeStep } = usePlanCreation();
   const { isUserPremium } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
-  const [recommendsCoaching, setRecommendsCoaching] = useState<boolean | null>(null);
+  const variants = useThemeColors();
 
-  useEffect(() => {
-    const fetchRecommendation = async () => {
-      if (!goal) return;
-      try {
-        const response = await api.post<{ needsCoaching: boolean }>("/ai/classify-coaching-need", { planGoal: goal });
-        setRecommendsCoaching(response.data.needsCoaching);
-      } catch (error) {
-        console.error("Failed to fetch coaching recommendation:", error);
-      }
-    };
-    fetchRecommendation();
-  }, [goal]);
-
-  const handleSelect = (wantsCoaching: boolean) => {
-    if (wantsCoaching && !isUserPremium) {
-      // Free user wants coaching - show upgrade
-      setShowUpgradePopover(true);
-      return;
-    }
-
-    setIsCoached(wantsCoaching);
-    setOutlineType(wantsCoaching ? "SPECIFIC" : "TIMES_PER_WEEK");
-
-    if (wantsCoaching) {
-      // Coaching selected - go to coach selector next
-      completeStep("coaching", {
-        isCoached: true,
-        outlineType: "SPECIFIC",
-      }, { nextStep: "coach-selector" });
-    } else {
-      // Self-guided - skip coach selector
-      completeStep("coaching", {
-        isCoached: false,
-        outlineType: "TIMES_PER_WEEK",
-      });
-    }
+  const handleSelect = (nextOutlineType: PlanOutlineChoice) => {
+    setOutlineType(nextOutlineType);
+    completeStep("coaching", { outlineType: nextOutlineType });
   };
 
   return (
     <div className="w-full max-w-lg space-y-8">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-2">
-          <Route className="w-20 h-20 text-blue-600" />
+          <Route className={cn("w-20 h-20", variants.text)} />
           <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
             How would you like to approach this?
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Choose between autopilot coaching or self-guided tracking.
+          Choose a flexible weekly target or specific scheduled sessions.
         </p>
       </div>
 
-      <PlanCoachingModeEditor
-        value={isCoached}
+      <PlanOutlineTypeEditor
+        value={outlineType}
         onChange={handleSelect}
-        recommended={recommendsCoaching}
-        isUserPremium={isUserPremium}
-        onBlockedPremium={() => setShowUpgradePopover(true)}
       />
+
+      {!isUserPremium && (
+        <div className="rounded-xl border border-border bg-card p-4 text-left">
+          <p className="text-sm font-medium text-foreground">
+            Coach automation is a Plus feature.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The coach can still understand your active plans here. Upgrade unlocks proactive check-ins, plan iteration, and session help.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={() => setShowUpgradePopover(true)}
+          >
+            Upgrade
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

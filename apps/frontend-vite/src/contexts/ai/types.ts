@@ -53,6 +53,12 @@ export interface AIContextType extends MessagesContextType {
   rejectProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
   acceptPlanCreationProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
   rejectPlanCreationProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
+  proposePlanCreationChanges: (data: {
+    messageId: string;
+    proposalIndex: number;
+    requestedProposal: unknown;
+    note?: string | null;
+  }) => Promise<Message[]>;
 
   // Activity log proposals
   acceptActivityLogProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;

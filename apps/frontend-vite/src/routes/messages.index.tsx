@@ -91,7 +91,7 @@ function MessagesPage() {
 
     for (const plan of plans) {
       const planAny = plan as any;
-      if (planAny.coachId && planAny.isCoached) {
+      if (planAny.coachId) {
         const coach = humanCoaches.find(c => c.id === planAny.coachId);
         if (coach) {
           coachesWithPlans.push({

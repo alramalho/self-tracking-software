@@ -3,8 +3,6 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useMetrics } from "@/contexts/metrics";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
 import { getPeriodLabel } from "@/utils/coachingTime";
 import { MINIMUM_ENTRIES } from "@/lib/metrics";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -20,7 +18,6 @@ import {
 } from "date-fns";
 import {
   Archive,
-  BadgeCheck,
   Loader2,
   Maximize2,
   MessageCircle,
@@ -32,7 +29,6 @@ import {
   Send,
   Trash2,
   UserPlus,
-  Users,
   BarChart3,
   BarChartHorizontal,
   Activity,
@@ -46,9 +42,9 @@ import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { CoachingTimeSelector } from "./CoachingTimeSelector";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
-import { CoachOverviewCard } from "./CoachOverviewCard";
 import InviteButton from "./InviteButton";
 import { MilestoneOverview } from "./MilestoneOverview";
+import { PlanCoachActionPreview } from "./PlanCoachActionPreview";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
@@ -172,7 +168,7 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
 
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
-  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan, archivePlan } = usePlans();
+  const { leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan, archivePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
   const { metrics, entries: metricEntries } = useMetrics();
   const api = useApiWithAuth();
@@ -185,20 +181,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       const response = await api.get<HumanCoach[]>("/coaches");
       return response.data;
     },
-    enabled: !!(selectedPlan as any).coachId && (selectedPlan as any).isCoached,
-  });
-
-  const { data: coachingRecommendation } = useQuery({
-    queryKey: ["coaching-recommendation", selectedPlan.id, selectedPlan.goal],
-    queryFn: async () => {
-      const response = await api.post<{ needsCoaching: boolean }>(
-        "/ai/classify-coaching-need",
-        { planGoal: selectedPlan.goal }
-      );
-      return response.data;
-    },
-    enabled: !!selectedPlan.id && !selectedPlan.isCoached,
-    staleTime: 1000 * 60 * 10,
+    enabled: !!(selectedPlan as any).coachId,
   });
 
   // Find the coach for this plan
@@ -221,18 +204,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
-
-  const isPlanCoached = useCallback(
-    (selectedPlan: CompletePlan) => {
-      if (!plans) return false;
-      // Check if the plan has the isCoached flag
-      return (selectedPlan as any).isCoached || false;
-    },
-    [selectedPlan, plans]
-  );
-
   // Conditional scroll to current week based on URL parameter
   useEffect(() => {
     if (scrollTo === "current-week" && currentWeekRef.current && planProgress?.weeks?.length) {
@@ -561,95 +532,95 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       )}
 
       <AnimatedSection delay={backgroundImageUrl ? 0.1 : 0}>
-        <div className="flex flex-row items-start justify-start gap-2 mb-4">
-        <span className="text-5xl">{selectedPlan.emoji}</span>
-        <div className="flex min-w-0 flex-1 flex-col gap-2 justify-start">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 text-2xl font-semibold">{selectedPlan.goal}</h2>
-            <div
-              className={`flex shrink-0 items-center gap-1 ${
-                selectedPlanStreak === 0 ? "grayscale opacity-50" : ""
-              }`}
-            >
-              <span className="text-lg font-cursive">x{selectedPlanStreak}</span>
-              <FireAnimation height={40} width={40} className="pb-2" />
+        <div className="flex flex-row items-start justify-start gap-3 mb-4">
+          <span className="text-5xl leading-none">{selectedPlan.emoji}</span>
+          <div className="flex min-w-0 flex-1 flex-col gap-3 justify-start">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="min-w-0 text-2xl font-semibold leading-tight">
+                  {selectedPlan.goal}
+                </h2>
+                <span className="mt-1 block text-sm leading-tight text-muted-foreground">
+                  {selectedPlan.outlineType === "TIMES_PER_WEEK"
+                    ? `${selectedPlan.timesPerWeek} times per week`
+                    : `custom plan`}
+                  {selectedPlan.finishingDate && (
+                    <> · until {format(selectedPlan.finishingDate, "MMM d, yyyy")}</>
+                  )}
+                </span>
+              </div>
+              <div
+                className={`flex shrink-0 items-center gap-1 pt-1 ${
+                  selectedPlanStreak === 0 ? "grayscale opacity-50" : ""
+                }`}
+              >
+                <span className="text-lg font-cursive leading-none">
+                  x{selectedPlanStreak}
+                </span>
+                <FireAnimation height={40} width={40} className="pb-2" />
+              </div>
+            </div>
+            <div className="flex gap-2 items-center justify-start">
+              {isPlanPaused && (
+                <div className="flex items-center gap-1 mr-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
+                  <Pause className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Paused</span>
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <Trash2 className="h-6 w-6" />
+              </Button>
+              <InviteButton
+                planId={selectedPlan.id!}
+                onInviteSuccess={() => {}}
+                isExternalSupported={false}
+                planEmoji={selectedPlan.emoji || undefined}
+                planGoal={selectedPlan.goal}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate({ to: "/edit-plan/$planId", params: { planId: selectedPlan.id! } })}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <Pencil className="h-6 w-6" />
+              </Button>
+              {isPlanPaused ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleResumePlan}
+                  disabled={isResumingPlan}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  {isResumingPlan ? <Loader2 className="h-6 w-6 animate-spin" /> : <Play className="h-6 w-6" />}
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPausePopover(true)}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  <Pause className="h-6 w-6" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowArchiveConfirm(true)}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Archive plan"
+              >
+                <Archive className="h-6 w-6" />
+              </Button>
             </div>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {selectedPlan.outlineType === "TIMES_PER_WEEK"
-              ? `${selectedPlan.timesPerWeek} times per week`
-              : `custom plan`}
-            {selectedPlan.finishingDate && (
-              <> · until {format(selectedPlan.finishingDate, "MMM d, yyyy")}</>
-            )}
-          </span>
-          <div className="flex gap-2 items-center justify-start">
-            {isPlanCoached(selectedPlan) && (
-              <div className="flex items-center gap-1 mr-2">
-                <BadgeCheck className={`h-5 w-5 ${variants.text}`} />
-                <span className="text-sm text-muted-foreground">Coached</span>
-              </div>
-            )}
-            {isPlanPaused && (
-              <div className="flex items-center gap-1 mr-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
-                <Pause className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Paused</span>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <Trash2 className="h-6 w-6" />
-            </Button>
-            <InviteButton
-              planId={selectedPlan.id!}
-              onInviteSuccess={() => {}}
-              isExternalSupported={false}
-              planEmoji={selectedPlan.emoji || undefined}
-              planGoal={selectedPlan.goal}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate({ to: "/edit-plan/$planId", params: { planId: selectedPlan.id! } })}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <Pencil className="h-6 w-6" />
-            </Button>
-            {isPlanPaused ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleResumePlan}
-                disabled={isResumingPlan}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                {isResumingPlan ? <Loader2 className="h-6 w-6 animate-spin" /> : <Play className="h-6 w-6" />}
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPausePopover(true)}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                <Pause className="h-6 w-6" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowArchiveConfirm(true)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-              title="Archive plan"
-            >
-              <Archive className="h-6 w-6" />
-            </Button>
-          </div>
-        </div>
         </div>
       </AnimatedSection>
 
@@ -659,47 +630,10 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </div>
       </AnimatedSection>
 
-      {!isPlanCoached(selectedPlan) && coachingRecommendation?.needsCoaching && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.12 : 0.05}>
-          <div className={`mb-6 rounded-2xl border-2 p-4 ${variants.brightBorder} ${variants.veryFadedBg}`}>
-            <div className="flex items-start gap-3">
-              <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${variants.fadedBg}`}>
-                <Users className={`h-5 w-5 ${variants.text}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-foreground">
-                  We recommend coaching for this plan
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  This goal looks like it benefits from structure, check-ins, and plan adjustments.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() =>
-                navigate({
-                  to: "/edit-plan/$planId",
-                  params: { planId: selectedPlan.id! },
-                  search: { step: "coaching" },
-                })
-              }
-              className={`mt-4 w-full gap-2 ${themeColors.button.solid}`}
-            >
-              <Users className="h-4 w-4" />
-              Set up coaching
-            </Button>
-          </div>
-        </AnimatedSection>
-      )}
-
       {/* AI Coach Overview */}
-      {isPlanCoached(selectedPlan) && !planCoach && (
+      {!planCoach && (
         <AnimatedSection delay={backgroundImageUrl ? 0.15 : 0.1}>
           <div className="mb-6">
-          <CoachOverviewCard
-            selectedPlan={selectedPlan}
-            activities={activities}
-          />
           <div
             className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4`}
             onClick={() => setShowCoachingTimeSelector(true)}
@@ -761,6 +695,14 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         )}
         </div>
       </AnimatedSection>
+{/* 
+      {!planCoach && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.23 : 0.18}>
+          <div className="mb-6">
+            <PlanCoachActionPreview selectedPlan={selectedPlan} />
+          </div>
+        </AnimatedSection>
+      )} */}
 
       {/* 2. Next 2 Weeks Calendar View (SPECIFIC plans) or Current Week (TIMES_PER_WEEK) */}
       {selectedPlan.outlineType === "SPECIFIC" ? (
@@ -809,7 +751,7 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       )}
 
       {/* 3. Coach Info Banner (Human Coach) */}
-      {isPlanCoached(selectedPlan) && planCoach && (
+      {planCoach && (
         <AnimatedSection delay={backgroundImageUrl ? 0.3 : 0.25}>
           <div className="mb-6">
             <div className="rounded-2xl overflow-hidden relative">
@@ -1091,14 +1033,12 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       />
 
       {/* Coaching Time Selector Popover */}
-      {isPlanCoached(selectedPlan) && (
-        <CoachingTimeSelector
-          open={showCoachingTimeSelector}
-          onClose={() => setShowCoachingTimeSelector(false)}
-          onSave={handleSaveCoachingTime}
-          currentStartHour={preferredCoachingHour}
-        />
-      )}
+      <CoachingTimeSelector
+        open={showCoachingTimeSelector}
+        onClose={() => setShowCoachingTimeSelector(false)}
+        onSave={handleSaveCoachingTime}
+        currentStartHour={preferredCoachingHour}
+      />
 
       {/* All Weeks Popover */}
       <AppleLikePopover
