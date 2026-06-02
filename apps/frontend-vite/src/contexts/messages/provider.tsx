@@ -94,14 +94,35 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       // Make the API call
       return await sendMessage(api, data);
     },
-    onSuccess: (responseMessages, { chatId }) => {
+    onSuccess: (responseMessages, { chatId, message }) => {
       // Clear any existing stagger timers
       staggerTimersRef.current.forEach(clearTimeout);
       staggerTimersRef.current = [];
 
-      if (responseMessages.length <= 1) {
+      const persistedUserMessage = responseMessages.find(
+        (msg) => msg.role === "USER" && msg.content === message
+      );
+      const coachMessages = responseMessages.filter(
+        (msg) => msg.id !== persistedUserMessage?.id
+      );
+
+      queryClient.setQueryData(
+        ["messages", chatId],
+        (oldMessages: Message[] = []) => {
+          const withoutTemp = oldMessages.filter(
+            (msg) => !(msg.id.startsWith("temp-") && msg.content === message)
+          );
+          if (!persistedUserMessage) return withoutTemp;
+          const exists = withoutTemp.some((msg) => msg.id === persistedUserMessage.id);
+          return exists ? withoutTemp : [...withoutTemp, persistedUserMessage];
+        }
+      );
+
+      if (coachMessages.length === 0) {
+        queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      } else if (coachMessages.length === 1) {
         // Single message — add immediately
-        const msg = responseMessages[0];
+        const msg = coachMessages[0];
         if (msg) {
           queryClient.setQueryData(
             ["messages", chatId],
@@ -114,7 +135,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
       } else {
         // Multiple messages — stagger delivery
-        const [firstMsg, ...rest] = responseMessages;
+        const [firstMsg, ...rest] = coachMessages;
 
         // Add first message immediately
         queryClient.setQueryData(
@@ -165,6 +186,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           return chat;
         });
       });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error, { chatId }) => {
       // Clear stagger timers on error

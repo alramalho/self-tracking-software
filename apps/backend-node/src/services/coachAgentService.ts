@@ -2,7 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
-import { ToolLoopAgent, tool } from "ai";
+import { ToolLoopAgent, hasToolCall, tool } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
@@ -150,6 +150,7 @@ export class CoachAgentService {
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
       temperature: 0.8,
+      stopWhen: hasToolCall("draftMessages"),
       instructions: dedent`
         You are ${coachPersonality.displayName}, ${coachPersonality.title}, a knowledgeable fitness and habits coach that helps users achieve their fitness and habit goals through evidence-based coaching and plan adjustments.
 
