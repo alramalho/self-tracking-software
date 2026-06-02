@@ -13,6 +13,17 @@ interface PlanCardProps {
   plan: CompletePlan & { progress: PlanProgressData };
 }
 
+const getPlannedActivityCount = (
+  plannedActivities: number | any[] | undefined,
+  outlineType: CompletePlan["outlineType"]
+) => {
+  if (outlineType === "TIMES_PER_WEEK") {
+    return typeof plannedActivities === "number" ? plannedActivities : 0;
+  }
+
+  return Array.isArray(plannedActivities) ? plannedActivities.length : 0;
+};
+
 export const PlanCard = ({ plan }: PlanCardProps) => {
   const navigate = useNavigate();
 
@@ -22,10 +33,13 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
     isSameWeek(week.startDate, new Date())
   );
 
-  const totalPlanned =
-    plan.outlineType === "TIMES_PER_WEEK"
-      ? (currentWeek?.plannedActivities as number) || 0
-      : ((currentWeek?.plannedActivities as any[])?.length || 0);
+  const progressPlanned = getPlannedActivityCount(
+    currentWeek?.plannedActivities,
+    plan.outlineType
+  );
+  const planTarget =
+    plan.outlineType === "TIMES_PER_WEEK" ? (plan.timesPerWeek ?? 0) : 0;
+  const totalPlanned = progressPlanned || planTarget;
 
   const uniqueDays = new Set(
     (currentWeek?.completedActivities || []).map((entry: any) =>
