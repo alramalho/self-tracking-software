@@ -125,11 +125,20 @@ jobs:
 
       - name: deploy
         run: |
-          ssh root@${{ secrets.HETZNER_HOST }} bash <<EOF
+          ssh root@${{ secrets.HETZNER_HOST }} bash -s -- \
+            '${{ secrets.GITHUB_TOKEN }}' \
+            '${{ github.actor }}' \
+            '${{ env.REMOTE_DIR }}' \
+            '${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}' <<'EOF'
           set -euo pipefail
-          echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          cd ${{ env.REMOTE_DIR }}
-          export BACKEND_IMAGE=${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
+          github_token="$1"
+          github_actor="$2"
+          remote_dir="$3"
+          backend_image="$4"
+
+          echo "$github_token" | docker login ghcr.io -u "$github_actor" --password-stdin
+          cd "$remote_dir"
+          export BACKEND_IMAGE="$backend_image"
           docker compose up -d redis
           for i in {1..20}; do
             if docker compose exec -T redis redis-cli ping | grep -q PONG; then
@@ -144,7 +153,13 @@ jobs:
             sleep 1
           done
           docker compose pull backend
-          docker compose up -d
+          docker compose up -d --force-recreate backend
+          running_image="$(docker inspect tsw-backend --format '{{.Config.Image}}')"
+          if [ "$running_image" != "$backend_image" ]; then
+            echo "backend image mismatch: expected $backend_image, got $running_image" >&2
+            docker compose ps
+            exit 1
+          fi
           docker image prune -f
           docker compose ps
           EOF
