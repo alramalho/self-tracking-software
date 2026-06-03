@@ -41,7 +41,44 @@ describe("PlansService progress", () => {
     await cleanup();
   });
 
-  it("includes the current week for times-per-week plans even when the historical range is empty", async () => {
+  it("includes the current week for active times-per-week plans even when the historical range is empty", async () => {
+    const user = await prisma.user.create({
+      data: {
+        id: testUserId,
+        email: `${testUserId}@test.com`,
+        username: testUserId,
+        name: "Plan Progress User",
+        timezone: "Europe/Sofia",
+      },
+    });
+
+    const plan = await prisma.plan.create({
+      data: {
+        userId: testUserId,
+        goal: "Meditate more often",
+        emoji: "M",
+        outlineType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 3,
+      },
+      include: {
+        activities: true,
+      },
+    });
+
+    const progress = await plansService.computePlanProgress(plan, user);
+    const currentWeek = progress.weeks.find((week) =>
+      isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 })
+    );
+
+    expect(currentWeek).toBeDefined();
+    expect(currentWeek?.plannedActivities).toBe(3);
+    expect(currentWeek?.weekActivities).toEqual([]);
+    expect(currentWeek?.completedActivities).toEqual([]);
+    expect(currentWeek?.isCompleted).toBe(false);
+    expect(progress.currentWeekStats.numActiveDaysInTheWeek).toBe(3);
+  });
+
+  it("caps current week planned activities at zero for ended times-per-week plans", async () => {
     const user = await prisma.user.create({
       data: {
         id: testUserId,
@@ -72,10 +109,10 @@ describe("PlansService progress", () => {
     );
 
     expect(currentWeek).toBeDefined();
-    expect(currentWeek?.plannedActivities).toBe(3);
+    expect(currentWeek?.plannedActivities).toBe(0);
     expect(currentWeek?.weekActivities).toEqual([]);
     expect(currentWeek?.completedActivities).toEqual([]);
     expect(currentWeek?.isCompleted).toBe(false);
-    expect(progress.currentWeekStats.numActiveDaysInTheWeek).toBe(3);
+    expect(progress.currentWeekStats.numActiveDaysInTheWeek).toBe(0);
   });
 });

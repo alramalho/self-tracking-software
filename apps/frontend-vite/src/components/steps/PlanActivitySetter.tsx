@@ -4,10 +4,13 @@ import {
   type BaseExtractionResponse,
   DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
+import { CoachActivitySuggestionCard } from "@/components/CoachActivitySuggestionCard";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
 import type { Activity } from "@tsw/prisma";
-import { AlertCircle, BicepsFlexed, Sparkles, Loader2, Check, X } from "lucide-react";
+import { AlertCircle, BicepsFlexed, Sparkles, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +23,7 @@ interface PlanActivitySetterResponse extends BaseExtractionResponse {
 function PlanActivitySetter() {
   const { planGoal, completeStep, planActivities } = useOnboarding();
   const api = useApiWithAuth();
+  const themeColors = useThemeColors();
   const [suggestedActivities, setSuggestedActivities] = useState<SuggestedActivity[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [creatingSuggestion, setCreatingSuggestion] = useState<string | null>(null);
@@ -141,7 +145,7 @@ function PlanActivitySetter() {
     if (suggestedActivities.length === 0 && createdFromSuggestions.length === 0) return null;
     return (
       <div className="space-y-2">
-        <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+        <p className={cn("text-sm flex items-center gap-1", themeColors.text)}>
           <Sparkles className="w-3 h-3" />
           Coach suggestions
         </p>
@@ -149,47 +153,29 @@ function PlanActivitySetter() {
           {createdFromSuggestions.map((activity) => (
             <div
               key={activity.id}
-              className="flex items-center w-full rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 p-3"
+              className={cn(
+                "flex items-center w-full rounded-lg border-2 p-3",
+                themeColors.border,
+                themeColors.veryFadedBg
+              )}
             >
               <span className="text-3xl mr-3">{activity.emoji}</span>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-semibold">{activity.title}</span>
                 <span className="text-xs text-muted-foreground ml-1.5">({activity.measure})</span>
               </div>
-              <Check className="w-4 h-4 text-blue-500 ml-2" />
+              <Check className={cn("w-4 h-4 ml-2", themeColors.text)} />
             </div>
           ))}
           {suggestedActivities.map((suggestion) => (
-            <div
+            <CoachActivitySuggestionCard
               key={suggestion.title}
-              className="flex items-center w-full rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 p-3 transition-all"
-            >
-              <span className="text-3xl mr-3">{suggestion.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold">{suggestion.title}</span>
-                <span className="text-xs text-muted-foreground ml-1.5">({suggestion.measure})</span>
-              </div>
-              <div className="flex items-center gap-1.5 ml-2">
-                <button
-                  onClick={() => handleDismissSuggestion(suggestion.title)}
-                  disabled={creatingSuggestion === suggestion.title}
-                  className="p-1.5 rounded-full text-muted-foreground hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleSelectSuggestion(suggestion)}
-                  disabled={creatingSuggestion === suggestion.title}
-                  className="p-1.5 rounded-full text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                >
-                  {creatingSuggestion === suggestion.title ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Check className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
+              suggestion={suggestion}
+              planGoal={planGoal}
+              isCreating={creatingSuggestion === suggestion.title}
+              onReject={() => handleDismissSuggestion(suggestion.title)}
+              onAccept={() => handleSelectSuggestion(suggestion)}
+            />
           ))}
         </div>
       </div>

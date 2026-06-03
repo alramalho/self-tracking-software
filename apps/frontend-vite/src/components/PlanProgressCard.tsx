@@ -277,9 +277,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Calculate if week is completed from current week data
   const isWeekCompleted =
-    plan.outlineType === "TIMES_PER_WEEK"
+    totalPlannedActivities > 0 &&
+    (plan.outlineType === "TIMES_PER_WEEK"
       ? totalCompletedActivities >= totalPlannedActivities
-      : totalCompletedActivities === totalPlannedActivities;
+      : totalCompletedActivities === totalPlannedActivities);
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
 

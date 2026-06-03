@@ -1,4 +1,12 @@
-import { addDays, format, isBefore, startOfDay, startOfWeek } from "date-fns";
+import {
+  addDays,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  startOfDay,
+  startOfWeek,
+} from "date-fns";
 import type { PlanState } from "@tsw/prisma";
 import type { CompletePlan } from "@/contexts/plans";
 import type { CalendarActivity, CalendarSession } from "@/components/CalendarGrid";
@@ -74,6 +82,38 @@ function placeGhosts(
   for (let i = 0; i < count - m; i++) {
     out.push({ ...base, date: openDays[m - 1], kind: "overflow" });
   }
+}
+
+function getTimesPerWeekTargetForDays(
+  plan: CompletePlan,
+  days: Date[]
+): number {
+  const timesPerWeek = plan.timesPerWeek ?? 0;
+  if (timesPerWeek <= 0 || days.length === 0) return 0;
+
+  if (!plan.finishingDate) {
+    return timesPerWeek;
+  }
+
+  const firstDay = startOfDay(days[0]);
+  const lastDay = startOfDay(days[days.length - 1]);
+  const finishingDate = startOfDay(new Date(plan.finishingDate));
+
+  if (isBefore(finishingDate, firstDay)) {
+    return 0;
+  }
+
+  if (isAfter(finishingDate, lastDay) || isSameDay(finishingDate, lastDay)) {
+    return timesPerWeek;
+  }
+
+  const activeDays = days.filter(
+    (day) =>
+      isBefore(startOfDay(day), finishingDate) ||
+      isSameDay(startOfDay(day), finishingDate)
+  ).length;
+
+  return Math.min(timesPerWeek, activeDays);
 }
 
 /**
@@ -161,9 +201,11 @@ export function computeGridCells(
       };
 
       const stats = plan.progress?.currentWeekStats;
+      const week1Target = getTimesPerWeekTargetForDays(plan, week1Days);
+      const week2Target = getTimesPerWeekTargetForDays(plan, week2Days);
       const localWeek1Count = Math.max(
         0,
-        plan.timesPerWeek - completedDaysThisWeek.size
+        week1Target - completedDaysThisWeek.size
       );
       const week1Count =
         stats?.numActiveDaysLeftInTheWeek == null
@@ -171,7 +213,7 @@ export function computeGridCells(
           : Math.min(stats.numActiveDaysLeftInTheWeek, localWeek1Count);
 
       placeGhosts(week1OpenForPlan, week1Count, base, ghostCells);
-      placeGhosts(week2Days, plan.timesPerWeek, base, ghostCells);
+      placeGhosts(week2Days, week2Target, base, ghostCells);
     }
   }
 
