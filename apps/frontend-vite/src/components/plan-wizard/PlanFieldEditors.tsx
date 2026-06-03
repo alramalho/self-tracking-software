@@ -19,6 +19,7 @@ import {
 export type PlanOutlineChoice = "SPECIFIC" | "TIMES_PER_WEEK";
 
 export type DraftPlanActivity = {
+  activityId?: string | null;
   title: string;
   measure: string;
   emoji: string;
@@ -296,10 +297,12 @@ export function DraftActivitiesEditor({
 }) {
   const activityKey = (activity: Pick<DraftPlanActivity, "title" | "measure">) =>
     `${activity.title.trim().toLowerCase()}::${activity.measure.trim().toLowerCase()}`;
+  const activityTitleKey = (activity: Pick<DraftPlanActivity, "title">) =>
+    activity.title.trim().toLowerCase();
 
-  const existingKeys = new Set(existingActivities.map(activityKey));
+  const existingTitleKeys = new Set(existingActivities.map(activityTitleKey));
   const draftOnlyActivities: ActivityPickerActivity[] = activities
-    .filter((activity) => !existingKeys.has(activityKey(activity)))
+    .filter((activity) => !activity.activityId && !existingTitleKeys.has(activityTitleKey(activity)))
     .map((activity, index) => ({
       id: `draft-${index}-${activityKey(activity)}`,
       title: activity.title,
@@ -310,14 +313,23 @@ export function DraftActivitiesEditor({
   const pickerActivities = [...existingActivities, ...draftOnlyActivities].sort((a, b) =>
     a.title.localeCompare(b.title)
   );
+  const draftOnlyIdsByTitle = new Map(
+    draftOnlyActivities.map((activity) => [activityTitleKey(activity), activity.id])
+  );
 
   const selectedActivities = activities.map((activity, index) => {
-    const matchingExisting = existingActivities.find(
-      (existing) => activityKey(existing) === activityKey(activity)
-    );
+    const matchingExisting =
+      (activity.activityId
+        ? existingActivities.find((existing) => existing.id === activity.activityId)
+        : null) ||
+      existingActivities.find(
+        (existing) => activityTitleKey(existing) === activityTitleKey(activity)
+      );
     return (
       matchingExisting || {
-        id: `selected-draft-${index}-${activityKey(activity)}`,
+        id:
+          draftOnlyIdsByTitle.get(activityTitleKey(activity)) ||
+          `selected-draft-${index}-${activityKey(activity)}`,
         title: activity.title,
         emoji: activity.emoji,
         measure: activity.measure,
@@ -326,16 +338,27 @@ export function DraftActivitiesEditor({
   });
 
   const toggleActivity = (activity: ActivityPickerActivity) => {
-    const key = activityKey(activity);
-    const isSelected = activities.some((selected) => activityKey(selected) === key);
+    const existingActivity = existingActivities.find((existing) => existing.id === activity.id);
+    const isSelected = activities.some((selected) =>
+      selected.activityId
+        ? selected.activityId === activity.id
+        : activityTitleKey(selected) === activityTitleKey(activity)
+    );
     if (isSelected) {
-      onChange(activities.filter((selected) => activityKey(selected) !== key));
+      onChange(
+        activities.filter((selected) =>
+          selected.activityId
+            ? selected.activityId !== activity.id
+            : activityTitleKey(selected) !== activityTitleKey(activity)
+        )
+      );
       return;
     }
 
     onChange([
       ...activities,
       {
+        activityId: existingActivity?.id || null,
         title: activity.title,
         emoji: activity.emoji,
         measure: activity.measure,
@@ -344,18 +367,26 @@ export function DraftActivitiesEditor({
   };
 
   return (
-    <ActivityPickerGrid
-      activities={pickerActivities}
-      selectedActivities={selectedActivities}
-      recommendedIds={draftOnlyActivities.map((activity) => activity.id)}
-      onToggle={toggleActivity}
-      onAddNew={() =>
-        onChange([
-          ...activities,
-          { title: "New activity", measure: "sessions", emoji: "📋" },
-        ])
-      }
-    />
+    <div className="space-y-3">
+      {draftOnlyActivities.length > 0 && (
+        <div className="rounded-lg border border-dashed border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Dashed activities are new.</span>{" "}
+          They will be created when the plan is accepted; the rest reuse your existing activities.
+        </div>
+      )}
+      <ActivityPickerGrid
+        activities={pickerActivities}
+        selectedActivities={selectedActivities}
+        recommendedIds={draftOnlyActivities.map((activity) => activity.id)}
+        onToggle={toggleActivity}
+        onAddNew={() =>
+          onChange([
+            ...activities,
+            { title: "New activity", measure: "sessions", emoji: "📋" },
+          ])
+        }
+      />
+    </div>
   );
 }
 
@@ -387,7 +418,7 @@ export function ActivityPickerGrid({
             className={cn(
               "flex flex-col items-center justify-center p-4 rounded-lg border-2 aspect-square transition-all relative",
               isSelected
-                ? `${variants.card.selected.border} ${variants.card.selected.bg}`
+                ? `${isRecommended ? "border-dashed" : ""} ${variants.card.selected.border} ${variants.card.selected.bg}`
                 : isRecommended
                   ? `border-dashed ${variants.border} ${variants.card.glassBg}`
                   : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-input"

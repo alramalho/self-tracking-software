@@ -23,6 +23,7 @@ interface CoachAgentContext {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
+  activityRecencyById?: Map<string, string>;
   onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
 }
 
@@ -33,6 +34,23 @@ function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
     !plan.isPaused &&
     (!plan.finishingDate || plan.finishingDate > now)
   );
+}
+
+function formatActivityRecency(now: Date, lastLoggedAt?: Date | null): string {
+  if (!lastLoggedAt) return "never logged";
+
+  const daysAgo = Math.max(0, differenceInCalendarDays(now, lastLoggedAt));
+  if (daysAgo === 0) return "today";
+  if (daysAgo === 1) return "yesterday";
+  if (daysAgo < 30) return `${daysAgo} days ago`;
+
+  const monthsAgo = Math.max(1, Math.round(daysAgo / 30));
+  if (monthsAgo < 12) {
+    return `${monthsAgo} month${monthsAgo === 1 ? "" : "s"} ago`;
+  }
+
+  const yearsAgo = Math.max(1, Math.round(daysAgo / 365));
+  return `${yearsAgo} year${yearsAgo === 1 ? "" : "s"} ago`;
 }
 
 export class CoachAgentService {
@@ -73,6 +91,7 @@ export class CoachAgentService {
       reminders,
       memoriesContext,
       recentActivityContext,
+      activityRecencyById,
       onStatus,
     } = context;
     const plans = allPlans.filter((plan) => isActiveCoachPlan(plan));
@@ -83,7 +102,10 @@ export class CoachAgentService {
     const plansContext = plans
       .map((plan) => {
         const activities = plan.activities
-          .map((a) => `${a.emoji} ${a.title} (${a.measure}) [activityId: ${a.id}]`)
+          .map((a) => {
+            const recency = activityRecencyById?.get(a.id) || "never logged";
+            return `${a.emoji} ${a.title} (${a.measure}) [activityId: ${a.id}; last logged: ${recency}]`;
+          })
           .join(", ");
 
         // Group sessions by date for readability
@@ -175,6 +197,7 @@ export class CoachAgentService {
         - Sound like a sharp friend texting, not a report. Plain words over coaching jargon.
         - Default to 1-2 short messages, 1-2 sentences each. Make one point, then ask at most one natural next-step question.
         - Give a longer answer only when the user asks for a list, table, syllabus, module breakdown, or exact extracted facts. Then give the complete useful answer.
+        - When attaching a plan creation proposal, keep the visible message scannable: use short line breaks between the rationale, what is being proposed, and the follow-up question. Do not cram all setup fields into one paragraph.
         - No markdown headers, no numbered lists, no em dashes (use commas, periods, or parentheses).
         - Avoid stiff phrases like "concrete, measurable outcome" or "frequency alone is not a strategy" unless the user used them first.
 
@@ -182,6 +205,7 @@ export class CoachAgentService {
         - Never invent exact counts, titles, modules, hours, URLs, or schedule facts.
         - Only call an activity recent, logged, done, trained, or practiced if RECENT ACTIVITY FACTS or readActivities shows it. Active plans and long-term memory are not recent-activity evidence.
         - If an activity only appears in a plan, call it planned, not logged.
+        - Activity recency matters. If you're creating a new plan and find several activities good candidates, recency might be a tiebreaker (most recent/ often logged activities are more likely to stick, as it indicates preference). If the activity that matches its a 'legacy' (non recently logged) activity, double check with the user if it makes sense to include it, or if an alternative should be used or created.
         - "Recently" and "lately" mean inside the recent-activity lookback unless readActivities returns a different range.
 
         3. Research and citations
@@ -198,6 +222,15 @@ export class CoachAgentService {
         - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - For a new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        - Activities are reusable tracking buckets. When a useful activity already appears in the plan context, reuse it by passing its activityId in proposePlanCreation.activities instead of creating a new activity with a variant name.
+        - Do not create separate activities for workout/session variants when a broader existing activity fits. Put the variant, intensity, or focus in sessions.descriptiveGuide.
+        - If a plan creation proposal is attached, do not repeat every activity, milestone, and session in prose. The proposal card shows the details, so summarize the split in one short sentence and let the card carry the setup list.
+        - Plan type selection. It is very important to clearly distinguish between the two types of plans.
+          - TIMES_PER_WEEK is for open-ended habits or maintenance goals where the target is simply doing the activity N times per week, sessions are interchangeable, and order/progression does not materially matter. Examples: meditate 4x/week, read 3x/week, strength maintenance 2x/week. Overall, plain habit building where progression is not the main focus.
+          - SPECIFIC is for goals where progression important and structure is present. Might include a deadline, event, exam, race, performance target, curriculum, source material, progressive load, taper, or varied session types where order matters. Examples: run 20km under 2h, prepare for a race, finish a course by a date, learn A1 German in 12 weeks, follow a playlist or syllabus.
+          - A finishingDate alone is not a schedule. If the plan needs progression toward that date, choose SPECIFIC and include dated sessions. If you cannot safely create those sessions yet, ask the blocking question instead of proposing a frequency-only plan.
+          - As a rule of thumb: If the plan is outcome oriented, or has clear deadlines, progression, or hard structure (like syllabus). It should be SPECIFIC.
+        - when creating SPECIFIC plans, if the user shares or agrees on a preferred syllabus. Make sure the generated sessions do reference to the (amount of videos to watch, chatpters to take, etc).
         - goalReason is only the user's inner motivation or personal outcome (confidence, health, identity, a life reason). Never put logistics, schedule, availability, or employment status there. Leave it null if the user hasn't shared a real why.
         - Propose one plan at a time. Don't bundle unrelated goals into a single proposal unless the user explicitly asks for a combined plan.
         - For bigger rebuilds, first confirm the target and weekly split, then propose. If the existing plan can't represent the new mix or schedule, prefer a new plan after confirmation over a cosmetic rename.
@@ -535,7 +568,8 @@ export class CoachAgentService {
             outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
             activities: z.array(z.object({
-              title: z.string().describe("Activity title, e.g. Easy run"),
+              activityId: z.string().optional().nullable().describe("Existing activityId to reuse from the plan context. Use this whenever an existing activity is the right tracking bucket."),
+              title: z.string().describe("Activity title. For reused activities, use the existing activity title exactly. For new activities, include only activities the user explicitly asked to track."),
               measure: z.string().describe("Tracking unit, e.g. km, minutes, reps"),
               emoji: z.string().describe("Single emoji for the activity"),
               kind: z.string().optional().describe("Activity kind/category"),
@@ -550,7 +584,7 @@ export class CoachAgentService {
               activityTitle: z.string().describe("Activity title matching one of the proposed activities"),
               date: z.string().describe("Session date in YYYY-MM-DD format"),
               quantity: z.number().positive().optional().describe("Session quantity using the activity measure"),
-              descriptiveGuide: z.string().optional().nullable().describe("Short session guidance"),
+              descriptiveGuide: z.string().optional().nullable().describe("Concrete session instructions. Put workout type, intensity, focus, or optional alternatives here instead of creating separate activity buckets. For source-backed learning plans, include exact lesson/video/module/chapter names or numbers, what portion to complete, and a practice/review task."),
             })).max(21).optional(),
             description: z.string().optional().describe("Short human-readable description"),
           }),
@@ -566,8 +600,63 @@ export class CoachAgentService {
             sessions,
             description,
           }) => {
+            const proposedSessions = sessions || [];
+            const resolvedOutlineType =
+              outlineType ||
+              (proposedSessions.length > 0 ? "SPECIFIC" : "TIMES_PER_WEEK");
+            const reusableActivitiesById = new Map(
+              plans.flatMap((plan) => plan.activities).map((activity) => [activity.id, activity])
+            );
+            const invalidActivityId = (activities || [])
+              .map((activity) => activity.activityId)
+              .find((activityId) => activityId && !reusableActivitiesById.has(activityId));
+
+            if (invalidActivityId) {
+              return {
+                success: false,
+                error: `Activity ${invalidActivityId} is not available in the plan context. Use an activityId from the context or omit activityId to create a new activity.`,
+              };
+            }
+
+            const resolvedActivities = (activities || []).map((activity) => {
+              const reusableActivity = activity.activityId
+                ? reusableActivitiesById.get(activity.activityId)
+                : null;
+
+              return reusableActivity
+                ? {
+                    activityId: reusableActivity.id,
+                    title: reusableActivity.title,
+                    measure: reusableActivity.measure,
+                    emoji: reusableActivity.emoji,
+                    kind: reusableActivity.kind,
+                  }
+                : activity;
+            });
+
+            if (resolvedOutlineType === "SPECIFIC" && proposedSessions.length === 0) {
+              return {
+                success: false,
+                error:
+                  "SPECIFIC plan proposals must include dated sessions. If the schedule is not ready, ask a clarifying question instead of proposing the plan.",
+              };
+            }
+
+            const weakSession = proposedSessions.find((session) => {
+              const guide = (session.descriptiveGuide || "").trim();
+              return guide.length < 80;
+            });
+
+            if (weakSession) {
+              return {
+                success: false,
+                error:
+                  `Session on ${weakSession.date} has an underspecified guide. Each dated session needs concrete instructions, including source/module/lesson details when relevant, and enough detail for the user to start immediately.`,
+              };
+            }
+
             logger.info(
-              `Plan creation proposed for ${user.id}: "${goal}" (${activities?.length || 0} activities)`
+              `Plan creation proposed for ${user.id}: "${goal}" (${resolvedActivities.length} activities)`
             );
 
             return {
@@ -576,14 +665,12 @@ export class CoachAgentService {
                 goal,
                 goalReason: goalReason || null,
                 emoji: emoji || "🎯",
-                outlineType:
-                  outlineType ||
-                  ((sessions?.length || 0) > 0 ? "SPECIFIC" : "TIMES_PER_WEEK"),
+                outlineType: resolvedOutlineType,
                 timesPerWeek: timesPerWeek || null,
-                activities: activities || [],
+                activities: resolvedActivities,
                 finishingDate: finishingDate || null,
                 milestones: milestones || [],
-                sessions: sessions || [],
+                sessions: proposedSessions,
                 description: description || `Create tracked plan: ${goal}`,
               },
             };
@@ -1007,6 +1094,42 @@ export class CoachAgentService {
     ].join("\n");
   }
 
+  private async buildActivityRecencyById(
+    userId: string,
+    plans: (Plan & { activities: Activity[] })[],
+    now: Date
+  ): Promise<Map<string, string>> {
+    const activityIds = Array.from(
+      new Set(plans.flatMap((plan) => plan.activities.map((activity) => activity.id)))
+    );
+
+    if (activityIds.length === 0) {
+      return new Map();
+    }
+
+    const lastEntries = await prisma.activityEntry.groupBy({
+      by: ["activityId"],
+      where: {
+        userId,
+        deletedAt: null,
+        activityId: { in: activityIds },
+        activity: { deletedAt: null },
+      },
+      _max: {
+        datetime: true,
+      },
+    });
+
+    return new Map(
+      lastEntries
+        .filter((entry) => entry.activityId)
+        .map((entry) => [
+          entry.activityId!,
+          formatActivityRecency(now, entry._max.datetime),
+        ])
+    );
+  }
+
   /**
    * Extract plan references from the message text
    * Looks for patterns like "plan goal" or emoji + text that match user's plans
@@ -1092,7 +1215,7 @@ export class CoachAgentService {
         emoji: string | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
-        activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
         finishingDate?: string | null;
         milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
         sessions?: Array<{
@@ -1120,12 +1243,12 @@ export class CoachAgentService {
   }> {
     const { user, message, conversationHistory, plans, reminders, memoriesContext, onStatus } = params;
     await onStatus?.("thinking");
+    const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
-    const recentActivityContext = await this.buildRecentActivityContext(
-      user,
-      new Date(),
-      activePlans
-    );
+    const [recentActivityContext, activityRecencyById] = await Promise.all([
+      this.buildRecentActivityContext(user, now, activePlans),
+      this.buildActivityRecencyById(user.id, activePlans, now),
+    ]);
 
     const agent = this.createAgent({
       user,
@@ -1134,6 +1257,7 @@ export class CoachAgentService {
       conversationHistory,
       memoriesContext,
       recentActivityContext,
+      activityRecencyById,
       onStatus,
     });
 
@@ -1234,10 +1358,17 @@ export class CoachAgentService {
 
       // Build draft messages with metadata distributed across them
       const plansList = activePlans.map((p) => ({ id: p.id, goal: p.goal, emoji: p.emoji }));
+      const webSearchToolCalls = visibleToolCalls.filter((tc) => tc.tool === "webSearch");
+      const nonWebSearchToolCalls = visibleToolCalls.filter((tc) => tc.tool !== "webSearch");
       const draftMessages = rawDrafts.map((draft, idx) => {
         const planReplacements = this.extractPlanReplacements(draft.content, plansList);
         const isFirst = idx === 0;
         const isLast = idx === rawDrafts.length - 1;
+        const hasCitations = /\[\d+\]/.test(draft.content);
+        const messageToolCalls = [
+          ...(isFirst ? nonWebSearchToolCalls : []),
+          ...(hasCitations ? webSearchToolCalls : []),
+        ];
 
         return {
           content: draft.content,
@@ -1248,8 +1379,9 @@ export class CoachAgentService {
           planCreationProposals: isLast && planCreationProposals.length > 0 ? planCreationProposals : undefined,
           // Activity log proposals on the LAST message
           activityLogProposals: isLast && activityLogProposals.length > 0 ? activityLogProposals : undefined,
-          // Tool calls on the FIRST message (excluding draftMessages)
-          toolCalls: isFirst && visibleToolCalls.length > 0 ? visibleToolCalls : undefined,
+          // Non-search tool calls stay on the first message. Web search calls
+          // follow any message that cites them so split bubbles can render sources.
+          toolCalls: messageToolCalls.length > 0 ? messageToolCalls : undefined,
         };
       });
 

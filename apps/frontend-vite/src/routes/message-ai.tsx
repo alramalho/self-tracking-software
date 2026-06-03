@@ -595,15 +595,13 @@ function MessageAIPage() {
     isClearingCoachHistory,
   } = useMessages();
   const coachLoadingLabel =
-    isSendingMessage
+    isSendingMessage || isRewritingMessage
       ? ({
           thinking: "Thinking...",
-          searching: "Searching...",
+          searching: "Searching the web...",
           drafting: "Drafting...",
         }[coachResponseStatus || "thinking"])
-      : isRewritingMessage
-        ? "Updating..."
-        : pendingStaggeredMessages.length > 0
+      : pendingStaggeredMessages.length > 0
           ? "Writing..."
           : null;
   const {
@@ -627,6 +625,7 @@ function MessageAIPage() {
   const [inputValue, setInputValue] = useState("");
   const [editingMessage, setEditingMessage] = useState<{
     id: string;
+    chatId: string;
     content: string;
   } | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -825,13 +824,15 @@ function MessageAIPage() {
     if (editingMessage) {
       const messageToSend = inputValue.trim();
       const messageId = editingMessage.id;
+      const sourceChatId = editingMessage.chatId;
       setInputValue("");
       setEditingMessage(null);
       setTimeout(scrollToBottom, 50);
 
       try {
         await rewriteMessage({
-          chatId: currentChatId,
+          chatId: sourceChatId,
+          cacheChatId: currentChatId,
           messageId,
           message: messageToSend,
         });
@@ -1434,6 +1435,40 @@ function MessageAIPage() {
                   ? canCopyMessage || canEditMessage
                   : activeActionMessageId === message.id &&
                     (canCopyMessage || isLastInCoachGroup);
+                const ownToolCalls = Array.isArray(message.toolCalls)
+                  ? message.toolCalls
+                  : [];
+                let inheritedWebSearchToolCalls: any[] = [];
+
+                if (
+                  isCoachMessage &&
+                  ownToolCalls.length === 0 &&
+                  typeof message.content === "string" &&
+                  /\[\d+\]/.test(message.content)
+                ) {
+                  for (let i = index - 1; i >= 0; i -= 1) {
+                    const previousCoachMessage = allMessages[i];
+                    if (previousCoachMessage?.role !== "COACH") break;
+
+                    const webSearchToolCalls = (
+                      previousCoachMessage.toolCalls || []
+                    ).filter((toolCall: any) => toolCall.tool === "webSearch");
+
+                    if (webSearchToolCalls.length > 0) {
+                      inheritedWebSearchToolCalls = webSearchToolCalls;
+                      break;
+                    }
+                  }
+                }
+
+                const displayToolCalls =
+                  ownToolCalls.length > 0
+                    ? ownToolCalls
+                    : inheritedWebSearchToolCalls;
+                const messageForRendering =
+                  displayToolCalls.length > 0 && ownToolCalls.length === 0
+                    ? { ...message, toolCalls: displayToolCalls }
+                    : message;
 
                 return (
                   <MessageWithReadTracking
@@ -1488,7 +1523,7 @@ function MessageAIPage() {
                               }
                             >
                               <div className="text-sm whitespace-pre-wrap">
-                                {renderMessageContent(message)}
+                                {renderMessageContent(messageForRendering)}
                               </div>
                             </MessageBubble>
                           )}
@@ -1529,9 +1564,12 @@ function MessageAIPage() {
                                     type="button"
                                     onClick={(event) => {
                                       event.stopPropagation();
+                                      const sourceChatId = message.chatId || currentChatId;
+                                      if (!sourceChatId) return;
                                       if (pendingSession) clearPendingSession();
                                       setEditingMessage({
                                         id: message.id,
+                                        chatId: sourceChatId,
                                         content: message.content,
                                       });
                                       setInputValue(message.content);
@@ -1645,9 +1683,9 @@ function MessageAIPage() {
                           </div>
                         )}
 
-                        {isCoachMessage && message.toolCalls && message.toolCalls.length > 0 && (
+                        {isCoachMessage && displayToolCalls.length > 0 && (
                           <CoachToolCallsCard
-                            toolCalls={message.toolCalls}
+                            toolCalls={displayToolCalls}
                             content={message.content}
                             plans={plans?.map(p => ({ id: p.id, goal: p.goal, emoji: p.emoji }))}
                           />

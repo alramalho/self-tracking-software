@@ -24,6 +24,28 @@ import { AIContext, type AIContextType } from "./types";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages, type Chat, type Message } from "@/contexts/messages";
 
+const hasPlanCreationProposal = (message: Message) =>
+  (message.planCreationProposals?.length || 0) > 0;
+
+const cancelPendingPlanCreationProposalsInCache = (
+  messages: Message[],
+  exceptMessageIds: Set<string> = new Set()
+): Message[] =>
+  messages.map((message) => {
+    if (exceptMessageIds.has(message.id) || !message.planCreationProposals) {
+      return message;
+    }
+
+    let changed = false;
+    const planCreationProposals = message.planCreationProposals.map((proposal) => {
+      if (proposal.status) return proposal;
+      changed = true;
+      return { ...proposal, status: "cancelled" as const };
+    });
+
+    return changed ? { ...message, planCreationProposals } : message;
+  });
+
 export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -254,7 +276,16 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.setQueryData(
         ["messages", messagesContext.currentChatId],
         (oldMessages: Message[] = []) => {
-          const updatedMessages = oldMessages.map((msg) => {
+          const newProposalMessageIds = new Set(newMessages.map((msg) => msg.id));
+          const shouldCancelPendingPlanCreations =
+            newMessages.some(hasPlanCreationProposal);
+          const preparedMessages = shouldCancelPendingPlanCreations
+            ? cancelPendingPlanCreationProposalsInCache(
+                oldMessages,
+                newProposalMessageIds
+              )
+            : oldMessages;
+          const updatedMessages = preparedMessages.map((msg) => {
             if (msg.id !== messageId || !msg.planCreationProposals) return msg;
             const updatedProposals = [...msg.planCreationProposals];
             updatedProposals[proposalIndex] = {

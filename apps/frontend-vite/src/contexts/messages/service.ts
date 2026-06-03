@@ -62,35 +62,26 @@ export async function sendMessage(
 
 export type CoachResponseStatus = "thinking" | "searching" | "drafting";
 
-export async function sendMessageStream(
-  api: AxiosInstance,
-  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" },
-  onStatus?: (status: CoachResponseStatus) => void
-): Promise<Message[]> {
+async function getStreamHeaders(): Promise<Record<string, string>> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const baseURL = api.defaults.baseURL || "";
-  const response = await fetch(
-    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : {}),
-      },
-      body: JSON.stringify({
-        message: data.message,
-        coachVersion: data.coachVersion,
-      }),
-    }
-  );
+  return {
+    "Content-Type": "application/json",
+    ...(session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {}),
+  };
+}
 
+async function readMessageStreamResponse(
+  response: Response,
+  fallbackErrorMessage: string,
+  onStatus?: (status: CoachResponseStatus) => void
+): Promise<Message[]> {
   if (!response.ok || !response.body) {
-    let errorMessage = "Failed to send message";
+    let errorMessage = fallbackErrorMessage;
     try {
       const errorBody = await response.json();
       if (typeof errorBody?.error === "string") {
@@ -142,7 +133,7 @@ export async function sendMessageStream(
     }
 
     if (eventName === "error") {
-      throw new Error(eventData?.error || "Failed to send message");
+      throw new Error(eventData?.error || fallbackErrorMessage);
     }
   };
 
@@ -178,6 +169,27 @@ export async function sendMessageStream(
   return [deserializeMessage(donePayload.message)];
 }
 
+export async function sendMessageStream(
+  api: AxiosInstance,
+  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" },
+  onStatus?: (status: CoachResponseStatus) => void
+): Promise<Message[]> {
+  const baseURL = api.defaults.baseURL || "";
+  const response = await fetch(
+    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/stream`,
+    {
+      method: "POST",
+      headers: await getStreamHeaders(),
+      body: JSON.stringify({
+        message: data.message,
+        coachVersion: data.coachVersion,
+      }),
+    }
+  );
+
+  return readMessageStreamResponse(response, "Failed to send message", onStatus);
+}
+
 export async function rewriteMessage(
   api: AxiosInstance,
   data: { chatId: string; messageId: string; message: string }
@@ -187,6 +199,26 @@ export async function rewriteMessage(
     { message: data.message }
   );
   return response.data.messages.map(deserializeMessage);
+}
+
+export async function rewriteMessageStream(
+  api: AxiosInstance,
+  data: { chatId: string; messageId: string; message: string },
+  onStatus?: (status: CoachResponseStatus) => void
+): Promise<Message[]> {
+  const baseURL = api.defaults.baseURL || "";
+  const response = await fetch(
+    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/${encodeURIComponent(data.messageId)}/rewrite/stream`,
+    {
+      method: "POST",
+      headers: await getStreamHeaders(),
+      body: JSON.stringify({
+        message: data.message,
+      }),
+    }
+  );
+
+  return readMessageStreamResponse(response, "Failed to edit message", onStatus);
 }
 
 // Create a direct message chat with another user

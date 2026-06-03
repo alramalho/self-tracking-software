@@ -25,6 +25,7 @@ import { coachContextBriefService } from "./coachContextBriefService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { aiService } from "./aiService";
 import { notificationService } from "./notificationService";
+import { cancelPendingPlanCreationProposals } from "./planCreationProposalStatusService";
 import {
   executePlanProposalPatch,
   getProposalPatch,
@@ -717,7 +718,7 @@ export class CoachAssessmentService {
         emoji: string | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
-        activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+        activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
         finishingDate?: string | null;
         milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
         sessions?: Array<{
@@ -744,6 +745,9 @@ export class CoachAssessmentService {
   ): Promise<{ messageIds: string[]; notificationId?: string }> {
     const { chat } = await this.ensureCoachChat(user);
     const messageIds: string[] = [];
+    const hasNewPlanCreationProposal = drafts.some(
+      (draft) => (draft.planCreationProposals?.length || 0) > 0
+    );
 
     for (const draft of drafts) {
       const message = await prisma.message.create({
@@ -769,6 +773,10 @@ export class CoachAssessmentService {
         },
       });
       messageIds.push(message.id);
+    }
+
+    if (hasNewPlanCreationProposal) {
+      await cancelPendingPlanCreationProposals(chat.id, messageIds);
     }
 
     await prisma.chat.update({

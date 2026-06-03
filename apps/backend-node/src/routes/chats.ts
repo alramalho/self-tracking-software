@@ -3,8 +3,10 @@ import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAgentService } from "../services/coachAgentService";
+import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
+import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
@@ -12,10 +14,36 @@ import { supermemoryService } from "../services/supermemoryService";
 const router = Router();
 
 type CoachResponseStatus = "thinking" | "searching" | "drafting";
+type ConversationHistory = Array<{ role: "user" | "assistant"; content: string }>;
+
+class RouteError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
 function writeSseEvent(res: Response, event: string, data: unknown) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function serializeUserMessage(
+  userMessage: Awaited<ReturnType<typeof prisma.message.create>>,
+  user: User
+) {
+  return {
+    id: userMessage.id,
+    chatId: userMessage.chatId,
+    role: userMessage.role,
+    content: userMessage.content,
+    createdAt: userMessage.createdAt,
+    senderId: user.id,
+    senderName: user.name,
+    senderPicture: user.picture,
+  };
 }
 
 async function runCoachV2MessagePipeline(params: {
@@ -24,17 +52,22 @@ async function runCoachV2MessagePipeline(params: {
   chatId: string;
   message: string;
   serializedUserMessage: Record<string, unknown>;
+  conversationHistory?: ConversationHistory;
   onStatus?: (status: CoachResponseStatus) => void | Promise<void>;
   logLabel: string;
 }) {
   const { user, chat, chatId, message, serializedUserMessage, onStatus, logLabel } = params;
+  let conversationHistory = params.conversationHistory;
 
-  const history = await prisma.message.findMany({
-    where: { chatId },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  });
-  history.reverse();
+  if (!conversationHistory) {
+    const history = await prisma.message.findMany({
+      where: { chatId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    history.reverse();
+    conversationHistory = toCoachConversationHistory(history);
+  }
 
   const plans = await prisma.plan.findMany({
     where: {
@@ -54,11 +87,6 @@ async function runCoachV2MessagePipeline(params: {
     },
     orderBy: [{ createdAt: "desc" }],
   });
-
-  const conversationHistory = history.map((msg) => ({
-    role: msg.role === "USER" ? "user" : "assistant",
-    content: msg.content,
-  })) as Array<{ role: "user" | "assistant"; content: string }>;
 
   const reminders = await prisma.reminder.findMany({
     where: {
@@ -84,6 +112,9 @@ async function runCoachV2MessagePipeline(params: {
   });
 
   const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
+  const hasNewPlanCreationProposal = v2Response.draftMessages.some(
+    (draft) => (draft.planCreationProposals?.length || 0) > 0
+  );
   for (const draft of v2Response.draftMessages) {
     const coachMsg = await prisma.message.create({
       data: {
@@ -103,6 +134,13 @@ async function runCoachV2MessagePipeline(params: {
       },
     });
     savedMessages.push(coachMsg);
+  }
+
+  if (hasNewPlanCreationProposal) {
+    await cancelPendingPlanCreationProposals(
+      chatId,
+      savedMessages.map((message) => message.id)
+    );
   }
 
   await prisma.chat.update({
@@ -192,6 +230,90 @@ async function runCoachV2MessagePipeline(params: {
     userMessage: serializedUserMessage,
     messages: [serializedUserMessage, ...resolvedMessages],
     message: resolvedMessages[resolvedMessages.length - 1] || serializedUserMessage,
+  };
+}
+
+async function prepareCoachMessageRewrite(params: {
+  user: User;
+  chatId: string;
+  messageId: string;
+  message: string;
+}) {
+  const { user, chatId, messageId, message } = params;
+
+  const chat = await prisma.chat.findFirst({
+    where: {
+      id: chatId,
+      userId: user.id,
+      type: "COACH",
+    },
+  });
+
+  if (!chat) {
+    throw new RouteError(404, "Chat not found");
+  }
+
+  const coachChatWhere = {
+    userId: user.id,
+    type: "COACH" as const,
+  };
+
+  const targetMessage = await prisma.message.findFirst({
+    where: {
+      id: messageId,
+      role: "USER",
+      senderId: user.id,
+      chat: coachChatWhere,
+    },
+    include: {
+      chat: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!targetMessage) {
+    throw new RouteError(404, "Editable message not found");
+  }
+
+  const targetMetadata = targetMessage.metadata as any;
+  if (targetMetadata?.userAction) {
+    throw new RouteError(400, "Action messages cannot be edited");
+  }
+
+  const history = await prisma.message.findMany({
+    where: {
+      chat: coachChatWhere,
+      createdAt: { lt: targetMessage.createdAt },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+  history.reverse();
+
+  await prisma.message.deleteMany({
+    where: {
+      chat: coachChatWhere,
+      createdAt: { gte: targetMessage.createdAt },
+    },
+  });
+
+  const userMessage = await prisma.message.create({
+    data: {
+      chatId: targetMessage.chatId,
+      role: "USER",
+      content: message,
+      senderId: user.id,
+    },
+  });
+
+  return {
+    chat: targetMessage.chat,
+    conversationHistory: toCoachConversationHistory(history),
+    serializedUserMessage: serializeUserMessage(userMessage, user),
   };
 }
 
@@ -628,16 +750,7 @@ router.post(
           senderId: user.id,
         },
       });
-      const serializedUserMessage = {
-        id: userMessage.id,
-        chatId: userMessage.chatId,
-        role: userMessage.role,
-        content: userMessage.content,
-        createdAt: userMessage.createdAt,
-        senderId: user.id,
-        senderName: user.name,
-        senderPicture: user.picture,
-      };
+      const serializedUserMessage = serializeUserMessage(userMessage, user);
 
       await prisma.chat.update({
         where: { id: chatId },
@@ -721,16 +834,7 @@ router.post(
           senderId: user.id,
         },
       });
-      const serializedUserMessage = {
-        id: userMessage.id,
-        chatId: userMessage.chatId,
-        role: userMessage.role,
-        content: userMessage.content,
-        createdAt: userMessage.createdAt,
-        senderId: user.id,
-        senderName: user.name,
-        senderPicture: user.picture,
-      };
+      const serializedUserMessage = serializeUserMessage(userMessage, user);
 
       // Update chat's updatedAt timestamp
       await prisma.chat.update({
@@ -781,10 +885,7 @@ router.post(
           orderBy: [{ createdAt: "desc" }],
         });
 
-        const conversationHistory = history.map((msg) => ({
-          role: msg.role === "USER" ? "user" : "assistant",
-          content: msg.content,
-        })) as Array<{ role: "user" | "assistant"; content: string }>;
+        const conversationHistory = toCoachConversationHistory(history);
 
         let aiResponse: {
           messageContent: string;
@@ -797,7 +898,7 @@ router.post(
             emoji: string | null;
             outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
             timesPerWeek: number | null;
-            activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+            activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
             finishingDate?: string | null;
             milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
             sessions?: Array<{
@@ -846,6 +947,10 @@ router.post(
             },
           },
         });
+
+        if ((aiResponse.planCreationProposals?.length || 0) > 0) {
+          await cancelPendingPlanCreationProposals(chatId, [coachMessage.id]);
+        }
 
         await prisma.chat.update({
           where: { id: chatId },
@@ -1013,6 +1118,83 @@ router.post(
 );
 
 router.post(
+  "/:chatId/messages/:messageId/rewrite/stream",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    let streamStarted = false;
+    let clientClosed = false;
+
+    try {
+      const user = req.user!;
+      const { chatId, messageId } = req.params;
+      const { message } = req.body;
+
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders?.();
+      streamStarted = true;
+
+      req.on("close", () => {
+        clientClosed = true;
+      });
+
+      const sendStatus = (state: CoachResponseStatus) => {
+        if (!clientClosed) {
+          writeSseEvent(res, "status", { state });
+        }
+      };
+
+      sendStatus("thinking");
+
+      const rewriteContext = await prepareCoachMessageRewrite({
+        user,
+        chatId,
+        messageId,
+        message,
+      });
+
+      const payload = await runCoachV2MessagePipeline({
+        user,
+        chat: rewriteContext.chat,
+        chatId: rewriteContext.chat.id,
+        message,
+        serializedUserMessage: rewriteContext.serializedUserMessage,
+        conversationHistory: rewriteContext.conversationHistory,
+        onStatus: sendStatus,
+        logLabel: "Coach message rewritten stream",
+      });
+
+      if (!clientClosed) {
+        writeSseEvent(res, "done", payload);
+        res.end();
+      }
+    } catch (error) {
+      logger.error("Error streaming message rewrite:", error);
+      if (streamStarted && !clientClosed) {
+        writeSseEvent(res, "error", {
+          error: error instanceof Error ? error.message : "Failed to rewrite message",
+        });
+        res.end();
+        return;
+      }
+
+      if (error instanceof RouteError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to rewrite message" });
+    }
+  }
+);
+
+router.post(
   "/:chatId/messages/:messageId/rewrite",
   requireAuth,
   async (
@@ -1028,202 +1210,29 @@ router.post(
         return res.status(400).json({ error: "Message is required" });
       }
 
-      const chat = await prisma.chat.findFirst({
-        where: {
-          id: chatId,
-          userId: user.id,
-          type: "COACH",
-        },
-      });
-
-      if (!chat) {
-        return res.status(404).json({ error: "Chat not found" });
-      }
-
-      const targetMessage = await prisma.message.findFirst({
-        where: {
-          id: messageId,
-          chatId,
-          role: "USER",
-          senderId: user.id,
-        },
-      });
-
-      if (!targetMessage) {
-        return res.status(404).json({ error: "Editable message not found" });
-      }
-
-      const targetMetadata = targetMessage.metadata as any;
-      if (targetMetadata?.userAction) {
-        return res.status(400).json({ error: "Action messages cannot be edited" });
-      }
-
-      const history = await prisma.message.findMany({
-        where: {
-          chatId,
-          createdAt: { lt: targetMessage.createdAt },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      });
-      history.reverse();
-
-      await prisma.message.deleteMany({
-        where: {
-          chatId,
-          createdAt: { gte: targetMessage.createdAt },
-        },
-      });
-
-      const userMessage = await prisma.message.create({
-        data: {
-          chatId,
-          role: "USER",
-          content: message,
-          senderId: user.id,
-        },
-      });
-
-      const serializedUserMessage = {
-        id: userMessage.id,
-        chatId: userMessage.chatId,
-        role: userMessage.role,
-        content: userMessage.content,
-        createdAt: userMessage.createdAt,
-        senderId: user.id,
-        senderName: user.name,
-        senderPicture: user.picture,
-      };
-
-      const plans = await prisma.plan.findMany({
-        where: {
-          userId: user.id,
-          deletedAt: null,
-          archivedAt: null,
-          isPaused: false,
-          OR: [
-            { finishingDate: null },
-            { finishingDate: { gt: new Date() } },
-          ],
-        },
-        include: {
-          activities: true,
-          sessions: true,
-          milestones: true,
-        },
-        orderBy: [{ createdAt: "desc" }],
-      });
-
-      const reminders = await prisma.reminder.findMany({
-        where: {
-          userId: user.id,
-          status: "PENDING",
-        },
-        orderBy: { triggerAt: "asc" },
-      });
-
-      const conversationHistory = history.map((msg) => ({
-        role: msg.role === "USER" ? "user" : "assistant",
-        content: msg.content,
-      })) as Array<{ role: "user" | "assistant"; content: string }>;
-
-      const memoriesContext = await supermemoryService.getProfile(user.id, message);
-
-      const v2Response = await coachAgentService.generateResponse({
+      const rewriteContext = await prepareCoachMessageRewrite({
         user,
+        chatId,
+        messageId,
         message,
-        conversationHistory,
-        plans: plans as Array<typeof plans[0] & {
-          sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
-          milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
-        }>,
-        reminders,
-        memoriesContext,
       });
 
-      const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
-      for (const draft of v2Response.draftMessages) {
-        const coachMsg = await prisma.message.create({
-          data: {
-            chatId,
-            role: "COACH",
-            content: draft.content,
-            metadata: {
-              planReplacements: draft.planReplacements || [],
-              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
-              planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
-              activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
-              ...(draft.toolCalls && {
-                toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
-              }),
-              ...(draft.error && { error: true }),
-            },
-          },
-        });
-        savedMessages.push(coachMsg);
-      }
-
-      await prisma.chat.update({
-        where: { id: chatId },
-        data: { updatedAt: new Date() },
+      const payload = await runCoachV2MessagePipeline({
+        user,
+        chat: rewriteContext.chat,
+        chatId: rewriteContext.chat.id,
+        message,
+        serializedUserMessage: rewriteContext.serializedUserMessage,
+        conversationHistory: rewriteContext.conversationHistory,
+        logLabel: "Coach message rewritten",
       });
 
-      const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
-      if (savedMessages.length > 0) {
-        supermemoryService.addMemory(
-          user.id,
-          `user: ${message}\nassistant: ${fullCoachText}`,
-          savedMessages[savedMessages.length - 1].id
-        );
-      }
-
-      logger.info(
-        `Coach message rewritten - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
-      );
-
-      const resolvedMessages = savedMessages.map((coachMsg, idx) => {
-        const draft = v2Response.draftMessages[idx];
-        const resolvedPlanReplacements =
-          draft.planReplacements
-            ?.map((replacement) => {
-              const plan = plans.find(
-                (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
-              );
-              return plan
-                ? {
-                    textToReplace: replacement.textToReplace,
-                    plan: {
-                      id: plan.id,
-                      goal: plan.goal,
-                      emoji: plan.emoji,
-                    },
-                  }
-                : null;
-            })
-            .filter(Boolean) || [];
-
-        return {
-          id: coachMsg.id,
-          chatId: coachMsg.chatId,
-          role: coachMsg.role,
-          content: draft.content,
-          planReplacements: resolvedPlanReplacements,
-          planProposals: draft.planProposals || [],
-          planCreationProposals: draft.planCreationProposals || [],
-          activityLogProposals: draft.activityLogProposals || [],
-          toolCalls: draft.toolCalls || null,
-          error: draft.error || false,
-          createdAt: coachMsg.createdAt,
-        };
-      });
-
-      return res.json({
-        userMessage: serializedUserMessage,
-        messages: [serializedUserMessage, ...resolvedMessages],
-        message: resolvedMessages[resolvedMessages.length - 1] || serializedUserMessage,
-      });
+      return res.json(payload);
     } catch (error) {
       logger.error("Error rewriting message:", error);
+      if (error instanceof RouteError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to rewrite message" });
     }
   }

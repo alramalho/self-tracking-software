@@ -5,8 +5,10 @@ import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAssessmentService } from "../services/coachAssessmentService";
 import { coachAgentService } from "../services/coachAgentService";
+import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
+import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
 import {
   executePlanProposalPatch,
   getProposalPatch,
@@ -34,6 +36,7 @@ const planCreationProposalChangesSchema = z.object({
     activities: z
       .array(
         z.object({
+          activityId: z.string().nullable().optional(),
           title: z.string(),
           measure: z.string(),
           emoji: z.string(),
@@ -837,10 +840,7 @@ router.post(
         orderBy: [{ createdAt: "desc" }],
       });
 
-      const conversationHistory = history.map((msg) => ({
-        role: msg.role === "USER" ? "user" : "assistant",
-        content: msg.content,
-      }));
+      const conversationHistory = toCoachConversationHistory(history);
 
       // Generate AI response using the new 2-step recommendation service
       const aiResponse = await aiService.generateCoachChatResponse({
@@ -1611,17 +1611,53 @@ router.post(
         return;
       }
 
+      const requestedActivityIds: string[] = Array.from(
+        new Set<string>(
+          (proposal.activities || [])
+            .map((activity: any) => activity.activityId)
+            .filter(
+              (activityId: unknown): activityId is string =>
+                typeof activityId === "string" && activityId.length > 0
+            )
+        )
+      );
+      const existingActivitiesById = requestedActivityIds.length > 0
+        ? new Map(
+            (
+              await prisma.activity.findMany({
+                where: {
+                  id: { in: requestedActivityIds },
+                  userId: user.id,
+                  deletedAt: null,
+                },
+              })
+            ).map((activity) => [activity.id, activity])
+          )
+        : new Map();
+      const missingActivityId = requestedActivityIds.find(
+        (activityId) => !existingActivitiesById.has(activityId)
+      );
+      if (missingActivityId) {
+        res.status(400).json({ error: `Activity ${missingActivityId} not found` });
+        return;
+      }
+
       const plan = await prisma.$transaction(async (tx) => {
         const activityIds: string[] = [];
         const activityIdsByTitle = new Map<string, string>();
         for (const activity of proposal.activities || []) {
-          const existing = await tx.activity.findFirst({
-            where: {
-              userId: user.id,
-              deletedAt: null,
-              title: { equals: activity.title, mode: "insensitive" },
-            },
-          });
+          const existingById = activity.activityId
+            ? existingActivitiesById.get(activity.activityId)
+            : null;
+          const existing =
+            existingById ||
+            (await tx.activity.findFirst({
+              where: {
+                userId: user.id,
+                deletedAt: null,
+                title: { equals: activity.title, mode: "insensitive" },
+              },
+            }));
 
           const savedActivity = existing || await tx.activity.create({
             data: {
@@ -1632,8 +1668,11 @@ router.post(
               kind: activity.kind || "other",
             },
           });
-          activityIds.push(savedActivity.id);
+          if (!activityIds.includes(savedActivity.id)) {
+            activityIds.push(savedActivity.id);
+          }
           activityIdsByTitle.set(activity.title.toLowerCase(), savedActivity.id);
+          activityIdsByTitle.set(savedActivity.title.toLowerCase(), savedActivity.id);
         }
 
         const sessionCreates: Array<{
@@ -1728,10 +1767,21 @@ router.post(
 
       metadata.planCreationProposals[proposalIndex].status = "accepted";
       metadata.planCreationProposals[proposalIndex].planId = plan.id;
+      metadata.planCreationProposals = metadata.planCreationProposals.map(
+        (existingProposal: any, existingIndex: number) =>
+          existingIndex === proposalIndex || existingProposal?.status
+            ? existingProposal
+            : {
+                ...existingProposal,
+                status: "cancelled",
+                cancelledAt: new Date().toISOString(),
+              }
+      );
       await prisma.message.update({
         where: { id: messageId },
         data: { metadata },
       });
+      await cancelPendingPlanCreationProposals(message.chatId, [messageId]);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -1953,10 +2003,7 @@ router.post(
         note?.trim() ? `\nUser note:\n${note.trim()}` : "",
       ].join("\n");
 
-      const conversationHistory = history.map((msg) => ({
-        role: msg.role === "USER" ? "user" : "assistant",
-        content: msg.content,
-      })) as Array<{ role: "user" | "assistant"; content: string }>;
+      const conversationHistory = toCoachConversationHistory(history);
 
       const memoriesContext = await supermemoryService.getProfile(
         user.id,
@@ -1977,6 +2024,9 @@ router.post(
         coachMsg: Awaited<ReturnType<typeof prisma.message.create>>;
         draft: DraftType;
       }> = [];
+      const hasNewPlanCreationProposal = aiResponse.draftMessages.some(
+        (draft) => (draft.planCreationProposals?.length || 0) > 0
+      );
 
       for (const draft of aiResponse.draftMessages) {
         const coachMsg = await prisma.message.create({
@@ -2001,6 +2051,13 @@ router.post(
           },
         });
         savedMessages.push({ coachMsg, draft });
+      }
+
+      if (hasNewPlanCreationProposal) {
+        await cancelPendingPlanCreationProposals(
+          message.chatId,
+          savedMessages.map(({ coachMsg }) => coachMsg.id)
+        );
       }
 
       await prisma.chat.update({
@@ -2461,6 +2518,9 @@ router.post(
       // Save multiple coach messages (one per draft)
       type DraftType = (typeof aiResponse.draftMessages)[number];
       const savedMessages: Array<{ coachMsg: Awaited<ReturnType<typeof prisma.message.create>>; draft: DraftType }> = [];
+      const hasNewPlanCreationProposal = aiResponse.draftMessages.some(
+        (draft) => (draft.planCreationProposals?.length || 0) > 0
+      );
       for (const draft of aiResponse.draftMessages) {
         const coachMsg = await prisma.message.create({
           data: {
@@ -2479,6 +2539,13 @@ router.post(
           },
         });
         savedMessages.push({ coachMsg, draft });
+      }
+
+      if (hasNewPlanCreationProposal) {
+        await cancelPendingPlanCreationProposals(
+          chat.id,
+          savedMessages.map(({ coachMsg }) => coachMsg.id)
+        );
       }
 
       // Update chat timestamp

@@ -69,7 +69,7 @@ export interface Message {
     emoji: string | null;
     outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
     timesPerWeek: number | null;
-    activities: Array<{ title: string; measure: string; emoji: string; kind?: string | null }>;
+    activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
     finishingDate?: string | null;
     milestones?: Array<{ description: string; date?: string | null; criteria?: string | null }>;
     sessions?: Array<{
@@ -79,7 +79,7 @@ export interface Message {
       descriptiveGuide?: string | null;
     }>;
     description: string;
-    status: "accepted" | "rejected" | "changes_requested" | null;
+    status: "accepted" | "rejected" | "changes_requested" | "cancelled" | null;
     planId?: string;
   }>;
   activityLogProposals?: Array<{
@@ -148,7 +148,7 @@ export interface MessagesContextType {
 
   // Mutations
   sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message[]>;
-  rewriteMessage: (data: { chatId: string; messageId: string; message: string }) => Promise<Message[]>;
+  rewriteMessage: (data: { chatId: string; cacheChatId?: string; messageId: string; message: string }) => Promise<Message[]>;
   isSendingMessage: boolean;
   coachResponseStatus: "thinking" | "searching" | "drafting" | null;
   isRewritingMessage: boolean;

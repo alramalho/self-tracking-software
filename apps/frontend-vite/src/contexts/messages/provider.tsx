@@ -9,7 +9,7 @@ import {
   getMessages,
   sendMessage,
   sendMessageStream,
-  rewriteMessage,
+  rewriteMessageStream,
   createDirectChat,
   markMessagesAsRead,
   clearCoachHistory,
@@ -21,6 +21,35 @@ import {
   type Chat,
   type Message,
 } from "./types";
+
+const hasPlanCreationProposal = (message: Message) =>
+  (message.planCreationProposals?.length || 0) > 0;
+
+const cancelPendingPlanCreationProposalsInCache = (
+  messages: Message[],
+  exceptMessageIds: Set<string> = new Set()
+): Message[] =>
+  messages.map((message) => {
+    if (exceptMessageIds.has(message.id) || !message.planCreationProposals) {
+      return message;
+    }
+
+    let changed = false;
+    const planCreationProposals = message.planCreationProposals.map((proposal) => {
+      if (proposal.status) return proposal;
+      changed = true;
+      return { ...proposal, status: "cancelled" as const };
+    });
+
+    return changed ? { ...message, planCreationProposals } : message;
+  });
+
+type RewriteMessageInput = {
+  chatId: string;
+  cacheChatId?: string;
+  messageId: string;
+  message: string;
+};
 
 export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -117,11 +146,16 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       const coachMessages = responseMessages.filter(
         (msg) => msg.id !== persistedUserMessage?.id
       );
+      const newProposalMessageIds = new Set(coachMessages.map((msg) => msg.id));
+      const shouldCancelPendingPlanCreations = coachMessages.some(hasPlanCreationProposal);
 
       queryClient.setQueryData(
         ["messages", chatId],
         (oldMessages: Message[] = []) => {
-          const withoutTemp = oldMessages.filter(
+          const preparedMessages = shouldCancelPendingPlanCreations
+            ? cancelPendingPlanCreationProposalsInCache(oldMessages, newProposalMessageIds)
+            : oldMessages;
+          const withoutTemp = preparedMessages.filter(
             (msg) => !(msg.id.startsWith("temp-") && msg.content === message)
           );
           if (!persistedUserMessage) return withoutTemp;
@@ -139,8 +173,11 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           queryClient.setQueryData(
             ["messages", chatId],
             (oldMessages: Message[] = []) => {
-              const exists = oldMessages.some((m) => m.id === msg.id);
-              return exists ? oldMessages : [...oldMessages, msg];
+              const preparedMessages = shouldCancelPendingPlanCreations
+                ? cancelPendingPlanCreationProposalsInCache(oldMessages, newProposalMessageIds)
+                : oldMessages;
+              const exists = preparedMessages.some((m) => m.id === msg.id);
+              return exists ? preparedMessages : [...preparedMessages, msg];
             }
           );
         }
@@ -153,8 +190,11 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         queryClient.setQueryData(
           ["messages", chatId],
           (oldMessages: Message[] = []) => {
-            const exists = oldMessages.some((m) => m.id === firstMsg.id);
-            return exists ? oldMessages : [...oldMessages, firstMsg];
+            const preparedMessages = shouldCancelPendingPlanCreations
+              ? cancelPendingPlanCreationProposalsInCache(oldMessages, newProposalMessageIds)
+              : oldMessages;
+            const exists = preparedMessages.some((m) => m.id === firstMsg.id);
+            return exists ? preparedMessages : [...preparedMessages, firstMsg];
           }
         );
 
@@ -173,8 +213,11 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
             queryClient.setQueryData(
               ["messages", chatId],
               (oldMessages: Message[] = []) => {
-                const exists = oldMessages.some((m) => m.id === msg.id);
-                return exists ? oldMessages : [...oldMessages, msg];
+                const preparedMessages = shouldCancelPendingPlanCreations
+                  ? cancelPendingPlanCreationProposalsInCache(oldMessages, newProposalMessageIds)
+                  : oldMessages;
+                const exists = preparedMessages.some((m) => m.id === msg.id);
+                return exists ? preparedMessages : [...preparedMessages, msg];
               }
             );
             setPendingStaggeredMessages((prev) => prev.filter((m) => m.id !== msg.id));
@@ -223,22 +266,24 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const rewriteMessageMutation = useMutation({
-    mutationFn: async (data: { chatId: string; messageId: string; message: string }) => {
+    mutationFn: async (data: RewriteMessageInput) => {
       staggerTimersRef.current.forEach(clearTimeout);
       staggerTimersRef.current = [];
       setPendingStaggeredMessages([]);
+      setCoachResponseStatus("thinking");
 
-      return await rewriteMessage(api, data);
+      return await rewriteMessageStream(api, data, setCoachResponseStatus);
     },
-    onMutate: async ({ chatId, messageId, message }) => {
-      await queryClient.cancelQueries({ queryKey: ["messages", chatId] });
+    onMutate: async ({ chatId, cacheChatId, messageId, message }) => {
+      const visibleChatId = cacheChatId || chatId;
+      await queryClient.cancelQueries({ queryKey: ["messages", visibleChatId] });
       const previousMessages = queryClient.getQueryData<Message[]>([
         "messages",
-        chatId,
+        visibleChatId,
       ]);
 
       queryClient.setQueryData(
-        ["messages", chatId],
+        ["messages", visibleChatId],
         (oldMessages: Message[] = []) => {
           const targetIndex = oldMessages.findIndex((msg) => msg.id === messageId);
           if (targetIndex === -1) return oldMessages;
@@ -255,11 +300,12 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      return { previousMessages };
+      return { previousMessages, visibleChatId, sourceChatId: chatId };
     },
-    onSuccess: (responseMessages, { chatId, messageId }) => {
+    onSuccess: (responseMessages, { chatId, cacheChatId, messageId }) => {
+      const visibleChatId = cacheChatId || chatId;
       queryClient.setQueryData(
-        ["messages", chatId],
+        ["messages", visibleChatId],
         (oldMessages: Message[] = []) => {
           const targetIndex = oldMessages.findIndex((msg) => msg.id === messageId);
           const retainedMessages =
@@ -270,25 +316,28 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
 
       queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
         return oldChats.map((chat) => {
-          if (chat.id === chatId) {
+          if (chat.id === chatId || chat.id === visibleChatId) {
             return { ...chat, updatedAt: new Date() };
           }
           return chat;
         });
       });
-      queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error, { chatId }, context) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(
-          ["messages", chatId],
+          ["messages", context.visibleChatId || chatId],
           context.previousMessages
         );
       }
       const customErrorMessage = `Failed to edit message`;
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
+    },
+    onSettled: () => {
+      setCoachResponseStatus(null);
     },
   });
 

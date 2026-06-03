@@ -44,6 +44,8 @@ interface CalendarGridProps {
   selectedSessionDisplay?: "detail" | "card";
   /** Allows days without sessions or suggestions to be selected visually */
   allDaysSelectable?: boolean;
+  /** Optional date used to choose the two visible weeks. Defaults to today. */
+  visibleStartDate?: Date | string;
 }
 
 export const CalendarGrid = ({
@@ -58,6 +60,7 @@ export const CalendarGrid = ({
   weekLabels = { week1: "This week", week2: "Next week" },
   selectedSessionDisplay = "detail",
   allDaysSelectable = false,
+  visibleStartDate,
 }: CalendarGridProps) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedGhostDay, setSelectedGhostDay] = useState<Date | null>(null);
@@ -78,7 +81,8 @@ export const CalendarGrid = ({
   const variants = getThemeVariants(themeColors.raw);
 
   const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+  const calendarStartDate = visibleStartDate ? new Date(visibleStartDate) : today;
+  const weekStart = startOfWeek(calendarStartDate, { weekStartsOn: 0 });
 
   const formatSessionCardDate = (date: Date) => {
     if (isSameDay(date, today)) return "Today";
