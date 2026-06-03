@@ -42,44 +42,43 @@
 
 ## Running locally
 
-To run the project locally, follow these steps:
+This repository is a pnpm/Turbo monorepo. The current app lives in `apps/frontend-vite` and `apps/backend-node`; the old `frontend`/`backend` yarn + Python instructions no longer match the repo layout.
 
-1. Navigate to the frontend directory and start the development server:
+Install dependencies and generate Prisma client code from the repository root:
 
-   ```sh
-   cd frontend
-   yarn dev
-   ```
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter @tsw/prisma db:generate
+```
 
-2. Navigate to the backend directory and start the backend server:
-   ```sh
-   cd backend
-   python -m main
-   ```
+Create local env files from the examples and fill in the credentials needed for the flows you want to exercise:
 
-## Installing dependencies
+```sh
+cp apps/backend-node/.env.example apps/backend-node/.env
+cp apps/frontend-vite/.env.example apps/frontend-vite/.env
+```
 
-1. Ensure all dependencies are installed beforehand.
+For normal local development, run the database, backend, and frontend in separate terminals:
 
-   **frontend**
+```sh
+supabase start
+pnpm --filter @tsw/prisma db:push
+pnpm --filter backend-node dev
+pnpm --filter frontend-vite dev
+```
 
-   ```sh
-   yarn
-   ```
+After copying `apps/backend-node/.env.example`, backend health should be available at `http://localhost:8000/health` (or the port you set in `apps/backend-node/.env`). Vite will print the frontend URL, usually `http://localhost:5173`.
 
-   **backend** <small>We recommended to use a local virtual environment (.venv):</smalll>
+### Readiness checks vs. app startup
 
-   ```sh
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+The app can build and start locally even when optional quality commands are not clean. Use these checks for CI/readiness work, not as proof that local app startup is broken:
 
-2. Make sure you have a [ngrok account and auth token setup](https://ngrok.com/docs/getting-started/)
-3. Make sure you create and link your [clerk](https://clerk.com/) account and link the necessary env vars
-   - frontend
-     - `CLERK_SECRET_KEY`
-     - `CLERK_JWT_PUBLIC_KEY`
-   - backend
-     - `CLERK_JWT_PUBLIC_KEY` (get this in API Keys > Show JWT Public Key)
-4.
+```sh
+pnpm build
+pnpm --filter frontend-vite lint
+pnpm --filter backend-node lint
+pnpm --filter backend-node test:ci
+pnpm --filter e2e-tests exec playwright test --list
+```
+
+At the time this note was added, `pnpm build` passes on `main`, while some lint/test/e2e checks still need separate cleanup or credentials. Treat those as CI hygiene items unless your current task is specifically to make those commands green.
