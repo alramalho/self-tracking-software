@@ -603,7 +603,9 @@ function MessageAIPage() {
         }[coachResponseStatus || "thinking"])
       : isRewritingMessage
         ? "Updating..."
-        : null;
+        : pendingStaggeredMessages.length > 0
+          ? "Writing..."
+          : null;
   const {
     submitFeedback,
     isSubmittingFeedback,
