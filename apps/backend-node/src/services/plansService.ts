@@ -12,7 +12,6 @@ import { PlanProgressData, PlanProgressState } from "@tsw/prisma/types";
 import {
   addWeeks,
   endOfWeek,
-  format,
   isAfter,
   isBefore,
   isSameDay,
@@ -32,6 +31,84 @@ function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   return isBefore(date, threeDaysAgo);
 }
+
+function getLocalDateKey(date: Date, timezone: string): string {
+  return formatInTimeZone(new Date(date), timezone, "yyyy-MM-dd");
+}
+
+function getScheduledSessionDateKey(session: PlanSession): string {
+  return formatInTimeZone(new Date(session.date), "UTC", "yyyy-MM-dd");
+}
+
+function getMatchedScheduledActivityEntries(
+  sessions: PlanSession[],
+  entries: ActivityEntry[],
+  timezone: string
+): ActivityEntry[] {
+  if (!sessions.length || !entries.length) {
+    return [];
+  }
+
+  const plannedSessionKeys = new Set(
+    sessions.map(
+      (session) =>
+        `${session.activityId}:${getScheduledSessionDateKey(session)}`
+    )
+  );
+
+  return entries.filter((entry) => {
+    if (!entry.activityId) {
+      return false;
+    }
+
+    return plannedSessionKeys.has(
+      `${entry.activityId}:${getLocalDateKey(entry.datetime, timezone)}`
+    );
+  });
+}
+
+function countCompletedScheduledSessionDays(
+  sessions: PlanSession[],
+  entries: ActivityEntry[],
+  timezone: string
+): number {
+  const completedSessionDays = new Set<string>();
+
+  for (const session of sessions) {
+    const sessionDateKey = getScheduledSessionDateKey(session);
+    const isCompleted = entries.some(
+      (entry) =>
+        entry.activityId === session.activityId &&
+        getLocalDateKey(entry.datetime, timezone) === sessionDateKey
+    );
+
+    if (isCompleted) {
+      completedSessionDays.add(sessionDateKey);
+    }
+  }
+
+  return completedSessionDays.size;
+}
+
+function areScheduledSessionsCompleted(
+  sessions: PlanSession[],
+  entries: ActivityEntry[],
+  timezone: string
+): boolean {
+  return (
+    sessions.length > 0 &&
+    sessions.every((session) => {
+      const sessionDateKey = getScheduledSessionDateKey(session);
+
+      return entries.some(
+        (entry) =>
+          entry.activityId === session.activityId &&
+          getLocalDateKey(entry.datetime, timezone) === sessionDateKey
+      );
+    })
+  );
+}
+
 type PlanWeek = {
   startDate: Date;
   activities: Activity[];
@@ -124,24 +201,29 @@ export class PlansService {
       ) + 1
     );
 
-    // Extract stats from the current week data
-    const daysCompletedThisWeek = new Set(
-      currentWeek.completedActivities.map((activity) =>
-        format(new Date(activity.datetime), "yyyy-MM-dd")
-      )
-    ).size;
-
     let numActiveDaysInTheWeek: number;
+    let daysCompletedThisWeek: number;
+
     if (typeof currentWeek.plannedActivities === "number") {
       numActiveDaysInTheWeek = currentWeek.plannedActivities;
+      daysCompletedThisWeek = new Set(
+        currentWeek.completedActivities.map((activity) =>
+          getLocalDateKey(new Date(activity.datetime), timezone)
+        )
+      ).size;
     } else {
       // For scheduled plans, count unique days with sessions
       const uniqueDays = new Set(
         currentWeek.plannedActivities.map((session) =>
-          format(new Date(session.date), "yyyy-MM-dd")
+          getScheduledSessionDateKey(session)
         )
       );
       numActiveDaysInTheWeek = uniqueDays.size;
+      daysCompletedThisWeek = countCompletedScheduledSessionDays(
+        currentWeek.plannedActivities,
+        currentWeek.completedActivities,
+        timezone
+      );
     }
 
     const numActiveDaysLeftInTheWeek = Math.max(
@@ -872,46 +954,50 @@ export class PlansService {
       },
     });
 
-    // For completed activities, return the performed activity entries this week for that plan
-    const completedActivities = planActivityEntriesThisWeek;
-    // Count unique days in the user's timezone to match their perception of "days"
-    const numberOfDaysCompletedThisWeek = new Set(
-      completedActivities.map((activity) =>
-        formatInTimeZone(new Date(activity.datetime), userTimezone, "yyyy-MM-dd")
-      )
-    ).size;
-
     // Check whether the plan is times per week or scheduled sessions
     let plannedActivities: number | PlanSession[];
+    let sessionsThisWeek: PlanSession[] = [];
 
     if (plan.outlineType === "TIMES_PER_WEEK") {
       // If times per week, return the plan activities (not entries!)
       plannedActivities = this.getTimesPerWeekTargetForWeek(plan, weekStart);
     } else {
       // If scheduled, return the plan.sessions for this specific week
-      const sessionsThisWeek = plan.sessions?.filter((session) => {
-        const sessionDate = new Date(session.date);
-        return (
-          (isAfter(sessionDate, weekStart) || isSameDay(sessionDate, weekStart)) &&
-          isBefore(sessionDate, nextWeekStart)
-        );
-      });
-      plannedActivities = sessionsThisWeek ?? 0;
+      sessionsThisWeek =
+        plan.sessions?.filter((session) => {
+          const sessionDate = new Date(session.date);
+          return (
+            (isAfter(sessionDate, weekStart) ||
+              isSameDay(sessionDate, weekStart)) &&
+            isBefore(sessionDate, nextWeekStart)
+          );
+        }) ?? [];
+      plannedActivities = sessionsThisWeek;
     }
+
+    // For scheduled plans, an entry only completes the plan if it matches the
+    // session activity on the same local calendar day.
+    const completedActivities =
+      plan.outlineType === "TIMES_PER_WEEK"
+        ? planActivityEntriesThisWeek
+        : getMatchedScheduledActivityEntries(
+            sessionsThisWeek,
+            planActivityEntriesThisWeek,
+            userTimezone
+          );
+
+    // Count unique days in the user's timezone to match their perception of "days"
+    const numberOfDaysCompletedThisWeek = new Set(
+      completedActivities.map((activity) =>
+        getLocalDateKey(new Date(activity.datetime), userTimezone)
+      )
+    ).size;
 
     let weekActivities: Activity[];
 
     if (plan.outlineType === "TIMES_PER_WEEK") {
       weekActivities = planActivities;
     } else {
-      const sessionsThisWeek = plan.sessions?.filter((session) => {
-        const sessionDate = new Date(session.date);
-        return (
-          (isAfter(sessionDate, weekStart) || isSameDay(sessionDate, weekStart)) &&
-          isBefore(sessionDate, nextWeekStart)
-        );
-      });
-
       const activityIdsThisWeek = Array.from(
         new Set(sessionsThisWeek?.map((session) => session.activityId) ?? [])
       );
@@ -928,11 +1014,15 @@ export class PlansService {
       plannedActivities,
       weekActivities,
       isCompleted:
-        completedActivities.length > 0 &&
-        numberOfDaysCompletedThisWeek >=
-          (typeof plannedActivities === "number"
-            ? plannedActivities
-            : (plannedActivities?.length ?? 0)),
+        plan.outlineType === "TIMES_PER_WEEK"
+          ? completedActivities.length > 0 &&
+            numberOfDaysCompletedThisWeek >=
+              (typeof plannedActivities === "number" ? plannedActivities : 0)
+          : areScheduledSessionsCompleted(
+              sessionsThisWeek,
+              completedActivities,
+              userTimezone
+            ),
     };
   }
 

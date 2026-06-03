@@ -3,8 +3,16 @@ import { usePlans } from "@/contexts/plans";
 import { cn } from "@/lib/utils";
 import { type PlanMilestone } from "@tsw/prisma/types";
 import { format, isBefore, startOfToday } from "date-fns";
-import { CheckCircle2, Flag, Minus, Pencil, Plus } from "lucide-react";
-import React, { useMemo } from "react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Flag,
+  Minus,
+  Pencil,
+  Plus,
+} from "lucide-react";
+import React, { useMemo, useState } from "react";
 
 interface MilestoneOverviewProps {
   milestones: PlanMilestone[];
@@ -28,6 +36,7 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
   onEdit,
 }) => {
   const { modifyManualMilestone, isModifyingManualMilestone } = usePlans();
+  const [isExpanded, setIsExpanded] = useState(false);
   const sortedMilestones = useMemo(
     () =>
       [...milestones].sort(
@@ -38,6 +47,14 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
   const completedCount = sortedMilestones.filter(
     (milestone) => getProgress(milestone) >= 100
   ).length;
+  const currentMilestone =
+    sortedMilestones.find((milestone) => getProgress(milestone) < 100) ??
+    sortedMilestones[sortedMilestones.length - 1];
+  const visibleMilestones = isExpanded
+    ? sortedMilestones
+    : currentMilestone
+      ? [currentMilestone]
+      : [];
 
   if (sortedMilestones.length === 0) return null;
 
@@ -55,22 +72,42 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
             </p>
           </div>
         </div>
-        {onEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onEdit}
-            aria-label="Edit milestones"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {sortedMilestones.length > 1 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsExpanded((expanded) => !expanded)}
+              aria-label={
+                isExpanded ? "Collapse milestones" : "Expand milestones"
+              }
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          {onEdit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onEdit}
+              aria-label="Edit milestones"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
-        {sortedMilestones.map((milestone) => {
+        {visibleMilestones.map((milestone) => {
           const progress = getProgress(milestone);
           const isComplete = progress >= 100;
           const isPastDue =

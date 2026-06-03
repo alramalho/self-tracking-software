@@ -231,7 +231,7 @@ export class CoachAgentService {
           - A finishingDate alone is not a schedule. If the plan needs progression toward that date, choose SPECIFIC and include dated sessions. If you cannot safely create those sessions yet, ask the blocking question instead of proposing a frequency-only plan.
           - As a rule of thumb: If the plan is outcome oriented, or has clear deadlines, progression, or hard structure (like syllabus). It should be SPECIFIC.
         - when creating SPECIFIC plans, if the user shares or agrees on a preferred syllabus. Make sure the generated sessions do reference to the (amount of videos to watch, chatpters to take, etc).
-        - goalReason is only the user's inner motivation or personal outcome (confidence, health, identity, a life reason). Never put logistics, schedule, availability, or employment status there. Leave it null if the user hasn't shared a real why.
+        - goalReason is the user's personal motivation for starting or changing the plan, captured so future coaching can reuse that motivation. It should answer "what does the user want this to do for them emotionally or personally?" Examples: feel more attractive, prove they can finish hard things, get a confidence boost, feel healthier for their family, enjoy the challenge. Do not write a generic training benefit like "build endurance" or "improve consistency", and never put logistics, schedule, availability, or employment status there. If unclear, try to clarify this with the user, prior to the plan creation.
         - Propose one plan at a time. Don't bundle unrelated goals into a single proposal unless the user explicitly asks for a combined plan.
         - For bigger rebuilds, first confirm the target and weekly split, then propose. If the existing plan can't represent the new mix or schedule, prefer a new plan after confirmation over a cosmetic rename.
 
@@ -393,7 +393,7 @@ export class CoachAgentService {
               archive: z.literal(true).optional(),
               plan: z.object({
                 goal: z.string().optional().describe("Clearer measurable plan goal"),
-                goalReason: z.string().optional().nullable().describe("Why this plan matters to the user"),
+                goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
                 outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
                 timesPerWeek: z.number().positive().nullable().optional(),
               }).optional(),
@@ -572,7 +572,7 @@ export class CoachAgentService {
           `,
           inputSchema: z.object({
             goal: z.string().describe("Short, concrete, measurable goal"),
-            goalReason: z.string().optional().nullable().describe("The user's inner motivation or desired personal outcome, if known. Do not put logistics, schedule, employment status, or constraints here."),
+            goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
             emoji: z.string().optional().describe("Single emoji for the plan"),
             outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),

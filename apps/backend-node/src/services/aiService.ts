@@ -1186,7 +1186,7 @@ export class AIService {
       `\n2. Paraphrase each goal to be short, concrete and tangible` +
       `\n3. Goals should include the achievable result, not timeframe or details` +
       `\n4. Each emoji MUST be exactly ONE emoji character (e.g., 📚, 🏃, 💪) - NEVER multiple emojis` +
-      `\n5. If the user mentions WHY they want to achieve the goal, extract it as goalReason. If no reason is given, set goalReason to null.` +
+      `\n5. If the user mentions a personal WHY they want to achieve the goal, extract it as goalReason. This should be an inner motivation or desired personal outcome (confidence, health, identity, attractiveness, proving something to themselves, family, enjoying the challenge), not a generic training benefit. If no personal reason is given, set goalReason to null.` +
       `\n\nExamples of correct extraction:` +
       `\n- Input: "I want to read 12 books and run a marathon" → [{goal: "Read 12 books", emoji: "📚", goalReason: null}, {goal: "Run a marathon", emoji: "🏃", goalReason: null}]` +
       `\n- Input: "I want to meditate daily so I can sleep better and manage my emotions" → [{goal: "Meditate daily", emoji: "🧘", goalReason: "Sleep better and manage emotions"}]` +
@@ -1211,14 +1211,16 @@ export class AIService {
     return this.generateStructuredResponse({
       schema,
       systemPrompt:
-        `You suggest a few common reasons why someone might want to achieve the goal of "${goal}". ` +
+        `You suggest a few common personal motivations someone might have for the goal of "${goal}". ` +
         `RULES:` +
         `\n- Each reason must be semantically distinct from the others — no overlapping meanings` +
         `\n- Keep each reason short and direct, under 8 words` +
+        `\n- Focus on why the goal matters personally: confidence, attractiveness, identity, health, family, self-respect, enjoyment, challenge, stress relief, or proving something to themselves` +
+        `\n- Do not suggest generic plan benefits or training mechanics like "Build endurance", "Improve speed", "Stay consistent", or "Track progress"` +
         `\n- Never start with "I want to", "So I can", "To" — just state the outcome directly (e.g. "Sleep better at night", "Feel less anxious")` +
         `\n- Be specific and grounded, not vague or aspirational — no guru slop like "become more mindful of thoughts and feelings"` +
         `\n- Fewer high-quality reasons are better than many generic ones`,
-      prompt: `Suggest common reasons someone might want to achieve the goal of "${goal}"`,
+      prompt: `Suggest common personal motivations someone might have for the goal of "${goal}"`,
     });
   }
 

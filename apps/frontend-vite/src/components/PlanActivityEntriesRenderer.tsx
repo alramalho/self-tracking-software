@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import ActivityEditor from "./ActivityEditor";
 import AppleLikePopover from "./AppleLikePopover";
 import BaseHeatmapRenderer from "./BaseHeatmapRenderer";
+import { DIFFICULTY_OPTIONS } from "./DifficultyLogPopover";
 interface PlanActivityEntriesRendererProps {
   plan: CompletePlan;
   activities: Activity[];
@@ -148,6 +149,10 @@ const PlanActivityEntriesRenderer: React.FC<
               );
               if (!activity) return null;
 
+              const difficulty = DIFFICULTY_OPTIONS.find(
+                (d) => d.value === entry.difficulty
+              );
+
               return (
                 <li key={index} className="flex items-center gap-2">
                   <span className="text-3xl">{activity.emoji}</span>
@@ -155,6 +160,12 @@ const PlanActivityEntriesRenderer: React.FC<
                   <span className="text-sm mt-1 text-muted-foreground">
                     ({entry.quantity} {activity.measure})
                   </span>
+                  {difficulty && (
+                    <span className="ml-auto flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-xs text-muted-foreground">
+                      <span>{difficulty.emoji}</span>
+                      <span>{difficulty.label}</span>
+                    </span>
+                  )}
                 </li>
               );
             })}

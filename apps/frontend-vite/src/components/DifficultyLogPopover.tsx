@@ -19,7 +19,7 @@ interface DifficultyOption {
   emoji: string;
 }
 
-const DIFFICULTY_OPTIONS: DifficultyOption[] = [
+export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
   { value: "very_easy", label: "Very Easy", emoji: "😌" },
   { value: "easy", label: "Easy", emoji: "🙂" },
   { value: "moderate", label: "Moderate", emoji: "😐" },

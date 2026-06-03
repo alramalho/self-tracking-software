@@ -115,4 +115,93 @@ describe("PlansService progress", () => {
     expect(currentWeek?.isCompleted).toBe(false);
     expect(progress.currentWeekStats.numActiveDaysInTheWeek).toBe(0);
   });
+
+  it("only counts matching same-day activity entries for specific scheduled sessions", async () => {
+    const user = await prisma.user.create({
+      data: {
+        id: testUserId,
+        email: `${testUserId}@test.com`,
+        username: testUserId,
+        name: "Plan Progress User",
+        timezone: "Europe/Sofia",
+      },
+    });
+
+    const running = await prisma.activity.create({
+      data: {
+        userId: testUserId,
+        title: "running",
+        measure: "km",
+        emoji: "🏃",
+      },
+    });
+    const gym = await prisma.activity.create({
+      data: {
+        userId: testUserId,
+        title: "gym",
+        measure: "session",
+        emoji: "💪",
+      },
+    });
+
+    const plan = await prisma.plan.create({
+      data: {
+        userId: testUserId,
+        goal: "run 20km under 2 hours",
+        emoji: "🏃",
+        outlineType: PlanOutlineType.SPECIFIC,
+        finishingDate: new Date("2026-08-26T00:00:00.000Z"),
+        activities: {
+          connect: [{ id: running.id }, { id: gym.id }],
+        },
+        sessions: {
+          create: [
+            {
+              activityId: running.id,
+              date: new Date("2026-06-04T00:00:00.000Z"),
+              quantity: 5,
+            },
+            {
+              activityId: running.id,
+              date: new Date("2026-06-06T00:00:00.000Z"),
+              quantity: 6,
+            },
+          ],
+        },
+      },
+      include: {
+        activities: true,
+      },
+    });
+
+    await prisma.activityEntry.createMany({
+      data: [
+        {
+          userId: testUserId,
+          activityId: gym.id,
+          quantity: 1,
+          datetime: new Date("2026-05-31T10:56:00.000Z"),
+        },
+        {
+          userId: testUserId,
+          activityId: gym.id,
+          quantity: 1,
+          datetime: new Date("2026-06-02T00:00:00.000Z"),
+        },
+      ],
+    });
+
+    const progress = await plansService.computePlanProgress(plan, user);
+    const currentWeek = progress.weeks.find((week) =>
+      isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 })
+    );
+
+    expect(currentWeek).toBeDefined();
+    expect(currentWeek?.plannedActivities).toHaveLength(2);
+    expect(currentWeek?.completedActivities).toEqual([]);
+    expect(currentWeek?.isCompleted).toBe(false);
+    expect(progress.currentWeekStats.numActiveDaysInTheWeek).toBe(2);
+    expect(progress.currentWeekStats.daysCompletedThisWeek).toBe(0);
+    expect(progress.currentWeekStats.numActiveDaysLeftInTheWeek).toBe(2);
+  });
 });

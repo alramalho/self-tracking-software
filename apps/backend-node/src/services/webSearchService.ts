@@ -142,7 +142,7 @@ class WebSearchService {
             : "medium";
 
       const result = await generateText({
-        model: gateway.languageModel(process.env.OPENAI_WEB_SEARCH_MODEL || "openai/gpt-5.5"),
+        model: gateway.languageModel(process.env.OPENAI_WEB_SEARCH_MODEL || "openai/gpt-5.4-mini"),
         prompt: [
           "Search the web for the following query or alternate queries.",
           "Return exact facts found from the web. Use the web_search tool when current or link-specific information is needed.",
