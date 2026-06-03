@@ -11,10 +11,10 @@ import { activitySummarizer } from "./activitySummarizer";
 import { getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
-import Perplexity from "@perplexity-ai/perplexity_ai";
 import dedent from "dedent";
 import { TelegramService } from "./telegramService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
+import { webSearchService } from "./webSearchService";
 
 interface CoachAgentContext {
   user: User;
@@ -35,20 +35,7 @@ function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
 }
 
 export class CoachAgentService {
-  private perplexity: Perplexity | null = null;
   private telegram = new TelegramService();
-
-  constructor() {
-    if (process.env.PERPLEXITY_API_KEY) {
-      this.perplexity = new Perplexity({
-        apiKey: process.env.PERPLEXITY_API_KEY,
-      });
-    } else {
-      logger.warn(
-        "PERPLEXITY_API_KEY not set - web search will be unavailable"
-      );
-    }
-  }
 
   private getOpenRouterWithUserId(): OpenRouterProvider {
     const user = getCurrentUser();
@@ -160,7 +147,7 @@ export class CoachAgentService {
 
     const agent = new ToolLoopAgent({
       model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
-      temperature: 0.8,
+      temperature: 0.5,
       stopWhen: hasToolCall("draftMessages"),
       instructions: dedent`
         You are ${coachPersonality.displayName}, ${coachPersonality.title}, a general-purpose coach. You can help with planning, learning, work, health, habits, relationships, decisions, creative projects, and any other topic the user brings up.
@@ -196,12 +183,20 @@ export class CoachAgentService {
         - "Recently" and "lately" mean inside the recent activity lookback unless the readActivities tool returns a different date range.
         - Use webSearch only when fresh outside knowledge materially changes the answer.
         - If you rely on a webSearch result, cite it inline with that result's citationLabel, like [1]. Cite only the sources you actually used.
+        - For exact web extraction tasks, such as "how many videos", "all titles", "modules", "durations", or "time to complete", do not answer from a weak first result. Search reactively: first search the exact URL or identifier, then search broader phrasing if the result lacks the exact facts.
+        - When a user provides a URL, include that exact URL or a unique identifier from it in the first webSearch query. If the first search only gives generic snippets, call webSearch again with alternate terms, source names, and likely mirror/index pages.
+        - For playlist/course extraction, prefer primary sources when they include the needed facts, but it is acceptable to use indexed mirrors or course listing pages when they expose exact titles, modules, or durations that the primary page hides.
+        - Before drafting the final answer for exact extraction tasks, reconcile the numbers yourself. For example, add course/module hours and convert total hours into weeks based on the user's stated weekly availability.
+        - Never invent exact counts, titles, modules, or hours. Only state exact facts when a search result title/snippet contains that fact. Do not infer a playlist count from a video index, number of search results, or vague playlist references.
+        - If at least two webSearch attempts still do not expose the exact requested facts, say that you could not verify the exact answer from search results and offer the closest verified facts.
+        - For exact extraction from lists, playlists, course pages, catalogs, or schedules, distinguish item metadata from collection metadata. An item title, item number, URL index, timestamp, or episode label is not evidence for the total collection count.
+        - Good follow-up searches vary the query shape rather than guessing: exact URL, stable identifier from the URL, exact page/list title if discovered, source/domain name, and the requested fact type such as titles, modules, durations, count, or schedule.
 
         RULES
         - Never modify sessions or reminders without user confirmation
         - Sound like a sharp friend texting, not a report. Prefer plain words over coaching jargon.
         - Default to 1-2 short messages. Only use a third message when a tool proposal needs a separate confirmation.
-        - Keep each message to 1-2 short sentences. Do not stack multiple critiques in one reply.
+        - Keep each message to 1-2 short sentences unless the user explicitly asks for a list, table, syllabus, module breakdown, or exact extracted facts. In those cases, give the complete useful answer.
         - Make one point, then ask one natural next-step question if needed.
         - Avoid stiff phrases like "concrete, measurable outcome", "frequency alone is not a strategy", or "serious coached plan" unless the user used them first.
         - Do not say you updated, switched, set, or changed a plan unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this..."
@@ -228,61 +223,94 @@ export class CoachAgentService {
 
         webSearch: tool({
           description:
-            "Search the web for current or specialized information on any topic relevant to the user's question. Use this when fresh outside knowledge materially improves coaching, planning, scheduling, learning, technical, health, fitness, or other advice.",
+            "Search the web for current or specialized information. You can pass one query or several alternate queries. Use repeated searches when exact URLs, playlists, titles, modules, durations, or completion-time facts are not available in the first result set.",
           inputSchema: z.object({
             query: z
               .string()
-              .describe("The search query to find relevant information"),
+              .optional()
+              .describe("A single search query to find relevant information"),
+            queries: z
+              .array(z.string())
+              .min(1)
+              .max(4)
+              .optional()
+              .describe("Several alternate search queries to run together when triangulating exact facts"),
+            maxResults: z
+              .number()
+              .int()
+              .min(1)
+              .max(10)
+              .optional()
+              .describe("Maximum results to return. Use 8-10 for exact extraction tasks."),
+            maxTokensPerPage: z
+              .number()
+              .int()
+              .min(256)
+              .max(4096)
+              .optional()
+              .describe("Search page token budget. Use 1500-3000 for exact extraction tasks."),
           }),
-          execute: async ({ query }) => {
-            if (!self.perplexity) {
+          execute: async ({ query, queries, maxResults, maxTokensPerPage }) => {
+            const searchQueries = queries?.length ? queries : query ? [query] : [];
+            if (searchQueries.length === 0) {
               return {
                 success: false as const,
-                error: "Web search is not available",
+                error: "Provide query or queries",
                 results: [] as Array<{ title: string; snippet: string; url: string }>,
               };
             }
 
-            try {
-              const searchResults = await self.perplexity.search.create({
-                query: [query],
-                max_results: 5,
-                max_tokens_per_page: 512,
-              });
+            const searchResult = await webSearchService.searchWithOpenAI({
+              query,
+              queries,
+              maxResults,
+              maxTokensPerPage,
+            });
+            // Toggle back for comparison runs:
+            // const searchResult = await webSearchService.searchWithPerplexity({
+            //   query,
+            //   queries,
+            //   maxResults,
+            //   maxTokensPerPage,
+            // });
 
-              const results = searchResults.results.map((result) => {
-                const citationIndex = nextCitationIndex++;
-                return {
-                  citationIndex,
-                  citationLabel: `[${citationIndex}]`,
-                  title: result.title,
-                  snippet: result.snippet?.substring(0, 300) || "",
-                  url: result.url,
-                };
-              });
-
-              logger.info(
-                `Web search for "${query}" returned ${results.length} results`
-              );
-
-              return {
-                success: true as const,
-                query,
-                citationInstruction:
-                  "If you use a result in your final answer, cite it inline with its citationLabel.",
-                results,
-              };
-            } catch (error) {
-              logger.error("Web search failed:", error);
+            if (!searchResult.success) {
+              logger.error("Web search failed:", searchResult.error);
               self.telegram.sendMessage(
-                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nQuery: ${query}\nError: ${error instanceof Error ? error.message : String(error)}`
+                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQuery: ${searchQueries.join(" | ")}\nError: ${searchResult.error}`
               );
               return {
                 success: false as const,
+                provider: searchResult.provider,
                 error: "Search failed. Continue without search results.",
                 results: [] as Array<{ title: string; snippet: string; url: string }>,
               };
             }
+
+            const results = searchResult.results.map((result) => {
+              const citationIndex = nextCitationIndex++;
+              return {
+                citationIndex,
+                citationLabel: `[${citationIndex}]`,
+                title: result.title,
+                snippet: result.snippet,
+                url: result.url,
+              };
+            });
+
+            logger.info(
+              `Web search (${searchResult.provider}) for "${searchQueries.join(" | ")}" returned ${results.length} results`
+            );
+
+            return {
+              success: true as const,
+              provider: searchResult.provider,
+              query: searchResult.query,
+              queries: searchResult.queries,
+              citationInstruction:
+                "If you use a result in your final answer, cite it inline with its citationLabel.",
+              results,
+            };
           },
         }),
 
