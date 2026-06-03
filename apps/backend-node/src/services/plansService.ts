@@ -644,6 +644,16 @@ export class PlansService {
     logger.info(`Reading cached progress for plan ${plan.id}`);
 
     const cachedState = plan.progressState as any as PlanProgressState;
+    const cachedWeeks = cachedState!.weeks || [];
+    const weeks = await this.ensureCurrentWeekForTimesPerWeek(
+      plan,
+      user,
+      cachedWeeks
+    );
+    const addedCurrentWeek = weeks.length !== cachedWeeks.length;
+    const currentWeekStats = addedCurrentWeek
+      ? await this.getPlanWeekStats(plan, user)
+      : cachedState!.currentWeekStats;
 
     return {
       plan: {
@@ -658,7 +668,7 @@ export class PlansService {
           cachedState!.achievement.achievedLastStreakAt ?? null,
         celebratedStreakAt: cachedState!.achievement.celebratedStreakAt ?? null,
       },
-      currentWeekStats: cachedState!.currentWeekStats,
+      currentWeekStats,
       habitAchievement: {
         ...cachedState!.habitAchievement,
         achievedAt: cachedState!.habitAchievement.achievedAt ?? null,
@@ -669,7 +679,7 @@ export class PlansService {
         achievedAt: cachedState!.lifestyleAchievement.achievedAt ?? null,
         celebratedAt: cachedState!.lifestyleAchievement.celebratedAt ?? null,
       },
-      weeks: cachedState!.weeks || [],
+      weeks,
       currentWeekState: cachedState!.currentWeekState,
     };
   }
@@ -1003,7 +1013,53 @@ export class PlansService {
       weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
     }
 
-    return weeks;
+    return this.ensureCurrentWeekForTimesPerWeek(
+      planWithSessions,
+      user,
+      weeks,
+      userActivities,
+      userTimezone
+    );
+  }
+
+  private async ensureCurrentWeekForTimesPerWeek(
+    plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
+    user: User,
+    weeks: Array<PlanWeek>,
+    userActivities?: Activity[],
+    userTimezone: string = user.timezone || "UTC"
+  ): Promise<Array<PlanWeek>> {
+    if (plan.outlineType !== PlanOutlineType.TIMES_PER_WEEK) {
+      return weeks;
+    }
+
+    const currentWeekStart = toMidnightUTCDate(
+      startOfWeek(new TZDate(new Date(), userTimezone), { weekStartsOn: 0 })
+    );
+    const hasCurrentWeek = weeks.some((week) =>
+      isSameDay(new Date(week.startDate), currentWeekStart)
+    );
+
+    if (hasCurrentWeek) {
+      return weeks;
+    }
+
+    const activities =
+      userActivities ??
+      (await prisma.activity.findMany({
+        where: { userId: user.id },
+      }));
+    const currentWeekData = await this.getPlanWeek(
+      currentWeekStart,
+      plan,
+      activities,
+      userTimezone
+    );
+
+    return [...weeks, currentWeekData].sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
   }
 
   async getPlanEmbedding(planId: string): Promise<number[] | null> {

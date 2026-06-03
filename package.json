@@ -9,6 +9,8 @@
     "build": "turbo run build",
     "build:client": "turbo run build --filter=!server",
     "start": "turbo run start",
+    "talk-to-coach": "pnpm --dir apps/backend-node talk-to-coach",
+    "query-db": "pnpm --dir apps/backend-node query-db",
     "clean": "rm -rf node_modules && turbo run clean",
     "db:generate": "turbo run db:generate",
     "db:generate:sql": "turbo run db:generate:sql",

@@ -33,14 +33,14 @@ export const CoachCard = ({
         navigate({ to: "/message-ai" });
       }}
     >
-      <div className="relative w-12 h-12">
+      <div className="relative w-14 h-14">
         {attentionCount > 0 && (
           <div className="absolute inset-0 rounded-full animate-ping bg-amber-400/30" />
         )}
         <img
           src={avatar}
           alt={aiCoach.label}
-          className="w-12 h-12 rounded-full object-contain relative z-10"
+          className="w-14 h-14 rounded-full object-contain relative z-10"
         />
       </div>
       <p className="text-base font-medium text-muted-foreground">

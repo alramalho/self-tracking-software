@@ -18,6 +18,8 @@
     "backfill-activity-categories": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/backfill_activity_categories.ts",
     "recalculate-user-progress": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/recalculate_user_progress.ts",
     "script:check-str-similarity": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/check_str_similarity.ts",
+    "talk-to-coach": "tsx scripts/talk_to_coach.ts",
+    "query-db": "tsx scripts/query_db.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "send-telegram-message": "tsx scripts/send_telegram_message.ts"
