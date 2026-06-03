@@ -1,4 +1,5 @@
 import { Response, Router } from "express";
+import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAgentService } from "../services/coachAgentService";
@@ -9,6 +10,190 @@ import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
 
 const router = Router();
+
+type CoachResponseStatus = "thinking" | "searching" | "drafting";
+
+function writeSseEvent(res: Response, event: string, data: unknown) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+async function runCoachV2MessagePipeline(params: {
+  user: User;
+  chat: { id: string; title: string | null };
+  chatId: string;
+  message: string;
+  serializedUserMessage: Record<string, unknown>;
+  onStatus?: (status: CoachResponseStatus) => void | Promise<void>;
+  logLabel: string;
+}) {
+  const { user, chat, chatId, message, serializedUserMessage, onStatus, logLabel } = params;
+
+  const history = await prisma.message.findMany({
+    where: { chatId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+  history.reverse();
+
+  const plans = await prisma.plan.findMany({
+    where: {
+      userId: user.id,
+      deletedAt: null,
+      archivedAt: null,
+      isPaused: false,
+      OR: [
+        { finishingDate: null },
+        { finishingDate: { gt: new Date() } },
+      ],
+    },
+    include: {
+      activities: true,
+      sessions: true,
+      milestones: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  const conversationHistory = history.map((msg) => ({
+    role: msg.role === "USER" ? "user" : "assistant",
+    content: msg.content,
+  })) as Array<{ role: "user" | "assistant"; content: string }>;
+
+  const reminders = await prisma.reminder.findMany({
+    where: {
+      userId: user.id,
+      status: "PENDING",
+    },
+    orderBy: { triggerAt: "asc" },
+  });
+
+  const memoriesContext = await supermemoryService.getProfile(user.id, message);
+
+  const v2Response = await coachAgentService.generateResponse({
+    user,
+    message,
+    conversationHistory,
+    plans: plans as Array<typeof plans[0] & {
+      sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
+      milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
+    }>,
+    reminders,
+    memoriesContext,
+    onStatus,
+  });
+
+  const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
+  for (const draft of v2Response.draftMessages) {
+    const coachMsg = await prisma.message.create({
+      data: {
+        chatId,
+        role: "COACH",
+        content: draft.content,
+        metadata: {
+          planReplacements: draft.planReplacements || [],
+          planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+          planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
+          activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
+          ...(draft.toolCalls && {
+            toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
+          }),
+          ...(draft.error && { error: true }),
+        },
+      },
+    });
+    savedMessages.push(coachMsg);
+  }
+
+  await prisma.chat.update({
+    where: { id: chatId },
+    data: { updatedAt: new Date() },
+  });
+
+  const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
+  const lastSavedMessage = savedMessages[savedMessages.length - 1];
+  if (lastSavedMessage) {
+    supermemoryService.addMemory(
+      user.id,
+      `user: ${message}\nassistant: ${fullCoachText}`,
+      lastSavedMessage.id
+    );
+  }
+
+  logger.info(
+    `${logLabel} - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
+  );
+
+  if (!chat.title) {
+    (async () => {
+      try {
+        const titlePrompt = `User: ${message}\nCoach: ${fullCoachText}`;
+        const titleSystemPrompt =
+          "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
+          "The title should be clear and concise. Only output the title, nothing else.";
+
+        const generatedTitle = await aiService.generateText({
+          prompt: titlePrompt,
+          systemPrompt: titleSystemPrompt,
+        });
+
+        await prisma.chat.update({
+          where: { id: chatId },
+          data: { title: generatedTitle.trim() },
+        });
+
+        logger.info(
+          `Generated title for chat ${chatId}: "${generatedTitle}"`
+        );
+      } catch (error) {
+        logger.error("Error generating chat title:", error);
+      }
+    })();
+  }
+
+  const resolvedMessages = savedMessages.map((coachMsg, idx) => {
+    const draft = v2Response.draftMessages[idx];
+    const resolvedPlanReplacements =
+      draft.planReplacements
+        ?.map((replacement) => {
+          const plan = plans.find(
+            (p) =>
+              p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+          );
+          return plan
+            ? {
+                textToReplace: replacement.textToReplace,
+                plan: {
+                  id: plan.id,
+                  goal: plan.goal,
+                  emoji: plan.emoji,
+                },
+              }
+            : null;
+        })
+        .filter(Boolean) || [];
+
+    return {
+      id: coachMsg.id,
+      chatId: coachMsg.chatId,
+      role: coachMsg.role,
+      content: draft.content,
+      planReplacements: resolvedPlanReplacements,
+      planProposals: draft.planProposals || [],
+      planCreationProposals: draft.planCreationProposals || [],
+      activityLogProposals: draft.activityLogProposals || [],
+      toolCalls: draft.toolCalls || null,
+      error: draft.error || false,
+      createdAt: coachMsg.createdAt,
+    };
+  });
+
+  return {
+    userMessage: serializedUserMessage,
+    messages: [serializedUserMessage, ...resolvedMessages],
+    message: resolvedMessages[resolvedMessages.length - 1] || serializedUserMessage,
+  };
+}
 
 // Get all chats for the current user (COACH, DIRECT, GROUP)
 router.get(
@@ -378,6 +563,113 @@ router.get(
   }
 );
 
+router.post(
+  "/:chatId/messages/stream",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    let streamStarted = false;
+    let clientClosed = false;
+
+    try {
+      const user = req.user!;
+      const { chatId } = req.params;
+      const { message, coachVersion } = req.body;
+
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      if (coachVersion !== "v2") {
+        return res.status(400).json({ error: "Streaming is only available for coach v2" });
+      }
+
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: user.id,
+          type: "COACH",
+        },
+        include: {
+          coach: true,
+          participants: true,
+        },
+      });
+
+      if (!chat) {
+        return res.status(404).json({ error: "Coach chat not found" });
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders?.();
+      streamStarted = true;
+
+      req.on("close", () => {
+        clientClosed = true;
+      });
+
+      const sendStatus = (state: CoachResponseStatus) => {
+        if (!clientClosed) {
+          writeSseEvent(res, "status", { state });
+        }
+      };
+
+      sendStatus("thinking");
+
+      const userMessage = await prisma.message.create({
+        data: {
+          chatId,
+          role: "USER",
+          content: message,
+          senderId: user.id,
+        },
+      });
+      const serializedUserMessage = {
+        id: userMessage.id,
+        chatId: userMessage.chatId,
+        role: userMessage.role,
+        content: userMessage.content,
+        createdAt: userMessage.createdAt,
+        senderId: user.id,
+        senderName: user.name,
+        senderPicture: user.picture,
+      };
+
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      });
+
+      const payload = await runCoachV2MessagePipeline({
+        user,
+        chat,
+        chatId,
+        message,
+        serializedUserMessage,
+        onStatus: sendStatus,
+        logLabel: "Coach v2 stream chat",
+      });
+
+      if (!clientClosed) {
+        writeSseEvent(res, "done", payload);
+        res.end();
+      }
+    } catch (error) {
+      logger.error("Error streaming coach message:", error);
+      if (streamStarted && !clientClosed) {
+        writeSseEvent(res, "error", { error: "Failed to send message" });
+        res.end();
+        return;
+      }
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  }
+);
+
 // Send a message to any chat type
 router.post(
   "/:chatId/messages",
@@ -448,6 +740,21 @@ router.post(
 
       // Handle different chat types
       if (chat.type === "COACH") {
+        if (useV2Coach) {
+          logger.info(`Using coach v2 for user ${user.username}`);
+
+          const payload = await runCoachV2MessagePipeline({
+            user,
+            chat,
+            chatId,
+            message,
+            serializedUserMessage,
+            logLabel: "Coach v2 chat",
+          });
+
+          return res.json(payload);
+        }
+
         // Get conversation history
         const history = await prisma.message.findMany({
           where: { chatId: chatId },
@@ -470,8 +777,6 @@ router.post(
           },
           include: {
             activities: true,
-            ...(useV2Coach && { sessions: true }),
-            ...(useV2Coach && { milestones: true }),
           },
           orderBy: [{ createdAt: "desc" }],
         });
@@ -508,160 +813,20 @@ router.post(
           toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
         };
 
-        if (useV2Coach) {
-          // Use the new agent-based coach (v2)
-          logger.info(`Using coach v2 for user ${user.username}`);
+        // Use the original coach (v1)
+        const metrics = await prisma.metric.findMany({
+          where: { userId: user.id },
+          orderBy: [{ createdAt: "desc" }],
+        });
 
-          // Fetch user's active reminders for v2 coach
-          const reminders = await prisma.reminder.findMany({
-            where: {
-              userId: user.id,
-              status: "PENDING",
-            },
-            orderBy: { triggerAt: "asc" },
-          });
-
-          const memoriesContext = await supermemoryService.getProfile(user.id, message);
-
-          const v2Response = await coachAgentService.generateResponse({
-            user,
-            message,
-            conversationHistory,
-            plans: plans as Array<typeof plans[0] & {
-              sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
-              milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
-            }>,
-            reminders,
-            memoriesContext,
-          });
-
-          // Save multiple coach messages (one per draft)
-          const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
-          for (const draft of v2Response.draftMessages) {
-            const coachMsg = await prisma.message.create({
-              data: {
-                chatId: chatId,
-                role: "COACH",
-                content: draft.content,
-                metadata: {
-                  planReplacements: draft.planReplacements || [],
-                  planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
-                  planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
-                  activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
-                  ...(draft.toolCalls && {
-                    toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
-                  }),
-                  ...(draft.error && { error: true }),
-                },
-              },
-            });
-            savedMessages.push(coachMsg);
-          }
-
-          await prisma.chat.update({
-            where: { id: chatId },
-            data: { updatedAt: new Date() },
-          });
-
-          // Fire-and-forget: store full exchange in long-term memory
-          const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
-          supermemoryService.addMemory(
-            user.id,
-            `user: ${message}\nassistant: ${fullCoachText}`,
-            savedMessages[savedMessages.length - 1].id
-          );
-
-          logger.info(
-            `Coach v2 chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
-          );
-
-          // Generate chat title if this is the first exchange
-          if (!chat.title) {
-            (async () => {
-              try {
-                const titlePrompt = `User: ${message}\nCoach: ${fullCoachText}`;
-                const titleSystemPrompt =
-                  "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
-                  "The title should be clear and concise. Only output the title, nothing else.";
-
-                const generatedTitle = await aiService.generateText({
-                  prompt: titlePrompt,
-                  systemPrompt: titleSystemPrompt,
-                });
-
-                await prisma.chat.update({
-                  where: { id: chatId },
-                  data: { title: generatedTitle.trim() },
-                });
-
-                logger.info(
-                  `Generated title for chat ${chatId}: "${generatedTitle}"`
-                );
-              } catch (error) {
-                logger.error("Error generating chat title:", error);
-              }
-            })();
-          }
-
-          // Resolve plans for response
-          const resolvedMessages = savedMessages.map((coachMsg, idx) => {
-            const draft = v2Response.draftMessages[idx];
-            const resolvedPlanReplacements =
-              draft.planReplacements
-                ?.map((replacement) => {
-                  const plan = plans.find(
-                    (p) =>
-                      p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
-                  );
-                  return plan
-                    ? {
-                        textToReplace: replacement.textToReplace,
-                        plan: {
-                          id: plan.id,
-                          goal: plan.goal,
-                          emoji: plan.emoji,
-                        },
-                      }
-                    : null;
-                })
-                .filter(Boolean) || [];
-
-            return {
-              id: coachMsg.id,
-              chatId: coachMsg.chatId,
-              role: coachMsg.role,
-              content: draft.content,
-              planReplacements: resolvedPlanReplacements,
-              planProposals: draft.planProposals || [],
-              planCreationProposals: draft.planCreationProposals || [],
-              activityLogProposals: draft.activityLogProposals || [],
-              toolCalls: draft.toolCalls || null,
-              error: draft.error || false,
-              createdAt: coachMsg.createdAt,
-            };
-          });
-
-          return res.json({
-            userMessage: serializedUserMessage,
-            messages: [serializedUserMessage, ...resolvedMessages],
-            message: resolvedMessages[resolvedMessages.length - 1],
-          });
-        } else {
-          // Use the original coach (v1)
-          const metrics = await prisma.metric.findMany({
-            where: { userId: user.id },
-            orderBy: [{ createdAt: "desc" }],
-          });
-
-          aiResponse = await aiService.generateCoachChatResponse({
-            user: user,
-            message: message,
-            chatId: chatId,
-            conversationHistory: conversationHistory,
-            plans: plans,
-            metrics: metrics,
-          });
-        }
+        aiResponse = await aiService.generateCoachChatResponse({
+          user: user,
+          message: message,
+          chatId: chatId,
+          conversationHistory: conversationHistory,
+          plans: plans,
+          metrics: metrics,
+        });
 
         // Save coach message
         const coachMessage = await prisma.message.create({

@@ -23,6 +23,7 @@ interface CoachAgentContext {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
+  onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
 }
 
 function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
@@ -72,6 +73,7 @@ export class CoachAgentService {
       reminders,
       memoriesContext,
       recentActivityContext,
+      onStatus,
     } = context;
     const plans = allPlans.filter((plan) => isActiveCoachPlan(plan));
     const self = this;
@@ -259,6 +261,8 @@ export class CoachAgentService {
                 results: [] as Array<{ title: string; snippet: string; url: string }>,
               };
             }
+
+            await onStatus?.("searching");
 
             const searchResult = await webSearchService.searchWithOpenAI({
               query,
@@ -1063,6 +1067,7 @@ export class CoachAgentService {
     plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
     reminders: Reminder[];
     memoriesContext?: string | null;
+    onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
   }): Promise<{
     draftMessages: Array<{
       content: string;
@@ -1109,7 +1114,8 @@ export class CoachAgentService {
     skipped?: boolean;
     skipReason?: string;
   }> {
-    const { user, message, conversationHistory, plans, reminders, memoriesContext } = params;
+    const { user, message, conversationHistory, plans, reminders, memoriesContext, onStatus } = params;
+    await onStatus?.("thinking");
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
     const recentActivityContext = await this.buildRecentActivityContext(
       user,
@@ -1124,6 +1130,7 @@ export class CoachAgentService {
       conversationHistory,
       memoriesContext,
       recentActivityContext,
+      onStatus,
     });
 
     try {
@@ -1143,6 +1150,8 @@ export class CoachAgentService {
           });
         },
       });
+
+      await onStatus?.("drafting");
 
       // Collect tool calls from all steps
       const allToolCalls: Array<{
