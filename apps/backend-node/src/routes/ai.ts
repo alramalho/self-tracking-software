@@ -115,6 +115,28 @@ function normalizePlanCreationProposal(proposal: any) {
   };
 }
 
+function parseProposalDateTime(value: unknown): Date | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+    ? `${trimmed}T00:00:00.000Z`
+    : trimmed;
+  const date = new Date(normalized);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function buildPlanCreationDiffs(originalProposal: any, requestedProposal: any) {
   const fields = [
     { key: "goal", label: "Goal" },
@@ -1677,7 +1699,7 @@ router.post(
 
         const sessionCreates: Array<{
           activityId: string;
-          date: string;
+          date: Date;
           quantity: number;
           descriptiveGuide: string;
         }> = [];
@@ -1713,10 +1735,11 @@ router.post(
             activityIdsByTitle.set(session.activityTitle.toLowerCase(), activityId);
           }
 
-          if (activityId && session.date) {
+          const sessionDate = parseProposalDateTime(session.date);
+          if (activityId && sessionDate) {
             sessionCreates.push({
               activityId,
-              date: session.date,
+              date: sessionDate,
               quantity: session.quantity || 1,
               descriptiveGuide: session.descriptiveGuide || "",
             });
@@ -1724,13 +1747,22 @@ router.post(
         }
 
         const milestoneCreates = (proposal.milestones || [])
-          .filter((milestone: any) => milestone.description && milestone.date)
-          .map((milestone: any) => ({
-            description: milestone.description,
-            date: milestone.date,
-            criteria: milestone.criteria || undefined,
-            progress: milestone.progress ?? 0,
-          }));
+          .flatMap((milestone: any) => {
+            const milestoneDate = parseProposalDateTime(milestone.date);
+
+            if (!milestone.description || !milestoneDate) {
+              return [];
+            }
+
+            return [
+              {
+                description: milestone.description,
+                date: milestoneDate,
+                criteria: milestone.criteria || undefined,
+                progress: milestone.progress ?? 0,
+              },
+            ];
+          });
 
         const outlineType =
           sessionCreates.length > 0 || !proposal.timesPerWeek
@@ -1743,7 +1775,7 @@ router.post(
             goal: proposal.goal,
             goalReason: proposal.goalReason || null,
             emoji: proposal.emoji || "🎯",
-            finishingDate: proposal.finishingDate || null,
+            finishingDate: parseProposalDateTime(proposal.finishingDate),
             outlineType,
             timesPerWeek:
               outlineType === "TIMES_PER_WEEK"
