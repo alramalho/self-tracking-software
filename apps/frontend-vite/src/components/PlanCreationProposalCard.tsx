@@ -31,9 +31,10 @@ import {
   Smile,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
+import { useNavigate } from "@tanstack/react-router";
 
 type PlanCreationActivity = DraftPlanActivity & {
   activityId?: string | null;
@@ -86,7 +87,11 @@ interface PlanCreationProposalCardProps {
   sessions?: PlanCreationSession[];
   description?: string;
   status?: "accepted" | "rejected" | "changes_requested" | "cancelled" | null;
-  onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
+  planId?: string | null;
+  onAccept: (
+    messageId: string,
+    proposalIndex: number
+  ) => Promise<{ success: boolean; plan?: { id: string } } | void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
   onProposeChanges: (
     messageId: string,
@@ -205,13 +210,18 @@ export function PlanCreationProposalCard({
   sessions = [],
   description,
   status,
+  planId,
   onAccept,
   onReject,
   onProposeChanges,
 }: PlanCreationProposalCardProps) {
+  const navigate = useNavigate();
   const themeColors = useThemeColors();
   const { activities: allActivities } = useActivities();
   const [isAccepted, setIsAccepted] = useState(status === "accepted");
+  const [acceptedPlanId, setAcceptedPlanId] = useState<string | null>(
+    planId || null
+  );
   const [isRejected, setIsRejected] = useState(status === "rejected");
   const [isChangesRequested, setIsChangesRequested] = useState(
     status === "changes_requested"
@@ -263,6 +273,12 @@ export function PlanCreationProposalCard({
     finishingDate: draftFinishingDate,
     activities: draftActivities,
   });
+
+  useEffect(() => {
+    if (planId) {
+      setAcceptedPlanId(planId);
+    }
+  }, [planId]);
   const existingActivityTitleKeys = new Set(
     (allActivities || []).map((activity) => getActivityTitleKey(activity))
   );
@@ -339,12 +355,19 @@ export function PlanCreationProposalCard({
   const handleAccept = async () => {
     setIsLoading(true);
     try {
-      await onAccept(messageId, proposalIndex);
+      const result = await onAccept(messageId, proposalIndex);
+      setAcceptedPlanId(result?.plan?.id || acceptedPlanId);
       setIsAccepted(true);
       setIsDrawerOpen(false);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSeeFullPlan = () => {
+    if (!acceptedPlanId) return;
+    setIsDrawerOpen(false);
+    navigate({ to: "/plans", search: { selectedPlan: acceptedPlanId } });
   };
 
   const handleReject = async () => {
@@ -680,24 +703,31 @@ export function PlanCreationProposalCard({
 
         <div className="shrink-0 border-t border-border bg-background px-1 pt-4">
           {isResolved ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/40 py-3 text-sm text-muted-foreground">
-              {isAccepted ? (
-                <Check size={16} className="text-green-500" />
-              ) : isCancelled ? (
-                <X size={16} className="text-muted-foreground" />
-              ) : isChangesRequested ? (
-                <RefreshCw size={16} className="text-primary" />
-              ) : (
-                <X size={16} className="text-red-500" />
-              )}
-              {isAccepted
-                ? "Plan proposal accepted"
-                : isCancelled
-                  ? "Plan proposal replaced by a newer one"
-                : isChangesRequested
-                  ? "Changes proposed"
-                  : "Plan proposal rejected"}
-            </div>
+            isAccepted && acceptedPlanId ? (
+              <Button type="button" className="w-full" onClick={handleSeeFullPlan}>
+                See full plan
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/40 py-3 text-sm text-muted-foreground">
+                {isAccepted ? (
+                  <Check size={16} className="text-green-500" />
+                ) : isCancelled ? (
+                  <X size={16} className="text-muted-foreground" />
+                ) : isChangesRequested ? (
+                  <RefreshCw size={16} className="text-primary" />
+                ) : (
+                  <X size={16} className="text-red-500" />
+                )}
+                {isAccepted
+                  ? "Plan proposal accepted"
+                  : isCancelled
+                    ? "Plan proposal replaced by a newer one"
+                  : isChangesRequested
+                    ? "Changes proposed"
+                    : "Plan proposal rejected"}
+              </div>
+            )
           ) : (
             <div className="flex gap-2">
               <Button

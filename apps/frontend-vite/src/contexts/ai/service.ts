@@ -121,10 +121,11 @@ export async function rejectProposal(
 export async function acceptPlanCreationProposal(
   api: AxiosInstance,
   data: { messageId: string; proposalIndex: number }
-): Promise<void> {
-  await api.post(`/ai/messages/${data.messageId}/accept-plan-creation-proposal`, {
+): Promise<{ success: boolean; plan?: { id: string } }> {
+  const response = await api.post<{ success: boolean; plan?: { id: string } }>(`/ai/messages/${data.messageId}/accept-plan-creation-proposal`, {
     proposalIndex: data.proposalIndex,
   });
+  return response.data;
 }
 
 export async function rejectPlanCreationProposal(

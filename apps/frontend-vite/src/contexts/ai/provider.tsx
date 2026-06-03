@@ -232,7 +232,32 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
       return await acceptPlanCreationProposal(api, data);
     },
-    onSuccess: () => {
+    onSuccess: (result, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.planCreationProposals) return msg;
+
+            const updatedProposals = msg.planCreationProposals.map(
+              (proposal, index) => {
+                if (index === proposalIndex) {
+                  return {
+                    ...proposal,
+                    status: "accepted" as const,
+                    planId: result.plan?.id || proposal.planId,
+                  };
+                }
+
+                return proposal.status
+                  ? proposal
+                  : { ...proposal, status: "cancelled" as const };
+              }
+            );
+
+            return { ...msg, planCreationProposals: updatedProposals };
+          })
+      );
       queryClient.invalidateQueries({
         queryKey: ["messages", messagesContext.currentChatId],
       });

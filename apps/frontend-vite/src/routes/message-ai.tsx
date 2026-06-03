@@ -1654,6 +1654,7 @@ function MessageAIPage() {
                                 sessions={proposal.sessions}
                                 description={proposal.description}
                                 status={proposal.status}
+                                planId={proposal.planId}
                                 onAccept={handleAcceptPlanCreationProposal}
                                 onReject={handleRejectPlanCreationProposal}
                                 onProposeChanges={handleProposePlanCreationChanges}
