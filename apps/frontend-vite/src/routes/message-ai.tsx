@@ -384,13 +384,14 @@ function CoachContextIsland({
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {activePlans.length > 0 ? (
                   activePlans.slice(0, 5).map((plan) => (
-                    <span
+                    <PlanLink
                       key={plan.id}
-                      className="inline-flex max-w-full items-center gap-1 rounded-md bg-background/70 px-2 py-1 text-xs"
-                    >
-                      <span>{plan.emoji || "📋"}</span>
-                      <span className="truncate">{plan.goal}</span>
-                    </span>
+                      planId={plan.id}
+                      displayText={plan.goal}
+                      emoji={plan.emoji || undefined}
+                      className="max-w-full bg-background/70 py-1 text-xs"
+                      labelClassName="truncate"
+                    />
                   ))
                 ) : (
                   <span className="text-xs text-muted-foreground">
