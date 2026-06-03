@@ -13,6 +13,7 @@ const PlanScalarPatchSchema = z
     goal: z.string().min(1).optional(),
     goalReason: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
+    finishingDate: z.string().nullable().optional(),
     outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
     timesPerWeek: z.number().positive().nullable().optional(),
   })
@@ -139,6 +140,7 @@ function convertLegacyOperationsToPatch(operations: any[]): PlanProposalPatch {
         ...(op.goal !== undefined && { goal: op.goal }),
         ...(op.goalReason !== undefined && { goalReason: op.goalReason }),
         ...(op.notes !== undefined && { notes: op.notes }),
+        ...(op.finishingDate !== undefined && { finishingDate: op.finishingDate }),
         ...(op.outlineType !== undefined && { outlineType: op.outlineType }),
         ...(op.timesPerWeek !== undefined && { timesPerWeek: op.timesPerWeek }),
       };
@@ -255,6 +257,11 @@ export async function executePlanProposalPatch(params: {
       }
       if (patch.plan.notes !== undefined) {
         updateData.notes = patch.plan.notes;
+      }
+      if (patch.plan.finishingDate !== undefined) {
+        updateData.finishingDate = patch.plan.finishingDate
+          ? parseDateOnly(patch.plan.finishingDate, "finishingDate")
+          : null;
       }
       if (patch.plan.outlineType !== undefined) {
         updateData.outlineType = patch.plan.outlineType;

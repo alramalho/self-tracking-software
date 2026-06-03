@@ -14,6 +14,7 @@ export interface ResolvedOperation {
   descriptiveGuide?: string;
   goal?: string;
   goalReason?: string | null;
+  finishingDate?: string | null;
   timesPerWeek?: number;
   milestoneDescription?: string;
   milestoneDate?: string;
@@ -127,6 +128,13 @@ export function PlanProposalCard({
                       <span>
                         {op.goal ? `Update goal to "${op.goal}"` : "Update plan setup"}
                         {op.timesPerWeek ? ` · ${op.timesPerWeek}x/week` : ""}
+                        {op.finishingDate !== undefined
+                          ? ` · ${
+                              op.finishingDate
+                                ? `until ${format(new Date(op.finishingDate), "MMM d, yyyy")}`
+                                : "no end date"
+                            }`
+                          : ""}
                       </span>
                     </>
                   ) : op.type === "add_milestone" ||

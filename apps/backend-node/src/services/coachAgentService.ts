@@ -62,6 +62,22 @@ function formatPromptExcerpt(value?: string | null, maxLength = 1000): string | 
     : trimmed;
 }
 
+function normalizePlanGoal(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function findPlanWithExactGoal(params: {
+  goal: string;
+  plans: Array<Plan>;
+}): Plan | null {
+  const normalizedGoal = normalizePlanGoal(params.goal);
+  return (
+    params.plans.find(
+      (plan) => normalizePlanGoal(plan.goal) === normalizedGoal
+    ) || null
+  );
+}
+
 export class CoachAgentService {
   private telegram = new TelegramService();
 
@@ -106,6 +122,7 @@ export class CoachAgentService {
     const plans = allPlans.filter((plan) => isActiveCoachPlan(plan));
     const self = this;
     const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
+    let successfulPlanCreationProposals = 0;
 
     // Build plans context for the system prompt
     const plansContext = plans
@@ -150,6 +167,7 @@ export class CoachAgentService {
           Plan: ${plan.goal} [planId: ${plan.id}]
           Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
+          Finishing date: ${plan.finishingDate ? format(new Date(plan.finishingDate), "yyyy-MM-dd") : "none"}
           ${notes ? `Roadmap / user notes:\n    ${notes.replace(/\n/g, "\n    ")}` : ""}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
@@ -229,12 +247,16 @@ export class CoachAgentService {
         - Ask clarifying questions before making changes: current experience, constraints, and things to avoid.
         - Be realistic. If a goal is unrealistic given the constraints, say so. Suggesting the user adjust the goal beats setting them up to fail.
         - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
-        - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, you should create two plans, each focusing on one set of activties. 
+        - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
-        - For a new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, change activities, continue a curriculum, or otherwise adjust a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
+        - If an active plan is similar but you are not sure whether the user wants a new separate plan or a change to the existing one, ask one clarifying question. Never create a near-duplicate plan just to represent an edit.
         - Treat Plan notes as the canonical user-provided roadmap: source URLs, syllabus, curriculum order, project sequence, constraints, and explicit user preferences. Use notes to keep future sessions anchored to the user's roadmap while adapting near-term scheduling based on usage.
         - Treat coachNotes as internal/generated coaching state, not as the canonical curriculum. Do not put user-provided roadmap material into coachNotes.
         - When the user provides a curriculum, syllabus, roadmap, ordered project list, course URLs, playlist URLs, or source material for a plan, preserve the full durable structure in plan notes. Generate only useful near-term dated sessions, but keep the full sequence in notes so later updates can continue from it.
+        - For source-backed learning plans, notes are mandatory. Do not rely on the visible chat message, milestones, or first sessions to remember the roadmap. If you cannot fit the complete durable roadmap into notes, ask the user which source/course to set up first.
+        - If the user brings several courses, roadmaps, or technical tracks at once, do not set up 2-3 new plans in one response. Pick one progressive deep dive to configure first, usually the prerequisite or the one the user seems most ready to start, and ask which track to do next. Examples: set up Deep Learning first, then Robotics after confirmation; set up C++ fundamentals first, then Arduino projects.
         - Activities are reusable tracking buckets. When a useful activity already appears in the plan context, reuse it by passing its activityId in proposePlanCreation.activities instead of creating a new activity with a variant name.
         - Do not create separate activities for workout/session variants when a broader existing activity fits. Put the variant, intensity, or focus in sessions.descriptiveGuide.
         - If a plan creation proposal is attached, do not repeat every activity, milestone, and session in prose. The proposal card shows the details, so summarize the split in one short sentence and let the card carry the setup list.
@@ -246,6 +268,7 @@ export class CoachAgentService {
         - when creating SPECIFIC plans, if the user shares or agrees on a preferred syllabus. Make sure the generated sessions do reference to the (amount of videos to watch, chatpters to take, etc).
         - goalReason is the user's personal motivation for starting or changing the plan, captured so future coaching can reuse that motivation. It should answer "what does the user want this to do for them emotionally or personally?" Examples: feel more attractive, prove they can finish hard things, get a confidence boost, feel healthier for their family, enjoy the challenge. Do not write a generic training benefit like "build endurance" or "improve consistency", and never put logistics, schedule, availability, or employment status there. If unclear, try to clarify this with the user, prior to the plan creation.
         - Propose one plan at a time. Don't bundle unrelated goals into a single proposal unless the user explicitly asks for a combined plan.
+        - "One plan at a time" is especially important for courses and roadmaps. Do not attach multiple plan creation cards for multiple courses in the same turn. A good response says which course/track you are setting up now and what will be handled next.
         - For bigger rebuilds, first confirm the target and weekly split, then propose. If the existing plan can't represent the new mix or schedule, prefer a new plan after confirmation over a cosmetic rename.
 
         4. Session quality
@@ -392,6 +415,8 @@ export class CoachAgentService {
         proposePlanModification: tool({
           description: dedent`
             Propose a typed patch to a user's plan. The user will be able to accept or reject the proposal with one click.
+            Use this whenever the user wants to change, refine, reschedule, add an end date to, or continue an existing active plan.
+            For SPECIFIC plans, partial near-term session updates are allowed when the user is adjusting the immediate schedule or roadmap.
             You can propose to:
             - Tighten plan setup with patch.plan
             - Add or update sessions with patch.sessions.upsert
@@ -404,7 +429,8 @@ export class CoachAgentService {
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
             IMPORTANT: Omitted fields mean "leave unchanged". Do not provide full relation arrays. Use upsert/deleteIds only.
             IMPORTANT: Archive must be standalone. Do not combine archive with other patch fields.
-            IMPORTANT: When adding sessions, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
+            IMPORTANT: When adding sessions to TIMES_PER_WEEK plans, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
+            IMPORTANT: SPECIFIC plans do not require full-week coverage. It is valid to update just the next session, next few sessions, or the sessions affected by the user's requested roadmap change.
             IMPORTANT: Milestone progress is a 0-100 number. Propose milestone changes only when they make the user's plan clearer or easier to follow.
           `,
           inputSchema: z.object({
@@ -420,6 +446,7 @@ export class CoachAgentService {
                 goal: z.string().optional().describe("Clearer measurable plan goal"),
                 goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
                 notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material for this plan. Use this to preserve full curricula, syllabi, ordered project sequences, source URLs, course/playlists/books, user constraints, and explicit preferences that future coaching should keep following. Keep it compact but complete enough to continue the roadmap later. Set null only when the user explicitly wants to clear the plan notes."),
+                finishingDate: z.string().optional().nullable().describe("Plan end date in YYYY-MM-DD format. Use null only when the user explicitly wants no end date."),
                 outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
                 timesPerWeek: z.number().positive().nullable().optional(),
               }).optional(),
@@ -556,8 +583,10 @@ export class CoachAgentService {
               const weekSun = startOfWeek(minDate, { weekStartsOn: 0 });
               const weekSat = endOfWeek(minDate, { weekStartsOn: 0 });
               const allInSameWeek = dates.every((d) => d >= weekSun && d <= weekSat);
+              const effectiveOutlineType = patch.plan?.outlineType || plan.outlineType;
+              const requiresFullWeekCoverage = effectiveOutlineType !== "SPECIFIC";
 
-              if (!allInSameWeek) {
+              if (requiresFullWeekCoverage && !allInSameWeek) {
                 return {
                   success: false,
                   error: `All proposed sessions must be within the same week (Sun-Sat).`,
@@ -565,7 +594,7 @@ export class CoachAgentService {
               }
 
               const spanDays = Math.round((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
-              if (spanDays < 4) {
+              if (requiresFullWeekCoverage && spanDays < 4) {
                 return {
                   success: false,
                   error: `Proposal only covers ${format(minDate, "EEE MMM d")} to ${format(maxDate, "EEE MMM d")}. Plan modifications must be for a full week (${format(weekSun, "MMM d")} - ${format(weekSat, "MMM d")}). Discuss the complete week schedule with the user before proposing.`,
@@ -594,6 +623,7 @@ export class CoachAgentService {
           description: dedent`
             Propose creating a new tracked plan. The user can accept or reject the proposal with one click.
             Use this only after the user clearly asks for a new tracked plan or agrees to turn the conversation into one.
+            Do not use this to revise an existing active plan. If a similar active plan exists, use proposePlanModification instead.
             Prefer goals that are clear enough to track, but do not force every coaching conversation into a plan.
           `,
           inputSchema: z.object({
@@ -637,6 +667,14 @@ export class CoachAgentService {
             sessions,
             description,
           }) => {
+            if (successfulPlanCreationProposals >= 1) {
+              return {
+                success: false,
+                error:
+                  "Only one new plan creation proposal is allowed per response. For multiple courses, roadmaps, or tracks, propose one progressive deep dive first and ask which track to set up next.",
+              };
+            }
+
             const proposedSessions = sessions || [];
             const resolvedOutlineType =
               outlineType ||
@@ -671,6 +709,19 @@ export class CoachAgentService {
                 : activity;
             });
 
+            const existingPlanWithSameGoal = findPlanWithExactGoal({
+              goal,
+              plans,
+            });
+            if (existingPlanWithSameGoal) {
+              return {
+                success: false,
+                error:
+                  `An active plan with this exact goal already exists: "${existingPlanWithSameGoal.goal}" [planId: ${existingPlanWithSameGoal.id}]. ` +
+                  "Use proposePlanModification to change that plan instead of creating a duplicate.",
+              };
+            }
+
             if (resolvedOutlineType === "SPECIFIC" && proposedSessions.length === 0) {
               return {
                 success: false,
@@ -682,6 +733,7 @@ export class CoachAgentService {
             logger.info(
               `Plan creation proposed for ${user.id}: "${goal}" (${resolvedActivities.length} activities)`
             );
+            successfulPlanCreationProposals += 1;
 
             return {
               success: true,

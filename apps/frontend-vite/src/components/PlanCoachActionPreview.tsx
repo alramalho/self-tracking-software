@@ -45,6 +45,7 @@ function resolveLegacyOperation(
       type: "update_plan",
       goal: op.goal,
       goalReason: op.goalReason,
+      finishingDate: op.finishingDate,
       timesPerWeek: op.timesPerWeek,
     };
   }
@@ -83,6 +84,7 @@ function resolvePatchOperations(
       type: "update_plan",
       goal: patch.plan.goal,
       goalReason: patch.plan.goalReason,
+      finishingDate: patch.plan.finishingDate,
       timesPerWeek: patch.plan.timesPerWeek,
     });
   }

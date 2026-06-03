@@ -1,7 +1,12 @@
 import { type CompletePlan } from "@/contexts/plans";
 import { SteppedBarProgress } from "@/components/SteppedBarProgress";
 import { useNavigate } from "@tanstack/react-router";
-import { format, isSameWeek } from "date-fns";
+import {
+  differenceInCalendarDays,
+  format,
+  isSameWeek,
+  startOfDay,
+} from "date-fns";
 import type { PlanProgressData } from "@tsw/prisma/types";
 import { Flame, Sprout, Rocket } from "lucide-react";
 import { HomeCardShell } from "./HomeCardShell";
@@ -22,6 +27,18 @@ const getPlannedActivityCount = (
   }
 
   return Array.isArray(plannedActivities) ? plannedActivities.length : 0;
+};
+
+const formatSessionDistance = (date: Date) => {
+  const daysAway = differenceInCalendarDays(
+    startOfDay(date),
+    startOfDay(new Date())
+  );
+
+  if (daysAway <= 0) return "today";
+  if (daysAway === 1) return "tomorrow";
+  if (daysAway === 2) return "in 2 days";
+  return `${format(date, "EEE")}, in ${daysAway} days`;
 };
 
 export const PlanCard = ({ plan }: PlanCardProps) => {
@@ -56,6 +73,30 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
   const lifestyleMax = plan.progress?.lifestyleAchievement?.maxValue ?? LIFESTYLE_WEEKS;
 
   const emoji = plan.activities?.[0]?.emoji || plan.emoji || "🎯";
+  const today = startOfDay(new Date());
+  const nextSession =
+    plan.outlineType === "SPECIFIC"
+      ? plan.sessions
+          ?.filter(
+            (session) =>
+              startOfDay(new Date(session.date)) >= today &&
+              !currentWeek?.completedActivities?.some(
+                (entry: any) =>
+                  entry.activityId === session.activityId &&
+                  format(new Date(entry.datetime || entry.date), "yyyy-MM-dd") ===
+                    format(new Date(session.date), "yyyy-MM-dd")
+              )
+          )
+          .sort(
+            (a, b) =>
+              new Date(a.date).getTime() - new Date(b.date).getTime()
+          )[0]
+      : null;
+  const nextSessionActivity = nextSession
+    ? plan.activities?.find((activity) => activity.id === nextSession.activityId)
+    : null;
+  const nextSessionTitle = nextSessionActivity?.title || "Next session";
+  const nextSessionEmoji = nextSessionActivity?.emoji || emoji;
 
   return (
     <HomeCardShell
@@ -69,6 +110,15 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
         </p>
       </div>
       <div className="space-y-2.5">
+        {nextSession && (
+          <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            <span className="shrink-0 text-sm leading-none">{nextSessionEmoji}</span>
+            <span className="min-w-0 truncate">{nextSessionTitle}</span>
+            <span className="shrink-0 text-muted-foreground/70">
+              ({formatSessionDistance(new Date(nextSession.date))})
+            </span>
+          </div>
+        )}
         <SteppedBarProgress
           value={totalCompleted}
           maxValue={totalPlanned}
