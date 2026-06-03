@@ -6,15 +6,24 @@ import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import { usePlans } from "@/contexts/plans";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { cn } from "@/lib/utils";
 import { format, isSameDay, startOfDay, addDays } from "date-fns";
 
 interface PlanLinkProps {
   planId: string;
   displayText: string;
   emoji?: string;
+  className?: string;
+  labelClassName?: string;
 }
 
-export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
+export function PlanLink({
+  planId,
+  displayText,
+  emoji,
+  className,
+  labelClassName,
+}: PlanLinkProps) {
   const navigate = useNavigate();
   const themeColors = useThemeColors();
   const { plans } = usePlans();
@@ -55,8 +64,12 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
     );
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const stopPlanLinkPropagation = (e: React.SyntheticEvent) => {
     e.stopPropagation();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    stopPlanLinkPropagation(e);
     setShowPreview(true);
   };
 
@@ -68,7 +81,13 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
   return (
     <>
       <span
-        className={`inline-flex items-center gap-1.5 font-medium cursor-pointer rounded-md px-2 py-0.5 transition-all text-foreground/90 ${themeColors.fadedBg} hover:${themeColors.bg}`}
+        className={cn(
+          `inline-flex items-center gap-1.5 font-medium cursor-pointer rounded-md px-2 py-0.5 transition-all text-foreground/90 ${themeColors.fadedBg} hover:${themeColors.bg}`,
+          className
+        )}
+        onPointerDown={stopPlanLinkPropagation}
+        onMouseDown={stopPlanLinkPropagation}
+        onTouchStart={stopPlanLinkPropagation}
         onClick={handleClick}
       >
         {emoji && !displayStartsWithEmoji ? (
@@ -76,13 +95,14 @@ export function PlanLink({ planId, displayText, emoji }: PlanLinkProps) {
         ) : !emoji ? (
           <Target size={14} className="flex-shrink-0" />
         ) : null}
-        <span>{displayText}</span>
+        <span className={labelClassName}>{displayText}</span>
       </span>
 
       <AppleLikePopover
         open={showPreview}
         onClose={() => setShowPreview(false)}
         title="Plan Preview"
+        wrapperClassName="contents"
       >
         <div className="p-4 space-y-4">
           {/* Plan Header */}
