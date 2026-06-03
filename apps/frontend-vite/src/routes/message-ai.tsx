@@ -635,11 +635,32 @@ function MessageAIPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputPreviewRef = useRef<HTMLDivElement>(null);
   const initiallyScrolledChatIdRef = useRef<string | null>(null);
 
   // Debounced mark-as-read tracking
   const messageQueueRef = useRef<Set<string>>(new Set());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const syncInputPreviewScroll = useCallback((textarea: HTMLTextAreaElement) => {
+    if (!inputPreviewRef.current) return;
+
+    inputPreviewRef.current.scrollTop = textarea.scrollTop;
+    inputPreviewRef.current.scrollLeft = textarea.scrollLeft;
+  }, []);
+
+  const resizeMessageInput = useCallback((textarea: HTMLTextAreaElement) => {
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+    syncInputPreviewScroll(textarea);
+  }, [syncInputPreviewScroll]);
+
+  useLayoutEffect(() => {
+    if (!inputTextareaRef.current) return;
+
+    resizeMessageInput(inputTextareaRef.current);
+  }, [inputValue, resizeMessageInput]);
 
   const flushReadQueue = useCallback(() => {
     if (messageQueueRef.current.size > 0 && currentChatId) {
@@ -1727,11 +1748,15 @@ function MessageAIPage() {
             <div className="flex items-end gap-3 bg-muted/80 rounded-3xl px-4 py-3 border border-border">
               <div className="flex-1 relative">
                 {inputValue && /[*_~]/.test(inputValue) && (
-                  <div className="absolute inset-0 pointer-events-none text-base">
+                  <div
+                    ref={inputPreviewRef}
+                    className="absolute inset-0 max-h-[7.5rem] overflow-hidden pointer-events-none text-base"
+                  >
                     <FormattedInputPreview text={inputValue} />
                   </div>
                 )}
                 <textarea
+                  ref={inputTextareaRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => {
@@ -1753,9 +1778,10 @@ function MessageAIPage() {
                     inputValue && /[*_~]/.test(inputValue) ? "text-transparent caret-foreground" : "text-foreground"
                   )}
                   onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = Math.min(target.scrollHeight, 120) + "px";
+                    resizeMessageInput(e.target as HTMLTextAreaElement);
+                  }}
+                  onScroll={(e) => {
+                    syncInputPreviewScroll(e.target as HTMLTextAreaElement);
                   }}
                 />
               </div>
