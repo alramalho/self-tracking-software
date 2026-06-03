@@ -139,29 +139,29 @@ jobs:
           echo "$github_token" | docker login ghcr.io -u "$github_actor" --password-stdin
           cd "$remote_dir"
           export BACKEND_IMAGE="$backend_image"
-          docker compose up -d redis
+          docker compose up -d redis < /dev/null
           for i in {1..20}; do
-            if docker compose exec -T redis redis-cli ping | grep -q PONG; then
+            if docker compose exec -T redis redis-cli ping < /dev/null | grep -q PONG; then
               echo "redis is ready"
               break
             fi
             if [ "$i" = "20" ]; then
               echo "redis failed to become ready" >&2
-              docker compose ps
+              docker compose ps < /dev/null
               exit 1
             fi
             sleep 1
           done
-          docker compose pull backend
-          docker compose up -d --force-recreate backend
+          docker compose pull backend < /dev/null
+          docker compose up -d --force-recreate backend < /dev/null
           running_image="$(docker inspect tsw-backend --format '{{.Config.Image}}')"
           if [ "$running_image" != "$backend_image" ]; then
             echo "backend image mismatch: expected $backend_image, got $running_image" >&2
-            docker compose ps
+            docker compose ps < /dev/null
             exit 1
           fi
-          docker image prune -f
-          docker compose ps
+          docker image prune -f < /dev/null
+          docker compose ps < /dev/null
           EOF
 
       - name: smoke test
