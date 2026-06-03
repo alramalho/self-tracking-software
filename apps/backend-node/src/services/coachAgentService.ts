@@ -301,12 +301,21 @@ export class CoachAgentService {
 
             await onStatus?.("searching");
 
-            const searchResult = await webSearchService.searchWithOpenAI({
+            let searchResult = await webSearchService.searchWithOpenAI({
               query,
               queries,
               maxResults,
               maxTokensPerPage,
             });
+            if (!searchResult.success) {
+              logger.error(`OpenAI web search failed, trying Perplexity fallback: ${searchResult.error}`);
+              searchResult = await webSearchService.searchWithPerplexity({
+                query,
+                queries,
+                maxResults,
+                maxTokensPerPage,
+              });
+            }
             // Toggle back for comparison runs:
             // const searchResult = await webSearchService.searchWithPerplexity({
             //   query,
