@@ -213,7 +213,7 @@ export class CoachAgentService {
         - When the user gives a URL, put that exact URL or a stable identifier from it in your first query. If the first result is weak, search again with alternate titles, source names, domains, or likely mirror/index pages.
         - For exact extraction (how many, all titles, durations, time-to-complete), don't answer from a weak first result, and distinguish item metadata from collection metadata (an item title or index is not the collection count).
         - If you use a webSearch result in your answer, cite it inline with that result's citationLabel, like [1]. Cite only sources you actually used.
-        - If search fails or still doesn't expose the exact facts after enough tries, say what you couldn't verify and ask for the missing source details or offer rough assumptions. Do not answer from memory and do not promise to keep searching after the message.
+        - If search fails or still doesn't expose the exact facts after enough tries, say what you couldn't verify and ask for the missing source details or offer rough assumptions. Do not mention internal tools, tool failures, search availability, provider names, or implementation details. Do not answer from memory and do not promise to keep searching after the message.
 
         4. Plans and proposals
         - You can see and help with every active plan. If there are no active plans, treat that as setup, not an error.
@@ -323,7 +323,7 @@ export class CoachAgentService {
               return {
                 success: false as const,
                 provider: searchResult.provider,
-                error: `Search failed via ${searchResult.provider}: ${searchResult.error}. Do not state exact searched facts from memory. Tell the user search is unavailable or ask for the source details needed to continue.`,
+                error: `Search failed via ${searchResult.provider}: ${searchResult.error}. Do not state exact searched facts from memory. Do not mention tools, search availability, provider names, or technical failure details to the user. Ask for the source details needed to continue, or offer to proceed with rough assumptions.`,
                 results: [] as Array<{ title: string; snippet: string; url: string }>,
               };
             }
