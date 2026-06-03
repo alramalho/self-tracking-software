@@ -9,11 +9,13 @@ import {
   getMessages,
   sendMessage,
   sendMessageStream,
+  getCoachResponseStatus,
   rewriteMessageStream,
   createDirectChat,
   markMessagesAsRead,
   clearCoachHistory,
   clearCoachMemory,
+  COACH_RESPONSE_TIMEOUT_MS,
 } from "./service";
 import {
   MessagesContext,
@@ -22,8 +24,18 @@ import {
   type Message,
 } from "./types";
 
+const CURRENT_CHAT_STORAGE_KEY = "tracking-so-current-chat-id";
+
 const hasPlanCreationProposal = (message: Message) =>
   (message.planCreationProposals?.length || 0) > 0;
+
+const COACH_RESPONSE_POLL_WINDOW_MS = 10 * 60 * 1000;
+
+const getLatestMessage = (messages: Message[] = []) =>
+  [...messages].sort(
+    (a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )[messages.length - 1];
 
 const cancelPendingPlanCreationProposalsInCache = (
   messages: Message[],
@@ -51,6 +63,14 @@ type RewriteMessageInput = {
   message: string;
 };
 
+type CoachResponseWaitState = {
+  hasPendingUserMessage: boolean;
+  isAwaiting: boolean;
+  isTimedOut: boolean;
+  status: "thinking" | "searching" | "drafting" | null;
+  errorMessage: string | null;
+};
+
 export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -58,10 +78,25 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatIdState] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(CURRENT_CHAT_STORAGE_KEY);
+  });
   const [pendingStaggeredMessages, setPendingStaggeredMessages] = useState<Message[]>([]);
   const [coachResponseStatus, setCoachResponseStatus] = useState<"thinking" | "searching" | "drafting" | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const staggerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const setCurrentChatId = useCallback((chatId: string | null) => {
+    setCurrentChatIdState(chatId);
+    if (typeof window === "undefined") return;
+
+    if (chatId) {
+      window.localStorage.setItem(CURRENT_CHAT_STORAGE_KEY, chatId);
+    } else {
+      window.localStorage.removeItem(CURRENT_CHAT_STORAGE_KEY);
+    }
+  }, []);
 
   // Cleanup stagger timers on unmount
   useEffect(() => {
@@ -76,7 +111,12 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("fetching chats");
       const result = await getChats(api);
       // Auto-select the most recent chat if none is selected
-      if (!currentChatId && result.length > 0) {
+      if (
+        currentChatId &&
+        !result.some((chat) => chat.id === currentChatId)
+      ) {
+        setCurrentChatId(null);
+      } else if (!currentChatId && result.length > 0) {
         setCurrentChatId(result[0].id);
       }
       return result;
@@ -104,6 +144,117 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     staleTime: 1000 * 60 * 2,
   });
 
+  const currentChat = useMemo(
+    () => chats.data?.find((chat) => chat.id === currentChatId),
+    [chats.data, currentChatId]
+  );
+
+  const persistedCoachResponseStatus = useQuery({
+    queryKey: ["coach-response-status", currentChatId],
+    queryFn: async () => {
+      if (!currentChatId) return null;
+      return await getCoachResponseStatus(api, currentChatId);
+    },
+    enabled:
+      isLoaded &&
+      isSignedIn &&
+      !!currentChatId &&
+      currentChat?.type === "COACH",
+    staleTime: 1000,
+  });
+
+  const coachResponseWaitState = useMemo<CoachResponseWaitState>(() => {
+    if (currentChat?.type !== "COACH") {
+      return {
+        hasPendingUserMessage: false,
+        isAwaiting: false,
+        isTimedOut: false,
+        status: null as "thinking" | "searching" | "drafting" | null,
+        errorMessage: null as string | null,
+      };
+    }
+
+    const persistedStatus = persistedCoachResponseStatus.data;
+    if (persistedStatus) {
+      const isExpired = nowMs >= new Date(persistedStatus.timeoutAt).getTime();
+      const isError = persistedStatus.status === "error";
+      const status: "thinking" | "searching" | "drafting" | null =
+        !isExpired && !isError
+          ? (persistedStatus.status as "thinking" | "searching" | "drafting")
+          : null;
+
+      return {
+        hasPendingUserMessage: true,
+        isAwaiting: !isExpired && !isError,
+        isTimedOut: isExpired || isError,
+        status,
+        errorMessage: isError
+          ? persistedStatus.errorMessage || "Coach response failed"
+          : null,
+      };
+    }
+
+    const latestMessage = getLatestMessage(messages.data || []);
+    if (!latestMessage || latestMessage.role !== "USER") {
+      return {
+        hasPendingUserMessage: false,
+        isAwaiting: false,
+        isTimedOut: false,
+        status: null,
+        errorMessage: null,
+      };
+    }
+
+    const ageMs = nowMs - new Date(latestMessage.createdAt).getTime();
+    const isRecentEnoughToTrack = ageMs < COACH_RESPONSE_POLL_WINDOW_MS;
+
+    return {
+      hasPendingUserMessage: isRecentEnoughToTrack,
+      isAwaiting: isRecentEnoughToTrack && ageMs < COACH_RESPONSE_TIMEOUT_MS,
+      isTimedOut: isRecentEnoughToTrack && ageMs >= COACH_RESPONSE_TIMEOUT_MS,
+      status:
+        isRecentEnoughToTrack && ageMs < COACH_RESPONSE_TIMEOUT_MS
+          ? ("thinking" as const)
+          : null,
+      errorMessage: null,
+    };
+  }, [
+    currentChat?.type,
+    messages.data,
+    nowMs,
+    persistedCoachResponseStatus.data,
+  ]);
+
+  useEffect(() => {
+    if (!coachResponseWaitState.hasPendingUserMessage) return;
+
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [coachResponseWaitState.hasPendingUserMessage]);
+
+  useEffect(() => {
+    if (!coachResponseWaitState.hasPendingUserMessage || !currentChatId) return;
+
+    const pollMs = coachResponseWaitState.isTimedOut ? 10000 : 3000;
+    const timer = window.setInterval(() => {
+      void queryClient.refetchQueries({ queryKey: ["messages", currentChatId] });
+      void queryClient.refetchQueries({ queryKey: ["chats"] });
+      void queryClient.refetchQueries({
+        queryKey: ["coach-response-status", currentChatId],
+      });
+    }, pollMs);
+
+    return () => window.clearInterval(timer);
+  }, [
+    coachResponseWaitState.hasPendingUserMessage,
+    coachResponseWaitState.isTimedOut,
+    currentChatId,
+    queryClient,
+  ]);
+
   if (messages.error) {
     const customErrorMessage = `Failed to get messages`;
     handleQueryError(messages.error, customErrorMessage);
@@ -125,6 +276,23 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           return [...oldMessages, userMessage];
         }
       );
+
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
+        const now = new Date();
+        return oldChats.map((chat) =>
+          chat.id === data.chatId
+            ? {
+                ...chat,
+                updatedAt: now,
+                lastMessage: {
+                  content: data.message,
+                  senderName: undefined,
+                  createdAt: now,
+                },
+              }
+            : chat
+        );
+      });
 
       if (data.coachVersion === "v2") {
         setCoachResponseStatus("thinking");
@@ -242,6 +410,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["coach-response-status", chatId],
+      });
     },
     onError: (error, { chatId }) => {
       // Clear stagger timers on error
@@ -259,6 +430,11 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       const customErrorMessage = `Failed to send message`;
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
+      queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["coach-response-status", chatId],
+      });
     },
     onSettled: () => {
       setCoachResponseStatus(null);
@@ -287,18 +463,37 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         (oldMessages: Message[] = []) => {
           const targetIndex = oldMessages.findIndex((msg) => msg.id === messageId);
           if (targetIndex === -1) return oldMessages;
+          const now = new Date();
 
           return oldMessages.slice(0, targetIndex + 1).map((msg, index) =>
             index === targetIndex
               ? {
                   ...msg,
                   content: message,
+                  createdAt: now,
                   userAction: null,
                 }
               : msg
           );
         }
       );
+
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
+        const now = new Date();
+        return oldChats.map((chat) =>
+          chat.id === chatId || chat.id === visibleChatId
+            ? {
+                ...chat,
+                updatedAt: now,
+                lastMessage: {
+                  content: message,
+                  senderName: undefined,
+                  createdAt: now,
+                },
+              }
+            : chat
+        );
+      });
 
       return { previousMessages, visibleChatId, sourceChatId: chatId };
     },
@@ -324,6 +519,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["coach-response-status", chatId],
+      });
     },
     onError: (error, { chatId }, context) => {
       if (context?.previousMessages) {
@@ -445,6 +643,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       setCurrentChatId(null);
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["coach-response-status"] });
     },
     onError: (error, _variables, context) => {
       if (context?.previousChats) {
@@ -496,7 +695,10 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     sendMessage: sendMessageMutation.mutateAsync,
     rewriteMessage: rewriteMessageMutation.mutateAsync,
     isSendingMessage: sendMessageMutation.isPending,
-    coachResponseStatus,
+    coachResponseStatus: coachResponseStatus || coachResponseWaitState.status,
+    isAwaitingCoachResponse: coachResponseWaitState.isAwaiting,
+    coachResponseTimedOut: coachResponseWaitState.isTimedOut,
+    coachResponseErrorMessage: coachResponseWaitState.errorMessage,
     isRewritingMessage: rewriteMessageMutation.isPending,
     pendingStaggeredMessages,
     createDirectChat: createDirectChatMutation.mutateAsync,

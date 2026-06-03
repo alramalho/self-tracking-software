@@ -715,6 +715,7 @@ export class CoachAssessmentService {
       planCreationProposals?: Array<{
         goal: string;
         goalReason: string | null;
+        notes?: string | null;
         emoji: string | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;

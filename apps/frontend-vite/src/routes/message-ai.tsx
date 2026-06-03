@@ -587,6 +587,9 @@ function MessageAIPage() {
     rewriteMessage,
     isSendingMessage,
     coachResponseStatus,
+    isAwaitingCoachResponse,
+    coachResponseTimedOut,
+    coachResponseErrorMessage,
     isRewritingMessage,
     pendingStaggeredMessages,
     isLoadingChats,
@@ -594,8 +597,10 @@ function MessageAIPage() {
     clearCoachHistory,
     isClearingCoachHistory,
   } = useMessages();
+  const hasActiveCoachRequest =
+    isSendingMessage || isRewritingMessage || isAwaitingCoachResponse;
   const coachLoadingLabel =
-    isSendingMessage || isRewritingMessage
+    hasActiveCoachRequest
       ? ({
           thinking: "Thinking...",
           searching: "Searching the web...",
@@ -1062,15 +1067,40 @@ function MessageAIPage() {
   const MarkdownText = ({ children }: { children: string }) => (
     <ReactMarkdown
       components={{
-        p: ({ children }) => <span>{children}</span>,
-        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        p: ({ children }) => (
+          <span className="break-words [overflow-wrap:anywhere]">
+            {children}
+          </span>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-semibold">{children}</strong>
+        ),
         em: ({ children }) => <em>{children}</em>,
         del: ({ children }) => <del className="line-through">{children}</del>,
-        ul: ({ children }) => <ul className="list-disc list-inside my-1">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal list-inside my-1">{children}</ol>,
-        li: ({ children }) => <li>{children}</li>,
-        code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
-        a: ({ href, children }) => <a href={href} className="text-primary underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+        ul: ({ children }) => (
+          <ul className="my-1 list-inside list-disc">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="my-1 list-inside list-decimal">{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li className="break-words [overflow-wrap:anywhere]">{children}</li>
+        ),
+        code: ({ children }) => (
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm break-words [overflow-wrap:anywhere]">
+            {children}
+          </code>
+        ),
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            className="break-words text-primary underline [overflow-wrap:anywhere]"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {children}
+          </a>
+        ),
       }}
     >
       {children}
@@ -1484,10 +1514,11 @@ function MessageAIPage() {
                   >
                     {showDateDivider && <DateDivider date={messageDate} />}
                     <div
-                      className={`flex gap-3 max-w-full overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
-                        }`}
+                      className={`flex min-w-0 max-w-full gap-3 overflow-visible ${
+                        isUserMessage ? "flex-row-reverse" : "flex-row"
+                      }`}
                     >
-                      <div className="flex flex-col gap-1 max-w-full overflow-visible">
+                      <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
                         {isCoachMessage &&
                           message.source === "autonomous_coach" &&
                           !prevIsCoach && (
@@ -1498,7 +1529,7 @@ function MessageAIPage() {
                           )}
                         <div
                           className={cn(
-                            "flex items-end gap-1",
+                            "flex min-w-0 max-w-full items-end gap-1",
                             isCoachMessage && "cursor-pointer"
                           )}
                           onClick={
@@ -1522,7 +1553,7 @@ function MessageAIPage() {
                                   : "bg-muted/60"
                               }
                             >
-                              <div className="text-sm whitespace-pre-wrap">
+                              <div className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">
                                 {renderMessageContent(messageForRendering)}
                               </div>
                             </MessageBubble>
@@ -1703,7 +1734,16 @@ function MessageAIPage() {
                 );
               })
             )}
-            {(isSendingMessage || isRewritingMessage || pendingStaggeredMessages.length > 0) && (
+            {coachResponseTimedOut && !hasActiveCoachRequest && (
+              <div className="mt-4 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                <AlertCircle size={13} className="text-red-500" />
+                <span>
+                  {coachResponseErrorMessage ||
+                    "Coach response timed out. The reply may still appear here if it finishes."}
+                </span>
+              </div>
+            )}
+            {(hasActiveCoachRequest || pendingStaggeredMessages.length > 0) && (!coachResponseTimedOut || hasActiveCoachRequest) && (
               <div
                 className="flex flex-col items-start gap-1 mt-4 opacity-0"
                 style={{ animation: "typing-appear 0.3s ease-out 1s forwards" }}

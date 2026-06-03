@@ -10,6 +10,7 @@ import { cancelPendingPlanCreationProposals } from "../services/planCreationProp
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
+import { coachResponseStatusService } from "../services/coachResponseStatusService";
 
 const router = Router();
 
@@ -44,6 +45,20 @@ function serializeUserMessage(
     senderName: user.name,
     senderPicture: user.picture,
   };
+}
+
+async function updateCoachResponseStatus(input: {
+  chatId: string;
+  userMessageId: string;
+  state: CoachResponseStatus;
+  sendStatus?: (state: CoachResponseStatus) => void;
+}) {
+  input.sendStatus?.(input.state);
+  await coachResponseStatusService.updateStatus({
+    chatId: input.chatId,
+    userMessageId: input.userMessageId,
+    status: input.state,
+  });
 }
 
 async function runCoachV2MessagePipeline(params: {
@@ -685,6 +700,39 @@ router.get(
   }
 );
 
+router.get(
+  "/:chatId/coach-response-status",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { chatId } = req.params;
+
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: user.id,
+          type: "COACH",
+        },
+        select: { id: true },
+      });
+
+      if (!chat) {
+        return res.status(404).json({ error: "Coach chat not found" });
+      }
+
+      const status = await coachResponseStatusService.getByChat(chatId);
+      res.json({ status });
+    } catch (error) {
+      logger.error("Error fetching coach response status:", error);
+      res.status(500).json({ error: "Failed to fetch coach response status" });
+    }
+  }
+);
+
 router.post(
   "/:chatId/messages/stream",
   requireAuth,
@@ -694,6 +742,7 @@ router.post(
   ): Promise<Response | void> => {
     let streamStarted = false;
     let clientClosed = false;
+    let statusUserMessageId: string | null = null;
 
     try {
       const user = req.user!;
@@ -740,8 +789,6 @@ router.post(
         }
       };
 
-      sendStatus("thinking");
-
       const userMessage = await prisma.message.create({
         data: {
           chatId,
@@ -751,6 +798,14 @@ router.post(
         },
       });
       const serializedUserMessage = serializeUserMessage(userMessage, user);
+      statusUserMessageId = userMessage.id;
+
+      await coachResponseStatusService.start({
+        chatId,
+        userMessageId: statusUserMessageId,
+        status: "thinking",
+      });
+      sendStatus("thinking");
 
       await prisma.chat.update({
         where: { id: chatId },
@@ -763,8 +818,19 @@ router.post(
         chatId,
         message,
         serializedUserMessage,
-        onStatus: sendStatus,
+        onStatus: (state) =>
+          updateCoachResponseStatus({
+            chatId,
+            userMessageId: statusUserMessageId!,
+            state,
+            sendStatus,
+          }),
         logLabel: "Coach v2 stream chat",
+      });
+
+      await coachResponseStatusService.complete({
+        chatId,
+        userMessageId: statusUserMessageId,
       });
 
       if (!clientClosed) {
@@ -773,6 +839,13 @@ router.post(
       }
     } catch (error) {
       logger.error("Error streaming coach message:", error);
+      if (statusUserMessageId) {
+        await coachResponseStatusService.markError({
+          chatId: req.params.chatId,
+          userMessageId: statusUserMessageId,
+          errorMessage: "Failed to send message",
+        });
+      }
       if (streamStarted && !clientClosed) {
         writeSseEvent(res, "error", { error: "Failed to send message" });
         res.end();
@@ -895,6 +968,7 @@ router.post(
           planCreationProposals?: Array<{
             goal: string;
             goalReason: string | null;
+            notes?: string | null;
             emoji: string | null;
             outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
             timesPerWeek: number | null;
@@ -1126,6 +1200,8 @@ router.post(
   ): Promise<Response | void> => {
     let streamStarted = false;
     let clientClosed = false;
+    let statusChatId: string | null = null;
+    let statusUserMessageId: string | null = null;
 
     try {
       const user = req.user!;
@@ -1152,14 +1228,26 @@ router.post(
         }
       };
 
-      sendStatus("thinking");
-
       const rewriteContext = await prepareCoachMessageRewrite({
         user,
         chatId,
         messageId,
         message,
       });
+      statusChatId = rewriteContext.chat.id;
+      statusUserMessageId =
+        typeof rewriteContext.serializedUserMessage.id === "string"
+          ? rewriteContext.serializedUserMessage.id
+          : null;
+
+      if (statusUserMessageId) {
+        await coachResponseStatusService.start({
+          chatId: statusChatId,
+          userMessageId: statusUserMessageId,
+          status: "thinking",
+        });
+      }
+      sendStatus("thinking");
 
       const payload = await runCoachV2MessagePipeline({
         user,
@@ -1168,9 +1256,24 @@ router.post(
         message,
         serializedUserMessage: rewriteContext.serializedUserMessage,
         conversationHistory: rewriteContext.conversationHistory,
-        onStatus: sendStatus,
+        onStatus: (state) =>
+          statusChatId && statusUserMessageId
+            ? updateCoachResponseStatus({
+                chatId: statusChatId,
+                userMessageId: statusUserMessageId,
+                state,
+                sendStatus,
+              })
+            : sendStatus(state),
         logLabel: "Coach message rewritten stream",
       });
+
+      if (statusChatId && statusUserMessageId) {
+        await coachResponseStatusService.complete({
+          chatId: statusChatId,
+          userMessageId: statusUserMessageId,
+        });
+      }
 
       if (!clientClosed) {
         writeSseEvent(res, "done", payload);
@@ -1178,6 +1281,14 @@ router.post(
       }
     } catch (error) {
       logger.error("Error streaming message rewrite:", error);
+      if (statusChatId && statusUserMessageId) {
+        await coachResponseStatusService.markError({
+          chatId: statusChatId,
+          userMessageId: statusUserMessageId,
+          errorMessage:
+            error instanceof Error ? error.message : "Failed to rewrite message",
+        });
+      }
       if (streamStarted && !clientClosed) {
         writeSseEvent(res, "error", {
           error: error instanceof Error ? error.message : "Failed to rewrite message",

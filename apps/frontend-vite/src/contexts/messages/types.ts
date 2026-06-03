@@ -66,6 +66,7 @@ export interface Message {
   planCreationProposals?: Array<{
     goal: string;
     goalReason: string | null;
+    notes?: string | null;
     emoji: string | null;
     outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
     timesPerWeek: number | null;
@@ -151,6 +152,9 @@ export interface MessagesContextType {
   rewriteMessage: (data: { chatId: string; cacheChatId?: string; messageId: string; message: string }) => Promise<Message[]>;
   isSendingMessage: boolean;
   coachResponseStatus: "thinking" | "searching" | "drafting" | null;
+  isAwaitingCoachResponse: boolean;
+  coachResponseTimedOut: boolean;
+  coachResponseErrorMessage: string | null;
   isRewritingMessage: boolean;
   pendingStaggeredMessages: Message[];
   createDirectChat: (userId: string) => Promise<Chat>;

@@ -53,6 +53,15 @@ function formatActivityRecency(now: Date, lastLoggedAt?: Date | null): string {
   return `${yearsAgo} year${yearsAgo === 1 ? "" : "s"} ago`;
 }
 
+function formatPromptExcerpt(value?: string | null, maxLength = 1000): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  return trimmed.length > maxLength
+    ? `${trimmed.slice(0, maxLength - 3)}...`
+    : trimmed;
+}
+
 export class CoachAgentService {
   private telegram = new TelegramService();
 
@@ -108,13 +117,16 @@ export class CoachAgentService {
           })
           .join(", ");
 
+        const notes = formatPromptExcerpt(plan.notes, 2500);
+
         // Group sessions by date for readability
         const sessionsByDate = plan.sessions.reduce((acc, s) => {
           const dateKey = format(new Date(s.date), "yyyy-MM-dd (EEE)");
           if (!acc[dateKey]) acc[dateKey] = [];
           const activity = plan.activities.find((a) => a.id === s.activityId);
+          const guide = formatPromptExcerpt(s.descriptiveGuide, 320);
           acc[dateKey].push(
-            `${activity?.emoji || ""} ${activity?.title || "Unknown"}: ${s.quantity} ${activity?.measure || ""} [sessionId: ${s.id}]`
+            `${activity?.emoji || ""} ${activity?.title || "Unknown"}: ${s.quantity} ${activity?.measure || ""} [sessionId: ${s.id}]${guide ? `; guide: ${guide}` : ""}`
           );
           return acc;
         }, {} as Record<string, string[]>);
@@ -138,6 +150,7 @@ export class CoachAgentService {
           Plan: ${plan.goal} [planId: ${plan.id}]
           Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
+          ${notes ? `Roadmap / user notes:\n    ${notes.replace(/\n/g, "\n    ")}` : ""}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
@@ -170,10 +183,13 @@ export class CoachAgentService {
       (user.name || "").trim().split(/\s+/)[0] || user.username;
 
     const agent = new ToolLoopAgent({
-      model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
+      model: this.getOpenRouterWithUserId().chat("anthropic/claude-haiku-4.5"),
       temperature: 0.5,
       stopWhen: hasToolCall("draftMessages"),
-      instructions: dedent`
+      instructions: {
+        role: "system",
+        providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } },
+        content: dedent`
         You are ${coachPersonality.displayName}, ${coachPersonality.title}, a general-purpose coach. You can help with planning, learning, work, health, habits, relationships, decisions, creative projects, and any other topic the user brings up.
 
         ${coachPersonality.systemPrompt}
@@ -191,7 +207,7 @@ export class CoachAgentService {
 
         ${memoriesContext ? `LONG-TERM MEMORY (key facts about this user):\n${memoriesContext}` : ""}
 
-        OPERATING PRINCIPLES
+        OPERATING GUIDELINES
 
         1. Voice and response shape
         - Sound like a sharp friend texting, not a report. Plain words over coaching jargon.
@@ -201,27 +217,24 @@ export class CoachAgentService {
         - No markdown headers, no numbered lists, no em dashes (use commas, periods, or parentheses).
         - Avoid stiff phrases like "concrete, measurable outcome" or "frequency alone is not a strategy" unless the user used them first.
 
-        2. Evidence and factuality
-        - Never invent exact counts, titles, modules, hours, URLs, or schedule facts.
-        - Only call an activity recent, logged, done, trained, or practiced if RECENT ACTIVITY FACTS or readActivities shows it. Active plans and long-term memory are not recent-activity evidence.
-        - If an activity only appears in a plan, call it planned, not logged.
-        - Activity recency matters. If you're creating a new plan and find several activities good candidates, recency might be a tiebreaker (most recent/ often logged activities are more likely to stick, as it indicates preference). If the activity that matches its a 'legacy' (non recently logged) activity, double check with the user if it makes sense to include it, or if an alternative should be used or created.
-        - "Recently" and "lately" mean inside the recent-activity lookback unless readActivities returns a different range.
-
-        3. Research and citations
+        2. Research and citations
         - Use webSearch when fresh outside knowledge materially changes the answer, or for current/external/URL-based facts.
         - When the user gives a URL, put that exact URL or a stable identifier from it in your first query. If the first result is weak, search again with alternate titles, source names, domains, or likely mirror/index pages.
         - For exact extraction (how many, all titles, durations, time-to-complete), don't answer from a weak first result, and distinguish item metadata from collection metadata (an item title or index is not the collection count).
         - If you use a webSearch result in your answer, cite it inline with that result's citationLabel, like [1]. Cite only sources you actually used.
         - If search fails or still doesn't expose the exact facts after enough tries, say what you couldn't verify and ask for the missing source details or offer rough assumptions. Do not mention internal tools, tool failures, search availability, provider names, or implementation details. Do not answer from memory and do not promise to keep searching after the message.
 
-        4. Plans and proposals
+        3. Plans and proposals
         - You can see and help with every active plan. If there are no active plans, treat that as setup, not an error.
         - Ask clarifying questions before making changes: current experience, constraints, and things to avoid.
         - Be realistic. If a goal is unrealistic given the constraints, say so. Suggesting the user adjust the goal beats setting them up to fail.
         - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
+        - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, you should create two plans, each focusing on one set of activties. 
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - For a new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        - Treat Plan notes as the canonical user-provided roadmap: source URLs, syllabus, curriculum order, project sequence, constraints, and explicit user preferences. Use notes to keep future sessions anchored to the user's roadmap while adapting near-term scheduling based on usage.
+        - Treat coachNotes as internal/generated coaching state, not as the canonical curriculum. Do not put user-provided roadmap material into coachNotes.
+        - When the user provides a curriculum, syllabus, roadmap, ordered project list, course URLs, playlist URLs, or source material for a plan, preserve the full durable structure in plan notes. Generate only useful near-term dated sessions, but keep the full sequence in notes so later updates can continue from it.
         - Activities are reusable tracking buckets. When a useful activity already appears in the plan context, reuse it by passing its activityId in proposePlanCreation.activities instead of creating a new activity with a variant name.
         - Do not create separate activities for workout/session variants when a broader existing activity fits. Put the variant, intensity, or focus in sessions.descriptiveGuide.
         - If a plan creation proposal is attached, do not repeat every activity, milestone, and session in prose. The proposal card shows the details, so summarize the split in one short sentence and let the card carry the setup list.
@@ -229,26 +242,37 @@ export class CoachAgentService {
           - TIMES_PER_WEEK is for open-ended habits or maintenance goals where the target is simply doing the activity N times per week, sessions are interchangeable, and order/progression does not materially matter. Examples: meditate 4x/week, read 3x/week, strength maintenance 2x/week. Overall, plain habit building where progression is not the main focus.
           - SPECIFIC is for goals where progression important and structure is present. Might include a deadline, event, exam, race, performance target, curriculum, source material, progressive load, taper, or varied session types where order matters. Examples: run 20km under 2h, prepare for a race, finish a course by a date, learn A1 German in 12 weeks, follow a playlist or syllabus.
           - A finishingDate alone is not a schedule. If the plan needs progression toward that date, choose SPECIFIC and include dated sessions. If you cannot safely create those sessions yet, ask the blocking question instead of proposing a frequency-only plan.
-          - As a rule of thumb: If the plan is outcome oriented, or has clear deadlines, progression, or hard structure (like syllabus). It should be SPECIFIC.
+          - Always ask the user explicitly whether they want structure or not before proposing. This is an important call and it is theirs to make. Still make your own assessment and nudge toward SPECIFIC when the plan needs structure and consistency (structured plans are easier to follow, the dated sessions create accountability), but if the user prefers an open, frequency-based approach, respect that and go TIMES_PER_WEEK.
         - when creating SPECIFIC plans, if the user shares or agrees on a preferred syllabus. Make sure the generated sessions do reference to the (amount of videos to watch, chatpters to take, etc).
         - goalReason is the user's personal motivation for starting or changing the plan, captured so future coaching can reuse that motivation. It should answer "what does the user want this to do for them emotionally or personally?" Examples: feel more attractive, prove they can finish hard things, get a confidence boost, feel healthier for their family, enjoy the challenge. Do not write a generic training benefit like "build endurance" or "improve consistency", and never put logistics, schedule, availability, or employment status there. If unclear, try to clarify this with the user, prior to the plan creation.
         - Propose one plan at a time. Don't bundle unrelated goals into a single proposal unless the user explicitly asks for a combined plan.
         - For bigger rebuilds, first confirm the target and weekly split, then propose. If the existing plan can't represent the new mix or schedule, prefer a new plan after confirmation over a cosmetic rename.
 
-        5. Session quality
+        4. Session quality
         - SPECIFIC plans must include dated sessions (or clearly tell the user sessions still need setup).
         - If the user gives source material (playlist, course, syllabus, book, URL), research it before proposing sessions. Sessions must follow the actual source structure, not a generic topic list.
         - Each dated session must name what to do: the lesson/video/module/chapter (name or number when verified), the portion to complete, and a small practice or review task, fit to the user's stated time commitment.
         - Never propose sessions that just say "study", "review", "practice exercises", or "course week". If you can't verify enough source structure after searching, ask for the outline instead of proposing a weak schedule.
 
-        6. Tool and proposal honesty
+        OPERATING RULES
+
+        1. Evidence and factuality
+        - Never invent exact counts, titles, modules, hours, URLs, or schedule facts.
+        - Only call an activity recent, logged, done, trained, or practiced if RECENT ACTIVITY FACTS or readActivities shows it. Active plans and long-term memory are not recent-activity evidence.
+        - If an activity only appears in a plan, call it planned, not logged.
+        - Activity recency matters. If you're creating a new plan and find several activities good candidates, recency might be a tiebreaker (most recent/ often logged activities are more likely to stick, as it indicates preference). If the activity that matches its a 'legacy' (non recently logged) activity, double check with the user if it makes sense to include it, or if an alternative should be used or created.
+        - "Recently" and "lately" mean inside the recent-activity lookback unless readActivities returns a different range.
+
+        2. Tool and proposal honesty
         - You only have the capabilities the available tools provide.
+        - Never use action-oriented verbs ('I've created', 'I've separated', 'I've compiled') unless a proposal tool succeeded this turn and the card is attached. They signal a completed action; without an attached result they read as a lie. Use 'Here is' or 'Note here' instead.
         - Never say you updated, switched, set, or changed a plan, session, or reminder unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this...".
         - Don't say "I proposed" or "I'll propose" unless a proposal tool succeeded this turn and the proposal is attached.
         - Never modify sessions, plans, or reminders without confirmation.
         - You MUST respond through draftMessages. It is the final visible response, never a progress update, so do the tool work first, then draft the result.
-        
+
       `,
+      },
       tools: {
         draftMessages: tool({
           description: "Send your response as chat messages. Always use this to reply.",
@@ -394,6 +418,7 @@ export class CoachAgentService {
               plan: z.object({
                 goal: z.string().optional().describe("Clearer measurable plan goal"),
                 goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
+                notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material for this plan. Use this to preserve full curricula, syllabi, ordered project sequences, source URLs, course/playlists/books, user constraints, and explicit preferences that future coaching should keep following. Keep it compact but complete enough to continue the roadmap later. Set null only when the user explicitly wants to clear the plan notes."),
                 outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
                 timesPerWeek: z.number().positive().nullable().optional(),
               }).optional(),
@@ -573,6 +598,7 @@ export class CoachAgentService {
           inputSchema: z.object({
             goal: z.string().describe("Short, concrete, measurable goal"),
             goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
+            notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material to save with the plan. Use this whenever the user gives a curriculum, syllabus, roadmap, ordered project sequence, course URL, playlist URL, book, constraints, or explicit preferences that should guide future coaching. Preserve the full durable sequence here, while sessions can cover only the near term. Keep it compact, factual, and grounded in what the user provided or verified sources."),
             emoji: z.string().optional().describe("Single emoji for the plan"),
             outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
@@ -600,6 +626,7 @@ export class CoachAgentService {
           execute: async ({
             goal,
             goalReason,
+            notes,
             emoji,
             outlineType,
             timesPerWeek,
@@ -673,6 +700,7 @@ export class CoachAgentService {
               proposal: {
                 goal,
                 goalReason: goalReason || null,
+                notes: notes || null,
                 emoji: emoji || "🎯",
                 outlineType: resolvedOutlineType,
                 timesPerWeek: timesPerWeek || null,
@@ -1221,6 +1249,7 @@ export class CoachAgentService {
       planCreationProposals?: Array<{
         goal: string;
         goalReason: string | null;
+        notes?: string | null;
         emoji: string | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;

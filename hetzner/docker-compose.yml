@@ -1,4 +1,17 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: tsw-redis
+    restart: always
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/alramalho/tracking-so-backend:latest}
     container_name: tsw-backend
@@ -9,6 +22,7 @@ services:
       PORT: "3000"
       HOST: "0.0.0.0"
       NODE_ENV: "production"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     expose:
       - "3000"
     networks:
@@ -19,6 +33,9 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    depends_on:
+      redis:
+        condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -37,7 +54,8 @@ services:
     networks:
       - web
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 networks:
   web:

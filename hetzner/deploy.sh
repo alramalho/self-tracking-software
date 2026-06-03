@@ -106,6 +106,21 @@ fi
 
 cd "$DIR/hetzner"
 
+echo "==> Ensuring Redis is running..."
+docker compose up -d redis
+for i in $(seq 1 20); do
+  if docker compose exec -T redis redis-cli ping | grep -q PONG; then
+    echo "==> Redis is ready"
+    break
+  fi
+  if [ "$i" = "20" ]; then
+    echo "Redis failed to become ready" >&2
+    docker compose ps
+    exit 1
+  fi
+  sleep 1
+done
+
 echo "==> Building and starting containers..."
 docker compose up --build -d
 docker image prune -f

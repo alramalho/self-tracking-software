@@ -61,6 +61,27 @@ export async function sendMessage(
 }
 
 export type CoachResponseStatus = "thinking" | "searching" | "drafting";
+export const COACH_RESPONSE_TIMEOUT_MS = 120000;
+
+export interface CoachResponseState {
+  chatId: string;
+  userMessageId: string;
+  status: CoachResponseStatus | "error";
+  startedAt: string;
+  updatedAt: string;
+  timeoutAt: string;
+  errorMessage?: string;
+}
+
+export async function getCoachResponseStatus(
+  api: AxiosInstance,
+  chatId: string
+): Promise<CoachResponseState | null> {
+  const response = await api.get<{ status: CoachResponseState | null }>(
+    `/chats/${chatId}/coach-response-status`
+  );
+  return response.data.status;
+}
 
 async function getStreamHeaders(): Promise<Record<string, string>> {
   const {
@@ -175,19 +196,35 @@ export async function sendMessageStream(
   onStatus?: (status: CoachResponseStatus) => void
 ): Promise<Message[]> {
   const baseURL = api.defaults.baseURL || "";
-  const response = await fetch(
-    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/stream`,
-    {
-      method: "POST",
-      headers: await getStreamHeaders(),
-      body: JSON.stringify({
-        message: data.message,
-        coachVersion: data.coachVersion,
-      }),
-    }
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    COACH_RESPONSE_TIMEOUT_MS
   );
 
-  return readMessageStreamResponse(response, "Failed to send message", onStatus);
+  try {
+    const response = await fetch(
+      `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/stream`,
+      {
+        method: "POST",
+        headers: await getStreamHeaders(),
+        body: JSON.stringify({
+          message: data.message,
+          coachVersion: data.coachVersion,
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    return readMessageStreamResponse(response, "Failed to send message", onStatus);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Coach response timed out");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 export async function rewriteMessage(
@@ -207,18 +244,34 @@ export async function rewriteMessageStream(
   onStatus?: (status: CoachResponseStatus) => void
 ): Promise<Message[]> {
   const baseURL = api.defaults.baseURL || "";
-  const response = await fetch(
-    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/${encodeURIComponent(data.messageId)}/rewrite/stream`,
-    {
-      method: "POST",
-      headers: await getStreamHeaders(),
-      body: JSON.stringify({
-        message: data.message,
-      }),
-    }
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    COACH_RESPONSE_TIMEOUT_MS
   );
 
-  return readMessageStreamResponse(response, "Failed to edit message", onStatus);
+  try {
+    const response = await fetch(
+      `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/${encodeURIComponent(data.messageId)}/rewrite/stream`,
+      {
+        method: "POST",
+        headers: await getStreamHeaders(),
+        body: JSON.stringify({
+          message: data.message,
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    return readMessageStreamResponse(response, "Failed to edit message", onStatus);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Coach response timed out");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 // Create a direct message chat with another user

@@ -70,6 +70,7 @@
     "file-type": "^21.0.0",
     "google-auth-library": "^10.4.0",
     "helmet": "^7.0.0",
+    "ioredis": "^5.11.0",
     "jsonwebtoken": "^9.0.0",
     "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",

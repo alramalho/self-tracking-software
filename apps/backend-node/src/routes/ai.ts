@@ -29,6 +29,7 @@ const planCreationProposalChangesSchema = z.object({
   requestedProposal: z.object({
     goal: z.string().optional(),
     goalReason: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
     emoji: z.string().nullable().optional(),
     outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).nullable().optional(),
     timesPerWeek: z.number().nullable().optional(),
@@ -80,6 +81,9 @@ function formatPlanCreationValue(field: string, value: unknown): string {
   if (field === "goalReason") {
     return typeof value === "string" && value.trim() ? value : "No reason";
   }
+  if (field === "notes") {
+    return typeof value === "string" && value.trim() ? value : "No notes";
+  }
   if (field === "activities" && Array.isArray(value)) {
     return value.length > 0
       ? value.map((activity: any) => `${activity.emoji || "📋"} ${activity.title} (${activity.measure || "sessions"})`).join(", ")
@@ -105,6 +109,7 @@ function normalizePlanCreationProposal(proposal: any) {
   return {
     goal: proposal.goal || "",
     goalReason: proposal.goalReason || null,
+    notes: proposal.notes || null,
     emoji: proposal.emoji || "🎯",
     outlineType,
     timesPerWeek: proposal.timesPerWeek ?? null,
@@ -141,6 +146,7 @@ function buildPlanCreationDiffs(originalProposal: any, requestedProposal: any) {
   const fields = [
     { key: "goal", label: "Goal" },
     { key: "goalReason", label: "Why" },
+    { key: "notes", label: "Notes" },
     { key: "emoji", label: "Emoji" },
     { key: "outlineType", label: "Plan type" },
     { key: "timesPerWeek", label: "Frequency" },
@@ -1774,6 +1780,7 @@ router.post(
             userId: user.id,
             goal: proposal.goal,
             goalReason: proposal.goalReason || null,
+            notes: proposal.notes || null,
             emoji: proposal.emoji || "🎯",
             finishingDate: parseProposalDateTime(proposal.finishingDate),
             outlineType,

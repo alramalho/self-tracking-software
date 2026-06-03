@@ -17,6 +17,7 @@ import { errorHandler, responseMonitor } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
 import { cronScheduler } from "./services/cronScheduler";
+import { redisService } from "./services/redisService";
 import { prisma } from "./utils/prisma";
 
 // Import routes
@@ -153,6 +154,7 @@ app.use(errorHandler);
 process.on("SIGINT", async () => {
   logger.info("Received SIGINT, shutting down gracefully...");
   cronScheduler.stop();
+  await redisService.disconnect();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -160,6 +162,7 @@ process.on("SIGINT", async () => {
 process.on("SIGTERM", async () => {
   logger.info("Received SIGTERM, shutting down gracefully...");
   cronScheduler.stop();
+  await redisService.disconnect();
   await prisma.$disconnect();
   process.exit(0);
 });
