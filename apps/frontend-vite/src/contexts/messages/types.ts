@@ -150,6 +150,7 @@ export interface MessagesContextType {
   sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message[]>;
   rewriteMessage: (data: { chatId: string; messageId: string; message: string }) => Promise<Message[]>;
   isSendingMessage: boolean;
+  coachResponseStatus: "thinking" | "searching" | "drafting" | null;
   isRewritingMessage: boolean;
   pendingStaggeredMessages: Message[];
   createDirectChat: (userId: string) => Promise<Chat>;

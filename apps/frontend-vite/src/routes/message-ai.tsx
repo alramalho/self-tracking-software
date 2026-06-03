@@ -586,6 +586,7 @@ function MessageAIPage() {
     sendMessage,
     rewriteMessage,
     isSendingMessage,
+    coachResponseStatus,
     isRewritingMessage,
     pendingStaggeredMessages,
     isLoadingChats,
@@ -593,6 +594,16 @@ function MessageAIPage() {
     clearCoachHistory,
     isClearingCoachHistory,
   } = useMessages();
+  const coachLoadingLabel =
+    isSendingMessage
+      ? ({
+          thinking: "Thinking...",
+          searching: "Searching...",
+          drafting: "Drafting...",
+        }[coachResponseStatus || "thinking"])
+      : isRewritingMessage
+        ? "Updating..."
+        : null;
   const {
     submitFeedback,
     isSubmittingFeedback,
@@ -721,7 +732,7 @@ function MessageAIPage() {
 
   // Auto-select most recent coach chat or create one
   useEffect(() => {
-    if (isLoadingChats) return;
+    if (isLoadingChats || isClearingCoachHistory) return;
 
     const currentChatIsCoach =
       !!currentChatId && coachChats.some((chat) => chat.id === currentChatId);
@@ -731,7 +742,7 @@ function MessageAIPage() {
     } else if (coachChats.length === 0 && !isCreatingCoachChat) {
       createCoachChat({ title: null });
     }
-  }, [coachChats, currentChatId, isLoadingChats, isCreatingCoachChat, setCurrentChatId, createCoachChat]);
+  }, [coachChats, currentChatId, isLoadingChats, isClearingCoachHistory, isCreatingCoachChat, setCurrentChatId, createCoachChat]);
 
   // Coach messages include previous coach chats so visible context matches coach memory.
   const allMessages = useMemo(() => {
@@ -1632,7 +1643,7 @@ function MessageAIPage() {
             )}
             {(isSendingMessage || isRewritingMessage || pendingStaggeredMessages.length > 0) && (
               <div
-                className="flex items-center gap-3 mt-4 opacity-0"
+                className="flex flex-col items-start gap-1 mt-4 opacity-0"
                 style={{ animation: "typing-appear 0.3s ease-out 1s forwards" }}
               >
                 <MessageBubble direction="left" className="bg-muted/60">
@@ -1648,6 +1659,11 @@ function MessageAIPage() {
                     ))}
                   </div>
                 </MessageBubble>
+                {coachLoadingLabel && (
+                  <div className="ml-1 text-xs text-muted-foreground">
+                    {coachLoadingLabel}
+                  </div>
+                )}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -1770,6 +1786,7 @@ function MessageAIPage() {
         description={`This will delete your coach chat history and erase ${aiCoach.name}'s memory of past interactions. This action cannot be undone.`}
         confirmText="Clear messages"
         variant="destructive"
+        isConfirming={isClearingCoachHistory}
       />
     </div>
   );

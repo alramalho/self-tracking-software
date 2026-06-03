@@ -1,6 +1,7 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 import { type Chat, type Message } from "./types";
+import { supabase } from "@/services/supabase";
 
 export type { Chat, Message } from "./types";
 
@@ -57,6 +58,124 @@ export async function sendMessage(
     return response.data.messages.map(deserializeMessage);
   }
   return [deserializeMessage(response.data.message)];
+}
+
+export type CoachResponseStatus = "thinking" | "searching" | "drafting";
+
+export async function sendMessageStream(
+  api: AxiosInstance,
+  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" },
+  onStatus?: (status: CoachResponseStatus) => void
+): Promise<Message[]> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const baseURL = api.defaults.baseURL || "";
+  const response = await fetch(
+    `${baseURL}/chats/${encodeURIComponent(data.chatId)}/messages/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        message: data.message,
+        coachVersion: data.coachVersion,
+      }),
+    }
+  );
+
+  if (!response.ok || !response.body) {
+    let errorMessage = "Failed to send message";
+    try {
+      const errorBody = await response.json();
+      if (typeof errorBody?.error === "string") {
+        errorMessage = errorBody.error;
+      }
+    } catch {
+      // Ignore non-JSON error responses.
+    }
+    throw new Error(errorMessage);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const donePayloadRef: {
+    current: { messages?: MessageApiResponse[]; message: MessageApiResponse } | null;
+  } = { current: null };
+
+  const handleEvent = (rawEvent: string) => {
+    const lines = rawEvent.split("\n");
+    let eventName = "message";
+    const dataLines: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith("event:")) {
+        eventName = line.slice("event:".length).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice("data:".length).trim());
+      }
+    }
+
+    if (dataLines.length === 0) return;
+    const eventData = JSON.parse(dataLines.join("\n"));
+
+    if (eventName === "status") {
+      if (
+        eventData?.state === "thinking" ||
+        eventData?.state === "searching" ||
+        eventData?.state === "drafting"
+      ) {
+        onStatus?.(eventData.state);
+      }
+      return;
+    }
+
+    if (eventName === "done") {
+      donePayloadRef.current = eventData;
+      return;
+    }
+
+    if (eventName === "error") {
+      throw new Error(eventData?.error || "Failed to send message");
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    let separatorIndex = buffer.indexOf("\n\n");
+    while (separatorIndex !== -1) {
+      const rawEvent = buffer.slice(0, separatorIndex).trim();
+      buffer = buffer.slice(separatorIndex + 2);
+      if (rawEvent) {
+        handleEvent(rawEvent);
+      }
+      separatorIndex = buffer.indexOf("\n\n");
+    }
+  }
+
+  buffer += decoder.decode();
+  if (buffer.trim()) {
+    handleEvent(buffer.trim());
+  }
+
+  const donePayload = donePayloadRef.current;
+  if (!donePayload) {
+    throw new Error("Stream ended before the coach response completed");
+  }
+
+  if (donePayload.messages) {
+    return donePayload.messages.map(deserializeMessage);
+  }
+  return [deserializeMessage(donePayload.message)];
 }
 
 export async function rewriteMessage(

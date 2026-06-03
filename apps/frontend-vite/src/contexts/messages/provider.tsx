@@ -8,6 +8,7 @@ import {
   getChats,
   getMessages,
   sendMessage,
+  sendMessageStream,
   rewriteMessage,
   createDirectChat,
   markMessagesAsRead,
@@ -30,6 +31,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   const { handleQueryError } = useLogError();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [pendingStaggeredMessages, setPendingStaggeredMessages] = useState<Message[]>([]);
+  const [coachResponseStatus, setCoachResponseStatus] = useState<"thinking" | "searching" | "drafting" | null>(null);
   const staggerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Cleanup stagger timers on unmount
@@ -95,13 +97,19 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      // Make the API call
+      if (data.coachVersion === "v2") {
+        setCoachResponseStatus("thinking");
+        return await sendMessageStream(api, data, setCoachResponseStatus);
+      }
+
+      setCoachResponseStatus(null);
       return await sendMessage(api, data);
     },
     onSuccess: (responseMessages, { chatId, message }) => {
       // Clear any existing stagger timers
       staggerTimersRef.current.forEach(clearTimeout);
       staggerTimersRef.current = [];
+      setPendingStaggeredMessages([]);
 
       const persistedUserMessage = responseMessages.find(
         (msg) => msg.role === "USER" && msg.content === message
@@ -208,6 +216,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       const customErrorMessage = `Failed to send message`;
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
+    },
+    onSettled: () => {
+      setCoachResponseStatus(null);
     },
   });
 
@@ -347,12 +358,53 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     mutationFn: async () => {
       await clearCoachHistory(api);
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["chats"] });
+      await queryClient.cancelQueries({ queryKey: ["messages"] });
+
+      const previousChatId = currentChatId;
+      const previousChats = queryClient.getQueryData<Chat[]>(["chats"]);
+      const previousMessagesQueries = queryClient.getQueriesData<Message[]>({
+        queryKey: ["messages"],
+      });
+      const coachChatIds = new Set(
+        (previousChats || [])
+          .filter((chat) => chat.type === "COACH")
+          .map((chat) => chat.id)
+      );
+
+      staggerTimersRef.current.forEach(clearTimeout);
+      staggerTimersRef.current = [];
+      setPendingStaggeredMessages([]);
+      setCoachResponseStatus(null);
+      setCurrentChatId(null);
+
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) =>
+        oldChats.filter((chat) => chat.type !== "COACH")
+      );
+
+      previousMessagesQueries.forEach(([queryKey]) => {
+        const [, chatId] = queryKey as [string, string | null | undefined];
+        if (!chatId || coachChatIds.has(chatId) || chatId === previousChatId) {
+          queryClient.setQueryData(queryKey, []);
+        }
+      });
+
+      return { previousChatId, previousChats, previousMessagesQueries };
+    },
     onSuccess: () => {
       setCurrentChatId(null);
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousChats) {
+        queryClient.setQueryData(["chats"], context.previousChats);
+      }
+      context?.previousMessagesQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      setCurrentChatId(context?.previousChatId || null);
       handleQueryError(error, "Failed to clear coach history");
       toast.error("Failed to clear coach history");
     },
@@ -395,6 +447,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     sendMessage: sendMessageMutation.mutateAsync,
     rewriteMessage: rewriteMessageMutation.mutateAsync,
     isSendingMessage: sendMessageMutation.isPending,
+    coachResponseStatus,
     isRewritingMessage: rewriteMessageMutation.isPending,
     pendingStaggeredMessages,
     createDirectChat: createDirectChatMutation.mutateAsync,
