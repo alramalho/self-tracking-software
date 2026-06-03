@@ -43,6 +43,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 const ENVIRONMENT = process.env.NODE_ENV || "development";
 
+if (ENVIRONMENT === "production") {
+  app.set("trust proxy", 1);
+}
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 3 * 60 * 1000,
