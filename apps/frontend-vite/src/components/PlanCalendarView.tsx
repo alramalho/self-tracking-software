@@ -17,6 +17,7 @@ export const PlanCalendarView = ({
 
   // Convert plan sessions to CalendarSession format
   const sessions: CalendarSession[] = (plan.sessions || []).map((session) => ({
+    id: session.id,
     date: new Date(session.date),
     activityId: session.activityId,
     quantity: session.quantity,
