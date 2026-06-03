@@ -190,6 +190,7 @@ export class CoachAgentService {
         - For playlist/course extraction, prefer primary sources when they include the needed facts, but it is acceptable to use indexed mirrors or course listing pages when they expose exact titles, modules, or durations that the primary page hides.
         - Before drafting the final answer for exact extraction tasks, reconcile the numbers yourself. For example, add course/module hours and convert total hours into weeks based on the user's stated weekly availability.
         - Never invent exact counts, titles, modules, or hours. Only state exact facts when a search result title/snippet contains that fact. Do not infer a playlist count from a video index, number of search results, or vague playlist references.
+        - If webSearch fails or returns no relevant exact facts, do not answer from memory and do not promise to keep searching after the message. Say what could not be verified and ask for the missing source details or permission to proceed with rough assumptions.
         - If at least two webSearch attempts still do not expose the exact requested facts, say that you could not verify the exact answer from search results and offer the closest verified facts.
         - For exact extraction from lists, playlists, course pages, catalogs, or schedules, distinguish item metadata from collection metadata. An item title, item number, URL index, timestamp, or episode label is not evidence for the total collection count.
         - Good follow-up searches vary the query shape rather than guessing: exact URL, stable identifier from the URL, exact page/list title if discovered, source/domain name, and the requested fact type such as titles, modules, durations, count, or schedule.
@@ -202,6 +203,8 @@ export class CoachAgentService {
         - Make one point, then ask one natural next-step question if needed.
         - Avoid stiff phrases like "concrete, measurable outcome", "frequency alone is not a strategy", or "serious coached plan" unless the user used them first.
         - Do not say you updated, switched, set, or changed a plan unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this..."
+        - draftMessages is the final visible response for this turn, not a progress update. Never use draftMessages to say you are going to search, find, map out, propose, schedule, or send something later in the same turn. Do the tool work first, then draft the result.
+        - Do not say "I proposed", "I'll propose", "I'll suggest", or "I suggested" a plan/schedule unless a proposePlanCreation or proposePlanModification tool call succeeded in this turn and the proposal will be attached to the final message. If you are only discussing an idea, say "we can sketch" or ask a confirming question instead.
         - Do not use update_plan as a cosmetic rename. It should represent a meaningful plan setup change, such as goal, reason, outline type, weekly frequency, sessions, milestones, activities, or date.
         - When you propose creating or updating a plan, be transparent about the setup: say whether it is times/week or specific dated sessions, which activities are included, and whether milestones, finishing date, and sessions are included now or need setup after accepting.
         - For bigger rebuilds, especially new activity mixes like strength plus running, work in two stages: first confirm the target and weekly split, then propose the plan or sessions that actually encode it.
@@ -279,14 +282,14 @@ export class CoachAgentService {
             // });
 
             if (!searchResult.success) {
-              logger.error("Web search failed:", searchResult.error);
+              logger.error(`Web search failed: ${searchResult.error}`);
               self.telegram.sendMessage(
                 `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQuery: ${searchQueries.join(" | ")}\nError: ${searchResult.error}`
               );
               return {
                 success: false as const,
                 provider: searchResult.provider,
-                error: "Search failed. Continue without search results.",
+                error: `Search failed via ${searchResult.provider}: ${searchResult.error}. Do not state exact searched facts from memory. Tell the user search is unavailable or ask for the source details needed to continue.`,
                 results: [] as Array<{ title: string; snippet: string; url: string }>,
               };
             }

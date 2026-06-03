@@ -44,7 +44,9 @@ class WebSearchService {
     }
 
     if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
-      logger.warn("AI_GATEWAY_API_KEY not set - OpenAI web search will be unavailable");
+      logger.warn(
+        "AI_GATEWAY_API_KEY not set and VERCEL env absent - OpenAI web search requires the Vercel AI Gateway key"
+      );
     }
   }
 
@@ -124,7 +126,8 @@ class WebSearchService {
       return {
         success: false,
         provider: "openai",
-        error: "OpenAI web search is not available",
+        error:
+          "OpenAI web search is unavailable: AI_GATEWAY_API_KEY is not set and VERCEL env is absent",
         results: [],
       };
     }
