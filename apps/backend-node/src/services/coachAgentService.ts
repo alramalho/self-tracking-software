@@ -183,7 +183,7 @@ export class CoachAgentService {
       (user.name || "").trim().split(/\s+/)[0] || user.username;
 
     const agent = new ToolLoopAgent({
-      model: this.getOpenRouterWithUserId().chat("anthropic/claude-haiku-4.5"),
+      model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
       temperature: 0.5,
       stopWhen: hasToolCall("draftMessages"),
       instructions: {
@@ -268,6 +268,7 @@ export class CoachAgentService {
         - Never use action-oriented verbs ('I've created', 'I've separated', 'I've compiled') unless a proposal tool succeeded this turn and the card is attached. They signal a completed action; without an attached result they read as a lie. Use 'Here is' or 'Note here' instead.
         - Never say you updated, switched, set, or changed a plan, session, or reminder unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this...".
         - Don't say "I proposed" or "I'll propose" unless a proposal tool succeeded this turn and the proposal is attached.
+        - A proposal tool that returns success:false means NOTHING was proposed and no card exists. Never say a plan or change was created, attached, proposed, or "below" in that case. Fix the issue in the error and call the tool again, or tell the user plainly what blocked it.
         - Never modify sessions, plans, or reminders without confirmation.
         - You MUST respond through draftMessages. It is the final visible response, never a progress update, so do the tool work first, then draft the result.
 
@@ -675,19 +676,6 @@ export class CoachAgentService {
                 success: false,
                 error:
                   "SPECIFIC plan proposals must include dated sessions. If the schedule is not ready, ask a clarifying question instead of proposing the plan.",
-              };
-            }
-
-            const weakSession = proposedSessions.find((session) => {
-              const guide = (session.descriptiveGuide || "").trim();
-              return guide.length < 80;
-            });
-
-            if (weakSession) {
-              return {
-                success: false,
-                error:
-                  `Session on ${weakSession.date} has an underspecified guide. Each dated session needs concrete instructions, including source/module/lesson details when relevant, and enough detail for the user to start immediately.`,
               };
             }
 
@@ -1334,7 +1322,7 @@ export class CoachAgentService {
             );
             allToolCalls.push({
               tool: tc.toolName,
-              args: "args" in tc ? tc.args : undefined,
+              args: "input" in tc ? tc.input : undefined,
               result: toolResult && "output" in toolResult ? toolResult.output : undefined,
             });
           }
@@ -1393,6 +1381,21 @@ export class CoachAgentService {
           ...(tc.result as any).proposal,
           status: null as null,
         }));
+
+      // Alert when the coach attempted a plan proposal that failed validation and
+      // nothing was attached. The user likely sees a claim with no card.
+      const failedPlanProposal = visibleToolCalls.find(
+        (tc) =>
+          (tc.tool === "proposePlanCreation" || tc.tool === "proposePlanModification") &&
+          tc.result &&
+          typeof tc.result === "object" &&
+          (tc.result as any).success === false
+      );
+      if (failedPlanProposal && planProposals.length === 0 && planCreationProposals.length === 0) {
+        this.telegram.sendMessage(
+          `🟠 Coach plan proposal failed (no card attached)\nUser: ${user.username}\nTool: ${failedPlanProposal.tool}\nError: ${(failedPlanProposal.result as any).error}`
+        );
+      }
 
       // Build draft messages with metadata distributed across them
       const plansList = activePlans.map((p) => ({ id: p.id, goal: p.goal, emoji: p.emoji }));
