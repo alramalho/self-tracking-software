@@ -62,6 +62,55 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
 
+      - name: prune old backend images
+        run: |
+          ssh root@${{ secrets.HETZNER_HOST }} bash <<'EOF'
+          set -euo pipefail
+          backend_repo="ghcr.io/${{ github.repository_owner }}/tracking-so-backend"
+
+          docker image prune -f
+
+          mapfile -t keep_backend_images < <(
+            docker image ls "$backend_repo" \
+              --no-trunc \
+              --format '{{.ID}}' \
+              | awk '!seen[$0]++ && kept++ < 5'
+          )
+
+          mapfile -t running_images < <(
+            docker ps --format '{{.Image}}' \
+              | xargs -r docker image inspect --format '{{.Id}}' 2>/dev/null \
+              | sort -u
+          )
+
+          is_kept_image() {
+            local image_id="$1"
+            local kept
+            for kept in "${keep_backend_images[@]}" "${running_images[@]}"; do
+              if [ "$image_id" = "$kept" ]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          old_backend_images=()
+          while IFS= read -r image_id; do
+            if ! is_kept_image "$image_id"; then
+              old_backend_images+=("$image_id")
+            fi
+          done < <(
+            docker image ls "$backend_repo" \
+              --no-trunc \
+              --format '{{.ID}}' \
+              | sort -u
+          )
+
+          if [ "${#old_backend_images[@]}" -gt 0 ]; then
+            docker image rm -f "${old_backend_images[@]}" || true
+          fi
+          EOF
+
       - name: sync compose + caddy
         run: |
           ssh root@${{ secrets.HETZNER_HOST }} "mkdir -p ${{ env.REMOTE_DIR }}"
