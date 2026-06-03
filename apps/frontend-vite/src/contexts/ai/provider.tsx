@@ -240,19 +240,14 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
             if (msg.id !== messageId || !msg.planCreationProposals) return msg;
 
             const updatedProposals = msg.planCreationProposals.map(
-              (proposal, index) => {
-                if (index === proposalIndex) {
-                  return {
-                    ...proposal,
-                    status: "accepted" as const,
-                    planId: result.plan?.id || proposal.planId,
-                  };
-                }
-
-                return proposal.status
-                  ? proposal
-                  : { ...proposal, status: "cancelled" as const };
-              }
+              (proposal, index) =>
+                index === proposalIndex
+                  ? {
+                      ...proposal,
+                      status: "accepted" as const,
+                      planId: result.plan?.id || proposal.planId,
+                    }
+                  : proposal
             );
 
             return { ...msg, planCreationProposals: updatedProposals };

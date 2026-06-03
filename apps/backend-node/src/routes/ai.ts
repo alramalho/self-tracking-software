@@ -1806,21 +1806,10 @@ router.post(
 
       metadata.planCreationProposals[proposalIndex].status = "accepted";
       metadata.planCreationProposals[proposalIndex].planId = plan.id;
-      metadata.planCreationProposals = metadata.planCreationProposals.map(
-        (existingProposal: any, existingIndex: number) =>
-          existingIndex === proposalIndex || existingProposal?.status
-            ? existingProposal
-            : {
-                ...existingProposal,
-                status: "cancelled",
-                cancelledAt: new Date().toISOString(),
-              }
-      );
       await prisma.message.update({
         where: { id: messageId },
         data: { metadata },
       });
-      await cancelPendingPlanCreationProposals(message.chatId, [messageId]);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
