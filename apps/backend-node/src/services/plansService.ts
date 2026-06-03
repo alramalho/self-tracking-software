@@ -886,7 +886,7 @@ export class PlansService {
 
     if (plan.outlineType === "TIMES_PER_WEEK") {
       // If times per week, return the plan activities (not entries!)
-      plannedActivities = plan.timesPerWeek ?? 0;
+      plannedActivities = this.getTimesPerWeekTargetForWeek(plan, weekStart);
     } else {
       // If scheduled, return the plan.sessions for this specific week
       const sessionsThisWeek = plan.sessions?.filter((session) => {
@@ -934,6 +934,38 @@ export class PlansService {
             ? plannedActivities
             : (plannedActivities?.length ?? 0)),
     };
+  }
+
+  private getTimesPerWeekTargetForWeek(
+    plan: Plan,
+    weekStart: Date
+  ): number {
+    const timesPerWeek = plan.timesPerWeek ?? 0;
+
+    if (!plan.finishingDate) {
+      return timesPerWeek;
+    }
+
+    const weekEnd = toMidnightUTCDate(
+      endOfWeek(weekStart, { weekStartsOn: 0 })
+    );
+    const finishingDate = toMidnightUTCDate(new Date(plan.finishingDate));
+
+    if (isBefore(finishingDate, weekStart)) {
+      return 0;
+    }
+
+    if (isAfter(finishingDate, weekEnd) || isSameDay(finishingDate, weekEnd)) {
+      return timesPerWeek;
+    }
+
+    const activeDaysInWeek =
+      Math.floor(
+        (finishingDate.getTime() - weekStart.getTime()) /
+          (1000 * 60 * 60 * 24)
+      ) + 1;
+
+    return Math.min(timesPerWeek, Math.max(0, activeDaysInWeek));
   }
 
   private async getPlanWeeks(

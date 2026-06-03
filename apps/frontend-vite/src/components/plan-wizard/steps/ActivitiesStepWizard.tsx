@@ -3,10 +3,13 @@ import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { Button } from "@/components/ui/button";
 import { useActivities } from "@/contexts/activities/useActivities";
 import ActivityEditor from "@/components/ActivityEditor";
+import { CoachActivitySuggestionCard } from "@/components/CoachActivitySuggestionCard";
 import { ActivityPickerGrid } from "@/components/plan-wizard/PlanFieldEditors";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
 import { type Activity } from "@tsw/prisma";
 import api from "@/lib/api";
-import { Dumbbell, Check, X, Sparkles, Loader2 } from "lucide-react";
+import { Dumbbell, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -16,12 +19,12 @@ const ActivitiesStepWizard = () => {
   const { goal, activities: selectedActivities, setActivities, completeStep } = usePlanCreation();
   const { activities: allActivities } = useActivities();
   const queryClient = useQueryClient();
+  const themeColors = useThemeColors();
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
   const [suggestedNewActivities, setSuggestedNewActivities] = useState<SuggestedActivity[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [creatingSuggestion, setCreatingSuggestion] = useState<string | null>(null);
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
   // Fetch AI recommendations based on goal
   useEffect(() => {
@@ -79,7 +82,6 @@ const ActivitiesStepWizard = () => {
 
   const handleDismissSuggestion = (title: string) => {
     setSuggestedNewActivities((prev) => prev.filter((s) => s.title !== title));
-    setDismissedSuggestions((prev) => new Set(prev).add(title));
   };
 
   const handleToggleActivity = (activity: Activity) => {
@@ -128,49 +130,27 @@ const ActivitiesStepWizard = () => {
 
         {!isLoadingRecommendations && suggestedNewActivities.length > 0 && (
           <div className="mb-4">
-            <p className="text-sm text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1">
+            <p className={cn("text-sm mb-2 flex items-center gap-1", themeColors.text)}>
               <Sparkles className="w-3 h-3" />
               Coach suggestions
             </p>
             <div className="flex flex-col gap-2">
               {suggestedNewActivities.map((suggestion) => (
-                <div
+                <CoachActivitySuggestionCard
                   key={suggestion.title}
-                  className="flex items-center w-full rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 p-3 transition-all"
-                >
-                  <span className="text-3xl mr-3">{suggestion.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-semibold">{suggestion.title}</span>
-                    <span className="text-xs text-muted-foreground ml-1.5">({suggestion.measure})</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <button
-                      onClick={() => handleDismissSuggestion(suggestion.title)}
-                      disabled={creatingSuggestion === suggestion.title}
-                      className="p-1.5 rounded-full text-muted-foreground hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleSelectSuggestion(suggestion)}
-                      disabled={creatingSuggestion === suggestion.title}
-                      className="p-1.5 rounded-full text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                    >
-                      {creatingSuggestion === suggestion.title ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                  suggestion={suggestion}
+                  planGoal={goal}
+                  isCreating={creatingSuggestion === suggestion.title}
+                  onReject={() => handleDismissSuggestion(suggestion.title)}
+                  onAccept={() => handleSelectSuggestion(suggestion)}
+                />
               ))}
             </div>
           </div>
         )}
 
         {!isLoadingRecommendations && recommendedIds.length > 0 && (
-          <p className="text-sm text-blue-600 dark:text-blue-400 text-left mb-3 flex items-center justify-start gap-1">
+          <p className={cn("text-sm text-left mb-3 flex items-center justify-start gap-1", themeColors.text)}>
             <Sparkles className="w-3 h-3" />
             Recommended activities highlighted
           </p>
