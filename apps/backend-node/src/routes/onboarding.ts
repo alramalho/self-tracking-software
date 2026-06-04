@@ -391,7 +391,8 @@ async function generatePlan(params: {
   // Use emoji from first activity or default
   const emoji = finalActivities[0]?.emoji || "🎯";
 
-  // Generate user-facing notes summarizing the plan focus
+  // Generate durable notes summarizing the plan focus and the user's starting point.
+  // The coach reads plan notes in future conversations, so keep the baseline explicit.
   const userNotes = await generatePlanSummary({
     goal: params.goal,
     activities: finalActivities,
@@ -422,31 +423,45 @@ async function generatePlanSummary(params: {
   experience: string;
   timesPerWeek: number;
 }): Promise<string> {
+  const fallbackSummary = dedent`
+    Starting level: ${params.experience}
+
+    A ${params.timesPerWeek}x/week plan to help you ${params.goal.toLowerCase()}, adjusted to your current baseline.
+  `;
+
   try {
     const schema = z.object({
-      summary: z.string().describe("A 1-2 sentence summary of what this plan focuses on"),
+      summary: z
+        .string()
+        .describe(
+          "Durable plan notes. Include the user's exact starting level, then a 1-2 sentence summary of the plan focus."
+        ),
     });
 
     const result = await aiService.generateStructuredResponse({
       prompt: dedent`
-        Generate a brief, friendly summary (1-2 sentences) of what this training plan focuses on.
+        Generate concise durable notes for this training plan.
 
         Goal: ${params.goal}
         Activities: ${params.activities.map(a => a.title).join(", ")}
-        Experience level: ${params.experience}
+        User's exact starting level: ${params.experience}
         Frequency: ${params.timesPerWeek} times per week
 
-        The summary should explain the plan's approach in a motivating way.
-        Example: "This plan builds your running foundation with easy runs and gradual progression, focusing on consistency over speed."
+        Requirements:
+        - Start with this exact line: "Starting level: ${params.experience}"
+        - Then add a blank line.
+        - Then explain the plan's approach in 1-2 friendly sentences.
+        - Make it clear the starting quantities and progression are adjusted to this baseline.
       `,
       schema,
-      systemPrompt: "You write concise, motivating plan summaries. Keep it to 1-2 sentences.",
+      systemPrompt:
+        "You write concise durable plan notes for a coach. Preserve the user's starting level exactly.",
     });
 
     return result.summary;
   } catch (error) {
     logger.error("Error generating plan summary:", error);
-    return `A ${params.timesPerWeek}x/week plan to help you ${params.goal.toLowerCase()}.`;
+    return fallbackSummary;
   }
 }
 

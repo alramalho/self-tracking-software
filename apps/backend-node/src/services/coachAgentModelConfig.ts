@@ -14,6 +14,7 @@ export type CoachAgentModelConfig = {
 
 export const KIMI_K26_MODEL = "moonshotai/kimi-k2.6";
 export const DEFAULT_COACH_AGENT_MODEL = KIMI_K26_MODEL;
+export const DEFAULT_COACH_AGENT_VISION_MODEL = "openai/gpt-4.1";
 
 function getGatewayRoutingForModel(
   model: string
@@ -35,6 +36,19 @@ export function resolveCoachAgentModelConfig(
     modelOverride?.trim() ||
     process.env.COACH_AGENT_MODEL?.trim() ||
     DEFAULT_COACH_AGENT_MODEL;
+
+  const gateway = getGatewayRoutingForModel(model);
+
+  return gateway ? { model, gateway } : { model };
+}
+
+export function resolveCoachAgentVisionModelConfig(
+  modelOverride?: string
+): CoachAgentModelConfig {
+  const model =
+    modelOverride?.trim() ||
+    process.env.COACH_AGENT_VISION_MODEL?.trim() ||
+    DEFAULT_COACH_AGENT_VISION_MODEL;
 
   const gateway = getGatewayRoutingForModel(model);
 

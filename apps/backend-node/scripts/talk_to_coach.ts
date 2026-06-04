@@ -12,6 +12,7 @@ const requireFromScript = createRequire(__filename);
 type CliArgs = {
   user?: string;
   message?: string;
+  imageUrls: string[];
   prod: boolean;
   history: number;
   help: boolean;
@@ -19,6 +20,7 @@ type CliArgs = {
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
+    imageUrls: [],
     prod: false,
     history: 0,
     help: false,
@@ -35,6 +37,17 @@ function parseArgs(argv: string[]): CliArgs {
       args.user = argv[++i];
     } else if (arg === "--message" && argv[i + 1]) {
       args.message = argv[++i];
+    } else if (arg === "--image-urls" && argv[i + 1]) {
+      args.imageUrls = argv[++i]
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean);
+    } else if (arg.startsWith("--image-urls=")) {
+      args.imageUrls = arg
+        .slice("--image-urls=".length)
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean);
     } else if (arg === "--history" && argv[i + 1]) {
       const history = Number.parseInt(argv[++i], 10);
       args.history = Number.isFinite(history) && history > 0 ? history : 0;
@@ -52,12 +65,17 @@ function printUsage(): void {
       "Usage:",
       '  pnpm talk-to-coach --user alex --message "how many videos are in this playlist?"',
       '  pnpm talk-to-coach --prod --user alex --message "what are the modules here https://..."',
+      '  pnpm talk-to-coach --user alex --message "what does this show?" --image-urls=https://example.com/screenshot.png',
       "",
       "Options:",
       "  --user <username|email|id>  User to test as.",
       "  --message <text>           Message to send to the coach.",
+      "  --image-urls <urls>        Comma-separated image URLs or data URLs to send with the message.",
       "  --prod                     Load .env, then override with .env.prod.",
       "  --history <n>              Include the latest n coach chat messages. Default: 0.",
+      "",
+      "Browser fallback testing:",
+      '  Ask explicitly for a forced browser test, e.g. "Use useBrowser with force=true to inspect https://..."',
     ].join("\n")
   );
 }
@@ -106,7 +124,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!args.user || !args.message) {
+  if (!args.user || (!args.message && args.imageUrls.length === 0)) {
     printUsage();
     process.exit(1);
   }
@@ -190,7 +208,22 @@ async function main(): Promise<void> {
     .map((message) => ({
       role: message.role === "USER" ? "user" as const : "assistant" as const,
       content: message.content,
+      imageAttachments:
+        message.role === "USER" &&
+        message.metadata &&
+        typeof message.metadata === "object" &&
+        Array.isArray((message.metadata as any).imageAttachments)
+          ? (message.metadata as any).imageAttachments
+          : undefined,
     }));
+  const imageAttachments = args.imageUrls.map((url, index) => ({
+    id: `cli-image-${index + 1}`,
+    url,
+    mediaType:
+      url.match(/^data:(image\/[^;]+);/)?.[1] ||
+      (url.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg"),
+    filename: `image-${index + 1}`,
+  }));
 
   console.log(
     chalk.dim(
@@ -200,22 +233,27 @@ async function main(): Promise<void> {
         `Plan type: ${user.planType}`,
         `Active plans: ${plans.length}`,
         `History messages: ${conversationHistory.length}`,
+        `Image attachments: ${imageAttachments.length}`,
         "",
       ].join("\n")
     )
   );
-  console.log(`${chalk.cyan("User message:")} ${chalk.white(args.message)}`);
+  console.log(`${chalk.cyan("User message:")} ${chalk.white(args.message || "(image only)")}`);
   console.log(chalk.dim("\nCoach response:"));
 
   const responseStartedAt = process.hrtime.bigint();
   const response = await requestContext.run({ user }, () =>
     coachAgentService.generateResponse({
       user,
-      message: args.message!,
+      message: args.message || "",
+      imageAttachments,
       conversationHistory,
       plans,
       reminders,
       memoriesContext: null,
+      onStatus: (status) => {
+        console.log(chalk.dim(`[status] ${status}`));
+      },
     })
   );
   const responseTime = formatElapsedSeconds(responseStartedAt);

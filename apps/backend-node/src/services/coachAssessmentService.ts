@@ -23,7 +23,6 @@ import { prisma } from "../utils/prisma";
 import { coachAgentService } from "./coachAgentService";
 import { coachContextBriefService } from "./coachContextBriefService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
-import { aiService } from "./aiService";
 import { notificationService } from "./notificationService";
 import { cancelPendingPlanCreationProposals } from "./planCreationProposalStatusService";
 import {
@@ -31,6 +30,10 @@ import {
   getProposalPatch,
   PlanProposalPatch,
 } from "./planProposalPatchService";
+import {
+  buildRecurrentCoachAssessmentPrompt,
+  type RecurrentCoachAssessmentInterventionType,
+} from "./recurrentCoachAssessmentPrompt";
 
 type CoachPlan = Plan & {
   activities: Activity[];
@@ -112,6 +115,18 @@ const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "INACTIVITY_CHECKIN",
   "CELEBRATION",
 ];
+
+function isRecurrentCoachAssessmentIntervention(
+  type: CoachInterventionType
+): type is RecurrentCoachAssessmentInterventionType {
+  return (
+    type === "WEEK_PREP" ||
+    type === "SESSION_PREP" ||
+    type === "WEEK_RECAP" ||
+    type === "INACTIVITY_CHECKIN" ||
+    type === "CELEBRATION"
+  );
+}
 
 function activePlanWhere(now: Date) {
   return {
@@ -581,9 +596,16 @@ export class CoachAssessmentService {
     });
 
     if (candidate.usesAgent) {
+      const message = isRecurrentCoachAssessmentIntervention(candidate.type)
+        ? buildRecurrentCoachAssessmentPrompt({
+            interventionType: candidate.type,
+            reason: candidate.reason,
+            context: candidate.context,
+          })
+        : this.buildAgentInterventionPrompt(candidate);
       const aiResponse = await coachAgentService.generateResponse({
         user,
-        message: this.buildAgentInterventionPrompt(candidate),
+        message,
         conversationHistory: recentMessages
           .slice(0, 8)
           .reverse()
@@ -600,17 +622,27 @@ export class CoachAssessmentService {
             planIds: user.plans.map((plan) => plan.id),
             targetDate: format(new TZDate(now, user.timezone || "UTC"), "yyyy-MM-dd"),
             context: await this.buildContextSummary(user, now),
-            usesAgent: false,
+            usesAgent: true,
           };
-          const generated = await aiService.generateCoachAssessmentInterventionMessage({
+          const fallbackResponse = await coachAgentService.generateResponse({
             user,
-            interventionType: "INACTIVITY_CHECKIN",
-            reason: fallbackCandidate.reason,
-            context: fallbackCandidate.context,
+            message: buildRecurrentCoachAssessmentPrompt({
+              interventionType: "INACTIVITY_CHECKIN",
+              reason: fallbackCandidate.reason,
+              context: fallbackCandidate.context,
+            }),
+            conversationHistory: recentMessages
+              .slice(0, 8)
+              .reverse()
+              .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+            plans: user.plans,
+            reminders,
           });
           const sent = await this.dispatchCoachDrafts(user, fallbackCandidate, [
-            { content: generated.message },
-          ], generated.title);
+            ...(fallbackResponse.draftMessages.length > 0
+              ? fallbackResponse.draftMessages
+              : [{ content: "Quick check-in, what would make the next small step feel doable today?" }]),
+          ], "Coach check-in");
 
           return {
             userId: user.id,
@@ -641,29 +673,11 @@ export class CoachAssessmentService {
       };
     }
 
-    const generated = await aiService.generateCoachAssessmentInterventionMessage({
-      user,
-      interventionType: candidate.type as
-        | "WEEK_PREP"
-        | "SESSION_PREP"
-        | "WEEK_RECAP"
-        | "INACTIVITY_CHECKIN"
-        | "CELEBRATION",
-      reason: candidate.reason,
-      context: candidate.context,
-    });
-
-    const sent = await this.dispatchCoachDrafts(user, candidate, [
-      { content: generated.message },
-    ], generated.title);
-
     return {
       userId: user.id,
       username: user.username,
-      action: "sent",
-      reason: `Sent ${candidate.type}`,
-      sentMessageIds: sent.messageIds,
-      notificationId: sent.notificationId,
+      action: "skipped",
+      reason: `Unsupported non-agent intervention ${candidate.type}`,
     };
   }
 
@@ -902,7 +916,7 @@ export class CoachAssessmentService {
           planIds: [summary.plan.id],
           targetWeekStart: currentWeekStartKey,
           context: baseContext,
-          usesAgent: false,
+          usesAgent: true,
         });
       }
 
@@ -913,7 +927,7 @@ export class CoachAssessmentService {
           planIds: [summary.plan.id],
           targetWeekStart: currentWeekStartKey,
           context: baseContext,
-          usesAgent: false,
+          usesAgent: true,
         });
       }
     }
@@ -929,7 +943,7 @@ export class CoachAssessmentService {
           sessionIds: weekSessions.map((s) => s.session.id),
           targetWeekStart: format(targetWeekStart, "yyyy-MM-dd"),
           context: this.buildSessionContext("Upcoming week", weekSessions),
-          usesAgent: false,
+          usesAgent: true,
         });
       }
     }
@@ -945,7 +959,7 @@ export class CoachAssessmentService {
           sessionIds: tomorrowSessions.map((s) => s.session.id),
           targetDate: format(tomorrow, "yyyy-MM-dd"),
           context: this.buildSessionContext("Tomorrow", tomorrowSessions),
-          usesAgent: false,
+          usesAgent: true,
         });
       }
     }
@@ -972,14 +986,13 @@ export class CoachAssessmentService {
           reason: `User logged ${entries.length} activit${entries.length === 1 ? "y" : "ies"} last week.`,
           planIds: activePlanIds,
           targetWeekStart: format(previousWeekStart, "yyyy-MM-dd"),
-          context: [
-            `Previous week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")}`,
-            `Logged activities: ${entries
-              .map((e) => e.activity ? `${e.activity.emoji} ${e.activity.title}` : null)
-              .filter(Boolean)
-              .join(", ")}`,
-          ].join("\n"),
-          usesAgent: false,
+          context: this.buildWeekRecapContext({
+            previousWeekStart,
+            previousWeekEnd,
+            sessions: this.getSessionsBetween(user.plans, previousWeekStart, previousWeekEnd),
+            entries,
+          }),
+          usesAgent: true,
         });
       }
     }
@@ -991,7 +1004,7 @@ export class CoachAssessmentService {
         planIds: user.plans.map((plan) => plan.id),
         targetDate: format(nowInTz, "yyyy-MM-dd"),
         context: await this.buildContextSummary(user, now),
-        usesAgent: false,
+        usesAgent: true,
       });
     }
 
@@ -1077,6 +1090,62 @@ export class CoachAssessmentService {
         `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`
       );
     }
+    return lines.join("\n");
+  }
+
+  private buildWeekRecapContext(params: {
+    previousWeekStart: Date;
+    previousWeekEnd: Date;
+    sessions: Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }>;
+    entries: Array<{
+      activityId: string | null;
+      datetime: Date;
+      quantity: number;
+      activity?: Pick<Activity, "title" | "emoji" | "measure"> | null;
+    }>;
+  }): string {
+    const { previousWeekStart, previousWeekEnd, sessions, entries } = params;
+    const lines = [
+      `Previous week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")}`,
+      `Logged activities: ${entries
+        .map((entry) =>
+          entry.activity
+            ? `${format(entry.datetime, "yyyy-MM-dd")}: ${entry.activity.emoji || ""} ${entry.activity.title} (${entry.quantity} ${entry.activity.measure})`
+            : null
+        )
+        .filter(Boolean)
+        .join(", ") || "none"}`,
+    ];
+
+    if (sessions.length > 0) {
+      lines.push("Scheduled sessions:");
+      for (const item of sessions) {
+        lines.push(
+          `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji || ""} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`
+        );
+      }
+
+      const completedSessions = sessions
+        .map((item) => {
+          const matchingEntry = entries.find(
+            (entry) =>
+              entry.activityId === item.session.activityId &&
+              isSameDay(entry.datetime, item.session.date)
+          );
+          return matchingEntry ? { ...item, matchingEntry } : null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+
+      if (completedSessions.length > 0) {
+        lines.push("Completed scheduled sessions with matching logs:");
+        for (const item of completedSessions) {
+          lines.push(
+            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. Planned guide: ${item.session.descriptiveGuide || "none"}. Matching log: ${item.matchingEntry.quantity} ${item.activity.measure}.`
+          );
+        }
+      }
+    }
+
     return lines.join("\n");
   }
 

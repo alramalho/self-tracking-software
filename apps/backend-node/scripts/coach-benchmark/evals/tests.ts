@@ -12,6 +12,7 @@ import {
   toolsNotCalled,
   type CoachEvalTest,
 } from "./types";
+import { buildRecurrentCoachAssessmentPrompt } from "../../../src/services/recurrentCoachAssessmentPrompt";
 
 const ALEX_BASE_USER = {
   email: "coach-bench@example.com",
@@ -145,6 +146,119 @@ export const inlineCurriculumSpecificPlanTest: CoachEvalTest = {
         "Preserves the full durable roadmap in plan notes, not only in the chat prose.",
         "Creates useful near-term dated sessions that reference modules or concrete work, not generic study sessions.",
         "Does not repeat every session detail in the visible message when the proposal card carries the plan."
+      )
+    ),
+};
+
+export const courseBackedActivityUsesBroadNameTest: CoachEvalTest = {
+  id: "course_backed_activity_uses_broad_name",
+  name: "Course-backed plan keeps activity name broad and puts source detail in notes",
+  userMessage:
+    "Let's set up a structured robotics plan. Starting level: I can write basic Arduino sketches, but I am new to motors and electronics. Course outline: DC Theory & Arduino, Module 1 DC circuits, Module 2 Arduino basics, Module 3 sensors, Module 4 motor control. I can do 2 sessions a week starting next Monday for 4 weeks.",
+  fixture: emptyAlexFixture("coach-bench-alex-12"),
+  verify: async (ctx) =>
+    allOf(
+      proposalCount(ctx, "planCreation", { equals: 1 }),
+      jsonPathEquals(ctx, "planCreationProposal", "outlineType", "SPECIFIC"),
+      jsonPathEquals(
+        ctx,
+        "planCreationProposal",
+        "activities.0.title",
+        "Robotics"
+      ),
+      jsonPathIncludes(ctx, "planCreationProposal", "notes", "DC Theory"),
+      jsonPathIncludes(ctx, "planCreationProposal", "notes", "Arduino"),
+      await llmJudge(
+        ctx,
+        "Uses a short broad activity title like Robotics, not a course title, source title, parenthetical, or module name.",
+        "Preserves the course/source details in plan notes and session guidance.",
+        "Does not create a separate tracking activity for Arduino basics, DC theory, sensors, or motor control."
+      )
+    ),
+};
+
+export const recurrentAssessmentChecksSessionGuideFollowedTest: CoachEvalTest = {
+  id: "recurrent_assessment_checks_session_guide_followed",
+  name: "Recurrent assessment asks whether completed scheduled session followed guide",
+  userMessage: buildRecurrentCoachAssessmentPrompt({
+    interventionType: "WEEK_RECAP",
+    reason:
+      "The user logged an activity that matches a scheduled robotics session with a descriptive guide.",
+    context: [
+      "Previous week: 2026-06-01 to 2026-06-07",
+      "Logged activities: 2026-06-03: 🤖 Robotics (1 sessions)",
+      "Scheduled sessions:",
+      '- 2026-06-03: 🤖 Robotics (1 sessions) for plan "Learn robotics with Arduino". Guide: Watch Arduino Module 2 and build the LED circuit.',
+      "Completed scheduled sessions with matching logs:",
+      "- 2026-06-03: Robotics. Planned guide: Watch Arduino Module 2 and build the LED circuit. Matching log: 1 sessions.",
+    ].join("\n"),
+  }),
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-13"),
+    plans: [
+      {
+        id: "bench-plan-robotics-guide",
+        goal: "Learn robotics with Arduino",
+        emoji: "🤖",
+        outlineType: "SPECIFIC",
+        notes:
+          "Course: DC Theory & Arduino. Follow module guides and capture deviations for future coaching.",
+        activities: [
+          {
+            id: "bench-activity-robotics-guide",
+            title: "Robotics",
+            measure: "sessions",
+            emoji: "🤖",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-robotics-guide",
+            activityId: "bench-activity-robotics-guide",
+            date: "2026-06-03",
+            quantity: 1,
+            descriptiveGuide: "Watch Arduino Module 2 and build the LED circuit.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    activityEntries: [
+      {
+        activityId: "bench-activity-robotics-guide",
+        datetime: "2026-06-03T18:00:00.000Z",
+        quantity: 1,
+      },
+    ],
+  },
+  verify: async (ctx) =>
+    allOf(
+      proposalCount(ctx, "planCreation", { equals: 0 }),
+      proposalCount(ctx, "planModification", { equals: 0 }),
+      proposalCount(ctx, "activityLog", { equals: 0 }),
+      responseMatches(ctx, /\?/i, "asks_a_question"),
+      responseMatches(
+        ctx,
+        /\b(follow|followed|stick|stuck|do|did)\b[\s\S]{0,120}\b(guide|planned|Module 2|LED circuit)\b|\b(guide|planned|Module 2|LED circuit)\b[\s\S]{0,120}\b(follow|followed|stick|stuck|do|did)\b/i,
+        "asks_about_session_guide"
+      ),
+      responseMatches(
+        ctx,
+        /\b(if not|if you didn'?t|if it changed|changed|got in the way|different|deviat|trying something else|something else|end up)\b/i,
+        "asks_about_deviation"
+      ),
+      responseNotMatches(
+        ctx,
+        /\b(you followed|you stuck to|you did exactly|you completed the guide|you built the LED circuit)\b/i,
+        "does_not_assume_guide_followed"
+      ),
+      await llmJudge(
+        ctx,
+        "Recognizes the log completed the scheduled Robotics session but does not assume the descriptive guide was followed.",
+        "Asks whether the user followed the planned guide, mentioning Arduino Module 2, the LED circuit, or the planned guide.",
+        "Asks what changed, was different, or got in the way if the guide was not followed.",
+        "Does not attach plan, activity log, or plan creation proposals."
       )
     ),
 };
@@ -497,6 +611,8 @@ export const tests: CoachEvalTest[] = [
   existingPlanFinishDateModificationTest,
   structuredGoalRequiresUserChoiceTest,
   inlineCurriculumSpecificPlanTest,
+  courseBackedActivityUsesBroadNameTest,
+  recurrentAssessmentChecksSessionGuideFollowedTest,
   multipleTracksOnePlanAtATimeTest,
   legacyActivityRecencyCheckTest,
   recentActivityEvidenceOnlyTest,

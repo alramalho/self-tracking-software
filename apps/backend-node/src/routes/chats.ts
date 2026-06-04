@@ -14,8 +14,21 @@ import { coachResponseStatusService } from "../services/coachResponseStatusServi
 
 const router = Router();
 
-type CoachResponseStatus = "thinking" | "searching" | "drafting";
-type ConversationHistory = Array<{ role: "user" | "assistant"; content: string }>;
+type CoachResponseStatus = "thinking" | "searching" | "browsing" | "drafting";
+type ImageAttachment = {
+  id?: string;
+  url: string;
+  mediaType: string;
+  filename?: string;
+};
+type ConversationHistory = Array<{
+  role: "user" | "assistant";
+  content: string;
+  imageAttachments?: ImageAttachment[];
+}>;
+
+const MAX_COACH_IMAGE_ATTACHMENTS = 4;
+const MAX_COACH_IMAGE_DATA_URL_LENGTH = 1_600_000;
 
 class RouteError extends Error {
   constructor(
@@ -31,15 +44,57 @@ function writeSseEvent(res: Response, event: string, data: unknown) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
+function normalizeImageAttachments(value: unknown): ImageAttachment[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) {
+    throw new RouteError(400, "Image attachments must be an array");
+  }
+  if (value.length > MAX_COACH_IMAGE_ATTACHMENTS) {
+    throw new RouteError(400, `Attach up to ${MAX_COACH_IMAGE_ATTACHMENTS} images`);
+  }
+
+  return value.map((attachment, index) => {
+    if (!attachment || typeof attachment !== "object") {
+      throw new RouteError(400, "Invalid image attachment");
+    }
+
+    const data = attachment as Record<string, unknown>;
+    const url = typeof data.url === "string" ? data.url : "";
+    const mediaType =
+      typeof data.mediaType === "string" ? data.mediaType : "";
+    const filename =
+      typeof data.filename === "string" ? data.filename : undefined;
+    const id = typeof data.id === "string" ? data.id : `image-${index + 1}`;
+
+    if (!url.startsWith("data:image/")) {
+      throw new RouteError(400, "Only data URL image attachments are supported");
+    }
+    if (!mediaType.startsWith("image/")) {
+      throw new RouteError(400, "Only image attachments are supported");
+    }
+    if (url.length > MAX_COACH_IMAGE_DATA_URL_LENGTH) {
+      throw new RouteError(400, "Attached image is too large");
+    }
+
+    return { id, url, mediaType, filename };
+  });
+}
+
 function serializeUserMessage(
   userMessage: Awaited<ReturnType<typeof prisma.message.create>>,
   user: User
 ) {
+  const metadata =
+    userMessage.metadata && typeof userMessage.metadata === "object"
+      ? (userMessage.metadata as any)
+      : null;
+
   return {
     id: userMessage.id,
     chatId: userMessage.chatId,
     role: userMessage.role,
     content: userMessage.content,
+    imageAttachments: metadata?.imageAttachments || null,
     createdAt: userMessage.createdAt,
     senderId: user.id,
     senderName: user.name,
@@ -66,12 +121,22 @@ async function runCoachV2MessagePipeline(params: {
   chat: { id: string; title: string | null };
   chatId: string;
   message: string;
+  imageAttachments?: ImageAttachment[];
   serializedUserMessage: Record<string, unknown>;
   conversationHistory?: ConversationHistory;
   onStatus?: (status: CoachResponseStatus) => void | Promise<void>;
   logLabel: string;
 }) {
-  const { user, chat, chatId, message, serializedUserMessage, onStatus, logLabel } = params;
+  const {
+    user,
+    chat,
+    chatId,
+    message,
+    imageAttachments,
+    serializedUserMessage,
+    onStatus,
+    logLabel,
+  } = params;
   let conversationHistory = params.conversationHistory;
 
   if (!conversationHistory) {
@@ -111,11 +176,15 @@ async function runCoachV2MessagePipeline(params: {
     orderBy: { triggerAt: "asc" },
   });
 
-  const memoriesContext = await supermemoryService.getProfile(user.id, message);
+  const memoryQuery =
+    message.trim() ||
+    (imageAttachments?.length ? "User attached an image for the coach to inspect." : "");
+  const memoriesContext = await supermemoryService.getProfile(user.id, memoryQuery);
 
   const v2Response = await coachAgentService.generateResponse({
     user,
     message,
+    imageAttachments,
     conversationHistory,
     plans: plans as Array<typeof plans[0] & {
       sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
@@ -168,7 +237,7 @@ async function runCoachV2MessagePipeline(params: {
   if (lastSavedMessage) {
     supermemoryService.addMemory(
       user.id,
-      `user: ${message}\nassistant: ${fullCoachText}`,
+      `user: ${memoryQuery}\nassistant: ${fullCoachText}`,
       lastSavedMessage.id
     );
   }
@@ -667,6 +736,7 @@ router.get(
             content: msg.content,
             status: msg.status,
             userAction: metadata?.userAction || null,
+            imageAttachments: metadata?.imageAttachments || null,
             createdAt: msg.createdAt,
             feedback: msg.feedback,
           };
@@ -676,17 +746,25 @@ router.get(
       }
 
       // For DIRECT and GROUP chats, return messages with sender information
-      const structuredMessages = messages.map((msg) => ({
-        id: msg.id,
-        chatId: msg.chatId,
-        role: msg.role,
-        content: msg.content,
-        status: msg.status,
-        createdAt: msg.createdAt,
-        senderId: msg.senderId,
-        senderName: msg.sender?.name,
-        senderPicture: msg.sender?.picture,
-      }));
+      const structuredMessages = messages.map((msg) => {
+        const metadata =
+          msg.metadata && typeof msg.metadata === "object"
+            ? (msg.metadata as any)
+            : null;
+
+        return {
+          id: msg.id,
+          chatId: msg.chatId,
+          role: msg.role,
+          content: msg.content,
+          status: msg.status,
+          imageAttachments: metadata?.imageAttachments || null,
+          createdAt: msg.createdAt,
+          senderId: msg.senderId,
+          senderName: msg.sender?.name,
+          senderPicture: msg.sender?.picture,
+        };
+      });
 
       logger.info(
         `Fetched ${messages.length} messages for chat ${chatId}, user ${user.username}`
@@ -748,9 +826,12 @@ router.post(
       const user = req.user!;
       const { chatId } = req.params;
       const { message, coachVersion } = req.body;
+      const messageText = typeof message === "string" ? message : "";
+      const imageAttachments = normalizeImageAttachments(req.body.imageAttachments);
+      const hasMessageText = messageText.trim().length > 0;
 
-      if (!message || typeof message !== "string" || !message.trim()) {
-        return res.status(400).json({ error: "Message is required" });
+      if (!hasMessageText && imageAttachments.length === 0) {
+        return res.status(400).json({ error: "Message or image is required" });
       }
 
       if (coachVersion !== "v2") {
@@ -793,8 +874,13 @@ router.post(
         data: {
           chatId,
           role: "USER",
-          content: message,
+          content: messageText,
           senderId: user.id,
+          ...(imageAttachments.length && {
+            metadata: {
+              imageAttachments,
+            },
+          }),
         },
       });
       const serializedUserMessage = serializeUserMessage(userMessage, user);
@@ -816,7 +902,8 @@ router.post(
         user,
         chat,
         chatId,
-        message,
+        message: messageText,
+        imageAttachments,
         serializedUserMessage,
         onStatus: (state) =>
           updateCoachResponseStatus({
@@ -839,6 +926,9 @@ router.post(
       }
     } catch (error) {
       logger.error("Error streaming coach message:", error);
+      if (error instanceof RouteError && !streamStarted) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       if (statusUserMessageId) {
         await coachResponseStatusService.markError({
           chatId: req.params.chatId,
@@ -868,9 +958,12 @@ router.post(
       const user = req.user!;
       const { chatId } = req.params;
       const { message, coachVersion } = req.body;
+      const messageText = typeof message === "string" ? message : "";
+      const imageAttachments = normalizeImageAttachments(req.body.imageAttachments);
+      const hasMessageText = messageText.trim().length > 0;
 
-      if (!message || typeof message !== "string" || !message.trim()) {
-        return res.status(400).json({ error: "Message is required" });
+      if (!hasMessageText && imageAttachments.length === 0) {
+        return res.status(400).json({ error: "Message or image is required" });
       }
 
       const useV2Coach = coachVersion === "v2";
@@ -903,8 +996,13 @@ router.post(
         data: {
           chatId: chatId,
           role: "USER",
-          content: message,
+          content: messageText,
           senderId: user.id,
+          ...(imageAttachments.length && {
+            metadata: {
+              imageAttachments,
+            },
+          }),
         },
       });
       const serializedUserMessage = serializeUserMessage(userMessage, user);
@@ -924,7 +1022,8 @@ router.post(
             user,
             chat,
             chatId,
-            message,
+            message: messageText,
+            imageAttachments,
             serializedUserMessage,
             logLabel: "Coach v2 chat",
           });
@@ -996,7 +1095,7 @@ router.post(
 
         aiResponse = await aiService.generateCoachChatResponse({
           user: user,
-          message: message,
+          message: messageText,
           chatId: chatId,
           conversationHistory: conversationHistory,
           plans: plans,
@@ -1034,19 +1133,19 @@ router.post(
         // Fire-and-forget: store exchange in long-term memory
         supermemoryService.addMemory(
           user.id,
-          `user: ${message}\nassistant: ${aiResponse.messageContent}`,
+          `user: ${messageText || "User attached an image for the coach to inspect."}\nassistant: ${aiResponse.messageContent}`,
           coachMessage.id
         );
 
         logger.info(
-          `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}..."`
+          `Coach chat - User: ${user.username}, Message: "${(messageText || "Image").substring(0, 50)}..."`
         );
 
         // Generate chat title if this is the first exchange
         if (!chat.title) {
           (async () => {
             try {
-              const titlePrompt = `User: ${message}\nCoach: ${aiResponse.messageContent}`;
+              const titlePrompt = `User: ${messageText || "User attached an image"}\nCoach: ${aiResponse.messageContent}`;
               const titleSystemPrompt =
                 "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
                 "The title should be clear and concise. Only output the title, nothing else.";
@@ -1160,7 +1259,9 @@ router.post(
         );
         const senderName = user.name || user.username || "Someone";
         const preview =
-          message.length > 50 ? message.substring(0, 50) + "..." : message;
+          messageText.length > 50
+            ? messageText.substring(0, 50) + "..."
+            : messageText || "Image";
 
         for (const recipient of recipients) {
           await notificationService.createAndProcessNotification({
@@ -1186,6 +1287,9 @@ router.post(
       });
     } catch (error) {
       logger.error("Error sending message:", error);
+      if (error instanceof RouteError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to send message" });
     }
   }

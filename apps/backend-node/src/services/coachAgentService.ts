@@ -1,5 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
-import { ToolLoopAgent, hasToolCall, tool, type LanguageModelUsage } from "ai";
+import { ToolLoopAgent, hasToolCall, tool, type LanguageModelUsage, type ModelMessage, type UserContent } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
@@ -11,21 +11,29 @@ import dedent from "dedent";
 import { TelegramService } from "./telegramService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { webSearchService } from "./webSearchService";
+import { browserAgentService } from "./browserAgentService";
 import {
   buildCoachAgentProviderOptions,
   resolveCoachAgentModelConfig,
+  resolveCoachAgentVisionModelConfig,
 } from "./coachAgentModelConfig";
+
+type ImageAttachment = {
+  url: string;
+  mediaType: string;
+  filename?: string;
+};
 
 interface CoachAgentContext {
   user: User;
   plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
   reminders: Reminder[];
-  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
   model?: string;
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
   activityRecencyById?: Map<string, string>;
-  onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
+  onStatus?: (status: "thinking" | "searching" | "browsing" | "drafting") => void | Promise<void>;
 }
 
 type CoachAgentTelemetry = {
@@ -127,6 +135,46 @@ function isActivityMetadataChangeIntent(text: string): boolean {
   );
 }
 
+function createCollector() {
+  const collector = {
+    toolsUsed: [] as Array<{
+      name: string;
+      status: "success" | "failed" | "insufficient";
+    }>,
+    recordTool(name: string, status: "success" | "failed" | "insufficient") {
+      this.toolsUsed.push({ name, status });
+    },
+    hasUsed(name: string) {
+      return this.toolsUsed.some((toolUse) => toolUse.name === name);
+    },
+  };
+
+  return collector;
+}
+
+function buildUserContent(
+  text: string,
+  imageAttachments?: ImageAttachment[]
+): UserContent {
+  const attachments = imageAttachments || [];
+  if (attachments.length === 0) {
+    return text;
+  }
+
+  const trimmedText = text.trim();
+  return [
+    {
+      type: "text" as const,
+      text: trimmedText || "Please respond to the attached image.",
+    },
+    ...attachments.map((attachment) => ({
+      type: "image" as const,
+      image: attachment.url,
+      mediaType: attachment.mediaType,
+    })),
+  ];
+}
+
 export class CoachAgentService {
   private telegram = new TelegramService();
 
@@ -148,6 +196,7 @@ export class CoachAgentService {
     const self = this;
     const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
     let successfulPlanCreationProposals = 0;
+    const collector = createCollector();
 
     // Build plans context for the system prompt
     const plansContext = plans
@@ -273,12 +322,17 @@ export class CoachAgentService {
         - Use webSearch when fresh outside knowledge materially changes the answer, or for current/external/URL-based facts.
         - When the user gives a URL, put that exact URL or a stable identifier from it in your first query. If the first result is weak, search again with alternate titles, source names, domains, or likely mirror/index pages.
         - For exact extraction (how many, all titles, durations, time-to-complete), don't answer from a weak first result, and distinguish item metadata from collection metadata (an item title or index is not the collection count).
+        - If proper webSearch attempts still cannot expose exact data because the page is dynamic, hidden behind scrolling, tabs, accordions, playlist panels, or other interaction, you may use useBrowser. This is slow and expensive, so use it only when exact information matters and webSearch was not enough.
+        - useBrowser has a force flag for local testing/debugging. Do not use force in normal user conversations unless the user explicitly asks you to bypass the webSearch gate for a test.
         - If you use a webSearch result in your answer, cite it inline with that result's citationLabel, like [1]. Cite only sources you actually used.
         - If search fails or still doesn't expose the exact facts after enough tries, say what you couldn't verify and ask for the missing source details or offer rough assumptions. Do not mention internal tools, tool failures, search availability, provider names, or implementation details. Do not answer from memory and do not promise to keep searching after the message.
 
         3. Plans and proposals
         - You can see and help with every active plan. If there are no active plans, treat that as setup, not an error.
         - Ask clarifying questions before making changes: current experience, constraints, and things to avoid.
+        - Before proposing a new plan, assess the user's current experience/baseline for that exact goal. Use the user's message, plan notes, active plan context, long-term memory, or recent activity facts if they clearly answer it. If it is not clearly known, ask one blocking question about their current level instead of proposing the plan.
+        - When creating or rebuilding a plan, make the frequency, activities, session quantities, and progression match that current baseline. Beginners should start conservatively; experienced users can carry more structure or volume when their stated history supports it.
+        - Preserve the assessed baseline in plan notes, e.g. "Starting level: ..." so future coaching can reuse it. Do not put experience level in goalReason.
         - Be realistic. If a goal is unrealistic given the constraints, say so. Suggesting the user adjust the goal beats setting them up to fail.
         - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
@@ -296,6 +350,7 @@ export class CoachAgentService {
         - For source-backed learning plans, notes are mandatory. Do not rely on the visible chat message, milestones, or first sessions to remember the roadmap. If you cannot fit the complete durable roadmap into notes, ask the user which source/course to set up first.
         - If the user brings several courses, roadmaps, or technical tracks at once, do not set up 2-3 new plans in one response. Pick one progressive deep dive to configure first, usually the prerequisite or the one the user seems most ready to start, and ask which track to do next. Examples: set up Deep Learning first, then Robotics after confirmation; set up C++ fundamentals first, then Arduino projects.
         - Activities are reusable tracking buckets. When a useful activity already appears in the plan context, reuse it by passing its activityId in proposePlanCreation.activities instead of creating a new activity with a variant name.
+        - New activity titles should be short reusable buckets matching the user's broad domain/action, e.g. Robotics, not course/source titles, parentheticals, module names, or added suffixes like Practice; put course names such as DC Theory & Arduino in notes and session guides.
         - Do not create separate activities for workout/session variants when a broader existing activity fits. Put the variant, intensity, or focus in sessions.descriptiveGuide.
         - If a plan creation proposal is attached, do not repeat every activity, milestone, and session in prose. The proposal card shows the details, so summarize the split in one short sentence and let the card carry the setup list.
         - Plan type selection. It is very important to clearly distinguish between the two types of plans.
@@ -343,7 +398,7 @@ export class CoachAgentService {
           description: "Send your response as chat messages. Always use this to reply.",
           inputSchema: z.object({
             messages: z.array(z.object({
-              content: z.string().describe("A short chat message (1-2 sentences)"),
+              content: z.string().trim().min(1).describe("A short chat message (1-2 sentences)"),
             })).min(1).max(3),
           }),
           execute: async ({ messages }) => ({ success: true, count: messages.length }),
@@ -381,6 +436,7 @@ export class CoachAgentService {
           execute: async ({ query, queries, maxResults, maxTokensPerPage }) => {
             const searchQueries = queries?.length ? queries : query ? [query] : [];
             if (searchQueries.length === 0) {
+              collector.recordTool("webSearch", "failed");
               return {
                 success: false as const,
                 error: "Provide query or queries",
@@ -415,6 +471,7 @@ export class CoachAgentService {
 
             if (!searchResult.success) {
               logger.error(`Web search failed: ${searchResult.error}`);
+              collector.recordTool("webSearch", "failed");
               self.telegram.sendMessage(
                 `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQuery: ${searchQueries.join(" | ")}\nError: ${searchResult.error}`
               );
@@ -440,6 +497,7 @@ export class CoachAgentService {
             logger.info(
               `Web search (${searchResult.provider}) for "${searchQueries.join(" | ")}" returned ${results.length} results`
             );
+            collector.recordTool("webSearch", results.length > 0 ? "success" : "insufficient");
 
             return {
               success: true as const,
@@ -450,6 +508,74 @@ export class CoachAgentService {
                 "If you use a result in your final answer, cite it inline with its citationLabel.",
               results,
             };
+          },
+        }),
+
+        useBrowser: tool({
+          description: dedent`
+            Use an interactive remote browser to inspect pages after webSearch could not expose exact facts.
+            Use this only for data hidden behind scrolling, clicking, expanding, tabs, playlist/course panels, lazy-loaded UI, or JavaScript-rendered pages.
+            This is slow and expensive. Try webSearch first in normal conversations.
+            The force flag is for local testing/debugging only, or when the user explicitly asks to bypass the webSearch gate.
+          `,
+          inputSchema: z.object({
+            task: z.string().describe("The exact fact-finding task the browser should complete."),
+            startingUrls: z
+              .array(z.string())
+              .min(1)
+              .max(5)
+              .describe("URLs from prior webSearch results or the user's message to open in the browser."),
+            expectedData: z
+              .string()
+              .optional()
+              .describe("A short description of the exact fields needed, such as titles, durations, counts, or lesson order."),
+            reason: z
+              .string()
+              .describe("Why webSearch was insufficient or why this is an explicit forced test."),
+            maxSteps: z
+              .number()
+              .int()
+              .min(1)
+              .max(12)
+              .optional()
+              .describe("Maximum browser interaction steps. Default 8."),
+            force: z
+              .boolean()
+              .optional()
+              .describe("Testing/debug escape hatch. Bypasses the webSearch gate only when the user explicitly requested it."),
+          }),
+          execute: async ({ task, startingUrls, expectedData, reason, maxSteps, force }) => {
+            if (!force && !collector.hasUsed("webSearch")) {
+              collector.recordTool("useBrowser", "failed");
+              return {
+                success: false as const,
+                status: "failed" as const,
+                error:
+                  "useBrowser is gated: run webSearch first. Only use force for explicit local testing/debugging.",
+                browserActionsSummary: [] as string[],
+                sources: [] as Array<{ url: string; title?: string }>,
+              };
+            }
+
+            await onStatus?.("browsing");
+            const result = await browserAgentService.browse({
+              task,
+              startingUrls,
+              expectedData,
+              reason,
+              maxSteps,
+            });
+
+            collector.recordTool(
+              "useBrowser",
+              result.success
+                ? result.status === "insufficient"
+                  ? "insufficient"
+                  : "success"
+                : "failed"
+            );
+
+            return result;
           },
         }),
 
@@ -489,7 +615,7 @@ export class CoachAgentService {
               plan: z.object({
                 goal: z.string().optional().describe("Clearer measurable plan goal"),
                 goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
-                notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material for this plan. Use this to preserve full curricula, syllabi, ordered project sequences, source URLs, course/playlists/books, user constraints, and explicit preferences that future coaching should keep following. Keep it compact but complete enough to continue the roadmap later. Set null only when the user explicitly wants to clear the plan notes."),
+                notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material and coaching baseline for this plan. Use this to preserve the current experience/baseline, full curricula, syllabi, ordered project sequences, source URLs, course/playlists/books, user constraints, and explicit preferences that future coaching should keep following. Keep it compact but complete enough to continue the roadmap later. Set null only when the user explicitly wants to clear the plan notes."),
                 finishingDate: z.string().optional().nullable().describe("Plan end date in YYYY-MM-DD format. Use null only when the user explicitly wants no end date."),
                 outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
                 timesPerWeek: z.number().positive().nullable().optional(),
@@ -688,7 +814,7 @@ export class CoachAgentService {
           inputSchema: z.object({
             goal: z.string().describe("Short, concrete, measurable goal"),
             goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
-            notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material to save with the plan. Use this whenever the user gives a curriculum, syllabus, roadmap, ordered project sequence, course URL, playlist URL, book, constraints, or explicit preferences that should guide future coaching. Preserve the full durable sequence here, while sessions can cover only the near term. Keep it compact, factual, and grounded in what the user provided or verified sources."),
+            notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material and coaching baseline to save with the plan. Include the assessed current experience/baseline when known, preferably as 'Starting level: ...'. Use this whenever the user gives a curriculum, syllabus, roadmap, ordered project sequence, course URL, playlist URL, book, constraints, or explicit preferences that should guide future coaching. Preserve the full durable sequence here, while sessions can cover only the near term. Keep it compact, factual, and grounded in what the user provided or verified sources."),
             emoji: z.string().optional().describe("Single emoji for the plan"),
             outlineType: z.enum(["TIMES_PER_WEEK", "SPECIFIC"]).optional().describe("TIMES_PER_WEEK for a weekly target, SPECIFIC for dated sessions."),
             timesPerWeek: z.number().positive().optional().describe("Suggested weekly frequency, if known"),
@@ -1326,12 +1452,13 @@ export class CoachAgentService {
   async generateResponse(params: {
     user: User;
     message: string;
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
+    imageAttachments?: ImageAttachment[];
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
     plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
     reminders: Reminder[];
     model?: string;
     memoriesContext?: string | null;
-    onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
+    onStatus?: (status: "thinking" | "searching" | "browsing" | "drafting") => void | Promise<void>;
   }): Promise<{
     draftMessages: Array<{
       content: string;
@@ -1380,8 +1507,12 @@ export class CoachAgentService {
     skipReason?: string;
     telemetry?: CoachAgentTelemetry;
   }> {
-    const { user, message, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
-    const resolvedModel = resolveCoachAgentModelConfig(model).model;
+    const { user, message, imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
+    const hasImageAttachments = (imageAttachments?.length || 0) > 0;
+    const modelConfig = hasImageAttachments
+      ? resolveCoachAgentVisionModelConfig(model)
+      : resolveCoachAgentModelConfig(model);
+    const resolvedModel = modelConfig.model;
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
@@ -1403,14 +1534,26 @@ export class CoachAgentService {
     });
 
     try {
+      const modelMessages: ModelMessage[] = [
+        ...conversationHistory.map((msg): ModelMessage =>
+          msg.role === "user"
+            ? {
+                role: "user",
+                content: buildUserContent(msg.content, msg.imageAttachments),
+              }
+            : {
+                role: "assistant",
+                content: msg.content,
+              }
+        ),
+        {
+          role: "user",
+          content: buildUserContent(message, imageAttachments),
+        },
+      ];
+
       const result = await agent.generate({
-        messages: [
-          ...conversationHistory.map((msg) => ({
-            role: msg.role as "user" | "assistant",
-            content: msg.content,
-          })),
-          { role: "user" as const, content: message },
-        ],
+        messages: modelMessages,
         onStepFinish: async ({ usage, toolCalls }) => {
           logger.info("Agent step completed", {
             inputTokens: usage?.inputTokens,

@@ -1,12 +1,19 @@
 type ConversationHistoryMessage = {
   role: "user" | "assistant";
   content: string;
+  imageAttachments?: ImageAttachment[];
 };
 
 type MessageForHistory = {
   role: string;
   content: string;
   metadata?: unknown;
+};
+
+type ImageAttachment = {
+  url: string;
+  mediaType: string;
+  filename?: string;
 };
 
 const formatStatus = (status: unknown) =>
@@ -39,6 +46,11 @@ export function toCoachConversationHistory(
 ): ConversationHistoryMessage[] {
   return messages.map((message) => {
     const role = message.role === "USER" ? "user" : "assistant";
+    const data = message.metadata as any;
+    const imageAttachments =
+      role === "user" && Array.isArray(data?.imageAttachments)
+        ? data.imageAttachments
+        : undefined;
     const proposalStateLines =
       role === "assistant" ? getCoachProposalStateLines(message.metadata) : [];
 
@@ -53,6 +65,7 @@ export function toCoachConversationHistory(
               ...proposalStateLines,
             ].join("\n")
           : message.content,
+      ...(imageAttachments?.length ? { imageAttachments } : {}),
     };
   }) as ConversationHistoryMessage[];
 }

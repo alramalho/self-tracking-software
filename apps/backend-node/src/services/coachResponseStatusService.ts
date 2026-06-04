@@ -4,6 +4,7 @@ import { redisService } from "./redisService";
 export type CoachResponseStatus =
   | "thinking"
   | "searching"
+  | "browsing"
   | "drafting"
   | "error";
 
@@ -19,7 +20,7 @@ export interface CoachResponseState {
 
 const ACTIVE_TTL_SECONDS = 10 * 60;
 const ERROR_TTL_SECONDS = 5 * 60;
-const COACH_RESPONSE_TIMEOUT_MS = 120000;
+const COACH_RESPONSE_TIMEOUT_MS = 300000;
 
 const chatKey = (chatId: string) => `coach-response:chat:${chatId}`;
 const messageKey = (userMessageId: string) =>
