@@ -2,13 +2,13 @@ import { type CompletePlan } from "@/contexts/plans";
 import { SteppedBarProgress } from "@/components/SteppedBarProgress";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  differenceInCalendarDays,
   format,
   isSameWeek,
+  isAfter,
   startOfDay,
 } from "date-fns";
 import type { PlanProgressData } from "@tsw/prisma/types";
-import { Flame, Sprout, Rocket } from "lucide-react";
+import { CalendarDays, Flame, Sprout, Rocket } from "lucide-react";
 import { HomeCardShell } from "./HomeCardShell";
 
 const HABIT_WEEKS = 4;
@@ -27,18 +27,6 @@ const getPlannedActivityCount = (
   }
 
   return Array.isArray(plannedActivities) ? plannedActivities.length : 0;
-};
-
-const formatSessionDistance = (date: Date) => {
-  const daysAway = differenceInCalendarDays(
-    startOfDay(date),
-    startOfDay(new Date())
-  );
-
-  if (daysAway <= 0) return "today";
-  if (daysAway === 1) return "tomorrow";
-  if (daysAway === 2) return "in 2 days";
-  return `${format(date, "EEE")}, in ${daysAway} days`;
 };
 
 export const PlanCard = ({ plan }: PlanCardProps) => {
@@ -73,30 +61,7 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
   const lifestyleMax = plan.progress?.lifestyleAchievement?.maxValue ?? LIFESTYLE_WEEKS;
 
   const emoji = plan.activities?.[0]?.emoji || plan.emoji || "🎯";
-  const today = startOfDay(new Date());
-  const nextSession =
-    plan.outlineType === "SPECIFIC"
-      ? plan.sessions
-          ?.filter(
-            (session) =>
-              startOfDay(new Date(session.date)) >= today &&
-              !currentWeek?.completedActivities?.some(
-                (entry: any) =>
-                  entry.activityId === session.activityId &&
-                  format(new Date(entry.datetime || entry.date), "yyyy-MM-dd") ===
-                    format(new Date(session.date), "yyyy-MM-dd")
-              )
-          )
-          .sort(
-            (a, b) =>
-              new Date(a.date).getTime() - new Date(b.date).getTime()
-          )[0]
-      : null;
-  const nextSessionActivity = nextSession
-    ? plan.activities?.find((activity) => activity.id === nextSession.activityId)
-    : null;
-  const nextSessionTitle = nextSessionActivity?.title || "Next session";
-  const nextSessionEmoji = nextSessionActivity?.emoji || emoji;
+  const isSpecificPlan = plan.outlineType === "SPECIFIC";
 
   return (
     <HomeCardShell
@@ -109,40 +74,81 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
           {plan.goal}
         </p>
       </div>
-      <div className="space-y-2.5">
-        {nextSession && (
-          <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <span className="shrink-0 text-sm leading-none">{nextSessionEmoji}</span>
-            <span className="min-w-0 truncate">{nextSessionTitle}</span>
-            <span className="shrink-0 text-muted-foreground/70">
-              ({formatSessionDistance(new Date(nextSession.date))})
-            </span>
-          </div>
-        )}
-        <SteppedBarProgress
-          value={totalCompleted}
-          maxValue={totalPlanned}
-          goal={<Flame size={14} className="text-orange-400" />}
-          compact
-        />
-        {!habitAchieved ? (
+      {isSpecificPlan ? (
+        <div className="space-y-2">
+          {(() => {
+            const todayStart = startOfDay(new Date());
+            const upcomingSessions = (plan.sessions || [])
+              .filter((session) => !isAfter(todayStart, new Date(session.date)))
+              .sort(
+                (a, b) =>
+                  new Date(a.date).getTime() - new Date(b.date).getTime()
+              );
+            const nextSession = upcomingSessions[0];
+            const nextActivity = nextSession
+              ? plan.activities?.find(
+                  (activity) => activity.id === nextSession.activityId
+                )
+              : null;
+
+            if (!nextSession || !nextActivity) {
+              return (
+                <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  No sessions scheduled.
+                </div>
+              );
+            }
+
+            return (
+              <div className="rounded-xl bg-muted/60 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  <span>Next session</span>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xl leading-none">
+                    {nextActivity.emoji || "📋"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-foreground">
+                      {nextActivity.title}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {format(new Date(nextSession.date), "EEE, MMM d")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
           <SteppedBarProgress
-            value={habitProgress}
-            maxValue={habitMax}
-            goal={<Sprout size={14} className="text-lime-500" />}
+            value={totalCompleted}
+            maxValue={totalPlanned}
+            goal={<Flame size={14} className="text-orange-400" />}
             compact
-            color="bg-lime-400"
           />
-        ) : (
-          <SteppedBarProgress
-            value={lifestyleProgress}
-            maxValue={lifestyleMax}
-            goal={<Rocket size={14} className="text-amber-400" />}
-            compact
-            color="bg-amber-400"
-          />
-        )}
-      </div>
+          {!habitAchieved ? (
+            <SteppedBarProgress
+              value={habitProgress}
+              maxValue={habitMax}
+              goal={<Sprout size={14} className="text-lime-500" />}
+              compact
+              color="bg-lime-400"
+            />
+          ) : (
+            <SteppedBarProgress
+              value={lifestyleProgress}
+              maxValue={lifestyleMax}
+              goal={<Rocket size={14} className="text-amber-400" />}
+              compact
+              color="bg-amber-400"
+            />
+          )}
+        </div>
+      )}
     </HomeCardShell>
   );
 };

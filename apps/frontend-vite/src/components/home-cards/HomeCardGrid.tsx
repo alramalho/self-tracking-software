@@ -9,10 +9,16 @@ import { CoachCard } from "./CoachCard";
 import { PlanCard } from "./PlanCard";
 import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
+import { UpcomingSessionsCard } from "./UpcomingSessionsCard";
 
 interface HomeCardGridProps {
   onOpenMetricsLog: () => void;
 }
+
+type HomeGridCard = {
+  node: React.ReactNode;
+  span: 1 | 2;
+};
 
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { plans } = usePlans();
@@ -31,37 +37,60 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   );
   const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
 
-  const cards: React.ReactNode[] = [];
+  const cards: HomeGridCard[] = [];
 
   if (!isUserOnFreePlan && isUserAIWhitelisted) {
     const firstPendingPlanId = (pendingCoachNotifications[0]?.relatedData as any)?.planIds?.[0];
-    cards.push(
-      <CoachCard
-        key="coach"
-        attentionCount={pendingCoachNotifications.length}
-        activePlanCount={activePlans?.length ?? 0}
-        reviewPlanId={firstPendingPlanId}
-      />
-    );
+    cards.push({
+      node: (
+        <CoachCard
+          key="coach"
+          attentionCount={pendingCoachNotifications.length}
+          activePlanCount={activePlans?.length ?? 0}
+          reviewPlanId={firstPendingPlanId}
+        />
+      ),
+      span: 1,
+    });
   }
 
-  activePlans?.forEach((plan) => {
-    cards.push(<PlanCard key={plan.id} plan={plan} />);
-  });
 
   if (metrics && metrics.length > 0 && !isUserOnFreePlan) {
-    cards.push(<MetricsCard key="metrics" onLogClick={onOpenMetricsLog} />);
+    cards.push({
+      node: <MetricsCard key="metrics" onLogClick={onOpenMetricsLog} />,
+      span: 1,
+    });
+  }
+  if (activePlans?.some((plan) => plan.outlineType === "SPECIFIC" && (plan.sessions || []).length > 0)) {
+    cards.push({
+      node: <UpcomingSessionsCard key="upcoming-sessions" plans={activePlans} />,
+      span: 2,
+    });
   }
 
-  if (cards.length > 0 && cards.length % 2 !== 0) {
-    cards.push(<GreetingCard key="greeting" />);
+  activePlans
+    ?.filter((plan) => plan.outlineType === "TIMES_PER_WEEK")
+    .forEach((plan) => {
+      cards.push({
+        node: <PlanCard key={plan.id} plan={plan} />,
+        span: 1,
+      });
+    });
+
+  const occupiedColumns = cards.reduce((total, card) => total + card.span, 0);
+
+  if (cards.length > 0 && occupiedColumns % 2 !== 0) {
+    cards.push({
+      node: <GreetingCard key="greeting" />,
+      span: 1,
+    });
   }
 
   if (cards.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {cards}
+    <div className="grid grid-flow-dense grid-cols-2 gap-3">
+      {cards.map((card) => card.node)}
     </div>
   );
 };

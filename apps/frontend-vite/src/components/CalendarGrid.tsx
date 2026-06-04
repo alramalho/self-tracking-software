@@ -11,6 +11,9 @@ export interface CalendarSession {
   id?: string;
   date: Date | string;
   activityId: string;
+  planId?: string;
+  planTitle?: string;
+  planEmoji?: string;
   quantity?: number;
   descriptiveGuide?: string;
   imageUrls?: string[];
@@ -40,12 +43,20 @@ interface CalendarGridProps {
   showLegend?: boolean;
   /** Custom week labels */
   weekLabels?: { week1: string; week2: string };
+  /** Whether week labels are rendered above each row. */
+  showWeekLabels?: boolean;
   /** How selected scheduled sessions are shown below the grid */
   selectedSessionDisplay?: "detail" | "card";
   /** Allows days without sessions or suggestions to be selected visually */
   allDaysSelectable?: boolean;
   /** Optional date used to choose the two visible weeks. Defaults to today. */
   visibleStartDate?: Date | string;
+  /** Compact density for previews embedded in small surfaces like home cards. */
+  density?: "default" | "compact";
+  /** Number of weeks to render, starting from the visible week. */
+  weekCount?: 1 | 2;
+  /** Calendar weeks start on Sunday; rolling days start from visibleStartDate/today. */
+  rangeMode?: "calendar-weeks" | "rolling-days";
 }
 
 export const CalendarGrid = ({
@@ -58,9 +69,13 @@ export const CalendarGrid = ({
   onSessionEdit,
   showLegend = true,
   weekLabels = { week1: "This week", week2: "Next week" },
+  showWeekLabels = true,
   selectedSessionDisplay = "detail",
   allDaysSelectable = false,
   visibleStartDate,
+  density = "default",
+  weekCount = 2,
+  rangeMode = "calendar-weeks",
 }: CalendarGridProps) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedGhostDay, setSelectedGhostDay] = useState<Date | null>(null);
@@ -82,7 +97,10 @@ export const CalendarGrid = ({
 
   const today = new Date();
   const calendarStartDate = visibleStartDate ? new Date(visibleStartDate) : today;
-  const weekStart = startOfWeek(calendarStartDate, { weekStartsOn: 0 });
+  const rangeStart =
+    rangeMode === "rolling-days"
+      ? startOfDay(calendarStartDate)
+      : startOfWeek(calendarStartDate, { weekStartsOn: 0 });
 
   const formatSessionCardDate = (date: Date) => {
     if (isSameDay(date, today)) return "Today";
@@ -90,10 +108,12 @@ export const CalendarGrid = ({
     return format(date, "EEEE, MMM d");
   };
 
-  // Generate 2 weeks of days
-  const days = Array.from({ length: 14 }, (_, i) => addDays(weekStart, i));
-  const week1 = days.slice(0, 7);
-  const week2 = days.slice(7, 14);
+  const weeks = Array.from({ length: weekCount }, (_, weekIndex) => ({
+    label: weekIndex === 0 ? weekLabels.week1 : weekLabels.week2,
+    days: Array.from({ length: 7 }, (_, dayIndex) =>
+      addDays(rangeStart, weekIndex * 7 + dayIndex)
+    ),
+  }));
 
   const getSessionsForDay = (day: Date) => {
     return sessions.filter((session) => {
@@ -226,12 +246,16 @@ export const CalendarGrid = ({
       isSameDay(new Date(selectedSession.session.date), day);
     const isEmptySelected = !!selectedEmptyDay && isSameDay(selectedEmptyDay, day);
     const isSelectedDay = isSessionSelected || isGhostSelected || isEmptySelected;
+    const compact = density === "compact";
 
     return (
       <div
         onClick={() => handleDayClick(day)}
         className={cn(
-          "flex flex-col items-center p-1 min-h-[72px] rounded-lg border transition-all",
+          "flex flex-col items-center border transition-all",
+          compact
+            ? "min-h-[34px] rounded-md p-0.5"
+            : "min-h-[72px] rounded-lg p-1",
           // Today: outline only (no fill) so it stays distinct from the selected day.
           isToday || isSelectedDay ? variants.brightBorder : "border-border",
           // Selected day: filled + ring.
@@ -245,7 +269,8 @@ export const CalendarGrid = ({
       >
         <span
           className={cn(
-            "text-[10px] font-medium uppercase",
+            "font-medium uppercase",
+            compact ? "text-[8px] leading-3" : "text-[10px]",
             isToday ? variants.text : "text-muted-foreground"
           )}
         >
@@ -253,13 +278,14 @@ export const CalendarGrid = ({
         </span>
         <span
           className={cn(
-            "text-sm font-semibold",
+            "font-semibold",
+            compact ? "text-[11px] leading-3" : "text-sm",
             isToday ? variants.text : "text-foreground"
           )}
         >
           {format(day, "d")}
         </span>
-        <div className="flex flex-col gap-0.5 mt-1">
+        <div className={cn("flex flex-col gap-0.5", compact ? "mt-0.5" : "mt-1")}>
           {daySessions.map((session, idx) => {
             const activity = getActivity(session.activityId);
             if (!activity) return null;
@@ -275,8 +301,9 @@ export const CalendarGrid = ({
                   handleSessionClick(session, activity);
                 }}
                 className={cn(
-                  "relative text-lg leading-none rounded-md p-0.5 transition-all",
-                  isSelected && cn(variants.fadedBg, "ring-2", variants.ring),
+                  "relative leading-none rounded-md transition-all",
+                  compact ? "p-0 text-xs" : "p-0.5 text-lg",
+                  isSelected && variants.fadedBg,
                   !isSelected && !isCompleted && "hover:bg-muted",
                   isCompleted && "bg-green-100 dark:bg-green-900/30"
                 )}
@@ -284,7 +311,13 @@ export const CalendarGrid = ({
                 {activity.emoji || "📋"}
                 {isCompleted && (
                   <span className="absolute -top-1.5 -right-1.5">
-                    <Check className="w-3.5 h-3.5 text-green-500 drop-shadow-sm" strokeWidth={3} />
+                    <Check
+                      className={cn(
+                        "text-green-500 drop-shadow-sm",
+                        compact ? "h-3 w-3" : "h-3.5 w-3.5"
+                      )}
+                      strokeWidth={3}
+                    />
                   </span>
                 )}
               </button>
@@ -299,11 +332,20 @@ export const CalendarGrid = ({
                 <span
                   key={`done-${cell.activityId}-${idx}`}
                   title={`${activity?.title || "Activity"} — done`}
-                  className="relative text-lg leading-none rounded-md p-0.5 bg-green-100 dark:bg-green-900/30"
+                  className={cn(
+                    "relative leading-none rounded-md bg-green-100 dark:bg-green-900/30",
+                    compact ? "p-0 text-xs" : "p-0.5 text-lg"
+                  )}
                 >
                   {display.emoji}
                   <span className="absolute -top-1.5 -right-1.5">
-                    <Check className="w-3.5 h-3.5 text-green-500 drop-shadow-sm" strokeWidth={3} />
+                    <Check
+                      className={cn(
+                        "text-green-500 drop-shadow-sm",
+                        compact ? "h-3 w-3" : "h-3.5 w-3.5"
+                      )}
+                      strokeWidth={3}
+                    />
                   </span>
                 </span>
               );
@@ -319,7 +361,8 @@ export const CalendarGrid = ({
                     : `${display.title} — flexible weekly slot`
                 }
                 className={cn(
-                  "text-lg leading-none rounded-md p-0.5 border border-dashed",
+                  "leading-none rounded-md border border-dashed",
+                  compact ? "p-0 text-xs" : "p-0.5 text-lg",
                   isOverflow
                     ? "border-red-400/70 bg-red-100 dark:bg-red-900/30"
                     : variants.brightBorder
@@ -334,16 +377,29 @@ export const CalendarGrid = ({
     );
   };
 
-  const WeekRow = ({ days, label }: { days: Date[]; label: string }) => (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day) => (
-          <DayCell key={day.toISOString()} day={day} />
-        ))}
+  const WeekRow = ({ days, label }: { days: Date[]; label: string }) => {
+    const compact = density === "compact";
+
+    return (
+      <div className={cn("flex flex-col", compact ? "gap-1" : "gap-2")}>
+        {showWeekLabels && (
+          <span
+            className={cn(
+              "font-medium text-muted-foreground",
+              compact ? "text-[10px]" : "text-xs"
+            )}
+          >
+            {label}
+          </span>
+        )}
+        <div className={cn("grid grid-cols-7", compact ? "gap-0.5" : "gap-1")}>
+          {days.map((day) => (
+            <DayCell key={day.toISOString()} day={day} />
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Get unique activities that have sessions
   const activeActivities = Array.from(
@@ -353,9 +409,10 @@ export const CalendarGrid = ({
     .filter(Boolean) as CalendarActivity[];
 
   return (
-    <div className={cn("w-full space-y-4", className)}>
-      <WeekRow days={week1} label={weekLabels.week1} />
-      <WeekRow days={week2} label={weekLabels.week2} />
+    <div className={cn("w-full", density === "compact" ? "space-y-2" : "space-y-4", className)}>
+      {weeks.map((week) => (
+        <WeekRow key={week.label} days={week.days} label={week.label} />
+      ))}
 
       {/* Ghost (suggested session) explanation */}
       <AnimatePresence mode="wait">
@@ -483,23 +540,42 @@ export const CalendarGrid = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex gap-2 overflow-x-auto pb-1"
+            className="space-y-1.5"
           >
-            <div className="relative min-w-[116px] rounded-xl bg-muted/80 p-2 text-center">
-              <Check
-                className="absolute right-2 top-1/2 h-5 w-5 -translate-y-1/2 text-green-500"
-                strokeWidth={3}
-              />
-              <div className="text-xl leading-none">
-                {selectedSession.activity.emoji || "📋"}
+            <div className="relative rounded-xl bg-muted/80 p-3 text-left">
+              {isCompletedOnDay?.(
+                selectedSession.session.activityId,
+                new Date(selectedSession.session.date)
+              ) && (
+                <Check
+                  className="absolute right-2 top-1/2 h-5 w-5 -translate-y-1/2 text-green-500"
+                  strokeWidth={3}
+                />
+              )}
+              <div className="flex items-start gap-2">
+                <span className="text-xl leading-none">
+                  {selectedSession.activity.emoji || "📋"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground">
+                    {selectedSession.activity.title}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    {formatSessionCardDate(new Date(selectedSession.session.date))}
+                  </div>
+                </div>
               </div>
-              <div className="mt-1 truncate text-sm font-medium text-foreground">
-                {selectedSession.activity.title}
-              </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground">
-                {formatSessionCardDate(new Date(selectedSession.session.date))}
-              </div>
+              {selectedSession.session.descriptiveGuide && (
+                <p className="mt-2 text-left text-xs leading-relaxed text-foreground">
+                  {selectedSession.session.descriptiveGuide}
+                </p>
+              )}
             </div>
+            {selectedSession.session.planTitle && (
+              <p className="px-1 text-xs text-muted-foreground">
+                Part of {selectedSession.session.planTitle}
+              </p>
+            )}
           </motion.div>
         )}
 
@@ -533,6 +609,11 @@ export const CalendarGrid = ({
                       </>
                     )}
                   </p>
+                  {selectedSession.session.planTitle && (
+                    <p className="mt-0.5 text-left text-xs text-muted-foreground">
+                      Part of {selectedSession.session.planTitle}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1">
