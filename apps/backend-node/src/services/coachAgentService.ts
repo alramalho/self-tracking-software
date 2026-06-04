@@ -1,8 +1,5 @@
-import {
-  createOpenRouter,
-  OpenRouterProvider,
-} from "@openrouter/ai-sdk-provider";
-import { ToolLoopAgent, hasToolCall, tool } from "ai";
+import { gateway } from "@ai-sdk/gateway";
+import { ToolLoopAgent, hasToolCall, tool, type LanguageModelUsage } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
@@ -10,21 +7,51 @@ import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subD
 import { activitySummarizer } from "./activitySummarizer";
 import { getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
-import { getCurrentUser } from "../utils/requestContext";
 import dedent from "dedent";
 import { TelegramService } from "./telegramService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { webSearchService } from "./webSearchService";
+import {
+  buildCoachAgentProviderOptions,
+  resolveCoachAgentModelConfig,
+} from "./coachAgentModelConfig";
 
 interface CoachAgentContext {
   user: User;
   plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
   reminders: Reminder[];
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
+  model?: string;
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
   activityRecencyById?: Map<string, string>;
   onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
+}
+
+type CoachAgentTelemetry = {
+  model: string;
+  stepCount?: number;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+    reasoningTokens?: number;
+  };
+};
+
+function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"] {
+  if (!usage) return undefined;
+
+  return {
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    totalTokens: usage.totalTokens,
+    cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens,
+    cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens,
+    reasoningTokens: usage.outputTokenDetails?.reasoningTokens,
+  };
 }
 
 function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
@@ -81,31 +108,6 @@ function findPlanWithExactGoal(params: {
 export class CoachAgentService {
   private telegram = new TelegramService();
 
-  private getOpenRouterWithUserId(): OpenRouterProvider {
-    const user = getCurrentUser();
-
-    const headers: Record<string, string> = {
-      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    };
-
-    if (user?.id) {
-      headers["Helicone-User-Id"] = user.id;
-    }
-    if (user?.username) {
-      headers["Helicone-Property-Username"] = user.username;
-    }
-    if (process.env.NODE_ENV) {
-      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-    }
-
-    return createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY!,
-      baseURL: "https://openrouter.helicone.ai/api/v1",
-      headers,
-    });
-  }
-
   /**
    * Create the coach agent with tools bound to the current context
    */
@@ -119,6 +121,7 @@ export class CoachAgentService {
       activityRecencyById,
       onStatus,
     } = context;
+    const modelConfig = resolveCoachAgentModelConfig(context.model);
     const plans = allPlans.filter((plan) => isActiveCoachPlan(plan));
     const self = this;
     const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
@@ -201,12 +204,12 @@ export class CoachAgentService {
       (user.name || "").trim().split(/\s+/)[0] || user.username;
 
     const agent = new ToolLoopAgent({
-      model: this.getOpenRouterWithUserId().chat("google/gemini-3-flash-preview"),
+      model: gateway(modelConfig.model),
       temperature: 0.5,
+      providerOptions: buildCoachAgentProviderOptions(user, modelConfig),
       stopWhen: hasToolCall("draftMessages"),
       instructions: {
         role: "system",
-        providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } },
         content: dedent`
         You are ${coachPersonality.displayName}, ${coachPersonality.title}, a general-purpose coach. You can help with planning, learning, work, health, habits, relationships, decisions, creative projects, and any other topic the user brings up.
 
@@ -441,7 +444,7 @@ export class CoachAgentService {
                 "Short human-readable description of the proposal (e.g. 'Pause chess for next week')"
               ),
             patch: z.object({
-              archive: z.literal(true).optional(),
+              archive: z.boolean().optional().describe("Set true to propose archiving this plan."),
               plan: z.object({
                 goal: z.string().optional().describe("Clearer measurable plan goal"),
                 goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
@@ -1270,6 +1273,7 @@ export class CoachAgentService {
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
     plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
     reminders: Reminder[];
+    model?: string;
     memoriesContext?: string | null;
     onStatus?: (status: "thinking" | "searching" | "drafting") => void | Promise<void>;
   }): Promise<{
@@ -1318,8 +1322,10 @@ export class CoachAgentService {
     }>;
     skipped?: boolean;
     skipReason?: string;
+    telemetry?: CoachAgentTelemetry;
   }> {
-    const { user, message, conversationHistory, plans, reminders, memoriesContext, onStatus } = params;
+    const { user, message, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
+    const resolvedModel = resolveCoachAgentModelConfig(model).model;
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
@@ -1333,6 +1339,7 @@ export class CoachAgentService {
       plans: activePlans,
       reminders,
       conversationHistory,
+      model: resolvedModel,
       memoriesContext,
       recentActivityContext,
       activityRecencyById,
@@ -1478,7 +1485,14 @@ export class CoachAgentService {
         };
       });
 
-      return { draftMessages };
+      return {
+        draftMessages,
+        telemetry: {
+          model: resolvedModel,
+          stepCount: result.steps.length,
+          usage: normalizeUsage(result.totalUsage),
+        },
+      };
     } catch (error) {
       logger.error("Coach agent error:", error);
       this.telegram.sendMessage(
