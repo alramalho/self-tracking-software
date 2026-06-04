@@ -265,6 +265,7 @@ const ALLOWED_ORIGINS = new Set([
   "http://localhost:3001",
   "http://localhost:5173",
   "http://localhost:4173",
+  "https://tracking-so.localhost",
 ]);
 
 const BLACKLISTED_IPS = new Set<string>();
