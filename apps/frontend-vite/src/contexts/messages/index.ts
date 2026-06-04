@@ -5,6 +5,7 @@ export { MessagesProvider } from "./provider";
 export { getMessages } from "./service";
 export type {
   Chat,
+  ImageAttachment,
   Message,
   ChatType,
   ChatParticipant,

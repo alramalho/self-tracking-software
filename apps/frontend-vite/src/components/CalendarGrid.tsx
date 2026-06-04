@@ -167,6 +167,13 @@ export const CalendarGrid = ({
     };
   };
 
+  const getPlanReferenceLabel = (session: CalendarSession) => {
+    if (!session.planTitle) return null;
+
+    const planName = `${session.planEmoji ? `${session.planEmoji} ` : ""}${session.planTitle}`;
+    return `Part of "${planName}" plan`;
+  };
+
   const getCompletedItemsForDay = (day: Date) => {
     const scheduledCompleted = getSessionsForDay(day)
       .filter((session) => isCompletedOnDay?.(session.activityId, day) ?? false)
@@ -616,7 +623,7 @@ export const CalendarGrid = ({
             </div>
             {selectedSession.session.planTitle && (
               <p className="px-1 text-xs text-muted-foreground">
-                Part of {selectedSession.session.planTitle}
+                {getPlanReferenceLabel(selectedSession.session)}
               </p>
             )}
           </motion.div>
@@ -666,7 +673,7 @@ export const CalendarGrid = ({
                   </p>
                   {selectedSession.session.planTitle && (
                     <p className="mt-0.5 text-left text-xs text-muted-foreground">
-                      Part of {selectedSession.session.planTitle}
+                      {getPlanReferenceLabel(selectedSession.session)}
                     </p>
                   )}
                 </div>

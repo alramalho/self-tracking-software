@@ -826,13 +826,6 @@ function MessageAIPage() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   const getMessageCopyText = (message: any) => {
     if (message.userAction) {
       const diffs = message.userAction.diffs || [];
@@ -1572,7 +1565,6 @@ function MessageAIPage() {
                                       const sourceChatId = message.chatId || currentChatId;
                                       if (!sourceChatId) return;
                                       if (pendingSession) clearPendingSession();
-                                      setPendingImages([]);
                                       setEditingMessage({
                                         id: message.id,
                                         chatId: sourceChatId,
@@ -1766,7 +1758,6 @@ function MessageAIPage() {
                   onClick={() => {
                     setEditingMessage(null);
                     setInputValue("");
-                    setPendingImages([]);
                   }}
                   className="rounded-md p-1 transition-colors hover:bg-muted"
                 >

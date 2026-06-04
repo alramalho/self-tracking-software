@@ -1,6 +1,6 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
-import { type MessageFeedback } from "./types";
+import { type CoachAssessmentResponse, type MessageFeedback } from "./types";
 import {
   type Chat,
   type Message,
@@ -40,8 +40,13 @@ export async function createCoachChat(
   return deserializeChat(response.data.chat);
 }
 
-export async function runCoachAssessment(api: AxiosInstance): Promise<void> {
-  await api.post("/ai/coach/run-assessment");
+export async function runCoachAssessment(
+  api: AxiosInstance
+): Promise<CoachAssessmentResponse> {
+  const response = await api.post<CoachAssessmentResponse>(
+    "/ai/coach/run-assessment"
+  );
+  return response.data;
 }
 
 // Update chat title (coach-specific)

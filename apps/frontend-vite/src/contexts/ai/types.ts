@@ -19,6 +19,19 @@ export interface MessageFeedback {
   updatedAt: string | Date;
 }
 
+export interface CoachAssessmentResult {
+  username: string | null;
+  userId: string;
+  action: "sent" | "skipped" | "agent_skipped" | "error";
+  reason: string;
+  sentMessageIds?: string[];
+  notificationId?: string;
+}
+
+export interface CoachAssessmentResponse {
+  result: CoachAssessmentResult;
+}
+
 export interface AIContextType extends MessagesContextType {
   // Coach chat creation
   createCoachChat: (data: {
@@ -26,8 +39,9 @@ export interface AIContextType extends MessagesContextType {
     initialCoachMessage?: string;
   }) => Promise<Chat>;
   isCreatingCoachChat: boolean;
-  runCoachAssessment: () => Promise<void>;
+  runCoachAssessment: () => Promise<CoachAssessmentResponse>;
   isRunningCoachAssessment: boolean;
+  lastCoachNoReportAt: string | null;
 
   // Chat title (coach-specific)
   updateChatTitle: (data: { chatId: string; title: string }) => Promise<Chat>;

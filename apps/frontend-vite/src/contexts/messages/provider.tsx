@@ -21,6 +21,7 @@ import {
   MessagesContext,
   type MessagesContextType,
   type Chat,
+  type ImageAttachment,
   type Message,
 } from "./types";
 
@@ -67,7 +68,7 @@ type CoachResponseWaitState = {
   hasPendingUserMessage: boolean;
   isAwaiting: boolean;
   isTimedOut: boolean;
-  status: "thinking" | "searching" | "drafting" | null;
+  status: "thinking" | "searching" | "browsing" | "drafting" | null;
   errorMessage: string | null;
 };
 
@@ -83,7 +84,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     return window.localStorage.getItem(CURRENT_CHAT_STORAGE_KEY);
   });
   const [pendingStaggeredMessages, setPendingStaggeredMessages] = useState<Message[]>([]);
-  const [coachResponseStatus, setCoachResponseStatus] = useState<"thinking" | "searching" | "drafting" | null>(null);
+  const [coachResponseStatus, setCoachResponseStatus] = useState<"thinking" | "searching" | "browsing" | "drafting" | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const staggerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -169,7 +170,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         hasPendingUserMessage: false,
         isAwaiting: false,
         isTimedOut: false,
-        status: null as "thinking" | "searching" | "drafting" | null,
+        status: null as "thinking" | "searching" | "browsing" | "drafting" | null,
         errorMessage: null as string | null,
       };
     }
@@ -178,9 +179,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     if (persistedStatus) {
       const isExpired = nowMs >= new Date(persistedStatus.timeoutAt).getTime();
       const isError = persistedStatus.status === "error";
-      const status: "thinking" | "searching" | "drafting" | null =
+      const status: "thinking" | "searching" | "browsing" | "drafting" | null =
         !isExpired && !isError
-          ? (persistedStatus.status as "thinking" | "searching" | "drafting")
+          ? (persistedStatus.status as "thinking" | "searching" | "browsing" | "drafting")
           : null;
 
       return {
@@ -261,12 +262,13 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => {
+    mutationFn: async (data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }) => {
       // Optimistically add user message to the cache immediately
       const userMessage: Message = {
         id: `temp-${Date.now()}`,
         role: "USER",
         content: data.message,
+        imageAttachments: data.imageAttachments || null,
         createdAt: new Date(),
       };
 
@@ -285,7 +287,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
                 ...chat,
                 updatedAt: now,
                 lastMessage: {
-                  content: data.message,
+                  content: data.message || "Image",
                   senderName: undefined,
                   createdAt: now,
                 },

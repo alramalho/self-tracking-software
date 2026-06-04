@@ -1,6 +1,6 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useNavigate } from "@tanstack/react-router";
-import { Target, ArrowRight, Calendar, CheckCircle2 } from "lucide-react";
+import { Target, ArrowRight, Calendar, CheckCircle2, Info } from "lucide-react";
 import { useState, useMemo } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
@@ -29,6 +29,7 @@ export function PlanLink({
   const { plans } = usePlans();
   const { activityEntries } = useActivities();
   const [showPreview, setShowPreview] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<any | null>(null);
 
   const plan = useMemo(() => plans?.find((p) => p.id === planId), [plans, planId]);
   const displayStartsWithEmoji = Boolean(
@@ -48,6 +49,17 @@ export function PlanLink({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 4);
   }, [plan?.sessions]);
+
+  const upcomingQuantityByActivity = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const session of upcomingSessions) {
+      totals.set(
+        session.activityId,
+        (totals.get(session.activityId) || 0) + (session.quantity || 0)
+      );
+    }
+    return totals;
+  }, [upcomingSessions]);
 
   // Get activity info for a session
   const getActivityForSession = (activityId: string) => {
@@ -73,8 +85,13 @@ export function PlanLink({
     setShowPreview(true);
   };
 
-  const handleViewFullPlan = () => {
+  const handleClosePreview = () => {
+    setSelectedSession(null);
     setShowPreview(false);
+  };
+
+  const handleViewFullPlan = () => {
+    handleClosePreview();
     navigate({ to: "/plans", search: { selectedPlan: planId } });
   };
 
@@ -100,7 +117,7 @@ export function PlanLink({
 
       <AppleLikePopover
         open={showPreview}
-        onClose={() => setShowPreview(false)}
+        onClose={handleClosePreview}
         title="Plan Preview"
         wrapperClassName="contents"
       >
@@ -123,15 +140,23 @@ export function PlanLink({
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">Activities</h4>
               <div className="flex flex-wrap gap-2">
-                {plan.activities.slice(0, 6).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted text-sm"
-                  >
-                    <span>{activity.emoji || "📌"}</span>
-                    <span className="text-foreground/80">{activity.title}</span>
-                  </div>
-                ))}
+                {plan.activities.slice(0, 6).map((activity) => {
+                  const upcomingQuantity = upcomingQuantityByActivity.get(activity.id);
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex max-w-full items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-sm"
+                    >
+                      <span>{activity.emoji || "📌"}</span>
+                      <span className="min-w-0 truncate text-foreground/80">{activity.title}</span>
+                      {upcomingQuantity ? (
+                        <span className="flex-shrink-0 text-xs text-muted-foreground">
+                          · {upcomingQuantity} {activity.measure}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
                 {plan.activities.length > 6 && (
                   <div className="flex items-center px-2.5 py-1.5 rounded-lg bg-muted text-sm text-muted-foreground">
                     +{plan.activities.length - 6} more
@@ -153,25 +178,45 @@ export function PlanLink({
                   const activity = getActivityForSession(session.activityId);
                   const isCompleted = isSessionCompleted(session);
                   const isToday = isSameDay(new Date(session.date), new Date());
+                  const quantityLabel =
+                    session.quantity && activity?.measure
+                      ? `${session.quantity} ${activity.measure}`
+                      : session.quantity
+                        ? `${session.quantity}`
+                        : null;
+                  const hasDescription = Boolean(session.descriptiveGuide?.trim());
                   return (
-                    <div
+                    <button
                       key={session.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                      type="button"
+                      onClick={() => hasDescription && setSelectedSession(session)}
+                      disabled={!hasDescription}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         isCompleted ? "bg-green-500/10" : "bg-muted/50"
-                      }`}
+                      } ${hasDescription ? "hover:bg-muted cursor-pointer" : "cursor-default"}`}
                     >
                       {isCompleted ? (
                         <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
                       ) : (
                         <span className="text-base leading-none">{activity?.emoji || "📌"}</span>
                       )}
-                      <span className={`flex-1 ${isCompleted ? "text-muted-foreground line-through" : "text-foreground/80"}`}>
-                        {activity?.title || "Activity"}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block truncate ${isCompleted ? "text-muted-foreground line-through" : "text-foreground/80"}`}>
+                          {activity?.title || "Activity"}
+                        </span>
+                        {quantityLabel && (
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {quantityLabel}
+                          </span>
+                        )}
                       </span>
+                      {hasDescription && (
+                        <Info size={13} className="flex-shrink-0 text-muted-foreground" />
+                      )}
                       <span className={`text-xs ${isToday ? "text-primary font-medium" : "text-muted-foreground"}`}>
                         {isToday ? "Today" : format(new Date(session.date), "EEE")}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -187,6 +232,48 @@ export function PlanLink({
             <ArrowRight size={16} />
           </Button>
         </div>
+      </AppleLikePopover>
+
+      <AppleLikePopover
+        open={Boolean(selectedSession)}
+        onClose={() => setSelectedSession(null)}
+        title="Session details"
+        wrapperClassName="contents"
+      >
+        {selectedSession && (
+          <div className="space-y-4 p-4">
+            {(() => {
+              const activity = getActivityForSession(selectedSession.activityId);
+              const quantityLabel =
+                selectedSession.quantity && activity?.measure
+                  ? `${selectedSession.quantity} ${activity.measure}`
+                  : selectedSession.quantity
+                    ? `${selectedSession.quantity}`
+                    : null;
+
+              return (
+                <>
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl leading-none">{activity?.emoji || "📌"}</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {activity?.title || "Activity"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(selectedSession.date), "EEEE, MMM d")}
+                        {quantityLabel ? ` · ${quantityLabel}` : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-muted/60 p-3 text-sm leading-relaxed text-foreground/85 whitespace-pre-wrap">
+                    {selectedSession.descriptiveGuide}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
       </AppleLikePopover>
     </>
   );

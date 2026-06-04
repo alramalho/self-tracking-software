@@ -21,11 +21,11 @@ type HomeGridCard = {
 };
 
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
-  const { plans } = usePlans();
+  const { plans, isLoadingPlans } = usePlans();
   const { metrics } = useMetrics();
   const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
-  const { isUserAIWhitelisted } = useAI();
+  const { isUserAIWhitelisted, lastCoachNoReportAt } = useAI();
 
   const isUserOnFreePlan = userPlanType === "FREE";
 
@@ -47,7 +47,9 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
           key="coach"
           attentionCount={pendingCoachNotifications.length}
           activePlanCount={activePlans?.length ?? 0}
+          isLoadingPlans={isLoadingPlans}
           reviewPlanId={firstPendingPlanId}
+          lastCoachNoReportAt={lastCoachNoReportAt}
         />
       ),
       span: 1,

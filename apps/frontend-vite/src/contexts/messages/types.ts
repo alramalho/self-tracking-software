@@ -23,6 +23,13 @@ export interface UserAction {
   proposalIndex?: number;
 }
 
+export interface ImageAttachment {
+  id?: string;
+  url: string;
+  mediaType: string;
+  filename?: string;
+}
+
 export interface Message {
   id: string;
   chatId?: string;
@@ -95,6 +102,7 @@ export interface Message {
   }>;
   toolCalls?: ToolCall[] | null;
   userAction?: UserAction | null;
+  imageAttachments?: ImageAttachment[] | null;
   error?: boolean;
   /** Origin tag, e.g. "autonomous_coach" for proactive coach assessment messages. */
   source?: string | null;
@@ -148,10 +156,10 @@ export interface MessagesContextType {
   isLoadingMessages: boolean;
 
   // Mutations
-  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }) => Promise<Message[]>;
+  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }) => Promise<Message[]>;
   rewriteMessage: (data: { chatId: string; cacheChatId?: string; messageId: string; message: string }) => Promise<Message[]>;
   isSendingMessage: boolean;
-  coachResponseStatus: "thinking" | "searching" | "drafting" | null;
+  coachResponseStatus: "thinking" | "searching" | "browsing" | "drafting" | null;
   isAwaitingCoachResponse: boolean;
   coachResponseTimedOut: boolean;
   coachResponseErrorMessage: string | null;

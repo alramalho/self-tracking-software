@@ -1,6 +1,6 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
-import { type Chat, type Message } from "./types";
+import { type Chat, type ImageAttachment, type Message } from "./types";
 import { supabase } from "@/services/supabase";
 
 export type { Chat, Message } from "./types";
@@ -47,11 +47,15 @@ export async function getMessages(
 // Send message to any chat type (coach, direct, group)
 export async function sendMessage(
   api: AxiosInstance,
-  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" }
+  data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }
 ): Promise<Message[]> {
   const response = await api.post<{ messages?: MessageApiResponse[]; message: MessageApiResponse }>(
     `/chats/${data.chatId}/messages`,
-    { message: data.message, coachVersion: data.coachVersion }
+    {
+      message: data.message,
+      coachVersion: data.coachVersion,
+      imageAttachments: data.imageAttachments,
+    }
   );
   // New multi-message format (v2) or fallback to single message
   if (response.data.messages) {
@@ -60,8 +64,8 @@ export async function sendMessage(
   return [deserializeMessage(response.data.message)];
 }
 
-export type CoachResponseStatus = "thinking" | "searching" | "drafting";
-export const COACH_RESPONSE_TIMEOUT_MS = 120000;
+export type CoachResponseStatus = "thinking" | "searching" | "browsing" | "drafting";
+export const COACH_RESPONSE_TIMEOUT_MS = 300000;
 
 export interface CoachResponseState {
   chatId: string;
@@ -141,6 +145,7 @@ async function readMessageStreamResponse(
       if (
         eventData?.state === "thinking" ||
         eventData?.state === "searching" ||
+        eventData?.state === "browsing" ||
         eventData?.state === "drafting"
       ) {
         onStatus?.(eventData.state);
@@ -192,7 +197,7 @@ async function readMessageStreamResponse(
 
 export async function sendMessageStream(
   api: AxiosInstance,
-  data: { message: string; chatId: string; coachVersion?: "v1" | "v2" },
+  data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] },
   onStatus?: (status: CoachResponseStatus) => void
 ): Promise<Message[]> {
   const baseURL = api.defaults.baseURL || "";
@@ -211,6 +216,7 @@ export async function sendMessageStream(
         body: JSON.stringify({
           message: data.message,
           coachVersion: data.coachVersion,
+          imageAttachments: data.imageAttachments,
         }),
         signal: controller.signal,
       }

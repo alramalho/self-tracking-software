@@ -45,6 +45,7 @@ function resolveLegacyOperation(
       type: "update_plan",
       goal: op.goal,
       goalReason: op.goalReason,
+      notes: op.notes,
       finishingDate: op.finishingDate,
       timesPerWeek: op.timesPerWeek,
     };
@@ -84,6 +85,7 @@ function resolvePatchOperations(
       type: "update_plan",
       goal: patch.plan.goal,
       goalReason: patch.plan.goalReason,
+      notes: patch.plan.notes,
       finishingDate: patch.plan.finishingDate,
       timesPerWeek: patch.plan.timesPerWeek,
     });

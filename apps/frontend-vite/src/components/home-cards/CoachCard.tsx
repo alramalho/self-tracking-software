@@ -1,27 +1,76 @@
 import { useCurrentUser } from "@/contexts/users";
 import { getCoachAvatar, getCoachPersonalityConfig } from "@/lib/coachPersonality";
 import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { HomeCardShell } from "./HomeCardShell";
 
 interface CoachCardProps {
   attentionCount: number;
   activePlanCount: number;
+  isLoadingPlans?: boolean;
   reviewPlanId?: string;
+  lastCoachNoReportAt?: string | null;
 }
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+const NO_REPORT_VISIBLE_MS = HOUR_MS;
+
+const getNextAssessmentAt = (now: Date, preferredHour: number) => {
+  const next = new Date(now);
+  next.setHours(preferredHour, 0, 0, 0);
+
+  if (next.getTime() <= now.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+
+  return next;
+};
+
+const formatSingleUnitDuration = (from: Date, to: Date) => {
+  const diffMs = Math.max(0, to.getTime() - from.getTime());
+
+  const days = Math.floor(diffMs / DAY_MS);
+  if (days >= 1) return `${days}d`;
+
+  const hours = Math.floor(diffMs / HOUR_MS);
+  if (hours >= 1) return `${hours}h`;
+
+  return `${Math.max(1, Math.ceil(diffMs / MINUTE_MS))}m`;
+};
 
 export const CoachCard = ({
   attentionCount,
   activePlanCount,
+  isLoadingPlans = false,
   reviewPlanId,
+  lastCoachNoReportAt,
 }: CoachCardProps) => {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
+  const [now, setNow] = useState(() => new Date());
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const hasActivePlans = activePlanCount > 0;
+  const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
+  const nextAssessmentAt = getNextAssessmentAt(now, preferredCoachingHour);
+  const nextAssessmentLabel = formatSingleUnitDuration(now, nextAssessmentAt);
+  const noReportAtMs = lastCoachNoReportAt
+    ? new Date(lastCoachNoReportAt).getTime()
+    : Number.NaN;
+  const hasRecentNoReport =
+    Number.isFinite(noReportAtMs) &&
+    now.getTime() - noReportAtMs < NO_REPORT_VISIBLE_MS;
   const avatar = getCoachAvatar(
     currentUser?.coachPersonality,
     attentionCount > 0 ? "thinking" : hasActivePlans ? "coachSmiling" : "sad"
   );
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <HomeCardShell
@@ -43,13 +92,21 @@ export const CoachCard = ({
           className="w-14 h-14 rounded-full object-contain relative z-10"
         />
       </div>
-      <p className="text-base font-medium text-muted-foreground">
-        {attentionCount > 0
-          ? `${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`
-          : hasActivePlans
-          ? "No coach actions pending"
-          : "No active plans"}
-      </p>
+      {isLoadingPlans ? (
+        <div className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      ) : (
+        <p className="text-base font-medium text-muted-foreground">
+          {attentionCount > 0
+            ? `${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`
+            : hasActivePlans
+              ? hasRecentNoReport
+                ? "Coach has nothing to report"
+                : `Next coach assessment in ${nextAssessmentLabel}`
+              : "No active plans"}
+        </p>
+      )}
     </HomeCardShell>
   );
 };
