@@ -94,6 +94,24 @@ export function toolCalled(ctx: CoachEvalContext, tool: string): VerifyResult {
   };
 }
 
+export function toolCalledWith(
+  ctx: CoachEvalContext,
+  tool: string,
+  predicate: (args: unknown, result: unknown) => boolean,
+  id = `tool_called_with:${tool}`
+): VerifyResult {
+  const matchingCalls = ctx.artifacts.toolCalls.filter((toolCall) => toolCall.tool === tool);
+  const pass = matchingCalls.some((toolCall) => predicate(toolCall.args, toolCall.result));
+  return {
+    id,
+    kind: "deterministic",
+    pass,
+    detail: pass
+      ? `${tool} was called with expected args`
+      : `${tool} calls were ${formatValue(matchingCalls.map((toolCall) => toolCall.args))}`,
+  };
+}
+
 export function toolsNotCalled(ctx: CoachEvalContext, tools: string[]): VerifyResult[] {
   return tools.map((tool) => {
     const pass = !ctx.artifacts.toolCalls.some((toolCall) => toolCall.tool === tool);
