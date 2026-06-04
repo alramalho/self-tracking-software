@@ -105,6 +105,28 @@ function findPlanWithExactGoal(params: {
   );
 }
 
+function hasDefinedValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(
+      (item) => item !== undefined
+    );
+  }
+  return value !== undefined;
+}
+
+function isActivityMetadataChangeIntent(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return (
+    /\b(change|update|switch|set|edit|replace)\b.{0,80}\b(activity|tracking unit|measure|unit)\b/.test(
+      normalized
+    ) ||
+    /\b(activity|tracking unit|measure|unit)\b.{0,80}\b(change|update|switch|set|edit|replace|from\s+\w+\s+to\s+\w+)\b/.test(
+      normalized
+    )
+  );
+}
+
 export class CoachAgentService {
   private telegram = new TelegramService();
 
@@ -266,6 +288,7 @@ export class CoachAgentService {
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
         - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, continue a curriculum, or otherwise adjust supported fields for a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
         - If the requested edit is not represented by the available proposal patch fields, do not simulate it with archive/recreate or another nearby proposal. Say that this particular change is not available from chat and ask for a supported next step.
+        - For unsupported edits, lead with the limitation directly. Do not say you can propose the requested change, and do not present a nearby supported edit as equivalent to the requested change.
         - If an active plan is similar but you are not sure whether the user wants a new separate plan or a change to the existing one, ask one clarifying question. Never create a near-duplicate plan just to represent an edit.
         - Treat Plan notes as the canonical user-provided roadmap: source URLs, syllabus, curriculum order, project sequence, constraints, and explicit user preferences. Use notes to keep future sessions anchored to the user's roadmap while adapting near-term scheduling based on usage.
         - Treat coachNotes as internal/generated coaching state, not as the canonical curriculum. Do not put user-provided roadmap material into coachNotes.
@@ -442,12 +465,14 @@ export class CoachAgentService {
             - Add or update milestones with patch.milestones.upsert
             - Remove milestones with patch.milestones.deleteIds
             - Archive a dormant plan with patch.archive
+            You cannot propose edits to activity metadata: activity title, emoji, kind, tracking unit/measure, or which activities belong to a plan.
 
             Use the planId, activityId, sessionId, and milestoneId values from the plan context above.
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
             IMPORTANT: Omitted fields mean "leave unchanged". Do not provide full relation arrays. Use upsert/deleteIds only.
             IMPORTANT: Archive must be standalone. Do not combine archive with other patch fields.
             IMPORTANT: Do not use archive/recreate as a workaround for unsupported edits. Only propose archive when the user's intent is to stop or remove a dormant plan.
+            IMPORTANT: Do not use patch.plan.notes or session descriptive guides to state that unsupported activity metadata changed. Notes and guides can describe instructions, not alter activity fields.
             IMPORTANT: When adding sessions to TIMES_PER_WEEK plans, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
             IMPORTANT: SPECIFIC plans do not require full-week coverage. It is valid to update just the next session, next few sessions, or the sessions affected by the user's requested roadmap change.
             IMPORTANT: Milestone progress is a 0-100 number. Propose milestone changes only when they make the user's plan clearer or easier to follow.
@@ -494,7 +519,7 @@ export class CoachAgentService {
           execute: async ({ planId, description, patch }) => {
             const hasChanges = !!(
               patch.archive ||
-              patch.plan ||
+              (patch.plan && hasDefinedValue(patch.plan)) ||
               patch.sessions?.upsert?.length ||
               patch.sessions?.deleteIds?.length ||
               patch.milestones?.upsert?.length ||
@@ -518,6 +543,21 @@ export class CoachAgentService {
               return {
                 success: false,
                 error: "Archive must be proposed as a standalone patch",
+              };
+            }
+
+            const proposalText = [
+              description,
+              patch.plan?.notes || "",
+              ...(patch.sessions?.upsert || []).map(
+                (session) => session.descriptiveGuide || ""
+              ),
+            ].join("\n");
+            if (isActivityMetadataChangeIntent(proposalText)) {
+              return {
+                success: false,
+                error:
+                  "This tool cannot change activity metadata such as title, emoji, kind, tracking unit, measure, or plan activity membership.",
               };
             }
 

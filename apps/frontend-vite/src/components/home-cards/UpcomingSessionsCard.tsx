@@ -29,6 +29,7 @@ function isSessionCompleted(
 export const UpcomingSessionsCard = ({ plans }: UpcomingSessionsCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const specificPlans = plans.filter((plan) => plan.outlineType === "SPECIFIC");
+  const today = new Date();
 
   const sessions: CalendarSession[] = specificPlans.flatMap((plan) =>
     (plan.sessions || []).map((session) => ({
@@ -41,6 +42,9 @@ export const UpcomingSessionsCard = ({ plans }: UpcomingSessionsCardProps) => {
       quantity: session.quantity,
       descriptiveGuide: session.descriptiveGuide ?? undefined,
       imageUrls: session.imageUrls ?? undefined,
+      expiresToday:
+        isSameDay(new Date(session.date), today) &&
+        !isSessionCompleted(session, specificPlans, today),
     }))
   );
 
@@ -59,16 +63,7 @@ export const UpcomingSessionsCard = ({ plans }: UpcomingSessionsCardProps) => {
   }
 
   if (sessions.length === 0) return null;
-
-  const today = new Date();
-  const incompleteTodayCount = specificPlans
-    .flatMap((plan) => plan.sessions || [])
-    .filter(
-      (session) =>
-        isSameDay(new Date(session.date), today) &&
-        !isSessionCompleted(session, specificPlans, today)
-    ).length;
-  const hasTodaySessions = incompleteTodayCount > 0;
+  const expiringTodayCount = sessions.filter((session) => session.expiresToday).length;
 
   return (
     <div className="col-span-2 rounded-3xl ring-1 ring-border bg-card p-4">
@@ -83,35 +78,28 @@ export const UpcomingSessionsCard = ({ plans }: UpcomingSessionsCardProps) => {
             <p className="text-sm font-semibold text-foreground">
               Upcoming sessions
             </p>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold",
-                hasTodaySessions
-                  ? "bg-amber-500/15 text-amber-400"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {incompleteTodayCount}
-              {hasTodaySessions ? (
-                <span className="relative flex h-2 w-2 items-center justify-center">
-                  <span className="absolute h-full w-full rounded-full bg-amber-400/70 motion-safe:animate-ping" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-amber-400" />
-                </span>
-              ) : (
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-              )}
-            </span>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             All scheduled plans
           </p>
         </div>
-        <ChevronDown
-          className={cn(
-            "mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-            isExpanded && "rotate-180"
+        <div className="flex shrink-0 items-center gap-2">
+          {expiringTodayCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-400">
+              {expiringTodayCount}
+              <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+                <span className="absolute h-full w-full rounded-full bg-amber-400/70 motion-safe:animate-ping" />
+                <span className="relative h-1.5 w-1.5 rounded-full bg-amber-400" />
+              </span>
+            </span>
           )}
-        />
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+              isExpanded && "rotate-180"
+            )}
+          />
+        </div>
       </button>
 
       <div

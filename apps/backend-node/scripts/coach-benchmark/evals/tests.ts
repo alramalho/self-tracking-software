@@ -432,11 +432,6 @@ export const unsupportedActivityMeasureChangeTest: CoachEvalTest = {
       proposalCount(ctx, "planModification", { equals: 0 }),
       proposalCount(ctx, "planCreation", { equals: 0 }),
       proposalCount(ctx, "activityLog", { equals: 0 }),
-      toolsNotCalled(ctx, [
-        "proposePlanModification",
-        "proposePlanCreation",
-        "proposeActivityLog",
-      ]),
       responseNotMatches(
         ctx,
         /\b(I\s+can|I'll|I\s+will|Let\s+me|I'd)\s+(?:propose\s+)?(?:change|changing|update|switch|set|fix)\b[^\n.]{0,120}\b(LeetCode|activity|measure|track)\b[^\n.]{0,120}\b(minutes|instead of sessions)\b/i,

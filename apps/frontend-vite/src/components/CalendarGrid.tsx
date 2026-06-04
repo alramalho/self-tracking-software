@@ -18,6 +18,7 @@ export interface CalendarSession {
   descriptiveGuide?: string;
   imageUrls?: string[];
   imagesLoading?: boolean;
+  expiresToday?: boolean;
 }
 
 export interface CalendarActivity {
@@ -107,6 +108,34 @@ export const CalendarGrid = ({
     if (isSameDay(date, addDays(today, 1))) return "Tomorrow";
     return format(date, "EEEE, MMM d");
   };
+
+  const ExpiringDot = ({ compact = false }: { compact?: boolean }) => (
+    <span
+      className={cn(
+        "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
+        compact ? "-right-1 h-1.5 w-1.5" : "-right-1.5 h-2 w-2"
+      )}
+      aria-label="Expires today"
+    >
+      <span className="absolute h-full w-full rounded-full bg-amber-400/70 motion-safe:animate-ping" />
+      <span
+        className={cn(
+          "relative rounded-full bg-amber-400",
+          compact ? "h-1.5 w-1.5" : "h-2 w-2"
+        )}
+      />
+    </span>
+  );
+
+  const ExpiresTodayPill = () => (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-400">
+      <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+        <span className="absolute h-full w-full rounded-full bg-amber-400/70 motion-safe:animate-ping" />
+        <span className="relative h-1.5 w-1.5 rounded-full bg-amber-400" />
+      </span>
+      Expires today!
+    </span>
+  );
 
   const weeks = Array.from({ length: weekCount }, (_, weekIndex) => ({
     label: weekIndex === 0 ? weekLabels.week1 : weekLabels.week2,
@@ -292,6 +321,7 @@ export const CalendarGrid = ({
 
             const isCompleted = isCompletedOnDay?.(session.activityId, day) ?? false;
             const isSelected = selectedSessionId === session.id;
+            const isExpiringToday = Boolean(session.expiresToday && !isCompleted);
 
             return (
               <button
@@ -309,6 +339,7 @@ export const CalendarGrid = ({
                 )}
               >
                 {activity.emoji || "📋"}
+                {isExpiringToday && <ExpiringDot compact={compact} />}
                 {isCompleted && (
                   <span className="absolute -top-1.5 -right-1.5">
                     <Check
@@ -392,7 +423,7 @@ export const CalendarGrid = ({
             {label}
           </span>
         )}
-        <div className={cn("grid grid-cols-7", compact ? "gap-0.5" : "gap-1")}>
+        <div className={cn("grid grid-cols-7 px-1", compact ? "gap-0.5" : "gap-1")}>
           {days.map((day) => (
             <DayCell key={day.toISOString()} day={day} />
           ))}
@@ -553,12 +584,24 @@ export const CalendarGrid = ({
                 />
               )}
               <div className="flex items-start gap-2">
-                <span className="text-xl leading-none">
+                <span className="relative text-xl leading-none">
                   {selectedSession.activity.emoji || "📋"}
+                  {selectedSession.session.expiresToday &&
+                    !isCompletedOnDay?.(
+                      selectedSession.session.activityId,
+                      new Date(selectedSession.session.date)
+                    ) && <ExpiringDot />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">
-                    {selectedSession.activity.title}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 truncate text-sm font-medium text-foreground">
+                      {selectedSession.activity.title}
+                    </div>
+                    {selectedSession.session.expiresToday &&
+                      !isCompletedOnDay?.(
+                        selectedSession.session.activityId,
+                        new Date(selectedSession.session.date)
+                      ) && <ExpiresTodayPill />}
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted-foreground">
                     {formatSessionCardDate(new Date(selectedSession.session.date))}
@@ -592,13 +635,25 @@ export const CalendarGrid = ({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">
+                <span className="relative text-2xl">
                   {selectedSession.activity.emoji || "📋"}
+                  {selectedSession.session.expiresToday &&
+                    !isCompletedOnDay?.(
+                      selectedSession.session.activityId,
+                      new Date(selectedSession.session.date)
+                    ) && <ExpiringDot />}
                 </span>
                 <div>
-                  <h4 className="text-left font-semibold text-foreground">
-                    {selectedSession.activity.title}
-                  </h4>
+                  <div className="flex items-start gap-2">
+                    <h4 className="text-left font-semibold text-foreground">
+                      {selectedSession.activity.title}
+                    </h4>
+                    {selectedSession.session.expiresToday &&
+                      !isCompletedOnDay?.(
+                        selectedSession.session.activityId,
+                        new Date(selectedSession.session.date)
+                      ) && <ExpiresTodayPill />}
+                  </div>
                   <p className="text-left text-sm text-muted-foreground">
                     {format(new Date(selectedSession.session.date), "EEEE, MMM d")}
                     {selectedSession.session.quantity && (
