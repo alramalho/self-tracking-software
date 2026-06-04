@@ -181,9 +181,16 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const upsertActivityMutation = useMutation({
     mutationFn: async (data: {
       activity: Partial<Activity>;
+      measureConversion?: {
+        operator: "multiply" | "divide";
+        factor: number;
+      };
       muteNotification?: boolean;
     }) => {
-      await api.post("/activities/upsert", data.activity);
+      await api.post("/activities/upsert", {
+        ...data.activity,
+        measureConversion: data.measureConversion,
+      });
     },
     onSuccess: (_, { activity: newActivity, muteNotification }) => {
       queryClient.setQueryData(

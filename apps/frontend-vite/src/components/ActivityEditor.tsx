@@ -10,6 +10,19 @@ import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { EmojiInput } from "./ui/emoji-input";
 import { Separator } from "./ui/separator";
 import SteppedColorPicker from "./SteppedColorPicker";
+
+type MeasureConversionOperator = "multiply" | "divide";
+
+const PREVIEW_QUANTITY = 60;
+
+function formatPreviewMeasure(measure: string, quantity: number) {
+  const trimmed = measure.trim();
+  if (quantity === 1 && trimmed.endsWith("s")) {
+    return trimmed.slice(0, -1);
+  }
+  return trimmed;
+}
+
 interface ActivityEditorProps {
   onClose: () => void;
   activity?: Activity;
@@ -33,6 +46,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const [colorHex, setColorHex] = useState(activity?.colorHex || "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMeasureConfirm, setShowMeasureConfirm] = useState(false);
+  const [conversionOperator, setConversionOperator] =
+    useState<MeasureConversionOperator>("divide");
+  const [conversionFactor, setConversionFactor] = useState("1");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLDivElement>(null);
@@ -43,11 +60,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       setMeasure(activity.measure || "");
       setEmoji(activity.emoji || "");
       setColorHex(activity.colorHex || "");
+      setShowMeasureConfirm(false);
+      setConversionOperator("divide");
+      setConversionFactor("1");
     }
-  }, [activity]);
-
-  useEffect(() => {
-    console.log({ activity });
   }, [activity]);
 
   useEffect(() => {
@@ -69,20 +85,61 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     };
   }, [showEmojiPicker]);
 
-  const handleSave = async () => {
+  const oldMeasure = activity?.measure?.trim() || "";
+  const newMeasure = measure.trim();
+  const isMeasureChanged = !!activity && oldMeasure !== newMeasure;
+  const conversionFactorNumber = Number(conversionFactor);
+  const isValidConversionFactor =
+    Number.isInteger(conversionFactorNumber) && conversionFactorNumber > 0;
+  const previewConvertedQuantity =
+    conversionOperator === "multiply"
+      ? PREVIEW_QUANTITY * conversionFactorNumber
+      : PREVIEW_QUANTITY / conversionFactorNumber;
+
+  const saveActivity = async (
+    measureConversion?: {
+      operator: MeasureConversionOperator;
+      factor: number;
+    }
+  ) => {
     if (!title || !measure || !emoji) {
       toast.error("Title, measure, and emoji are required.");
       return;
     }
 
-    upsertActivity({activity: {
-      ...activity,
-      emoji,
-      title: title.trim(),
-      measure: measure.trim(),
-      colorHex: colorHex === "" ? null : colorHex,
-    }});
-    onClose?.()
+    await upsertActivity({
+      activity: {
+        ...activity,
+        emoji,
+        title: title.trim(),
+        measure: newMeasure,
+        colorHex: colorHex === "" ? null : colorHex,
+      },
+      measureConversion,
+    });
+    onClose?.();
+  };
+
+  const handleSave = async () => {
+    if (isMeasureChanged) {
+      setShowMeasureConfirm(true);
+      return;
+    }
+
+    await saveActivity();
+  };
+
+  const confirmMeasureChange = async () => {
+    if (!isValidConversionFactor) {
+      toast.error("Multiplier must be a positive whole number.");
+      return;
+    }
+
+    await saveActivity({
+      operator: conversionOperator,
+      factor: conversionFactorNumber,
+    });
+    setShowMeasureConfirm(false);
   };
 
   const handleDelete = async () => {
@@ -116,13 +173,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
-              {!activity && (
-                <Input
-                  placeholder="Measure (e.g., minutes, times)"
-                  value={measure}
-                  onChange={(e) => setMeasure(e.target.value)}
-                />
-              )}
+              <Input
+                placeholder="Measure (e.g., minutes, times)"
+                value={measure}
+                onChange={(e) => setMeasure(e.target.value)}
+              />
               <SteppedColorPicker value={colorHex} onChange={setColorHex} />
 
               <Separator className="my-4" />
@@ -161,6 +216,74 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         description={<>Are you sure you want to delete this activity? <strong>This will permanently delete all entries, reactions, and comments associated with it.</strong> This action cannot be undone.</>}
         confirmText="Delete"
         variant="destructive"
+      />
+
+      <ConfirmDialogOrPopover
+        isOpen={showMeasureConfirm}
+        onClose={() => setShowMeasureConfirm(false)}
+        onConfirm={confirmMeasureChange}
+        title="Change Activity Measure"
+        description={
+          <div className="space-y-4 text-left">
+            <p>
+              This changes how existing logs and planned sessions for this
+              activity are measured. Pick how old quantities should convert.
+            </p>
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="mb-2 text-sm font-medium text-foreground">
+                Conversion
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate">{oldMeasure}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-12 shrink-0 px-0 text-lg"
+                  onClick={() =>
+                    setConversionOperator((operator) =>
+                      operator === "divide" ? "multiply" : "divide"
+                    )
+                  }
+                >
+                  {conversionOperator === "divide" ? "÷" : "×"}
+                </Button>
+                <Input
+                  className="h-9 w-20 shrink-0 text-center"
+                  inputMode="numeric"
+                  value={conversionFactor}
+                  onChange={(event) => setConversionFactor(event.target.value)}
+                />
+                <span className="min-w-0 flex-1 truncate">{newMeasure}</span>
+              </div>
+              <div className="mt-3 text-sm text-muted-foreground">
+                {Number.isFinite(previewConvertedQuantity) &&
+                isValidConversionFactor ? (
+                  <>
+                    {PREVIEW_QUANTITY}{" "}
+                    {formatPreviewMeasure(oldMeasure, PREVIEW_QUANTITY)} ={" "}
+                    {previewConvertedQuantity}{" "}
+                    {formatPreviewMeasure(
+                      newMeasure,
+                      previewConvertedQuantity
+                    )}
+                  </>
+                ) : (
+                  "Enter a positive whole number to preview the conversion."
+                )}
+              </div>
+            </div>
+            {isValidConversionFactor &&
+              !Number.isInteger(previewConvertedQuantity) && (
+                <p className="text-sm text-red-500">
+                  This conversion can create fractional quantities. Existing
+                  activity quantities are whole numbers today, so the server may
+                  reject it if any saved log or session would become fractional.
+                </p>
+              )}
+          </div>
+        }
+        confirmText="Change Measure"
+        isConfirming={isUpsertingActivity}
       />
     </>
   );

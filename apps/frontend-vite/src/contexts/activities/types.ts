@@ -50,6 +50,10 @@ export interface ActivitiesContextType {
 
   upsertActivity: (data: {
     activity: Partial<Activity>;
+    measureConversion?: {
+      operator: "multiply" | "divide";
+      factor: number;
+    };
     muteNotification?: boolean;
   }) => Promise<void>;
   upsertActivityEntry: (data: {
