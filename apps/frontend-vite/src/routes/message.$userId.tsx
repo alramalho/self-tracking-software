@@ -1,17 +1,16 @@
+import { ChatMessageComposer } from "@/components/ChatMessageComposer";
+import ImageZoomDialog from "@/components/ImageZoomDialog";
 import { MessageBubble } from "@/components/MessageBubble";
+import { MessageImageAttachments } from "@/components/MessageImageAttachments";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/contexts/users";
-import { useMessages } from "@/contexts/messages";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import { cn } from "@/lib/utils";
+import { useMessages, type ImageAttachment } from "@/contexts/messages";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft } from "lucide-react";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import ReactMarkdown from "react-markdown";
-import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -86,9 +85,6 @@ function MessageUserPage() {
   const { userId } = Route.useParams();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
-  const api = useApiWithAuth();
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
   const {
     chats,
     currentChatId,
@@ -111,6 +107,7 @@ function MessageUserPage() {
   } | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<{ src: string; alt: string } | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -150,8 +147,6 @@ function MessageUserPage() {
       flushReadQueue();
     };
   }, [flushReadQueue]);
-
-  const currentChat = chats?.find((chat) => chat.id === currentChatId);
 
   // Load user info and find/create chat
   useEffect(() => {
@@ -226,26 +221,27 @@ function MessageUserPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isSendingMessage || !currentChatId) {
+  const handleSend = async ({
+    message,
+    imageAttachments,
+  }: {
+    message: string;
+    imageAttachments: ImageAttachment[];
+  }) => {
+    if ((!message.trim() && imageAttachments.length === 0) || isSendingMessage || !currentChatId) {
       return;
     }
 
-    const messageToSend = inputValue;
-    setInputValue("");
-
     try {
-      await sendMessage({ message: messageToSend, chatId: currentChatId });
+      await sendMessage({
+        message: message.trim(),
+        chatId: currentChatId,
+        imageAttachments,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+      throw error;
     }
   };
 
@@ -365,8 +361,6 @@ function MessageUserPage() {
             ) : (
               messages.map((message: any, index: number) => {
                 const isUserMessage = message.role === "USER" || message.senderId === currentUser?.id;
-                const isHumanMessage = message.role === "HUMAN";
-
                 const prevMessage = messages[index - 1];
                 const messageDate = new Date(message.createdAt);
                 const showDateDivider = !prevMessage ||
@@ -391,8 +385,14 @@ function MessageUserPage() {
                           timestamp={message.createdAt}
                           className={isUserMessage ? "bg-muted" : ""}
                         >
-                          <div className="text-sm whitespace-pre-wrap">
-                            <MarkdownText>{message.content}</MarkdownText>
+                          <div className="space-y-2 text-sm whitespace-pre-wrap">
+                            {message.content?.trim() && (
+                              <MarkdownText>{message.content}</MarkdownText>
+                            )}
+                            <MessageImageAttachments
+                              images={message.imageAttachments}
+                              onOpen={setZoomedImage}
+                            />
                           </div>
                         </MessageBubble>
                       </div>
@@ -408,30 +408,28 @@ function MessageUserPage() {
         {/* Input */}
         <div className="flex-shrink-0 pb-4 pt-2">
           <div className="w-full max-w-4xl mx-auto px-4">
-            <div className="flex items-center gap-2 bg-muted/80 rounded-full px-3 py-2 border border-border">
-              <input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
-                disabled={isSendingMessage}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isSendingMessage}
-                className={`p-2 rounded-full transition-colors ${
-                  inputValue.trim() && !isSendingMessage
-                    ? "bg-foreground text-background hover:bg-foreground/90"
-                    : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
-                }`}
-              >
-                <Send size={16} />
-              </button>
-            </div>
+            <ChatMessageComposer
+              value={inputValue}
+              onValueChange={setInputValue}
+              onSend={handleSend}
+              disabled={isSendingMessage || !currentChatId}
+              isSending={isSendingMessage}
+            />
           </div>
         </div>
       </div>
+      {zoomedImage && (
+        <ImageZoomDialog
+          open={!!zoomedImage}
+          onOpenChange={(open) => {
+            if (!open) {
+              setZoomedImage(null);
+            }
+          }}
+          src={zoomedImage.src}
+          alt={zoomedImage.alt}
+        />
+      )}
     </div>
   );
 }

@@ -1,10 +1,13 @@
 import { CoachToolCallsCard } from "@/components/CoachToolCallsCard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
+import { MessageImageAttachments } from "@/components/MessageImageAttachments";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
 import { UserActionCard } from "@/components/UserActionCard";
 import { CalendarGrid } from "@/components/CalendarGrid";
+import { ChatMessageComposer } from "@/components/ChatMessageComposer";
+import ImageZoomDialog from "@/components/ImageZoomDialog";
 import {
   computeGridCells,
   isActiveVisiblePlan,
@@ -18,7 +21,7 @@ import { UserRecommendationCards } from "@/components/UserRecommendationCards";
 import { Button } from "@/components/ui/button";
 import { useAI } from "@/contexts/ai";
 import { useCurrentUser } from "@/contexts/users";
-import { useMessages, type Message } from "@/contexts/messages";
+import { useMessages, type ImageAttachment, type Message } from "@/contexts/messages";
 import { usePlans } from "@/contexts/plans";
 import { useActivities } from "@/contexts/activities/useActivities";
 import type { ResolvedOperation } from "@/components/PlanProposalCard";
@@ -29,7 +32,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
+import { Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
@@ -49,11 +52,7 @@ function formatRelativeDate(date: Date): string {
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
 
-  return messageDate.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: messageDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  });
+  return format(messageDate, "d MMM yyyy");
 }
 
 // Helper to check if two dates are on the same day
@@ -68,10 +67,12 @@ function isSameDay(date1: Date, date2: Date): boolean {
 // Date divider component
 function DateDivider({ date }: { date: Date }) {
   return (
-    <div className="flex items-center gap-3 py-4">
-      <div className="flex-1 h-px bg-border" />
-      <span className="text-xs text-muted-foreground">{formatRelativeDate(date)}</span>
-      <div className="flex-1 h-px bg-border" />
+    <div className="relative -mx-4 flex items-center py-3">
+      <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+      <span className="relative mx-auto inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+        {formatRelativeDate(date)}
+        <ChevronDown size={12} />
+      </span>
     </div>
   );
 }
@@ -348,7 +349,7 @@ function CoachContextIsland({
               transition={{ duration: 0.25, ease: "easeInOut" }}
               className="overflow-hidden"
             >
-              <div className="mt-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3">
+              <div className="mt-2 max-h-[calc(100dvh-12rem)] space-y-3 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/70 p-3">
             <div>
               <div className="mb-2 text-xs font-medium text-muted-foreground">
                 Recent logs
@@ -439,12 +440,14 @@ function MessageWithReadTracking({
   onVisible,
   children,
   className,
+  dateLabel,
 }: {
   message: { id: string; status?: string };
   isOwnMessage: boolean;
   onVisible: (messageId: string) => void;
   children: React.ReactNode;
   className?: string;
+  dateLabel?: string;
 }) {
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -457,110 +460,9 @@ function MessageWithReadTracking({
     }
   }, [inView, isOwnMessage, message.id, message.status, onVisible]);
 
-  return <div ref={ref} className={className}>{children}</div>;
-}
-
-// WhatsApp-style formatted input preview with visible markers
-function FormattedInputPreview({ text }: { text: string }) {
-  if (!text) return null;
-
-  const hasFormatting = /[*_~]/.test(text) || /^[\s]*[-*]\s/m.test(text) || /^[\s]*\d+\.\s/m.test(text);
-  if (!hasFormatting) return null;
-
-  const renderFormattedText = (input: string): React.ReactNode[] => {
-    const result: React.ReactNode[] = [];
-    const lines = input.split('\n');
-
-    lines.forEach((line: string, lineIdx: number) => {
-      if (lineIdx > 0) {
-        result.push(<br key={`br-${lineIdx}`} />);
-      }
-
-      const bulletMatch = line.match(/^([\s]*)([-*])(\s)(.*)$/);
-      if (bulletMatch) {
-        const [, indent, bullet, space, content] = bulletMatch;
-        result.push(
-          <span key={`line-${lineIdx}`}>
-            {indent}
-            <span className="opacity-50">{bullet}</span>
-            {space}
-            {renderInlineFormatting(content, `${lineIdx}-`)}
-          </span>
-        );
-        return;
-      }
-
-      const numberedMatch = line.match(/^([\s]*)(\d+)(\.)(\s)(.*)$/);
-      if (numberedMatch) {
-        const [, indent, num, dot, space, content] = numberedMatch;
-        result.push(
-          <span key={`line-${lineIdx}`}>
-            {indent}
-            <span className="opacity-50">{num}{dot}</span>
-            {space}
-            {renderInlineFormatting(content, `${lineIdx}-`)}
-          </span>
-        );
-        return;
-      }
-
-      result.push(<span key={`line-${lineIdx}`}>{renderInlineFormatting(line, `${lineIdx}-`)}</span>);
-    });
-
-    return result;
-  };
-
-  const renderInlineFormatting = (text: string, keyPrefix: string): React.ReactNode[] => {
-    const result: React.ReactNode[] = [];
-    const regex = /(\*([^*]+)\*)|(_([^_]+)_)|(~([^~]+)~)/g;
-    let lastIndex = 0;
-    let match;
-    let idx = 0;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        result.push(<span key={`${keyPrefix}text-${idx++}`}>{text.slice(lastIndex, match.index)}</span>);
-      }
-
-      if (match[1]) {
-        result.push(
-          <span key={`${keyPrefix}bold-${idx++}`}>
-            <span className="opacity-40">*</span>
-            <strong className="font-semibold">{match[2]}</strong>
-            <span className="opacity-40">*</span>
-          </span>
-        );
-      } else if (match[3]) {
-        result.push(
-          <span key={`${keyPrefix}italic-${idx++}`}>
-            <span className="opacity-40">_</span>
-            <em>{match[4]}</em>
-            <span className="opacity-40">_</span>
-          </span>
-        );
-      } else if (match[5]) {
-        result.push(
-          <span key={`${keyPrefix}strike-${idx++}`}>
-            <span className="opacity-40">~</span>
-            <del className="line-through">{match[6]}</del>
-            <span className="opacity-40">~</span>
-          </span>
-        );
-      }
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex < text.length) {
-      result.push(<span key={`${keyPrefix}text-end`}>{text.slice(lastIndex)}</span>);
-    }
-
-    return result.length > 0 ? result : [<span key={`${keyPrefix}empty`}>{text}</span>];
-  };
-
   return (
-    <div className="text-foreground whitespace-pre-wrap">
-      {renderFormattedText(text)}
+    <div ref={ref} className={className} data-message-date-label={dateLabel}>
+      {children}
     </div>
   );
 }
@@ -604,6 +506,7 @@ function MessageAIPage() {
       ? ({
           thinking: "Thinking...",
           searching: "Searching the web...",
+          browsing: "Browsing the web (might take a minute)...",
           drafting: "Drafting...",
         }[coachResponseStatus || "thinking"])
       : pendingStaggeredMessages.length > 0
@@ -638,35 +541,19 @@ function MessageAIPage() {
   const [showMenu, setShowMenu] = useState(false);
   const [showCoachContext, setShowCoachContext] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
+  const [activeDateLabel, setActiveDateLabel] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const inputPreviewRef = useRef<HTMLDivElement>(null);
   const initiallyScrolledChatIdRef = useRef<string | null>(null);
 
   // Debounced mark-as-read tracking
   const messageQueueRef = useRef<Set<string>>(new Set());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const syncInputPreviewScroll = useCallback((textarea: HTMLTextAreaElement) => {
-    if (!inputPreviewRef.current) return;
-
-    inputPreviewRef.current.scrollTop = textarea.scrollTop;
-    inputPreviewRef.current.scrollLeft = textarea.scrollLeft;
-  }, []);
-
-  const resizeMessageInput = useCallback((textarea: HTMLTextAreaElement) => {
-    textarea.style.height = "auto";
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
-    syncInputPreviewScroll(textarea);
-  }, [syncInputPreviewScroll]);
-
-  useLayoutEffect(() => {
-    if (!inputTextareaRef.current) return;
-
-    resizeMessageInput(inputTextareaRef.current);
-  }, [inputValue, resizeMessageInput]);
 
   const flushReadQueue = useCallback(() => {
     if (messageQueueRef.current.size > 0 && currentChatId) {
@@ -778,6 +665,46 @@ function MessageAIPage() {
     );
   }, [messages]);
 
+  const updateActiveDateLabel = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const messageNodes = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-message-date-label]")
+    );
+    if (messageNodes.length === 0) {
+      setActiveDateLabel(null);
+      return;
+    }
+
+    const containerTop = container.getBoundingClientRect().top;
+    const firstVisibleMessage =
+      messageNodes.find(
+        (node) => node.getBoundingClientRect().bottom > containerTop + 8
+      ) || messageNodes[messageNodes.length - 1];
+
+    setActiveDateLabel(firstVisibleMessage.dataset.messageDateLabel || null);
+  }, []);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || isLoadingMessages || allMessages.length === 0) {
+      setActiveDateLabel(null);
+      return;
+    }
+
+    updateActiveDateLabel();
+    container.addEventListener("scroll", updateActiveDateLabel, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateActiveDateLabel);
+
+    return () => {
+      container.removeEventListener("scroll", updateActiveDateLabel);
+      window.removeEventListener("resize", updateActiveDateLabel);
+    };
+  }, [allMessages.length, isLoadingMessages, updateActiveDateLabel]);
+
   // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -821,16 +748,26 @@ function MessageAIPage() {
     initiallyScrolledChatIdRef.current = currentChatId;
   }, [allMessages.length, currentChatId, isLoadingMessages, scrollToBottom]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isSendingMessage || isRewritingMessage || !currentChatId) {
+  const handleSend = async ({
+    message,
+    imageAttachments,
+  }: {
+    message: string;
+    imageAttachments: ImageAttachment[];
+  }) => {
+    if (
+      (!message.trim() && imageAttachments.length === 0) ||
+      isSendingMessage ||
+      isRewritingMessage ||
+      !currentChatId
+    ) {
       return;
     }
 
     if (editingMessage) {
-      const messageToSend = inputValue.trim();
+      const messageToSend = message.trim();
       const messageId = editingMessage.id;
       const sourceChatId = editingMessage.chatId;
-      setInputValue("");
       setEditingMessage(null);
       setTimeout(scrollToBottom, 50);
 
@@ -844,27 +781,32 @@ function MessageAIPage() {
       } catch (error) {
         console.error("Failed to edit message:", error);
         setEditingMessage(editingMessage);
-        setInputValue(messageToSend);
+        throw error;
       }
       return;
     }
 
-    let messageToSend = inputValue;
+    let messageToSend = message.trim();
     if (pendingSession) {
       const sessionDate = format(new Date(pendingSession.date), "EEEE, MMM d");
       const description = pendingSession.descriptiveGuide ? `|${pendingSession.descriptiveGuide}` : "";
       const sessionInfo = `[About: ${pendingSession.activityEmoji || "📋"} ${pendingSession.activityTitle} on ${sessionDate}${pendingSession.quantity ? ` (${pendingSession.quantity} ${pendingSession.activityMeasure})` : ""}${description}]\n\n`;
-      messageToSend = sessionInfo + inputValue;
+      messageToSend = sessionInfo + messageToSend;
       clearPendingSession();
     }
 
-    setInputValue("");
     setTimeout(scrollToBottom, 50);
 
     try {
-      await sendMessage({ message: messageToSend, chatId: currentChatId, coachVersion: "v2" });
+      await sendMessage({
+        message: messageToSend,
+        chatId: currentChatId,
+        coachVersion: "v2",
+        imageAttachments,
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
+      throw error;
     }
   };
 
@@ -872,8 +814,12 @@ function MessageAIPage() {
     if (isRunningCoachAssessment) return;
 
     try {
-      await runCoachAssessment();
-      toast.success("Coach assessment started");
+      const response = await runCoachAssessment();
+      toast.success(
+        response.result.action === "agent_skipped"
+          ? "Coach has nothing to report"
+          : "Coach assessment started"
+      );
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error("Failed to run coach assessment:", error);
@@ -1122,13 +1068,31 @@ function MessageAIPage() {
       return (
         <>
           {sessionCard}
-          {message.role === "COACH" ? renderCoachContent({ ...message, content: restOfMessage }) : <MarkdownText>{restOfMessage}</MarkdownText>}
+          {message.role === "COACH" ? (
+            renderCoachContent({ ...message, content: restOfMessage })
+          ) : (
+            <div className="space-y-2">
+              {restOfMessage.trim() && <MarkdownText>{restOfMessage}</MarkdownText>}
+              <MessageImageAttachments
+                images={message.imageAttachments}
+                onOpen={setZoomedImage}
+              />
+            </div>
+          )}
         </>
       );
     }
 
     if (message.role !== "COACH") {
-      return <MarkdownText>{content}</MarkdownText>;
+      return (
+        <div className="space-y-2">
+          {content.trim() && <MarkdownText>{content}</MarkdownText>}
+          <MessageImageAttachments
+            images={message.imageAttachments}
+            onOpen={setZoomedImage}
+          />
+        </div>
+      );
     }
 
     return renderCoachContent(message);
@@ -1409,7 +1373,15 @@ function MessageAIPage() {
         />
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto" ref={messagesContainerRef}>
+        <div className="relative flex-1 overflow-y-auto" ref={messagesContainerRef}>
+          {activeDateLabel && !isLoadingMessages && allMessages.length > 0 && (
+            <div className="pointer-events-none sticky top-0 z-30 flex h-0 justify-center">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+                {activeDateLabel}
+                <ChevronDown size={12} />
+              </span>
+            </div>
+          )}
           <div className="w-full max-w-4xl mx-auto px-4 py-6">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center h-full">
@@ -1458,6 +1430,7 @@ function MessageAIPage() {
                   isUserMessage &&
                   message.role === "USER" &&
                   !message.userAction &&
+                  !(message.imageAttachments?.length > 0) &&
                   typeof message.content === "string" &&
                   !message.id.startsWith("temp-");
                 const canCopyMessage = !!getMessageCopyText(message);
@@ -1511,6 +1484,7 @@ function MessageAIPage() {
                         : () => undefined
                     }
                     className={messageSpacing}
+                    dateLabel={formatRelativeDate(messageDate)}
                   >
                     {showDateDivider && <DateDivider date={messageDate} />}
                     <div
@@ -1598,6 +1572,7 @@ function MessageAIPage() {
                                       const sourceChatId = message.chatId || currentChatId;
                                       if (!sourceChatId) return;
                                       if (pendingSession) clearPendingSession();
+                                      setPendingImages([]);
                                       setEditingMessage({
                                         id: message.id,
                                         chatId: sourceChatId,
@@ -1791,6 +1766,7 @@ function MessageAIPage() {
                   onClick={() => {
                     setEditingMessage(null);
                     setInputValue("");
+                    setPendingImages([]);
                   }}
                   className="rounded-md p-1 transition-colors hover:bg-muted"
                 >
@@ -1826,61 +1802,23 @@ function MessageAIPage() {
                 </button>
               </div>
             )}
-            <div className="flex items-end gap-3 bg-muted/80 rounded-3xl px-4 py-3 border border-border">
-              <div className="flex-1 relative">
-                {inputValue && /[*_~]/.test(inputValue) && (
-                  <div
-                    ref={inputPreviewRef}
-                    className="absolute inset-0 max-h-[7.5rem] overflow-hidden pointer-events-none text-base"
-                  >
-                    <FormattedInputPreview text={inputValue} />
-                  </div>
-                )}
-                <textarea
-                  ref={inputTextareaRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder={
-                    editingMessage
-                      ? "Edit and resend..."
-                      : pendingSession
-                        ? "Ask about this session..."
-                        : "Ask anything"
-                  }
-                  rows={1}
-                  className={cn(
-                    "w-full bg-transparent border-none outline-none placeholder:text-muted-foreground text-base resize-none max-h-[7.5rem] overflow-y-auto",
-                    inputValue && /[*_~]/.test(inputValue) ? "text-transparent caret-foreground" : "text-foreground"
-                  )}
-                  onInput={(e) => {
-                    resizeMessageInput(e.target as HTMLTextAreaElement);
-                  }}
-                  onScroll={(e) => {
-                    syncInputPreviewScroll(e.target as HTMLTextAreaElement);
-                  }}
-                />
-              </div>
-              <button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isSendingMessage || isRewritingMessage}
-                className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${inputValue.trim() && !isSendingMessage && !isRewritingMessage
-                    ? "bg-foreground text-background hover:bg-foreground/90"
-                    : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
-                  }`}
-              >
-                {isRewritingMessage ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Send size={18} />
-                )}
-              </button>
-            </div>
+            <ChatMessageComposer
+              value={inputValue}
+              onValueChange={setInputValue}
+              onSend={handleSend}
+              placeholder={
+                editingMessage
+                  ? "Edit and resend..."
+                  : pendingSession
+                    ? "Ask about this session..."
+                    : "Ask anything"
+              }
+              disabled={isSendingMessage || isRewritingMessage || !currentChatId}
+              isSending={isSendingMessage || isRewritingMessage}
+              imagesDisabled={!!editingMessage}
+              ariaLabel={editingMessage ? "Edit message" : "Message"}
+              resetAttachmentsKey={editingMessage?.id || "compose"}
+            />
           </div>
         </div>
       </div>
@@ -1895,6 +1833,18 @@ function MessageAIPage() {
         variant="destructive"
         isConfirming={isClearingCoachHistory}
       />
+      {zoomedImage && (
+        <ImageZoomDialog
+          open={!!zoomedImage}
+          onOpenChange={(open) => {
+            if (!open) {
+              setZoomedImage(null);
+            }
+          }}
+          src={zoomedImage.src}
+          alt={zoomedImage.alt}
+        />
+      )}
     </div>
   );
 }
