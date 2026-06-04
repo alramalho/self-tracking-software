@@ -15,6 +15,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 export type PlanOutlineChoice = "SPECIFIC" | "TIMES_PER_WEEK";
 
@@ -301,14 +302,40 @@ export function DraftActivitiesEditor({
     activity.title.trim().toLowerCase();
 
   const existingTitleKeys = new Set(existingActivities.map(activityTitleKey));
-  const draftOnlyActivities: ActivityPickerActivity[] = activities
-    .filter((activity) => !activity.activityId && !existingTitleKeys.has(activityTitleKey(activity)))
-    .map((activity, index) => ({
-      id: `draft-${index}-${activityKey(activity)}`,
-      title: activity.title,
-      emoji: activity.emoji,
-      measure: activity.measure,
-    }));
+  const toDraftOnlyPickerActivity = (
+    activity: DraftPlanActivity
+  ): ActivityPickerActivity => ({
+    id: `draft-${activityKey(activity)}`,
+    title: activity.title,
+    emoji: activity.emoji,
+    measure: activity.measure,
+  });
+  const currentDraftOnlyActivities = useMemo(
+    () =>
+      activities
+        .filter(
+          (activity) =>
+            !activity.activityId &&
+            !existingTitleKeys.has(activityTitleKey(activity))
+        )
+        .map(toDraftOnlyPickerActivity),
+    [activities, existingActivities]
+  );
+  const [draftOnlyOptions, setDraftOnlyOptions] = useState<ActivityPickerActivity[]>(
+    currentDraftOnlyActivities
+  );
+
+  useEffect(() => {
+    setDraftOnlyOptions((current) => {
+      const byKey = new Map(current.map((activity) => [activity.id, activity]));
+      for (const activity of currentDraftOnlyActivities) {
+        byKey.set(activity.id, activity);
+      }
+      return Array.from(byKey.values());
+    });
+  }, [currentDraftOnlyActivities]);
+
+  const draftOnlyActivities = draftOnlyOptions;
 
   const pickerActivities = [...existingActivities, ...draftOnlyActivities].sort((a, b) =>
     a.title.localeCompare(b.title)
