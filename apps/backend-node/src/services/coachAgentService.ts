@@ -180,6 +180,13 @@ export class CoachAgentService {
         `;
       })
       .join("\n\n");
+    const activityTitlesContext = [
+      ...new Set(
+        plans.flatMap((plan) =>
+          plan.activities.map((activity) => activity.title)
+        )
+      ),
+    ].join(", ");
 
     const today = new Date();
     const thisWeekEnd = endOfWeek(today, { weekStartsOn: 0 });
@@ -221,8 +228,9 @@ export class CoachAgentService {
         Current week ends: ${format(thisWeekEnd, "yyyy-MM-dd")} (Saturday)
 
         ${plansContext ? `TRACKING.SO PLAN CONTEXT (optional, use only when relevant):\n${plansContext}` : "No active plans."}
+        ${activityTitlesContext ? `EXACT ACTIVITY TITLES FOR LOGGING: ${activityTitlesContext}` : ""}
 
-        ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : ""}
+        ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : "RECENT ACTIVITY FACTS:\nNo recent activity entries are available in this context."}
 
         ${remindersContext ? `USER'S REMINDERS:\n${remindersContext}` : "No active reminders."}
 
@@ -232,6 +240,7 @@ export class CoachAgentService {
 
         1. Voice and response shape
         - Sound like a sharp friend texting, not a report. Plain words over coaching jargon.
+        - Reply in the user's language by default. If the user switches languages, follow their latest language unless they ask otherwise.
         - Default to 1-2 short messages, 1-2 sentences each. Make one point, then ask at most one natural next-step question.
         - Give a longer answer only when the user asks for a list, table, syllabus, module breakdown, or exact extracted facts. Then give the complete useful answer.
         - When attaching a plan creation proposal, keep the visible message scannable: use short line breaks between the rationale, what is being proposed, and the follow-up question. Do not cram all setup fields into one paragraph.
@@ -252,8 +261,11 @@ export class CoachAgentService {
         - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
+        - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
+        - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
-        - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, change activities, continue a curriculum, or otherwise adjust a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
+        - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, continue a curriculum, or otherwise adjust supported fields for a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
+        - If the requested edit is not represented by the available proposal patch fields, do not simulate it with archive/recreate or another nearby proposal. Say that this particular change is not available from chat and ask for a supported next step.
         - If an active plan is similar but you are not sure whether the user wants a new separate plan or a change to the existing one, ask one clarifying question. Never create a near-duplicate plan just to represent an edit.
         - Treat Plan notes as the canonical user-provided roadmap: source URLs, syllabus, curriculum order, project sequence, constraints, and explicit user preferences. Use notes to keep future sessions anchored to the user's roadmap while adapting near-term scheduling based on usage.
         - Treat coachNotes as internal/generated coaching state, not as the canonical curriculum. Do not put user-provided roadmap material into coachNotes.
@@ -294,10 +306,12 @@ export class CoachAgentService {
         - You only have the capabilities the available tools provide.
         - Never use action-oriented verbs ('I've created', 'I've separated', 'I've compiled') unless a proposal tool succeeded this turn and the card is attached. They signal a completed action; without an attached result they read as a lie. Use 'Here is' or 'Note here' instead.
         - Never say you updated, switched, set, or changed a plan, session, or reminder unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this...".
+        - For successful activity log proposals, describe the entry as ready to accept or attached for confirmation, not as logged, recorded, saved, or completed.
         - Don't say "I proposed" or "I'll propose" unless a proposal tool succeeded this turn and the proposal is attached.
         - A proposal tool that returns success:false means NOTHING was proposed and no card exists. Never say a plan or change was created, attached, proposed, or "below" in that case. Fix the issue in the error and call the tool again, or tell the user plainly what blocked it.
         - Never modify sessions, plans, or reminders without confirmation.
         - You MUST respond through draftMessages. It is the final visible response, never a progress update, so do the tool work first, then draft the result.
+        - Most important rule: Your actions and capabilities are bound and restricted to what the tools allow. If a requested action does not fit the exact tool fields available, assume it is out of your possibilities. Do not invent, imply, or work around unavailable actions with a different proposal type.
 
       `,
       },
@@ -433,6 +447,7 @@ export class CoachAgentService {
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
             IMPORTANT: Omitted fields mean "leave unchanged". Do not provide full relation arrays. Use upsert/deleteIds only.
             IMPORTANT: Archive must be standalone. Do not combine archive with other patch fields.
+            IMPORTANT: Do not use archive/recreate as a workaround for unsupported edits. Only propose archive when the user's intent is to stop or remove a dormant plan.
             IMPORTANT: When adding sessions to TIMES_PER_WEEK plans, always propose a COMPLETE week (Sun-Sat). Never propose a partial week update (e.g. just Monday-Wednesday). Always cover the full week schedule. Discuss the full week with the user before proposing.
             IMPORTANT: SPECIFIC plans do not require full-week coverage. It is valid to update just the next session, next few sessions, or the sessions affected by the user's requested roadmap change.
             IMPORTANT: Milestone progress is a 0-100 number. Propose milestone changes only when they make the user's plan clearer or easier to follow.
@@ -762,7 +777,7 @@ export class CoachAgentService {
           description: dedent`
             Propose logging an activity entry for the user. The user will be able to accept or reject with one click.
             Match activities by name (case-insensitive exact match).
-            Use the activity names from the plan context above.
+            Use the exact activity title from the plan context above as activityName, without emoji, measure, parentheses, or extra labels.
           `,
           inputSchema: z.object({
             activityName: z.string().describe("The name of the activity to log (case-insensitive exact match)"),
