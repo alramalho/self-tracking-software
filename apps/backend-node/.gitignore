@@ -72,3 +72,6 @@ tmp/
 temp/
 
 .scripts/
+
+# Coach benchmark output
+scripts/coach-benchmark/results/
