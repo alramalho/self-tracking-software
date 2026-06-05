@@ -38,6 +38,31 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
     });
   }
 
+  if (Array.isArray(data?.activityEditProposals)) {
+    data.activityEditProposals.forEach((proposal: any) => {
+      const fromMeasure = proposal?.original?.measure;
+      const toMeasure = proposal?.requested?.measure;
+      const measureText =
+        fromMeasure && toMeasure && fromMeasure !== toMeasure
+          ? ` (${fromMeasure} -> ${toMeasure})`
+          : "";
+      lines.push(
+        `- activity edit "${proposal?.activityName || "activity"}${measureText}": ${formatStatus(proposal?.status)}`
+      );
+    });
+  }
+
+  if (Array.isArray(data?.activityLogProposals)) {
+    data.activityLogProposals.forEach((proposal: any) => {
+      const quantity = proposal?.quantity ?? "?";
+      const measure = proposal?.activityMeasure || "units";
+      const date = proposal?.date ? ` on ${proposal.date}` : "";
+      lines.push(
+        `- activity log "${proposal?.activityName || "activity"} ${quantity} ${measure}${date}": ${formatStatus(proposal?.status)}`
+      );
+    });
+  }
+
   return lines;
 }
 

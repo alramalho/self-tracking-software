@@ -62,6 +62,51 @@ function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"
   };
 }
 
+function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getActivityLogProposalKey(proposal: any) {
+  return [
+    proposal.activityId,
+    proposal.quantity,
+    proposal.date,
+    proposal.time || "00:00:00",
+  ].join("|");
+}
+
+function getActivityEditProposalKey(proposal: any) {
+  return JSON.stringify({
+    activityId: proposal.activityId,
+    requested: proposal.requested,
+    measureConversion: proposal.measureConversion,
+  });
+}
+
+function getPlanProposalKey(proposal: any) {
+  return JSON.stringify({
+    planId: proposal.planId,
+    patch: proposal.patch,
+  });
+}
+
+function getPlanCreationProposalKey(proposal: any) {
+  return (proposal.goal || "").trim().toLowerCase();
+}
+
+function isActivityMeasureChangeProposal(proposal: any) {
+  return (
+    (proposal.original?.measure || "").trim() !==
+    (proposal.requested?.measure || "").trim()
+  );
+}
+
 function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
   return (
     !plan.deletedAt &&
@@ -386,6 +431,7 @@ export class CoachAgentService {
         - Never use action-oriented verbs ('I've created', 'I've separated', 'I've compiled') unless a proposal tool succeeded this turn and the card is attached. They signal a completed action; without an attached result they read as a lie. Use 'Here is' or 'Note here' instead.
         - Never say you updated, switched, set, or changed a plan, session, or reminder unless the user already accepted the proposal. Before acceptance, say "I can propose..." or "I'd make this...".
         - For successful activity log proposals, describe the entry as ready to accept or attached for confirmation, not as logged, recorded, saved, or completed.
+        - Do not bundle a dependent activity log with a same-turn activity measure/unit change. Propose the measure change first; after acceptance, propose logs in the new unit.
         - Don't say "I proposed" or "I'll propose" unless a proposal tool succeeded this turn and the proposal is attached.
         - A proposal tool that returns success:false means NOTHING was proposed and no card exists. Never say a plan or change was created, attached, proposed, or "below" in that case. Fix the issue in the error and call the tool again, or tell the user plainly what blocked it.
         - Never modify sessions, plans, or reminders without confirmation.
@@ -945,6 +991,7 @@ export class CoachAgentService {
             Propose logging an activity entry for the user. The user will be able to accept or reject with one click.
             Match activities by name (case-insensitive exact match).
             Use the exact activity title from the plan context above as activityName, without emoji, measure, parentheses, or extra labels.
+            Quantity must use the activity's current saved tracking measure. If the user wants to log in a different measure, propose the measure edit first and wait for acceptance.
           `,
           inputSchema: z.object({
             activityName: z.string().describe("The name of the activity to log (case-insensitive exact match)"),
@@ -1723,62 +1770,84 @@ export class CoachAgentService {
       const visibleToolCalls = allToolCalls.filter((tc) => tc.tool !== "draftMessages");
 
       // Extract plan proposals from tool calls
-      const planProposals = visibleToolCalls
-        .filter(
-          (tc) =>
-            tc.tool === "proposePlanModification" &&
-            tc.result &&
-            typeof tc.result === "object" &&
-            (tc.result as any).success &&
-            (tc.result as any).proposal
-        )
-        .map((tc) => ({
-          ...(tc.result as any).proposal,
-          status: null as null,
-        }));
+      const planProposals = uniqueBy(
+        visibleToolCalls
+          .filter(
+            (tc) =>
+              tc.tool === "proposePlanModification" &&
+              tc.result &&
+              typeof tc.result === "object" &&
+              (tc.result as any).success &&
+              (tc.result as any).proposal
+          )
+          .map((tc) => ({
+            ...(tc.result as any).proposal,
+            status: null as null,
+          })),
+        getPlanProposalKey
+      );
+
+      const activityEditProposals = uniqueBy(
+        visibleToolCalls
+          .filter(
+            (tc) =>
+              tc.tool === "proposeActivityEdit" &&
+              tc.result &&
+              typeof tc.result === "object" &&
+              (tc.result as any).success &&
+              (tc.result as any).proposal
+          )
+          .map((tc) => ({
+            ...(tc.result as any).proposal,
+            status: null as null,
+          })),
+        getActivityEditProposalKey
+      );
+
+      const activityIdsWithMeasureChange = new Set(
+        activityEditProposals
+          .filter(isActivityMeasureChangeProposal)
+          .map((proposal) => proposal.activityId)
+      );
 
       // Extract activity log proposals from tool calls
-      const activityLogProposals = visibleToolCalls
-        .filter(
-          (tc) =>
-            tc.tool === "proposeActivityLog" &&
-            tc.result &&
-            typeof tc.result === "object" &&
-            (tc.result as any).success &&
-            (tc.result as any).proposal
-        )
-        .map((tc) => ({
-          ...(tc.result as any).proposal,
-          status: null as null,
-        }));
+      const activityLogProposals = uniqueBy(
+        visibleToolCalls
+          .filter(
+            (tc) =>
+              tc.tool === "proposeActivityLog" &&
+              tc.result &&
+              typeof tc.result === "object" &&
+              (tc.result as any).success &&
+              (tc.result as any).proposal
+          )
+          .map((tc) => ({
+            ...(tc.result as any).proposal,
+            status: null as null,
+          }))
+          .filter(
+            (proposal) =>
+              !activityIdsWithMeasureChange.has(proposal.activityId)
+          ),
+        getActivityLogProposalKey
+      );
 
-      const activityEditProposals = visibleToolCalls
-        .filter(
-          (tc) =>
-            tc.tool === "proposeActivityEdit" &&
-            tc.result &&
-            typeof tc.result === "object" &&
-            (tc.result as any).success &&
-            (tc.result as any).proposal
-        )
-        .map((tc) => ({
-          ...(tc.result as any).proposal,
-          status: null as null,
-        }));
-
-      const planCreationProposals = visibleToolCalls
-        .filter(
-          (tc) =>
-            tc.tool === "proposePlanCreation" &&
-            tc.result &&
-            typeof tc.result === "object" &&
-            (tc.result as any).success &&
-            (tc.result as any).proposal
-        )
-        .map((tc) => ({
-          ...(tc.result as any).proposal,
-          status: null as null,
-        }));
+      const planCreationProposals = uniqueBy(
+        visibleToolCalls
+          .filter(
+            (tc) =>
+              tc.tool === "proposePlanCreation" &&
+              tc.result &&
+              typeof tc.result === "object" &&
+              (tc.result as any).success &&
+              (tc.result as any).proposal
+          )
+          .map((tc) => ({
+            ...(tc.result as any).proposal,
+            status: null as null,
+          })),
+        getPlanCreationProposalKey
+      );
 
       // Alert when the coach attempted a plan proposal that failed validation and
       // nothing was attached. The user likely sees a claim with no card.

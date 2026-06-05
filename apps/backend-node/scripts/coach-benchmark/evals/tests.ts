@@ -420,6 +420,71 @@ export const activityLogProposalHonestyTest: CoachEvalTest = {
     ),
 };
 
+export const activityMeasureChangeBeforeDependentLogTest: CoachEvalTest = {
+  id: "activity_measure_change_before_dependent_log",
+  name: "Activity measure change is proposed before dependent logs",
+  userMessage:
+    "Change LeetCode Practice from sessions to minutes, 1 session is 60 minutes. I did 90 minutes today too.",
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-14"),
+    plans: [
+      {
+        id: "bench-plan-leetcode-conversion",
+        goal: "Complete 75 LeetCode problems and 26 System Design videos in 12 weeks",
+        emoji: "💻",
+        outlineType: "SPECIFIC",
+        notes: "Interview prep with daily LeetCode practice.",
+        activities: [
+          {
+            id: "bench-activity-leetcode-conversion",
+            title: "LeetCode Practice",
+            measure: "sessions",
+            emoji: "💻",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-leetcode-conversion",
+            activityId: "bench-activity-leetcode-conversion",
+            date: "2026-06-05",
+            quantity: 1,
+            descriptiveGuide: "Complete one LeetCode practice session.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    activityEntries: [],
+  },
+  verify: async (ctx) =>
+    allOf(
+      toolCalled(ctx, "proposeActivityEdit"),
+      proposalCount(ctx, "activityEdit", { equals: 1 }),
+      proposalCount(ctx, "activityLog", { equals: 0 }),
+      jsonPathEquals(
+        ctx,
+        "activityEditProposal",
+        "activityName",
+        "LeetCode Practice"
+      ),
+      jsonPathEquals(ctx, "activityEditProposal", "requested.measure", "minutes"),
+      jsonPathEquals(
+        ctx,
+        "activityEditProposal",
+        "measureConversion.operator",
+        "multiply"
+      ),
+      jsonPathEquals(ctx, "activityEditProposal", "measureConversion.factor", 60),
+      await llmJudge(
+        ctx,
+        "Proposes the activity measure conversion first.",
+        "Does not attach a log proposal that depends on the new measure in the same response.",
+        "Makes it clear the log can happen after the measure change is accepted."
+      )
+    ),
+};
+
 export const claimedActivityMissingLogProposalTest: CoachEvalTest = {
   id: "claimed_activity_missing_log_proposal",
   name: "Claimed completed activity is checked against logs and proposed when missing",
@@ -617,6 +682,7 @@ export const tests: CoachEvalTest[] = [
   legacyActivityRecencyCheckTest,
   recentActivityEvidenceOnlyTest,
   activityLogProposalHonestyTest,
+  activityMeasureChangeBeforeDependentLogTest,
   claimedActivityMissingLogProposalTest,
   unsupportedActivityMeasureChangeTest,
   browserCapabilityDoesNotDiscloseInternalsTest,

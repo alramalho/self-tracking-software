@@ -8,6 +8,7 @@ import { UserActionCard } from "@/components/UserActionCard";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { ChatMessageComposer } from "@/components/ChatMessageComposer";
 import ImageZoomDialog from "@/components/ImageZoomDialog";
+import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   computeGridCells,
   isActiveVisiblePlan,
@@ -286,18 +287,12 @@ type VisibleActivity = {
   datetime: Date;
 };
 
-function CoachContextIsland({
-  coachName,
-  expanded,
-  onToggle,
+function CoachContextContent({
   recentActivities,
   activePlans,
   gridData,
   isCompletedOnDay,
 }: {
-  coachName: string;
-  expanded: boolean;
-  onToggle: () => void;
   recentActivities: VisibleActivity[];
   activePlans: Array<{
     id: string;
@@ -307,135 +302,83 @@ function CoachContextIsland({
   gridData: GridData;
   isCompletedOnDay: (activityId: string, day: Date) => boolean;
 }) {
-  const preview =
-    recentActivities.length > 0
-      ? recentActivities
-          .slice(0, 3)
-          .map((activity) => `${activity.emoji} ${activity.title}`)
-          .join(" · ")
-      : "No recent activity logs";
-
   return (
-    <div className="flex-shrink-0 bg-background/95 border-b border-border">
-      <div className="w-full max-w-4xl mx-auto px-4 py-2">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="w-full rounded-2xl border border-border bg-card/80 px-3 py-2 text-left shadow-sm"
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-              <Eye size={15} className="text-muted-foreground" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-foreground">
-                What {coachName} can see
-              </div>
-              <div className="truncate text-xs text-muted-foreground">
-                {preview}
-              </div>
-            </div>
-            <ChevronDown
-              size={16}
-              className={cn(
-                "text-muted-foreground transition-transform",
-                expanded && "rotate-180"
-              )}
-            />
-          </div>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              key="coach-context-expanded"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2 max-h-[calc(100dvh-12rem)] space-y-3 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/70 p-3">
-            <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Recent logs
-              </div>
-              {recentActivities.length > 0 ? (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {recentActivities.slice(0, 8).map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="min-w-[116px] rounded-xl bg-muted/80 p-2 text-center"
-                    >
-                      <div className="text-xl leading-none">{activity.emoji}</div>
-                      <div className="mt-1 truncate text-sm font-medium text-foreground">
-                        {activity.title}
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">
-                        {formatCoachVisibleDate(activity.datetime)}
-                      </div>
+    <div className="max-h-[calc(100dvh-8rem)] space-y-3 overflow-y-auto overscroll-contain px-1 pb-2 pt-1">
+                <div>
+                  <div className="mb-2 text-xs font-medium text-muted-foreground">
+                    Recent logs
+                  </div>
+                  {recentActivities.length > 0 ? (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {recentActivities.slice(0, 8).map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="min-w-[116px] rounded-xl bg-muted/80 p-2 text-center"
+                        >
+                          <div className="text-xl leading-none">{activity.emoji}</div>
+                          <div className="mt-1 truncate text-sm font-medium text-foreground">
+                            {activity.title}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {formatCoachVisibleDate(activity.datetime)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                      No recent activity logs are available.
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                  No recent activity logs are available.
-                </div>
-              )}
-            </div>
 
-            <div className="rounded-xl bg-muted/60 px-3 py-2">
-              <div className="text-xs font-medium text-muted-foreground">
-                Active plans
-              </div>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {activePlans.length > 0 ? (
-                  activePlans.slice(0, 5).map((plan) => (
-                    <PlanLink
-                      key={plan.id}
-                      planId={plan.id}
-                      displayText={plan.goal}
-                      emoji={plan.emoji || undefined}
-                      className="max-w-full bg-background/70 py-1 text-xs"
-                      labelClassName="truncate"
+                <div className="rounded-xl bg-muted/60 px-3 py-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Active plans
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {activePlans.length > 0 ? (
+                      activePlans.slice(0, 5).map((plan) => (
+                        <PlanLink
+                          key={plan.id}
+                          planId={plan.id}
+                          displayText={plan.goal}
+                          emoji={plan.emoji || undefined}
+                          className="max-w-full bg-background/70 py-1 text-xs"
+                          labelClassName="truncate"
+                        />
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        No active plans.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-muted/60 px-3 py-2">
+                  <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <CalendarDays size={13} />
+                    Upcoming sessions
+                  </div>
+                  {gridData.scheduledSessions.length > 0 ||
+                    gridData.ghostCells.length > 0 ? (
+                    <CalendarGrid
+                      sessions={gridData.scheduledSessions}
+                      activities={gridData.activities}
+                      ghostCells={gridData.ghostCells}
+                      isCompletedOnDay={isCompletedOnDay}
+                      showLegend={false}
+                      weekLabels={{ week1: "This week", week2: "Next week" }}
+                      selectedSessionDisplay="card"
+                      allDaysSelectable
                     />
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    No active plans.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-muted/60 px-3 py-2">
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <CalendarDays size={13} />
-                Upcoming sessions
-              </div>
-              {gridData.scheduledSessions.length > 0 ||
-              gridData.ghostCells.length > 0 ? (
-                <CalendarGrid
-                  sessions={gridData.scheduledSessions}
-                  activities={gridData.activities}
-                  ghostCells={gridData.ghostCells}
-                  isCompletedOnDay={isCompletedOnDay}
-                  showLegend={false}
-                  weekLabels={{ week1: "This week", week2: "Next week" }}
-                  selectedSessionDisplay="card"
-                  allDaysSelectable
-                />
-              ) : (
-                <div className="text-xs text-muted-foreground">
-                  No upcoming sessions.
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      No upcoming sessions.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }
@@ -510,14 +453,14 @@ function MessageAIPage() {
   const coachLoadingLabel =
     hasActiveCoachRequest
       ? ({
-          thinking: "Thinking...",
-          searching: "Searching the web...",
-          browsing: "Browsing the web (might take a minute)...",
-          drafting: "Drafting...",
-        }[coachResponseStatus || "thinking"])
+        thinking: "Thinking...",
+        searching: "Searching the web...",
+        browsing: "Browsing the web (might take a minute)...",
+        drafting: "Drafting...",
+      }[coachResponseStatus || "thinking"])
       : pendingStaggeredMessages.length > 0
-          ? "Writing..."
-          : null;
+        ? "Writing..."
+        : null;
   const {
     submitFeedback,
     isSubmittingFeedback,
@@ -554,10 +497,18 @@ function MessageAIPage() {
     alt: string;
   } | null>(null);
   const [activeDateLabel, setActiveDateLabel] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const topChromeRef = useRef<HTMLDivElement>(null);
+  const bottomChromeRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initiallyScrolledChatIdRef = useRef<string | null>(null);
+  const [chromeInsets, setChromeInsets] = useState({ top: 0, bottom: 0 });
 
   // Debounced mark-as-read tracking
   const messageQueueRef = useRef<Set<string>>(new Set());
@@ -596,6 +547,27 @@ function MessageAIPage() {
   }, [flushReadQueue]);
 
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
+
+  useLayoutEffect(() => {
+    const updateChromeInsets = () => {
+      setChromeInsets({
+        top: topChromeRef.current?.offsetHeight ?? 0,
+        bottom: bottomChromeRef.current?.offsetHeight ?? 0,
+      });
+    };
+
+    updateChromeInsets();
+
+    const resizeObserver = new ResizeObserver(updateChromeInsets);
+    if (topChromeRef.current) resizeObserver.observe(topChromeRef.current);
+    if (bottomChromeRef.current) resizeObserver.observe(bottomChromeRef.current);
+    window.addEventListener("resize", updateChromeInsets);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateChromeInsets);
+    };
+  }, []);
 
   // Get all coach chats sorted by date (newest first)
   const coachChats = useMemo(() =>
@@ -716,7 +688,11 @@ function MessageAIPage() {
   // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        !menuRef.current?.contains(target) &&
+        !menuButtonRef.current?.contains(target)
+      ) {
         setShowMenu(false);
       }
     };
@@ -725,6 +701,30 @@ function MessageAIPage() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showMenu]);
+
+  const updateMenuPosition = useCallback(() => {
+    const button = menuButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    setMenuPosition({
+      top: rect.bottom + 6,
+      right: Math.max(12, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showMenu) return;
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [showMenu, updateMenuPosition]);
 
   const handleClearHistory = async () => {
     try {
@@ -1243,10 +1243,16 @@ function MessageAIPage() {
 
   return (
     <div className="flex h-screen bg-background relative z-50 overflow-hidden">
-      <div className="flex-1 flex flex-col w-full max-w-full">
-        {/* Header */}
-        <div className="flex-shrink-0 bg-card/80 backdrop-blur-lg border-b border-border">
-          <div className="w-full max-w-4xl mx-auto px-4 py-3">
+      <div className="grid flex-1 grid-cols-1 grid-rows-1 w-full max-w-full overflow-hidden">
+        <div
+          ref={topChromeRef}
+          className="z-30 col-start-1 row-start-1 self-start sticky top-0 bg-gradient-to-b from-background via-background/90 to-background/0"
+     
+        >
+   
+   
+          {/* Header */}
+          <div className="w-full max-w-4xl mx-auto px-4 pt-3 pb-12">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Button
@@ -1268,96 +1274,141 @@ function MessageAIPage() {
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                {!isLoadingMessages && allMessages.length === 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowCoachContext(true)}
+                  aria-label={`What ${aiCoach.name} can see`}
+                >
+                  <Eye size={18} />
+                </Button>
+                <div className="relative">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRunCoachAssessment}
-                    disabled={isRunningCoachAssessment}
-                    className="gap-2"
-                  >
-                    {isRunningCoachAssessment ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={15} />
-                    )}
-                    Assess
-                  </Button>
-                )}
-                <div className="relative" ref={menuRef}>
-                  <Button
+                    ref={menuButtonRef}
                     variant="ghost"
                     size="icon"
-                    onClick={() => setShowMenu(!showMenu)}
+                    onClick={() => {
+                      if (!showMenu) updateMenuPosition();
+                      setShowMenu(!showMenu);
+                    }}
                   >
                     <EllipsisVertical size={18} />
                   </Button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-[100] py-1">
-                      <button
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                        onClick={async () => {
-                          setShowMenu(false);
-                          try {
-                            await createCoachChat({ title: null });
-                            toast.success("New conversation started");
-                          } catch {
-                            toast.error("Failed to create conversation");
-                          }
-                        }}
-                      disabled={isCreatingCoachChat || isClearingCoachHistory}
-                      >
-                        <MessageSquarePlus size={16} />
-                        New conversation
-                      </button>
-                      <button
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                        onClick={() => {
-                          setShowMenu(false);
-                          navigate({ to: "/manage-ai-coach" });
-                        }}
-                      >
-                        <Settings size={16} />
-                        Settings
-                      </button>
-                      <button
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted transition-colors"
-                        onClick={() => {
-                          setShowMenu(false);
-                          setShowClearDialog(true);
-                        }}
-                      >
-                        <Eraser size={16} />
-                        Clear messages
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
+        {showMenu && menuPosition && (
+          <div
+            ref={menuRef}
+            className="fixed w-56 rounded-xl border border-border bg-card/50 backdrop-blur-md py-1 shadow-xl z-[1000]"
+            style={{
+              top: menuPosition.top,
+              right: menuPosition.right,
+            }}
+          >
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
+              onClick={async () => {
+                setShowMenu(false);
+                try {
+                  await createCoachChat({ title: null });
+                  toast.success("New conversation started");
+                } catch {
+                  toast.error("Failed to create conversation");
+                }
+              }}
+              disabled={isCreatingCoachChat || isClearingCoachHistory}
+            >
+              <MessageSquarePlus size={16} />
+              New conversation
+            </button>
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => {
+                setShowMenu(false);
+                void handleRunCoachAssessment();
+              }}
+              disabled={isRunningCoachAssessment}
+            >
+              {isRunningCoachAssessment ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              Assess
+            </button>
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
+              onClick={() => {
+                setShowMenu(false);
+                navigate({ to: "/manage-ai-coach" });
+              }}
+            >
+              <Settings size={16} />
+              Settings
+            </button>
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-destructive hover:bg-muted transition-colors"
+              onClick={() => {
+                setShowMenu(false);
+                setShowClearDialog(true);
+              }}
+            >
+              <Eraser size={16} />
+              Clear messages
+            </button>
+          </div>
+        )}
 
-        <CoachContextIsland
-          coachName={aiCoach.name}
-          expanded={showCoachContext}
-          onToggle={() => setShowCoachContext((value) => !value)}
-          recentActivities={recentActivities}
-          activePlans={activePlans}
-          gridData={gridData}
-          isCompletedOnDay={isCompletedOnDay}
-        />
+        <AppleLikePopover
+          open={showCoachContext}
+          onClose={() => setShowCoachContext(false)}
+          title={`What ${aiCoach.name} can see`}
+          className="sm:max-w-xl"
+        >
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                <Eye size={18} className="text-muted-foreground" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  What {aiCoach.name} can see
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Recent logs, active plans, and upcoming sessions.
+                </p>
+              </div>
+            </div>
+            <CoachContextContent
+              recentActivities={recentActivities}
+              activePlans={activePlans}
+              gridData={gridData}
+              isCompletedOnDay={isCompletedOnDay}
+            />
+          </div>
+        </AppleLikePopover>
 
         {/* Messages */}
-        <div className="relative flex-1 overflow-y-auto" ref={messagesContainerRef}>
-          {activeDateLabel && !isLoadingMessages && allMessages.length > 0 && (
+        <div
+          className="z-0 col-start-1 row-start-1 min-h-0 overflow-y-auto"
+          ref={messagesContainerRef}
+          style={{
+            paddingTop: chromeInsets.top,
+            paddingBottom: chromeInsets.bottom,
+          }}
+        >
+          {/* floating date below island */}
+          {/* {activeDateLabel && !isLoadingMessages && allMessages.length > 0 && (
             <div className="pointer-events-none sticky top-0 z-30 flex h-0 justify-center">
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+              <span className="-mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-3 text-xs font-semibold text-muted-foreground shadow-sm">
                 {activeDateLabel}
                 <ChevronDown size={12} />
               </span>
             </div>
-          )}
+          )} */}
           <div className="w-full max-w-4xl mx-auto px-4 py-6">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center h-full">
@@ -1413,7 +1464,7 @@ function MessageAIPage() {
                 const showActionRow = isUserMessage
                   ? canCopyMessage || canEditMessage
                   : activeActionMessageId === message.id &&
-                    (canCopyMessage || isLastInCoachGroup);
+                  (canCopyMessage || isLastInCoachGroup);
                 const ownToolCalls = Array.isArray(message.toolCalls)
                   ? message.toolCalls
                   : [];
@@ -1464,9 +1515,8 @@ function MessageAIPage() {
                   >
                     {showDateDivider && <DateDivider date={messageDate} />}
                     <div
-                      className={`flex min-w-0 max-w-full gap-3 overflow-visible ${
-                        isUserMessage ? "flex-row-reverse" : "flex-row"
-                      }`}
+                      className={`flex min-w-0 max-w-full gap-3 overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
+                        }`}
                     >
                       <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
                         {isCoachMessage &&
@@ -1597,8 +1647,8 @@ function MessageAIPage() {
                                 proposal.patch
                                   ? resolvePatchOperations(proposal.patch, plan, activities || [])
                                   : (proposal.operations || []).map((op: any) =>
-                                      resolveLegacyOperation(op, plan, activities || [])
-                                    );
+                                    resolveLegacyOperation(op, plan, activities || [])
+                                  );
                               return (
                                 <PlanProposalCard
                                   key={`proposal-${message.id}-${originalIndex}`}
@@ -1745,7 +1795,10 @@ function MessageAIPage() {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 pb-4 pt-2">
+        <div
+          ref={bottomChromeRef}
+          className="z-30 col-start-1 row-start-1 self-end bg-gradient-to-t from-background via-background/60 to-background/0 pb-4 pt-2"
+        >
           <div className="w-full max-w-4xl mx-auto px-4 space-y-2">
             {editingMessage && (
               <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/70 px-3 py-2">

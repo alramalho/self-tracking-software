@@ -231,7 +231,7 @@ export function ActivityLogProposalCard({
         onClick={() => setIsDrawerOpen(true)}
         className={`mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${themeColors.fadedBg}`}
       >
-        <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+        <span className="min-w-0 flex-1 text-sm font-medium text-foreground p-2">
           {label}
         </span>
         <ChevronRight size={14} className="flex-shrink-0 text-muted-foreground" />

@@ -213,7 +213,7 @@ export function ChatMessageComposer({
   };
 
   return (
-    <div className={cn("bg-muted/80 rounded-3xl px-3 py-3 border border-border", className)}>
+    <div className={cn("bg-muted/80 rounded-3xl px-3 py-3 border border-border backdrop-blur-md", className)}>
       {pendingImages.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2 px-1">
           {pendingImages.map((image) => (

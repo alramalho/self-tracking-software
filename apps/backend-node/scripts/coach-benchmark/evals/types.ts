@@ -1,11 +1,16 @@
 import { z } from "zod/v4";
 
-export type ProposalKind = "planCreation" | "planModification" | "activityLog";
+export type ProposalKind =
+  | "planCreation"
+  | "planModification"
+  | "activityLog"
+  | "activityEdit";
 
 export type ArtifactSource =
   | "planCreationProposal"
   | "planModificationProposal"
-  | "activityLogProposal";
+  | "activityLogProposal"
+  | "activityEditProposal";
 
 export type CoachEvalTest = {
   id: string;
@@ -31,6 +36,7 @@ export type CoachEvalArtifacts = {
   planCreationProposals: unknown[];
   planModificationProposals: unknown[];
   activityLogProposals: unknown[];
+  activityEditProposals: unknown[];
 };
 
 export type CoachEvalContext = {
@@ -286,7 +292,8 @@ function proposalList(
 ): unknown[] {
   if (proposal === "planCreation") return artifacts.planCreationProposals;
   if (proposal === "planModification") return artifacts.planModificationProposals;
-  return artifacts.activityLogProposals;
+  if (proposal === "activityLog") return artifacts.activityLogProposals;
+  return artifacts.activityEditProposals;
 }
 
 function sourceValue(
@@ -295,7 +302,8 @@ function sourceValue(
 ): unknown {
   if (source === "planCreationProposal") return artifacts.planCreationProposals[0];
   if (source === "planModificationProposal") return artifacts.planModificationProposals[0];
-  return artifacts.activityLogProposals[0];
+  if (source === "activityLogProposal") return artifacts.activityLogProposals[0];
+  return artifacts.activityEditProposals[0];
 }
 
 function getByPath(value: unknown, pathExpression: string): unknown {

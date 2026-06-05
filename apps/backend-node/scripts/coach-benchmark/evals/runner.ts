@@ -271,6 +271,7 @@ async function runOne(params: {
         planCreationProposals: [],
         planModificationProposals: [],
         activityLogProposals: [],
+        activityEditProposals: [],
       },
       error: error instanceof Error ? error.message : String(error),
     };
@@ -337,6 +338,7 @@ function extractArtifacts(response: any): CoachEvalArtifacts {
     planCreationProposals: drafts.flatMap((draft: any) => draft.planCreationProposals || []),
     planModificationProposals: drafts.flatMap((draft: any) => draft.planProposals || []),
     activityLogProposals: drafts.flatMap((draft: any) => draft.activityLogProposals || []),
+    activityEditProposals: drafts.flatMap((draft: any) => draft.activityEditProposals || []),
   };
 }
 
