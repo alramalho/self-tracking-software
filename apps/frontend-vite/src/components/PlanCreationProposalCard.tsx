@@ -35,6 +35,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "@tanstack/react-router";
+import { PlanNotesBlock } from "./PlanNotesBlock";
 
 type PlanCreationActivity = DraftPlanActivity & {
   activityId?: string | null;
@@ -83,6 +84,7 @@ interface PlanCreationProposalCardProps {
   timesPerWeek?: number | null;
   activities?: PlanCreationActivity[];
   finishingDate?: string | null;
+  notes?: string | null;
   milestones?: PlanCreationMilestone[];
   sessions?: PlanCreationSession[];
   description?: string;
@@ -206,6 +208,7 @@ export function PlanCreationProposalCard({
   timesPerWeek,
   activities = [],
   finishingDate,
+  notes,
   milestones = [],
   sessions = [],
   description,
@@ -252,7 +255,7 @@ export function PlanCreationProposalCard({
   const [draftActivities, setDraftActivities] = useState<PlanCreationActivity[]>(
     activities.map((activity) => ({ ...activity }))
   );
-  const [draftNote, setDraftNote] = useState("");
+  const [draftNote, setDraftNote] = useState(notes || "");
 
   const originalDraft = normalizeDraft({
     goal,
@@ -404,7 +407,7 @@ export function PlanCreationProposalCard({
     frequency: "Edit Frequency",
     finishingDate: "Edit Date",
     activities: "Edit Activities",
-    note: "Edit Note",
+    note: "Edit Notes",
   };
 
   const closeEditor = () => setActiveEditor(null);
@@ -501,12 +504,12 @@ export function PlanCreationProposalCard({
 
           {activeEditor === "note" && (
             <label className="block space-y-1">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Note for coach</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">Notes for coach</span>
               <textarea
                 value={draftNote}
                 onChange={(event) => setDraftNote(event.target.value)}
-                className={`${fieldClassName} min-h-32 resize-none`}
-                placeholder="Anything the coach should consider"
+                className={`${fieldClassName} min-h-48 resize-none`}
+                placeholder="Roadmap, sources, constraints, baseline, or anything the coach should keep following"
               />
             </label>
           )}
@@ -695,8 +698,14 @@ export function PlanCreationProposalCard({
           )}
           <ReviewRow
             icon={<Info className="h-5 w-5 text-muted-foreground" />}
-            label="Note"
-            value={draftNote.trim() || "None"}
+            label="Notes"
+            value={
+              draftNote.trim() ? (
+                <PlanNotesBlock notes={draftNote.trim()} />
+              ) : (
+                "None"
+              )
+            }
             onClick={openEditor("note")}
           />
         </div>

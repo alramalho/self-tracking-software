@@ -32,6 +32,8 @@ import {
   BarChart3,
   BarChartHorizontal,
   Activity,
+  ChevronDown,
+  FileText,
   Flame,
   Rocket,
   Sprout,
@@ -64,6 +66,13 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import { cn } from "@/lib/utils";
+import { PlanNotesBlock } from "./PlanNotesBlock";
 
 interface PlanRendererv2Props {
   selectedPlan: CompletePlan;
@@ -163,6 +172,52 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
         />
       )}
     </div>
+  );
+};
+
+const PlanNotesSection = ({ notes }: { notes?: string | null }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const trimmedNotes = notes?.trim();
+
+  if (!trimmedNotes) return null;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-foreground">
+                  Plan notes
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                  Roadmap, sources, constraints, and coach context
+                </div>
+              </div>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <PlanNotesBlock
+            notes={trimmedNotes}
+            className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground"
+          />
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 };
 
@@ -627,6 +682,12 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
       <AnimatedSection delay={backgroundImageUrl ? 0.12 : 0.05}>
         <div className="mb-8">
           <PlanProgressStrip plan={selectedPlan} />
+        </div>
+      </AnimatedSection>
+
+      <AnimatedSection delay={backgroundImageUrl ? 0.13 : 0.06}>
+        <div className="mb-6">
+          <PlanNotesSection notes={selectedPlan.notes} />
         </div>
       </AnimatedSection>
 

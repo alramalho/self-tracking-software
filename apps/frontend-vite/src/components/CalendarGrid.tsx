@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, Pencil } from "lucide-react";
 import type { GhostCell } from "@/utils/ghostGrid";
+import { useNavigate } from "@tanstack/react-router";
 
 export interface CalendarSession {
   id?: string;
@@ -78,6 +79,7 @@ export const CalendarGrid = ({
   weekCount = 2,
   rangeMode = "calendar-weeks",
 }: CalendarGridProps) => {
+  const navigate = useNavigate();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedGhostDay, setSelectedGhostDay] = useState<Date | null>(null);
   const [selectedEmptyDay, setSelectedEmptyDay] = useState<Date | null>(null);
@@ -167,11 +169,38 @@ export const CalendarGrid = ({
     };
   };
 
-  const getPlanReferenceLabel = (session: CalendarSession) => {
+  const getPlanReferenceName = (session: CalendarSession) => {
     if (!session.planTitle) return null;
 
-    const planName = `${session.planEmoji ? `${session.planEmoji} ` : ""}${session.planTitle}`;
-    return `Part of "${planName}" plan`;
+    return `${session.planEmoji ? `${session.planEmoji} ` : ""}${session.planTitle}`;
+  };
+
+  const PlanReference = ({ session }: { session: CalendarSession }) => {
+    const planName = getPlanReferenceName(session);
+    if (!planName) return null;
+
+    const handleClick = () => {
+      if (!session.planId) return;
+      navigate({ to: "/plans", search: { selectedPlan: session.planId } });
+    };
+
+    return (
+      <span>
+        Part of{" "}
+        {session.planId ? (
+          <button
+            type="button"
+            onClick={handleClick}
+            className="inline p-0 text-left align-baseline underline underline-offset-2 decoration-muted-foreground/60 transition-colors hover:text-foreground hover:decoration-foreground"
+          >
+            {planName}
+          </button>
+        ) : (
+          <span>{planName}</span>
+        )}{" "}
+        plan
+      </span>
+    );
   };
 
   const getCompletedItemsForDay = (day: Date) => {
@@ -622,8 +651,8 @@ export const CalendarGrid = ({
               )}
             </div>
             {selectedSession.session.planTitle && (
-              <p className="px-1 text-xs text-muted-foreground">
-                {getPlanReferenceLabel(selectedSession.session)}
+              <p className="px-1 text-left text-xs text-muted-foreground">
+                <PlanReference session={selectedSession.session} />
               </p>
             )}
           </motion.div>
@@ -673,7 +702,7 @@ export const CalendarGrid = ({
                   </p>
                   {selectedSession.session.planTitle && (
                     <p className="mt-0.5 text-left text-xs text-muted-foreground">
-                      {getPlanReferenceLabel(selectedSession.session)}
+                      <PlanReference session={selectedSession.session} />
                     </p>
                   )}
                 </div>

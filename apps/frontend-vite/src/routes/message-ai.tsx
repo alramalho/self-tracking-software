@@ -1,5 +1,5 @@
 import { CoachToolCallsCard } from "@/components/CoachToolCallsCard";
-import { MessageBubble } from "@/components/MessageBubble";
+import { MessageBubble, MessageMarkdown } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MessageImageAttachments } from "@/components/MessageImageAttachments";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
@@ -37,7 +37,6 @@ import { Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, Message
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
-import ReactMarkdown from "react-markdown";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
@@ -1030,49 +1029,6 @@ function MessageAIPage() {
     return <SessionInfoCard sessionText={sessionText} />;
   };
 
-  const MarkdownText = ({ children }: { children: string }) => (
-    <ReactMarkdown
-      components={{
-        p: ({ children }) => (
-          <span className="break-words [overflow-wrap:anywhere]">
-            {children}
-          </span>
-        ),
-        strong: ({ children }) => (
-          <strong className="font-semibold">{children}</strong>
-        ),
-        em: ({ children }) => <em>{children}</em>,
-        del: ({ children }) => <del className="line-through">{children}</del>,
-        ul: ({ children }) => (
-          <ul className="my-1 list-inside list-disc">{children}</ul>
-        ),
-        ol: ({ children }) => (
-          <ol className="my-1 list-inside list-decimal">{children}</ol>
-        ),
-        li: ({ children }) => (
-          <li className="break-words [overflow-wrap:anywhere]">{children}</li>
-        ),
-        code: ({ children }) => (
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm break-words [overflow-wrap:anywhere]">
-            {children}
-          </code>
-        ),
-        a: ({ href, children }) => (
-          <a
-            href={href}
-            className="break-words text-primary underline [overflow-wrap:anywhere]"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {children}
-          </a>
-        ),
-      }}
-    >
-      {children}
-    </ReactMarkdown>
-  );
-
   const renderMessageContent = (message: any) => {
     const content =
       typeof message.content === "string"
@@ -1092,7 +1048,7 @@ function MessageAIPage() {
             renderCoachContent({ ...message, content: restOfMessage })
           ) : (
             <div className="space-y-2">
-              {restOfMessage.trim() && <MarkdownText>{restOfMessage}</MarkdownText>}
+              {restOfMessage.trim() && <MessageMarkdown>{restOfMessage}</MessageMarkdown>}
               <MessageImageAttachments
                 images={message.imageAttachments}
                 onOpen={setZoomedImage}
@@ -1106,7 +1062,7 @@ function MessageAIPage() {
     if (message.role !== "COACH") {
       return (
         <div className="space-y-2">
-          {content.trim() && <MarkdownText>{content}</MarkdownText>}
+          {content.trim() && <MessageMarkdown>{content}</MessageMarkdown>}
           <MessageImageAttachments
             images={message.imageAttachments}
             onOpen={setZoomedImage}
@@ -1260,7 +1216,7 @@ function MessageAIPage() {
         processedText = processedText.replace(/(\n\d+)\. $/g, '$1\\. ');
       }
 
-      return <MarkdownText>{processedText}</MarkdownText>;
+      return <MessageMarkdown>{processedText}</MessageMarkdown>;
     };
 
     return (
@@ -1547,7 +1503,7 @@ function MessageAIPage() {
                                   : "bg-muted/60"
                               }
                             >
-                              <div className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">
+                              <div className="min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                                 {renderMessageContent(messageForRendering)}
                               </div>
                             </MessageBubble>
@@ -1675,6 +1631,7 @@ function MessageAIPage() {
                                 timesPerWeek={proposal.timesPerWeek}
                                 activities={proposal.activities}
                                 finishingDate={proposal.finishingDate}
+                                notes={proposal.notes}
                                 milestones={proposal.milestones}
                                 sessions={proposal.sessions}
                                 description={proposal.description}

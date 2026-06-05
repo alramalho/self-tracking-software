@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
-import LinkifiedText from "./LinkifiedText";
+import { PlanNotesBlock } from "./PlanNotesBlock";
 
 export interface ResolvedOperation {
   date?: string;
@@ -131,9 +131,9 @@ function OperationDetail({ op }: { op: ResolvedOperation }) {
           </div>
         )}
         {op.notes !== undefined && op.notes && (
-          <div className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words">
-            <span className="text-foreground">Notes: </span>
-            <LinkifiedText text={op.notes} />
+          <div className="max-h-56 overflow-y-auto break-words">
+            <div className="mb-1 text-foreground">Notes</div>
+            <PlanNotesBlock notes={op.notes} />
           </div>
         )}
         {!hasVisibleFields && (
@@ -353,7 +353,7 @@ export function PlanProposalCard({
             Review Changes
           </h2>
           <p className="text-sm text-muted-foreground">
-            Only the proposed delta for {planGoal}
+            On {planGoal}
           </p>
         </div>
 
