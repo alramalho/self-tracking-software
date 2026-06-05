@@ -1160,6 +1160,24 @@ export class CoachAssessmentService {
           );
         }
       }
+
+      const missedSessions = sessions.filter(
+        (item) =>
+          !entries.some(
+            (entry) =>
+              entry.activityId === item.session.activityId &&
+              isSameDay(entry.datetime, item.session.date)
+          )
+      );
+
+      if (missedSessions.length > 0) {
+        lines.push("Missed scheduled sessions:");
+        for (const item of missedSessions) {
+          lines.push(
+            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. No matching activity log found. Planned guide: ${item.session.descriptiveGuide || "none"}.`
+          );
+        }
+      }
     }
 
     return lines.join("\n");

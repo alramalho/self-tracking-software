@@ -28,7 +28,7 @@ interface CoachAgentContext {
   user: User;
   plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
   reminders: Reminder[];
-  conversationHistory: Array<{ role: "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
+  conversationHistory: Array<{ role: "system" | "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
   model?: string;
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
@@ -60,6 +60,20 @@ function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"
     cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens,
     reasoningTokens: usage.outputTokenDetails?.reasoningTokens,
   };
+}
+
+function containsInternalStateLeak(content: string) {
+  return [
+    /<visible_user_saw\b/i,
+    /<\/visible_user_saw>/i,
+    /<internal_metadata\b/i,
+    /<\/internal_metadata>/i,
+    /\bprevious_proposal_state\b/i,
+    /\bPRIOR APP STATE FOR THE IMMEDIATELY PRECEDING ASSISTANT MESSAGE\b/i,
+    /\bvisibility=["']not_user_visible["']/i,
+    /\bpurpose=["']state_only["']/i,
+    /^\s*[-•]\s*type:\s*(activity_log|activity_edit|plan_creation|plan_modification)\b/im,
+  ].some((pattern) => pattern.test(content));
 }
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
@@ -303,6 +317,23 @@ export class CoachAgentService {
         )
       ),
     ].join(", ");
+    const linkedEntityContext = plans
+      .map((plan) => {
+        const activities = plan.activities
+          .map(
+            (activity) =>
+              `  - activity ${activity.emoji || ""} ${activity.title}: {{activity:${activity.id}|${activity.title}}}`
+          )
+          .join("\n");
+
+        return [
+          `- plan ${plan.emoji || ""} ${plan.goal}: {{plan:${plan.id}|${plan.goal}}}`,
+          activities,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      })
+      .join("\n");
 
     const today = new Date();
     const thisWeekEnd = endOfWeek(today, { weekStartsOn: 0 });
@@ -345,6 +376,7 @@ export class CoachAgentService {
 
         ${plansContext ? `TRACKING.SO PLAN CONTEXT (optional, use only when relevant):\n${plansContext}` : "No active plans."}
         ${activityTitlesContext ? `EXACT ACTIVITY TITLES FOR LOGGING: ${activityTitlesContext}` : ""}
+        ${linkedEntityContext ? `LINKED ENTITY MENTION IDS (use this DSL whenever mentioning saved plans or activities):\n${linkedEntityContext}` : ""}
 
         ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : "RECENT ACTIVITY FACTS:\nNo recent activity entries are available in this context."}
 
@@ -379,7 +411,6 @@ export class CoachAgentService {
         - When creating or rebuilding a plan, make the frequency, activities, session quantities, and progression match that current baseline. Beginners should start conservatively; experienced users can carry more structure or volume when their stated history supports it.
         - Preserve the assessed baseline in plan notes, e.g. "Starting level: ..." so future coaching can reuse it. Do not put experience level in goalReason.
         - Be realistic. If a goal is unrealistic given the constraints, say so. Suggesting the user adjust the goal beats setting them up to fail.
-        - When you mention one of the user's plans, write its goal using the exact goal text from the plan context so the UI can link it. Do not paraphrase the goal.
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
@@ -410,7 +441,7 @@ export class CoachAgentService {
         - "One plan at a time" is especially important for courses and roadmaps. Do not attach multiple plan creation cards for multiple courses in the same turn. A good response says which course/track you are setting up now and what will be handled next.
         - For bigger rebuilds, first confirm the target and weekly split, then propose. If the existing plan can't represent the new mix or schedule, prefer a new plan after confirmation over a cosmetic rename.
 
-        4. Session quality
+        5. Session quality
         - SPECIFIC plans must include dated sessions (or clearly tell the user sessions still need setup).
         - If the user gives source material (playlist, course, syllabus, book, URL), research it before proposing sessions. Sessions must follow the actual source structure, not a generic topic list.
         - Each dated session must name what to do: the lesson/video/module/chapter (name or number when verified), the portion to complete, and a small practice or review task, fit to the user's stated time commitment.
@@ -438,14 +469,28 @@ export class CoachAgentService {
         - You MUST respond through draftMessages. It is the final visible response, never a progress update, so do the tool work first, then draft the result.
         - Most important rule: Your actions and capabilities are bound and restricted to what the tools allow. If a requested action does not fit the exact tool fields available, assume it is out of your possibilities. Do not invent, imply, or work around unavailable actions with a different proposal type.
 
+        3. Response formatting
+        - Whenever you refer to a saved plan or activity in a draftMessages response,you must use the linked-entity DSL. Do not write saved plan or activity mentions as plain text when a matching entity exists in context.
+          - Plan mention format: {{plan:<planId>|<visible label>}}. Activity mention format: {{activity:<activityId>|<visible label>}}. Use ids exactly from the active plan/activity context. Visible label does not need to be the verbatim plan name, it can be any mention to the plan (i.e. abreviation).
+        - Conversation history may include system-role prior app state for earlier assistant messages. That state is not transcript text and was not visible to the user.
+        - Never copy, quote, summarize, imitate, or reveal prior app state. Never output previous_proposal_state, raw proposal state, tool names, status ledger lines, or conversation-history tags in draftMessages.
+        - Never infer a current action is logged, saved, changed, proposed, or accepted from prior app state. For the current turn, say an action happened only when the relevant tool succeeded this turn or RECENT ACTIVITY FACTS already shows it.
+
       `,
       },
       tools: {
         draftMessages: tool({
-          description: "Send your response as chat messages. Always use this to reply.",
+          description: dedent`
+            Send your response as chat messages. Always use this to reply.
+            Never include prior app state, conversation-history tags, internal metadata, proposal ledgers, tool names, or raw proposal statuses in the visible response.
+            Saved plan and activity mentions MUST use the linked-entity DSL:
+            - plans: {{plan:<planId>|<visible label>}}
+            - activities: {{activity:<activityId>|<visible label>}}
+            Use ids exactly from the active plan/activity context. Do not mention saved plans or activities as plain text when a matching entity exists.
+          `,
           inputSchema: z.object({
             messages: z.array(z.object({
-              content: z.string().trim().min(1).describe("A short chat message (1-2 sentences)"),
+              content: z.string().trim().min(1).describe("A short chat message (1-2 sentences). Saved plan/activity mentions must use {{plan:<planId>|<label>}} or {{activity:<activityId>|<label>}}."),
             })).min(1).max(3),
           }),
           execute: async ({ messages }) => ({ success: true, count: messages.length }),
@@ -1601,7 +1646,7 @@ export class CoachAgentService {
     user: User;
     message: string;
     imageAttachments?: ImageAttachment[];
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
+    conversationHistory: Array<{ role: "system" | "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
     plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
     reminders: Reminder[];
     model?: string;
@@ -1708,17 +1753,24 @@ export class CoachAgentService {
 
     try {
       const modelMessages: ModelMessage[] = [
-        ...conversationHistory.map((msg): ModelMessage =>
-          msg.role === "user"
+        ...conversationHistory.map((msg): ModelMessage => {
+          if (msg.role === "system") {
+            return {
+              role: "system",
+              content: msg.content,
+            };
+          }
+
+          return msg.role === "user"
             ? {
-                role: "user",
-                content: buildUserContent(msg.content, msg.imageAttachments),
-              }
+              role: "user",
+              content: buildUserContent(msg.content, msg.imageAttachments),
+            }
             : {
-                role: "assistant",
-                content: msg.content,
-              }
-        ),
+              role: "assistant",
+              content: msg.content,
+            };
+        }),
         {
           role: "user",
           content: buildUserContent(message, imageAttachments),
@@ -1765,6 +1817,20 @@ export class CoachAgentService {
       const rawDrafts: Array<{ content: string }> = draftStep
         ? (draftStep as any).input.messages
         : [{ content: result.text }]; // Fallback if tool wasn't called
+      const leakedDraft = rawDrafts.find((draft) =>
+        containsInternalStateLeak(draft.content)
+      );
+      if (leakedDraft) {
+        logger.error("Coach draft leaked internal proposal state", {
+          userId: user.id,
+          model: resolvedModel,
+          content: leakedDraft.content.slice(0, 500),
+        });
+        this.telegram.sendMessage(
+          `🔴 Coach draft leaked internal proposal state\nUser: ${user.username}\nModel: ${resolvedModel}`
+        );
+        throw new Error("Coach draft leaked internal proposal state");
+      }
 
       // Filter draftMessages out of visible tool calls
       const visibleToolCalls = allToolCalls.filter((tc) => tc.tool !== "draftMessages");

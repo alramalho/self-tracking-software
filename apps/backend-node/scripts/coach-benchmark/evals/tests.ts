@@ -263,6 +263,91 @@ export const recurrentAssessmentChecksSessionGuideFollowedTest: CoachEvalTest = 
     ),
 };
 
+export const recurrentAssessmentMissedScheduledSessionAsksWhyTest: CoachEvalTest = {
+  id: "recurrent_assessment_missed_scheduled_session_asks_why",
+  name: "Recurrent assessment treats missed scheduled session as urgent coaching signal",
+  userMessage: buildRecurrentCoachAssessmentPrompt({
+    interventionType: "WEEK_RECAP",
+    reason:
+      "The user had a scheduled robotics session last week and no matching activity log exists.",
+    context: [
+      "Previous week: 2026-06-01 to 2026-06-07",
+      "Logged activities: none",
+      "Scheduled sessions:",
+      '- 2026-06-04: 🤖 Robotics (1 sessions) for plan "Learn robotics with Arduino". Guide: Watch Arduino Module 2 and build the LED circuit.',
+      "Missed scheduled sessions:",
+      "- 2026-06-04: Robotics. No matching activity log found.",
+    ].join("\n"),
+  }),
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-15"),
+    plans: [
+      {
+        id: "bench-plan-robotics-missed",
+        goal: "Learn robotics with Arduino",
+        emoji: "🤖",
+        outlineType: "SPECIFIC",
+        notes:
+          "Course: DC Theory & Arduino. Follow module guides and adapt the schedule when sessions are repeatedly missed.",
+        activities: [
+          {
+            id: "bench-activity-robotics-missed",
+            title: "Robotics",
+            measure: "sessions",
+            emoji: "🤖",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-robotics-missed",
+            activityId: "bench-activity-robotics-missed",
+            date: "2026-06-04",
+            quantity: 1,
+            descriptiveGuide: "Watch Arduino Module 2 and build the LED circuit.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    activityEntries: [],
+  },
+  verify: async (ctx) =>
+    allOf(
+      proposalCount(ctx, "planCreation", { equals: 0 }),
+      proposalCount(ctx, "planModification", { equals: 0 }),
+      proposalCount(ctx, "activityLog", { equals: 0 }),
+      responseMatches(
+        ctx,
+        /\b(missed|didn'?t|not done|not logged|nothing got logged|skipped|don'?t see.{0,40}\blog|no matching activity log|no log)\b/i,
+        "calls_out_missed_session"
+      ),
+      responseMatches(ctx, /\?/i, "asks_a_question"),
+      responseMatches(
+        ctx,
+        /\b(why|what happened|what got in the way|blocked|blocker|too hard|time|schedule)\b/i,
+        "asks_why_or_friction"
+      ),
+      responseMatches(
+        ctx,
+        /\b(adapt|adjust|reschedul|move|shift|change|scale|smaller|easier|next time|pick it up|plan for next week|this weekend)\b/i,
+        "mentions_adaptation_or_rescheduling"
+      ),
+      responseNotMatches(
+        ctx,
+        /\b(follow|followed|stick|stuck)\b[\s\S]{0,100}\b(guide|planned|Module 2|LED circuit)\b/i,
+        "does_not_ask_if_guide_was_followed_when_session_was_missed"
+      ),
+      await llmJudge(
+        ctx,
+        "Clearly treats the missed scheduled Robotics session as important, not as a generic recap or optional note.",
+        "Asks what happened, why it was missed, or what got in the way.",
+        "Connects the answer to a future coaching decision such as adapting, scaling, or rescheduling the plan.",
+        "Does not attach plan, activity log, or plan creation proposals in this assessment turn."
+      )
+    ),
+};
+
 export const multipleTracksOnePlanAtATimeTest: CoachEvalTest = {
   id: "multiple_tracks_one_plan_at_a_time",
   name: "Multiple learning tracks are not bundled into several plan cards",
@@ -678,6 +763,7 @@ export const tests: CoachEvalTest[] = [
   inlineCurriculumSpecificPlanTest,
   courseBackedActivityUsesBroadNameTest,
   recurrentAssessmentChecksSessionGuideFollowedTest,
+  recurrentAssessmentMissedScheduledSessionAsksWhyTest,
   multipleTracksOnePlanAtATimeTest,
   legacyActivityRecencyCheckTest,
   recentActivityEvidenceOnlyTest,

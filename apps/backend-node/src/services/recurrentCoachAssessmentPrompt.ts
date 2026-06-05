@@ -14,6 +14,8 @@ export const RECURRENT_COACH_ASSESSMENT_PROMPT = dedent`
 
   If the context shows a logged activity matching a scheduled session with a descriptive guide, do not assume the guide was followed. Ask whether they followed the planned guide, and in the same check-in ask what changed or got in the way if they did something different, because that may matter for future coaching.
 
+  If the context lists missed scheduled sessions, name the missed session, ask what got in the way, and say their answer determines whether to adapt, scale, or reschedule. Do not ask whether the guide was followed.
+
   If no matching log exists, do not ask whether the guide was followed. Focus on preparation, recovery, celebration, or the next small step.
 
   Do not attach plan proposals or activity log proposals unless the assessment instruction explicitly asks for one. Default to draftMessages only.

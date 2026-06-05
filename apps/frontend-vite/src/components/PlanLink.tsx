@@ -99,7 +99,7 @@ export function PlanLink({
     <>
       <span
         className={cn(
-          `inline-flex items-center gap-1.5 font-medium cursor-pointer rounded-md px-2 py-0.5 transition-all text-foreground/90 ${themeColors.fadedBg} hover:${themeColors.bg}`,
+          `inline-flex max-w-full items-center gap-1.5 align-baseline font-medium cursor-pointer rounded-md px-2 py-0.5 transition-all text-foreground/90 ${themeColors.fadedBg} hover:${themeColors.bg}`,
           className
         )}
         onPointerDown={stopPlanLinkPropagation}
@@ -112,7 +112,9 @@ export function PlanLink({
         ) : !emoji ? (
           <Target size={14} className="flex-shrink-0" />
         ) : null}
-        <span className={labelClassName}>{displayText}</span>
+        <span className={cn("min-w-0 truncate", labelClassName)}>
+          {displayText}
+        </span>
       </span>
 
       <AppleLikePopover

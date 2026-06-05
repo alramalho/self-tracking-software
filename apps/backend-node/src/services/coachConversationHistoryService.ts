@@ -1,5 +1,5 @@
 type ConversationHistoryMessage = {
-  role: "user" | "assistant";
+  role: "system" | "user" | "assistant";
   content: string;
   imageAttachments?: ImageAttachment[];
 };
@@ -19,6 +19,11 @@ type ImageAttachment = {
 const formatStatus = (status: unknown) =>
   typeof status === "string" && status.length > 0 ? status : "pending";
 
+const formatMetadataValue = (value: unknown) =>
+  String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 function getCoachProposalStateLines(metadata: unknown): string[] {
   const data = metadata as any;
   const lines: string[] = [];
@@ -26,7 +31,11 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
   if (Array.isArray(data?.planCreationProposals)) {
     data.planCreationProposals.forEach((proposal: any) => {
       lines.push(
-        `- plan creation "${proposal?.goal || "untitled"}": ${formatStatus(proposal?.status)}`
+        [
+          "- type: plan_creation",
+          `goal: ${formatMetadataValue(proposal?.goal) || "untitled"}`,
+          `status: ${formatStatus(proposal?.status)}`,
+        ].join("; ")
       );
     });
   }
@@ -34,7 +43,13 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
   if (Array.isArray(data?.planProposals)) {
     data.planProposals.forEach((proposal: any) => {
       const label = proposal?.description || proposal?.planGoal || "plan modification";
-      lines.push(`- plan modification "${label}": ${formatStatus(proposal?.status)}`);
+      lines.push(
+        [
+          "- type: plan_modification",
+          `label: ${formatMetadataValue(label)}`,
+          `status: ${formatStatus(proposal?.status)}`,
+        ].join("; ")
+      );
     });
   }
 
@@ -47,7 +62,11 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
           ? ` (${fromMeasure} -> ${toMeasure})`
           : "";
       lines.push(
-        `- activity edit "${proposal?.activityName || "activity"}${measureText}": ${formatStatus(proposal?.status)}`
+        [
+          "- type: activity_edit",
+          `activity: ${formatMetadataValue(proposal?.activityName) || "activity"}${measureText}`,
+          `status: ${formatStatus(proposal?.status)}`,
+        ].join("; ")
       );
     });
   }
@@ -56,9 +75,15 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
     data.activityLogProposals.forEach((proposal: any) => {
       const quantity = proposal?.quantity ?? "?";
       const measure = proposal?.activityMeasure || "units";
-      const date = proposal?.date ? ` on ${proposal.date}` : "";
       lines.push(
-        `- activity log "${proposal?.activityName || "activity"} ${quantity} ${measure}${date}": ${formatStatus(proposal?.status)}`
+        [
+          "- type: activity_log",
+          `activity: ${formatMetadataValue(proposal?.activityName) || "activity"}`,
+          `quantity: ${quantity}`,
+          `measure: ${formatMetadataValue(measure)}`,
+          `date: ${formatMetadataValue(proposal?.date) || "unknown"}`,
+          `status: ${formatStatus(proposal?.status)}`,
+        ].join("; ")
       );
     });
   }
@@ -69,7 +94,7 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
 export function toCoachConversationHistory(
   messages: MessageForHistory[]
 ): ConversationHistoryMessage[] {
-  return messages.map((message) => {
+  return messages.flatMap((message) => {
     const role = message.role === "USER" ? "user" : "assistant";
     const data = message.metadata as any;
     const imageAttachments =
@@ -79,18 +104,28 @@ export function toCoachConversationHistory(
     const proposalStateLines =
       role === "assistant" ? getCoachProposalStateLines(message.metadata) : [];
 
-    return {
+    const visibleMessage = {
       role,
-      content:
-        proposalStateLines.length > 0
-          ? [
-              message.content,
-              "",
-              "Internal proposal state from this message:",
-              ...proposalStateLines,
-            ].join("\n")
-          : message.content,
+      content: message.content,
       ...(imageAttachments?.length ? { imageAttachments } : {}),
     };
+
+    if (role !== "assistant" || proposalStateLines.length === 0) {
+      return [visibleMessage];
+    }
+
+    return [
+      visibleMessage,
+      {
+        role: "system",
+        content: [
+          "PRIOR APP STATE FOR THE IMMEDIATELY PRECEDING ASSISTANT MESSAGE.",
+          "This is not transcript text and was not visible to the user.",
+          "Use it only to understand persisted proposal state. Do not quote, imitate, or output it.",
+          "previous_proposal_state:",
+          ...proposalStateLines,
+        ].join("\n"),
+      },
+    ];
   }) as ConversationHistoryMessage[];
 }

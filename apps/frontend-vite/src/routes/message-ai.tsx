@@ -4,6 +4,7 @@ import { MessageFeedback } from "@/components/MessageFeedback";
 import { MessageImageAttachments } from "@/components/MessageImageAttachments";
 import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
+import { ActivityLink } from "@/components/ActivityLink";
 import { UserActionCard } from "@/components/UserActionCard";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { ChatMessageComposer } from "@/components/ChatMessageComposer";
@@ -73,6 +74,18 @@ function DateDivider({ date }: { date: Date }) {
       <span className="relative mx-auto inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
         {formatRelativeDate(date)}
         <ChevronDown size={12} />
+      </span>
+    </div>
+  );
+}
+
+function AssessmentDivider({ position }: { position: "start" | "end" }) {
+  return (
+    <div className="relative -mx-4 flex items-center py-3">
+      <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-border/70" />
+      <span className="relative mx-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-sm">
+        <Sparkles size={12} />
+        {position === "start" ? "Coach assessment" : "End assessment"}
       </span>
     </div>
   );
@@ -821,16 +834,20 @@ function MessageAIPage() {
   const handleRunCoachAssessment = async () => {
     if (isRunningCoachAssessment) return;
 
+    const toastId = toast.loading("Coach assessment started");
+
     try {
       const response = await runCoachAssessment();
       toast.success(
         response.result.action === "agent_skipped"
           ? "Coach has nothing to report"
-          : "Coach assessment started"
+          : "Coach assessment complete",
+        { id: toastId }
       );
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error("Failed to run coach assessment:", error);
+      toast.error("Failed to run coach assessment", { id: toastId });
     }
   };
 
@@ -1086,6 +1103,12 @@ function MessageAIPage() {
       component: JSX.Element;
     }> = [];
     const citationSources = getCitationSources(content, message.toolCalls);
+    const hasOverlap = (index: number, length: number) =>
+      replacements.some(
+        (replacement) =>
+          index < replacement.index + replacement.length &&
+          index + length > replacement.index
+      );
 
     if (message.metricReplacement) {
       const index = content.indexOf(message.metricReplacement.textToReplace);
@@ -1109,7 +1132,61 @@ function MessageAIPage() {
           ),
         });
       }
-    } else if (message.planReplacements) {
+    }
+
+    const entityPattern = /\{\{(plan|activity):([^|{}\s]+)\|([^{}]+?)\}\}/g;
+    let entityMatch: RegExpExecArray | null;
+    let hasDslEntities = false;
+
+    while ((entityMatch = entityPattern.exec(content)) !== null) {
+      const [raw, type, id, label] = entityMatch;
+      const index = entityMatch.index;
+      const cleanLabel = label.trim();
+
+      if (hasOverlap(index, raw.length)) continue;
+
+      if (type === "plan") {
+        const plan = plans?.find((item: any) => item.id === id);
+        replacements.push({
+          index,
+          length: raw.length,
+          component: plan ? (
+            <PlanLink
+              key={`entity-plan-${message.id}-${index}`}
+              planId={id}
+              displayText={cleanLabel}
+              emoji={plan.emoji || undefined}
+            />
+          ) : (
+            <span key={`entity-plan-missing-${message.id}-${index}`}>
+              {cleanLabel}
+            </span>
+          ),
+        });
+        hasDslEntities = true;
+      } else if (type === "activity") {
+        const activity = activities?.find((item: any) => item.id === id);
+        replacements.push({
+          index,
+          length: raw.length,
+          component: activity ? (
+            <ActivityLink
+              key={`entity-activity-${message.id}-${index}`}
+              activityId={id}
+              displayText={cleanLabel}
+              emoji={activity.emoji || undefined}
+            />
+          ) : (
+            <span key={`entity-activity-missing-${message.id}-${index}`}>
+              {cleanLabel}
+            </span>
+          ),
+        });
+        hasDslEntities = true;
+      }
+    }
+
+    if (!hasDslEntities && message.planReplacements) {
       message.planReplacements.forEach((replacement: any, idx: number) => {
         const textToFind = replacement.textToReplace;
         const baseIndex = content.indexOf(textToFind);
@@ -1172,12 +1249,7 @@ function MessageAIPage() {
       while (searchFrom < content.length) {
         const index = content.indexOf(source.citationLabel, searchFrom);
         if (index === -1) break;
-        const overlaps = replacements.some(
-          (replacement) =>
-            index < replacement.index + replacement.length &&
-            index + source.citationLabel.length > replacement.index
-        );
-        if (!overlaps) {
+        if (!hasOverlap(index, source.citationLabel.length)) {
           replacements.push({
             index,
             length: source.citationLabel.length,
@@ -1188,10 +1260,21 @@ function MessageAIPage() {
       }
     });
 
-    replacements.sort((a, b) => a.index - b.index);
+    replacements.sort((a, b) => {
+      if (a.index !== b.index) return a.index - b.index;
+      return b.length - a.length;
+    });
+
+    const nonOverlappingReplacements: typeof replacements = [];
+    let lastReplacementEnd = 0;
+    for (const replacement of replacements) {
+      if (replacement.index < lastReplacementEnd) continue;
+      nonOverlappingReplacements.push(replacement);
+      lastReplacementEnd = replacement.index + replacement.length;
+    }
 
     let lastIndex = 0;
-    replacements.forEach((replacement) => {
+    nonOverlappingReplacements.forEach((replacement) => {
       if (replacement.index > lastIndex) {
         parts.push(content.substring(lastIndex, replacement.index));
       }
@@ -1218,6 +1301,113 @@ function MessageAIPage() {
 
       return <MessageMarkdown>{processedText}</MessageMarkdown>;
     };
+
+    const renderInlineTokens = (tokens: (string | JSX.Element)[], keyPrefix: string) =>
+      tokens.map((token, tokenIdx) => {
+        if (typeof token === "string") {
+          if (!token) return null;
+          return (
+            <MessageMarkdown key={`${keyPrefix}-text-${tokenIdx}`}>
+              {token}
+            </MessageMarkdown>
+          );
+        }
+
+        return <span key={`${keyPrefix}-component-${tokenIdx}`}>{token}</span>;
+      });
+
+    const stripLeadingText = (
+      tokens: (string | JSX.Element)[],
+      lengthToStrip: number
+    ) => {
+      let remaining = lengthToStrip;
+      return tokens
+        .map((token) => {
+          if (remaining <= 0 || typeof token !== "string") return token;
+          const nextToken = token.slice(remaining);
+          remaining = Math.max(0, remaining - token.length);
+          return nextToken;
+        })
+        .filter((token) => typeof token !== "string" || token.length > 0);
+    };
+
+    const renderMixedParts = () => {
+      const lines: (string | JSX.Element)[][] = [[]];
+
+      parts.forEach((part) => {
+        if (typeof part !== "string") {
+          lines[lines.length - 1].push(part);
+          return;
+        }
+
+        part.split(/(\n)/).forEach((segment) => {
+          if (segment === "\n") {
+            lines.push([]);
+          } else if (segment) {
+            lines[lines.length - 1].push(segment);
+          }
+        });
+      });
+
+      const rendered: JSX.Element[] = [];
+      let pendingListItems: (string | JSX.Element)[][] = [];
+
+      const flushList = () => {
+        if (pendingListItems.length === 0) return;
+        const listIndex = rendered.length;
+        rendered.push(
+          <ul
+            key={`mixed-list-${listIndex}`}
+            className="my-1 list-outside list-disc space-y-0 whitespace-normal pl-5 leading-snug"
+          >
+            {pendingListItems.map((tokens, itemIdx) => (
+              <li
+                key={`mixed-list-${listIndex}-${itemIdx}`}
+                className="pl-0 leading-snug marker:text-muted-foreground"
+              >
+                {renderInlineTokens(tokens, `mixed-list-${listIndex}-${itemIdx}`)}
+              </li>
+            ))}
+          </ul>
+        );
+        pendingListItems = [];
+      };
+
+      lines.forEach((line, lineIdx) => {
+        const lineText = line
+          .map((token) => (typeof token === "string" ? token : ""))
+          .join("");
+        const bulletMatch = lineText.match(/^\s*[-*]\s+/);
+
+        if (bulletMatch) {
+          pendingListItems.push(stripLeadingText(line, bulletMatch[0].length));
+          return;
+        }
+
+        flushList();
+
+        if (line.length === 0 || lineText.trim().length === 0) {
+          rendered.push(<div key={`mixed-gap-${lineIdx}`} className="h-2" />);
+          return;
+        }
+
+        rendered.push(
+          <div
+            key={`mixed-line-${lineIdx}`}
+            className="whitespace-pre-wrap break-words leading-snug [overflow-wrap:anywhere]"
+          >
+            {renderInlineTokens(line, `mixed-line-${lineIdx}`)}
+          </div>
+        );
+      });
+
+      flushList();
+      return rendered;
+    };
+
+    if (nonOverlappingReplacements.length > 0) {
+      return <>{renderMixedParts()}</>;
+    }
 
     return (
       <>
@@ -1439,12 +1629,24 @@ function MessageAIPage() {
               allMessages.map((message: any, index: number) => {
                 const isUserMessage = message.role === "USER" || message.senderId === currentUser?.id;
                 const isCoachMessage = message.role === "COACH";
+                const isAssessmentMessage =
+                  isCoachMessage && message.source === "autonomous_coach";
 
                 const prevMessage = allMessages[index - 1];
                 const nextMessage = allMessages[index + 1];
+                const prevIsAssessment =
+                  prevMessage?.role === "COACH" &&
+                  prevMessage.source === "autonomous_coach";
+                const nextIsAssessment =
+                  nextMessage?.role === "COACH" &&
+                  nextMessage.source === "autonomous_coach";
                 const messageDate = new Date(message.createdAt);
                 const showDateDivider = !prevMessage ||
                   !isSameDay(messageDate, new Date(prevMessage.createdAt));
+                const showAssessmentStart =
+                  isAssessmentMessage && (!prevIsAssessment || showDateDivider);
+                const showAssessmentEnd =
+                  isAssessmentMessage && !nextIsAssessment;
 
                 // Show feedback only on the last coach message before a non-coach message (or end of list)
                 const isLastInCoachGroup = isCoachMessage && (!nextMessage || nextMessage.role !== "COACH");
@@ -1514,19 +1716,12 @@ function MessageAIPage() {
                     dateLabel={formatRelativeDate(messageDate)}
                   >
                     {showDateDivider && <DateDivider date={messageDate} />}
+                    {showAssessmentStart && <AssessmentDivider position="start" />}
                     <div
                       className={`flex min-w-0 max-w-full gap-3 overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
                         }`}
                     >
                       <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
-                        {isCoachMessage &&
-                          message.source === "autonomous_coach" &&
-                          !prevIsCoach && (
-                            <div className="flex items-center gap-1 px-1 text-[11px] font-medium text-primary">
-                              <Sparkles size={11} />
-                              Coach assessment
-                            </div>
-                          )}
                         <div
                           className={cn(
                             "flex min-w-0 max-w-full items-end gap-1",
@@ -1752,6 +1947,7 @@ function MessageAIPage() {
                         )}
                       </div>
                     </div>
+                    {showAssessmentEnd && <AssessmentDivider position="end" />}
                   </MessageWithReadTracking>
                 );
               })
@@ -1801,7 +1997,7 @@ function MessageAIPage() {
         >
           <div className="w-full max-w-4xl mx-auto px-4 space-y-2">
             {editingMessage && (
-              <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/70 px-3 py-2">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/70 backdrop-blur-sm px-3 py-2">
                 <Pencil size={15} className="text-muted-foreground" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground">

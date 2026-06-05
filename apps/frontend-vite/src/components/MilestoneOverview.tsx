@@ -59,26 +59,28 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
   if (sortedMilestones.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-border p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Flag className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">
+    <section className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60">
+            <Flag className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-foreground">
               Milestones
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="truncate text-xs text-muted-foreground">
               {completedCount}/{sortedMilestones.length} complete
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {sortedMilestones.length > 1 && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => setIsExpanded((expanded) => !expanded)}
               aria-label={
                 isExpanded ? "Collapse milestones" : "Expand milestones"
@@ -96,7 +98,7 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={onEdit}
               aria-label="Edit milestones"
             >
@@ -106,7 +108,7 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="mt-4 space-y-3 border-t border-border pt-4">
         {visibleMilestones.map((milestone) => {
           const progress = getProgress(milestone);
           const isComplete = progress >= 100;

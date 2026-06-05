@@ -22,7 +22,7 @@ type ImageAttachment = {
   filename?: string;
 };
 type ConversationHistory = Array<{
-  role: "user" | "assistant";
+  role: "system" | "user" | "assistant";
   content: string;
   imageAttachments?: ImageAttachment[];
 }>;
