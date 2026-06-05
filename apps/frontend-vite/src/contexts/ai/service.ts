@@ -182,6 +182,24 @@ export async function rejectActivityLogProposal(
   });
 }
 
+export async function acceptActivityEditProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/accept-activity-edit-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
+export async function rejectActivityEditProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/reject-activity-edit-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
 // Submit AI satisfaction feedback
 export async function submitAISatisfaction(
   api: AxiosInstance,

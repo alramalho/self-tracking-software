@@ -152,7 +152,8 @@ function hasPendingProposal(messages: Pick<Message, "metadata">[]): boolean {
     const metadata = message.metadata as any;
     const planProposals = metadata?.planProposals || [];
     const activityLogProposals = metadata?.activityLogProposals || [];
-    return [...planProposals, ...activityLogProposals].some(
+    const activityEditProposals = metadata?.activityEditProposals || [];
+    return [...planProposals, ...activityLogProposals, ...activityEditProposals].some(
       (proposal: any) => !proposal.status
     );
   });
@@ -754,6 +755,16 @@ export class CoachAssessmentService {
         date: string;
         status: null;
       }>;
+      activityEditProposals?: Array<{
+        activityId: string;
+        activityName: string;
+        activityEmoji: string;
+        description: string;
+        original: unknown;
+        requested: unknown;
+        measureConversion: unknown;
+        status: null;
+      }>;
       toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
     }>,
     notificationTitle?: string
@@ -782,6 +793,7 @@ export class CoachAssessmentService {
               planProposals: draft.planProposals || [],
               planCreationProposals: draft.planCreationProposals || [],
               activityLogProposals: draft.activityLogProposals || [],
+              activityEditProposals: draft.activityEditProposals || [],
               ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
             })
           ),
@@ -800,15 +812,19 @@ export class CoachAssessmentService {
     });
 
     const hasProposal = drafts.some(
-      (d) => (d.planProposals && d.planProposals.length > 0) || (d.activityLogProposals && d.activityLogProposals.length > 0)
-        || (d.planCreationProposals && d.planCreationProposals.length > 0)
+      (d) =>
+        (d.planProposals && d.planProposals.length > 0) ||
+        (d.activityLogProposals && d.activityLogProposals.length > 0) ||
+        (d.activityEditProposals && d.activityEditProposals.length > 0) ||
+        (d.planCreationProposals && d.planCreationProposals.length > 0)
     );
     const pendingActionCount = drafts.reduce(
       (count, draft) =>
         count +
         (draft.planProposals?.filter((proposal) => !proposal.status).length || 0) +
         (draft.planCreationProposals?.filter((proposal) => !proposal.status).length || 0) +
-        (draft.activityLogProposals?.filter((proposal) => !proposal.status).length || 0),
+        (draft.activityLogProposals?.filter((proposal) => !proposal.status).length || 0) +
+        (draft.activityEditProposals?.filter((proposal) => !proposal.status).length || 0),
       0
     );
 

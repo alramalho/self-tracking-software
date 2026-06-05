@@ -763,6 +763,7 @@ router.get(
           planProposals: metadata.planProposals || [],
           planCreationProposals: metadata.planCreationProposals || [],
           activityLogProposals: metadata.activityLogProposals || [],
+          activityEditProposals: metadata.activityEditProposals || [],
           toolCalls: metadata.toolCalls || null,
           feedback: message.feedback,
         };

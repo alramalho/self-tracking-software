@@ -5,6 +5,7 @@ import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { classifyActivityKind } from "../services/activityCategorizationService";
+import { updateActivityWithMeasureConversion } from "../services/activityUpdateService";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
@@ -784,138 +785,26 @@ router.post(
         id = uuidv4();
       }
 
-      const existingActivity = await prisma.activity.findFirst({
-        where: {
-          id,
-          userId: req.user!.id,
-          deletedAt: null,
-        },
-      });
-
-      const isMeasureChange =
-        !!existingActivity && existingActivity.measure !== measure;
-
-      if (isMeasureChange) {
-        const operator = measureConversion?.operator;
-        const factor = Number(measureConversion?.factor);
-
-        if (
-          (operator !== "multiply" && operator !== "divide") ||
-          !Number.isInteger(factor) ||
-          factor <= 0
-        ) {
-          return res.status(400).json({
-            error:
-              "Changing an activity measure requires a positive integer conversion factor.",
-          });
-        }
-
-        const activityEntries = await prisma.activityEntry.findMany({
-          where: {
-            activityId: id,
-            userId: req.user!.id,
-            deletedAt: null,
-          },
-          select: {
-            id: true,
-            quantity: true,
-          },
-        });
-
-        const planSessions = await prisma.planSession.findMany({
-          where: {
-            activityId: id,
-            plan: {
-              userId: req.user!.id,
-              deletedAt: null,
-            },
-          },
-          select: {
-            id: true,
-            quantity: true,
-          },
-        });
-
-        const convertQuantity = (quantity: number) =>
-          operator === "multiply" ? quantity * factor : quantity / factor;
-
-        const convertedEntries = activityEntries.map((entry) => ({
-          id: entry.id,
-          quantity: convertQuantity(entry.quantity),
-        }));
-        const convertedSessions = planSessions.map((session) => ({
-          id: session.id,
-          quantity: convertQuantity(session.quantity),
-        }));
-        const fractionalConversion = [...convertedEntries, ...convertedSessions].find(
-          (item) => !Number.isInteger(item.quantity)
-        );
-
-        if (fractionalConversion) {
-          return res.status(400).json({
-            error:
-              "This conversion would create fractional quantities, but activities currently store whole numbers only.",
-          });
-        }
-
-        const activity = await prisma.$transaction(async (tx) => {
-          const updatedActivity = await tx.activity.update({
-            where: { id },
-            data: {
-              title,
-              measure,
-              emoji,
-              colorHex,
-              kind,
-            },
-          });
-
-          await Promise.all([
-            ...convertedEntries.map((entry) =>
-              tx.activityEntry.update({
-                where: { id: entry.id },
-                data: { quantity: entry.quantity },
-              })
-            ),
-            ...convertedSessions.map((session) =>
-              tx.planSession.update({
-                where: { id: session.id },
-                data: { quantity: session.quantity },
-              })
-            ),
-          ]);
-
-          return updatedActivity;
-        });
-
-        return res.json(activity);
-      }
-
-      const activity = await prisma.activity.upsert({
-        where: { id },
-        update: {
-          userId: req.user!.id,
-          title,
-          measure,
-          emoji,
-          colorHex,
-          kind,
-        },
-        create: {
-          id,
-          userId: req.user!.id,
-          title,
-          measure,
-          emoji,
-          colorHex,
-          kind,
-        },
+      const activity = await updateActivityWithMeasureConversion({
+        prisma,
+        userId: req.user!.id,
+        activityId: id,
+        title,
+        measure,
+        emoji,
+        colorHex,
+        kind,
+        measureConversion,
       });
 
       res.json(activity);
     } catch (error) {
       logger.error("Error upserting activity:", error);
-      res.status(500).json({ error: "Failed to upsert activity" });
+      const message =
+        error instanceof Error ? error.message : "Failed to upsert activity";
+      const isConversionError =
+        message.includes("conversion") || message.includes("whole numbers");
+      res.status(isConversionError ? 400 : 500).json({ error: message });
     }
   }
 );

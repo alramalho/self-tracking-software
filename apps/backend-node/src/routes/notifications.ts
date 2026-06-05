@@ -16,8 +16,11 @@ function countPendingCoachActions(metadata: unknown): number {
   const activityLogProposals = Array.isArray(data?.activityLogProposals)
     ? data.activityLogProposals
     : [];
+  const activityEditProposals = Array.isArray(data?.activityEditProposals)
+    ? data.activityEditProposals
+    : [];
 
-  return [...planProposals, ...activityLogProposals].filter(
+  return [...planProposals, ...activityLogProposals, ...activityEditProposals].filter(
     (proposal) => !proposal.status
   ).length + (data?.metricReplacement && !data.metricReplacement.status ? 1 : 0);
 }

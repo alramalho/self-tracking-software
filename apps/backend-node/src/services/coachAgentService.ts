@@ -340,6 +340,7 @@ export class CoachAgentService {
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
         - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        - If the user asks to edit an activity title, emoji, color, kind, or tracking measure/unit, use proposeActivityEdit. If the measure changes, include the conversion factor/operator, or ask one clarifying question if it is not clear.
         - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, continue a curriculum, or otherwise adjust supported fields for a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
         - If the requested edit is not represented by the available proposal patch fields, do not simulate it with archive/recreate or another nearby proposal. Say that this particular change is not available from chat and ask for a supported next step.
         - For unsupported edits, lead with the limitation directly. Do not say you can propose the requested change, and do not present a nearby supported edit as equivalent to the requested change.
@@ -591,7 +592,7 @@ export class CoachAgentService {
             - Add or update milestones with patch.milestones.upsert
             - Remove milestones with patch.milestones.deleteIds
             - Archive a dormant plan with patch.archive
-            You cannot propose edits to activity metadata: activity title, emoji, kind, tracking unit/measure, or which activities belong to a plan.
+            Use proposeActivityEdit, not this tool, for activity metadata: activity title, emoji, kind, color, tracking unit/measure.
 
             Use the planId, activityId, sessionId, and milestoneId values from the plan context above.
             IMPORTANT: Always provide a clear, short description of what the proposal does (e.g. "Archive gym for now", "Pause chess for next week", "Reduce gym to 2x/week").
@@ -981,6 +982,106 @@ export class CoachAgentService {
                 quantity,
                 date: logDate,
                 time: logTime,
+              },
+            };
+          },
+        }),
+
+        proposeActivityEdit: tool({
+          description: dedent`
+            Propose editing an existing activity. The user will be able to accept or reject with one click.
+            Use this for activity title, emoji, colorHex, kind, and tracking measure/unit changes.
+            If measure changes, measureConversion is required and describes how existing activity log and planned session quantities should be converted.
+            Use the exact activity title from the plan context as activityName, without emoji, measure, parentheses, or extra labels.
+          `,
+          inputSchema: z.object({
+            activityName: z.string().describe("The exact current activity title to edit."),
+            description: z.string().describe("Short human-readable description of the proposed edit."),
+            title: z.string().optional().describe("New activity title. Omit to keep unchanged."),
+            emoji: z.string().optional().describe("New activity emoji. Omit to keep unchanged."),
+            measure: z.string().optional().describe("New tracking measure/unit. Omit to keep unchanged."),
+            colorHex: z.string().nullable().optional().describe("New activity color hex, or null to clear. Omit to keep unchanged."),
+            kind: z.string().nullable().optional().describe("New activity kind/category. Omit to keep unchanged."),
+            measureConversion: z
+              .object({
+                operator: z.enum(["multiply", "divide"]),
+                factor: z.number().int().positive(),
+              })
+              .optional()
+              .describe("Required when measure changes. Existing quantities become old quantity multiplied or divided by this factor."),
+          }),
+          execute: async ({
+            activityName,
+            description,
+            title,
+            emoji,
+            measure,
+            colorHex,
+            kind,
+            measureConversion,
+          }) => {
+            const allActivities = plans.flatMap((p) => p.activities);
+            const matchedActivity = allActivities.find(
+              (a) => a.title.toLowerCase() === activityName.toLowerCase()
+            );
+
+            if (!matchedActivity) {
+              return {
+                success: false,
+                error: `Activity "${activityName}" not found. Available activities: ${[...new Set(allActivities.map((a) => a.title))].join(", ")}`,
+              };
+            }
+
+            const original = {
+              title: matchedActivity.title,
+              emoji: matchedActivity.emoji,
+              measure: matchedActivity.measure,
+              colorHex: matchedActivity.colorHex || null,
+              kind: matchedActivity.kind || null,
+            };
+            const requested = {
+              title: title?.trim() || original.title,
+              emoji: emoji?.trim() || original.emoji,
+              measure: measure?.trim() || original.measure,
+              colorHex: colorHex === undefined ? original.colorHex : colorHex,
+              kind: kind === undefined ? original.kind : kind,
+            };
+            const changes = Object.entries(requested).filter(
+              ([key, value]) => original[key as keyof typeof original] !== value
+            );
+
+            if (changes.length === 0) {
+              return {
+                success: false,
+                error: "This tool cannot be called without activity changes.",
+              };
+            }
+
+            if (original.measure !== requested.measure && !measureConversion) {
+              return {
+                success: false,
+                error:
+                  "Changing an activity measure requires measureConversion. Ask the user how existing quantities should convert if it is unclear.",
+              };
+            }
+
+            logger.info(
+              `Activity edit proposed: ${matchedActivity.emoji} ${matchedActivity.title} (${changes.map(([key]) => key).join(", ")})`
+            );
+
+            return {
+              success: true,
+              proposal: {
+                activityId: matchedActivity.id,
+                activityName: matchedActivity.title,
+                activityEmoji: matchedActivity.emoji,
+                description,
+                original,
+                requested,
+                measureConversion:
+                  original.measure !== requested.measure
+                    ? measureConversion
+                    : null,
               },
             };
           },
@@ -1501,6 +1602,31 @@ export class CoachAgentService {
         date: string;
         status: null;
       }>;
+      activityEditProposals?: Array<{
+        activityId: string;
+        activityName: string;
+        activityEmoji: string;
+        description: string;
+        original: {
+          title: string;
+          emoji: string;
+          measure: string;
+          colorHex: string | null;
+          kind: string | null;
+        };
+        requested: {
+          title: string;
+          emoji: string;
+          measure: string;
+          colorHex: string | null;
+          kind: string | null;
+        };
+        measureConversion: {
+          operator: "multiply" | "divide";
+          factor: number;
+        } | null;
+        status: null;
+      }>;
       toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
     }>;
     skipped?: boolean;
@@ -1626,6 +1752,20 @@ export class CoachAgentService {
           status: null as null,
         }));
 
+      const activityEditProposals = visibleToolCalls
+        .filter(
+          (tc) =>
+            tc.tool === "proposeActivityEdit" &&
+            tc.result &&
+            typeof tc.result === "object" &&
+            (tc.result as any).success &&
+            (tc.result as any).proposal
+        )
+        .map((tc) => ({
+          ...(tc.result as any).proposal,
+          status: null as null,
+        }));
+
       const planCreationProposals = visibleToolCalls
         .filter(
           (tc) =>
@@ -1678,6 +1818,8 @@ export class CoachAgentService {
           planCreationProposals: isLast && planCreationProposals.length > 0 ? planCreationProposals : undefined,
           // Activity log proposals on the LAST message
           activityLogProposals: isLast && activityLogProposals.length > 0 ? activityLogProposals : undefined,
+          // Activity edit proposals on the LAST message
+          activityEditProposals: isLast && activityEditProposals.length > 0 ? activityEditProposals : undefined,
           // Non-search tool calls stay on the first message. Web search calls
           // follow any message that cites them so split bubbles can render sources.
           toolCalls: messageToolCalls.length > 0 ? messageToolCalls : undefined,

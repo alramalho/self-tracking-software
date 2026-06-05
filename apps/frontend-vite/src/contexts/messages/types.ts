@@ -100,6 +100,31 @@ export interface Message {
     time?: string;
     status: "accepted" | "rejected" | null;
   }>;
+  activityEditProposals?: Array<{
+    activityId: string;
+    activityName: string;
+    activityEmoji: string;
+    description: string;
+    original: {
+      title: string;
+      emoji: string;
+      measure: string;
+      colorHex: string | null;
+      kind: string | null;
+    };
+    requested: {
+      title: string;
+      emoji: string;
+      measure: string;
+      colorHex: string | null;
+      kind: string | null;
+    };
+    measureConversion?: {
+      operator: "multiply" | "divide";
+      factor: number;
+    } | null;
+    status: "accepted" | "rejected" | null;
+  }>;
   toolCalls?: ToolCall[] | null;
   userAction?: UserAction | null;
   imageAttachments?: ImageAttachment[] | null;

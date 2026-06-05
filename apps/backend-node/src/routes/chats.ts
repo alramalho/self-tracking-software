@@ -210,6 +210,7 @@ async function runCoachV2MessagePipeline(params: {
           planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
           planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
           activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
+          activityEditProposals: JSON.parse(JSON.stringify(draft.activityEditProposals || [])),
           ...(draft.toolCalls && {
             toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
           }),
@@ -304,6 +305,7 @@ async function runCoachV2MessagePipeline(params: {
       planProposals: draft.planProposals || [],
       planCreationProposals: draft.planCreationProposals || [],
       activityLogProposals: draft.activityLogProposals || [],
+      activityEditProposals: draft.activityEditProposals || [],
       toolCalls: draft.toolCalls || null,
       error: draft.error || false,
       createdAt: coachMsg.createdAt,
@@ -699,6 +701,7 @@ router.get(
                 planProposals: metadata.planProposals || [],
                 planCreationProposals: metadata.planCreationProposals || [],
                 activityLogProposals: metadata.activityLogProposals || [],
+                activityEditProposals: metadata.activityEditProposals || [],
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
                 error: metadata.error || false,

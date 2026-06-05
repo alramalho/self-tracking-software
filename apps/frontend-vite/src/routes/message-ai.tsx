@@ -15,6 +15,7 @@ import {
 } from "@/utils/ghostGrid";
 import { AnimatePresence, motion } from "framer-motion";
 import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
+import { ActivityEditProposalCard } from "@/components/ActivityEditProposalCard";
 import { PlanCreationProposalCard } from "@/components/PlanCreationProposalCard";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
@@ -524,6 +525,8 @@ function MessageAIPage() {
     proposePlanCreationChanges,
     acceptActivityLogProposal,
     rejectActivityLogProposal,
+    acceptActivityEditProposal,
+    rejectActivityEditProposal,
     createCoachChat,
     isCreatingCoachChat,
     runCoachAssessment,
@@ -950,6 +953,24 @@ function MessageAIPage() {
       await rejectActivityLogProposal({ messageId, proposalIndex });
     } catch (error) {
       console.error("Failed to reject activity log proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleAcceptActivityEditProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await acceptActivityEditProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to accept activity edit proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectActivityEditProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await rejectActivityEditProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to reject activity edit proposal:", error);
       throw error;
     }
   };
@@ -1677,6 +1698,27 @@ function MessageAIPage() {
                                 status={proposal.status}
                                 onAccept={handleAcceptActivityLogProposal}
                                 onReject={handleRejectActivityLogProposal}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {isCoachMessage && message.activityEditProposals && message.activityEditProposals.length > 0 && (
+                          <div className="px-0">
+                            {message.activityEditProposals.map((proposal: any, idx: number) => (
+                              <ActivityEditProposalCard
+                                key={`activity-edit-${message.id}-${idx}`}
+                                messageId={message.id}
+                                proposalIndex={idx}
+                                activityName={proposal.activityName}
+                                activityEmoji={proposal.activityEmoji}
+                                description={proposal.description}
+                                original={proposal.original}
+                                requested={proposal.requested}
+                                measureConversion={proposal.measureConversion}
+                                status={proposal.status}
+                                onAccept={handleAcceptActivityEditProposal}
+                                onReject={handleRejectActivityEditProposal}
                               />
                             ))}
                           </div>

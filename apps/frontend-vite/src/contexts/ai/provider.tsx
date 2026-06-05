@@ -18,6 +18,8 @@ import {
   proposePlanCreationChanges,
   acceptActivityLogProposal,
   rejectActivityLogProposal,
+  acceptActivityEditProposal,
+  rejectActivityEditProposal,
   submitAISatisfaction,
 } from "./service";
 import { AIContext, type AIContextType } from "./types";
@@ -400,6 +402,63 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const acceptActivityEditProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await acceptActivityEditProposal(api, data);
+    },
+    onSuccess: (_, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.activityEditProposals) return msg;
+            const updated = [...msg.activityEditProposals];
+            updated[proposalIndex] = {
+              ...updated[proposalIndex],
+              status: "accepted",
+            };
+            return { ...msg, activityEditProposals: updated };
+          })
+      );
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Activity updated!");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to update activity");
+      toast.error(toDisplayErrorMessage(error, "Failed to update activity"));
+    },
+  });
+
+  const rejectActivityEditProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await rejectActivityEditProposal(api, data);
+    },
+    onSuccess: (_, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.activityEditProposals) return msg;
+            const updated = [...msg.activityEditProposals];
+            updated[proposalIndex] = {
+              ...updated[proposalIndex],
+              status: "rejected",
+            };
+            return { ...msg, activityEditProposals: updated };
+          })
+      );
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to reject activity edit");
+      toast.error("Failed to reject activity edit");
+    },
+  });
+
   const submitAISatisfactionMutation = useMutation({
     mutationFn: async (data: { liked: boolean; content?: string }) => {
       return await submitAISatisfaction(api, data);
@@ -439,6 +498,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     proposePlanCreationChanges: proposePlanCreationChangesMutation.mutateAsync,
     acceptActivityLogProposal: acceptActivityLogProposalMutation.mutateAsync,
     rejectActivityLogProposal: rejectActivityLogProposalMutation.mutateAsync,
+    acceptActivityEditProposal: acceptActivityEditProposalMutation.mutateAsync,
+    rejectActivityEditProposal: rejectActivityEditProposalMutation.mutateAsync,
     submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
     isSubmittingAISatisfaction: submitAISatisfactionMutation.isPending,
     isUserAIWhitelisted,

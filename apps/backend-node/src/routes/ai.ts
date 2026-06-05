@@ -8,6 +8,7 @@ import { coachAgentService } from "../services/coachAgentService";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
+import { updateActivityWithMeasureConversion } from "../services/activityUpdateService";
 import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
 import {
   executePlanProposalPatch,
@@ -178,11 +179,14 @@ function hasPendingCoachActions(metadata: unknown): boolean {
   const activityLogProposals = Array.isArray(data?.activityLogProposals)
     ? data.activityLogProposals
     : [];
+  const activityEditProposals = Array.isArray(data?.activityEditProposals)
+    ? data.activityEditProposals
+    : [];
   const planCreationProposals = Array.isArray(data?.planCreationProposals)
     ? data.planCreationProposals
     : [];
 
-  return [...planProposals, ...activityLogProposals, ...planCreationProposals].some(
+  return [...planProposals, ...activityLogProposals, ...activityEditProposals, ...planCreationProposals].some(
     (proposal) => !proposal.status
   ) || (data?.metricReplacement && !data.metricReplacement.status);
 }
@@ -384,6 +388,8 @@ router.get(
               metricReplacement,
               planProposals: metadata.planProposals || [],
               planCreationProposals: metadata.planCreationProposals || [],
+              activityLogProposals: metadata.activityLogProposals || [],
+              activityEditProposals: metadata.activityEditProposals || [],
               userRecommendations: metadata.userRecommendations || null,
               toolCalls: metadata.toolCalls || null,
               createdAt: msg.createdAt,
@@ -2071,6 +2077,9 @@ router.post(
               activityLogProposals: JSON.parse(
                 JSON.stringify(draft.activityLogProposals || [])
               ),
+              activityEditProposals: JSON.parse(
+                JSON.stringify(draft.activityEditProposals || [])
+              ),
               ...(draft.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
               }),
@@ -2131,6 +2140,7 @@ router.post(
           planProposals: draft.planProposals || [],
           planCreationProposals: draft.planCreationProposals || [],
           activityLogProposals: draft.activityLogProposals || [],
+          activityEditProposals: draft.activityEditProposals || [],
           toolCalls: draft.toolCalls || null,
           error: draft.error || false,
           createdAt: coachMsg.createdAt,
@@ -2330,6 +2340,175 @@ router.post(
     } catch (error) {
       logger.error("Error rejecting activity log proposal:", error);
       res.status(500).json({ error: "Failed to reject activity log proposal" });
+    }
+  }
+);
+
+// Accept an activity edit proposal from AI coach
+router.post(
+  "/messages/:messageId/accept-activity-edit-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.activityEditProposals ||
+        !metadata.activityEditProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.activityEditProposals[proposalIndex];
+
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      const activity = await prisma.activity.findFirst({
+        where: {
+          id: proposal.activityId,
+          userId: user.id,
+          deletedAt: null,
+        },
+      });
+
+      if (!activity) {
+        res.status(404).json({ error: "Activity not found" });
+        return;
+      }
+
+      const updatedActivity = await updateActivityWithMeasureConversion({
+        prisma,
+        userId: user.id,
+        activityId: proposal.activityId,
+        title: proposal.requested.title,
+        measure: proposal.requested.measure,
+        emoji: proposal.requested.emoji,
+        colorHex: proposal.requested.colorHex,
+        kind: proposal.requested.kind,
+        measureConversion: proposal.measureConversion,
+      });
+
+      metadata.activityEditProposals[proposalIndex].status = "accepted";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
+
+      logger.info(
+        `User ${user.username} accepted activity edit proposal: ${proposal.activityName}`
+      );
+
+      res.json({ success: true, activity: updatedActivity });
+    } catch (error) {
+      logger.error("Error accepting activity edit proposal:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to accept activity edit proposal";
+      const isConversionError =
+        message.includes("conversion") || message.includes("whole numbers");
+      res.status(isConversionError ? 400 : 500).json({ error: message });
+    }
+  }
+);
+
+// Reject an activity edit proposal from AI coach
+router.post(
+  "/messages/:messageId/reject-activity-edit-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.activityEditProposals ||
+        !metadata.activityEditProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      if (metadata.activityEditProposals[proposalIndex].status) {
+        res.status(400).json({
+          error: `Proposal already ${metadata.activityEditProposals[proposalIndex].status}`,
+        });
+        return;
+      }
+
+      metadata.activityEditProposals[proposalIndex].status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+      await concludeResolvedAutonomousCoachNotifications(
+        user.id,
+        message.chatId,
+        messageId
+      );
+
+      logger.info(
+        `User ${user.username} rejected activity edit proposal: ${metadata.activityEditProposals[proposalIndex].activityName}`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting activity edit proposal:", error);
+      res.status(500).json({ error: "Failed to reject activity edit proposal" });
     }
   }
 );
