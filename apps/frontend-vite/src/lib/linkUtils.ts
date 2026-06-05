@@ -1,6 +1,37 @@
 // URL detection regex - matches http(s):// URLs and www. URLs
 const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"{}|\\^`[\]]+/gi;
 
+const TRAILING_URL_PUNCTUATION = /[.,!?;:]+$/;
+
+function trimTrailingUrlPunctuation(rawUrl: string): {
+  url: string;
+  trailingText: string;
+} {
+  let url = rawUrl;
+  let trailingText = "";
+
+  const punctuationMatch = url.match(TRAILING_URL_PUNCTUATION);
+  if (punctuationMatch) {
+    trailingText = punctuationMatch[0] + trailingText;
+    url = url.slice(0, -punctuationMatch[0].length);
+  }
+
+  while (url.endsWith(")")) {
+    const openCount = (url.match(/\(/g) || []).length;
+    const closeCount = (url.match(/\)/g) || []).length;
+    if (closeCount <= openCount) break;
+
+    trailingText = ")" + trailingText;
+    url = url.slice(0, -1);
+  }
+
+  return { url, trailingText };
+}
+
+function ensureProtocol(url: string): string {
+  return url.startsWith("www.") ? `https://${url}` : url;
+}
+
 /**
  * Extract the first URL from a text string
  */
@@ -10,11 +41,8 @@ export function extractFirstUrl(text: string | null | undefined): string | null 
   if (!matches || matches.length === 0) return null;
 
   // Ensure URL has protocol
-  let url = matches[0];
-  if (url.startsWith("www.")) {
-    url = "https://" + url;
-  }
-  return url;
+  const { url } = trimTrailingUrlPunctuation(matches[0]);
+  return ensureProtocol(url);
 }
 
 /**
@@ -25,12 +53,7 @@ export function extractAllUrls(text: string | null | undefined): string[] {
   const matches = text.match(URL_REGEX);
   if (!matches) return [];
 
-  return matches.map((url) => {
-    if (url.startsWith("www.")) {
-      return "https://" + url;
-    }
-    return url;
-  });
+  return matches.map((url) => ensureProtocol(trimTrailingUrlPunctuation(url).url));
 }
 
 /**
@@ -66,15 +89,17 @@ export function splitTextWithUrls(
       });
     }
 
-    // Add the URL
-    let url = match[0];
-    if (url.startsWith("www.")) {
-      url = "https://" + url;
-    }
+    const { url, trailingText } = trimTrailingUrlPunctuation(match[0]);
     parts.push({
       type: "url",
-      content: url,
+      content: ensureProtocol(url),
     });
+    if (trailingText) {
+      parts.push({
+        type: "text",
+        content: trailingText,
+      });
+    }
 
     lastIndex = regex.lastIndex;
   }

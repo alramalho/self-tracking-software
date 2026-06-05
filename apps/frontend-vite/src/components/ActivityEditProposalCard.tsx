@@ -119,16 +119,16 @@ export function ActivityEditProposalCard({
       title="Review Activity Changes"
       className="max-h-[92dvh] sm:max-w-lg"
     >
-      <div className="flex h-[calc(92dvh-2rem)] max-h-[720px] w-full flex-col">
-        <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-2 text-center">
-          <span className="text-6xl">{requested.emoji || activityEmoji}</span>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+      <div className="flex max-h-[calc(92dvh-2rem)] w-full flex-col">
+        <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-1 text-center">
+          <span className="text-5xl">{requested.emoji || activityEmoji}</span>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             Review Activity
           </h2>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-1 pb-4">
+        <div className="min-h-0 max-h-[52dvh] space-y-2 overflow-y-auto px-1 pb-4">
           {changes.map((change) => (
             <div
               key={change.field}

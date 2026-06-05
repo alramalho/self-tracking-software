@@ -115,6 +115,9 @@ function resolveLegacyOperation(op: any, plan: any, activities: any[] = []): Res
       type: "update_plan",
       goal: op.goal,
       goalReason: op.goalReason,
+      notes: op.notes,
+      finishingDate: op.finishingDate,
+      outlineType: op.outlineType,
       timesPerWeek: op.timesPerWeek,
     };
   }
@@ -142,6 +145,9 @@ function resolvePatchOperations(patch: any, plan: any, activities: any[] = []): 
       type: "update_plan",
       goal: patch.plan.goal,
       goalReason: patch.plan.goalReason,
+      notes: patch.plan.notes,
+      finishingDate: patch.plan.finishingDate,
+      outlineType: patch.plan.outlineType,
       timesPerWeek: patch.plan.timesPerWeek,
     });
   }

@@ -27,6 +27,7 @@ export interface ResolvedOperation {
   goalReason?: string | null;
   notes?: string | null;
   finishingDate?: string | null;
+  outlineType?: string | null;
   timesPerWeek?: number;
   milestoneDescription?: string;
   milestoneDate?: string;
@@ -85,6 +86,14 @@ function OperationDetail({ op }: { op: ResolvedOperation }) {
   }
 
   if (op.type === "update_plan") {
+    const hasVisibleFields =
+      op.goal !== undefined ||
+      op.goalReason !== undefined ||
+      op.timesPerWeek !== undefined ||
+      op.finishingDate !== undefined ||
+      op.outlineType !== undefined ||
+      Boolean(op.notes);
+
     return (
       <div className="space-y-1 text-sm text-muted-foreground">
         {op.goal && (
@@ -105,6 +114,16 @@ function OperationDetail({ op }: { op: ResolvedOperation }) {
             {op.timesPerWeek}x/week
           </div>
         )}
+        {op.outlineType !== undefined && (
+          <div>
+            <span className="text-foreground">Plan type: </span>
+            {op.outlineType === "SPECIFIC"
+              ? "Specific sessions"
+              : op.outlineType === "TIMES_PER_WEEK"
+                ? "Times per week"
+                : op.outlineType || "Clear"}
+          </div>
+        )}
         {op.finishingDate !== undefined && (
           <div>
             <span className="text-foreground">Finishing date: </span>
@@ -116,6 +135,9 @@ function OperationDetail({ op }: { op: ResolvedOperation }) {
             <span className="text-foreground">Notes: </span>
             <LinkifiedText text={op.notes} />
           </div>
+        )}
+        {!hasVisibleFields && (
+          <div>Plan setup metadata will be updated.</div>
         )}
       </div>
     );
@@ -324,10 +346,10 @@ export function PlanProposalCard({
       title="Review Changes"
       className="max-h-[92dvh] sm:max-w-lg"
     >
-      <div className="flex h-[calc(92dvh-2rem)] max-h-[760px] w-full flex-col">
-        <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-2 text-center">
-          <span className="text-6xl">{planEmoji || "🎯"}</span>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+      <div className="flex max-h-[calc(92dvh-2rem)] w-full flex-col">
+        <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-1 text-center">
+          <span className="text-5xl">{planEmoji || "🎯"}</span>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             Review Changes
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -335,7 +357,7 @@ export function PlanProposalCard({
           </p>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-1 pb-4">
+        <div className="min-h-0 max-h-[52dvh] space-y-2 overflow-y-auto px-1 pb-4">
           {description && (
             <div className="rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground">
               {description}
