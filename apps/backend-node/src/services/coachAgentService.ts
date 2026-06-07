@@ -469,7 +469,7 @@ export class CoachAgentService {
         - Do not bundle a dependent activity log with a same-turn activity measure/unit change. Propose the measure change first; after acceptance, propose logs in the new unit.
         - Don't say "I proposed" or "I'll propose" unless a proposal tool succeeded this turn and the proposal is attached.
         - A proposal tool that returns success:false means NOTHING was proposed and no card exists. Never say a plan or change was created, attached, proposed, or "below" in that case. Fix the issue in the error and call the tool again, or tell the user plainly what blocked it.
-        - Never modify sessions, plans, or reminders without confirmation.
+        - Never modify sessions, plans, or reminders without confirmation. (unless the user was the one asking for it)
         - You MUST respond through draftMessages. It is the final visible response, never a progress update, so do the tool work first, then draft the result.
         - Most important rule: Your actions and capabilities are bound and restricted to what the tools allow. If a requested action does not fit the exact tool fields available, assume it is out of your possibilities. Do not invent, imply, or work around unavailable actions with a different proposal type.
 
