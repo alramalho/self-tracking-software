@@ -111,6 +111,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       formData.append("iso_date_string", data.datetime.toISOString());
       formData.append("quantity", data.quantity.toString());
       formData.append("description", data.description || "");
+      if (data.privateNotes !== undefined)
+        formData.append("privateNotes", data.privateNotes);
       formData.append(
         "timezone",
         Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -229,6 +231,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         payload.datetime = data.entry.datetime;
       if (data.entry.description !== undefined)
         payload.description = data.entry.description;
+      if ((data.entry as any).privateNotes !== undefined)
+        payload.privateNotes = (data.entry as any).privateNotes;
       if ((data.entry as any).difficulty !== undefined)
         payload.difficulty = (data.entry as any).difficulty;
 

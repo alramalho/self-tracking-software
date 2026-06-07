@@ -1,9 +1,10 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
 export type DifficultyLevel =
@@ -27,10 +28,12 @@ export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
   { value: "very_hard", label: "Very Hard", emoji: "🥵" },
 ];
 
+const REFLECTION_REASONS = ["Pattern", "Focus", "Time", "Energy", "Bugs", "Other"];
+
 interface DifficultyLogPopoverProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (difficulty: DifficultyLevel) => Promise<void>;
+  onSubmit: (difficulty: DifficultyLevel, privateNotes?: string) => Promise<void>;
   activityTitle?: string;
   activityEmoji?: string;
 }
@@ -44,15 +47,48 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
 }) => {
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<DifficultyLevel | null>(null);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [reflection, setReflection] = useState("");
+  const [showReflectionDetail, setShowReflectionDetail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedDifficulty(null);
+      setSelectedReasons([]);
+      setReflection("");
+      setShowReflectionDetail(false);
+    }
+  }, [open]);
+
+  const shouldPromptReflection =
+    selectedDifficulty === "hard" || selectedDifficulty === "very_hard";
+  const shouldShowReflection = shouldPromptReflection || showReflectionDetail;
+
+  const privateNotes = useMemo(() => {
+    const parts = [
+      selectedReasons.length
+        ? `What made it hard: ${selectedReasons.join(", ")}.`
+        : "",
+      reflection.trim(),
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join("\n") : undefined;
+  }, [reflection, selectedReasons]);
+
+  const toggleReason = (reason: string) => {
+    setSelectedReasons((current) =>
+      current.includes(reason)
+        ? current.filter((item) => item !== reason)
+        : [...current, reason]
+    );
+  };
 
   const handleSubmit = async () => {
     if (!selectedDifficulty) return;
 
     setIsSubmitting(true);
     try {
-      await onSubmit(selectedDifficulty);
-      setSelectedDifficulty(null);
+      await onSubmit(selectedDifficulty, privateNotes);
       onClose();
     } catch (error) {
       console.error("Failed to log difficulty:", error);
@@ -63,7 +99,6 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
   };
 
   const handleSkip = () => {
-    setSelectedDifficulty(null);
     onClose();
   };
 
@@ -127,6 +162,76 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
             </button>
           ))}
         </motion.div>
+
+        {selectedDifficulty && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-3"
+          >
+            {shouldShowReflection ? (
+              <>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground">
+                    What should your coach remember?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {REFLECTION_REASONS.map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => toggleReason(reason)}
+                        disabled={isSubmitting}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                          selectedReasons.includes(reason)
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-card text-muted-foreground hover:bg-accent/50"
+                        )}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {showReflectionDetail ? (
+                  <Textarea
+                    value={reflection}
+                    onChange={(event) => setReflection(event.target.value)}
+                    placeholder="Add a private reflection..."
+                    className="min-h-[84px] resize-none"
+                    disabled={isSubmitting}
+                  />
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="px-0 text-muted-foreground"
+                    onClick={() => setShowReflectionDetail(true)}
+                    disabled={isSubmitting}
+                  >
+                    Add detail
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Reflection is private to you and your coach.
+                </p>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="px-0 text-muted-foreground"
+                onClick={() => setShowReflectionDetail(true)}
+                disabled={isSubmitting}
+              >
+                Add reflection
+              </Button>
+            )}
+          </motion.div>
+        )}
 
         {/* Action Buttons */}
         <motion.div

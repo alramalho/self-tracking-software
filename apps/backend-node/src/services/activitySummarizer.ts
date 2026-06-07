@@ -11,6 +11,7 @@ interface SummarizeInput {
   activityEntries: Array<{
     datetime: Date;
     quantity: number;
+    privateNotes?: string | null;
     difficulty?: string | null;
     activity?: { title: string; emoji: string; measure: string } | null;
   }>;
@@ -86,6 +87,7 @@ class ActivitySummarizer {
     // Completed activities grouped by date
     const entriesByDate: Record<string, string[]> = {};
     const difficultiesByDate: Record<string, string[]> = {};
+    const reflectionsByDate: Record<string, string[]> = {};
     for (const e of activityEntries) {
       const dateKey = format(new Date(e.datetime), "yyyy-MM-dd (EEE)");
       if (!entriesByDate[dateKey]) entriesByDate[dateKey] = [];
@@ -97,6 +99,10 @@ class ActivitySummarizer {
       if (e.difficulty) {
         if (!difficultiesByDate[dateKey]) difficultiesByDate[dateKey] = [];
         difficultiesByDate[dateKey].push(`${actTitle}: ${e.difficulty}`);
+      }
+      if (e.privateNotes?.trim()) {
+        if (!reflectionsByDate[dateKey]) reflectionsByDate[dateKey] = [];
+        reflectionsByDate[dateKey].push(`${actTitle}: ${e.privateNotes.trim()}`);
       }
     }
     if (Object.keys(entriesByDate).length > 0) {
@@ -120,6 +126,18 @@ class ActivitySummarizer {
       );
     } else {
       parts.push("DIFFICULTY REPORTS: No difficulty reported");
+    }
+
+    // Private reflections
+    if (Object.keys(reflectionsByDate).length > 0) {
+      parts.push(
+        "PRIVATE REFLECTIONS:\n" +
+          Object.entries(reflectionsByDate)
+            .map(([date, entries]) => `  ${date}: ${entries.join(" | ")}`)
+            .join("\n")
+      );
+    } else {
+      parts.push("PRIVATE REFLECTIONS: No private reflections recorded");
     }
 
     // Metric entries grouped by date
@@ -152,10 +170,11 @@ class ActivitySummarizer {
         system: `You are a data summarizer. Given raw user activity tracking data for a date range, produce a concise plain text summary covering:
 1. Activities completed vs planned (per activity, grouped by day)
 2. Difficulty reports (explicitly state "no difficulty reported" if none)
-3. Metric recordings (explicitly state "no metrics recorded" if none)
-4. Overall adherence/consistency assessment
+3. Private reflections/postmortems (explicitly state "no private reflections recorded" if none)
+4. Metric recordings (explicitly state "no metrics recorded" if none)
+5. Overall adherence/consistency assessment
 
-Be factual and concise. Use bullet points. Do not give advice — just summarize the data.`,
+Be factual and concise. Use bullet points. Do not give advice — just summarize the data. Treat private reflections as coach-only planning evidence, not public captions.`,
         prompt: `Summarize this user's activity data from ${fromStr} to ${toStr}:\n\n${rawData}`,
         temperature: 0.2,
       });

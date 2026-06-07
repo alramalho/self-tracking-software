@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAssessmentService } from "../services/coachAssessmentService";
+import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import { coachAgentService } from "../services/coachAgentService";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
@@ -24,6 +25,21 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
 const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
+
+function activePlanWhere(now: Date) {
+  return {
+    deletedAt: null,
+    archivedAt: null,
+    isPaused: false,
+    OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
+  };
+}
+
+function normalizeOptionalText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 const planCreationProposalChangesSchema = z.object({
   proposalIndex: z.number(),
@@ -264,6 +280,39 @@ router.post(
   }
 );
 
+router.get(
+  "/coach/attention",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const now = new Date();
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          ...activePlanWhere(now),
+        },
+        include: { activities: true, sessions: true, milestones: true },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
+      res.json({
+        attentionItems: deriveCoachAttentionItems({
+          user,
+          plans,
+          now,
+        }),
+      });
+    } catch (error) {
+      logger.error("Error loading coach attention items:", error);
+      res.status(500).json({ error: "Failed to load coach attention items" });
+    }
+  }
+);
+
 // Get coach messages (conversation history)
 router.get(
   "/coach/messages",
@@ -390,6 +439,7 @@ router.get(
               planCreationProposals: metadata.planCreationProposals || [],
               activityLogProposals: metadata.activityLogProposals || [],
               activityEditProposals: metadata.activityEditProposals || [],
+              coachAttentionItems: metadata.coachAttentionItems || [],
               userRecommendations: metadata.userRecommendations || null,
               toolCalls: metadata.toolCalls || null,
               createdAt: msg.createdAt,
@@ -2234,6 +2284,10 @@ router.post(
 
       // Check for existing entry on this date
       const proposalDatetime = new Date(proposal.date + "T" + (proposal.time || "00:00:00") + ".000Z");
+      const description = normalizeOptionalText(proposal.description);
+      const privateNotes = normalizeOptionalText(proposal.privateNotes);
+      const difficulty =
+        typeof proposal.difficulty === "string" ? proposal.difficulty : undefined;
       const existingEntry = await prisma.activityEntry.findFirst({
         where: {
           activityId: proposal.activityId,
@@ -2248,6 +2302,12 @@ router.post(
           where: { id: existingEntry.id },
           data: {
             quantity: existingEntry.quantity + proposal.quantity,
+            description:
+              description !== undefined ? description : existingEntry.description,
+            privateNotes:
+              privateNotes !== undefined ? privateNotes : existingEntry.privateNotes,
+            difficulty:
+              difficulty !== undefined ? difficulty : existingEntry.difficulty,
           },
         });
       } else {
@@ -2257,6 +2317,9 @@ router.post(
             userId: user.id,
             quantity: proposal.quantity,
             datetime: proposalDatetime,
+            description,
+            privateNotes,
+            difficulty,
           },
         });
       }

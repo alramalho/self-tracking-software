@@ -31,6 +31,7 @@ export interface ActivityLogData {
   datetime: Date;
   quantity: number;
   description?: string;
+  privateNotes?: string;
   photo?: File;
   photos?: File[];
   withUserId?: string;

@@ -707,4 +707,3 @@ function HomePage() {
     </div>
   );
 }
-

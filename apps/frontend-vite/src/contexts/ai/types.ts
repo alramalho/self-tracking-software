@@ -32,6 +32,23 @@ export interface CoachAssessmentResponse {
   result: CoachAssessmentResult;
 }
 
+export interface CoachAttentionItem {
+  dedupeKey: string;
+  kind: "SPECIFIC_NO_FUTURE_SESSIONS" | "SPECIFIC_SCHEDULE_ENDING";
+  severity: "critical" | "warning" | "info";
+  planIds: string[];
+  planGoal: string;
+  planEmoji: string | null;
+  title: string;
+  message: string;
+  facts: Array<{ label: string; value: string }>;
+  primaryAction: {
+    type: "ASK_COACH_TO_FIX";
+    prompt: string;
+  };
+  generatedAt: string;
+}
+
 export interface AIContextType extends MessagesContextType {
   // Coach chat creation
   createCoachChat: (data: {

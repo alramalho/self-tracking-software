@@ -53,6 +53,38 @@ const upload = multer({
   },
 });
 
+function redactActivityEntryPrivateNotes(entry: any, viewerUserId: string): any {
+  if (!entry || typeof entry !== "object") return entry;
+
+  const redacted =
+    entry.userId === viewerUserId
+      ? { ...entry }
+      : (() => {
+          const { privateNotes: _privateNotes, ...rest } = entry;
+          return rest;
+        })();
+
+  const sharedEntries =
+    redacted.sharedActivityEntry?.sharedActivity?.entries;
+  if (Array.isArray(sharedEntries)) {
+    redacted.sharedActivityEntry = {
+      ...redacted.sharedActivityEntry,
+      sharedActivity: {
+        ...redacted.sharedActivityEntry.sharedActivity,
+        entries: sharedEntries.map((sharedEntry: any) => ({
+          ...sharedEntry,
+          activityEntry: redactActivityEntryPrivateNotes(
+            sharedEntry.activityEntry,
+            viewerUserId
+          ),
+        })),
+      },
+    };
+  }
+
+  return redacted;
+}
+
 const basicUserInclude = {
   connectionsFrom: {
     include: {
@@ -758,10 +790,15 @@ usersRouter.post(
       // Augment each plan with progress data and add coach profile
       const userWithProgress = {
         ...user,
-        activityEntries: user.activityEntries.map((entry) => ({
-          ...entry,
-          comments: [...entry.comments].reverse(),
-        })),
+        activityEntries: user.activityEntries.map((entry) =>
+          redactActivityEntryPrivateNotes(
+            {
+              ...entry,
+              comments: [...entry.comments].reverse(),
+            },
+            req.user!.id
+          )
+        ),
         plans: user.plans.map((plan) => ({
           ...plan,
           progress: progressMap.get(plan.id),
@@ -1138,7 +1175,9 @@ usersRouter.get(
 
       const filteredActivityEntries = pageItems
         .filter((item) => item.type === "activity")
-        .map((item) => item.data);
+        .map((item) =>
+          redactActivityEntryPrivateNotes(item.data, req.user!.id)
+        );
 
       const achievementPosts = pageItems
         .filter((item) => item.type === "achievement")

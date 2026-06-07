@@ -164,12 +164,13 @@ model ActivityEntry {
   datetime    DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
-  description String?
-  deletedAt   DateTime?
-  timezone    String?
-  latitude    Float?
-  longitude   Float?
-  difficulty  String?
+  description  String?
+  privateNotes String?
+  deletedAt    DateTime?
+  timezone     String?
+  latitude     Float?
+  longitude    Float?
+  difficulty   String?
 
   // Image info
   imageS3Path    String?

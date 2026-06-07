@@ -95,7 +95,12 @@ export function toCoachConversationHistory(
   messages: MessageForHistory[]
 ): ConversationHistoryMessage[] {
   return messages.flatMap((message) => {
-    const role = message.role === "USER" ? "user" : "assistant";
+    const role =
+      message.role === "SYSTEM"
+        ? "system"
+        : message.role === "USER"
+          ? "user"
+          : "assistant";
     const data = message.metadata as any;
     const imageAttachments =
       role === "user" && Array.isArray(data?.imageAttachments)

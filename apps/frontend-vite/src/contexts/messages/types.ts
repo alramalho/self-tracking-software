@@ -23,6 +23,23 @@ export interface UserAction {
   proposalIndex?: number;
 }
 
+export interface CoachAttentionItem {
+  dedupeKey: string;
+  kind: "SPECIFIC_NO_FUTURE_SESSIONS" | "SPECIFIC_SCHEDULE_ENDING";
+  severity: "critical" | "warning" | "info";
+  planIds: string[];
+  planGoal: string;
+  planEmoji: string | null;
+  title: string;
+  message: string;
+  facts: Array<{ label: string; value: string }>;
+  primaryAction: {
+    type: "ASK_COACH_TO_FIX";
+    prompt: string;
+  };
+  generatedAt: string;
+}
+
 export interface ImageAttachment {
   id?: string;
   url: string;
@@ -98,6 +115,9 @@ export interface Message {
     quantity: number;
     date: string;
     time?: string;
+    description?: string;
+    privateNotes?: string;
+    difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard";
     status: "accepted" | "rejected" | null;
   }>;
   activityEditProposals?: Array<{
@@ -125,6 +145,7 @@ export interface Message {
     } | null;
     status: "accepted" | "rejected" | null;
   }>;
+  coachAttentionItems?: CoachAttentionItem[];
   toolCalls?: ToolCall[] | null;
   userAction?: UserAction | null;
   imageAttachments?: ImageAttachment[] | null;

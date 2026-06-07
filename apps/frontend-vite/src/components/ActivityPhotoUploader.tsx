@@ -91,10 +91,10 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           />
         </div>
         <TextAreaWithVoice
-          label="Description (optional)"
+          label="Caption (optional)"
           value={description}
           onChange={setDescription}
-          placeholder="How was your activity? Share your thoughts..."
+          placeholder="Add a caption for this log..."
           disabled={isLoggingActivity}
         />
         <div className="mb-3">

@@ -3,6 +3,7 @@ import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
+import { useCoachAttentionItems } from "@/components/CoachAttentionBanner";
 import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
 import { isAfter } from "date-fns";
 import { CoachCard } from "./CoachCard";
@@ -28,6 +29,8 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { isUserAIWhitelisted, lastCoachNoReportAt } = useAI();
 
   const isUserOnFreePlan = userPlanType === "FREE";
+  const showCoachCard = !isUserOnFreePlan && isUserAIWhitelisted;
+  const coachAttentionItems = useCoachAttentionItems(showCoachCard);
 
   const activePlans = plans?.filter(
     (plan) =>
@@ -39,7 +42,7 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
 
   const cards: HomeGridCard[] = [];
 
-  if (!isUserOnFreePlan && isUserAIWhitelisted) {
+  if (showCoachCard) {
     const firstPendingPlanId = (pendingCoachNotifications[0]?.relatedData as any)?.planIds?.[0];
     cards.push({
       node: (
@@ -50,9 +53,10 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
           isLoadingPlans={isLoadingPlans}
           reviewPlanId={firstPendingPlanId}
           lastCoachNoReportAt={lastCoachNoReportAt}
+          coachAttentionItems={coachAttentionItems}
         />
       ),
-      span: 1,
+      span: coachAttentionItems.length > 0 ? 2 : 1,
     });
   }
 
@@ -92,7 +96,14 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
 
   return (
     <div className="grid grid-flow-dense grid-cols-2 gap-3">
-      {cards.map((card) => card.node)}
+      {cards.map((card, index) => (
+        <div
+          key={index}
+          className={card.span === 2 ? "col-span-2" : "col-span-1"}
+        >
+          {card.node}
+        </div>
+      ))}
     </div>
   );
 };

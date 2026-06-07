@@ -1021,6 +1021,7 @@ function ProfilePage() {
               datetime: showEditActivityEntry.datetime,
               activityId: showEditActivityEntry.activityId || "",
               description: showEditActivityEntry.description || undefined,
+              privateNotes: (showEditActivityEntry as any).privateNotes || undefined,
               imageUrl: showEditActivityEntry.imageUrl,
               createdAt: showEditActivityEntry.createdAt,
             }}

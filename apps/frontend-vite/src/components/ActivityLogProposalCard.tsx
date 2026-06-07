@@ -5,6 +5,14 @@ import { CalendarDays, Check, ChevronRight, Clock, Loader2, X } from "lucide-rea
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 
+const DIFFICULTY_LABELS: Record<string, string> = {
+  very_easy: "Very Easy",
+  easy: "Easy",
+  moderate: "Moderate",
+  hard: "Hard",
+  very_hard: "Very Hard",
+};
+
 interface ActivityLogProposalCardProps {
   messageId: string;
   proposalIndex: number;
@@ -14,6 +22,9 @@ interface ActivityLogProposalCardProps {
   quantity: number;
   date: string;
   time?: string;
+  description?: string;
+  privateNotes?: string;
+  difficulty?: string;
   status?: "accepted" | "rejected" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
@@ -28,6 +39,9 @@ export function ActivityLogProposalCard({
   quantity,
   date,
   time,
+  description,
+  privateNotes,
+  difficulty,
   status,
   onAccept,
   onReject,
@@ -59,6 +73,7 @@ export function ActivityLogProposalCard({
     : formattedDay;
 
   const label = `${activityEmoji} ${activityName} — ${quantity} ${activityMeasure} on ${formattedDate}`;
+  const difficultyLabel = difficulty ? DIFFICULTY_LABELS[difficulty] || difficulty : null;
 
   const handleAccept = async () => {
     setIsLoading(true);
@@ -150,6 +165,42 @@ export function ActivityLogProposalCard({
               <div className="mt-1 text-sm font-medium text-foreground">
                 {formattedTime}
               </div>
+            </div>
+          )}
+
+          {difficultyLabel && (
+            <div className="rounded-xl border border-border bg-card p-3 text-left">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Difficulty
+              </p>
+              <div className="mt-1 text-sm font-medium text-foreground">
+                {difficultyLabel}
+              </div>
+            </div>
+          )}
+
+          {description && (
+            <div className="rounded-xl border border-border bg-card p-3 text-left">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Caption
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                {description}
+              </p>
+            </div>
+          )}
+
+          {privateNotes && (
+            <div className="rounded-xl border border-border bg-card p-3 text-left">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Reflection
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                {privateNotes}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Private to you and your coach.
+              </p>
             </div>
           )}
         </div>

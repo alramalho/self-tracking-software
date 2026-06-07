@@ -21,6 +21,11 @@ import { getCoachWeekBounds, getPreviousCoachWeekBounds } from "../utils/date";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { coachAgentService } from "./coachAgentService";
+import {
+  deriveCoachAttentionItems,
+  formatCoachAttentionContext,
+  type CoachAttentionItem,
+} from "./coachAttentionService";
 import { coachContextBriefService } from "./coachContextBriefService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { notificationService } from "./notificationService";
@@ -85,6 +90,7 @@ function patchContainsMilestoneChanges(patch: PlanProposalPatch): boolean {
 type CoachInterventionType =
   | "INACTIVITY_ARCHIVE_PROPOSAL"
   | "INACTIVITY_PAUSE_PROPOSAL"
+  | "PLAN_ATTENTION"
   | "PLAN_ADJUSTMENT"
   | "COACH_SETUP"
   | "WEEK_PREP"
@@ -103,11 +109,13 @@ type CoachInterventionCandidate = {
   targetWeekStart?: string;
   context: string;
   usesAgent: boolean;
+  attentionItems?: CoachAttentionItem[];
 };
 
 const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "INACTIVITY_ARCHIVE_PROPOSAL",
   "INACTIVITY_PAUSE_PROPOSAL",
+  "PLAN_ATTENTION",
   "PLAN_ADJUSTMENT",
   "WEEK_PREP",
   "SESSION_PREP",
@@ -264,10 +272,15 @@ export class CoachAssessmentService {
       where: { userId: user.id, status: "PENDING" },
       orderBy: { triggerAt: "asc" },
     });
+    const attentionItems = deriveCoachAttentionItems({
+      user,
+      plans: coachUser.plans,
+      now,
+    });
 
     const aiResponse = await coachAgentService.generateResponse({
       user,
-      message: this.buildStatusReviewPrompt(),
+      message: this.buildStatusReviewPrompt(attentionItems),
       conversationHistory: [],
       plans: coachUser.plans,
       reminders,
@@ -290,8 +303,9 @@ export class CoachAssessmentService {
       type: "STATUS_REVIEW",
       reason: "User requested a coach assessment.",
       planIds: coachUser.plans.map((p) => p.id),
-      context: "",
+      context: formatCoachAttentionContext(attentionItems),
       usesAgent: true,
+      attentionItems,
     };
 
     const sent = await this.dispatchCoachDrafts(
@@ -311,14 +325,26 @@ export class CoachAssessmentService {
     };
   }
 
-  private buildStatusReviewPrompt(): string {
+  private buildStatusReviewPrompt(attentionItems: CoachAttentionItem[] = []): string {
+    const attentionContext = formatCoachAttentionContext(attentionItems);
+
     return dedent`
       You are doing an introductory status check-in with the user. This is a fresh
       assessment — do not treat it as a continuation of a prior conversation.
 
+      ${attentionContext}
+
       Required:
+      - Treat COACH ATTENTION ITEMS as the assessment agenda. If any critical item exists,
+        mention the highest-severity item before praise.
       - Open with a brief read on where they stand across their active plans, using
         USER'S PLANS + RECENT ACTIVITY FACTS only.
+      - Distinguish current week-to-date from the last fully completed week. Do not
+        describe last-week zeros as current-week zeros when current-week logs exist.
+      - For active SPECIFIC plans, cross-check current-week sessions, next-week
+        sessions, future sessions, and recent linked entries.
+      - If a SPECIFIC plan has no future sessions, call it a schedule setup gap,
+        not proof the user failed the goal.
       - Give a one-line status-vs-goal take per meaningful plan (on track / slipping / strong).
       - End with one concrete, realistic next step, or a single question to align focus.
       - Use 2-3 short messages. Keep each to 1-2 short sentences. Sound like a sharp
@@ -688,7 +714,9 @@ export class CoachAssessmentService {
         ? "propose archiving the inactive plan with patch.archive"
         : candidate.type === "INACTIVITY_PAUSE_PROPOSAL"
           ? "propose pausing the inactive plan with a single pause operation"
-          : "propose a realistic plan adjustment for the user's missed or at-risk sessions";
+          : candidate.type === "PLAN_ATTENTION"
+            ? "explain the schedule gap and ask whether the user wants you to repair or extend the affected plan schedule"
+            : "propose a realistic plan adjustment for the user's missed or at-risk sessions";
 
     return dedent`
       You are doing proactive coach assessment. The system selected this intervention:
@@ -702,9 +730,10 @@ export class CoachAssessmentService {
 
       Required action:
       - ${action}.
-      - Use the available plan modification tool when proposing changes.
-      - Mention that the user has 48 hours to decline before it applies automatically.
+      - Use the available plan modification tool only when proposing concrete changes.
+      - Mention the 48-hour auto-apply window only if a plan proposal is attached.
       - When proposing plan creation or updates, state what will be set immediately and what still needs setup: times/week vs dated sessions, activities, milestones, finishing date, and sessions.
+      - If the selected intervention is PLAN_ATTENTION, call missing future sessions a schedule setup gap, not proof the user failed the goal.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
       - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
       - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
@@ -753,6 +782,10 @@ export class CoachAssessmentService {
         activityMeasure: string;
         quantity: number;
         date: string;
+        time?: string;
+        description?: string;
+        privateNotes?: string;
+        difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard";
         status: null;
       }>;
       activityEditProposals?: Array<{
@@ -794,6 +827,7 @@ export class CoachAssessmentService {
               planCreationProposals: draft.planCreationProposals || [],
               activityLogProposals: draft.activityLogProposals || [],
               activityEditProposals: draft.activityEditProposals || [],
+              coachAttentionItems: candidate.attentionItems || [],
               ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
             })
           ),
@@ -845,6 +879,7 @@ export class CoachAssessmentService {
           sessionIds: candidate.sessionIds || [],
           messageIds,
           pendingActionCount,
+          coachAttentionItems: candidate.attentionItems || [],
         },
       },
       true
@@ -858,6 +893,7 @@ export class CoachAssessmentService {
     const titles: Record<CoachInterventionType, string> = {
       INACTIVITY_ARCHIVE_PROPOSAL: "Plan archive suggestion",
       INACTIVITY_PAUSE_PROPOSAL: "Plan pause suggestion",
+      PLAN_ATTENTION: "Plan needs attention",
       PLAN_ADJUSTMENT: "Plan adjustment",
       COACH_SETUP: "Coach setup",
       WEEK_PREP: "Week prep",
@@ -882,6 +918,23 @@ export class CoachAssessmentService {
     const { start: currentWeekStart } = getCoachWeekBounds(now, timezone);
     const currentWeekStartKey = format(currentWeekStart, "yyyy-MM-dd");
     const candidates: CoachInterventionCandidate[] = [];
+    const attentionItems = deriveCoachAttentionItems({
+      user,
+      plans: user.plans,
+      now,
+    });
+
+    if (attentionItems.length > 0) {
+      candidates.push({
+        type: "PLAN_ATTENTION",
+        reason: attentionItems[0].title,
+        planIds: Array.from(new Set(attentionItems.flatMap((item) => item.planIds))),
+        targetWeekStart: currentWeekStartKey,
+        context: formatCoachAttentionContext(attentionItems),
+        usesAgent: true,
+        attentionItems,
+      });
+    }
 
     const planSummaries = await Promise.all(
       user.plans.map((plan) => this.buildPlanAssessmentSummary(user, plan, now))

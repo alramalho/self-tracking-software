@@ -160,11 +160,18 @@ function LogPage() {
     handleSharedActivityPromptDone();
   };
 
-  const handleDifficultySubmit = async (difficulty: DifficultyLevel) => {
+  const handleDifficultySubmit = async (
+    difficulty: DifficultyLevel,
+    privateNotes?: string
+  ) => {
     if (!currentEntryId) return;
 
     await upsertActivityEntry({
-      entry: { id: currentEntryId, difficulty } as Partial<ActivityEntry>,
+      entry: {
+        id: currentEntryId,
+        difficulty,
+        ...(privateNotes !== undefined ? { privateNotes } : {}),
+      } as Partial<ActivityEntry>,
       muteNotification: true,
     });
   };
@@ -277,8 +284,8 @@ function LogPage() {
       <DifficultyLogPopover
         open={showDifficultyPopover}
         onClose={handleDifficultyDone}
-        onSubmit={async (difficulty) => {
-          await handleDifficultySubmit(difficulty);
+        onSubmit={async (difficulty, privateNotes) => {
+          await handleDifficultySubmit(difficulty, privateNotes);
           handleDifficultyDone();
         }}
         activityTitle={selectedActivity?.title}

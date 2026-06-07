@@ -1,6 +1,6 @@
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
-import { type CoachAssessmentResponse, type MessageFeedback } from "./types";
+import { type CoachAssessmentResponse, type CoachAttentionItem, type MessageFeedback } from "./types";
 import {
   type Chat,
   type Message,
@@ -47,6 +47,32 @@ export async function runCoachAssessment(
     "/ai/coach/run-assessment"
   );
   return response.data;
+}
+
+export async function getCoachAttentionItems(
+  api: AxiosInstance
+): Promise<CoachAttentionItem[]> {
+  const response = await api.get<{ attentionItems: CoachAttentionItem[] }>(
+    "/ai/coach/attention"
+  );
+  return response.data.attentionItems;
+}
+
+export async function startCoachAttentionAction(
+  api: AxiosInstance,
+  data: { dedupeKey: string }
+): Promise<{ chat: Chat; messages: Message[]; systemMessageId: string }> {
+  const response = await api.post<{
+    chat: any;
+    messages: any[];
+    systemMessageId: string;
+  }>("/chats/coach/attention/start", data);
+
+  return {
+    chat: deserializeChat(response.data.chat),
+    messages: response.data.messages.map(deserializeMessage),
+    systemMessageId: response.data.systemMessageId,
+  };
 }
 
 // Update chat title (coach-specific)

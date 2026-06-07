@@ -430,12 +430,19 @@ function MessageWithReadTracking({
 }
 
 export const Route = createFileRoute("/message-ai")({
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { coachPrompt?: string } => ({
+    coachPrompt:
+      typeof search.coachPrompt === "string" ? search.coachPrompt : undefined,
+  }),
   component: MessageAIPage,
 });
 
 function MessageAIPage() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
+  const { coachPrompt } = Route.useSearch();
   const { plans } = usePlans();
   const { activities, activityEntries } = useActivities();
   const themeColors = useThemeColors();
@@ -495,6 +502,7 @@ function MessageAIPage() {
   } = useAI();
   const { pendingSession, clearPendingSession } = useSessionMessage();
   const [inputValue, setInputValue] = useState("");
+  const [consumedCoachPrompt, setConsumedCoachPrompt] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<{
     id: string;
     chatId: string;
@@ -518,6 +526,14 @@ function MessageAIPage() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const topChromeRef = useRef<HTMLDivElement>(null);
   const bottomChromeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!coachPrompt || coachPrompt === consumedCoachPrompt) return;
+
+    setInputValue(coachPrompt);
+    setConsumedCoachPrompt(coachPrompt);
+    navigate({ to: "/message-ai", search: {}, replace: true });
+  }, [coachPrompt, consumedCoachPrompt, navigate]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initiallyScrolledChatIdRef = useRef<string | null>(null);
@@ -1903,6 +1919,9 @@ function MessageAIPage() {
                                 quantity={proposal.quantity}
                                 date={proposal.date}
                                 time={proposal.time}
+                                description={proposal.description}
+                                privateNotes={proposal.privateNotes}
+                                difficulty={proposal.difficulty}
                                 status={proposal.status}
                                 onAccept={handleAcceptActivityLogProposal}
                                 onReject={handleRejectActivityLogProposal}

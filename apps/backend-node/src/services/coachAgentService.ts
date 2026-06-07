@@ -5,7 +5,7 @@ import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringTy
 import { prisma } from "../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "./activitySummarizer";
-import { getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
+import { getCoachWeekBounds, getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
 import dedent from "dedent";
 import { TelegramService } from "./telegramService";
@@ -92,6 +92,9 @@ function getActivityLogProposalKey(proposal: any) {
     proposal.quantity,
     proposal.date,
     proposal.time || "00:00:00",
+    proposal.description || "",
+    proposal.privateNotes || "",
+    proposal.difficulty || "",
   ].join("|");
 }
 
@@ -414,6 +417,7 @@ export class CoachAgentService {
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
+        - When the user reports that a completed activity was hard, failed, confusing, or frustrating, treat it as planning evidence: capture the concrete reason in the activity log privateNotes/reflection when logging is proposed, set difficulty when clear, and say how future sessions should adapt from that evidence.
         - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
         - If the user asks to edit an activity title, emoji, color, kind, or tracking measure/unit, use proposeActivityEdit. If the measure changes, include the conversion factor/operator, or ask one clarifying question if it is not clear.
@@ -1037,14 +1041,18 @@ export class CoachAgentService {
             Match activities by name (case-insensitive exact match).
             Use the exact activity title from the plan context above as activityName, without emoji, measure, parentheses, or extra labels.
             Quantity must use the activity's current saved tracking measure. If the user wants to log in a different measure, propose the measure edit first and wait for acceptance.
+            Use description only for a user-facing caption. Use privateNotes for private reflection/postmortem details the coach should remember, especially failures, blockers, frustration, or what should change next.
           `,
           inputSchema: z.object({
             activityName: z.string().describe("The name of the activity to log (case-insensitive exact match)"),
             quantity: z.number().describe("The quantity/amount to log"),
             date: z.string().optional().describe("The date for the log (YYYY-MM-DD format). Defaults to today."),
             time: z.string().optional().describe("The time for the log (HH:mm:ss format, 24h). Defaults to 00:00:00. Use this when the user mentions a specific time."),
+            description: z.string().optional().describe("Optional user-facing caption for this activity entry."),
+            privateNotes: z.string().optional().describe("Optional private reflection for the user and coach. Use this for postmortem details, blockers, and planning implications."),
+            difficulty: z.enum(["very_easy", "easy", "moderate", "hard", "very_hard"]).optional().describe("Optional perceived difficulty when the user makes it clear."),
           }),
-          execute: async ({ activityName, quantity, date, time }) => {
+          execute: async ({ activityName, quantity, date, time, description, privateNotes, difficulty }) => {
             const allActivities = plans.flatMap((p) => p.activities);
             const matchedActivity = allActivities.find(
               (a) => a.title.toLowerCase() === activityName.toLowerCase()
@@ -1074,6 +1082,9 @@ export class CoachAgentService {
                 quantity,
                 date: logDate,
                 time: logTime,
+                description: description?.trim() || undefined,
+                privateNotes: privateNotes?.trim() || undefined,
+                difficulty,
               },
             };
           },
@@ -1438,12 +1449,14 @@ export class CoachAgentService {
     days = 30
   ): Promise<string> {
     const from = startOfDay(subDays(now, days));
+    const { start: currentWeekStart } =
+      getCoachWeekBounds(now, user.timezone);
     const { start: previousWeekStart, end: previousWeekEnd } =
       getPreviousCoachWeekBounds(now, user.timezone);
     const planActivityIds = Array.from(
       new Set(plans.flatMap((plan) => plan.activities.map((activity) => activity.id)))
     );
-    const [entries, previousWeekEntries] = await Promise.all([
+    const [entries, currentWeekEntries, previousWeekEntries] = await Promise.all([
       prisma.activityEntry.findMany({
         where: {
           userId: user.id,
@@ -1460,6 +1473,23 @@ export class CoachAgentService {
         orderBy: { datetime: "desc" },
         take: 20,
       }),
+      planActivityIds.length > 0
+        ? prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: planActivityIds },
+              activity: { deletedAt: null },
+              datetime: { gte: currentWeekStart, lte: now },
+            },
+            include: {
+              activity: {
+                select: { title: true, emoji: true, measure: true },
+              },
+            },
+            orderBy: { datetime: "asc" },
+          })
+        : Promise.resolve([]),
       planActivityIds.length > 0
         ? prisma.activityEntry.findMany({
             where: {
@@ -1509,12 +1539,18 @@ export class CoachAgentService {
       const dateLabel = relativeLabel
         ? `${format(entry.datetime, "yyyy-MM-dd")} (${relativeLabel})`
         : format(entry.datetime, "yyyy-MM-dd");
-      return `- ${dateLabel}: ${activity?.emoji || ""} ${activity?.title || "Unknown"} (${entry.quantity} ${activity?.measure || "units"})`;
+      const details = [
+        entry.difficulty ? `difficulty=${entry.difficulty}` : "",
+        entry.privateNotes?.trim()
+          ? `reflection="${entry.privateNotes.trim()}"`
+          : "",
+      ].filter(Boolean);
+      return `- ${dateLabel}: ${activity?.emoji || ""} ${activity?.title || "Unknown"} (${entry.quantity} ${activity?.measure || "units"})${details.length ? `; ${details.join("; ")}` : ""}`;
     });
 
-    const previousWeekRollups = plans.map((plan) => {
+    const buildPlanRollups = (windowEntries: typeof currentWeekEntries) => plans.map((plan) => {
       const planActivityIds = new Set(plan.activities.map((activity) => activity.id));
-      const planEntries = previousWeekEntries.filter(
+      const planEntries = windowEntries.filter(
         (entry) =>
           entry.activityId &&
           planActivityIds.has(entry.activityId)
@@ -1526,7 +1562,7 @@ export class CoachAgentService {
         ? planEntries
             .map((entry) =>
               entry.activity
-                ? `${format(entry.datetime, "yyyy-MM-dd")} ${entry.activity.emoji} ${entry.activity.title}`
+                ? `${format(entry.datetime, "yyyy-MM-dd")} ${entry.activity.emoji} ${entry.activity.title}${entry.difficulty ? ` (${entry.difficulty})` : ""}${entry.privateNotes?.trim() ? ` reflection: ${entry.privateNotes.trim()}` : ""}`
                 : `${format(entry.datetime, "yyyy-MM-dd")} unknown activity`
             )
             .join("; ")
@@ -1534,14 +1570,20 @@ export class CoachAgentService {
 
       return `- ${plan.emoji || ""} ${plan.goal}: ${target} linked activity entries. Entries: ${entriesText}.`;
     });
+    const currentWeekRollups = buildPlanRollups(currentWeekEntries);
+    const previousWeekRollups = buildPlanRollups(previousWeekEntries);
 
     return [
       `Lookback: last ${days} days.`,
       `Logged activity counts: ${summary || "none"}.`,
-      `Previous completed week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")} (Sunday-Saturday).`,
       "Times-per-week completion rule: every logged activity entry linked to a times-per-week plan counts as one completion, regardless of whether the activity measure is sessions, km, minutes, or something else.",
-      "Plan weekly rollups:",
+      `Current week-to-date (the week the user is in now): ${format(currentWeekStart, "yyyy-MM-dd")} to ${format(now, "yyyy-MM-dd")}.`,
+      "Current week-to-date plan rollups:",
+      ...(currentWeekRollups.length > 0 ? currentWeekRollups : ["- none"]),
+      `Last fully completed week (historical, not the current week): ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")} (Sunday-Saturday).`,
+      "Last fully completed week plan rollups:",
       ...(previousWeekRollups.length > 0 ? previousWeekRollups : ["- none"]),
+      "Interpretation rule: do not describe last fully completed week zeros as current-week zeros. If current week-to-date has linked entries, the plan is not at zero for the current week.",
       entries.length > 0
         ? "Most recent entries:"
         : "Most recent entries: none. Do not call any plan activity recent unless readActivities returns newer data.",
@@ -1645,6 +1687,7 @@ export class CoachAgentService {
   async generateResponse(params: {
     user: User;
     message: string;
+    messageRole?: "user" | "system";
     imageAttachments?: ImageAttachment[];
     conversationHistory: Array<{ role: "system" | "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
     plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
@@ -1692,6 +1735,10 @@ export class CoachAgentService {
         activityMeasure: string;
         quantity: number;
         date: string;
+        time?: string;
+        description?: string;
+        privateNotes?: string;
+        difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard";
         status: null;
       }>;
       activityEditProposals?: Array<{
@@ -1725,7 +1772,7 @@ export class CoachAgentService {
     skipReason?: string;
     telemetry?: CoachAgentTelemetry;
   }> {
-    const { user, message, imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
+    const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
     const hasImageAttachments = (imageAttachments?.length || 0) > 0;
     const modelConfig = hasImageAttachments
       ? resolveCoachAgentVisionModelConfig(model)
@@ -1771,10 +1818,15 @@ export class CoachAgentService {
               content: msg.content,
             };
         }),
-        {
-          role: "user",
-          content: buildUserContent(message, imageAttachments),
-        },
+        messageRole === "system"
+          ? {
+              role: "system",
+              content: message,
+            }
+          : {
+              role: "user",
+              content: buildUserContent(message, imageAttachments),
+            },
       ];
 
       const result = await agent.generate({

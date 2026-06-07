@@ -20,6 +20,20 @@ import { timezoneFromCoords } from "../utils/timezone";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+function normalizeOptionalText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function redactActivityEntryPrivateNotes(entry: any, viewerUserId: string): any {
+  if (!entry || typeof entry !== "object" || entry.userId === viewerUserId) {
+    return entry;
+  }
+  const { privateNotes: _privateNotes, ...rest } = entry;
+  return rest;
+}
+
 const sharedActivityInclude = {
   include: {
     sharedActivity: {
@@ -497,6 +511,7 @@ router.post(
         quantity,
         isPublic,
         description,
+        privateNotes,
         timezone: clientTimezone,
         latitude: rawLat,
         longitude: rawLng,
@@ -551,6 +566,7 @@ router.post(
       });
 
       let entry: ActivityEntry;
+      const normalizedPrivateNotes = normalizeOptionalText(privateNotes);
       if (existingEntry) {
         // Update existing entry by adding quantity
         entry = await prisma.activityEntry.update({
@@ -558,6 +574,10 @@ router.post(
           data: {
             quantity: existingEntry.quantity + parseInt(quantity),
             description: description || existingEntry.description,
+            privateNotes:
+              normalizedPrivateNotes !== undefined
+                ? normalizedPrivateNotes
+                : existingEntry.privateNotes,
           },
         });
       } else {
@@ -569,6 +589,7 @@ router.post(
             quantity: parseInt(quantity),
             datetime: iso_date_string,
             description,
+            privateNotes: normalizedPrivateNotes,
             timezone,
             latitude: latitude ?? undefined,
             longitude: longitude ?? undefined,
@@ -819,7 +840,7 @@ router.put(
   ): Promise<Response | void> => {
     try {
       const { activityEntryId } = req.params;
-      const { quantity, datetime, description, difficulty } = req.body;
+      const { quantity, datetime, description, difficulty, privateNotes } = req.body;
 
       // Verify ownership
       const existingEntry = await prisma.activityEntry.findFirst({
@@ -842,6 +863,10 @@ router.put(
             datetime !== undefined ? new Date(datetime) : existingEntry.datetime,
           description:
             description !== undefined ? description : existingEntry.description,
+          privateNotes:
+            privateNotes !== undefined
+              ? normalizeOptionalText(privateNotes) ?? null
+              : existingEntry.privateNotes,
           difficulty:
             difficulty !== undefined ? difficulty : existingEntry.difficulty,
         },
@@ -1426,7 +1451,20 @@ router.post(
         },
       });
 
-      res.json({ sharedActivity });
+      res.json({
+        sharedActivity: sharedActivity
+          ? {
+              ...sharedActivity,
+              entries: sharedActivity.entries.map((entry) => ({
+                ...entry,
+                activityEntry: redactActivityEntryPrivateNotes(
+                  entry.activityEntry,
+                  req.user!.id
+                ),
+              })),
+            }
+          : null,
+      });
     } catch (error) {
       logger.error("Error linking shared activity:", error);
       res.status(500).json({ error: "Failed to link shared activity" });

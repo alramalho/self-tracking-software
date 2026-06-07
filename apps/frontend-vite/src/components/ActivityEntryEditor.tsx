@@ -20,6 +20,7 @@ interface ActivityEntry {
   datetime: Date;
   activityId: string;
   description?: string;
+  privateNotes?: string | null;
   imageUrl?: string | null;
   imageUrls?: string[];
   createdAt?: Date;
@@ -45,6 +46,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
     minute: entryDate.getMinutes().toString().padStart(2, "0"),
   });
   const [description, setDescription] = useState(activityEntry.description || "");
+  const [privateNotes, setPrivateNotes] = useState(activityEntry.privateNotes || "");
   const [isTimePickerExpanded, setIsTimePickerExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
@@ -132,6 +134,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         quantity,
         datetime,
         description,
+        privateNotes,
       },
     });
     onClose?.();
@@ -264,11 +267,21 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-center">Description</h3>
+          <h3 className="text-lg font-semibold mb-2 text-center">Caption</h3>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Add a description..."
+            placeholder="Add a caption..."
+            className="min-h-[80px]"
+          />
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2 text-center">Reflection</h3>
+          <Textarea
+            value={privateNotes}
+            onChange={(e) => setPrivateNotes(e.target.value)}
+            placeholder="Private to you and your coach..."
             className="min-h-[80px]"
           />
         </div>
