@@ -1431,6 +1431,13 @@ export class PlansService {
         return null;
       }
 
+      if (user.proactiveCoachingEnabled === false) {
+        logger.info(
+          `Skipping post-activity coaching for user ${user.username} because proactive coaching is disabled`
+        );
+        return null;
+      }
+
       // Import services dynamically to avoid circular dependency
       const { notificationService } = await import("./notificationService");
       const { aiService } = await import("./aiService");
@@ -1561,6 +1568,13 @@ export class PlansService {
       if (user.planType === "FREE") {
         logger.info(
           `Skipping user ${user.username} because they are on free plan`
+        );
+        return null;
+      }
+
+      if (user.proactiveCoachingEnabled === false) {
+        logger.info(
+          `Skipping plan coaching for user ${user.username} because proactive coaching is disabled`
         );
         return null;
       }

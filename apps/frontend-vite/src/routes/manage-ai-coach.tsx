@@ -5,6 +5,7 @@ import { ArrowLeft, CalendarCheck, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AICoachPersonalitySelector } from "@/components/AICoachPersonalitySelector";
 import { CoachingTimeSelector } from "@/components/CoachingTimeSelector";
+import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/contexts/users";
 import {
   getCoachPersonalityConfig,
@@ -23,6 +24,8 @@ function ManageAICoachPage() {
   const { currentUser, updateUser, isUpdatingUser } = useCurrentUser();
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
+  const proactiveCoachingEnabled =
+    currentUser?.proactiveCoachingEnabled ?? true;
   const [showCoachingTimeSelector, setShowCoachingTimeSelector] =
     useState(false);
 
@@ -52,6 +55,22 @@ function ManageAICoachPage() {
     } catch (error) {
       console.error("Failed to update coaching time:", error);
       toast.error("Failed to update coaching time");
+      throw error;
+    }
+  };
+
+  const handleProactiveCoachingChange = async (enabled: boolean) => {
+    try {
+      await updateUser({
+        updates: { proactiveCoachingEnabled: enabled },
+        muteNotifications: true,
+      });
+      toast.success(
+        enabled ? "Proactive coaching enabled" : "Proactive coaching disabled"
+      );
+    } catch (error) {
+      console.error("Failed to update proactive coaching:", error);
+      toast.error("Failed to update proactive coaching");
       throw error;
     }
   };
@@ -102,6 +121,34 @@ function ManageAICoachPage() {
             onSelect={handleCoachPersonalityChange}
             disabled={isUpdatingUser}
           />
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">
+              Proactive coaching
+            </h2>
+            <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-4">
+              <div className="flex items-start gap-3">
+                <Send
+                  size={20}
+                  className="text-muted-foreground mt-0.5 shrink-0"
+                />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Coach can check in first
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Plan warnings, autonomous coach messages, coach actions,
+                    and scheduled check-ins use this setting.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={proactiveCoachingEnabled}
+                onCheckedChange={handleProactiveCoachingChange}
+                disabled={isUpdatingUser}
+              />
+            </div>
+          </div>
 
           <div className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">

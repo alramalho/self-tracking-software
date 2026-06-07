@@ -105,6 +105,25 @@ router.post(
         return res.status(404).json({ error: "Notification not found" });
       }
 
+      if (
+        notification.type === "COACH" &&
+        notification.user.proactiveCoachingEnabled === false
+      ) {
+        await prisma.notification.update({
+          where: { id: notification_id },
+          data: {
+            status: "CONCLUDED",
+            concludedAt: new Date(),
+          },
+        });
+        logger.info(
+          `Skipped scheduled coach notification ${notification_id} because proactive coaching is disabled`
+        );
+        return res.json({
+          message: "Scheduled coach notification skipped because proactive coaching is disabled",
+        });
+      }
+
       // Update notification status to processed and set processedAt
       const processedNotification = await prisma.notification.update({
         where: { id: notification_id },
@@ -288,6 +307,14 @@ router.get(
       const notifications = await prisma.notification.findMany({
         where: {
           userId: req.user!.id,
+          ...(req.user!.proactiveCoachingEnabled === false
+            ? {
+                NOT: {
+                  type: "COACH",
+                  promptTag: AUTONOMOUS_COACH_PROMPT_TAG,
+                },
+              }
+            : {}),
         },
         orderBy: {
           createdAt: "desc",

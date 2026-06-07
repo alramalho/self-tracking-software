@@ -187,6 +187,7 @@ export class CoachAssessmentService {
       where: {
         deletedAt: null,
         planType: { not: "FREE" },
+        proactiveCoachingEnabled: true,
         ...(filter_usernames.length > 0
           ? { username: { in: filter_usernames } }
           : {}),
@@ -432,7 +433,7 @@ export class CoachAssessmentService {
         createdAt: { lte: cutoff },
         metadata: { path: ["source"], equals: AUTONOMOUS_PROMPT_TAG },
       },
-      include: { chat: true },
+      include: { chat: { include: { user: true } } },
       orderBy: { createdAt: "asc" },
     });
 
@@ -441,6 +442,13 @@ export class CoachAssessmentService {
     let errors = 0;
 
     for (const message of messages) {
+      if (message.chat.user?.proactiveCoachingEnabled === false) {
+        logger.info(
+          `Skipping auto-accept for coach message ${message.id} because proactive coaching is disabled`
+        );
+        continue;
+      }
+
       const metadata = message.metadata as any;
       const proposals: any[] = metadata?.planProposals || [];
       let changed = false;

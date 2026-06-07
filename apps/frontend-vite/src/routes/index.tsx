@@ -7,6 +7,7 @@ import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import { useAchievements } from "@/contexts/achievements";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import ClientOverviewPopover from "@/components/ClientOverviewPopover";
+import { CoachOnboardingPopover } from "@/components/CoachOnboardingPopover";
 import { HomeCardGrid } from "@/components/home-cards/HomeCardGrid";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
@@ -136,6 +137,8 @@ function HomePage() {
   const [isSubmittingTestimonial, setIsSubmittingTestimonial] = useState(false);
   const [hasFinishedLastCoachMessageAnimation, setHasFinishedLastCoachMessageAnimation] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientPlan | null>(null);
+  const [coachOnboardingDismissed, setCoachOnboardingDismissed] =
+    useState(false);
 
   // Fetch coach's clients if user has a coach profile
   const { data: coachClients } = useQuery({
@@ -250,6 +253,10 @@ function HomePage() {
   // Check if user has more than 50 activities
   const shouldShowTestimonialPopover = activityEntries && activityEntries.length > 50;
   const shouldShowPlusUpgradeWelcomeAnnouncement = !isUserOnFreePlan && metricEntries && metricEntries.length === 0 && currentUser !== undefined && currentUser.planType === "PLUS";
+  const shouldShowCoachOnboarding =
+    currentUser?.planType === "PLUS" &&
+    !currentUser.coachOnboardingCompletedAt &&
+    !coachOnboardingDismissed;
   
   // Show loader for unauthenticated users (prevents flash before redirect)
   if (!isLoaded || !isSignedIn) {
@@ -549,6 +556,11 @@ function HomePage() {
       <MetricsLogPopover
         open={isMetricsPopoverOpen}
         onClose={() => setIsMetricsPopoverOpen(false)}
+      />
+
+      <CoachOnboardingPopover
+        open={shouldShowCoachOnboarding}
+        onClose={() => setCoachOnboardingDismissed(true)}
       />
 
       {/* AI Coach Popover */}

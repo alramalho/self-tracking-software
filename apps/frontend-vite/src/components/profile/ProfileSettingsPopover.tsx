@@ -508,6 +508,38 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <MoveRight size={20} className="text-muted-foreground" />
                       </div>
 
+                      <div
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        onClick={async () => {
+                          if (currentUser?.planType === "FREE") {
+                            toast.error("Coach setup only appears for Plus users");
+                            return;
+                          }
+
+                          await updateUser({
+                            updates: {
+                              coachOnboardingCompletedAt: null,
+                              proactiveCoachingEnabled: true,
+                            },
+                            muteNotifications: true,
+                          });
+                          toast.success("Coach setup will show on home");
+                          onClose();
+                          navigate({ to: "/" });
+                        }}
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            Show Coach Setup
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Reset coach onboarding and open the setup flow on
+                            home
+                          </p>
+                        </div>
+                        <ShieldCheck size={20} className="text-muted-foreground" />
+                      </div>
+
                       {/* Demo Achievement Celebrations */}
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-foreground px-3">

@@ -703,6 +703,10 @@ router.get(
       const { planId } = req.params;
       const userId = req.user!.id;
 
+      if (req.user!.proactiveCoachingEnabled === false) {
+        return res.json([]);
+      }
+
       const plan = await prisma.plan.findFirst({
         where: { id: planId, userId, deletedAt: null },
         select: { id: true },

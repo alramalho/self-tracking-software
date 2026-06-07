@@ -11,6 +11,7 @@ import { PlanCard } from "./PlanCard";
 import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
 import { UpcomingSessionsCard } from "./UpcomingSessionsCard";
+import { useCurrentUser } from "@/contexts/users";
 
 interface HomeCardGridProps {
   onOpenMetricsLog: () => void;
@@ -27,9 +28,13 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
   const { isUserAIWhitelisted, lastCoachNoReportAt } = useAI();
+  const { currentUser } = useCurrentUser();
 
   const isUserOnFreePlan = userPlanType === "FREE";
-  const showCoachCard = !isUserOnFreePlan && isUserAIWhitelisted;
+  const showCoachCard =
+    !isUserOnFreePlan &&
+    isUserAIWhitelisted &&
+    currentUser?.proactiveCoachingEnabled !== false;
   const coachAttentionItems = useCoachAttentionItems(showCoachCard);
 
   const activePlans = plans?.filter(
