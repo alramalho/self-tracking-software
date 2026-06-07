@@ -60,8 +60,8 @@ export const CoachCard = ({
   const [isAttentionDrawerOpen, setIsAttentionDrawerOpen] = useState(false);
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const hasActivePlans = activePlanCount > 0;
-  const hasPlanWarnings = coachAttentionItems.length > 0;
-  const criticalWarningCount = coachAttentionItems.filter(
+  const hasPlanUpdates = coachAttentionItems.length > 0;
+  const readyToExtendCount = coachAttentionItems.filter(
     (item) => item.severity === "critical"
   ).length;
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
@@ -75,7 +75,7 @@ export const CoachCard = ({
     now.getTime() - noReportAtMs < NO_REPORT_VISIBLE_MS;
   const avatar = getCoachAvatar(
     currentUser?.coachPersonality,
-    hasPlanWarnings || attentionCount > 0
+    hasPlanUpdates || attentionCount > 0
       ? "thinking"
       : hasActivePlans
         ? "coachSmiling"
@@ -88,7 +88,7 @@ export const CoachCard = ({
   }, []);
 
   const openCard = () => {
-    if (hasPlanWarnings) {
+    if (hasPlanUpdates) {
       setIsAttentionDrawerOpen(true);
       return;
     }
@@ -106,12 +106,12 @@ export const CoachCard = ({
       <HomeCardShell
         onClick={openCard}
         className={
-          hasPlanWarnings
+          hasPlanUpdates
             ? "aspect-[2/1] p-5 ring-amber-500/35 bg-amber-500/10"
             : undefined
         }
       >
-        {hasPlanWarnings ? (
+        {hasPlanUpdates ? (
           <>
             <div className="flex items-start justify-between gap-4">
               <div className="relative h-20 w-20 shrink-0">
@@ -130,13 +130,13 @@ export const CoachCard = ({
 
             <div>
               <p className="text-xl font-semibold leading-tight text-foreground">
-                {coachAttentionItems.length} plan warning
+                {coachAttentionItems.length} plan update
                 {coachAttentionItems.length === 1 ? "" : "s"}
               </p>
               <p className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
-                {criticalWarningCount > 0
-                  ? `${criticalWarningCount} plan${criticalWarningCount === 1 ? "" : "s"} with no sessions left`
-                  : "Schedules run out this week"}
+                {readyToExtendCount > 0
+                  ? `${readyToExtendCount} plan${readyToExtendCount === 1 ? "" : "s"} ready to extend`
+                  : "Next week needs planning"}
               </p>
               <p className="mt-3 inline-flex items-center text-sm font-semibold text-amber-500">
                 Expand

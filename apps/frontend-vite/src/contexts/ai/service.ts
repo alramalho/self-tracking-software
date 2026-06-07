@@ -60,7 +60,7 @@ export async function getCoachAttentionItems(
 
 export async function startCoachAttentionAction(
   api: AxiosInstance,
-  data: { dedupeKey: string }
+  data: { dedupeKey: string; guidance?: string }
 ): Promise<{ chat: Chat; messages: Message[]; systemMessageId: string }> {
   const response = await api.post<{
     chat: any;

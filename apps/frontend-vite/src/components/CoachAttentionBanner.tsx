@@ -20,13 +20,13 @@ import { getCoachAvatar, getCoachPersonalityConfig } from "@/lib/coachPersonalit
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Loader2,
   ShieldAlert,
-  Wrench,
   X,
 } from "lucide-react";
 import type { MouseEvent } from "react";
@@ -37,6 +37,10 @@ const severityRank: Record<CoachAttentionItem["severity"], number> = {
   critical: 0,
   warning: 1,
   info: 2,
+};
+
+const fadeStepTransition = {
+  opacity: { duration: 0.18 },
 };
 
 export function useCoachAttentionItems(enabled = true) {
@@ -63,8 +67,8 @@ export function useCoachAttentionItems(enabled = true) {
 
 function attentionHeadline(item: CoachAttentionItem) {
   return item.kind === "SPECIFIC_NO_FUTURE_SESSIONS"
-    ? "has no sessions left!"
-    : "runs out this week!";
+    ? "Next sessions need planning"
+    : "Next week needs planning";
 }
 
 function factValue(item: CoachAttentionItem, label: string) {
@@ -112,8 +116,11 @@ export function CoachAttentionDrawer({
   }, [open]);
 
   const startAttentionAction = useMutation({
-    mutationFn: (item: CoachAttentionItem) =>
-      startCoachAttentionAction(api, { dedupeKey: item.dedupeKey }),
+    mutationFn: (input: { item: CoachAttentionItem; guidance?: string }) =>
+      startCoachAttentionAction(api, {
+        dedupeKey: input.item.dedupeKey,
+        guidance: input.guidance,
+      }),
     onSuccess: ({ chat, messages }) => {
       setCurrentChatId(chat.id);
       queryClient.setQueryData(["messages", chat.id], (oldMessages: any[] = []) => {
@@ -130,19 +137,19 @@ export function CoachAttentionDrawer({
       navigate({ to: "/message-ai" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Coach could not start this fix");
+      toast.error(error?.response?.data?.error || "Coach could not prepare this update");
     },
   });
 
-  const askCoachToFix = (item: CoachAttentionItem) => {
-    startAttentionAction.mutate(item);
+  const startPlanUpdate = (item: CoachAttentionItem, guidance?: string) => {
+    startAttentionAction.mutate({ item, guidance });
   };
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[92dvh]">
         <DrawerHeader className="px-5 pb-2 text-left">
-          <DrawerTitle className="sr-only">Plans need scheduling</DrawerTitle>
+          <DrawerTitle className="sr-only">Plan updates</DrawerTitle>
         </DrawerHeader>
 
         <div className="px-5 pb-3">
@@ -158,113 +165,127 @@ export function CoachAttentionDrawer({
             ))}
           </div>
 
-          {step === 0 ? (
-            <div className="flex min-h-[420px] flex-col items-center justify-between text-center">
-              <div className="flex flex-col items-center">
-                <div className="relative mb-5">
-                  <div className="absolute inset-0 rounded-full bg-amber-400/20 motion-safe:animate-ping" />
-                  <img
-                    src={coachAvatar}
-                    alt={aiCoach.label}
-                    className="relative z-10 h-28 w-28 rounded-full object-contain"
-                  />
-                  <div className="absolute -right-1 bottom-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-background bg-amber-500 text-background shadow-sm">
-                    <AlertTriangle className="h-5 w-5" />
+          <AnimatePresence initial={false} mode="wait">
+            {step === 0 ? (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={fadeStepTransition}
+                className="flex min-h-[420px] flex-col items-center justify-between text-center"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-5">
+                    <div className="absolute inset-0 rounded-full bg-amber-400/20 motion-safe:animate-ping" />
+                    <img
+                      src={coachAvatar}
+                      alt={aiCoach.label}
+                      className="relative z-10 h-28 w-28 rounded-full object-contain"
+                    />
+                    <div className="absolute -right-1 bottom-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-background bg-amber-500 text-background shadow-sm">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
                   </div>
-                </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  {items.length} plan warning{items.length === 1 ? "" : "s"}
-                </h2>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  {aiCoach.name} found plans that need scheduling before they can guide your next step.
-                </p>
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    {items.length} plan update{items.length === 1 ? "" : "s"}
+                  </h2>
+                  <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                    {aiCoach.name} found plans that need their next scheduled step.
+                  </p>
 
-                <div className="mt-6 grid w-full grid-cols-2 gap-2">
-                  <div className="rounded-2xl bg-muted/50 p-4">
-                    <p className="text-3xl font-semibold text-foreground">{criticalCount}</p>
-                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      no active schedule
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-muted/50 p-4">
-                    <p className="text-3xl font-semibold text-foreground">{warningCount}</p>
-                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      ending this week
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full" onClick={() => setStep(1)}>
-                Continue
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          ) : activeItem ? (
-            <div className="flex min-h-[420px] flex-col justify-between">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-5">
-                  <img
-                    src={coachAvatar}
-                    alt={aiCoach.label}
-                    className="h-24 w-24 rounded-full object-contain"
-                  />
-                  <div className="absolute -right-2 bottom-1 flex h-12 w-12 items-center justify-center rounded-full border border-background bg-card text-2xl shadow-sm">
-                    {activeItem.planEmoji || "🎯"}
+                  <div className="mt-6 grid w-full grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-muted/50 p-4">
+                      <p className="text-3xl font-semibold text-foreground">{criticalCount}</p>
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">
+                        ready to extend
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-muted/50 p-4">
+                      <p className="text-3xl font-semibold text-foreground">{warningCount}</p>
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">
+                        ending soon
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-3 inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
-                  {step} of {items.length}
-                </div>
-
-                <h2 className="max-w-sm text-2xl font-semibold leading-tight text-foreground">
-                  {activeItem.planGoal}
-                </h2>
-                <p className="mt-2 text-xl font-semibold leading-tight text-amber-500">
-                  {attentionHeadline(activeItem)}
-                </p>
-
-                <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                  Last planned: {formatHumanDate(factValue(activeItem, "Last planned session"))}
-                  {" · "}
-                  Ends: {formatHumanDate(factValue(activeItem, "Plan end"))}
-                </p>
-              </div>
-
-              <div className="mt-6 space-y-2">
-                <Button
-                  className="w-full"
-                  disabled={startAttentionAction.isPending}
-                  onClick={() => askCoachToFix(activeItem)}
-                >
-                  {startAttentionAction.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wrench className="mr-2 h-4 w-4" />
-                  )}
-                  Ask coach to fix
+                <Button className="w-full" onClick={() => setStep(1)}>
+                  Continue
+                  <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep((current) => Math.max(0, current - 1))}
-                  >
-                    <ChevronLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={step >= items.length}
-                    onClick={() => setStep((current) => Math.min(items.length, current + 1))}
-                  >
-                    Next
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
+              </motion.div>
+            ) : activeItem ? (
+              <motion.div
+                key={activeItem.dedupeKey}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={fadeStepTransition}
+                className="flex min-h-[420px] flex-col justify-between"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-5">
+                    <img
+                      src={coachAvatar}
+                      alt={aiCoach.label}
+                      className="h-24 w-24 rounded-full object-contain"
+                    />
+                    <div className="absolute -right-2 bottom-1 flex h-12 w-12 items-center justify-center rounded-full border border-background bg-card text-2xl shadow-sm">
+                      {activeItem.planEmoji || "🎯"}
+                    </div>
+                  </div>
+
+                  <div className="mb-3 inline-flex rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
+                    {step} of {items.length}
+                  </div>
+
+                  <h2 className="max-w-sm text-3xl font-semibold leading-tight text-foreground">
+                    {attentionHeadline(activeItem)}
+                  </h2>
+                  <p className="mt-3 max-w-sm text-xl font-semibold leading-tight text-muted-foreground">
+                    {activeItem.planGoal}
+                  </p>
+
+                  <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                    Last planned: {formatHumanDate(factValue(activeItem, "Last planned session"))}
+                    {" · "}
+                    Ends: {formatHumanDate(factValue(activeItem, "Plan end"))}
+                  </p>
                 </div>
-              </div>
-            </div>
-          ) : null}
+
+                <div className="mt-6 space-y-2">
+                  <Button
+                    className="w-full rounded-2xl"
+                    disabled={startAttentionAction.isPending}
+                    onClick={() => startPlanUpdate(activeItem)}
+                  >
+                    {startAttentionAction.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Let coach prepare the update
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep((current) => Math.max(0, current - 1))}
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Back
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={step >= items.length}
+                      onClick={() => setStep((current) => Math.min(items.length, current + 1))}
+                    >
+                      Next
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
 
         <DrawerFooter className="pt-0">
@@ -289,8 +310,8 @@ export function CoachAttentionTrigger() {
         type="button"
         onClick={() => setOpen(true)}
         className="relative rounded-full p-2 transition-colors duration-200 hover:bg-muted/50"
-        title="Plan warnings"
-        aria-label="Plan warnings"
+        title="Plan updates"
+        aria-label="Plan updates"
       >
         <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-400">
           <span className="absolute inset-0 rounded-full bg-amber-400 motion-safe:animate-ping" />
@@ -370,7 +391,7 @@ export function CoachAttentionBanner() {
             type="button"
             onClick={dismissPrimary}
             className="rounded-full p-1.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-            aria-label="Dismiss warning"
+            aria-label="Dismiss plan update"
           >
             <X className="h-4 w-4" />
           </button>

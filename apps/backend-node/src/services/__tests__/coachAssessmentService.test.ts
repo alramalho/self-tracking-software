@@ -114,6 +114,7 @@ describe("coach attention schedule rules", () => {
     expect(items).toHaveLength(1);
     expect(items[0].kind).toBe("SPECIFIC_NO_FUTURE_SESSIONS");
     expect(items[0].severity).toBe("critical");
+    expect(items[0].primaryAction.type).toBe("START_PLAN_UPDATE");
   });
 
   it("flags active specific plans whose schedule ends this week", () => {
@@ -126,6 +127,7 @@ describe("coach attention schedule rules", () => {
     expect(items).toHaveLength(1);
     expect(items[0].kind).toBe("SPECIFIC_SCHEDULE_ENDING");
     expect(items[0].severity).toBe("warning");
+    expect(items[0].message).toContain("next week still needs to be planned");
   });
 
   it("does not flag times-per-week plans without sessions", () => {

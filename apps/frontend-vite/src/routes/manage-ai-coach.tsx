@@ -137,7 +137,7 @@ function ManageAICoachPage() {
                     Coach can check in first
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Plan warnings, autonomous coach messages, coach actions,
+                    Plan updates, autonomous coach messages, coach actions,
                     and scheduled check-ins use this setting.
                   </p>
                 </div>

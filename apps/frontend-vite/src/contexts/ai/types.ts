@@ -43,7 +43,7 @@ export interface CoachAttentionItem {
   message: string;
   facts: Array<{ label: string; value: string }>;
   primaryAction: {
-    type: "ASK_COACH_TO_FIX";
+    type: "START_PLAN_UPDATE";
     prompt: string;
   };
   generatedAt: string;

@@ -23,7 +23,7 @@ export type CoachAttentionItem = {
   message: string;
   facts: Array<{ label: string; value: string }>;
   primaryAction: {
-    type: "ASK_COACH_TO_FIX";
+    type: "START_PLAN_UPDATE";
     prompt: string;
   };
   generatedAt: string;
@@ -48,10 +48,10 @@ function planLabel(plan: Pick<Plan, "emoji" | "goal">) {
 
 function buildRepairPrompt(plan: AttentionPlan, kind: CoachAttentionKind) {
   if (kind === "SPECIFIC_NO_FUTURE_SESSIONS") {
-    return `Please repair the schedule for my plan "${plan.goal}". It is a specific dated-session plan, but it has no future sessions. Use the plan notes and current progress, then propose the next useful sessions.`;
+    return `Please adapt my plan "${plan.goal}". It is a specific dated-session plan that has reached the end of its scheduled sessions. Use the plan notes and current progress, then propose the next useful sessions or ask one question if you need direction.`;
   }
 
-  return `Please extend the schedule for my plan "${plan.goal}". Its current dated sessions run out this week. Use the plan notes and current progress, then propose the next useful sessions.`;
+  return `Please adapt my plan "${plan.goal}". Its current dated sessions run out this week. Use the plan notes and current progress, then propose the next useful sessions or ask one question if you need direction.`;
 }
 
 export function deriveCoachAttentionItems(params: {
@@ -97,7 +97,7 @@ export function deriveCoachAttentionItems(params: {
         planEmoji: plan.emoji || null,
         title: `${label} has no active schedule`,
         message:
-          "This specific plan has no dated sessions left, so the app cannot guide the next step.",
+          "This plan reached the end of its scheduled sessions. The coach can prepare the next useful week.",
         facts: [
           { label: "Future sessions", value: "0" },
           {
@@ -107,7 +107,7 @@ export function deriveCoachAttentionItems(params: {
           { label: "Plan end", value: finishingDate },
         ],
         primaryAction: {
-          type: "ASK_COACH_TO_FIX",
+          type: "START_PLAN_UPDATE",
           prompt: buildRepairPrompt(plan, "SPECIFIC_NO_FUTURE_SESSIONS"),
         },
         generatedAt,
@@ -125,7 +125,7 @@ export function deriveCoachAttentionItems(params: {
         planEmoji: plan.emoji || null,
         title: `${label} schedule runs out this week`,
         message:
-          "This specific plan has dated sessions this week, but nothing planned after that.",
+          "This plan has sessions this week, but the next week still needs to be planned.",
         facts: [
           { label: "Next session", value: nextSession ? dateKey(nextSession.date, timezone) : "None" },
           { label: "Future sessions", value: `${futureSessions.length}` },
@@ -136,7 +136,7 @@ export function deriveCoachAttentionItems(params: {
           { label: "Plan end", value: finishingDate },
         ],
         primaryAction: {
-          type: "ASK_COACH_TO_FIX",
+          type: "START_PLAN_UPDATE",
           prompt: buildRepairPrompt(plan, "SPECIFIC_SCHEDULE_ENDING"),
         },
         generatedAt,
