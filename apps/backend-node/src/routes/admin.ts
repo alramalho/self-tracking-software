@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
-import { coachAssessmentService } from "../services/coachAssessmentService";
+import { coachAssessmentService } from "../services/coach/assessment/service";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { recurringJobService } from "../services/recurringJobService";

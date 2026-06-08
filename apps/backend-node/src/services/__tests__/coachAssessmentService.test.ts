@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { getPreviousCoachWeekBounds } from "../../utils/date";
 import { deriveCoachAttentionItems } from "../coachAttentionService";
 import { coachContextBriefService } from "../coachContextBriefService";
-import { isWithinPreferredCoachWindow } from "../coachAssessmentService";
+import { isWithinPreferredCoachWindow } from "../coach/assessment/service";
 
 describe("coach assessment week bounds", () => {
   it("uses Sunday as the first day for previous-week recaps", () => {

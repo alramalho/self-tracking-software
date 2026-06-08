@@ -1,58 +1,44 @@
 import { gateway } from "@ai-sdk/gateway";
 import { ToolLoopAgent, tool, type LanguageModelUsage, type ModelMessage, type UserContent } from "ai";
 import { z } from "zod/v4";
-import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
-import { prisma } from "../utils/prisma";
+import { Plan, User, RecurringType } from "@tsw/prisma";
+import { prisma } from "../../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
-import { activitySummarizer } from "./activitySummarizer";
-import { getCoachWeekBounds, getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
-import { logger, serializeErrorForLog } from "../utils/logger";
+import { activitySummarizer } from "../activitySummarizer";
+import { getCoachWeekBounds, getPreviousCoachWeekBounds, toMidnightUTCDate } from "../../utils/date";
+import { logger, serializeErrorForLog } from "../../utils/logger";
 import dedent from "dedent";
-import { TelegramService } from "./telegramService";
-import { getCoachPersonalityConfig } from "./coachPersonalityService";
-import { webSearchService } from "./webSearchService";
-import { browserAgentService } from "./browserAgentService";
+import { TelegramService } from "../telegramService";
+import { getCoachPersonalityConfig } from "../coachPersonalityService";
+import { webSearchService } from "../webSearchService";
+import { browserAgentService } from "../browserAgentService";
 import {
   buildCoachAgentProviderOptions,
   resolveCoachAgentModelConfig,
   resolveCoachAgentVisionModelConfig,
-} from "./coachAgentModelConfig";
-
-type ImageAttachment = {
-  url: string;
-  mediaType: string;
-  filename?: string;
-};
-
-interface CoachAgentContext {
-  user: User;
-  plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
-  reminders: Reminder[];
-  conversationHistory: Array<{ role: "system" | "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
-  model?: string;
-  memoriesContext?: string | null;
-  recentActivityContext?: string | null;
-  activityRecencyById?: Map<string, string>;
-  onStatus?: (status: "thinking" | "searching" | "browsing" | "drafting") => void | Promise<void>;
-}
-
-type CoachAgentTelemetry = {
-  model: string;
-  stepCount?: number;
-  usage?: {
-    inputTokens?: number;
-    outputTokens?: number;
-    totalTokens?: number;
-    cacheReadTokens?: number;
-    cacheWriteTokens?: number;
-    reasoningTokens?: number;
-  };
-};
-
-type CoachAgentErrorReportContext = {
-  source?: string;
-  chatId?: string;
-};
+} from "../coachAgentModelConfig";
+import {
+  containsInternalStateLeak,
+  getRepeatedRecentAssistantDraft,
+  REPEATED_DRAFT_FAILURE_LIMIT,
+} from "./draftGuards";
+import {
+  collectToolCallsFromSteps,
+  getDraftToolCalls,
+  getRepeatLimitDraftCall,
+  getSuccessfulDraftCall,
+  getVisibleToolCalls,
+} from "./toolCalls";
+import { createDraftMessagesTool } from "./tools/draftMessages/tool";
+import type {
+  ActiveCoachPlan,
+  CoachAgentContext,
+  CoachAgentErrorReportContext,
+  CoachAgentResponse,
+  CoachAgentTelemetry,
+  CoachGenerateResponseParams,
+  ImageAttachment,
+} from "./types";
 
 const TELEGRAM_MESSAGE_LIMIT = 3900;
 
@@ -72,43 +58,6 @@ function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"
     cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens,
     reasoningTokens: usage.outputTokenDetails?.reasoningTokens,
   };
-}
-
-function containsInternalStateLeak(content: string) {
-  return [
-    /<visible_user_saw\b/i,
-    /<\/visible_user_saw>/i,
-    /<internal_metadata\b/i,
-    /<\/internal_metadata>/i,
-    /\bprevious_proposal_state\b/i,
-    /\bPRIOR APP STATE FOR THE IMMEDIATELY PRECEDING ASSISTANT MESSAGE\b/i,
-    /\bvisibility=["']not_user_visible["']/i,
-    /\bpurpose=["']state_only["']/i,
-    /^\s*[-•]\s*type:\s*(activity_log|activity_edit|plan_creation|plan_modification)\b/im,
-  ].some((pattern) => pattern.test(content));
-}
-
-function normalizeDraftForRepeatCheck(content: string) {
-  return content
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function isRepeatingRecentAssistantMessage(params: {
-  drafts: Array<{ content: string }>;
-  recentAssistantMessages: string[];
-}) {
-  const recent = new Set(
-    params.recentAssistantMessages
-      .map(normalizeDraftForRepeatCheck)
-      .filter(Boolean)
-  );
-
-  return params.drafts.some((draft) => {
-    const normalized = normalizeDraftForRepeatCheck(draft.content);
-    return normalized.length > 0 && recent.has(normalized);
-  });
 }
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
@@ -454,6 +403,7 @@ export class CoachAgentService {
 
       return (
         draftResults.some((toolResult: any) => toolResult.output?.success === true) ||
+        draftResults.some((toolResult: any) => toolResult.output?.repeatLimitExceeded === true) ||
         steps.length >= 6
       );
     };
@@ -548,6 +498,7 @@ export class CoachAgentService {
         - SPECIFIC plans must include dated sessions (or clearly tell the user sessions still need setup).
         - If the user gives source material (playlist, course, syllabus, book, URL), research it before proposing sessions. Sessions must follow the actual source structure, not a generic topic list.
         - Each dated session must name what to do: the lesson/video/module/chapter (name or number when verified), the portion to complete, and a small practice or review task, fit to the user's stated time commitment.
+        - Session descriptiveGuide supports markdown. For multi-step sessions, use concise bullets and optional bold labels like **Goal:** or **Target:**. Avoid dense paragraphs.
         - Never propose sessions that just say "study", "review", "practice exercises", or "course week". If you can't verify enough source structure after searching, ask for the outline instead of proposing a weak schedule.
 
         OPERATING RULES
@@ -582,37 +533,7 @@ export class CoachAgentService {
       `,
       },
       tools: {
-        draftMessages: tool({
-          description: dedent`
-            Send your response as chat messages. Always use this to reply.
-            Never include prior app state, conversation-history tags, internal metadata, proposal ledgers, tool names, or raw proposal statuses in the visible response.
-            Saved plan and activity mentions MUST use the linked-entity DSL:
-            - plans: {{plan:<planId>|<visible label>}}
-            - activities: {{activity:<activityId>|<visible label>}}
-            Use ids exactly from the active plan/activity context. Do not mention saved plans or activities as plain text when a matching entity exists.
-          `,
-          inputSchema: z.object({
-            messages: z.array(z.object({
-              content: z.string().trim().min(1).describe("A short chat message (1-2 sentences). Saved plan/activity mentions must use {{plan:<planId>|<label>}} or {{activity:<activityId>|<label>}}."),
-            })).min(1).max(3),
-          }),
-          execute: async ({ messages }) => {
-            if (
-              isRepeatingRecentAssistantMessage({
-                drafts: messages,
-                recentAssistantMessages,
-              })
-            ) {
-              return {
-                success: false,
-                error:
-                  "Your draft repeats a recent coach message exactly. Do not send it. Answer the user's latest message directly, acknowledge the new information, and move the conversation forward.",
-              };
-            }
-
-            return { success: true, count: messages.length };
-          },
-        }),
+        draftMessages: createDraftMessagesTool({ recentAssistantMessages }),
 
         webSearch: tool({
           description:
@@ -836,7 +757,7 @@ export class CoachAgentService {
                   activityId: z.string().optional().describe("Required for new sessions. Optional for updates."),
                   date: z.string().optional().describe("YYYY-MM-DD date"),
                   quantity: z.number().positive().optional(),
-                  descriptiveGuide: z.string().optional(),
+                  descriptiveGuide: z.string().optional().describe("Markdown-supported session instructions. Use concise bullets for multi-step work; include exact lesson/module names, what to complete, practice/review task, and target duration when relevant. Avoid one dense paragraph."),
                 })).optional(),
                 deleteIds: z.array(z.string()).optional().describe("Existing sessionIds to delete"),
               }).optional(),
@@ -1045,7 +966,7 @@ export class CoachAgentService {
               activityTitle: z.string().describe("Activity title matching one of the proposed activities"),
               date: z.string().describe("Session date in YYYY-MM-DD format"),
               quantity: z.number().positive().optional().describe("Session quantity using the activity measure"),
-              descriptiveGuide: z.string().optional().nullable().describe("Concrete session instructions. Put workout type, intensity, focus, or optional alternatives here instead of creating separate activity buckets. For source-backed learning plans, include exact lesson/video/module/chapter names or numbers, what portion to complete, and a practice/review task."),
+              descriptiveGuide: z.string().optional().nullable().describe("Markdown-supported session instructions. Use concise bullets for multi-step work. Put workout type, intensity, focus, or optional alternatives here instead of creating separate activity buckets. For source-backed learning plans, include exact lesson/video/module/chapter names or numbers, what portion to complete, a practice/review task, and target duration when relevant. Avoid one dense paragraph."),
             })).max(21).optional(),
             description: z.string().optional().describe("Short human-readable description"),
           }),
@@ -1593,7 +1514,7 @@ export class CoachAgentService {
   private async buildRecentActivityContext(
     user: User,
     now: Date,
-    plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[],
+    plans: ActiveCoachPlan[],
     days = 30
   ): Promise<string> {
     const from = startOfDay(subDays(now, days));
@@ -1741,7 +1662,7 @@ export class CoachAgentService {
 
   private async buildActivityRecencyById(
     userId: string,
-    plans: (Plan & { activities: Activity[] })[],
+    plans: ActiveCoachPlan[],
     now: Date
   ): Promise<Map<string, string>> {
     const activityIds = Array.from(
@@ -1832,104 +1753,9 @@ export class CoachAgentService {
   /**
    * Generate a coach response using the agent
    */
-  async generateResponse(params: {
-    user: User;
-    message: string;
-    messageRole?: "user" | "system";
-    imageAttachments?: ImageAttachment[];
-    conversationHistory: Array<{ role: "system" | "user" | "assistant"; content: string; imageAttachments?: ImageAttachment[] }>;
-    plans: (Plan & { activities: Activity[]; sessions: PlanSession[]; milestones: PlanMilestone[] })[];
-    reminders: Reminder[];
-    model?: string;
-    memoriesContext?: string | null;
-    onStatus?: (status: "thinking" | "searching" | "browsing" | "drafting") => void | Promise<void>;
-    reportContext?: CoachAgentErrorReportContext;
-  }): Promise<{
-    draftMessages: Array<{
-      content: string;
-      error?: boolean;
-      planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
-      planProposals?: Array<{
-        planId: string;
-        planGoal: string;
-        planEmoji: string | null;
-        description: string;
-        patch: unknown;
-        operations?: unknown[];
-        status: null;
-      }>;
-      planCreationProposals?: Array<{
-        goal: string;
-        goalReason: string | null;
-        notes?: string | null;
-        emoji: string | null;
-        outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
-        timesPerWeek: number | null;
-        activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
-        finishingDate?: string | null;
-        milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
-        sessions?: Array<{
-          activityTitle: string;
-          date: string;
-          quantity?: number | null;
-          descriptiveGuide?: string | null;
-        }>;
-        description: string;
-        status: null;
-      }>;
-      activityLogProposals?: Array<{
-        activityId: string;
-        activityName: string;
-        activityEmoji: string;
-        activityMeasure: string;
-        quantity: number;
-        date: string;
-        time?: string;
-        description?: string;
-        privateNotes?: string;
-        difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard";
-        status: null;
-      }>;
-      activityEditProposals?: Array<{
-        activityId: string;
-        activityName: string;
-        activityEmoji: string;
-        description: string;
-        original: {
-          title: string;
-          emoji: string;
-          measure: string;
-          colorHex: string | null;
-          kind: string | null;
-        };
-        requested: {
-          title: string;
-          emoji: string;
-          measure: string;
-          colorHex: string | null;
-          kind: string | null;
-        };
-        measureConversion: {
-          operator: "multiply" | "divide";
-          factor: number;
-        } | null;
-        status: null;
-      }>;
-      userContextEventProposals?: Array<{
-        title: string;
-        description?: string;
-        occurredAt?: string;
-        endedAt?: string;
-        source?: string;
-        confidence?: number | null;
-        status: null;
-      }>;
-      toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
-    }>;
-    skipped?: boolean;
-    skipReason?: string;
-    telemetry?: CoachAgentTelemetry;
-  }> {
+  async generateResponse(
+    params: CoachGenerateResponseParams
+  ): Promise<CoachAgentResponse> {
     const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus, reportContext } = params;
     const hasImageAttachments = (imageAttachments?.length || 0) > 0;
     const modelConfig = hasImageAttachments
@@ -2000,46 +1826,74 @@ export class CoachAgentService {
 
       await onStatus?.("drafting");
 
-      // Collect tool calls from all steps
-      const allToolCalls: Array<{
-        tool: string;
-        args: unknown;
-        result: unknown;
-      }> = [];
+      const allToolCalls = collectToolCallsFromSteps(result.steps);
+      const draftToolCalls = getDraftToolCalls(allToolCalls);
+      const successfulDraftCall = getSuccessfulDraftCall(allToolCalls);
 
-      for (const step of result.steps) {
-        if (step.toolCalls) {
-          for (const tc of step.toolCalls) {
-            const toolResult = step.toolResults?.find(
-              (tr) => tr.toolCallId === tc.toolCallId
-            );
-            allToolCalls.push({
-              tool: tc.toolName,
-              args: "input" in tc ? tc.input : undefined,
-              result: toolResult && "output" in toolResult ? toolResult.output : undefined,
-            });
-          }
+      if (!successfulDraftCall) {
+        const repeatLimitCall = getRepeatLimitDraftCall(allToolCalls);
+
+        if (repeatLimitCall) {
+          const repeatedDraft =
+            (repeatLimitCall.result as any)?.repeatedDraftPreview ||
+            "unknown";
+          logger.error("Coach repeated recent assistant draft 3 times", {
+            userId: user.id,
+            model: resolvedModel,
+            repeatedDraft,
+          });
+          throw new Error(
+            `Coach repeated a recent assistant draft ${REPEATED_DRAFT_FAILURE_LIMIT} times. Last repeated draft: ${repeatedDraft}`
+          );
         }
-      }
 
-      const draftToolCalls = allToolCalls.filter(
-        (toolCall) => toolCall.tool === "draftMessages"
-      );
-      const successfulDraftCall = [...draftToolCalls]
-        .reverse()
-        .find((toolCall) => (toolCall.result as any)?.success === true);
+        if (draftToolCalls.length > 0) {
+          logger.error("Coach could not produce a valid draftMessages response", {
+            userId: user.id,
+            model: resolvedModel,
+          });
+          throw new Error("Coach could not produce a valid draftMessages response");
+        }
 
-      if (draftToolCalls.length > 0 && !successfulDraftCall) {
-        logger.error("Coach could not produce a non-repeated draft", {
+        if (!result.text?.trim()) {
+          logger.error("Coach did not produce draftMessages or raw text", {
+            userId: user.id,
+            model: resolvedModel,
+            toolsUsed: allToolCalls.map((toolCall) => toolCall.tool),
+          });
+          throw new Error("Coach did not produce draftMessages or raw text");
+        }
+
+        logger.warn("Coach did not call draftMessages; using raw text fallback", {
           userId: user.id,
           model: resolvedModel,
+          toolsUsed: allToolCalls.map((toolCall) => toolCall.tool),
+          rawTextPreview: result.text?.slice(0, 500),
         });
-        throw new Error("Coach could not produce a non-repeated draft");
       }
 
-      const rawDrafts: Array<{ content: string }> = successfulDraftCall
-        ? (successfulDraftCall.args as any).messages
-        : [{ content: result.text }]; // Fallback if draftMessages wasn't called
+      const rawDrafts: Array<{ content: string }> =
+        successfulDraftCall
+          ? (successfulDraftCall.args as any).messages
+          : [{ content: result.text }];
+      const repeatedRawDraft = getRepeatedRecentAssistantDraft({
+        drafts: rawDrafts,
+        recentAssistantMessages: conversationHistory
+          .filter((msg) => msg.role === "assistant")
+          .slice(-8)
+          .map((msg) => msg.content),
+      });
+      if (repeatedRawDraft) {
+        logger.error("Coach returned repeated assistant text", {
+          userId: user.id,
+          model: resolvedModel,
+          usedDraftTool: Boolean(successfulDraftCall),
+          repeatedDraft: repeatedRawDraft.slice(0, 500),
+        });
+        throw new Error(
+          `Coach returned repeated assistant text. Used draftMessages: ${Boolean(successfulDraftCall)}. Repeated draft: ${repeatedRawDraft.slice(0, 500)}`
+        );
+      }
       const leakedDraft = rawDrafts.find((draft) =>
         containsInternalStateLeak(draft.content)
       );
@@ -2055,8 +1909,7 @@ export class CoachAgentService {
         throw new Error("Coach draft leaked internal proposal state");
       }
 
-      // Filter draftMessages out of visible tool calls
-      const visibleToolCalls = allToolCalls.filter((tc) => tc.tool !== "draftMessages");
+      const visibleToolCalls = getVisibleToolCalls(allToolCalls);
 
       // Extract plan proposals from tool calls
       const planProposals = uniqueBy(

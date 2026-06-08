@@ -54,8 +54,8 @@ export async function runCoachEvals(options: RunCoachEvalsOptions): Promise<{
 
   const { prisma } = requireFromRunner("../../../src/utils/prisma") as typeof import("../../../src/utils/prisma");
   const { coachAgentService } = requireFromRunner(
-    "../../../src/services/coachAgentService"
-  ) as typeof import("../../../src/services/coachAgentService");
+    "../../../src/services/coach/agent"
+  ) as typeof import("../../../src/services/coach/agent");
   const { requestContext } = requireFromRunner(
     "../../../src/utils/requestContext"
   ) as typeof import("../../../src/utils/requestContext");

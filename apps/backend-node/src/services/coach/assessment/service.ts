@@ -17,28 +17,28 @@ import {
   subDays,
 } from "date-fns";
 import dedent from "dedent";
-import { getCoachWeekBounds, getPreviousCoachWeekBounds } from "../utils/date";
-import { logger } from "../utils/logger";
-import { prisma } from "../utils/prisma";
-import { coachAgentService } from "./coachAgentService";
+import { getCoachWeekBounds, getPreviousCoachWeekBounds } from "../../../utils/date";
+import { logger } from "../../../utils/logger";
+import { prisma } from "../../../utils/prisma";
+import { coachAgentService } from "../agent";
 import {
   deriveCoachAttentionItems,
   formatCoachAttentionContext,
   type CoachAttentionItem,
-} from "./coachAttentionService";
-import { coachContextBriefService } from "./coachContextBriefService";
-import { getCoachPersonalityConfig } from "./coachPersonalityService";
-import { notificationService } from "./notificationService";
-import { cancelPendingPlanCreationProposals } from "./planCreationProposalStatusService";
+} from "../../coachAttentionService";
+import { coachContextBriefService } from "../../coachContextBriefService";
+import { getCoachPersonalityConfig } from "../../coachPersonalityService";
+import { notificationService } from "../../notificationService";
+import { cancelPendingPlanCreationProposals } from "../../planCreationProposalStatusService";
 import {
   executePlanProposalPatch,
   getProposalPatch,
   PlanProposalPatch,
-} from "./planProposalPatchService";
+} from "../../planProposalPatchService";
 import {
   buildRecurrentCoachAssessmentPrompt,
   type RecurrentCoachAssessmentInterventionType,
-} from "./recurrentCoachAssessmentPrompt";
+} from "./prompt";
 
 type CoachPlan = Plan & {
   activities: Activity[];

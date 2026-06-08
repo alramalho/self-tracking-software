@@ -158,8 +158,8 @@ async function main(): Promise<void> {
   }
 
   const { coachAgentService } = requireFromScript(
-    "../src/services/coachAgentService"
-  ) as typeof import("../src/services/coachAgentService");
+    "../src/services/coach/agent"
+  ) as typeof import("../src/services/coach/agent");
   const { requestContext } = requireFromScript(
     "../src/utils/requestContext"
   ) as typeof import("../src/utils/requestContext");

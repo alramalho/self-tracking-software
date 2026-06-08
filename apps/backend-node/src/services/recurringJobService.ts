@@ -8,7 +8,7 @@ import { onboardingNotificationService } from "./onboardingNotificationService";
 import { sesService } from "./sesService";
 import { userService } from "./userService";
 import { runCategorizationJob } from "./planCategorizationService";
-import { coachAssessmentService } from "./coachAssessmentService";
+import { coachAssessmentService } from "./coach/assessment/service";
 
 interface DailyJobOptions {
   filter_usernames?: string[];

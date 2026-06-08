@@ -12,7 +12,7 @@ import {
   toolsNotCalled,
   type CoachEvalTest,
 } from "./types";
-import { buildRecurrentCoachAssessmentPrompt } from "../../../src/services/recurrentCoachAssessmentPrompt";
+import { buildRecurrentCoachAssessmentPrompt } from "../../../src/services/coach/assessment/prompt";
 
 const ALEX_BASE_USER = {
   email: "coach-bench@example.com",

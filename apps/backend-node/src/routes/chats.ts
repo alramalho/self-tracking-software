@@ -2,7 +2,7 @@ import { Response, Router } from "express";
 import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
-import { coachAgentService } from "../services/coachAgentService";
+import { coachAgentService } from "../services/coach/agent";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
