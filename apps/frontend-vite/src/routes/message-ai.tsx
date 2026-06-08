@@ -11,6 +11,10 @@ import { ChatMessageComposer } from "@/components/ChatMessageComposer";
 import ImageZoomDialog from "@/components/ImageZoomDialog";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import {
+  CoachAttentionDrawer,
+  useCoachAttentionItems,
+} from "@/components/CoachAttentionBanner";
+import {
   computeGridCells,
   isActiveVisiblePlan,
   type GridData,
@@ -36,7 +40,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, ArrowLeft, X, Settings, AlertCircle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
+import { Loader2, ArrowLeft, X, Settings, AlertCircle, AlertTriangle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
@@ -504,6 +508,7 @@ function MessageAIPage() {
     isRunningCoachAssessment,
   } = useAI();
   const { pendingSession, clearPendingSession } = useSessionMessage();
+  const coachAttentionItems = useCoachAttentionItems();
   const [inputValue, setInputValue] = useState("");
   const [consumedCoachPrompt, setConsumedCoachPrompt] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<{
@@ -515,6 +520,7 @@ function MessageAIPage() {
   const [activeActionMessageId, setActiveActionMessageId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showCoachContext, setShowCoachContext] = useState(false);
+  const [showCoachAttentionDrawer, setShowCoachAttentionDrawer] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<{
     src: string;
@@ -579,6 +585,8 @@ function MessageAIPage() {
   }, [flushReadQueue]);
 
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
+  const coachAttentionCount = coachAttentionItems.length;
+  const hasCoachAttention = coachAttentionCount > 0;
 
   useLayoutEffect(() => {
     const updateChromeInsets = () => {
@@ -1489,16 +1497,29 @@ function MessageAIPage() {
                 >
                   <ArrowLeft size={20} />
                 </Button>
-                <button
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                  onClick={() => navigate({ to: "/manage-ai-coach" })}
-                >
-                  <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
-                  <div className="text-left">
-                    <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
-                    <p className="text-xs text-muted-foreground">AI Coach</p>
-                  </div>
-                </button>
+                <div className="relative flex items-center">
+                  {hasCoachAttention && (
+                    <button
+                      type="button"
+                      className="absolute -left-1 top-1/2 z-20 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1 rounded-full border border-background bg-amber-500 px-2 text-xs font-bold text-background shadow-lg motion-safe:animate-pulse"
+                      onClick={() => setShowCoachAttentionDrawer(true)}
+                      aria-label={`${coachAttentionCount} plan update${coachAttentionCount === 1 ? "" : "s"} need attention`}
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span>{coachAttentionCount}</span>
+                    </button>
+                  )}
+                  <button
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    onClick={() => navigate({ to: "/manage-ai-coach" })}
+                  >
+                    <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
+                    <div className="text-left">
+                      <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
+                      <p className="text-xs text-muted-foreground">AI Coach</p>
+                    </div>
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -1617,6 +1638,12 @@ function MessageAIPage() {
             />
           </div>
         </AppleLikePopover>
+
+        <CoachAttentionDrawer
+          open={showCoachAttentionDrawer}
+          onOpenChange={setShowCoachAttentionDrawer}
+          items={coachAttentionItems}
+        />
 
         {/* Messages */}
         <div
