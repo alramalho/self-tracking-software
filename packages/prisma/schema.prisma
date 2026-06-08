@@ -72,6 +72,7 @@ model User {
   activityEntries         ActivityEntry[]
   metrics                 Metric[]
   metricEntries           MetricEntry[]
+  contextEvents           UserContextEvent[]
   plans                   Plan[]
   notifications           Notification[]
   planGroupMemberships    PlanGroupMember[] @relation("PlanGroupMember")
@@ -405,6 +406,30 @@ model MetricEntry {
   @@index([userId, createdAt])
   @@index([metricId, createdAt])
   @@map("metric_entries")
+  @@schema("public")
+}
+
+model UserContextEvent {
+  id              String                  @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  occurredAt      DateTime?
+  endedAt         DateTime?
+  source          UserContextEventSource  @default(USER_REPORTED)
+  sourceMessageId String?
+  confidence      Float?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, occurredAt])
+  @@index([sourceMessageId])
+  @@map("user_context_events")
   @@schema("public")
 }
 
@@ -794,6 +819,14 @@ enum Visibility {
   PUBLIC
   PRIVATE
   FRIENDS
+
+  @@schema("public")
+}
+
+enum UserContextEventSource {
+  USER_REPORTED
+  COACH_INFERRED
+  USER_CONFIRMED
 
   @@schema("public")
 }

@@ -207,6 +207,7 @@ async function clearTargetDatabase() {
     "achievement_images",
     "achievement_posts",
     "activity_entries",
+    "user_context_events",
     "metric_entries",
     "activities",
     "metrics",
@@ -301,6 +302,33 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
     }
 
     console.info(`Migrated ${users.length} users`);
+
+    console.info("Migrating user context events...");
+    const canMigrateUserContextEvents =
+      (await tableExists(sourcePrisma, "user_context_events")) &&
+      (await tableExists(targetPrisma, "user_context_events"));
+    if (canMigrateUserContextEvents) {
+      const userContextEvents = await sourcePrisma.userContextEvent.findMany();
+
+      for (const event of userContextEvents) {
+        const { id, ...eventData } = event;
+        await targetPrisma.userContextEvent.upsert({
+          where: { id },
+          create: {
+            id,
+            ...eventData,
+          },
+          update: {
+            ...eventData,
+          },
+        });
+      }
+      console.info(`Migrated ${userContextEvents.length} user context events`);
+    } else {
+      console.info(
+        "Skipping user context events; source or target table does not exist"
+      );
+    }
 
     // Step 3: Migrate PlanGroups
     console.info("Migrating plan groups...");
