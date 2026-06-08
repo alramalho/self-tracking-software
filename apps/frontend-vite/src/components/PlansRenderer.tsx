@@ -150,6 +150,12 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     return plans ? sortPlansByDate(plans as CompletePlan[]) : [];
   }, [plans]);
 
+  const displayedPlans = useMemo(() => {
+    return showOldPlans
+      ? orderedPlans
+      : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
+  }, [orderedPlans, showOldPlans]);
+
   useEffect(() => {
     setSelectedPlanId(initialSelectedPlanId);
   }, [initialSelectedPlanId]);
@@ -158,17 +164,13 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     if (selectedPlanId === null) return null;
 
     const explicitPlan = selectedPlanId
-      ? orderedPlans.find((plan) => plan.id === selectedPlanId)
+      ? displayedPlans.find((plan) => plan.id === selectedPlanId)
       : null;
 
     if (explicitPlan) return explicitPlan;
 
-    const firstActivePlan = orderedPlans.find(
-      (plan) => !isPlanExpired(plan) && !isPlanArchived(plan)
-    );
-
-    return firstActivePlan || orderedPlans[0] || null;
-  }, [orderedPlans, selectedPlanId]);
+    return displayedPlans[0] || null;
+  }, [displayedPlans, selectedPlanId]);
 
   const activeSelectedPlanId = selectedPlan?.id ?? null;
 
@@ -328,11 +330,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
-  // Filter plans based on whether we're showing old/archived plans
-  const displayedPlans = showOldPlans
-    ? orderedPlans
-    : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
-
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
   return (
     <div className="space-y-6">
@@ -399,17 +396,16 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         </div>
       )}
 
-      <Divider />
-
-      <AnimatePresence mode="wait">
-        {selectedPlan && (
+      {selectedPlan && (
+        <>
+          <Divider />
           <PlanRendererv2
             key={selectedPlan.id}
             selectedPlan={selectedPlan as CompletePlan}
             scrollTo={scrollTo}
           />
-        )}
-      </AnimatePresence>
+        </>
+      )}
 
       <AppleLikePopover
         open={inactivePlanPopover !== null}

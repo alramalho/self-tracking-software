@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { MetricIsland } from "./MetricIsland";
 import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Dummy data for coach overview demo
 const DEMO_PLAN_ID = "demo-coach-plan";
@@ -320,6 +321,77 @@ const MockCoachActionMessages = ({
   );
 };
 
+const checkInMessages = [
+  "How many sessions did you actually manage this week?",
+  "You planned 4 workouts. I only see 1 logged. What got in the way?",
+  "Want me to make next week easier to restart?",
+  "How's robotics going? I haven't seen a log in a few days.",
+  "Want a lighter version of this plan for the next 7 days?",
+];
+
+const MockCoachCheckInMessages = ({
+  personality,
+}: {
+  personality: CoachPersonality;
+}) => {
+  const aiCoach = getCoachPersonalityConfig(personality);
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setMessageIndex((current) => (current + 1) % checkInMessages.length);
+    }, 3200);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const activeMessage = checkInMessages[messageIndex];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 pl-[3.75rem] text-[11px] font-medium text-primary">
+        <Send size={12} />
+        <span>{aiCoach.name} checks in</span>
+      </div>
+      <div className="flex items-start gap-3">
+        <div className="relative mt-1 h-12 w-12 shrink-0">
+          <div className="absolute inset-0 rounded-full bg-primary/10" />
+          <img
+            src={getCoachAvatar(personality, "coachSpeaking")}
+            alt={aiCoach.label}
+            className="relative z-10 h-12 w-12 object-contain"
+          />
+        </div>
+        <motion.div
+          layout
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="min-w-0 flex-1"
+        >
+          <MessageBubble
+            direction="left"
+            timestamp="2026-06-04T20:12:00"
+            tailPosition="top"
+            className="bg-muted/60"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeMessage}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="text-sm"
+              >
+                {activeMessage}
+              </motion.div>
+            </AnimatePresence>
+          </MessageBubble>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
 export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
   children,
   humanCoach,
@@ -330,6 +402,9 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
 }) => {
   const [activeDemo, setActiveDemo] = useState<
     "home" | "plan-action" | "metrics" | null
+  >(null);
+  const [activeInlineDemo, setActiveInlineDemo] = useState<
+    "home" | "check-in" | "plan-action" | "metrics" | null
   >(null);
   const [selectedPersonality, setSelectedPersonality] =
     useState<CoachPersonality>(
@@ -350,6 +425,63 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
     if (coachPersonalityDisabled) return;
     setSelectedPersonality(personality);
     onCoachPersonalitySelect?.(personality);
+  };
+
+  const toggleInlineDemo = (
+    demo: "home" | "check-in" | "plan-action" | "metrics"
+  ) => {
+    setActiveInlineDemo((current) => (current === demo ? null : demo));
+  };
+
+  const inlineDemoContent = (
+    demo: "home" | "check-in" | "plan-action" | "metrics"
+  ) => {
+    if (demo === "home") {
+      return <MockHomeActionCards personality={selectedPersonality} />;
+    }
+    if (demo === "check-in") {
+      return <MockCoachCheckInMessages personality={selectedPersonality} />;
+    }
+    if (demo === "plan-action") {
+      return <MockCoachActionMessages personality={selectedPersonality} />;
+    }
+
+    return (
+      <div className="space-y-3">
+        <MetricIsland
+          metric={dummyMetric}
+          isLoggedToday={false}
+          className="bg-card"
+        />
+        <MetricWeeklyView
+          metric={dummyMetric}
+          weekData={[3, 4, 0, 5, 4, 3, 4]}
+          color="blue"
+          hasAnyData={true}
+          positiveCorrelations={[
+            {
+              activity: {
+                id: "exercise",
+                title: "Exercise",
+                emoji: "🏃‍♂️",
+                measure: "minutes",
+              } as Activity,
+              correlation: 0.65,
+            },
+            {
+              activity: {
+                id: "meditation",
+                title: "Meditation",
+                emoji: "🧘‍♂️",
+                measure: "minutes",
+              } as Activity,
+              correlation: 0.45,
+            },
+          ]}
+          className="bg-card"
+        />
+      </div>
+    );
   };
 
   return (
@@ -481,72 +613,52 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
       )}
 
       {inlineDemos && !humanCoach && (
-        <div className="space-y-5 py-2">
-          <div className="space-y-3">
-            <CardItem
-              icon={<LandPlot className={featureIconClassName} />}
-              title="Monitoring your plan state from the homepage"
-            />
-            <div className="px-2">
-              <MockHomeActionCards personality={selectedPersonality} />
-            </div>
-          </div>
-
-          <CardItem
-            icon={<Send className={featureIconClassName} />}
-            title="Checking in several times a week"
-          />
-
-          <div className="space-y-3">
-            <CardItem
-              icon={<Route className={featureIconClassName} />}
-              title="Adapting next week's plan based on progress"
-            />
-            <div className="px-2">
-              <MockCoachActionMessages personality={selectedPersonality} />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <CardItem
-              icon={<NotepadText className={featureIconClassName} />}
-              title="Finding useful patterns in your metrics"
-            />
-            <div className="space-y-3 px-2">
-              <MetricIsland
-                metric={dummyMetric}
-                isLoggedToday={false}
-                className="bg-card"
+        <div className="space-y-1 py-2">
+          {[
+            {
+              id: "home" as const,
+              icon: <LandPlot className={featureIconClassName} />,
+              title: "Monitoring your plan state from the homepage",
+            },
+            {
+              id: "check-in" as const,
+              icon: <Send className={featureIconClassName} />,
+              title: "Checking in several times a week",
+            },
+            {
+              id: "plan-action" as const,
+              icon: <Route className={featureIconClassName} />,
+              title: "Adapting next week's plan based on progress",
+            },
+            {
+              id: "metrics" as const,
+              icon: <NotepadText className={featureIconClassName} />,
+              title: "Finding useful patterns in your metrics",
+            },
+          ].map((item) => (
+            <div key={item.id}>
+              <CardItem
+                icon={item.icon}
+                title={item.title}
+                onDemoClick={() => toggleInlineDemo(item.id)}
               />
-              <MetricWeeklyView
-                metric={dummyMetric}
-                weekData={[3, 4, 0, 5, 4, 3, 4]}
-                color="blue"
-                hasAnyData={true}
-                positiveCorrelations={[
-                  {
-                    activity: {
-                      id: "exercise",
-                      title: "Exercise",
-                      emoji: "🏃‍♂️",
-                      measure: "minutes",
-                    } as Activity,
-                    correlation: 0.65,
-                  },
-                  {
-                    activity: {
-                      id: "meditation",
-                      title: "Meditation",
-                      emoji: "🧘‍♂️",
-                      measure: "minutes",
-                    } as Activity,
-                    correlation: 0.45,
-                  },
-                ]}
-                className="bg-card"
-              />
+              <AnimatePresence initial={false}>
+                {activeInlineDemo === item.id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -6 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -6 }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-2 pb-6 pt-2">
+                      {inlineDemoContent(item.id)}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
+          ))}
         </div>
       )}
 

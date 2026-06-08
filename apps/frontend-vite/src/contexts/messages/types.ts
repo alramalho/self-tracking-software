@@ -145,6 +145,16 @@ export interface Message {
     } | null;
     status: "accepted" | "rejected" | null;
   }>;
+  userContextEventProposals?: Array<{
+    title: string;
+    description?: string | null;
+    occurredAt?: string | null;
+    endedAt?: string | null;
+    source?: string | null;
+    confidence?: number | null;
+    status: "accepted" | "rejected" | null;
+    contextEventId?: string | null;
+  }>;
   coachAttentionItems?: CoachAttentionItem[];
   toolCalls?: ToolCall[] | null;
   userAction?: UserAction | null;

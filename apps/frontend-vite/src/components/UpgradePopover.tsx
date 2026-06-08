@@ -145,32 +145,6 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-8 pt-6 pb-12">
-        <div className="space-y-4 text-center">
-          <div className="mx-auto h-16 w-16">
-            <Lottie
-              options={{
-                loop: true,
-                autoplay: true,
-                animationData: starAnimation,
-                rendererSettings: {
-                  preserveAspectRatio: "xMidYMid slice",
-                },
-              }}
-              height={64}
-              width={64}
-              isClickToPauseDisabled
-            />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              Upgrade your coach
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Give your plans proactive check-ins, adaptive weekly changes, and
-              metrics your coach can reason from.
-            </p>
-          </div>
-        </div>
 
         <div className="space-y-5">
           <AICoachFeaturePreview

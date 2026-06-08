@@ -3,10 +3,13 @@ import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
+import { useActivities } from "@/contexts/activities/useActivities";
 import { useCoachAttentionItems } from "@/components/CoachAttentionBanner";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
-import { isAfter } from "date-fns";
+import { isAfter, subDays } from "date-fns";
 import { CoachCard } from "./CoachCard";
+import { CoachUpgradeCard } from "./CoachUpgradeCard";
 import { PlanCard } from "./PlanCard";
 import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
@@ -24,11 +27,13 @@ type HomeGridCard = {
 
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { plans, isLoadingPlans } = usePlans();
+  const { activityEntries, isLoadingActivityEntries } = useActivities();
   const { metrics } = useMetrics();
   const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
   const { isUserAIWhitelisted, lastCoachNoReportAt } = useAI();
   const { currentUser } = useCurrentUser();
+  const { setShowUpgradePopover } = useUpgrade();
 
   const isUserOnFreePlan = userPlanType === "FREE";
   const showCoachCard =
@@ -44,8 +49,29 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
   const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
+  const recentActivityCount = activityEntries.filter((entry) => {
+    const datetime = new Date(entry.datetime);
+    return datetime >= subDays(new Date(), 30);
+  }).length;
 
   const cards: HomeGridCard[] = [];
+
+  if (
+    isUserOnFreePlan &&
+    !isLoadingActivityEntries &&
+    recentActivityCount <= 5
+  ) {
+    cards.push({
+      node: (
+        <CoachUpgradeCard
+          key="coach-upgrade"
+          onOpenUpgrade={() => setShowUpgradePopover(true)}
+          recentActivityCount={recentActivityCount}
+        />
+      ),
+      span: 2,
+    });
+  }
 
   if (showCoachCard) {
     const firstPendingPlanId = (pendingCoachNotifications[0]?.relatedData as any)?.planIds?.[0];

@@ -96,6 +96,8 @@ export interface AIContextType extends MessagesContextType {
   rejectActivityLogProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
   acceptActivityEditProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
   rejectActivityEditProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
+  acceptUserContextEventProposal: (data: { messageId: string; proposalIndex: number }) => Promise<{ success: boolean; event?: { id: string } }>;
+  rejectUserContextEventProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
 
   // AI satisfaction
   submitAISatisfaction: (data: { liked: boolean; content?: string }) => Promise<void>;

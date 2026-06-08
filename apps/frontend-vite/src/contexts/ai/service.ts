@@ -226,6 +226,28 @@ export async function rejectActivityEditProposal(
   });
 }
 
+export async function acceptUserContextEventProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<{ success: boolean; event?: { id: string } }> {
+  const response = await api.post<{ success: boolean; event?: { id: string } }>(
+    `/ai/messages/${data.messageId}/accept-user-context-event-proposal`,
+    {
+      proposalIndex: data.proposalIndex,
+    }
+  );
+  return response.data;
+}
+
+export async function rejectUserContextEventProposal(
+  api: AxiosInstance,
+  data: { messageId: string; proposalIndex: number }
+): Promise<void> {
+  await api.post(`/ai/messages/${data.messageId}/reject-user-context-event-proposal`, {
+    proposalIndex: data.proposalIndex,
+  });
+}
+
 // Submit AI satisfaction feedback
 export async function submitAISatisfaction(
   api: AxiosInstance,

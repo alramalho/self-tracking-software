@@ -20,6 +20,8 @@ import {
   rejectActivityLogProposal,
   acceptActivityEditProposal,
   rejectActivityEditProposal,
+  acceptUserContextEventProposal,
+  rejectUserContextEventProposal,
   submitAISatisfaction,
 } from "./service";
 import { AIContext, type AIContextType } from "./types";
@@ -459,6 +461,59 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const acceptUserContextEventProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await acceptUserContextEventProposal(api, data);
+    },
+    onSuccess: (result, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.userContextEventProposals) return msg;
+            const updated = [...msg.userContextEventProposals];
+            updated[proposalIndex] = {
+              ...updated[proposalIndex],
+              status: "accepted",
+              contextEventId: result.event?.id || updated[proposalIndex]?.contextEventId,
+            };
+            return { ...msg, userContextEventProposals: updated };
+          })
+      );
+      queryClient.invalidateQueries({ queryKey: ["context-events"] });
+      toast.success("Context saved");
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to save context");
+      toast.error("Failed to save context");
+    },
+  });
+
+  const rejectUserContextEventProposalMutation = useMutation({
+    mutationFn: async (data: { messageId: string; proposalIndex: number }) => {
+      return await rejectUserContextEventProposal(api, data);
+    },
+    onSuccess: (_, { messageId, proposalIndex }) => {
+      queryClient.setQueryData(
+        ["messages", messagesContext.currentChatId],
+        (oldMessages: Message[] = []) =>
+          oldMessages.map((msg) => {
+            if (msg.id !== messageId || !msg.userContextEventProposals) return msg;
+            const updated = [...msg.userContextEventProposals];
+            updated[proposalIndex] = {
+              ...updated[proposalIndex],
+              status: "rejected",
+            };
+            return { ...msg, userContextEventProposals: updated };
+          })
+      );
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to reject context");
+      toast.error("Failed to reject context");
+    },
+  });
+
   const submitAISatisfactionMutation = useMutation({
     mutationFn: async (data: { liked: boolean; content?: string }) => {
       return await submitAISatisfaction(api, data);
@@ -500,6 +555,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     rejectActivityLogProposal: rejectActivityLogProposalMutation.mutateAsync,
     acceptActivityEditProposal: acceptActivityEditProposalMutation.mutateAsync,
     rejectActivityEditProposal: rejectActivityEditProposalMutation.mutateAsync,
+    acceptUserContextEventProposal: acceptUserContextEventProposalMutation.mutateAsync,
+    rejectUserContextEventProposal: rejectUserContextEventProposalMutation.mutateAsync,
     submitAISatisfaction: submitAISatisfactionMutation.mutateAsync,
     isSubmittingAISatisfaction: submitAISatisfactionMutation.isPending,
     isUserAIWhitelisted,

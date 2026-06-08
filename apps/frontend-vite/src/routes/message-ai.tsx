@@ -18,6 +18,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
 import { ActivityEditProposalCard } from "@/components/ActivityEditProposalCard";
+import { UserContextEventProposalCard } from "@/components/UserContextEventProposalCard";
 import { PlanCreationProposalCard } from "@/components/PlanCreationProposalCard";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { UserRecommendationCards } from "@/components/UserRecommendationCards";
@@ -495,6 +496,8 @@ function MessageAIPage() {
     rejectActivityLogProposal,
     acceptActivityEditProposal,
     rejectActivityEditProposal,
+    acceptUserContextEventProposal,
+    rejectUserContextEventProposal,
     createCoachChat,
     isCreatingCoachChat,
     runCoachAssessment,
@@ -1009,6 +1012,24 @@ function MessageAIPage() {
       await rejectActivityEditProposal({ messageId, proposalIndex });
     } catch (error) {
       console.error("Failed to reject activity edit proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleAcceptUserContextEventProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await acceptUserContextEventProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to accept context event proposal:", error);
+      throw error;
+    }
+  };
+
+  const handleRejectUserContextEventProposal = async (messageId: string, proposalIndex: number) => {
+    try {
+      await rejectUserContextEventProposal({ messageId, proposalIndex });
+    } catch (error) {
+      console.error("Failed to reject context event proposal:", error);
       throw error;
     }
   };
@@ -1946,6 +1967,25 @@ function MessageAIPage() {
                                 status={proposal.status}
                                 onAccept={handleAcceptActivityEditProposal}
                                 onReject={handleRejectActivityEditProposal}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {isCoachMessage && message.userContextEventProposals && message.userContextEventProposals.length > 0 && (
+                          <div className="px-0">
+                            {message.userContextEventProposals.map((proposal: any, idx: number) => (
+                              <UserContextEventProposalCard
+                                key={`context-event-${message.id}-${idx}`}
+                                messageId={message.id}
+                                proposalIndex={idx}
+                                title={proposal.title}
+                                description={proposal.description}
+                                occurredAt={proposal.occurredAt}
+                                endedAt={proposal.endedAt}
+                                status={proposal.status}
+                                onAccept={handleAcceptUserContextEventProposal}
+                                onReject={handleRejectUserContextEventProposal}
                               />
                             ))}
                           </div>

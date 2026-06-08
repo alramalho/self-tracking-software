@@ -132,6 +132,8 @@ const AnimatedSection = ({
 
 function CoachUpgradeTeaser() {
   const { setShowUpgradePopover } = useUpgrade();
+  const { currentUser } = useCurrentUser();
+  const themeColors = useThemeColors();
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(COACH_TEASER_DISMISSED_KEY) === "true";
@@ -147,23 +149,27 @@ function CoachUpgradeTeaser() {
   };
 
   return (
-    <div className="mx-auto mt-2 w-full max-w-md rounded-xl border border-primary/20 bg-card/80 p-4 text-left shadow-sm">
+    <div
+      className="mx-auto mt-2 w-full max-w-md overflow-hidden rounded-2xl border p-4 text-left shadow-sm"
+      style={{
+        background: `linear-gradient(135deg, ${themeColors.hex}1F 0%, rgba(24, 24, 27, 0.42) 58%, ${themeColors.hex}12 100%)`,
+        borderColor: `${themeColors.hex}55`,
+      }}
+    >
       <div className="flex gap-3">
-        <div className="relative h-14 w-14 shrink-0">
-          <div className="absolute inset-0 rounded-2xl bg-primary/10" />
+        <div className="relative h-16 w-16 shrink-0">
           <img
-            src={getCoachAvatar("CHAMPION", "coachSmiling")}
+            src={getCoachAvatar(currentUser?.coachPersonality, "coachSmiling")}
             alt="AI coach"
-            className="relative z-10 h-14 w-14 object-contain"
+            className="h-16 w-16 rounded-full object-contain"
           />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>Let your coach keep this moving</span>
-              </div>
+              <p className="text-base font-semibold leading-tight text-foreground">
+                Let your coach keep this moving
+              </p>
               <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 Get proactive check-ins, plan adjustments, and metric patterns
                 when your week starts drifting.
@@ -182,8 +188,9 @@ function CoachUpgradeTeaser() {
             <Button
               type="button"
               size="sm"
+              variant="ghost"
               onClick={() => setShowUpgradePopover(true)}
-              className="h-9 rounded-lg"
+              className={`h-9 rounded-lg px-0 font-semibold hover:bg-transparent ${themeColors.text}`}
             >
               See more
               <ArrowRight className="ml-1.5 h-4 w-4" />

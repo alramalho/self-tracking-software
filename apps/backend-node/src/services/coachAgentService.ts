@@ -1,5 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
-import { ToolLoopAgent, hasToolCall, tool, type LanguageModelUsage, type ModelMessage, type UserContent } from "ai";
+import { ToolLoopAgent, tool, type LanguageModelUsage, type ModelMessage, type UserContent } from "ai";
 import { z } from "zod/v4";
 import { Plan, PlanMilestone, PlanSession, Activity, User, Reminder, RecurringType } from "@tsw/prisma";
 import { prisma } from "../utils/prisma";
@@ -76,6 +76,29 @@ function containsInternalStateLeak(content: string) {
   ].some((pattern) => pattern.test(content));
 }
 
+function normalizeDraftForRepeatCheck(content: string) {
+  return content
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isRepeatingRecentAssistantMessage(params: {
+  drafts: Array<{ content: string }>;
+  recentAssistantMessages: string[];
+}) {
+  const recent = new Set(
+    params.recentAssistantMessages
+      .map(normalizeDraftForRepeatCheck)
+      .filter(Boolean)
+  );
+
+  return params.drafts.some((draft) => {
+    const normalized = normalizeDraftForRepeatCheck(draft.content);
+    return normalized.length > 0 && recent.has(normalized);
+  });
+}
+
 function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
   const seen = new Set<string>();
   return items.filter((item) => {
@@ -115,6 +138,14 @@ function getPlanProposalKey(proposal: any) {
 
 function getPlanCreationProposalKey(proposal: any) {
   return (proposal.goal || "").trim().toLowerCase();
+}
+
+function getUserContextEventProposalKey(proposal: any) {
+  return [
+    (proposal.title || "").trim().toLowerCase(),
+    proposal.occurredAt || "",
+    proposal.endedAt || "",
+  ].join("|");
 }
 
 function isActivityMeasureChangeProposal(proposal: any) {
@@ -359,12 +390,28 @@ export class CoachAgentService {
 
     const userFirstName =
       (user.name || "").trim().split(/\s+/)[0] || user.username;
+    const recentAssistantMessages = context.conversationHistory
+      .filter((message) => message.role === "assistant")
+      .slice(-8)
+      .map((message) => message.content);
+
+    const shouldStopAfterStep = ({ steps }: { steps: any[] }) => {
+      const latestStep = steps[steps.length - 1];
+      const draftResults = (latestStep?.toolResults || []).filter(
+        (toolResult: any) => toolResult.toolName === "draftMessages"
+      );
+
+      return (
+        draftResults.some((toolResult: any) => toolResult.output?.success === true) ||
+        steps.length >= 6
+      );
+    };
 
     const agent = new ToolLoopAgent({
       model: gateway(modelConfig.model),
       temperature: 0.5,
       providerOptions: buildCoachAgentProviderOptions(user, modelConfig),
-      stopWhen: hasToolCall("draftMessages"),
+      stopWhen: shouldStopAfterStep,
       instructions: {
         role: "system",
         content: dedent`
@@ -419,6 +466,7 @@ export class CoachAgentService {
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
         - When the user reports that a completed activity was hard, failed, confusing, or frustrating, treat it as planning evidence: capture the concrete reason in the activity log privateNotes/reflection when logging is proposed, set difficulty when clear, and say how future sessions should adapt from that evidence.
         - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
+        - When the user shares a durable life/work/health context event that is likely useful for future coaching or metric interpretation, use proposeUserContextEvent. Do not use it for transient moods, ordinary complaints, or simple preferences. The event is not saved until the user accepts it, so present it as optional.
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
         - If the user asks to edit an activity title, emoji, color, kind, or tracking measure/unit, use proposeActivityEdit. If the measure changes, include the conversion factor/operator, or ask one clarifying question if it is not clear. For an exact activity title rename with no other requested change, propose only the title edit: do not search, do not edit plans/sessions, and do not ask a follow-up.
         - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, continue a curriculum, or otherwise adjust supported fields for a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
@@ -497,7 +545,22 @@ export class CoachAgentService {
               content: z.string().trim().min(1).describe("A short chat message (1-2 sentences). Saved plan/activity mentions must use {{plan:<planId>|<label>}} or {{activity:<activityId>|<label>}}."),
             })).min(1).max(3),
           }),
-          execute: async ({ messages }) => ({ success: true, count: messages.length }),
+          execute: async ({ messages }) => {
+            if (
+              isRepeatingRecentAssistantMessage({
+                drafts: messages,
+                recentAssistantMessages,
+              })
+            ) {
+              return {
+                success: false,
+                error:
+                  "Your draft repeats a recent coach message exactly. Do not send it. Answer the user's latest message directly, acknowledge the new information, and move the conversation forward.",
+              };
+            }
+
+            return { success: true, count: messages.length };
+          },
         }),
 
         webSearch: tool({
@@ -1190,6 +1253,40 @@ export class CoachAgentService {
           },
         }),
 
+        proposeUserContextEvent: tool({
+          description: dedent`
+            Propose saving durable private user context for future coaching and metric interpretation.
+            The user can accept or reject with one click. This does not save anything until accepted.
+            Use this for meaningful life/work/health events, not transient moods, normal daily friction, or preferences.
+          `,
+          inputSchema: z.object({
+            title: z.string().trim().min(1).max(120).describe("Short label for the durable context event."),
+            description: z.string().trim().max(1000).optional().describe("Optional factual detail useful for future coaching."),
+            occurredAt: z.string().optional().describe("Optional ISO 8601 datetime when the event started or happened."),
+            endedAt: z.string().optional().describe("Optional ISO 8601 datetime when the event ended."),
+            confidence: z.number().min(0).max(1).optional().describe("Confidence that this is worth saving."),
+          }),
+          execute: async ({ title, description, occurredAt, endedAt, confidence }) => {
+            const parseOptionalDate = (value?: string) => {
+              if (!value) return undefined;
+              const parsed = new Date(value);
+              return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+            };
+
+            return {
+              success: true,
+              proposal: {
+                title: title.trim(),
+                description: description?.trim() || undefined,
+                occurredAt: parseOptionalDate(occurredAt),
+                endedAt: parseOptionalDate(endedAt),
+                source: "COACH_INFERRED",
+                confidence: confidence ?? null,
+              },
+            };
+          },
+        }),
+
         manageReminders: tool({
           description: dedent`
             Manage reminders for the user. You can:
@@ -1766,6 +1863,15 @@ export class CoachAgentService {
         } | null;
         status: null;
       }>;
+      userContextEventProposals?: Array<{
+        title: string;
+        description?: string;
+        occurredAt?: string;
+        endedAt?: string;
+        source?: string;
+        confidence?: number | null;
+        status: null;
+      }>;
       toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
     }>;
     skipped?: boolean;
@@ -1864,11 +1970,24 @@ export class CoachAgentService {
         }
       }
 
-      // Extract draft messages from the draftMessages tool call
-      const draftStep = result.steps.flatMap((s) => s.toolCalls || []).find((tc) => tc.toolName === "draftMessages");
-      const rawDrafts: Array<{ content: string }> = draftStep
-        ? (draftStep as any).input.messages
-        : [{ content: result.text }]; // Fallback if tool wasn't called
+      const draftToolCalls = allToolCalls.filter(
+        (toolCall) => toolCall.tool === "draftMessages"
+      );
+      const successfulDraftCall = [...draftToolCalls]
+        .reverse()
+        .find((toolCall) => (toolCall.result as any)?.success === true);
+
+      if (draftToolCalls.length > 0 && !successfulDraftCall) {
+        logger.error("Coach could not produce a non-repeated draft", {
+          userId: user.id,
+          model: resolvedModel,
+        });
+        throw new Error("Coach could not produce a non-repeated draft");
+      }
+
+      const rawDrafts: Array<{ content: string }> = successfulDraftCall
+        ? (successfulDraftCall.args as any).messages
+        : [{ content: result.text }]; // Fallback if draftMessages wasn't called
       const leakedDraft = rawDrafts.find((draft) =>
         containsInternalStateLeak(draft.content)
       );
@@ -1967,6 +2086,23 @@ export class CoachAgentService {
         getPlanCreationProposalKey
       );
 
+      const userContextEventProposals = uniqueBy(
+        visibleToolCalls
+          .filter(
+            (tc) =>
+              tc.tool === "proposeUserContextEvent" &&
+              tc.result &&
+              typeof tc.result === "object" &&
+              (tc.result as any).success &&
+              (tc.result as any).proposal
+          )
+          .map((tc) => ({
+            ...(tc.result as any).proposal,
+            status: null as null,
+          })),
+        getUserContextEventProposalKey
+      );
+
       // Alert when the coach attempted a plan proposal that failed validation and
       // nothing was attached. The user likely sees a claim with no card.
       const failedPlanProposal = visibleToolCalls.find(
@@ -2007,6 +2143,8 @@ export class CoachAgentService {
           activityLogProposals: isLast && activityLogProposals.length > 0 ? activityLogProposals : undefined,
           // Activity edit proposals on the LAST message
           activityEditProposals: isLast && activityEditProposals.length > 0 ? activityEditProposals : undefined,
+          // User context event proposals on the LAST message
+          userContextEventProposals: isLast && userContextEventProposals.length > 0 ? userContextEventProposals : undefined,
           // Non-search tool calls stay on the first message. Web search calls
           // follow any message that cites them so split bubbles can render sources.
           toolCalls: messageToolCalls.length > 0 ? messageToolCalls : undefined,

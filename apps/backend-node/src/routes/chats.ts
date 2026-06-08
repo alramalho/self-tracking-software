@@ -191,8 +191,15 @@ async function runCoachV2MessagePipeline(params: {
   let conversationHistory = params.conversationHistory;
 
   if (!conversationHistory) {
+    const currentMessageId =
+      typeof serializedUserMessage.id === "string"
+        ? serializedUserMessage.id
+        : null;
     const history = await prisma.message.findMany({
-      where: { chatId },
+      where: {
+        chatId,
+        ...(currentMessageId ? { id: { not: currentMessageId } } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
     });
@@ -263,6 +270,7 @@ async function runCoachV2MessagePipeline(params: {
           planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
           activityLogProposals: JSON.parse(JSON.stringify(draft.activityLogProposals || [])),
           activityEditProposals: JSON.parse(JSON.stringify(draft.activityEditProposals || [])),
+          userContextEventProposals: JSON.parse(JSON.stringify(draft.userContextEventProposals || [])),
           ...(draft.toolCalls && {
             toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
           }),
@@ -358,6 +366,7 @@ async function runCoachV2MessagePipeline(params: {
       planCreationProposals: draft.planCreationProposals || [],
       activityLogProposals: draft.activityLogProposals || [],
       activityEditProposals: draft.activityEditProposals || [],
+      userContextEventProposals: draft.userContextEventProposals || [],
       toolCalls: draft.toolCalls || null,
       error: draft.error || false,
       createdAt: coachMsg.createdAt,
@@ -869,6 +878,7 @@ router.get(
                 planCreationProposals: metadata.planCreationProposals || [],
                 activityLogProposals: metadata.activityLogProposals || [],
                 activityEditProposals: metadata.activityEditProposals || [],
+                userContextEventProposals: metadata.userContextEventProposals || [],
                 coachAttentionItems: metadata.coachAttentionItems || [],
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
@@ -888,6 +898,7 @@ router.get(
               status: msg.status,
               planReplacements: [],
               metricReplacement: null,
+              userContextEventProposals: [],
               toolCalls: null,
               error: false,
               createdAt: msg.createdAt,
@@ -1235,6 +1246,15 @@ router.post(
           planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
           metricReplacement?: { textToReplace: string; metricTitle: string; rating: number } | null;
           planProposals?: Array<{ planId: string; planGoal: string; planEmoji: string | null; description: string; patch: unknown; operations?: unknown[]; status: null }>;
+          userContextEventProposals?: Array<{
+            title: string;
+            description?: string | null;
+            occurredAt?: string | null;
+            endedAt?: string | null;
+            source?: string | null;
+            confidence?: number | null;
+            status: null;
+          }>;
           planCreationProposals?: Array<{
             goal: string;
             goalReason: string | null;
@@ -1283,6 +1303,7 @@ router.post(
               planReplacements: aiResponse.planReplacements || [],
               metricReplacement: aiResponse.metricReplacement || null,
               planProposals: JSON.parse(JSON.stringify(aiResponse.planProposals || [])),
+              userContextEventProposals: JSON.parse(JSON.stringify(aiResponse.userContextEventProposals || [])),
               planCreationProposals: JSON.parse(JSON.stringify(aiResponse.planCreationProposals || [])),
               userRecommendations: aiResponse.userRecommendations || null,
               ...(aiResponse.toolCalls && {
@@ -1404,6 +1425,7 @@ router.post(
           planReplacements: resolvedPlanReplacements,
           metricReplacement: resolvedMetricReplacement,
           planProposals: aiResponse.planProposals || [],
+          userContextEventProposals: aiResponse.userContextEventProposals || [],
           planCreationProposals: aiResponse.planCreationProposals || [],
           userRecommendations: aiResponse.userRecommendations || null,
           toolCalls: aiResponse.toolCalls || null,

@@ -2576,6 +2576,164 @@ router.post(
   }
 );
 
+// Accept a user context event proposal from AI coach
+router.post(
+  "/messages/:messageId/accept-user-context-event-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.userContextEventProposals ||
+        !metadata.userContextEventProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      const proposal = metadata.userContextEventProposals[proposalIndex];
+
+      if (proposal.status) {
+        res.status(400).json({
+          error: `Proposal already ${proposal.status}`,
+        });
+        return;
+      }
+
+      if (typeof proposal.title !== "string" || !proposal.title.trim()) {
+        res.status(400).json({ error: "Proposal title is required" });
+        return;
+      }
+
+      const parseOptionalDate = (value: unknown): Date | null => {
+        if (typeof value !== "string" || !value.trim()) return null;
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+
+      const event = await prisma.userContextEvent.create({
+        data: {
+          userId: user.id,
+          title: proposal.title.trim().slice(0, 120),
+          description: normalizeOptionalText(proposal.description) ?? null,
+          occurredAt: parseOptionalDate(proposal.occurredAt),
+          endedAt: parseOptionalDate(proposal.endedAt),
+          source: "USER_CONFIRMED",
+          sourceMessageId: messageId,
+          confidence:
+            typeof proposal.confidence === "number"
+              ? Math.max(0, Math.min(1, proposal.confidence))
+              : null,
+        },
+      });
+
+      metadata.userContextEventProposals[proposalIndex].status = "accepted";
+      metadata.userContextEventProposals[proposalIndex].contextEventId = event.id;
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} accepted user context event proposal: ${event.title}`
+      );
+
+      res.json({ success: true, event });
+    } catch (error) {
+      logger.error("Error accepting user context event proposal:", error);
+      res.status(500).json({ error: "Failed to accept user context event proposal" });
+    }
+  }
+);
+
+// Reject a user context event proposal from AI coach
+router.post(
+  "/messages/:messageId/reject-user-context-event-proposal",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const { proposalIndex } = req.body;
+
+      if (typeof proposalIndex !== "number") {
+        res.status(400).json({ error: "proposalIndex is required (number)" });
+        return;
+      }
+
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { chat: true },
+      });
+
+      if (!message) {
+        res.status(404).json({ error: "Message not found" });
+        return;
+      }
+
+      if (message.chat.userId !== user.id) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const metadata = message.metadata as any;
+      if (
+        !metadata?.userContextEventProposals ||
+        !metadata.userContextEventProposals[proposalIndex]
+      ) {
+        res.status(400).json({ error: "Proposal not found" });
+        return;
+      }
+
+      if (metadata.userContextEventProposals[proposalIndex].status) {
+        res.status(400).json({
+          error: `Proposal already ${metadata.userContextEventProposals[proposalIndex].status}`,
+        });
+        return;
+      }
+
+      metadata.userContextEventProposals[proposalIndex].status = "rejected";
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { metadata },
+      });
+
+      logger.info(
+        `User ${user.username} rejected user context event proposal: ${metadata.userContextEventProposals[proposalIndex].title}`
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error rejecting user context event proposal:", error);
+      res.status(500).json({ error: "Failed to reject user context event proposal" });
+    }
+  }
+);
+
 // Submit AI overall satisfaction feedback
 router.post(
   "/feedback/ai-satisfaction",
