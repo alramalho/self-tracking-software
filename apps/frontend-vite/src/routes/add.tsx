@@ -9,7 +9,10 @@ import {
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import SharedActivityPrompt from "@/components/SharedActivityPrompt";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ActivityLogData, SharedActivityCandidate } from "@/contexts/activities/types";
+import type {
+  ActivityLogData,
+  SharedActivityCandidate,
+} from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
@@ -61,8 +64,11 @@ function LogPage() {
   const [currentActivityLogData, setCurrentActivityLogData] =
     useState<ActivityLogData | null>(null);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
-  const [sharedActivityCandidates, setSharedActivityCandidates] = useState<SharedActivityCandidate[]>([]);
-  const [showSharedActivityPrompt, setShowSharedActivityPrompt] = useState(false);
+  const [sharedActivityCandidates, setSharedActivityCandidates] = useState<
+    SharedActivityCandidate[]
+  >([]);
+  const [showSharedActivityPrompt, setShowSharedActivityPrompt] =
+    useState(false);
   const geo = useGeolocation();
 
   const handleActivityLogSubmit = useCallback(
@@ -106,18 +112,18 @@ function LogPage() {
   };
 
   const continuePostLogFlow = (entryId: string) => {
-
     // Show difficulty popover only for paid coach automation and recent activity.
     const isWithin48Hours =
       currentActivityLogData &&
       differenceInHours(new Date(), currentActivityLogData.datetime) < 48;
 
-    const isInActivePlan = plans?.some(
-      (p) =>
-        !p.deletedAt &&
-        !p.archivedAt &&
-        p.activities?.some((a) => a.id === selectedActivity?.id)
-    ) ?? false;
+    const isInActivePlan =
+      plans?.some(
+        (p) =>
+          !p.deletedAt &&
+          !p.archivedAt &&
+          p.activities?.some((a) => a.id === selectedActivity?.id)
+      ) ?? false;
 
     if (isUserPremium && isWithin48Hours && isInActivePlan) {
       setShowDifficultyPopover(true);
@@ -151,12 +157,16 @@ function LogPage() {
     }
   };
 
-  const handleLinkSharedActivity = async (candidateActivityEntryId: string) => {
+  const handleLinkSharedActivity = async (
+    candidateActivityEntryIds: string[]
+  ) => {
     if (!currentEntryId) return;
-    await linkSharedActivity({
-      activityEntryId: currentEntryId,
-      candidateActivityEntryId,
-    });
+    for (const candidateActivityEntryId of candidateActivityEntryIds) {
+      await linkSharedActivity({
+        activityEntryId: currentEntryId,
+        candidateActivityEntryId,
+      });
+    }
     handleSharedActivityPromptDone();
   };
 

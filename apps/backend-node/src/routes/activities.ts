@@ -26,7 +26,10 @@ function normalizeOptionalText(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function redactActivityEntryPrivateNotes(entry: any, viewerUserId: string): any {
+function redactActivityEntryPrivateNotes(
+  entry: any,
+  viewerUserId: string
+): any {
   if (!entry || typeof entry !== "object" || entry.userId === viewerUserId) {
     return entry;
   }
@@ -85,8 +88,14 @@ async function getAcceptedConnectionIds(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      connectionsFrom: { where: { status: "ACCEPTED" }, select: { toId: true } },
-      connectionsTo: { where: { status: "ACCEPTED" }, select: { fromId: true } },
+      connectionsFrom: {
+        where: { status: "ACCEPTED" },
+        select: { toId: true },
+      },
+      connectionsTo: {
+        where: { status: "ACCEPTED" },
+        select: { fromId: true },
+      },
     },
   });
 
@@ -97,7 +106,9 @@ async function getAcceptedConnectionIds(userId: string): Promise<string[]> {
   ];
 }
 
-async function getVisibleActivityIdsForUsers(userIds: string[]): Promise<Set<string>> {
+async function getVisibleActivityIdsForUsers(
+  userIds: string[]
+): Promise<Set<string>> {
   if (!userIds.length) return new Set();
 
   const [activities, publicPlans] = await Promise.all([
@@ -131,23 +142,60 @@ async function getVisibleActivityIdsForUsers(userIds: string[]): Promise<Set<str
 
   return new Set(
     activities
-      .filter((activity) => publicActivityIds.has(activity.id) || !plannedActivityIds.has(activity.id))
+      .filter(
+        (activity) =>
+          publicActivityIds.has(activity.id) ||
+          !plannedActivityIds.has(activity.id)
+      )
       .map((activity) => activity.id)
   );
 }
 
-async function findSharedActivityCandidates(activityEntryId: string, userId: string) {
+async function findSharedActivityCandidates(
+  activityEntryId: string,
+  userId: string
+) {
   const entry = await prisma.activityEntry.findFirst({
-    where: { id: activityEntryId, userId, deletedAt: null, activityId: { not: null } },
-    include: { activity: true, sharedActivityEntry: true },
+    where: {
+      id: activityEntryId,
+      userId,
+      deletedAt: null,
+      activityId: { not: null },
+    },
+    include: {
+      activity: true,
+      sharedActivityEntry: {
+        include: {
+          sharedActivity: {
+            include: {
+              entries: {
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
-  if (!entry?.activity || entry.sharedActivityEntry) return [];
+  if (!entry?.activity) return [];
+
+  const existingParticipantUserIds = new Set(
+    entry.sharedActivityEntry?.sharedActivity.entries.map(
+      (participant) => participant.userId
+    ) || [userId]
+  );
 
   const connectionIds = await getAcceptedConnectionIds(userId);
   if (!connectionIds.length) return [];
 
-  const visibleActivityIds = await getVisibleActivityIdsForUsers(connectionIds);
+  const candidateUserIds = connectionIds.filter(
+    (connectionId) => !existingParticipantUserIds.has(connectionId)
+  );
+  if (!candidateUserIds.length) return [];
+
+  const visibleActivityIds =
+    await getVisibleActivityIdsForUsers(candidateUserIds);
   if (!visibleActivityIds.size) return [];
 
   const dayStart = new Date(entry.datetime);
@@ -159,7 +207,7 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
 
   const candidates = await prisma.activityEntry.findMany({
     where: {
-      userId: { in: connectionIds },
+      userId: { in: candidateUserIds },
       deletedAt: null,
       activityId: { in: Array.from(visibleActivityIds) },
       datetime: { gte: start, lte: end },
@@ -196,7 +244,6 @@ async function findSharedActivityCandidates(activityEntryId: string, userId: str
     }))
     .filter(({ score }) => score >= 50)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
     .map(({ candidate, score }) => ({
       activityEntryId: candidate.id,
       user: candidate.user,
@@ -247,7 +294,9 @@ async function createPendingSharedActivityInvite({
       inviteeUserId,
     },
     include: {
-      invitee: { select: { id: true, username: true, name: true, picture: true } },
+      invitee: {
+        select: { id: true, username: true, name: true, picture: true },
+      },
     },
   });
 
@@ -267,9 +316,18 @@ async function createPendingSharedActivityInvite({
   return invite;
 }
 
-async function canLinkActivityEntries(userId: string, ownEntryId: string, candidateEntryId: string) {
+async function canLinkActivityEntries(
+  userId: string,
+  ownEntryId: string,
+  candidateEntryId: string
+) {
   const ownEntry = await prisma.activityEntry.findFirst({
-    where: { id: ownEntryId, userId, deletedAt: null, activityId: { not: null } },
+    where: {
+      id: ownEntryId,
+      userId,
+      deletedAt: null,
+      activityId: { not: null },
+    },
     include: { activity: true },
   });
   if (!ownEntry?.activity) return false;
@@ -286,7 +344,9 @@ async function canLinkActivityEntries(userId: string, ownEntryId: string, candid
   });
   if (!candidateEntry?.activityId || !candidateEntry.activity) return false;
 
-  const visibleActivityIds = await getVisibleActivityIdsForUsers([candidateEntry.userId]);
+  const visibleActivityIds = await getVisibleActivityIdsForUsers([
+    candidateEntry.userId,
+  ]);
   if (!visibleActivityIds.has(candidateEntry.activityId)) return false;
 
   const score = scoreSharedActivityCandidate({
@@ -521,7 +581,7 @@ router.post(
       const longitude = rawLng ? parseFloat(rawLng) : undefined;
       const timezone =
         latitude != null && longitude != null
-          ? timezoneFromCoords(latitude, longitude) ?? clientTimezone
+          ? (timezoneFromCoords(latitude, longitude) ?? clientTimezone)
           : clientTimezone;
       const photos = getUploadedActivityEntryPhotos(req);
       let uploadedImageCount = 0;
@@ -546,12 +606,16 @@ router.post(
 
       if (normalizedWithUserId) {
         if (normalizedWithUserId === req.user!.id) {
-          return res.status(400).json({ error: "Cannot invite yourself to a shared activity" });
+          return res
+            .status(400)
+            .json({ error: "Cannot invite yourself to a shared activity" });
         }
 
         const connectionIds = await getAcceptedConnectionIds(req.user!.id);
         if (!connectionIds.includes(normalizedWithUserId)) {
-          return res.status(400).json({ error: "Selected user is not an accepted connection" });
+          return res
+            .status(400)
+            .json({ error: "Selected user is not an accepted connection" });
         }
       }
 
@@ -662,16 +726,20 @@ router.post(
       const hasCoachAutomation = req.user!.planType === "PLUS";
       for (const plan of plans) {
         if (!hasCoachAutomation) {
-          logger.info(`User ${req.user!.username} is not eligible for coach automation, skipping`);
+          logger.info(
+            `User ${req.user!.username} is not eligible for coach automation, skipping`
+          );
           continue;
         }
 
-        void plansService.recalculateCurrentWeekState(plan, req.user!).catch((error) => {
-          logger.error(
-            `Error recalculating plan state for plan ${plan.id}:`,
-            error
-          );
-        });
+        void plansService
+          .recalculateCurrentWeekState(plan, req.user!)
+          .catch((error) => {
+            logger.error(
+              `Error recalculating plan state for plan ${plan.id}:`,
+              error
+            );
+          });
 
         // Schedule post-activity celebration message (30-90 seconds after logging)
         // Use a random delay to make it feel more natural
@@ -705,7 +773,9 @@ router.post(
         );
       }
 
-      let sharedActivityInvite: Awaited<ReturnType<typeof createPendingSharedActivityInvite>> | null = null;
+      let sharedActivityInvite: Awaited<
+        ReturnType<typeof createPendingSharedActivityInvite>
+      > | null = null;
       if (normalizedWithUserId) {
         try {
           sharedActivityInvite = await createPendingSharedActivityInvite({
@@ -717,19 +787,34 @@ router.post(
           });
         } catch (error) {
           logger.warn("Could not create shared activity invite:", error);
-          return res.status(400).json({ error: "Could not invite that user to this activity" });
+          return res
+            .status(400)
+            .json({ error: "Could not invite that user to this activity" });
         }
       }
 
-      const sharedActivityCandidates = shouldLookupSharedActivityCandidates(normalizedWithUserId)
+      const sharedActivityCandidates = shouldLookupSharedActivityCandidates(
+        normalizedWithUserId
+      )
         ? await findSharedActivityCandidates(entry.id, req.user!.id)
         : [];
-      logger.info(`Shared activity candidates for entry ${entry.id}: ${sharedActivityCandidates.length}`, {
-        entryId: entry.id,
-        candidateCount: sharedActivityCandidates.length,
-        candidates: sharedActivityCandidates.map((c: any) => ({ id: c.activityEntryId, score: c.score })),
+      logger.info(
+        `Shared activity candidates for entry ${entry.id}: ${sharedActivityCandidates.length}`,
+        {
+          entryId: entry.id,
+          candidateCount: sharedActivityCandidates.length,
+          candidates: sharedActivityCandidates.map((c: any) => ({
+            id: c.activityEntryId,
+            score: c.score,
+          })),
+        }
+      );
+      res.json({
+        ...entry,
+        entry,
+        sharedActivityCandidates,
+        sharedActivityInvite,
       });
-      res.json({ ...entry, entry, sharedActivityCandidates, sharedActivityInvite });
 
       if (uploadedImageCount > 0) {
         void notifyConnectionsAboutActivityPhotos({
@@ -840,7 +925,8 @@ router.put(
   ): Promise<Response | void> => {
     try {
       const { activityEntryId } = req.params;
-      const { quantity, datetime, description, difficulty, privateNotes } = req.body;
+      const { quantity, datetime, description, difficulty, privateNotes } =
+        req.body;
 
       // Verify ownership
       const existingEntry = await prisma.activityEntry.findFirst({
@@ -860,12 +946,14 @@ router.put(
         data: {
           quantity: quantity !== undefined ? quantity : existingEntry.quantity,
           datetime:
-            datetime !== undefined ? new Date(datetime) : existingEntry.datetime,
+            datetime !== undefined
+              ? new Date(datetime)
+              : existingEntry.datetime,
           description:
             description !== undefined ? description : existingEntry.description,
           privateNotes:
             privateNotes !== undefined
-              ? normalizeOptionalText(privateNotes) ?? null
+              ? (normalizeOptionalText(privateNotes) ?? null)
               : existingEntry.privateNotes,
           difficulty:
             difficulty !== undefined ? difficulty : existingEntry.difficulty,
@@ -930,7 +1018,8 @@ router.put(
 
       if (existingEntry.createdAt < sevenDaysAgo) {
         return res.status(403).json({
-          error: "Can only edit photos for activity entries from the last 7 days",
+          error:
+            "Can only edit photos for activity entries from the last 7 days",
         });
       }
 
@@ -988,16 +1077,22 @@ router.delete(
 
       if (existingEntry.createdAt < sevenDaysAgo) {
         return res.status(403).json({
-          error: "Can only delete photos for activity entries from the last 7 days",
+          error:
+            "Can only delete photos for activity entries from the last 7 days",
         });
       }
 
       const imageS3Paths = Array.from(
-        new Set([
-          ...((existingEntry as typeof existingEntry & { imageS3Paths?: string[] })
-            .imageS3Paths || []),
-          existingEntry.imageS3Path,
-        ].filter((path): path is string => !!path))
+        new Set(
+          [
+            ...((
+              existingEntry as typeof existingEntry & {
+                imageS3Paths?: string[];
+              }
+            ).imageS3Paths || []),
+            existingEntry.imageS3Path,
+          ].filter((path): path is string => !!path)
+        )
       );
 
       if (imageS3Paths.length === 0) {
@@ -1104,19 +1199,22 @@ router.post(
               ? addedEmojis.join(" ")
               : `${addedEmojis.slice(0, 3).join(" ")} and ${addedEmojis.length - 3} more`;
 
-          await notificationService.createAndProcessNotification({
-            userId: activityEntry.userId,
-            message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
-            type: "INFO",
-            relatedId: activityEntryId,
-            relatedData: {
-              activityEntryId: activityEntryId,
-              reactorPicture: req.user!.picture,
-              reactorName: req.user!.name,
-              reactorUsername: req.user!.username,
-              batchCategory: "REACTIONS",
+          await notificationService.createAndProcessNotification(
+            {
+              userId: activityEntry.userId,
+              message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
+              type: "INFO",
+              relatedId: activityEntryId,
+              relatedData: {
+                activityEntryId: activityEntryId,
+                reactorPicture: req.user!.picture,
+                reactorName: req.user!.name,
+                reactorUsername: req.user!.username,
+                batchCategory: "REACTIONS",
+              },
             },
-          }, false);
+            false
+          );
         }
       }
 
@@ -1190,19 +1288,22 @@ router.post(
               ? emojiList.join(" ")
               : `${emojiList.slice(0, 3).join(" ")} and ${emojiList.length - 3} more`;
 
-          await notificationService.createAndProcessNotification({
-            userId: activityEntry.userId,
-            message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
-            type: "INFO",
-            relatedId: activityEntryId,
-            relatedData: {
-              activityEntryId: activityEntryId,
-              reactorPicture: req.user!.picture,
-              reactorName: req.user!.name,
-              reactorUsername: req.user!.username,
-              batchCategory: "REACTIONS",
+          await notificationService.createAndProcessNotification(
+            {
+              userId: activityEntry.userId,
+              message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
+              type: "INFO",
+              relatedId: activityEntryId,
+              relatedData: {
+                activityEntryId: activityEntryId,
+                reactorPicture: req.user!.picture,
+                reactorName: req.user!.name,
+                reactorUsername: req.user!.username,
+                batchCategory: "REACTIONS",
+              },
             },
-          }, false);
+            false
+          );
         }
 
         const activityEntryReactions = await prisma.reaction.findMany({
@@ -1333,7 +1434,6 @@ router.delete(
   }
 );
 
-
 router.get(
   "/activity-entries/:activityEntryId/shared-candidates",
   requireAuth,
@@ -1349,7 +1449,9 @@ router.get(
       res.json({ candidates });
     } catch (error) {
       logger.error("Error finding shared activity candidates:", error);
-      res.status(500).json({ error: "Failed to find shared activity candidates" });
+      res
+        .status(500)
+        .json({ error: "Failed to find shared activity candidates" });
     }
   }
 );
@@ -1365,8 +1467,13 @@ router.post(
       const { activityEntryId } = req.params;
       const { candidateActivityEntryId } = req.body;
 
-      if (!candidateActivityEntryId || typeof candidateActivityEntryId !== "string") {
-        return res.status(400).json({ error: "candidateActivityEntryId is required" });
+      if (
+        !candidateActivityEntryId ||
+        typeof candidateActivityEntryId !== "string"
+      ) {
+        return res
+          .status(400)
+          .json({ error: "candidateActivityEntryId is required" });
       }
 
       const canLink = await canLinkActivityEntries(
@@ -1375,38 +1482,60 @@ router.post(
         candidateActivityEntryId
       );
       if (!canLink) {
-        return res.status(403).json({ error: "Activity entries cannot be linked" });
+        return res
+          .status(403)
+          .json({ error: "Activity entries cannot be linked" });
       }
 
       const [ownLink, candidateLink, candidateEntry] = await Promise.all([
         prisma.sharedActivityEntry.findUnique({ where: { activityEntryId } }),
-        prisma.sharedActivityEntry.findUnique({ where: { activityEntryId: candidateActivityEntryId } }),
-        prisma.activityEntry.findUnique({ where: { id: candidateActivityEntryId } }),
+        prisma.sharedActivityEntry.findUnique({
+          where: { activityEntryId: candidateActivityEntryId },
+        }),
+        prisma.activityEntry.findUnique({
+          where: { id: candidateActivityEntryId },
+        }),
       ]);
 
       if (!candidateEntry) {
-        return res.status(404).json({ error: "Candidate activity entry not found" });
+        return res
+          .status(404)
+          .json({ error: "Candidate activity entry not found" });
       }
 
-      if (ownLink && candidateLink && ownLink.sharedActivityId !== candidateLink.sharedActivityId) {
-        return res.status(409).json({ error: "Entries are already linked to different shared activities" });
+      if (
+        ownLink &&
+        candidateLink &&
+        ownLink.sharedActivityId !== candidateLink.sharedActivityId
+      ) {
+        return res.status(409).json({
+          error: "Entries are already linked to different shared activities",
+        });
       }
 
       const sharedActivityId =
         ownLink?.sharedActivityId ||
         candidateLink?.sharedActivityId ||
-        (await prisma.sharedActivity.create({ data: { createdById: req.user!.id } })).id;
+        (
+          await prisma.sharedActivity.create({
+            data: { createdById: req.user!.id },
+          })
+        ).id;
 
       const duplicateUserLink = await prisma.sharedActivityEntry.findFirst({
         where: {
           sharedActivityId,
           userId: { in: [req.user!.id, candidateEntry.userId] },
-          activityEntryId: { notIn: [activityEntryId, candidateActivityEntryId] },
+          activityEntryId: {
+            notIn: [activityEntryId, candidateActivityEntryId],
+          },
         },
       });
 
       if (duplicateUserLink) {
-        return res.status(409).json({ error: "User already has an entry in this shared activity" });
+        return res
+          .status(409)
+          .json({ error: "User already has an entry in this shared activity" });
       }
 
       await prisma.sharedActivityEntry.upsert({
@@ -1430,7 +1559,9 @@ router.post(
         include: {
           entries: {
             include: {
-              user: { select: { id: true, username: true, name: true, picture: true } },
+              user: {
+                select: { id: true, username: true, name: true, picture: true },
+              },
               activityEntry: true,
             },
           },
@@ -1488,7 +1619,9 @@ router.delete(
       });
 
       if (!link) {
-        return res.status(404).json({ error: "Shared activity link not found" });
+        return res
+          .status(404)
+          .json({ error: "Shared activity link not found" });
       }
 
       await prisma.sharedActivityEntry.delete({ where: { id: link.id } });
@@ -1498,7 +1631,9 @@ router.delete(
       });
 
       if (remaining < 2) {
-        await prisma.sharedActivity.delete({ where: { id: link.sharedActivityId } }).catch(() => null);
+        await prisma.sharedActivity
+          .delete({ where: { id: link.sharedActivityId } })
+          .catch(() => null);
       }
 
       res.json({ success: true });

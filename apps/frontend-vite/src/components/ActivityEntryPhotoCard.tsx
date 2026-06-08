@@ -64,10 +64,9 @@ const formatUsernameList = (usernames: string[]) => {
   const uniqueNames = Array.from(new Set(usernames.filter(Boolean)));
   if (uniqueNames.length === 0) return "";
   if (uniqueNames.length === 1) return uniqueNames[0];
-  if (uniqueNames.length === 2) return `${uniqueNames[0]} and ${uniqueNames[1]}`;
-  return `${uniqueNames.slice(0, -1).join(", ")}, and ${
-    uniqueNames[uniqueNames.length - 1]
-  }`;
+  if (uniqueNames.length === 2)
+    return `${uniqueNames[0]} and ${uniqueNames[1]}`;
+  return `${uniqueNames.slice(0, -1).join(", ")}, and ${uniqueNames[uniqueNames.length - 1]}`;
 };
 
 type ActivityCardUser = {
@@ -77,6 +76,15 @@ type ActivityCardUser = {
   planType?: PlanType;
 };
 
+const MAX_VISIBLE_JOINT_PARTICIPANTS = 6;
+
+const getUniqueParticipants = (users: ActivityCardUser[]) =>
+  users.filter(
+    (participant, index, list) =>
+      participant.username &&
+      list.findIndex((item) => item.username === participant.username) === index
+  );
+
 const ParticipantAvatar = ({
   user,
   size = "md",
@@ -84,15 +92,16 @@ const ParticipantAvatar = ({
   onClick,
 }: {
   user: ActivityCardUser;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   isLightMode: boolean;
   onClick?: (user: ActivityCardUser) => void;
 }) => {
   const accountLevel = useAccountLevel(user.username || undefined);
-  const ringSize = size === "sm" ? 28 : 36;
-  const avatarSize = size === "sm" ? "w-6 h-6" : "w-8 h-8";
-  const ringWidth = size === "sm" ? 1.5 : 2;
-  const outerRing = size === "sm" ? 3 : 5;
+  const ringSize = size === "xs" ? 24 : size === "sm" ? 28 : 36;
+  const avatarSize =
+    size === "xs" ? "w-5 h-5" : size === "sm" ? "w-6 h-6" : "w-8 h-8";
+  const ringWidth = size === "xs" ? 1.25 : size === "sm" ? 1.5 : 2;
+  const outerRing = size === "xs" ? 2.5 : size === "sm" ? 3 : 5;
 
   return (
     <ProgressRing
@@ -118,9 +127,88 @@ const ParticipantAvatar = ({
         }}
       >
         <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-        <AvatarFallback>{(user.name || user.username || "U")[0]}</AvatarFallback>
+        <AvatarFallback>
+          {(user.name || user.username || "U")[0]}
+        </AvatarFallback>
       </Avatar>
     </ProgressRing>
+  );
+};
+
+const ParticipantAvatarCluster = ({
+  users,
+  isLightMode,
+  onParticipantClick,
+  compact = false,
+}: {
+  users: ActivityCardUser[];
+  isLightMode: boolean;
+  onParticipantClick?: (user: ActivityCardUser) => void;
+  compact?: boolean;
+}) => {
+  const uniqueUsers = getUniqueParticipants(users);
+  const visibleUsers = uniqueUsers.slice(0, MAX_VISIBLE_JOINT_PARTICIPANTS);
+  const overflowCount = uniqueUsers.length - visibleUsers.length;
+  const count = visibleUsers.length;
+
+  if (count <= 2) {
+    return (
+      <div className="flex flex-shrink-0 -space-x-2">
+        {visibleUsers.map((participant) => (
+          <ParticipantAvatar
+            key={participant.username}
+            user={participant}
+            size={compact ? "xs" : "sm"}
+            isLightMode={isLightMode}
+            onClick={onParticipantClick}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const clusterSize = compact ? 48 : 58;
+  const avatarRingSize = count >= 5 || compact ? 24 : 28;
+  const avatarSize = avatarRingSize === 24 ? "xs" : "sm";
+  const radius = clusterSize / 2 - avatarRingSize / 2 - 1;
+
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: clusterSize, height: clusterSize }}
+    >
+      {visibleUsers.map((participant, index) => {
+        const startAngle = count === 4 ? (-3 * Math.PI) / 4 : -Math.PI / 2;
+        const angle = startAngle + (index * 2 * Math.PI) / count;
+        const left = clusterSize / 2 + radius * Math.cos(angle);
+        const top = clusterSize / 2 + radius * Math.sin(angle);
+
+        return (
+          <div
+            key={participant.username}
+            className="absolute"
+            style={{
+              left,
+              top,
+              transform: "translate(-50%, -50%)",
+              zIndex: count - index,
+            }}
+          >
+            <ParticipantAvatar
+              user={participant}
+              size={avatarSize}
+              isLightMode={isLightMode}
+              onClick={onParticipantClick}
+            />
+          </div>
+        );
+      })}
+      {overflowCount > 0 && (
+        <div className="absolute bottom-0 right-0 flex h-5 min-w-5 items-center justify-center rounded-full border border-background bg-muted px-1 text-[10px] font-bold text-muted-foreground">
+          +{overflowCount}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -155,11 +243,7 @@ const ParticipantNameList = ({
   users: ActivityCardUser[];
   onParticipantClick?: (user: ActivityCardUser) => void;
 }) => {
-  const uniqueUsers = users.filter(
-    (participant, index, list) =>
-      participant.username &&
-      list.findIndex((item) => item.username === participant.username) === index
-  );
+  const uniqueUsers = getUniqueParticipants(users);
 
   return (
     <>
@@ -182,7 +266,12 @@ type SharedActivityCardEntry = {
     imageUrls?: string[];
   };
   activity: Activity;
-  user: { username: string; name: string | null; picture: string | null; planType: PlanType };
+  user: {
+    username: string;
+    name: string | null;
+    picture: string | null;
+    planType: PlanType;
+  };
 };
 
 interface ActivityEntryPhotoCardProps {
@@ -194,12 +283,19 @@ interface ActivityEntryPhotoCardProps {
       sharedActivity?: {
         entries?: {
           activityEntryId: string;
-          user: { id: string; username: string | null; name?: string | null; picture?: string | null };
-          activityEntry?: (ActivityEntry & {
-            imageUrls?: string[];
-            activity?: Activity | null;
-            deletedAt?: Date | null;
-          }) | null;
+          user: {
+            id: string;
+            username: string | null;
+            name?: string | null;
+            picture?: string | null;
+          };
+          activityEntry?:
+            | (ActivityEntry & {
+                imageUrls?: string[];
+                activity?: Activity | null;
+                deletedAt?: Date | null;
+              })
+            | null;
         }[];
       };
     } | null;
@@ -487,9 +583,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     if (usernames.length === 0) return "";
     if (usernames.length === 1) return usernames[0];
     if (usernames.length === 2) return `${usernames[0]} & ${usernames[1]}`;
-    return `${usernames.slice(0, -1).join(", ")} & ${
-      usernames[usernames.length - 1]
-    }`;
+    return `${usernames.slice(0, -1).join(", ")} & ${usernames[usernames.length - 1]}`;
   };
 
   const getEntryImageUrls = (
@@ -499,10 +593,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       return [];
     }
 
-    return [
-      ...(entry.imageUrls || []),
-      entry.imageUrl,
-    ].filter((url): url is string => !!url);
+    return [...(entry.imageUrls || []), entry.imageUrl].filter(
+      (url): url is string => !!url
+    );
   };
 
   const embeddedSharedActivityEntries = (
@@ -516,7 +609,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         entry.activityEntry?.activity
     )
     .map((entry) => ({
-      activityEntry: entry.activityEntry as ActivityEntry & { imageUrls?: string[] },
+      activityEntry: entry.activityEntry as ActivityEntry & {
+        imageUrls?: string[];
+      },
       activity: entry.activityEntry!.activity as Activity,
       user: {
         username: entry.user.username as string,
@@ -528,16 +623,17 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   const allSharedActivityEntries = Array.from(
     new Map(
-      [...sharedActivityEntries, ...embeddedSharedActivityEntries].map((entry) => [
-        entry.activityEntry.id,
-        entry,
-      ])
+      [...sharedActivityEntries, ...embeddedSharedActivityEntries].map(
+        (entry) => [entry.activityEntry.id, entry]
+      )
     ).values()
   );
 
   const imageUrls = Array.from(
     new Set([
-      ...getEntryImageUrls(activityEntry as typeof activityEntry & { imageUrls?: string[] }),
+      ...getEntryImageUrls(
+        activityEntry as typeof activityEntry & { imageUrls?: string[] }
+      ),
       ...allSharedActivityEntries.flatMap(({ activityEntry }) =>
         getEntryImageUrls(activityEntry)
       ),
@@ -563,13 +659,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const sharedParticipants = (
     isMergedJointActivity
       ? []
-      : activityEntry.sharedActivityEntry?.sharedActivity?.entries
+      : (activityEntry.sharedActivityEntry?.sharedActivity?.entries
           ?.filter(
             (entry) =>
               entry.activityEntryId !== activityEntry.id &&
               !entry.activityEntry?.deletedAt
           )
-          ?.map((entry) => entry.user) ?? []
+          ?.map((entry) => entry.user) ?? [])
   ).filter((participant) => participant.username);
   const sharedParticipantLabel = formatUsernameList(
     sharedParticipants.map((participant) => `@${participant.username}`)
@@ -585,17 +681,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   // Collapsed minimal view for cards without images
   const collapsedCardContent = (
     <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl overflow-visible p-4 px-5 flex items-center gap-2">
-      <div className="relative flex flex-shrink-0 -space-x-1.5">
+      <div className="relative flex flex-shrink-0">
         {isMergedJointActivity ? (
-          jointParticipants.slice(0, 3).map((participant) => (
-            <ParticipantAvatar
-              key={participant.username}
-              user={participant}
-              size="sm"
-              isLightMode={isLightMode}
-              onClick={handleParticipantClick}
-            />
-          ))
+          <ParticipantAvatarCluster
+            users={jointParticipants}
+            isLightMode={isLightMode}
+            onParticipantClick={handleParticipantClick}
+            compact
+          />
         ) : (
           <div
             onClick={(e) => {
@@ -603,7 +696,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               onAvatarClick?.();
             }}
           >
-            <ParticipantAvatar user={user} size="sm" isLightMode={isLightMode} />
+            <ParticipantAvatar
+              user={user}
+              size="sm"
+              isLightMode={isLightMode}
+            />
           </div>
         )}
       </div>
@@ -738,9 +835,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             {hasImage && !isOwnActivityEntry && (
               <>
                 <div
-                  className={`absolute bottom-0 right-2 z-30 ${
-                    activityEntry.description ? "mb-8" : "mb-2"
-                  }`}
+                  className={`absolute bottom-0 right-2 z-30 ${activityEntry.description ? "mb-8" : "mb-2"}`}
                 >
                   {showEmojiPicker ? (
                     <ReactionBarSelector
@@ -854,16 +949,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           {isMergedJointActivity ? (
             <div className="flex w-full flex-col gap-2">
               <div className="flex items-center gap-3">
-                <div className="flex flex-shrink-0 -space-x-2">
-                  {jointParticipants.slice(0, 3).map((participant) => (
-                    <ParticipantAvatar
-                      key={participant.username}
-                      user={participant}
-                      isLightMode={isLightMode}
-                      onClick={handleParticipantClick}
-                    />
-                  ))}
-                </div>
+                <ParticipantAvatarCluster
+                  users={jointParticipants}
+                  isLightMode={isLightMode}
+                  onParticipantClick={handleParticipantClick}
+                />
                 <div className="min-w-0 text-sm font-semibold">
                   <ParticipantNameList
                     users={jointParticipants}
@@ -881,7 +971,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       key={row.activityEntry.id}
                       className="flex items-center gap-2 rounded-xl bg-muted/35 px-2 py-1 text-xs"
                     >
-                      <span className="text-base leading-none">{row.activity.emoji}</span>
+                      <span className="text-base leading-none">
+                        {row.activity.emoji}
+                      </span>
                       <span className="min-w-0 flex-1 truncate">
                         <span className="font-medium text-muted-foreground">
                           @{row.user.username}
@@ -921,7 +1013,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     }}
                     onClick={onAvatarClick}
                   >
-                    <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+                    <AvatarImage
+                      src={user.picture || ""}
+                      alt={user.name || ""}
+                    />
                     <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
                   </Avatar>
                 </ProgressRing>

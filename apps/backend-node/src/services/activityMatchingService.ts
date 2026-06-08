@@ -41,7 +41,8 @@ function interpolatePosition(
       const ratio = t1 === t0 ? 0 : (ts - t0) / (t1 - t0);
       return {
         latitude:
-          points[i].latitude + ratio * (points[i + 1].latitude - points[i].latitude),
+          points[i].latitude +
+          ratio * (points[i + 1].latitude - points[i].latitude),
         longitude:
           points[i].longitude +
           ratio * (points[i + 1].longitude - points[i].longitude),
@@ -190,20 +191,42 @@ export async function findAndCreateSharedActivities(
         continue;
       }
 
-      // Match found! Create or extend SharedActivity
-      const existingShared = await prisma.sharedActivityEntry.findFirst({
-        where: { activityEntryId: candidate.id },
-      });
+      const [newEntryShared, candidateShared] = await Promise.all([
+        prisma.sharedActivityEntry.findFirst({
+          where: { activityEntryId: newEntryId },
+        }),
+        prisma.sharedActivityEntry.findFirst({
+          where: { activityEntryId: candidate.id },
+        }),
+      ]);
+
+      if (
+        newEntryShared &&
+        candidateShared &&
+        newEntryShared.sharedActivityId !== candidateShared.sharedActivityId
+      ) {
+        continue;
+      }
+
+      const existingShared = newEntryShared || candidateShared;
 
       if (existingShared) {
-        // Add new entry to existing shared activity
-        const alreadyLinked = await prisma.sharedActivityEntry.findFirst({
-          where: {
-            sharedActivityId: existingShared.sharedActivityId,
-            activityEntryId: newEntryId,
-          },
+        const participantLinks = await prisma.sharedActivityEntry.findMany({
+          where: { sharedActivityId: existingShared.sharedActivityId },
+          select: { userId: true, activityEntryId: true },
         });
-        if (!alreadyLinked) {
+        const participantUserIds = new Set(
+          participantLinks.map((participant) => participant.userId)
+        );
+
+        if (
+          (!newEntryShared && participantUserIds.has(userId)) ||
+          (!candidateShared && participantUserIds.has(candidate.userId))
+        ) {
+          continue;
+        }
+
+        if (!newEntryShared) {
           await prisma.sharedActivityEntry.create({
             data: {
               sharedActivityId: existingShared.sharedActivityId,
@@ -212,8 +235,17 @@ export async function findAndCreateSharedActivities(
             },
           });
         }
+
+        if (!candidateShared) {
+          await prisma.sharedActivityEntry.create({
+            data: {
+              sharedActivityId: existingShared.sharedActivityId,
+              activityEntryId: candidate.id,
+              userId: candidate.userId,
+            },
+          });
+        }
       } else {
-        // Create new shared activity with both entries
         await prisma.sharedActivity.create({
           data: {
             createdById: userId,
@@ -230,8 +262,6 @@ export async function findAndCreateSharedActivities(
       logger.info(
         `Created shared activity between entries ${newEntryId} and ${candidate.id}`
       );
-      // Only link to the first match found (can be extended later)
-      break;
     }
   } catch (error) {
     logger.error("Error in activity matching:", error);
