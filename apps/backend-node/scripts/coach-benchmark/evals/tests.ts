@@ -709,6 +709,108 @@ export const unsupportedActivityMeasureChangeTest: CoachEvalTest = {
     ),
 };
 
+export const directActivityRenameNoRedundantConfirmationTest: CoachEvalTest = {
+  id: "direct_activity_rename_no_redundant_confirmation",
+  name: "Direct activity rename proposes edit without redundant confirmation",
+  userMessage: "just call it system design study",
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-15"),
+    plans: [
+      {
+        id: "bench-plan-system-design-rename",
+        goal: "Complete 75 LeetCode problems and 26 System Design videos in 12 weeks",
+        emoji: "💻",
+        outlineType: "SPECIFIC",
+        notes:
+          "Interview prep with LeetCode practice and System Design Primer sessions.",
+        activities: [
+          {
+            id: "bench-activity-leetcode-rename",
+            title: "LeetCode Practice",
+            measure: "minutes",
+            emoji: "💻",
+            kind: "learning",
+          },
+          {
+            id: "bench-activity-system-design-rename",
+            title: "System Design (Gaurav Sen)",
+            measure: "minutes",
+            emoji: "🏗️",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-system-design-rename",
+            activityId: "bench-activity-system-design-rename",
+            date: "2026-06-08",
+            quantity: 60,
+            descriptiveGuide:
+              "Study system design using the current source sequence.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    conversationHistory: [
+      {
+        role: "user",
+        content:
+          "Also, im not doing gaurav sam anymore, i doing the system primer, update the activity name",
+      },
+      {
+        role: "assistant",
+        content:
+          'I can rename the activity to "System Design Study." Should I keep everything else the same (emoji, minutes measure, color)?',
+      },
+    ],
+  },
+  verify: async (ctx) =>
+    allOf(
+      toolCalled(ctx, "proposeActivityEdit"),
+      toolsNotCalled(ctx, ["webSearch", "useBrowser"]),
+      proposalCount(ctx, "activityEdit", { equals: 1 }),
+      proposalCount(ctx, "planModification", { equals: 0 }),
+      proposalCount(ctx, "planCreation", { equals: 0 }),
+      proposalCount(ctx, "activityLog", { equals: 0 }),
+      jsonPathEquals(
+        ctx,
+        "activityEditProposal",
+        "activityName",
+        "System Design (Gaurav Sen)"
+      ),
+      jsonPathEquals(
+        ctx,
+        "activityEditProposal",
+        "requested.title",
+        "System Design Study"
+      ),
+      jsonPathEquals(
+        ctx,
+        "activityEditProposal",
+        "requested.measure",
+        "minutes"
+      ),
+      jsonPathEquals(ctx, "activityEditProposal", "requested.emoji", "🏗️"),
+      responseNotMatches(
+        ctx,
+        /\b(should I|do you want me to|confirm|keep everything else|emoji|measure|color)\b/i,
+        "does_not_ask_redundant_confirmation"
+      ),
+      responseNotMatches(
+        ctx,
+        /\b(26 videos|goal|modules|Primer|repository|course|source)\b[^\n.?!]{0,120}\?/i,
+        "does_not_expand_rename_into_roadmap_question"
+      ),
+      await llmJudge(
+        ctx,
+        "Treats the user's short follow-up as clear confirmation to rename the existing System Design activity.",
+        "Attaches an activity edit proposal rather than asking another confirmation question.",
+        "Preserves emoji, minutes measure, and color/kind by omission or unchanged requested values."
+      )
+    ),
+};
+
 export const browserCapabilityDoesNotDiscloseInternalsTest: CoachEvalTest = {
   id: "browser_capability_does_not_disclose_internals",
   name: "Browser capability answer does not disclose internals",
@@ -771,6 +873,7 @@ export const tests: CoachEvalTest[] = [
   activityMeasureChangeBeforeDependentLogTest,
   claimedActivityMissingLogProposalTest,
   unsupportedActivityMeasureChangeTest,
+  directActivityRenameNoRedundantConfirmationTest,
   browserCapabilityDoesNotDiscloseInternalsTest,
   explicitBrowserBypassTest,
 ];
