@@ -717,6 +717,11 @@ export const repeatedConfirmationRepairTest: CoachEvalTest = {
         /Just to be clear: you finished Software Lab 1 Part 1 and Part 2/i,
         "does_not_repeat_full_prior_confirmation"
       ),
+      responseNotMatches(
+        ctx,
+        /\b(I('|')?ve|I have|I)\s+(logged|recorded|saved)\b/i,
+        "does_not_claim_activity_log_saved"
+      ),
       await llmJudge(
         ctx,
         "Treats the user's 'yes' as confirmation of the previous requested action, not as a reason to ask the same confirmation again.",
@@ -724,6 +729,99 @@ export const repeatedConfirmationRepairTest: CoachEvalTest = {
         "Does not repeat the previous assistant message."
       )
     ),
+};
+
+const duplicateSoftwareLabConfirmation =
+  "I can log both sessions and adjust the week. Here's what I'll do:\n\n- Log 60 min for Software Lab 1 Part 1 today\n- Log 60 min for Software Lab 1 Part 2 today\n- Update the plan: remove Monday/Tuesday Lab sessions, shift practice to Tuesday, and Lecture 3 prep to Wednesday-Thursday\n\nSound right?";
+
+export const sameDaySameActivityMergedLogTest: CoachEvalTest = {
+  id: "same_day_same_activity_merged_log",
+  name: "Same-day same-activity confirmations merge into one high-signal log",
+  userMessage: "y",
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-18"),
+    conversationHistory: [
+      {
+        role: "user",
+        content:
+          "not bad, but you should log my entries, and also, i just now did the part 1 + part 2",
+      },
+      {
+        role: "assistant",
+        content: duplicateSoftwareLabConfirmation,
+      },
+    ],
+    plans: [
+      {
+        id: "bench-plan-deep-learning",
+        goal: "Complete all 5 courses of the Deep Learning plan",
+        emoji: "🤖",
+        outlineType: "SPECIFIC",
+        notes:
+          "Roadmap: MIT 6.S191 Software Lab 1 has Part 1: Deep Learning in Python and Part 2: Music Generation. Each part is planned as a 60-minute Deep Learning Theory session.",
+        activities: [
+          {
+            id: "bench-activity-deep-learning-theory-merged",
+            title: "Deep Learning Theory",
+            measure: "minutes",
+            emoji: "🧠",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-lab-part-1-merged",
+            activityId: "bench-activity-deep-learning-theory-merged",
+            date: "2026-06-08",
+            quantity: 60,
+            descriptiveGuide:
+              "MIT 6.S191 Software Lab 1 Part 1: Deep Learning in Python.",
+          },
+          {
+            id: "bench-session-lab-part-2-merged",
+            activityId: "bench-activity-deep-learning-theory-merged",
+            date: "2026-06-08",
+            quantity: 60,
+            descriptiveGuide: "MIT 6.S191 Software Lab 1 Part 2: Music Generation.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    activityEntries: [],
+  },
+  verify: async (ctx) => {
+    const proposal = ctx.artifacts.activityLogProposals[0] as
+      | { description?: string | null; privateNotes?: string | null; quantity?: number }
+      | undefined;
+    const notesText = [proposal?.description, proposal?.privateNotes]
+      .filter(Boolean)
+      .join(" ");
+    const fillerReflection = /\b(user confirmed|confirmed doing|completed part|confirmed.*today)\b/i;
+
+    return allOf(
+      proposalCount(ctx, "activityLog", { equals: 1 }),
+      jsonPathEquals(ctx, "activityLogProposal", "activityName", "Deep Learning Theory"),
+      jsonPathEquals(ctx, "activityLogProposal", "quantity", 120),
+      responseNotMatches(
+        ctx,
+        /\b(I('|')?ve|I have|I)\s+(logged|recorded|saved)\b/i,
+        "does_not_claim_activity_log_saved"
+      ),
+      {
+        id: "activity_log_notes_not_filler",
+        kind: "deterministic" as const,
+        pass: !fillerReflection.test(notesText),
+        detail: notesText ? `notes were ${notesText}` : "notes were empty",
+      },
+      await llmJudge(
+        ctx,
+        "Treats the two completed Software Lab parts as one same-day Deep Learning Theory log with summed quantity unless the user explicitly asked for separate entries.",
+        "Does not put filler or meta-confirmation text in caption or private notes.",
+        "Leaves private notes empty unless there is high-value coaching context such as blockers, difficulty, insight, or an adjustment for future sessions."
+      )
+    );
+  },
 };
 
 export const unsupportedActivityMeasureChangeTest: CoachEvalTest = {
@@ -959,6 +1057,7 @@ export const tests: CoachEvalTest[] = [
   activityMeasureChangeBeforeDependentLogTest,
   claimedActivityMissingLogProposalTest,
   repeatedConfirmationRepairTest,
+  sameDaySameActivityMergedLogTest,
   unsupportedActivityMeasureChangeTest,
   directActivityRenameNoRedundantConfirmationTest,
   browserCapabilityDoesNotDiscloseInternalsTest,

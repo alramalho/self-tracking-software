@@ -47,7 +47,9 @@ type CoachRepairFailure = {
     | "invalid_draft_tool"
     | "repeated_draft_tool"
     | "repeated_text"
-    | "internal_state_leak";
+    | "internal_state_leak"
+    | "duplicate_activity_log"
+    | "premature_activity_log_claim";
   source: "draftMessages" | "rawText" | "toolLoop";
   usedDraftTool: boolean;
   toolsUsed: string[];
@@ -56,6 +58,7 @@ type CoachRepairFailure = {
 };
 
 const TELEGRAM_MESSAGE_LIMIT = 3900;
+const MAX_COACH_GENERATION_ATTEMPTS = 3;
 
 function truncateForReport(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
@@ -73,6 +76,12 @@ function buildCoachRepairMessage(failure: CoachRepairFailure) {
     "Do not repeat the rejected text.",
     "Answer the user's latest message directly and move the conversation forward.",
     "If the latest user message confirms a prior proposed action, perform the relevant proposal/tool action instead of asking the same confirmation again.",
+    failure.reason === "duplicate_activity_log"
+      ? "Merge same-day logs for the same activity into one proposal with summed quantity unless the user explicitly asked for separate entries."
+      : null,
+    failure.reason === "premature_activity_log_claim"
+      ? "Activity log proposals are not saved yet. Say you proposed or attached the log for the user to accept; do not say you logged, recorded, or saved it."
+      : null,
     "Use draftMessages for the final visible response.",
   ]
     .filter((line): line is string => line !== null)
@@ -112,6 +121,58 @@ function getActivityLogProposalKey(proposal: any) {
     proposal.privateNotes || "",
     proposal.difficulty || "",
   ].join("|");
+}
+
+function findDuplicateDefaultTimeActivityLogGroup(
+  toolCalls: ReturnType<typeof collectToolCallsFromSteps>
+) {
+  const groups = new Map<string, any[]>();
+
+  for (const toolCall of getVisibleToolCalls(toolCalls)) {
+    const result = toolCall.result as any;
+    if (
+      toolCall.tool !== "proposeActivityLog" ||
+      !result ||
+      typeof result !== "object" ||
+      !result.success ||
+      !result.proposal
+    ) {
+      continue;
+    }
+
+    const proposal = result.proposal;
+    const time = proposal.time || "00:00:00";
+    if (time !== "00:00:00") continue;
+
+    const key = `${proposal.activityId}|${proposal.date}|${time}`;
+    const group = groups.get(key) || [];
+    group.push(proposal);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).find((group) => group.length > 1);
+}
+
+function hasSuccessfulActivityLogProposal(
+  toolCalls: ReturnType<typeof collectToolCallsFromSteps>
+) {
+  return getVisibleToolCalls(toolCalls).some((toolCall) => {
+    const result = toolCall.result as any;
+    return (
+      toolCall.tool === "proposeActivityLog" &&
+      result &&
+      typeof result === "object" &&
+      result.success &&
+      result.proposal
+    );
+  });
+}
+
+function findPrematureActivityLogClaim(drafts: Array<{ content: string }>) {
+  const claimPattern =
+    /\b((I('|’)?ve|I have|I)\s+(logged|recorded|saved)|Done[.! ,:;]*\s*(I\s+)?(logged|recorded|saved))\b/i;
+
+  return drafts.find((draft) => claimPattern.test(draft.content));
 }
 
 function getActivityEditProposalKey(proposal: any) {
@@ -497,7 +558,10 @@ export class CoachAgentService {
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
-        - When the user reports that a completed activity was hard, failed, confusing, or frustrating, treat it as planning evidence: capture the concrete reason in the activity log privateNotes/reflection when logging is proposed, set difficulty when clear, and say how future sessions should adapt from that evidence.
+        - Proposal tools attach pending cards; they do not save changes. Say "proposed" or "attached for you to accept", never say you logged, saved, recorded, updated, or changed something that still requires accepting a proposal card.
+        - Activity logs should default to one entry per activity per day. If the user did multiple parts/segments of the same activity on the same day, propose one log with summed quantity unless they explicitly ask for separate entries. Put useful segment names in the caption, not separate cards.
+        - Activity log captions/privateNotes must earn their space. Use description for concise factual context the user would want on the timeline. Use privateNotes only for high-signal coaching evidence: blockers, difficulty, insight, failure reason, or future adjustment. Omit privateNotes when there is no such signal; never write meta filler like "user confirmed" or "completed today."
+        - When the user reports that a completed activity was hard, failed, confusing, or frustrating, treat it as planning evidence: capture the concrete reason in privateNotes when logging is proposed, set difficulty when clear, and say how future sessions should adapt from that evidence.
         - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
         - When the user shares a durable life/work/health context event that is likely useful for future coaching or metric interpretation, use proposeUserContextEvent. Do not use it for transient moods, ordinary complaints, or simple preferences. The event is not saved until the user accepts it, so present it as optional.
         - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
@@ -1108,15 +1172,16 @@ export class CoachAgentService {
             Match activities by name (case-insensitive exact match).
             Use the exact activity title from the plan context above as activityName, without emoji, measure, parentheses, or extra labels.
             Quantity must use the activity's current saved tracking measure. If the user wants to log in a different measure, propose the measure edit first and wait for acceptance.
-            Use description only for a user-facing caption. Use privateNotes for private reflection/postmortem details the coach should remember, especially failures, blockers, frustration, or what should change next.
+            Default to one log per activity per day: merge multiple same-day parts of the same activity by summing quantity unless the user explicitly asks for separate entries.
+            Use description only for a concise user-facing caption with useful factual detail. Use privateNotes only for high-signal reflection/postmortem details the coach should remember, especially failures, blockers, frustration, insights, or what should change next. Omit privateNotes rather than filling it with meta-confirmation.
           `,
           inputSchema: z.object({
             activityName: z.string().describe("The name of the activity to log (case-insensitive exact match)"),
             quantity: z.number().describe("The quantity/amount to log"),
             date: z.string().optional().describe("The date for the log (YYYY-MM-DD format). Defaults to today."),
             time: z.string().optional().describe("The time for the log (HH:mm:ss format, 24h). Defaults to 00:00:00. Use this when the user mentions a specific time."),
-            description: z.string().optional().describe("Optional user-facing caption for this activity entry."),
-            privateNotes: z.string().optional().describe("Optional private reflection for the user and coach. Use this for postmortem details, blockers, and planning implications."),
+            description: z.string().optional().describe("Optional user-facing caption. Use only for concise factual detail that adds value beyond activity/date/quantity."),
+            privateNotes: z.string().optional().describe("Optional private reflection for the user and coach. Use only for high-signal blockers, difficulty, insights, or planning implications; omit filler/meta-confirmation."),
             difficulty: z.enum(["very_easy", "easy", "moderate", "hard", "very_hard"]).optional().describe("Optional perceived difficulty when the user makes it clear."),
           }),
           execute: async ({ activityName, quantity, date, time, description, privateNotes, difficulty }) => {
@@ -1855,7 +1920,7 @@ export class CoachAgentService {
         .slice(-8)
         .map((msg) => msg.content);
 
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      for (let attempt = 0; attempt < MAX_COACH_GENERATION_ATTEMPTS; attempt += 1) {
         const attemptMessages: ModelMessage[] = repairFailure
           ? [
               ...modelMessages,
@@ -1967,12 +2032,47 @@ export class CoachAgentService {
         }
 
         if (!failure) {
+          const duplicateActivityLogs = findDuplicateDefaultTimeActivityLogGroup(allToolCalls);
+          if (duplicateActivityLogs) {
+            failure = {
+              reason: "duplicate_activity_log",
+              source: successfulDraftCall ? "draftMessages" : "rawText",
+              usedDraftTool: Boolean(successfulDraftCall),
+              toolsUsed,
+              rejectedText: duplicateActivityLogs
+                .map(
+                  (proposal) =>
+                    `${proposal.activityName}: ${proposal.quantity} ${proposal.activityMeasure} on ${proposal.date}`
+                )
+                .join("; "),
+              errorMessage:
+                "Coach proposed duplicate same-day activity logs instead of one merged activity log",
+            };
+          }
+        }
+
+        if (!failure && hasSuccessfulActivityLogProposal(allToolCalls)) {
+          const prematureClaim = findPrematureActivityLogClaim(attemptRawDrafts);
+          if (prematureClaim) {
+            failure = {
+              reason: "premature_activity_log_claim",
+              source: successfulDraftCall ? "draftMessages" : "rawText",
+              usedDraftTool: Boolean(successfulDraftCall),
+              toolsUsed,
+              rejectedText: prematureClaim.content,
+              errorMessage:
+                "Coach claimed an activity log was saved even though it only attached a proposal",
+            };
+          }
+        }
+
+        if (!failure) {
           rawDrafts = attemptRawDrafts;
           repairFailure = null;
           break;
         }
 
-        if (attempt === 0) {
+        if (attempt < MAX_COACH_GENERATION_ATTEMPTS - 1) {
           logger.warn("Coach attempt rejected; retrying with repair context", {
             userId: user.id,
             model: resolvedModel,
