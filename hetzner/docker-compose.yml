@@ -1,11 +1,43 @@
+x-betterstack-logging: &betterstack-logging
+  driver: fluentd
+  options:
+    fluentd-address: "127.0.0.1:24224"
+    fluentd-async: "true"
+    fluentd-sub-second-precision: "true"
+    tag: "{{.Name}}"
+
 services:
+  fluent-bit:
+    image: cr.fluentbit.io/fluent/fluent-bit:3.2
+    container_name: tsw-fluent-bit
+    restart: always
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      BETTERSTACK_INGESTING_HOST: ${BETTERSTACK_INGESTING_HOST:?BETTERSTACK_INGESTING_HOST is required}
+      BETTERSTACK_SOURCE_TOKEN: ${BETTERSTACK_SOURCE_TOKEN:?BETTERSTACK_SOURCE_TOKEN is required}
+    command: ["fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - fluent_bit_storage:/buffers
+    ports:
+      - "127.0.0.1:24224:24224"
+      - "127.0.0.1:2020:2020"
+    networks:
+      - web
+
   redis:
     image: redis:7-alpine
     container_name: tsw-redis
     restart: always
     command: ["redis-server", "--save", "", "--appendonly", "no"]
+    logging: *betterstack-logging
     networks:
       - web
+    depends_on:
+      fluent-bit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -17,12 +49,14 @@ services:
     container_name: tsw-backend
     restart: always
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       PORT: "3000"
       HOST: "0.0.0.0"
       NODE_ENV: "production"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    logging: *betterstack-logging
     expose:
       - "3000"
     networks:
@@ -34,6 +68,8 @@ services:
       retries: 3
       start_period: 30s
     depends_on:
+      fluent-bit:
+        condition: service_started
       redis:
         condition: service_healthy
 
@@ -47,6 +83,7 @@ services:
     environment:
       API_DOMAIN: ${API_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
+    logging: *betterstack-logging
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -54,6 +91,8 @@ services:
     networks:
       - web
     depends_on:
+      fluent-bit:
+        condition: service_started
       backend:
         condition: service_healthy
 
@@ -64,3 +103,4 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
+  fluent_bit_storage:

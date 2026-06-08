@@ -9,10 +9,11 @@ import { MAX_METRICS } from "@/contexts/metrics/lib";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { DEFAULT_COACH_PERSONALITY, getCoachAvatar } from "@/lib/coachPersonality";
 import { defaultMetrics } from "@/lib/metrics";
 import { todaysLocalDate } from "@/lib/utils";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, ScanFace } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
@@ -34,6 +35,7 @@ function OnboardingPage() {
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const { setShowUpgradePopover } = useUpgrade();
   const navigate = useNavigate();
+  const coachAvatar = getCoachAvatar(DEFAULT_COACH_PERSONALITY, "coachSmiling");
 
   const handleContinue = () => {
     if (isUserOnFreePlan) {
@@ -110,7 +112,11 @@ function OnboardingPage() {
           <>
             <div className="flex flex-col items-center space-y-8">
               <div className="text-center space-y-4">
-                <ScanFace className="w-12 h-12 text-blue-500 mx-auto" />
+                <img
+                  src={coachAvatar}
+                  alt=""
+                  className="mx-auto h-16 w-16 object-contain"
+                />
                 <h1 className="text-2xl font-bold">
                   Welcome to your insights!
                 </h1>

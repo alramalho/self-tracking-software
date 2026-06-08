@@ -48,7 +48,7 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
 5. Verify next-day Cost Explorer shows ECS/ELB/WAF lines at 0.
 
 ### Nice-to-haves (after teardown is stable)
-- **Log shipping**: wire backend container to Axiom or Better Stack (you already have creds). Currently logs are `docker compose logs` only.
+- **Log shipping**: compose is wired for Fluent Bit → Better Stack. Deployment requires `BETTERSTACK_INGESTING_HOST` and `BETTERSTACK_SOURCE_TOKEN` in the Hetzner runtime env.
 - **Backups**: Supabase Postgres is managed so no DB backup concern, but VM state (Caddy data, any runtime-generated files) is unsnapshotted. A Hetzner snapshot schedule would be prudent (~€0.5/mo).
 - **Healthcheck false-positive**: compose reports backend `unhealthy` despite serving 200s — `wget` check needs tuning or swap to a curl-based probe.
 - **Separate AWS cleanup pass** for the unrelated dead-side-project stacks (Fidel '22, HippoPrototype '23, Jarvis, AGR, BuildingIdentifier, yThinkingApp, parts of redditleads). Likely ~$5-15/mo cumulative.

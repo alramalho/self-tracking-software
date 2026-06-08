@@ -4,6 +4,7 @@ import { JobType, User, Reminder } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { notificationService } from "./notificationService";
+import { onboardingNotificationService } from "./onboardingNotificationService";
 import { sesService } from "./sesService";
 import { userService } from "./userService";
 import { runCategorizationJob } from "./planCategorizationService";
@@ -54,6 +55,8 @@ interface HourlyJobResult {
   batched_notifications_sent: string[];
   autonomous_coach_checked: number;
   autonomous_coach_sent: number;
+  onboarding_inactive_checked: number;
+  onboarding_inactive_notified: string[];
 }
 
 export class RecurringJobService {
@@ -231,6 +234,9 @@ export class RecurringJobService {
     // Process batched social notifications
     const batchedNotificationResults = await this.processBatchedNotifications();
 
+    const onboardingInactiveResults =
+      await onboardingNotificationService.processInactiveOnboardingUsers();
+
     // Process autonomous coach assessments. This is feature-flagged and dry-run
     // by default so production rollout can be staged without changing cron.
     const coachAssessmentResults =
@@ -260,6 +266,8 @@ export class RecurringJobService {
       batched_notifications_sent: batchedNotificationResults.sent,
       autonomous_coach_checked: coachAssessmentResults.users_checked,
       autonomous_coach_sent: coachAssessmentResults.messages_sent,
+      onboarding_inactive_checked: onboardingInactiveResults.checked,
+      onboarding_inactive_notified: onboardingInactiveResults.notified,
     };
   }
 

@@ -6,7 +6,7 @@ import { prisma } from "../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "./activitySummarizer";
 import { getCoachWeekBounds, getPreviousCoachWeekBounds, toMidnightUTCDate } from "../utils/date";
-import { logger } from "../utils/logger";
+import { logger, serializeErrorForLog } from "../utils/logger";
 import dedent from "dedent";
 import { TelegramService } from "./telegramService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
@@ -316,7 +316,9 @@ export class CoachAgentService {
     void this.telegram
       .sendPlainMessage(truncateForReport(report, TELEGRAM_MESSAGE_LIMIT))
       .catch((telegramError) => {
-        logger.error("Failed to send coach agent Telegram error report:", telegramError);
+        logger.error("Failed to send coach agent Telegram error report", {
+          error: serializeErrorForLog(telegramError),
+        });
       });
   }
 
@@ -2210,7 +2212,14 @@ export class CoachAgentService {
         },
       };
     } catch (error) {
-      logger.error("Coach agent error:", error);
+      logger.error("Coach agent error", {
+        userId: user.id,
+        username: user.username,
+        model: resolvedModel,
+        source: reportContext?.source,
+        chatId: reportContext?.chatId,
+        error: serializeErrorForLog(error),
+      });
       this.sendCoachAgentErrorReport({
         user,
         message,

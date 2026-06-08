@@ -26,7 +26,6 @@ import {
   NotepadText,
   Rocket,
   Route,
-  ScanFace,
   Send,
   Sparkles,
   Target,
@@ -778,7 +777,12 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
             />
             <p className="text-md text-muted-foreground mt-3">
               Or an even more in-depth view on the
-              <br /> <ScanFace className="w-5 h-5 inline-block mb-1" />{" "}
+              <br />
+              <img
+                src={getCoachAvatar(aiCoachPersonality, "coachSmiling")}
+                alt=""
+                className="mb-1 inline-block h-6 w-6 object-contain"
+              />{" "}
               Insights page.
             </p>
           </div>

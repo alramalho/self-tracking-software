@@ -4,6 +4,122 @@ import { createLogger, format, transports } from "winston";
 import { AuthenticatedRequest } from "../middleware/auth";
 
 const { combine, timestamp, errors, json, printf } = format;
+const isProduction = process.env.NODE_ENV === "production";
+
+type LoggableError = {
+  name?: string;
+  message: string;
+  stack?: string;
+  statusCode?: unknown;
+  status?: unknown;
+  code?: unknown;
+  type?: unknown;
+  url?: unknown;
+  requestId?: unknown;
+  generationId?: unknown;
+  gateway?: unknown;
+  cause?: LoggableError;
+};
+
+function truncateLogString(value: string, maxLength = 2500): string {
+  return value.length > maxLength
+    ? `${value.slice(0, maxLength - 15)}... [truncated]`
+    : value;
+}
+
+function parseJsonObject(value: unknown): Record<string, any> | undefined {
+  if (typeof value !== "string") return undefined;
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function getNestedObject(value: unknown, path: string[]): Record<string, any> | undefined {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (!current || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return current && typeof current === "object" && !Array.isArray(current)
+    ? current as Record<string, any>
+    : undefined;
+}
+
+function compactGatewayMetadata(error: any): unknown {
+  const parsedResponseBody = parseJsonObject(error?.responseBody);
+  const gateway =
+    getNestedObject(error, ["providerMetadata", "gateway"]) ||
+    getNestedObject(error, ["data", "providerMetadata", "gateway"]) ||
+    getNestedObject(parsedResponseBody, ["providerMetadata", "gateway"]);
+
+  if (!gateway) return undefined;
+
+  const routing = gateway.routing;
+  return {
+    generationId: gateway.generationId,
+    cost: gateway.cost,
+    marketCost: gateway.marketCost,
+    routing: routing && typeof routing === "object"
+      ? {
+          originalModelId: routing.originalModelId,
+          canonicalSlug: routing.canonicalSlug,
+          resolvedProvider: routing.resolvedProvider,
+          finalProvider: routing.finalProvider,
+          fallbacksAvailable: routing.fallbacksAvailable,
+          modelAttemptCount: routing.modelAttemptCount,
+          totalProviderAttemptCount: routing.totalProviderAttemptCount,
+          providerAttemptCount: routing.providerAttemptCount,
+        }
+      : undefined,
+  };
+}
+
+export function serializeErrorForLog(error: unknown): LoggableError {
+  if (!error || typeof error !== "object") {
+    return { message: String(error) };
+  }
+
+  const err = error as any;
+  const parsedResponseBody = parseJsonObject(err.responseBody);
+  const parsedError = getNestedObject(parsedResponseBody, ["error"]);
+  const gateway = compactGatewayMetadata(err);
+  const generationId =
+    gateway && typeof gateway === "object"
+      ? (gateway as Record<string, unknown>).generationId
+      : undefined;
+  const cause =
+    err.cause && err.cause !== error
+      ? serializeErrorForLog(err.cause)
+      : undefined;
+
+  return {
+    name: typeof err.name === "string" ? err.name : undefined,
+    message:
+      typeof err.message === "string"
+        ? err.message
+        : typeof parsedError?.message === "string"
+          ? parsedError.message
+          : String(error),
+    stack: typeof err.stack === "string" ? truncateLogString(err.stack) : undefined,
+    statusCode: err.statusCode ?? err.status ?? parsedError?.statusCode,
+    status: err.status,
+    code: err.code ?? parsedError?.code,
+    type: err.type ?? parsedError?.type,
+    url: err.url,
+    requestId: err.requestId,
+    generationId,
+    gateway,
+    cause,
+  };
+}
 
 const consoleFormat = printf(
   ({ level, message, timestamp, stack, ...meta }) => {
@@ -64,7 +180,7 @@ export const logger = createLogger({
 // if (process.env.NODE_ENV !== "production") {
 logger.add(
   new transports.Console({
-    format: consoleFormat,
+    format: isProduction ? combine(timestamp(), json()) : consoleFormat,
   })
 );
 // }
@@ -118,18 +234,27 @@ export const morganMiddleware = morgan((tokens, req, res) => {
   const status = parseInt(tokens.status?.(req, res) ?? "0");
   const method = tokens.method?.(req, res) ?? "UNKNOWN";
   const url = tokens.url?.(req, res) ?? "";
-  const responseTime = tokens["response-time"]?.(req, res);
+  const responseTime = Number(tokens["response-time"]?.(req, res) ?? 0);
   const userId = tokens.userId?.(req, res);
   const ip = tokens.ip?.(req, res);
 
   const message = `(IP: ${ip}) ${method} ${url} ${status} ${responseTime} ms - ${userId}`;
+  const metadata = {
+    event: "http_request",
+    ip,
+    method,
+    url,
+    status,
+    responseTimeMs: responseTime,
+    userId,
+  };
 
   if (status >= 500) {
-    logger.error(colorHttp(message));
+    logger.error(isProduction ? "handled request" : colorHttp(message), metadata);
   } else if (status >= 400 && status < 500) {
-    logger.warn(colorHttp(message));
+    logger.warn(isProduction ? "handled request" : colorHttp(message), metadata);
   } else {
-    logger.info(colorHttp(message));
+    logger.info(isProduction ? "handled request" : colorHttp(message), metadata);
   }
   return null;
 });

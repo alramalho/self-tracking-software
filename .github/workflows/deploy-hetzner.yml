@@ -114,7 +114,7 @@ jobs:
       - name: sync compose + caddy
         run: |
           ssh root@${{ secrets.HETZNER_HOST }} "mkdir -p ${{ env.REMOTE_DIR }}"
-          rsync -az hetzner/docker-compose.yml hetzner/Caddyfile \
+          rsync -az hetzner/docker-compose.yml hetzner/Caddyfile hetzner/fluent-bit.conf \
             root@${{ secrets.HETZNER_HOST }}:${{ env.REMOTE_DIR }}/
 
       - name: write env file

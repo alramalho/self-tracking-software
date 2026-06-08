@@ -6,6 +6,7 @@ import Stripe from "stripe";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { linearService } from "../services/linearService";
 import { notificationService } from "../services/notificationService";
+import { onboardingNotificationService } from "../services/onboardingNotificationService";
 import { plansService } from "../services/plansService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
@@ -253,6 +254,9 @@ usersRouter.patch(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const shouldNotifyOnboardingCompleted =
+        !req.user!.onboardingCompletedAt && req.body?.onboardingCompletedAt;
+
       const updatedUser = await prisma.user.update({
         where: { id: req.user!.id },
         data: req.body,
@@ -273,6 +277,10 @@ usersRouter.patch(
         ...userData,
         coachProfile: coaches?.[0] || null,
       };
+
+      if (shouldNotifyOnboardingCompleted) {
+        void onboardingNotificationService.sendOnboardingCompleted(updatedUser);
+      }
 
       res.json(userWithCoachProfile);
     } catch (error) {

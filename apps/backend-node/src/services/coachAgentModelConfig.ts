@@ -15,14 +15,33 @@ export type CoachAgentModelConfig = {
 export const KIMI_K26_MODEL = "moonshotai/kimi-k2.6";
 export const DEFAULT_COACH_AGENT_MODEL = KIMI_K26_MODEL;
 export const DEFAULT_COACH_AGENT_VISION_MODEL = "openai/gpt-4.1";
+const KIMI_K26_PROVIDER_ORDER = [
+  "baseten",
+  "togetherai"
+];
+const DEFAULT_COACH_AGENT_FALLBACK_MODELS = [
+  "openai/gpt-5.4-mini",
+  "anthropic/claude-sonnet-4.6",
+];
+
+function getCoachAgentFallbackModels(): string[] {
+  const configuredModels = process.env.COACH_AGENT_FALLBACK_MODELS
+    ?.split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+  return configuredModels && configuredModels.length > 0
+    ? configuredModels
+    : DEFAULT_COACH_AGENT_FALLBACK_MODELS;
+}
 
 function getGatewayRoutingForModel(
   model: string
 ): CoachAgentGatewayRouting | undefined {
   if (model === KIMI_K26_MODEL) {
     return {
-      only: ["baseten"],
-      order: ["baseten"],
+      order: KIMI_K26_PROVIDER_ORDER,
+      models: getCoachAgentFallbackModels(),
     };
   }
 

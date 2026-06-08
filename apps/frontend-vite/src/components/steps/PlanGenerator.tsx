@@ -14,6 +14,7 @@ import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { getCoachAvatar } from "@/lib/coachPersonality";
 import type { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCheck, MoveRight, Route } from "lucide-react";
@@ -57,6 +58,7 @@ const PlanGenerator = () => {
     wantsCoaching,
     selectedCoachId,
     selectedCoach,
+    coachPersonality,
     completeStep,
     updateOnboardingState,
     setSelectedPlan,
@@ -72,43 +74,53 @@ const PlanGenerator = () => {
     []
   );
   const [hasAttemptedGeneration, setHasAttemptedGeneration] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [showPaywallPopover, setShowPaywallPopover] = useState(false);
   const [showSelfGuidedConfirmPopover, setShowSelfGuidedConfirmPopover] = useState(false);
   const api = useApiWithAuth();
+  const coachAvatar = getCoachAvatar(coachPersonality, "coachSpeaking");
 
   const handlePlanSelect = async (plan: CompletePlan) => {
-    setSelectedPlan(plan);
-    // Create a Set of activity IDs to avoid duplicates
-    const activities = plan.activities || [];
-    const activityIds = new Set(activities.map((activity) => activity.id));
+    try {
+      setIsSavingPlan(true);
+      setSelectedPlan(plan);
+      // Create a Set of activity IDs to avoid duplicates
+      const activities = plan.activities || [];
+      const activityIds = new Set(activities.map((activity) => activity.id));
 
-    // Create activities one by one using the unique IDs
-    await Promise.all(
-      Array.from(activityIds).map((id) => {
-        const activity = activities.find((a) => a.id === id);
-        if (!activity) return;
-        return upsertActivity({
-          activity: activity,
-          muteNotification: true,
-        });
-      })
-    );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { progressState, pauseHistory, progress, ...planWithoutProgress } = plan as any;
-    upsertPlan({
-      planId: plan.id,
-      updates: {
-        ...planWithoutProgress,
-        planGroup: undefined,
-        activities: activities,
-        sessions: plan.sessions,
-        milestones: plan.milestones,
-      },
-    });
-    completeStep("plan-generator", {
-      selectedPlan: plan,
-      plans: generatedPlans,
-    });
+      // Create activities one by one using the unique IDs
+      await Promise.all(
+        Array.from(activityIds).map((id) => {
+          const activity = activities.find((a) => a.id === id);
+          if (!activity) return;
+          return upsertActivity({
+            activity: activity,
+            muteNotification: true,
+          });
+        })
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { progressState, pauseHistory, progress, ...planWithoutProgress } = plan as any;
+      await upsertPlan({
+        planId: plan.id,
+        updates: {
+          ...planWithoutProgress,
+          planGroup: undefined,
+          activities: activities,
+          sessions: plan.sessions,
+          milestones: plan.milestones,
+        },
+      });
+      completeStep("plan-generator", {
+        selectedPlan: plan,
+        plans: generatedPlans,
+      });
+    } catch (error) {
+      console.error("Failed to save onboarding plan:", error);
+      toast.error("Failed to save your plan. Please try again.");
+    } finally {
+      setIsSavingPlan(false);
+    }
   };
 
   const handleStartPlanClick = () => {
@@ -228,28 +240,23 @@ const PlanGenerator = () => {
                 transition={{ duration: 0.3 }}
                 className="flex flex-col items-center"
               >
-                <motion.div
-                  className="relative w-20 h-20"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                <div
+                  className="relative flex h-24 w-24 items-center justify-center"
                 >
                   <motion.div
-                    className="absolute inset-0 rounded-full bg-blue-100 dark:bg-blue-900/50"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="absolute inset-1 rounded-full border-2 border-blue-200 border-t-blue-600 dark:border-blue-900/60 dark:border-t-blue-300"
+                    animate={{ rotate: 360, scale: [1, 1.06, 1] }}
+                    transition={{
+                      rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 1.5, repeat: Infinity },
+                    }}
                   />
-                  <motion.div
-                    className="absolute inset-2 rounded-full bg-blue-200 dark:bg-blue-800/60"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1.2, repeat: Infinity }}
+                  <img
+                    src={coachAvatar}
+                    alt=""
+                    className="h-20 w-20 rounded-full object-contain"
                   />
-                  <motion.div
-                    className="absolute inset-4 rounded-full bg-blue-400 dark:bg-blue-600"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                  />
-                  <div className="absolute inset-6 rounded-full bg-blue-600 dark:bg-blue-400"></div>
-                </motion.div>
+                </div>
 
                 <motion.h2
                   className="text-2xl mt-2 font-bold tracking-tight text-foreground"
@@ -345,6 +352,8 @@ const PlanGenerator = () => {
                       onClick={handleStartPlanClick}
                       className="w-full"
                       size="lg"
+                      loading={isSavingPlan}
+                      disabled={isSavingPlan}
                     >
                       Start my plan
                     </Button>

@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { classifyActivityKind } from "../services/activityCategorizationService";
 import { aiService } from "../services/aiService";
+import { onboardingNotificationService } from "../services/onboardingNotificationService";
 import { perplexityAiService } from "../services/perplexityAiService";
 import { s3Service } from "../services/s3Service";
 import type { PipelineTraceStep } from "../services/planGenerationPipeline";
@@ -15,11 +16,16 @@ import dedent from "dedent";
 
 const router = Router();
 
+function markOnboardingActivity(req: AuthenticatedRequest) {
+  void onboardingNotificationService.markOnboardingActivity(req.user!.id);
+}
+
 router.post(
   "/suggest-goal-reasons",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
     try {
+      markOnboardingActivity(req);
       const { goal } = req.body;
       if (!goal) return res.status(400).json({ error: "goal is required" });
       const result = await aiService.suggestGoalReasons(goal);
@@ -40,6 +46,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      markOnboardingActivity(req);
       const { message, question_checks } = req.body;
 
       if (!message || !question_checks) {
@@ -93,6 +100,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      markOnboardingActivity(req);
       const { message, plan_goal } = req.body;
 
       if (message == null || plan_goal == undefined) {
@@ -164,6 +172,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      markOnboardingActivity(req);
       const { plan_goal, plan_goal_reason, plan_activities, plan_progress, wants_coaching, times_per_week, coach_id } = req.body;
 
       // For coached mode, activities are optional (the pipeline will generate them)
@@ -232,6 +241,23 @@ router.post(
       doTraceUpload().catch(err => logger.warn("Failed to upload plan generation trace", err));
     } catch (error) {
       logger.error("Error generating plans:", error);
+      void onboardingNotificationService.sendPlanCreationFailed({
+        user: req.user!,
+        route: "POST /onboarding/generate-plans",
+        statusCode: 500,
+        requestBody: {
+          plan_goal: req.body?.plan_goal,
+          plan_goal_reason: req.body?.plan_goal_reason,
+          plan_progress: req.body?.plan_progress,
+          wants_coaching: req.body?.wants_coaching,
+          times_per_week: req.body?.times_per_week,
+          coach_id: req.body?.coach_id,
+          plan_activities_count: Array.isArray(req.body?.plan_activities)
+            ? req.body.plan_activities.length
+            : null,
+        },
+        error,
+      });
       res.status(500).json({ error: "Failed to generate plans" });
     }
   }
@@ -563,6 +589,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      markOnboardingActivity(req);
       const { plan_goal, plan_progress, times_per_week } = req.body;
 
       if (!plan_goal || !plan_progress || times_per_week == null) {

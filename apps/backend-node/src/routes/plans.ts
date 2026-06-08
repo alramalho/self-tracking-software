@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
+import { onboardingNotificationService } from "../services/onboardingNotificationService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
@@ -1397,6 +1398,26 @@ router.post(
       const validationResult = PlanUpsertSchema.safeParse(req.body);
 
       if (!validationResult.success) {
+        void onboardingNotificationService.sendPlanCreationFailed({
+          user: req.user!,
+          route: "POST /plans/upsert",
+          statusCode: 400,
+          requestBody: {
+            id: req.body?.id,
+            goal: req.body?.goal,
+            goalReason: req.body?.goalReason,
+            outlineType: req.body?.outlineType,
+            timesPerWeek: req.body?.timesPerWeek,
+            coachId: req.body?.coachId,
+            activitiesCount: Array.isArray(req.body?.activities)
+              ? req.body.activities.length
+              : null,
+            sessionsCount: Array.isArray(req.body?.sessions)
+              ? req.body.sessions.length
+              : null,
+          },
+          error: validationResult.error,
+        });
         res.status(400).json({
           success: false,
           error: "Invalid request data",
@@ -1490,6 +1511,18 @@ router.post(
       } else {
         // Create new plan using existing create-plan logic
         if (!planData.goal) {
+          void onboardingNotificationService.sendPlanCreationFailed({
+            user: req.user!,
+            route: "POST /plans/upsert",
+            statusCode: 400,
+            requestBody: {
+              id: planData.id,
+              outlineType: planData.outlineType,
+              timesPerWeek: planData.timesPerWeek,
+              coachId: planData.coachId,
+            },
+            error: new Error("Goal is required"),
+          });
           res.status(400).json({
             success: false,
             error: "Goal is required",
@@ -1572,6 +1605,26 @@ router.post(
       }
     } catch (error) {
       logger.error("Error upserting plan:", error);
+      void onboardingNotificationService.sendPlanCreationFailed({
+        user: req.user!,
+        route: "POST /plans/upsert",
+        statusCode: 500,
+        requestBody: {
+          id: req.body?.id,
+          goal: req.body?.goal,
+          goalReason: req.body?.goalReason,
+          outlineType: req.body?.outlineType,
+          timesPerWeek: req.body?.timesPerWeek,
+          coachId: req.body?.coachId,
+          activitiesCount: Array.isArray(req.body?.activities)
+            ? req.body.activities.length
+            : null,
+          sessionsCount: Array.isArray(req.body?.sessions)
+            ? req.body.sessions.length
+            : null,
+        },
+        error,
+      });
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to save plan",
