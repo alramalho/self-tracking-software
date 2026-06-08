@@ -14,8 +14,14 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import { PlanNotesBlock } from "./PlanNotesBlock";
+import {
+  CalendarGrid,
+  type CalendarActivity,
+  type CalendarSession,
+} from "./CalendarGrid";
 
 export interface ResolvedOperation {
+  id?: string;
   date?: string;
   type: string;
   quantity?: number;
@@ -42,6 +48,16 @@ interface PlanProposalCardProps {
   planEmoji: string | null;
   description?: string;
   operations: ResolvedOperation[];
+  plan?: {
+    sessions?: Array<{
+      id?: string;
+      date: Date | string;
+      activityId: string;
+      quantity?: number;
+      descriptiveGuide?: string;
+    }>;
+    activities?: CalendarActivity[];
+  } | null;
   status?: "accepted" | "rejected" | null;
   onAccept: (messageId: string, proposalIndex: number) => Promise<void>;
   onReject: (messageId: string, proposalIndex: number) => Promise<void>;
@@ -284,6 +300,97 @@ function OperationInlineSummary({ op }: { op: ResolvedOperation }) {
   );
 }
 
+const isSessionOperation = (op: ResolvedOperation) =>
+  op.type === "add" ||
+  op.type === "add_session" ||
+  op.type === "remove" ||
+  op.type === "delete_session" ||
+  op.type === "update_session";
+
+const getOperationChangeType = (
+  op: ResolvedOperation
+): CalendarSession["changeType"] => {
+  if (op.type === "add" || op.type === "add_session") return "added";
+  if (op.type === "remove" || op.type === "delete_session") return "removed";
+  return "changed";
+};
+
+const makeActivityKey = (op: ResolvedOperation) =>
+  `${op.activityEmoji || "📋"}:${op.activityName || "Session"}:${op.activityMeasure || ""}`;
+
+function buildPlanProposalCalendar(params: {
+  operations: ResolvedOperation[];
+  plan?: PlanProposalCardProps["plan"];
+}) {
+  const sessionOperations = params.operations.filter(
+    (op) => isSessionOperation(op) && op.date
+  );
+
+  if (sessionOperations.length === 0) {
+    return null;
+  }
+
+  const activityByKey = new Map<string, CalendarActivity>();
+  const sessions: CalendarSession[] = sessionOperations.map((op, index) => {
+    const key = makeActivityKey(op);
+    let activity = activityByKey.get(key);
+
+    if (!activity) {
+      activity =
+        params.plan?.activities?.find(
+          (item) =>
+            item.title === op.activityName &&
+            (op.activityMeasure ? item.measure === op.activityMeasure : true)
+        ) || {
+          id: `proposal-activity-${activityByKey.size}`,
+          title: op.activityName || "Session",
+          emoji: op.activityEmoji || "📋",
+          measure: op.activityMeasure || "",
+        };
+      activityByKey.set(key, activity);
+    }
+
+    return {
+      id: `proposal-session-${op.type}-${index}`,
+      date: op.date!,
+      activityId: activity.id,
+      quantity: op.quantity,
+      descriptiveGuide: op.descriptiveGuide,
+      changeType: getOperationChangeType(op),
+    };
+  });
+
+  const sortedDates = sessions
+    .map((session) => new Date(session.date))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  return {
+    sessions,
+    activities: Array.from(activityByKey.values()),
+    visibleStartDate: sortedDates[0] || undefined,
+  };
+}
+
+function ProposalChangeLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-muted-foreground">
+      <span className="inline-flex items-center gap-1">
+        <span className="h-2.5 w-2.5 rounded-full bg-green-400/80" />
+        Added
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/80" />
+        Changed
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
+        Removed
+      </span>
+    </div>
+  );
+}
+
 export function PlanProposalCard({
   messageId,
   proposalIndex,
@@ -291,6 +398,7 @@ export function PlanProposalCard({
   planEmoji,
   description,
   operations,
+  plan,
   status,
   onAccept,
   onReject,
@@ -338,6 +446,8 @@ export function PlanProposalCard({
   );
   const isResolved = isAccepted || isRejected;
   const visibleOperationSummaries = operations.slice(0, 3);
+  const proposalCalendar = buildPlanProposalCalendar({ operations, plan });
+  const nonSessionOperations = operations.filter((op) => !isSessionOperation(op));
 
   const reviewDrawer = (
     <AppleLikePopover
@@ -363,10 +473,27 @@ export function PlanProposalCard({
               {description}
             </div>
           )}
-          {operations.length > 0 ? (
-            operations.map((op, index) => (
+          {proposalCalendar ? (
+            <div className="space-y-3 rounded-xl border border-border bg-card p-3">
+              <CalendarGrid
+                sessions={proposalCalendar.sessions}
+                activities={proposalCalendar.activities}
+                showLegend={false}
+                showWeekLabels
+                selectedSessionDisplay="card"
+                visibleStartDate={proposalCalendar.visibleStartDate}
+                weekCount={1}
+                rangeMode="calendar-weeks"
+              />
+              <ProposalChangeLegend />
+            </div>
+          ) : null}
+          {nonSessionOperations.length > 0 ? (
+            nonSessionOperations.map((op, index) => (
               <OperationReviewRow key={`${op.type}-${index}`} op={op} />
             ))
+          ) : operations.length > 0 || proposalCalendar ? (
+            null
           ) : (
             <div className="rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground">
               No concrete changes are included in this proposal.

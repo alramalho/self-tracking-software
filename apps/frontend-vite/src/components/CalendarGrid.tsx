@@ -1,4 +1,5 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { MessageMarkdown } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { format, startOfWeek, addDays, isSameDay, isBefore, startOfDay } from "date-fns";
@@ -20,6 +21,7 @@ export interface CalendarSession {
   imageUrls?: string[];
   imagesLoading?: boolean;
   expiresToday?: boolean;
+  changeType?: "added" | "removed" | "changed";
 }
 
 export interface CalendarActivity {
@@ -173,6 +175,26 @@ export const CalendarGrid = ({
     if (!session.planTitle) return null;
 
     return `${session.planEmoji ? `${session.planEmoji} ` : ""}${session.planTitle}`;
+  };
+
+  const getSessionChangeStyles = (changeType?: CalendarSession["changeType"]) => {
+    if (changeType === "added") {
+      return "border border-green-400/50 bg-green-100 text-green-900 dark:bg-green-900/35 dark:text-green-100";
+    }
+    if (changeType === "removed") {
+      return "border border-red-400/50 bg-red-100 text-red-900 opacity-80 dark:bg-red-900/35 dark:text-red-100";
+    }
+    if (changeType === "changed") {
+      return "border border-yellow-400/60 bg-yellow-100 text-yellow-950 dark:bg-yellow-900/35 dark:text-yellow-100";
+    }
+    return null;
+  };
+
+  const getSessionChangeLabel = (changeType?: CalendarSession["changeType"]) => {
+    if (changeType === "added") return "Added";
+    if (changeType === "removed") return "Removed";
+    if (changeType === "changed") return "Changed";
+    return null;
   };
 
   const PlanReference = ({ session }: { session: CalendarSession }) => {
@@ -369,12 +391,15 @@ export const CalendarGrid = ({
                 className={cn(
                   "relative leading-none rounded-md transition-all",
                   compact ? "p-0 text-xs" : "p-0.5 text-lg",
+                  getSessionChangeStyles(session.changeType),
                   isSelected && variants.fadedBg,
-                  !isSelected && !isCompleted && "hover:bg-muted",
+                  !isSelected && !isCompleted && !session.changeType && "hover:bg-muted",
                   isCompleted && "bg-green-100 dark:bg-green-900/30"
                 )}
               >
-                {activity.emoji || "📋"}
+                <span className={cn(session.changeType === "removed" && "line-through")}>
+                  {activity.emoji || "📋"}
+                </span>
                 {isExpiringToday && <ExpiringDot compact={compact} />}
                 {isCompleted && (
                   <span className="absolute -top-1.5 -right-1.5">
@@ -633,6 +658,21 @@ export const CalendarGrid = ({
                     <div className="min-w-0 truncate text-sm font-medium text-foreground">
                       {selectedSession.activity.title}
                     </div>
+                    {getSessionChangeLabel(selectedSession.session.changeType) && (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          selectedSession.session.changeType === "added" &&
+                            "bg-green-500/15 text-green-500",
+                          selectedSession.session.changeType === "removed" &&
+                            "bg-red-500/15 text-red-500",
+                          selectedSession.session.changeType === "changed" &&
+                            "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
+                        )}
+                      >
+                        {getSessionChangeLabel(selectedSession.session.changeType)}
+                      </span>
+                    )}
                     {selectedSession.session.expiresToday &&
                       !isCompletedOnDay?.(
                         selectedSession.session.activityId,
@@ -645,9 +685,9 @@ export const CalendarGrid = ({
                 </div>
               </div>
               {selectedSession.session.descriptiveGuide && (
-                <p className="mt-2 text-left text-xs leading-relaxed text-foreground">
-                  {selectedSession.session.descriptiveGuide}
-                </p>
+                <div className="mt-2 text-left text-xs leading-relaxed text-foreground">
+                  <MessageMarkdown>{selectedSession.session.descriptiveGuide}</MessageMarkdown>
+                </div>
               )}
             </div>
             {selectedSession.session.planTitle && (
@@ -684,6 +724,21 @@ export const CalendarGrid = ({
                     <h4 className="text-left font-semibold text-foreground">
                       {selectedSession.activity.title}
                     </h4>
+                    {getSessionChangeLabel(selectedSession.session.changeType) && (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          selectedSession.session.changeType === "added" &&
+                            "bg-green-500/15 text-green-500",
+                          selectedSession.session.changeType === "removed" &&
+                            "bg-red-500/15 text-red-500",
+                          selectedSession.session.changeType === "changed" &&
+                            "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
+                        )}
+                      >
+                        {getSessionChangeLabel(selectedSession.session.changeType)}
+                      </span>
+                    )}
                     {selectedSession.session.expiresToday &&
                       !isCompletedOnDay?.(
                         selectedSession.session.activityId,
@@ -726,9 +781,9 @@ export const CalendarGrid = ({
             </div>
 
             {selectedSession.session.descriptiveGuide && (
-              <p className="mt-3 text-sm text-foreground text-left">
-                {selectedSession.session.descriptiveGuide}
-              </p>
+              <div className="mt-3 text-left text-sm leading-relaxed text-foreground">
+                <MessageMarkdown>{selectedSession.session.descriptiveGuide}</MessageMarkdown>
+              </div>
             )}
 
             {selectedSession.session.imagesLoading &&

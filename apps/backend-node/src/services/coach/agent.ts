@@ -40,11 +40,43 @@ import type {
   ImageAttachment,
 } from "./types";
 
+type CoachRepairFailure = {
+  reason:
+    | "missing_draft_tool"
+    | "missing_content"
+    | "invalid_draft_tool"
+    | "repeated_draft_tool"
+    | "repeated_text"
+    | "internal_state_leak";
+  source: "draftMessages" | "rawText" | "toolLoop";
+  usedDraftTool: boolean;
+  toolsUsed: string[];
+  rejectedText?: string;
+  errorMessage: string;
+};
+
 const TELEGRAM_MESSAGE_LIMIT = 3900;
 
 function truncateForReport(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 15)}... [truncated]`;
+}
+
+function buildCoachRepairMessage(failure: CoachRepairFailure) {
+  return [
+    "Your previous attempt was rejected before being shown to the user.",
+    `Failure: ${failure.reason}.`,
+    `Output source: ${failure.source}.`,
+    failure.rejectedText
+      ? `Rejected text:\n${truncateForReport(failure.rejectedText, 900)}`
+      : null,
+    "Do not repeat the rejected text.",
+    "Answer the user's latest message directly and move the conversation forward.",
+    "If the latest user message confirms a prior proposed action, perform the relevant proposal/tool action instead of asking the same confirmation again.",
+    "Use draftMessages for the final visible response.",
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 }
 
 function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"] {
@@ -1813,100 +1845,166 @@ export class CoachAgentService {
             },
       ];
 
-      const result = await agent.generate({
-        messages: modelMessages,
-        onStepFinish: async ({ usage, toolCalls }) => {
-          logger.info("Agent step completed", {
-            inputTokens: usage?.inputTokens,
-            outputTokens: usage?.outputTokens,
-            toolsUsed: toolCalls?.map((tc) => tc.toolName),
+      let result: any = null;
+      let allToolCalls: ReturnType<typeof collectToolCallsFromSteps> = [];
+      let successfulDraftCall: ReturnType<typeof getSuccessfulDraftCall> | undefined;
+      let rawDrafts: Array<{ content: string }> = [];
+      let repairFailure: CoachRepairFailure | null = null;
+      const recentAssistantMessagesForRepeatCheck = conversationHistory
+        .filter((msg) => msg.role === "assistant")
+        .slice(-8)
+        .map((msg) => msg.content);
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const attemptMessages: ModelMessage[] = repairFailure
+          ? [
+              ...modelMessages,
+              {
+                role: "system",
+                content: buildCoachRepairMessage(repairFailure),
+              },
+            ]
+          : modelMessages;
+
+        result = await agent.generate({
+          messages: attemptMessages,
+          onStepFinish: async ({ usage, toolCalls }) => {
+            logger.info("Agent step completed", {
+              inputTokens: usage?.inputTokens,
+              outputTokens: usage?.outputTokens,
+              toolsUsed: toolCalls?.map((tc) => tc.toolName),
+            });
+          },
+        });
+
+        await onStatus?.("drafting");
+
+        allToolCalls = collectToolCallsFromSteps(result.steps);
+        const draftToolCalls = getDraftToolCalls(allToolCalls);
+        successfulDraftCall = getSuccessfulDraftCall(allToolCalls);
+        const toolsUsed = allToolCalls.map((toolCall) => toolCall.tool);
+        let failure: CoachRepairFailure | null = null;
+
+        if (!successfulDraftCall) {
+          const repeatLimitCall = getRepeatLimitDraftCall(allToolCalls);
+
+          if (repeatLimitCall) {
+            const repeatedDraft =
+              (repeatLimitCall.result as any)?.repeatedDraftPreview ||
+              "unknown";
+            failure = {
+              reason: "repeated_draft_tool",
+              source: "draftMessages",
+              usedDraftTool: true,
+              toolsUsed,
+              rejectedText: repeatedDraft,
+              errorMessage: `Coach repeated a recent assistant draft ${REPEATED_DRAFT_FAILURE_LIMIT} times. Last repeated draft: ${repeatedDraft}`,
+            };
+          } else if (draftToolCalls.length > 0) {
+            failure = {
+              reason: "invalid_draft_tool",
+              source: "draftMessages",
+              usedDraftTool: true,
+              toolsUsed,
+              errorMessage: "Coach could not produce a valid draftMessages response",
+            };
+          } else if (!result.text?.trim()) {
+            failure = {
+              reason: "missing_content",
+              source: "toolLoop",
+              usedDraftTool: false,
+              toolsUsed,
+              errorMessage: "Coach did not produce draftMessages or raw text",
+            };
+          } else {
+            logger.warn("Coach did not call draftMessages; using raw text fallback", {
+              userId: user.id,
+              model: resolvedModel,
+              toolsUsed,
+              rawTextPreview: result.text?.slice(0, 500),
+            });
+          }
+        }
+
+        const attemptRawDrafts: Array<{ content: string }> = failure
+          ? []
+          : successfulDraftCall
+            ? (successfulDraftCall.args as any).messages
+            : [{ content: result.text }];
+
+        if (!failure) {
+          const repeatedRawDraft = getRepeatedRecentAssistantDraft({
+            drafts: attemptRawDrafts,
+            recentAssistantMessages: recentAssistantMessagesForRepeatCheck,
           });
-        },
-      });
 
-      await onStatus?.("drafting");
+          if (repeatedRawDraft) {
+            failure = {
+              reason: "repeated_text",
+              source: successfulDraftCall ? "draftMessages" : "rawText",
+              usedDraftTool: Boolean(successfulDraftCall),
+              toolsUsed,
+              rejectedText: repeatedRawDraft,
+              errorMessage: `Coach returned repeated assistant text. Used draftMessages: ${Boolean(successfulDraftCall)}. Repeated draft: ${repeatedRawDraft.slice(0, 500)}`,
+            };
+          }
+        }
 
-      const allToolCalls = collectToolCallsFromSteps(result.steps);
-      const draftToolCalls = getDraftToolCalls(allToolCalls);
-      const successfulDraftCall = getSuccessfulDraftCall(allToolCalls);
+        if (!failure) {
+          const leakedDraft = attemptRawDrafts.find((draft) =>
+            containsInternalStateLeak(draft.content)
+          );
+          if (leakedDraft) {
+            failure = {
+              reason: "internal_state_leak",
+              source: successfulDraftCall ? "draftMessages" : "rawText",
+              usedDraftTool: Boolean(successfulDraftCall),
+              toolsUsed,
+              rejectedText: leakedDraft.content,
+              errorMessage: "Coach draft leaked internal proposal state",
+            };
+          }
+        }
 
-      if (!successfulDraftCall) {
-        const repeatLimitCall = getRepeatLimitDraftCall(allToolCalls);
+        if (!failure) {
+          rawDrafts = attemptRawDrafts;
+          repairFailure = null;
+          break;
+        }
 
-        if (repeatLimitCall) {
-          const repeatedDraft =
-            (repeatLimitCall.result as any)?.repeatedDraftPreview ||
-            "unknown";
-          logger.error("Coach repeated recent assistant draft 3 times", {
+        if (attempt === 0) {
+          logger.warn("Coach attempt rejected; retrying with repair context", {
             userId: user.id,
             model: resolvedModel,
-            repeatedDraft,
+            reason: failure.reason,
+            source: failure.source,
+            usedDraftTool: failure.usedDraftTool,
+            rejectedText: failure.rejectedText?.slice(0, 500),
           });
-          throw new Error(
-            `Coach repeated a recent assistant draft ${REPEATED_DRAFT_FAILURE_LIMIT} times. Last repeated draft: ${repeatedDraft}`
+          repairFailure = failure;
+          continue;
+        }
+
+        logger.error("Coach attempt rejected after repair", {
+          userId: user.id,
+          model: resolvedModel,
+          reason: failure.reason,
+          source: failure.source,
+          usedDraftTool: failure.usedDraftTool,
+          rejectedText: failure.rejectedText?.slice(0, 500),
+        });
+
+        if (failure.reason === "internal_state_leak") {
+          this.telegram.sendMessage(
+            `🔴 Coach draft leaked internal proposal state\nUser: ${user.username}\nModel: ${resolvedModel}`
           );
         }
 
-        if (draftToolCalls.length > 0) {
-          logger.error("Coach could not produce a valid draftMessages response", {
-            userId: user.id,
-            model: resolvedModel,
-          });
-          throw new Error("Coach could not produce a valid draftMessages response");
-        }
-
-        if (!result.text?.trim()) {
-          logger.error("Coach did not produce draftMessages or raw text", {
-            userId: user.id,
-            model: resolvedModel,
-            toolsUsed: allToolCalls.map((toolCall) => toolCall.tool),
-          });
-          throw new Error("Coach did not produce draftMessages or raw text");
-        }
-
-        logger.warn("Coach did not call draftMessages; using raw text fallback", {
-          userId: user.id,
-          model: resolvedModel,
-          toolsUsed: allToolCalls.map((toolCall) => toolCall.tool),
-          rawTextPreview: result.text?.slice(0, 500),
-        });
+        throw new Error(failure.errorMessage);
       }
 
-      const rawDrafts: Array<{ content: string }> =
-        successfulDraftCall
-          ? (successfulDraftCall.args as any).messages
-          : [{ content: result.text }];
-      const repeatedRawDraft = getRepeatedRecentAssistantDraft({
-        drafts: rawDrafts,
-        recentAssistantMessages: conversationHistory
-          .filter((msg) => msg.role === "assistant")
-          .slice(-8)
-          .map((msg) => msg.content),
-      });
-      if (repeatedRawDraft) {
-        logger.error("Coach returned repeated assistant text", {
-          userId: user.id,
-          model: resolvedModel,
-          usedDraftTool: Boolean(successfulDraftCall),
-          repeatedDraft: repeatedRawDraft.slice(0, 500),
-        });
-        throw new Error(
-          `Coach returned repeated assistant text. Used draftMessages: ${Boolean(successfulDraftCall)}. Repeated draft: ${repeatedRawDraft.slice(0, 500)}`
-        );
-      }
-      const leakedDraft = rawDrafts.find((draft) =>
-        containsInternalStateLeak(draft.content)
-      );
-      if (leakedDraft) {
-        logger.error("Coach draft leaked internal proposal state", {
-          userId: user.id,
-          model: resolvedModel,
-          content: leakedDraft.content.slice(0, 500),
-        });
-        this.telegram.sendMessage(
-          `🔴 Coach draft leaked internal proposal state\nUser: ${user.username}\nModel: ${resolvedModel}`
-        );
-        throw new Error("Coach draft leaked internal proposal state");
+      if (!result || rawDrafts.length === 0) {
+        throw new Error("Coach did not produce a valid response after repair");
       }
 
       const visibleToolCalls = getVisibleToolCalls(allToolCalls);

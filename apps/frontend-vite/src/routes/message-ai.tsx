@@ -1890,6 +1890,7 @@ function MessageAIPage() {
                                   planEmoji={proposal.planEmoji}
                                   description={proposal.description}
                                   operations={resolvedOperations}
+                                  plan={plan}
                                   status={proposal.status}
                                   onAccept={handleAcceptProposal}
                                   onReject={handleRejectProposal}

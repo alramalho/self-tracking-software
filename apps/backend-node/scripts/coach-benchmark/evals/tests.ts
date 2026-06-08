@@ -640,6 +640,92 @@ export const claimedActivityMissingLogProposalTest: CoachEvalTest = {
     ),
 };
 
+const repeatedSoftwareLabConfirmation =
+  "I can log your completed sessions and update the plan. Just to be clear: you finished Software Lab 1 Part 1 and Part 2 today (Monday), so that's two 60-minute sessions done. Should I log both as completed today, and then adjust the rest of the week so Lab 1 is done and we move to practice/review tomorrow?";
+
+export const repeatedConfirmationRepairTest: CoachEvalTest = {
+  id: "repeated_confirmation_repair",
+  name: "Confirmed action does not repeat prior coach confirmation",
+  userMessage: "yes",
+  fixture: {
+    ...emptyAlexFixture("coach-bench-alex-17"),
+    conversationHistory: [
+      {
+        role: "user",
+        content:
+          "not bad, but you should log my entries (you can assum)e, and also, i just now did the part 1 + part 2",
+      },
+      {
+        role: "assistant",
+        content: repeatedSoftwareLabConfirmation,
+      },
+    ],
+    plans: [
+      {
+        id: "bench-plan-software-lab",
+        goal: "Finish Software Lab 1",
+        emoji: "💻",
+        outlineType: "SPECIFIC",
+        notes:
+          "Roadmap: complete Software Lab 1 in order. Part 1 and Part 2 are 60-minute study sessions.",
+        activities: [
+          {
+            id: "bench-activity-deep-learning-theory",
+            title: "Deep Learning Theory",
+            measure: "minutes",
+            emoji: "🧠",
+            kind: "learning",
+          },
+        ],
+        sessions: [
+          {
+            id: "bench-session-software-lab-part-1",
+            activityId: "bench-activity-deep-learning-theory",
+            date: "2026-06-08",
+            quantity: 60,
+            descriptiveGuide: "Software Lab 1, Parte 1.",
+          },
+          {
+            id: "bench-session-software-lab-part-2",
+            activityId: "bench-activity-deep-learning-theory",
+            date: "2026-06-08",
+            quantity: 60,
+            descriptiveGuide: "Software Lab 1, Parte 2.",
+          },
+        ],
+        milestones: [],
+      },
+    ],
+    activityEntries: [],
+  },
+  verify: async (ctx) =>
+    allOf(
+      proposalCount(ctx, "activityLog", { min: 1 }),
+      jsonPathEquals(
+        ctx,
+        "activityLogProposal",
+        "activityName",
+        "Deep Learning Theory"
+      ),
+      responseNotMatches(
+        ctx,
+        /Should I log both as completed today/i,
+        "does_not_repeat_prior_confirmation"
+      ),
+      responseNotMatches(
+        ctx,
+        /Just to be clear: you finished Software Lab 1 Part 1 and Part 2/i,
+        "does_not_repeat_full_prior_confirmation"
+      ),
+      await llmJudge(
+        ctx,
+        "Treats the user's 'yes' as confirmation of the previous requested action, not as a reason to ask the same confirmation again.",
+        "Attaches one or more activity log proposals for the completed Software Lab 1 work.",
+        "Does not repeat the previous assistant message."
+      )
+    ),
+};
+
 export const unsupportedActivityMeasureChangeTest: CoachEvalTest = {
   id: "unsupported_activity_measure_change",
   name: "Activity measure change is not claimed as a supported coach action",
@@ -872,6 +958,7 @@ export const tests: CoachEvalTest[] = [
   activityLogProposalHonestyTest,
   activityMeasureChangeBeforeDependentLogTest,
   claimedActivityMissingLogProposalTest,
+  repeatedConfirmationRepairTest,
   unsupportedActivityMeasureChangeTest,
   directActivityRenameNoRedundantConfirmationTest,
   browserCapabilityDoesNotDiscloseInternalsTest,

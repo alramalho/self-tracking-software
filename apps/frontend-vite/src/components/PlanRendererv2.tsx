@@ -18,6 +18,7 @@ import {
 } from "date-fns";
 import {
   Archive,
+  Check,
   Loader2,
   Maximize2,
   MessageCircle,
@@ -37,6 +38,7 @@ import {
   Flame,
   Rocket,
   Sprout,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
@@ -175,46 +177,143 @@ const PlanProgressStrip = ({ plan }: { plan: CompletePlan }) => {
   );
 };
 
-const PlanNotesSection = ({ notes }: { notes?: string | null }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const PlanNotesSection = ({
+  notes,
+  onSave,
+  isSaving = false,
+}: {
+  notes?: string | null;
+  onSave: (notes: string | null) => Promise<void>;
+  isSaving?: boolean;
+}) => {
   const trimmedNotes = notes?.trim();
+  const [isOpen, setIsOpen] = useState(Boolean(trimmedNotes));
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftNotes, setDraftNotes] = useState(trimmedNotes || "");
 
-  if (!trimmedNotes) return null;
+  useEffect(() => {
+    if (!isEditing) {
+      setDraftNotes(trimmedNotes || "");
+    }
+  }, [isEditing, trimmedNotes]);
+
+  const startEditing = () => {
+    setDraftNotes(trimmedNotes || "");
+    setIsOpen(true);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setDraftNotes(trimmedNotes || "");
+    setIsEditing(false);
+  };
+
+  const saveNotes = async () => {
+    const nextNotes = draftNotes.trim();
+    await onSave(nextNotes || null);
+    setIsEditing(false);
+    setIsOpen(Boolean(nextNotes));
+  };
+
+  const previewNotes = draftNotes.trim();
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="rounded-2xl border border-border bg-card p-4">
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="flex w-full items-center justify-between gap-3 text-left"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60">
-                <FileText className="h-5 w-5 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground">
+                    Plan notes
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    Roadmap, sources, constraints, and coach context
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-foreground">
-                  Plan notes
+              <ChevronDown
+                className={cn(
+                  "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200",
+                  isOpen && "rotate-180"
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={startEditing}
+            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label="Edit plan notes"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+        <CollapsibleContent>
+          {isEditing ? (
+            <div className="mt-4 space-y-4 border-t border-border pt-4">
+              <textarea
+                value={draftNotes}
+                onChange={(event) => setDraftNotes(event.target.value)}
+                className="min-h-40 w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                placeholder="Roadmap, sources, constraints, baseline, or anything the coach should keep following"
+              />
+              {previewNotes && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Preview
+                  </div>
+                  <PlanNotesBlock
+                    notes={previewNotes}
+                    className="text-sm leading-relaxed text-muted-foreground"
+                  />
                 </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Roadmap, sources, constraints, and coach context
-                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={saveNotes}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={cancelEditing}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
               </div>
             </div>
-            <ChevronDown
-              className={cn(
-                "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200",
-                isOpen && "rotate-180"
-              )}
+          ) : trimmedNotes ? (
+            <PlanNotesBlock
+              notes={trimmedNotes}
+              className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground"
             />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <PlanNotesBlock
-            notes={trimmedNotes}
-            className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground"
-          />
+          ) : (
+            <div className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">
+              No notes yet.
+            </div>
+          )}
         </CollapsibleContent>
       </div>
     </Collapsible>
@@ -223,7 +322,7 @@ const PlanNotesSection = ({ notes }: { notes?: string | null }) => {
 
 export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
-  const { leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan, archivePlan } = usePlans();
+  const { leavePlanGroup, isLeavingPlanGroup, deletePlan, pausePlan, isPausingPlan, resumePlan, isResumingPlan, archivePlan, updatePlans, isUpdatingPlans } = usePlans();
   const { activities, activityEntries } = useActivities();
   const { metrics, entries: metricEntries } = useMetrics();
   const api = useApiWithAuth();
@@ -539,6 +638,22 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     }
   };
 
+  const handleSavePlanNotes = async (notes: string | null) => {
+    if (!selectedPlan.id) return;
+
+    try {
+      await updatePlans({
+        updates: [{ planId: selectedPlan.id, updates: { notes } }],
+        muteNotifications: true,
+      });
+      toast.success("Plan notes updated");
+    } catch (error) {
+      console.error("Failed to update plan notes:", error);
+      toast.error("Failed to update plan notes");
+      throw error;
+    }
+  };
+
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
   const periodLabel = getPeriodLabel(preferredCoachingHour);
 
@@ -687,7 +802,11 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
       <AnimatedSection delay={backgroundImageUrl ? 0.13 : 0.06}>
         <div className="mb-6">
-          <PlanNotesSection notes={selectedPlan.notes} />
+          <PlanNotesSection
+            notes={selectedPlan.notes}
+            onSave={handleSavePlanNotes}
+            isSaving={isUpdatingPlans}
+          />
         </div>
       </AnimatedSection>
 

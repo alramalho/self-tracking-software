@@ -39,6 +39,21 @@ export function PlanNotesBlock({ notes, className = "" }: PlanNotesBlockProps) {
     <div className={className}>
       <ReactMarkdown
         components={{
+          h1: ({ children }) => (
+            <h3 className="mb-2 mt-3 text-base font-semibold leading-snug text-foreground first:mt-0">
+              {children}
+            </h3>
+          ),
+          h2: ({ children }) => (
+            <h4 className="mb-2 mt-3 text-sm font-semibold leading-snug text-foreground first:mt-0">
+              {children}
+            </h4>
+          ),
+          h3: ({ children }) => (
+            <h5 className="mb-1.5 mt-2 text-sm font-medium leading-snug text-foreground first:mt-0">
+              {children}
+            </h5>
+          ),
           p: ({ children }) => (
             <p className="mb-2 last:mb-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
               {linkifyTextChildren(children)}
