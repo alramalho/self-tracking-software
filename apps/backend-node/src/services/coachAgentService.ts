@@ -49,6 +49,18 @@ type CoachAgentTelemetry = {
   };
 };
 
+type CoachAgentErrorReportContext = {
+  source?: string;
+  chatId?: string;
+};
+
+const TELEGRAM_MESSAGE_LIMIT = 3900;
+
+function truncateForReport(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 15)}... [truncated]`;
+}
+
 function normalizeUsage(usage?: LanguageModelUsage): CoachAgentTelemetry["usage"] {
   if (!usage) return undefined;
 
@@ -270,6 +282,43 @@ function buildUserContent(
 
 export class CoachAgentService {
   private telegram = new TelegramService();
+
+  private sendCoachAgentErrorReport(input: {
+    user: User;
+    message: string;
+    model: string;
+    error: unknown;
+    reportContext?: CoachAgentErrorReportContext;
+  }) {
+    const error =
+      input.error instanceof Error
+        ? input.error
+        : new Error(String(input.error));
+    const stack = error.stack || `${error.name}: ${error.message}`;
+    const report = [
+      "🔴 COACH INTERNAL ERROR",
+      "",
+      `Time: ${new Date().toISOString()}`,
+      `User: ${input.user.username || "unknown"} (${input.user.id})`,
+      input.reportContext?.source ? `Source: ${input.reportContext.source}` : null,
+      input.reportContext?.chatId ? `Chat: ${input.reportContext.chatId}` : null,
+      `Model: ${input.model}`,
+      "",
+      "Message that triggered it:",
+      truncateForReport(input.message, 700),
+      "",
+      "Actual error:",
+      truncateForReport(stack, 2500),
+    ]
+      .filter((line): line is string => line !== null)
+      .join("\n");
+
+    void this.telegram
+      .sendPlainMessage(truncateForReport(report, TELEGRAM_MESSAGE_LIMIT))
+      .catch((telegramError) => {
+        logger.error("Failed to send coach agent Telegram error report:", telegramError);
+      });
+  }
 
   /**
    * Create the coach agent with tools bound to the current context
@@ -1792,6 +1841,7 @@ export class CoachAgentService {
     model?: string;
     memoriesContext?: string | null;
     onStatus?: (status: "thinking" | "searching" | "browsing" | "drafting") => void | Promise<void>;
+    reportContext?: CoachAgentErrorReportContext;
   }): Promise<{
     draftMessages: Array<{
       content: string;
@@ -1878,7 +1928,7 @@ export class CoachAgentService {
     skipReason?: string;
     telemetry?: CoachAgentTelemetry;
   }> {
-    const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus } = params;
+    const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus, reportContext } = params;
     const hasImageAttachments = (imageAttachments?.length || 0) > 0;
     const modelConfig = hasImageAttachments
       ? resolveCoachAgentVisionModelConfig(model)
@@ -2161,9 +2211,13 @@ export class CoachAgentService {
       };
     } catch (error) {
       logger.error("Coach agent error:", error);
-      this.telegram.sendMessage(
-        `🔴 Coach agent failed\nUser: ${user.username}\nMessage: ${message.substring(0, 100)}\nError: ${error instanceof Error ? error.message : String(error)}`
-      );
+      this.sendCoachAgentErrorReport({
+        user,
+        message,
+        model: resolvedModel,
+        error,
+        reportContext,
+      });
       return {
         draftMessages: [{
           content: "Sorry, I ran into an issue processing your message. The team has been notified.",

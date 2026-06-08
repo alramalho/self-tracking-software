@@ -252,6 +252,10 @@ async function runCoachV2MessagePipeline(params: {
     reminders,
     memoriesContext,
     onStatus,
+    reportContext: {
+      source: logLabel,
+      chatId,
+    },
   });
 
   const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];

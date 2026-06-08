@@ -54,6 +54,15 @@ export class TelegramService {
     await this.sendToAllChats(message, "Markdown");
   }
 
+  async sendPlainMessage(message: string): Promise<void> {
+    if (!this.botToken || this.chatIds.length === 0) {
+      logger.warn("Telegram bot token or chat IDs not configured");
+      return;
+    }
+
+    await this.sendToAllChats(message);
+  }
+
   async sendMessageWithPhotos(
     message: string,
     photoUrls: string[]
@@ -72,7 +81,8 @@ export class TelegramService {
             chat_id: chatId,
             text: message,
             parse_mode: "Markdown",
-          }
+          },
+          { timeout: 6000 }
         );
 
         // Then send each photo
@@ -82,7 +92,8 @@ export class TelegramService {
             {
               chat_id: chatId,
               photo: photoUrl,
-            }
+            },
+            { timeout: 6000 }
           );
         }
 
@@ -117,7 +128,8 @@ export class TelegramService {
 
         await axios.post(
           `https://api.telegram.org/bot${this.botToken}/sendMessage`,
-          payload
+          payload,
+          { timeout: 6000 }
         );
         logger.debug(`Message sent successfully to chat ID: ${chatId}`);
       } catch (error) {
