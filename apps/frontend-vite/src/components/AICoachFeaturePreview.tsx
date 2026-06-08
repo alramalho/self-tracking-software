@@ -177,6 +177,7 @@ interface AICoachFeaturePreviewProps {
   aiCoachPersonality?: CoachPersonality;
   onCoachPersonalitySelect?: (personality: CoachPersonality) => void;
   coachPersonalityDisabled?: boolean;
+  inlineDemos?: boolean;
 }
 
 const coachTextClassName: Record<CoachPersonality, string> = {
@@ -325,6 +326,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
   aiCoachPersonality,
   onCoachPersonalitySelect,
   coachPersonalityDisabled = false,
+  inlineDemos = false,
 }) => {
   const [activeDemo, setActiveDemo] = useState<
     "home" | "plan-action" | "metrics" | null
@@ -478,32 +480,106 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
         </div>
       )}
 
-      <div className="space-y-0">
-        <CardItem
-          icon={<LandPlot className={featureIconClassName} />}
-          title="Monitoring your plan state from the homepage"
-          onDemoClick={humanCoach ? undefined : () => setActiveDemo("home")}
-        />
-        <CardItem
-          icon={<Send className={featureIconClassName} />}
-          title="Checking in several times a week"
-        />
-        <CardItem
-          icon={<Route className={featureIconClassName} />}
-          title="Adapting next week's plan based on progress"
-          onDemoClick={
-            humanCoach ? undefined : () => setActiveDemo("plan-action")
-          }
-        />
-        <CardItem
-          icon={<NotepadText className={featureIconClassName} />}
-          title="Finding useful patterns in your metrics"
-          onDemoClick={humanCoach ? undefined : () => setActiveDemo("metrics")}
-        />
-      </div>
-      <p className="text-md text-muted-foreground w-full text-center py-2">
-        And many more features to come!
-      </p>
+      {inlineDemos && !humanCoach && (
+        <div className="space-y-5 py-2">
+          <div className="space-y-3">
+            <CardItem
+              icon={<LandPlot className={featureIconClassName} />}
+              title="Monitoring your plan state from the homepage"
+            />
+            <div className="px-2">
+              <MockHomeActionCards personality={selectedPersonality} />
+            </div>
+          </div>
+
+          <CardItem
+            icon={<Send className={featureIconClassName} />}
+            title="Checking in several times a week"
+          />
+
+          <div className="space-y-3">
+            <CardItem
+              icon={<Route className={featureIconClassName} />}
+              title="Adapting next week's plan based on progress"
+            />
+            <div className="px-2">
+              <MockCoachActionMessages personality={selectedPersonality} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <CardItem
+              icon={<NotepadText className={featureIconClassName} />}
+              title="Finding useful patterns in your metrics"
+            />
+            <div className="space-y-3 px-2">
+              <MetricIsland
+                metric={dummyMetric}
+                isLoggedToday={false}
+                className="bg-card"
+              />
+              <MetricWeeklyView
+                metric={dummyMetric}
+                weekData={[3, 4, 0, 5, 4, 3, 4]}
+                color="blue"
+                hasAnyData={true}
+                positiveCorrelations={[
+                  {
+                    activity: {
+                      id: "exercise",
+                      title: "Exercise",
+                      emoji: "🏃‍♂️",
+                      measure: "minutes",
+                    } as Activity,
+                    correlation: 0.65,
+                  },
+                  {
+                    activity: {
+                      id: "meditation",
+                      title: "Meditation",
+                      emoji: "🧘‍♂️",
+                      measure: "minutes",
+                    } as Activity,
+                    correlation: 0.45,
+                  },
+                ]}
+                className="bg-card"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!inlineDemos && (
+        <>
+          <div className="space-y-0">
+            <CardItem
+              icon={<LandPlot className={featureIconClassName} />}
+              title="Monitoring your plan state from the homepage"
+              onDemoClick={humanCoach ? undefined : () => setActiveDemo("home")}
+            />
+            <CardItem
+              icon={<Send className={featureIconClassName} />}
+              title="Checking in several times a week"
+            />
+            <CardItem
+              icon={<Route className={featureIconClassName} />}
+              title="Adapting next week's plan based on progress"
+              onDemoClick={
+                humanCoach ? undefined : () => setActiveDemo("plan-action")
+              }
+            />
+            <CardItem
+              icon={<NotepadText className={featureIconClassName} />}
+              title="Finding useful patterns in your metrics"
+              onDemoClick={humanCoach ? undefined : () => setActiveDemo("metrics")}
+            />
+          </div>
+          <p className="text-md text-muted-foreground w-full text-center py-2">
+            And many more features to come!
+          </p>
+        </>
+      )}
 
       {children}
     </div>

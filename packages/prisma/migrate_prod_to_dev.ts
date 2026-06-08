@@ -1,5 +1,8 @@
+import "dotenv/config";
 import * as readline from "readline";
 import { PrismaClient } from "./generated/prisma";
+
+const LOGIN_EMAIL = "alexandre.ramalho.1998@gmail.com";
 
 // Parse command line arguments
 function parseArgs(): { impersonateUser: string } {
@@ -124,7 +127,7 @@ function maskDatabaseUrl(url: string): string {
   return url.substring(0, 20) + "...";
 }
 
-async function confirmMigration(): Promise<boolean> {
+async function confirmMigration(impersonateUser: string): Promise<boolean> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -149,6 +152,9 @@ async function confirmMigration(): Promise<boolean> {
   console.log(
     "\n⚠️  ALL DATA in the DEV database will be PERMANENTLY DELETED!\n"
   );
+  console.log(
+    `Impersonation: login as ${LOGIN_EMAIL}, use app user '${impersonateUser}'\n`
+  );
 
   return new Promise((resolve) => {
     rl.question('Type "CONFIRM" to proceed with the migration: ', (answer) => {
@@ -156,6 +162,20 @@ async function confirmMigration(): Promise<boolean> {
       resolve(answer.trim() === "CONFIRM");
     });
   });
+}
+
+async function getLocalSupabaseAuthIdForEmail(
+  email: string
+): Promise<string | null> {
+  const authUsers = await targetPrisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id::text as id
+    FROM auth.users
+    WHERE lower(email) = lower(${email})
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+
+  return authUsers[0]?.id ?? null;
 }
 
 async function clearTargetDatabase() {
@@ -210,7 +230,7 @@ async function clearTargetDatabase() {
   }
 }
 
-async function migrateData() {
+async function migrateData(impersonateUser = parseArgs().impersonateUser) {
   console.info("Starting data migration from PROD to DEV...");
 
   try {
@@ -881,14 +901,13 @@ async function migrateData() {
     }
 
     // Post-processing: Impersonate user by swapping supabaseAuthId
-    const { impersonateUser } = parseArgs();
     console.info(
       `Post-processing: Setting up impersonation for ${impersonateUser}...`
     );
 
     // Find your user (the one you'll log in as)
     const myUser = await targetPrisma.user.findUnique({
-      where: { email: "alexandre.ramalho.1998@gmail.com" },
+      where: { email: LOGIN_EMAIL },
     });
 
     // Find the target user to impersonate
@@ -896,34 +915,55 @@ async function migrateData() {
       where: { username: impersonateUser },
     });
 
-    if (targetUser && myUser) {
-      const myOriginalAuthId = myUser.supabaseAuthId;
-      const targetOriginalAuthId = targetUser.supabaseAuthId;
-
-      // Swap the supabaseAuthId values
-      // Your user gets a placeholder auth ID
-      await targetPrisma.user.update({
-        where: { id: myUser.id },
-        data: {
-          supabaseAuthId: `--impersonating-${impersonateUser}--`,
-        },
-      });
-
-      // Target user gets your auth ID (so when you log in, you become them)
-      await targetPrisma.user.update({
-        where: { id: targetUser.id },
-        data: {
-          supabaseAuthId: myOriginalAuthId,
-        },
-      });
-
+    if (!targetUser || !myUser) {
+      console.warn(
+        `⚠️  User with email '${LOGIN_EMAIL}' or username '${impersonateUser}' not found, could not set up impersonation.`
+      );
+    } else if (targetUser.id === myUser.id) {
       console.info(
-        `✅ Impersonation set up: logging in with alexandre.ramalho.1998@gmail.com will impersonate ${impersonateUser}`
+        `Impersonation target '${impersonateUser}' is already ${LOGIN_EMAIL}; no auth stitching needed.`
       );
     } else {
-      console.warn(
-        `⚠️  User with email 'alexandre.ramalho.1998@gmail.com' or username '${impersonateUser}' not found, could not set up impersonation.`
-      );
+      const localLoginAuthId = await getLocalSupabaseAuthIdForEmail(LOGIN_EMAIL);
+      const loginAuthId = localLoginAuthId ?? myUser.supabaseAuthId;
+
+      if (!localLoginAuthId) {
+        console.warn(
+          `⚠️  No local Supabase auth.users row found for ${LOGIN_EMAIL}; falling back to the migrated app auth id. Log in once locally, then rerun this command if impersonation still resolves to Alex.`
+        );
+      }
+
+      if (!loginAuthId) {
+        console.warn(
+          `⚠️  No auth id available for ${LOGIN_EMAIL}; could not set up impersonation.`
+        );
+      } else {
+        const authOwner = await targetPrisma.user.findUnique({
+          where: { supabaseAuthId: loginAuthId },
+        });
+
+        await targetPrisma.$transaction(async (tx) => {
+          if (authOwner && authOwner.id !== targetUser.id) {
+            await tx.user.update({
+              where: { id: authOwner.id },
+              data: {
+                supabaseAuthId: `--impersonating-${impersonateUser}-${authOwner.id}--`,
+              },
+            });
+          }
+
+          await tx.user.update({
+            where: { id: targetUser.id },
+            data: {
+              supabaseAuthId: loginAuthId,
+            },
+          });
+        });
+
+        console.info(
+          `✅ Impersonation set up: logging in with ${LOGIN_EMAIL} will use app user '${impersonateUser}'`
+        );
+      }
     }
 
     console.info("Migration completed successfully! 🎉");
@@ -950,7 +990,8 @@ async function main() {
   }
 
   // Show confirmation prompt
-  const confirmed = await confirmMigration();
+  const { impersonateUser } = parseArgs();
+  const confirmed = await confirmMigration(impersonateUser);
   if (!confirmed) {
     console.log("\n❌ Migration cancelled by user.");
     process.exit(0);
@@ -959,7 +1000,7 @@ async function main() {
   console.log("\n✅ Migration confirmed. Starting data transfer...\n");
 
   try {
-    await migrateData();
+    await migrateData(impersonateUser);
   } catch (error) {
     console.error("Error running migration script:", error);
     process.exit(1);

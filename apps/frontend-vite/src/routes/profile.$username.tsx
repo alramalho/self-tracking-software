@@ -21,11 +21,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useCurrentUser } from "@/contexts/users";
+import { getCoachAvatar } from "@/lib/coachPersonality";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +61,7 @@ export const Route = createFileRoute("/profile/$username")({
 });
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
+const COACH_TEASER_DISMISSED_KEY = "profile-coach-teaser-dismissed";
 
 // Utility function to convert TimeRange to number of days
 export const getTimeRangeDays = (timeRange: TimeRange): number => {
@@ -127,6 +130,80 @@ const AnimatedSection = ({
   );
 };
 
+function CoachUpgradeTeaser() {
+  const { setShowUpgradePopover } = useUpgrade();
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(COACH_TEASER_DISMISSED_KEY) === "true";
+  });
+
+  if (dismissed) return null;
+
+  const close = () => {
+    setDismissed(true);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(COACH_TEASER_DISMISSED_KEY, "true");
+    }
+  };
+
+  return (
+    <div className="mx-auto mt-2 w-full max-w-md rounded-xl border border-primary/20 bg-card/80 p-4 text-left shadow-sm">
+      <div className="flex gap-3">
+        <div className="relative h-14 w-14 shrink-0">
+          <div className="absolute inset-0 rounded-2xl bg-primary/10" />
+          <img
+            src={getCoachAvatar("CHAMPION", "coachSmiling")}
+            alt="AI coach"
+            className="relative z-10 h-14 w-14 object-contain"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Let your coach keep this moving</span>
+              </div>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                Get proactive check-ins, plan adjustments, and metric patterns
+                when your week starts drifting.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Close coach upgrade suggestion"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowUpgradePopover(true)}
+              className="h-9 rounded-lg"
+            >
+              See more
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={close}
+              className="h-9 rounded-lg text-muted-foreground"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfilePage() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
@@ -149,6 +226,7 @@ function ProfilePage() {
     currentUser,
   } = useUnifiedProfileData(username);
   const { isAdmin } = useCurrentUser();
+  const isUserPremium = currentUser?.planType === "PLUS";
   const { deleteAchievementPost } = useActivities();
   const { totalStreaks, totalHabits, totalLifestyles } = useMemo(() => {
     return userifyPlansProgress(
@@ -901,10 +979,13 @@ function ProfilePage() {
                         />
                       ))}
                   {(!profileActivePlans || profileActivePlans.length === 0) && (
-                    <div className="text-center text-muted-foreground py-8">
-                      {isOwnProfile
-                        ? "You haven't created any plans yet."
-                        : `${profileData?.name} hasn't got any public plans available.`}
+                    <div className="space-y-4 py-8 text-center">
+                      <p className="text-muted-foreground">
+                        {isOwnProfile
+                          ? "You haven't created any plans yet."
+                          : `${profileData?.name} hasn't got any public plans available.`}
+                      </p>
+                      {isOwnProfile && !isUserPremium && <CoachUpgradeTeaser />}
                     </div>
                   )}
                   {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (

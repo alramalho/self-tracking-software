@@ -19,6 +19,19 @@ import {
 } from "./service";
 import { UsersContext, type UsersContextType } from "./types";
 
+const ACTIVE_USER_CACHE_KEY = "TRACKING_SO_ACTIVE_USER_ID";
+const USER_SPECIFIC_QUERY_KEYS = [
+  "plans",
+  "activities",
+  "activity-entries",
+  "timeline",
+  "notifications",
+  "recommendations",
+  "messages",
+  "achievements",
+  "metrics",
+];
+
 export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -244,15 +257,42 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
+    const currentUserId = currentUserQuery.data?.id;
+    if (!currentUserId || typeof window === "undefined") return;
+
+    const previousUserId = window.localStorage.getItem(ACTIVE_USER_CACHE_KEY);
+    const cachedActivityEntries = queryClient.getQueryData<
+      Array<{ userId?: string | null }>
+    >(["activity-entries"]);
+    const cachedPlans = queryClient.getQueryData<Array<{ userId?: string | null }>>([
+      "plans",
+    ]);
+    const hasForeignUserData = [...(cachedActivityEntries || []), ...(cachedPlans || [])].some(
+      (item) => item.userId && item.userId !== currentUserId
+    );
+
+    if ((previousUserId && previousUserId !== currentUserId) || hasForeignUserData) {
+      console.log("🧹 Clearing user-specific cache because current user changed");
+      USER_SPECIFIC_QUERY_KEYS.forEach((key) => {
+        queryClient.removeQueries({ queryKey: [key] });
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
+      window.localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
+    }
+
+    window.localStorage.setItem(ACTIVE_USER_CACHE_KEY, currentUserId);
+  }, [currentUserQuery.data?.id, queryClient]);
+
+  useEffect(() => {
     if (isLoaded && !isSignedIn) {
       console.log("🧹 Clearing user-specific cache because not signed in");
       // Only clear user-specific queries, not public ones like "coaches"
-      const userSpecificKeys = ["current-user", "plans", "activities", "timeline", "notifications", "recommendations", "messages", "achievements", "metrics"];
-      userSpecificKeys.forEach(key => {
+      ["current-user", ...USER_SPECIFIC_QUERY_KEYS].forEach(key => {
         queryClient.removeQueries({ queryKey: [key] });
       });
       if (typeof window !== "undefined") {
         localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
+        localStorage.removeItem(ACTIVE_USER_CACHE_KEY);
       }
     }
   }, [isSignedIn, isLoaded, queryClient]);
