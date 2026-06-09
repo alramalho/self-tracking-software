@@ -3,7 +3,7 @@ import {
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
 import { Activity, Plan, PlanOutlineType, User } from "@tsw/prisma";
-import { generateObject, generateText } from "ai";
+import { generateObject, generateText } from "../utils/aiSdk";
 import dedent from "dedent";
 import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";

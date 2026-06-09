@@ -2,7 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
+import { generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
 import { format, startOfWeek } from "date-fns";
 import dedent from "dedent";

@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { tool } from "../../../../utils/aiSdk";
 import dedent from "dedent";
 import { z } from "zod/v4";
 import {

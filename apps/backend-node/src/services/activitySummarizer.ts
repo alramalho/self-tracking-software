@@ -2,7 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
-import { generateText } from "ai";
+import { generateText } from "../utils/aiSdk";
 import { format } from "date-fns";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";

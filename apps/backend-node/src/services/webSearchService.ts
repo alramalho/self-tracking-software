@@ -1,6 +1,6 @@
 import { openai } from "@ai-sdk/openai";
 import Perplexity from "@perplexity-ai/perplexity_ai";
-import { createGateway, generateText } from "ai";
+import { createGateway, generateText } from "../utils/aiSdk";
 import { logger } from "../utils/logger";
 
 export interface WebSearchInput {

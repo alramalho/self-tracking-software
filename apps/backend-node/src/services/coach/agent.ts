@@ -1,5 +1,11 @@
 import { gateway } from "@ai-sdk/gateway";
-import { ToolLoopAgent, tool, type LanguageModelUsage, type ModelMessage, type UserContent } from "ai";
+import {
+  ToolLoopAgent,
+  tool,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type UserContent,
+} from "../../utils/aiSdk";
 import { z } from "zod/v4";
 import { Plan, User, RecurringType } from "@tsw/prisma";
 import { prisma } from "../../utils/prisma";

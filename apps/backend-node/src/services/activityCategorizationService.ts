@@ -1,5 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
-import { generateText, Output } from "ai";
+import { generateText, Output } from "../utils/aiSdk";
 import dedent from "dedent";
 import { z } from "zod/v4";
 import {

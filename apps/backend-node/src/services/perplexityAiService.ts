@@ -1,5 +1,5 @@
 import Perplexity from "@perplexity-ai/perplexity_ai";
-import { generateObject, generateText } from "ai";
+import { generateObject, generateText } from "../utils/aiSdk";
 import {
   createOpenRouter,
   OpenRouterProvider,

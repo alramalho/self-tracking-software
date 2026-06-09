@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
+import { generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
