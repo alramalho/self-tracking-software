@@ -1,4 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
+import { traced } from "braintrust";
 import {
   ToolLoopAgent,
   tool,
@@ -1857,6 +1858,42 @@ export class CoachAgentService {
    * Generate a coach response using the agent
    */
   async generateResponse(
+    params: CoachGenerateResponseParams
+  ): Promise<CoachAgentResponse> {
+    const { user, messageRole = "user", imageAttachments, conversationHistory, plans, reminders } = params;
+
+    return traced(
+      async (span) => {
+        span.log({
+          metadata: {
+            userId: user.id,
+            username: user.username || null,
+            messageRole,
+            imageAttachmentCount: imageAttachments?.length || 0,
+            conversationHistoryCount: conversationHistory.length,
+            planCount: plans.length,
+            reminderCount: reminders.length,
+          },
+          tags: ["coach"],
+        });
+
+        return this.generateResponseInternal(params);
+      },
+      {
+        name: "coach",
+        type: "function",
+        event: {
+          metadata: {
+            userId: user.id,
+            username: user.username || null,
+          },
+          tags: ["coach"],
+        },
+      }
+    );
+  }
+
+  private async generateResponseInternal(
     params: CoachGenerateResponseParams
   ): Promise<CoachAgentResponse> {
     const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, reminders, model, memoriesContext, onStatus, reportContext } = params;
