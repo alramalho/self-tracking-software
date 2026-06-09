@@ -1,5 +1,3 @@
-import { generateText, generateObject, generateImage } from "ai";
-import { createGateway } from "@ai-sdk/gateway";
 import {
   createOpenRouter,
 } from "@openrouter/ai-sdk-provider";
@@ -11,9 +9,22 @@ import dedent from "dedent";
 
 dotenv.config({ path: resolve(__dirname, "../../apps/backend-node/.env") });
 
-const gateway = createGateway({
-  apiKey: process.env.AI_GATEWAY_API_KEY,
-});
+let createGateway: any;
+let generateText: any;
+let generateObject: any;
+let generateImage: any;
+let gateway: any;
+
+async function loadAISDK(): Promise<void> {
+  const aiSdk = await import("../../apps/backend-node/src/utils/aiSdk");
+  createGateway = aiSdk.createGateway;
+  generateText = aiSdk.generateText;
+  generateObject = aiSdk.generateObject;
+  generateImage = aiSdk.generateImage;
+  gateway = createGateway({
+    apiKey: process.env.AI_GATEWAY_API_KEY,
+  });
+}
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -181,6 +192,8 @@ async function pool<T>(
 // --- Main ---
 
 async function main() {
+  await loadAISDK();
+
   const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const expDir = join(__dirname, `exp_${ts}`);
   mkdirSync(expDir, { recursive: true });
