@@ -6,6 +6,7 @@ import { wrapAISDK } from "braintrust";
 const wrappedAI = wrapAISDK(ai);
 
 export const createGateway = wrappedAI.createGateway;
+export const generateImage = wrappedAI.generateImage;
 export const generateObject = wrappedAI.generateObject;
 export const generateText = wrappedAI.generateText;
 export const Output = wrappedAI.Output;

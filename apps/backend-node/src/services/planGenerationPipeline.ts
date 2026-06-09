@@ -2,7 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "../utils/aiSdk";
+import { createGateway, generateImage, generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
 import { format, startOfWeek } from "date-fns";
 import dedent from "dedent";
@@ -456,11 +456,9 @@ export class PlanGenerationPipeline {
       return null;
     }
 
-    const { generateImage: genImg } = await import("ai");
-    const { createGateway } = await import("@ai-sdk/gateway");
     const gw = createGateway({ apiKey });
 
-    const result = await genImg({
+    const result = await generateImage({
       model: gw.imageModel("openai/gpt-image-2"),
       prompt,
       size: "1024x1024",
