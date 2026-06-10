@@ -10,7 +10,8 @@ type AttentionPlan = Plan & {
 
 export type CoachAttentionKind =
   | "SPECIFIC_NO_FUTURE_SESSIONS"
-  | "SPECIFIC_SCHEDULE_ENDING";
+  | "SPECIFIC_SCHEDULE_ENDING"
+  | "SPECIFIC_AUTO_ARCHIVED";
 
 export type CoachAttentionItem = {
   dedupeKey: string;
@@ -23,13 +24,16 @@ export type CoachAttentionItem = {
   message: string;
   facts: Array<{ label: string; value: string }>;
   primaryAction: {
-    type: "START_PLAN_UPDATE";
+    type: "START_PLAN_UPDATE" | "VIEW_COACH_CHAT";
     prompt: string;
   };
   generatedAt: string;
 };
 
-function isActivePlan(plan: Pick<Plan, "deletedAt" | "archivedAt" | "isPaused" | "finishingDate">, now: Date) {
+function isActivePlan(
+  plan: Pick<Plan, "deletedAt" | "archivedAt" | "isPaused" | "finishingDate">,
+  now: Date,
+) {
   return (
     !plan.deletedAt &&
     !plan.archivedAt &&
@@ -63,7 +67,10 @@ export function deriveCoachAttentionItems(params: {
   const timezone = params.user.timezone || "UTC";
   const nowInTz = new TZDate(now, timezone);
   const todayKey = dateKey(startOfDay(nowInTz), timezone);
-  const currentWeekEndKey = dateKey(endOfWeek(nowInTz, { weekStartsOn: 0 }), timezone);
+  const currentWeekEndKey = dateKey(
+    endOfWeek(nowInTz, { weekStartsOn: 0 }),
+    timezone,
+  );
   const generatedAt = now.toISOString();
   const items: CoachAttentionItem[] = [];
 
@@ -72,13 +79,13 @@ export function deriveCoachAttentionItems(params: {
     if (plan.outlineType !== "SPECIFIC") continue;
 
     const sessions = [...(plan.sessions || [])].sort(
-      (a, b) => a.date.getTime() - b.date.getTime()
+      (a, b) => a.date.getTime() - b.date.getTime(),
     );
     const futureSessions = sessions.filter(
-      (session) => dateKey(session.date, timezone) >= todayKey
+      (session) => dateKey(session.date, timezone) >= todayKey,
     );
     const sessionsAfterCurrentWeek = futureSessions.filter(
-      (session) => dateKey(session.date, timezone) > currentWeekEndKey
+      (session) => dateKey(session.date, timezone) > currentWeekEndKey,
     );
     const lastSession = sessions[sessions.length - 1];
     const nextSession = futureSessions[0];
@@ -115,7 +122,11 @@ export function deriveCoachAttentionItems(params: {
       continue;
     }
 
-    if (sessionsAfterCurrentWeek.length === 0 && (!plan.finishingDate || dateKey(plan.finishingDate, timezone) > currentWeekEndKey)) {
+    if (
+      sessionsAfterCurrentWeek.length === 0 &&
+      (!plan.finishingDate ||
+        dateKey(plan.finishingDate, timezone) > currentWeekEndKey)
+    ) {
       items.push({
         dedupeKey: `${plan.id}:SPECIFIC_SCHEDULE_ENDING`,
         kind: "SPECIFIC_SCHEDULE_ENDING",
@@ -127,7 +138,10 @@ export function deriveCoachAttentionItems(params: {
         message:
           "This plan has sessions this week, but the next week still needs to be planned.",
         facts: [
-          { label: "Next session", value: nextSession ? dateKey(nextSession.date, timezone) : "None" },
+          {
+            label: "Next session",
+            value: nextSession ? dateKey(nextSession.date, timezone) : "None",
+          },
           { label: "Future sessions", value: `${futureSessions.length}` },
           {
             label: "Last planned session",
@@ -146,7 +160,9 @@ export function deriveCoachAttentionItems(params: {
 
   return items.sort((a, b) => {
     const rank = { critical: 0, warning: 1, info: 2 };
-    return rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title);
+    return (
+      rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title)
+    );
   });
 }
 
@@ -156,7 +172,9 @@ export function formatCoachAttentionContext(items: CoachAttentionItem[]) {
   return [
     "COACH ATTENTION ITEMS:",
     ...items.map((item) => {
-      const facts = item.facts.map((fact) => `${fact.label}: ${fact.value}`).join("; ");
+      const facts = item.facts
+        .map((fact) => `${fact.label}: ${fact.value}`)
+        .join("; ");
       return `- [${item.severity}] ${item.title}. ${item.message} Facts: ${facts}`;
     }),
   ].join("\n");

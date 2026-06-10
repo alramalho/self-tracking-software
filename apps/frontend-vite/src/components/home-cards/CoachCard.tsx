@@ -1,9 +1,10 @@
 import { useCurrentUser } from "@/contexts/users";
-import {
-  CoachAttentionDrawer,
-} from "@/components/CoachAttentionBanner";
+import { CoachAttentionDrawer } from "@/components/CoachAttentionBanner";
 import { type CoachAttentionItem } from "@/contexts/ai/types";
-import { getCoachAvatar, getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import {
+  getCoachAvatar,
+  getCoachPersonalityConfig,
+} from "@/lib/coachPersonality";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -61,8 +62,11 @@ export const CoachCard = ({
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const hasActivePlans = activePlanCount > 0;
   const hasPlanUpdates = coachAttentionItems.length > 0;
+  const archivedCount = coachAttentionItems.filter(
+    (item) => item.kind === "SPECIFIC_AUTO_ARCHIVED",
+  ).length;
   const readyToExtendCount = coachAttentionItems.filter(
-    (item) => item.severity === "critical"
+    (item) => item.severity === "critical",
   ).length;
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
   const nextAssessmentAt = getNextAssessmentAt(now, preferredCoachingHour);
@@ -79,7 +83,7 @@ export const CoachCard = ({
       ? "thinking"
       : hasActivePlans
         ? "coachSmiling"
-        : "sad"
+        : "sad",
   );
 
   useEffect(() => {
@@ -114,15 +118,22 @@ export const CoachCard = ({
         {hasPlanUpdates ? (
           <>
             <div className="flex items-start justify-between gap-4">
-              <div className="relative h-20 w-20 shrink-0">
-                <div className="absolute inset-1 rounded-full bg-amber-400/20 motion-safe:animate-ping" />
-                <img
-                  src={avatar}
-                  alt={aiCoach.label}
-                  className="relative z-10 h-20 w-20 rounded-full object-contain"
-                />
-                <div className="absolute -right-1 bottom-1 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-background shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="relative h-20 w-20 shrink-0">
+                  <div className="absolute inset-1 rounded-full bg-amber-400/20 motion-safe:animate-ping" />
+                  <img
+                    src={avatar}
+                    alt={aiCoach.label}
+                    className="relative z-10 h-20 w-20 rounded-full object-contain"
+                  />
+                </div>
+                <div className="flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-500 px-2 text-background shadow-sm">
                   <AlertTriangle className="h-4 w-4" />
+                  {coachAttentionItems.length > 1 && (
+                    <span className="ml-1 text-sm font-semibold leading-none">
+                      {coachAttentionItems.length}
+                    </span>
+                  )}
                 </div>
               </div>
               <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
@@ -130,13 +141,16 @@ export const CoachCard = ({
 
             <div>
               <p className="text-xl font-semibold leading-tight text-foreground">
-                {coachAttentionItems.length} plan update
-                {coachAttentionItems.length === 1 ? "" : "s"}
+                {archivedCount > 0
+                  ? `${archivedCount} plan${archivedCount === 1 ? "" : "s"} archived`
+                  : `${coachAttentionItems.length} plan update${coachAttentionItems.length === 1 ? "" : "s"}`}
               </p>
               <p className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
-                {readyToExtendCount > 0
-                  ? `${readyToExtendCount} plan${readyToExtendCount === 1 ? "" : "s"} ready to extend`
-                  : "Next week needs planning"}
+                {archivedCount > 0
+                  ? "Coach warning needs review"
+                  : readyToExtendCount > 0
+                    ? `${readyToExtendCount} plan${readyToExtendCount === 1 ? "" : "s"} ready to extend`
+                    : "Next week needs planning"}
               </p>
               <p className="mt-3 inline-flex items-center text-sm font-semibold text-amber-500">
                 Expand

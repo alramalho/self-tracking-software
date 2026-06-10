@@ -1,5 +1,6 @@
 import { Response, Router } from "express";
 import multer from "multer";
+import { subDays } from "date-fns";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
@@ -20,6 +21,7 @@ import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import type { CoachAttentionItem } from "../services/coachAttentionService";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -33,6 +35,41 @@ function activePlanWhere(now: Date) {
     isPaused: false,
     OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
   };
+}
+
+async function getRecentArchivedCoachAttentionItems(
+  userId: string,
+  now: Date,
+): Promise<CoachAttentionItem[]> {
+  const notifications = await prisma.notification.findMany({
+    where: {
+      userId,
+      type: "COACH",
+      promptTag: AUTONOMOUS_COACH_PROMPT_TAG,
+      status: { not: "CONCLUDED" },
+      createdAt: { gte: subDays(now, 7) },
+      relatedData: {
+        path: ["interventionType"],
+        equals: "PLAN_ATTENTION_ARCHIVED",
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+
+  const seen = new Set<string>();
+  return notifications.flatMap((notification) => {
+    const relatedData = notification.relatedData as any;
+    const items = Array.isArray(relatedData?.coachAttentionItems)
+      ? relatedData.coachAttentionItems
+      : [];
+
+    return items.filter((item: CoachAttentionItem) => {
+      if (!item?.dedupeKey || seen.has(item.dedupeKey)) return false;
+      seen.add(item.dedupeKey);
+      return true;
+    });
+  });
 }
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -59,7 +96,7 @@ const planCreationProposalChangesSchema = z.object({
           measure: z.string(),
           emoji: z.string(),
           kind: z.string().nullable().optional(),
-        })
+        }),
       )
       .optional(),
     milestones: z
@@ -68,7 +105,7 @@ const planCreationProposalChangesSchema = z.object({
           description: z.string(),
           date: z.string().nullable().optional(),
           criteria: z.string().nullable().optional(),
-        })
+        }),
       )
       .optional(),
     sessions: z
@@ -78,7 +115,7 @@ const planCreationProposalChangesSchema = z.object({
           date: z.string(),
           quantity: z.number().nullable().optional(),
           descriptiveGuide: z.string().nullable().optional(),
-        })
+        }),
       )
       .optional(),
   }),
@@ -87,7 +124,11 @@ const planCreationProposalChangesSchema = z.object({
 
 function formatPlanCreationValue(field: string, value: unknown): string {
   if (field === "outlineType") {
-    return value === "SPECIFIC" ? "Specific sessions" : value === "TIMES_PER_WEEK" ? "Times per week" : "Not set";
+    return value === "SPECIFIC"
+      ? "Specific sessions"
+      : value === "TIMES_PER_WEEK"
+        ? "Times per week"
+        : "Not set";
   }
   if (field === "timesPerWeek") {
     return typeof value === "number" ? `${value}x/week` : "Not set";
@@ -103,14 +144,23 @@ function formatPlanCreationValue(field: string, value: unknown): string {
   }
   if (field === "activities" && Array.isArray(value)) {
     return value.length > 0
-      ? value.map((activity: any) => `${activity.emoji || "📋"} ${activity.title} (${activity.measure || "sessions"})`).join(", ")
+      ? value
+          .map(
+            (activity: any) =>
+              `${activity.emoji || "📋"} ${activity.title} (${activity.measure || "sessions"})`,
+          )
+          .join(", ")
       : "None";
   }
   if (field === "sessions" && Array.isArray(value)) {
-    return value.length > 0 ? `${value.length} dated session${value.length === 1 ? "" : "s"}` : "None";
+    return value.length > 0
+      ? `${value.length} dated session${value.length === 1 ? "" : "s"}`
+      : "None";
   }
   if (field === "milestones" && Array.isArray(value)) {
-    return value.length > 0 ? `${value.length} milestone${value.length === 1 ? "" : "s"}` : "None";
+    return value.length > 0
+      ? `${value.length} milestone${value.length === 1 ? "" : "s"}`
+      : "None";
   }
   if (typeof value === "string" && value.trim()) return value;
   return "Not set";
@@ -191,7 +241,9 @@ function buildPlanCreationDiffs(originalProposal: any, requestedProposal: any) {
 
 function hasPendingCoachActions(metadata: unknown): boolean {
   const data = metadata as any;
-  const planProposals = Array.isArray(data?.planProposals) ? data.planProposals : [];
+  const planProposals = Array.isArray(data?.planProposals)
+    ? data.planProposals
+    : [];
   const activityLogProposals = Array.isArray(data?.activityLogProposals)
     ? data.activityLogProposals
     : [];
@@ -202,15 +254,21 @@ function hasPendingCoachActions(metadata: unknown): boolean {
     ? data.planCreationProposals
     : [];
 
-  return [...planProposals, ...activityLogProposals, ...activityEditProposals, ...planCreationProposals].some(
-    (proposal) => !proposal.status
-  ) || (data?.metricReplacement && !data.metricReplacement.status);
+  return (
+    [
+      ...planProposals,
+      ...activityLogProposals,
+      ...activityEditProposals,
+      ...planCreationProposals,
+    ].some((proposal) => !proposal.status) ||
+    (data?.metricReplacement && !data.metricReplacement.status)
+  );
 }
 
 async function concludeResolvedAutonomousCoachNotifications(
   userId: string,
   chatId: string,
-  messageId: string
+  messageId: string,
 ) {
   const notifications = await prisma.notification.findMany({
     where: {
@@ -224,18 +282,23 @@ async function concludeResolvedAutonomousCoachNotifications(
 
   const matchingNotifications = notifications.filter((notification) => {
     const relatedData = notification.relatedData as any;
-    return Array.isArray(relatedData?.messageIds) && relatedData.messageIds.includes(messageId);
+    return (
+      Array.isArray(relatedData?.messageIds) &&
+      relatedData.messageIds.includes(messageId)
+    );
   });
 
   for (const notification of matchingNotifications) {
     const relatedData = notification.relatedData as any;
-    const messageIds = relatedData.messageIds.filter((id: unknown) => typeof id === "string");
+    const messageIds = relatedData.messageIds.filter(
+      (id: unknown) => typeof id === "string",
+    );
     const messages = await prisma.message.findMany({
       where: { id: { in: messageIds } },
       select: { metadata: true },
     });
     const hasPendingActions = messages.some((message) =>
-      hasPendingCoachActions(message.metadata)
+      hasPendingCoachActions(message.metadata),
     );
 
     if (!hasPendingActions) {
@@ -247,7 +310,7 @@ async function concludeResolvedAutonomousCoachNotifications(
         },
       });
       logger.info(
-        `Concluded autonomous coach notification ${notification.id} after pending actions were resolved`
+        `Concluded autonomous coach notification ${notification.id} after pending actions were resolved`,
       );
     }
   }
@@ -258,11 +321,12 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
-      const result = await coachAssessmentService.runManualCoachAssessmentForUser(user.id);
+      const result =
+        await coachAssessmentService.runManualCoachAssessmentForUser(user.id);
 
       if (result.action === "skipped") {
         return res.status(409).json({ error: result.reason, result });
@@ -277,7 +341,7 @@ router.post(
       logger.error("Error running manual coach assessment:", error);
       res.status(500).json({ error: "Failed to run coach assessment" });
     }
-  }
+  },
 );
 
 router.get(
@@ -285,7 +349,7 @@ router.get(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -299,18 +363,24 @@ router.get(
         orderBy: [{ createdAt: "desc" }],
       });
 
+      const activeAttentionItems = deriveCoachAttentionItems({
+        user,
+        plans,
+        now,
+      });
+      const archivedAttentionItems = await getRecentArchivedCoachAttentionItems(
+        user.id,
+        now,
+      );
+
       res.json({
-        attentionItems: deriveCoachAttentionItems({
-          user,
-          plans,
-          now,
-        }),
+        attentionItems: [...archivedAttentionItems, ...activeAttentionItems],
       });
     } catch (error) {
       logger.error("Error loading coach attention items:", error);
       res.status(500).json({ error: "Failed to load coach attention items" });
     }
-  }
+  },
 );
 
 // Get coach messages (conversation history)
@@ -319,7 +389,7 @@ router.get(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -371,7 +441,7 @@ router.get(
         return text
           .replace(
             /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
-            ""
+            "",
           )
           .trim();
       };
@@ -390,7 +460,7 @@ router.get(
                   const plan = plans.find(
                     (p: any) =>
                       p.goal.toLowerCase() ===
-                      replacement.planGoal.toLowerCase()
+                      replacement.planGoal.toLowerCase(),
                   );
                   return plan
                     ? {
@@ -409,10 +479,11 @@ router.get(
             let metricReplacement: any = null;
             if (metadata.metricReplacement) {
               const aiMetricTitle = stripEmojis(
-                metadata.metricReplacement.metricTitle
+                metadata.metricReplacement.metricTitle,
               ).toLowerCase();
               const metric = metrics.find(
-                (m: any) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+                (m: any) =>
+                  stripEmojis(m.title).toLowerCase() === aiMetricTitle,
               );
               if (metric) {
                 metricReplacement = {
@@ -460,7 +531,7 @@ router.get(
                     const plan = plans.find(
                       (p: any) =>
                         p.goal.toLowerCase() ===
-                        replacement.planGoal.toLowerCase()
+                        replacement.planGoal.toLowerCase(),
                     );
                     return plan
                       ? {
@@ -479,11 +550,11 @@ router.get(
               let metricReplacement: any = null;
               if (parsed.metricReplacement) {
                 const aiMetricTitle = stripEmojis(
-                  parsed.metricReplacement.metricTitle
+                  parsed.metricReplacement.metricTitle,
                 ).toLowerCase();
                 const metric = metrics.find(
                   (m: any) =>
-                    stripEmojis(m.title).toLowerCase() === aiMetricTitle
+                    stripEmojis(m.title).toLowerCase() === aiMetricTitle,
                 );
                 if (metric) {
                   metricReplacement = {
@@ -552,7 +623,7 @@ router.get(
       });
 
       logger.info(
-        `Fetched ${messages.length} messages for chat ${chatId}, user ${user.username}`
+        `Fetched ${messages.length} messages for chat ${chatId}, user ${user.username}`,
       );
 
       res.json({ messages: structuredMessages });
@@ -560,7 +631,7 @@ router.get(
       logger.error("Error fetching coach messages:", error);
       res.status(500).json({ error: "Failed to fetch coach messages" });
     }
-  }
+  },
 );
 
 // Get all user chats
@@ -569,7 +640,7 @@ router.get(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -600,7 +671,7 @@ router.get(
       logger.error("Error fetching chats:", error);
       res.status(500).json({ error: "Failed to fetch chats" });
     }
-  }
+  },
 );
 
 // Create a new chat
@@ -609,7 +680,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -666,7 +737,7 @@ router.post(
       logger.error("Error creating chat:", error);
       res.status(500).json({ error: "Failed to create chat" });
     }
-  }
+  },
 );
 
 // Clear all coach chat history and memory
@@ -675,7 +746,7 @@ router.delete(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -704,7 +775,7 @@ router.delete(
       await supermemoryService.deleteAllMemories(user.id);
 
       logger.info(
-        `Cleared coach history for user ${user.username}: ${chatIds.length} chats deleted`
+        `Cleared coach history for user ${user.username}: ${chatIds.length} chats deleted`,
       );
 
       res.json({ success: true });
@@ -712,7 +783,7 @@ router.delete(
       logger.error("Error clearing coach history:", error);
       res.status(500).json({ error: "Failed to clear coach history" });
     }
-  }
+  },
 );
 
 // Clear only supermemory (keeps chat history)
@@ -721,7 +792,7 @@ router.delete(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -735,7 +806,7 @@ router.delete(
       logger.error("Error clearing coach memory:", error);
       res.status(500).json({ error: "Failed to clear coach memory" });
     }
-  }
+  },
 );
 
 // Update chat title
@@ -744,7 +815,7 @@ router.patch(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -774,7 +845,7 @@ router.patch(
       });
 
       logger.info(
-        `Updated chat ${chatId} title to "${title}" for user ${user.username}`
+        `Updated chat ${chatId} title to "${title}" for user ${user.username}`,
       );
 
       res.json({ chat: updatedChat });
@@ -782,7 +853,7 @@ router.patch(
       logger.error("Error updating chat title:", error);
       res.status(500).json({ error: "Failed to update chat title" });
     }
-  }
+  },
 );
 
 // Submit message feedback
@@ -791,7 +862,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -834,7 +905,7 @@ router.post(
       });
 
       logger.info(
-        `Message feedback submitted - User: ${user.username}, MessageId: ${messageId}, Type: ${feedbackType}`
+        `Message feedback submitted - User: ${user.username}, MessageId: ${messageId}, Type: ${feedbackType}`,
       );
 
       res.json({ feedback });
@@ -842,7 +913,7 @@ router.post(
       logger.error("Error submitting message feedback:", error);
       res.status(500).json({ error: "Failed to submit feedback" });
     }
-  }
+  },
 );
 
 // Send message to coach (chat)
@@ -851,7 +922,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -951,7 +1022,7 @@ router.post(
       });
 
       logger.info(
-        `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Response: "${aiResponse.messageContent.substring(0, 50)}..."`
+        `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Response: "${aiResponse.messageContent.substring(0, 50)}..."`,
       );
 
       // Generate chat title if this is the first exchange (title is null)
@@ -976,7 +1047,7 @@ router.post(
             });
 
             logger.info(
-              `Generated title for chat ${chatId}: "${generatedTitle}"`
+              `Generated title for chat ${chatId}: "${generatedTitle}"`,
             );
           } catch (error) {
             logger.error("Error generating chat title:", error);
@@ -991,7 +1062,8 @@ router.post(
         aiResponse.planReplacements
           ?.map((replacement) => {
             const plan = plans.find(
-              (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+              (p) =>
+                p.goal.toLowerCase() === replacement.planGoal.toLowerCase(),
             );
 
             if (!plan) {
@@ -1015,7 +1087,7 @@ router.post(
         return text
           .replace(
             /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
-            ""
+            "",
           )
           .trim();
       };
@@ -1024,11 +1096,11 @@ router.post(
       let resolvedMetricReplacement: any = null;
       if (aiResponse.metricReplacement) {
         const aiMetricTitle = stripEmojis(
-          aiResponse.metricReplacement.metricTitle
+          aiResponse.metricReplacement.metricTitle,
         ).toLowerCase();
 
         const metric = metrics.find(
-          (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+          (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle,
         );
 
         if (metric) {
@@ -1043,7 +1115,7 @@ router.post(
           };
         } else {
           logger.warn(
-            `Metric not found for title: ${aiResponse.metricReplacement.metricTitle} (stripped: ${aiMetricTitle})`
+            `Metric not found for title: ${aiResponse.metricReplacement.metricTitle} (stripped: ${aiMetricTitle})`,
           );
         }
       }
@@ -1064,7 +1136,7 @@ router.post(
       logger.error("Error in coach chat:", error);
       res.status(500).json({ error: "Failed to process chat message" });
     }
-  }
+  },
 );
 
 // Audio transcription endpoint
@@ -1074,7 +1146,7 @@ router.post(
   upload.single("audio_file"),
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const audioFile = req.file;
@@ -1085,13 +1157,13 @@ router.post(
       }
 
       logger.info(
-        `Audio transcription requested for user ${req.user!.id}, format: ${audioFormat || "auto-detect"}`
+        `Audio transcription requested for user ${req.user!.id}, format: ${audioFormat || "auto-detect"}`,
       );
 
       // Use the STT service to transcribe the audio
       const transcribedText = await sttService.speechToText(
         audioFile.buffer,
-        audioFormat
+        audioFormat,
       );
 
       res.json({
@@ -1102,7 +1174,7 @@ router.post(
       logger.error("Error in audio transcription:", error);
       res.status(500).json({ error: "Audio transcription failed" });
     }
-  }
+  },
 );
 
 // Dynamic UI logging endpoints
@@ -1111,13 +1183,13 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const { question_checks, attempts, id, extracted_data } = req.body;
 
       logger.info(
-        `Dynamic UI attempt error logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`
+        `Dynamic UI attempt error logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
       );
       logger.debug("Question checks:", question_checks);
       logger.debug("Extracted data:", extracted_data);
@@ -1129,7 +1201,7 @@ router.post(
             `User: ${req.user!.username}\n` +
             `Attempts: ${attempts}\n` +
             `Extracted data: ${JSON.stringify(extracted_data, null, 2)}\n` +
-            `UTC Time: ${new Date().toISOString()}`
+            `UTC Time: ${new Date().toISOString()}`,
         );
       }
 
@@ -1138,7 +1210,7 @@ router.post(
       logger.error("Error logging dynamic UI attempt error:", error);
       res.status(500).json({ error: "Failed to log error" });
     }
-  }
+  },
 );
 
 router.post(
@@ -1146,13 +1218,13 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const { question_checks, attempts, extracted_data, id } = req.body;
 
       logger.info(
-        `Dynamic UI skip logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`
+        `Dynamic UI skip logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
       );
       logger.debug("Question checks:", question_checks);
       logger.debug("Extracted data:", extracted_data);
@@ -1163,7 +1235,7 @@ router.post(
           `User: ${req.user!.username}\n` +
           `Attempts: ${attempts}\n` +
           `ID: ${id}\n` +
-          `UTC Time: ${new Date().toISOString()}`
+          `UTC Time: ${new Date().toISOString()}`,
       );
 
       res.json({ status: "success" });
@@ -1171,7 +1243,7 @@ router.post(
       logger.error("Error logging dynamic UI skip:", error);
       res.status(500).json({ error: "Failed to log skip" });
     }
-  }
+  },
 );
 
 // Rewrite testimonial message with AI
@@ -1180,7 +1252,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -1231,7 +1303,7 @@ Make it more polished and compelling while keeping the user's authentic voice an
       logger.error("Error rewriting testimonial:", error);
       res.status(500).json({ error: "Failed to rewrite testimonial" });
     }
-  }
+  },
 );
 
 // Accept metric suggestion from AI coach
@@ -1288,20 +1360,20 @@ router.post(
         return text
           .replace(
             /[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}]/gu,
-            ""
+            "",
           )
           .trim();
       };
 
       // Find the metric by title (strip emojis and match)
       const aiMetricTitle = stripEmojis(
-        metadata.metricReplacement.metricTitle
+        metadata.metricReplacement.metricTitle,
       ).toLowerCase();
       const allMetrics = await prisma.metric.findMany({
         where: { userId: user.id },
       });
       const metric = allMetrics.find(
-        (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle
+        (m) => stripEmojis(m.title).toLowerCase() === aiMetricTitle,
       );
 
       if (!metric) {
@@ -1351,11 +1423,11 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} accepted metric suggestion: ${metric.title} with rating ${rating}/5`
+        `User ${user.username} accepted metric suggestion: ${metric.title} with rating ${rating}/5`,
       );
 
       res.json({ success: true });
@@ -1363,7 +1435,7 @@ router.post(
       logger.error("Error accepting metric suggestion:", error);
       res.status(500).json({ error: "Failed to accept metric suggestion" });
     }
-  }
+  },
 );
 
 // Reject metric suggestion from AI coach
@@ -1423,11 +1495,11 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} rejected metric suggestion: ${metadata.metricReplacement.metricTitle}`
+        `User ${user.username} rejected metric suggestion: ${metadata.metricReplacement.metricTitle}`,
       );
 
       res.json({ success: true });
@@ -1435,7 +1507,7 @@ router.post(
       logger.error("Error rejecting metric suggestion:", error);
       res.status(500).json({ error: "Failed to reject metric suggestion" });
     }
-  }
+  },
 );
 
 // Accept a plan proposal from AI coach
@@ -1469,10 +1541,7 @@ router.post(
       }
 
       const metadata = message.metadata as any;
-      if (
-        !metadata?.planProposals ||
-        !metadata.planProposals[proposalIndex]
-      ) {
+      if (!metadata?.planProposals || !metadata.planProposals[proposalIndex]) {
         res.status(400).json({ error: "Proposal not found" });
         return;
       }
@@ -1512,18 +1581,18 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       const successCount = changes.filter((c) => c.success).length;
       logger.info(
-        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount} changes successful)`
+        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount} changes successful)`,
       );
 
       // Conclude week_recap notification if all proposals are now resolved
       if (metadata.notificationType === "week_recap") {
         const allResolved = metadata.planProposals.every(
-          (p: any) => !!p.status
+          (p: any) => !!p.status,
         );
         if (allResolved) {
           await prisma.notification.updateMany({
@@ -1540,7 +1609,7 @@ router.post(
             },
           });
           logger.info(
-            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`
+            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`,
           );
         }
       }
@@ -1550,7 +1619,7 @@ router.post(
       logger.error("Error accepting plan proposal:", error);
       res.status(500).json({ error: "Failed to accept plan proposal" });
     }
-  }
+  },
 );
 
 // Reject a plan proposal from AI coach
@@ -1584,10 +1653,7 @@ router.post(
       }
 
       const metadata = message.metadata as any;
-      if (
-        !metadata?.planProposals ||
-        !metadata.planProposals[proposalIndex]
-      ) {
+      if (!metadata?.planProposals || !metadata.planProposals[proposalIndex]) {
         res.status(400).json({ error: "Proposal not found" });
         return;
       }
@@ -1607,17 +1673,17 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} rejected proposal: "${metadata.planProposals[proposalIndex].description}"`
+        `User ${user.username} rejected proposal: "${metadata.planProposals[proposalIndex].description}"`,
       );
 
       // Conclude week_recap notification if all proposals are now resolved
       if (metadata.notificationType === "week_recap") {
         const allResolved = metadata.planProposals.every(
-          (p: any) => !!p.status
+          (p: any) => !!p.status,
         );
         if (allResolved) {
           await prisma.notification.updateMany({
@@ -1634,7 +1700,7 @@ router.post(
             },
           });
           logger.info(
-            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`
+            `Concluded week_recap notification after all proposals resolved for chat ${message.chatId}`,
           );
         }
       }
@@ -1644,7 +1710,7 @@ router.post(
       logger.error("Error rejecting plan proposal:", error);
       res.status(500).json({ error: "Failed to reject plan proposal" });
     }
-  }
+  },
 );
 
 // Accept a plan creation proposal from AI coach
@@ -1701,28 +1767,31 @@ router.post(
             .map((activity: any) => activity.activityId)
             .filter(
               (activityId: unknown): activityId is string =>
-                typeof activityId === "string" && activityId.length > 0
-            )
-        )
+                typeof activityId === "string" && activityId.length > 0,
+            ),
+        ),
       );
-      const existingActivitiesById = requestedActivityIds.length > 0
-        ? new Map(
-            (
-              await prisma.activity.findMany({
-                where: {
-                  id: { in: requestedActivityIds },
-                  userId: user.id,
-                  deletedAt: null,
-                },
-              })
-            ).map((activity) => [activity.id, activity])
-          )
-        : new Map();
+      const existingActivitiesById =
+        requestedActivityIds.length > 0
+          ? new Map(
+              (
+                await prisma.activity.findMany({
+                  where: {
+                    id: { in: requestedActivityIds },
+                    userId: user.id,
+                    deletedAt: null,
+                  },
+                })
+              ).map((activity) => [activity.id, activity]),
+            )
+          : new Map();
       const missingActivityId = requestedActivityIds.find(
-        (activityId) => !existingActivitiesById.has(activityId)
+        (activityId) => !existingActivitiesById.has(activityId),
       );
       if (missingActivityId) {
-        res.status(400).json({ error: `Activity ${missingActivityId} not found` });
+        res
+          .status(400)
+          .json({ error: `Activity ${missingActivityId} not found` });
         return;
       }
 
@@ -1743,20 +1812,28 @@ router.post(
               },
             }));
 
-          const savedActivity = existing || await tx.activity.create({
-            data: {
-              userId: user.id,
-              title: activity.title,
-              measure: activity.measure || "sessions",
-              emoji: activity.emoji || "📋",
-              kind: activity.kind || "other",
-            },
-          });
+          const savedActivity =
+            existing ||
+            (await tx.activity.create({
+              data: {
+                userId: user.id,
+                title: activity.title,
+                measure: activity.measure || "sessions",
+                emoji: activity.emoji || "📋",
+                kind: activity.kind || "other",
+              },
+            }));
           if (!activityIds.includes(savedActivity.id)) {
             activityIds.push(savedActivity.id);
           }
-          activityIdsByTitle.set(activity.title.toLowerCase(), savedActivity.id);
-          activityIdsByTitle.set(savedActivity.title.toLowerCase(), savedActivity.id);
+          activityIdsByTitle.set(
+            activity.title.toLowerCase(),
+            savedActivity.id,
+          );
+          activityIdsByTitle.set(
+            savedActivity.title.toLowerCase(),
+            savedActivity.id,
+          );
         }
 
         const sessionCreates: Array<{
@@ -1768,7 +1845,7 @@ router.post(
 
         for (const session of proposal.sessions || []) {
           let activityId = activityIdsByTitle.get(
-            String(session.activityTitle || "").toLowerCase()
+            String(session.activityTitle || "").toLowerCase(),
           );
 
           if (!activityId && session.activityTitle) {
@@ -1780,21 +1857,26 @@ router.post(
               },
             });
 
-            const savedActivity = existing || await tx.activity.create({
-              data: {
-                userId: user.id,
-                title: session.activityTitle,
-                measure: "sessions",
-                emoji: "📋",
-                kind: "other",
-              },
-            });
+            const savedActivity =
+              existing ||
+              (await tx.activity.create({
+                data: {
+                  userId: user.id,
+                  title: session.activityTitle,
+                  measure: "sessions",
+                  emoji: "📋",
+                  kind: "other",
+                },
+              }));
 
             activityId = savedActivity.id;
             if (!activityIds.includes(activityId)) {
               activityIds.push(activityId);
             }
-            activityIdsByTitle.set(session.activityTitle.toLowerCase(), activityId);
+            activityIdsByTitle.set(
+              session.activityTitle.toLowerCase(),
+              activityId,
+            );
           }
 
           const sessionDate = parseProposalDateTime(session.date);
@@ -1808,8 +1890,8 @@ router.post(
           }
         }
 
-        const milestoneCreates = (proposal.milestones || [])
-          .flatMap((milestone: any) => {
+        const milestoneCreates = (proposal.milestones || []).flatMap(
+          (milestone: any) => {
             const milestoneDate = parseProposalDateTime(milestone.date);
 
             if (!milestone.description || !milestoneDate) {
@@ -1824,7 +1906,8 @@ router.post(
                 progress: milestone.progress ?? 0,
               },
             ];
-          });
+          },
+        );
 
         const outlineType =
           sessionCreates.length > 0 || !proposal.timesPerWeek
@@ -1844,15 +1927,18 @@ router.post(
               outlineType === "TIMES_PER_WEEK"
                 ? proposal.timesPerWeek || null
                 : null,
-            activities: activityIds.length > 0
-              ? { connect: activityIds.map((id) => ({ id })) }
-              : undefined,
-            sessions: sessionCreates.length > 0
-              ? { create: sessionCreates }
-              : undefined,
-            milestones: milestoneCreates.length > 0
-              ? { create: milestoneCreates }
-              : undefined,
+            activities:
+              activityIds.length > 0
+                ? { connect: activityIds.map((id) => ({ id })) }
+                : undefined,
+            sessions:
+              sessionCreates.length > 0
+                ? { create: sessionCreates }
+                : undefined,
+            milestones:
+              milestoneCreates.length > 0
+                ? { create: milestoneCreates }
+                : undefined,
           },
           include: { activities: true, sessions: true, milestones: true },
         });
@@ -1869,19 +1955,21 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} accepted plan creation proposal: "${proposal.goal}"`
+        `User ${user.username} accepted plan creation proposal: "${proposal.goal}"`,
       );
 
       res.json({ success: true, plan });
     } catch (error) {
       logger.error("Error accepting plan creation proposal:", error);
-      res.status(500).json({ error: "Failed to accept plan creation proposal" });
+      res
+        .status(500)
+        .json({ error: "Failed to accept plan creation proposal" });
     }
-  }
+  },
 );
 
 // Reject a plan creation proposal from AI coach
@@ -1938,19 +2026,21 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} rejected plan creation proposal: "${metadata.planCreationProposals[proposalIndex].goal}"`
+        `User ${user.username} rejected plan creation proposal: "${metadata.planCreationProposals[proposalIndex].goal}"`,
       );
 
       res.json({ success: true });
     } catch (error) {
       logger.error("Error rejecting plan creation proposal:", error);
-      res.status(500).json({ error: "Failed to reject plan creation proposal" });
+      res
+        .status(500)
+        .json({ error: "Failed to reject plan creation proposal" });
     }
-  }
+  },
 );
 
 router.post(
@@ -1967,7 +2057,11 @@ router.post(
         return;
       }
 
-      const { proposalIndex, requestedProposal: requestedPatch, note } = parsed.data;
+      const {
+        proposalIndex,
+        requestedProposal: requestedPatch,
+        note,
+      } = parsed.data;
 
       const message = await prisma.message.findUnique({
         where: { id: messageId },
@@ -2011,7 +2105,8 @@ router.post(
       });
       const diffs = buildPlanCreationDiffs(originalProposal, requestedProposal);
 
-      metadata.planCreationProposals[proposalIndex].status = "changes_requested";
+      metadata.planCreationProposals[proposalIndex].status =
+        "changes_requested";
       await prisma.message.update({
         where: { id: messageId },
         data: { metadata },
@@ -2081,7 +2176,10 @@ router.post(
         `Requested proposal:\n${JSON.stringify(requestedProposal, null, 2)}`,
         diffs.length > 0
           ? `\nChanged fields:\n${diffs
-              .map((diff) => `- ${diff.label}: ${diff.oldValue} -> ${diff.newValue}`)
+              .map(
+                (diff) =>
+                  `- ${diff.label}: ${diff.oldValue} -> ${diff.newValue}`,
+              )
               .join("\n")}`
           : "\nChanged fields: none",
         note?.trim() ? `\nUser note:\n${note.trim()}` : "",
@@ -2091,7 +2189,7 @@ router.post(
 
       const memoriesContext = await supermemoryService.getProfile(
         user.id,
-        internalPrompt
+        internalPrompt,
       );
 
       const aiResponse = await coachAgentService.generateResponse({
@@ -2109,7 +2207,7 @@ router.post(
         draft: DraftType;
       }> = [];
       const hasNewPlanCreationProposal = aiResponse.draftMessages.some(
-        (draft) => (draft.planCreationProposals?.length || 0) > 0
+        (draft) => (draft.planCreationProposals?.length || 0) > 0,
       );
 
       for (const draft of aiResponse.draftMessages) {
@@ -2120,15 +2218,17 @@ router.post(
             content: draft.content,
             metadata: {
               planReplacements: draft.planReplacements || [],
-              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
+              planProposals: JSON.parse(
+                JSON.stringify(draft.planProposals || []),
+              ),
               planCreationProposals: JSON.parse(
-                JSON.stringify(draft.planCreationProposals || [])
+                JSON.stringify(draft.planCreationProposals || []),
               ),
               activityLogProposals: JSON.parse(
-                JSON.stringify(draft.activityLogProposals || [])
+                JSON.stringify(draft.activityLogProposals || []),
               ),
               activityEditProposals: JSON.parse(
-                JSON.stringify(draft.activityEditProposals || [])
+                JSON.stringify(draft.activityEditProposals || []),
               ),
               ...(draft.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
@@ -2143,7 +2243,7 @@ router.post(
       if (hasNewPlanCreationProposal) {
         await cancelPendingPlanCreationProposals(
           message.chatId,
-          savedMessages.map(({ coachMsg }) => coachMsg.id)
+          savedMessages.map(({ coachMsg }) => coachMsg.id),
         );
       }
 
@@ -2158,7 +2258,8 @@ router.post(
       supermemoryService.addMemory(
         user.id,
         `user: ${internalPrompt}\nassistant: ${fullCoachText}`,
-        savedMessages[savedMessages.length - 1]?.coachMsg.id || userActionMessage.id
+        savedMessages[savedMessages.length - 1]?.coachMsg.id ||
+          userActionMessage.id,
       );
 
       const resolvedMessages = savedMessages.map(({ coachMsg, draft }) => {
@@ -2166,7 +2267,8 @@ router.post(
           draft.planReplacements
             ?.map((replacement) => {
               const plan = plans.find(
-                (p) => p.goal.toLowerCase() === replacement.planGoal.toLowerCase()
+                (p) =>
+                  p.goal.toLowerCase() === replacement.planGoal.toLowerCase(),
               );
               return plan
                 ? {
@@ -2210,18 +2312,22 @@ router.post(
       };
 
       logger.info(
-        `User ${user.username} proposed changes to plan creation proposal: "${proposal.goal}"`
+        `User ${user.username} proposed changes to plan creation proposal: "${proposal.goal}"`,
       );
 
       res.json({
         messages: [serializedUserActionMessage, ...resolvedMessages],
-        message: resolvedMessages[resolvedMessages.length - 1] || serializedUserActionMessage,
+        message:
+          resolvedMessages[resolvedMessages.length - 1] ||
+          serializedUserActionMessage,
       });
     } catch (error) {
       logger.error("Error proposing plan creation changes:", error);
-      res.status(500).json({ error: "Failed to propose plan creation changes" });
+      res
+        .status(500)
+        .json({ error: "Failed to propose plan creation changes" });
     }
-  }
+  },
 );
 
 // Accept an activity log proposal from AI coach
@@ -2283,11 +2389,15 @@ router.post(
       }
 
       // Check for existing entry on this date
-      const proposalDatetime = new Date(proposal.date + "T" + (proposal.time || "00:00:00") + ".000Z");
+      const proposalDatetime = new Date(
+        proposal.date + "T" + (proposal.time || "00:00:00") + ".000Z",
+      );
       const description = normalizeOptionalText(proposal.description);
       const privateNotes = normalizeOptionalText(proposal.privateNotes);
       const difficulty =
-        typeof proposal.difficulty === "string" ? proposal.difficulty : undefined;
+        typeof proposal.difficulty === "string"
+          ? proposal.difficulty
+          : undefined;
       const existingEntry = await prisma.activityEntry.findFirst({
         where: {
           activityId: proposal.activityId,
@@ -2303,9 +2413,13 @@ router.post(
           data: {
             quantity: existingEntry.quantity + proposal.quantity,
             description:
-              description !== undefined ? description : existingEntry.description,
+              description !== undefined
+                ? description
+                : existingEntry.description,
             privateNotes:
-              privateNotes !== undefined ? privateNotes : existingEntry.privateNotes,
+              privateNotes !== undefined
+                ? privateNotes
+                : existingEntry.privateNotes,
             difficulty:
               difficulty !== undefined ? difficulty : existingEntry.difficulty,
           },
@@ -2332,7 +2446,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date}`
+        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date}`,
       );
 
       res.json({ success: true });
@@ -2340,7 +2454,7 @@ router.post(
       logger.error("Error accepting activity log proposal:", error);
       res.status(500).json({ error: "Failed to accept activity log proposal" });
     }
-  }
+  },
 );
 
 // Reject an activity log proposal from AI coach
@@ -2396,7 +2510,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} rejected activity log proposal: ${metadata.activityLogProposals[proposalIndex].activityEmoji} ${metadata.activityLogProposals[proposalIndex].activityName}`
+        `User ${user.username} rejected activity log proposal: ${metadata.activityLogProposals[proposalIndex].activityEmoji} ${metadata.activityLogProposals[proposalIndex].activityName}`,
       );
 
       res.json({ success: true });
@@ -2404,7 +2518,7 @@ router.post(
       logger.error("Error rejecting activity log proposal:", error);
       res.status(500).json({ error: "Failed to reject activity log proposal" });
     }
-  }
+  },
 );
 
 // Accept an activity edit proposal from AI coach
@@ -2488,23 +2602,25 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} accepted activity edit proposal: ${proposal.activityName}`
+        `User ${user.username} accepted activity edit proposal: ${proposal.activityName}`,
       );
 
       res.json({ success: true, activity: updatedActivity });
     } catch (error) {
       logger.error("Error accepting activity edit proposal:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to accept activity edit proposal";
+        error instanceof Error
+          ? error.message
+          : "Failed to accept activity edit proposal";
       const isConversionError =
         message.includes("conversion") || message.includes("whole numbers");
       res.status(isConversionError ? 400 : 500).json({ error: message });
     }
-  }
+  },
 );
 
 // Reject an activity edit proposal from AI coach
@@ -2561,19 +2677,21 @@ router.post(
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
-        messageId
+        messageId,
       );
 
       logger.info(
-        `User ${user.username} rejected activity edit proposal: ${metadata.activityEditProposals[proposalIndex].activityName}`
+        `User ${user.username} rejected activity edit proposal: ${metadata.activityEditProposals[proposalIndex].activityName}`,
       );
 
       res.json({ success: true });
     } catch (error) {
       logger.error("Error rejecting activity edit proposal:", error);
-      res.status(500).json({ error: "Failed to reject activity edit proposal" });
+      res
+        .status(500)
+        .json({ error: "Failed to reject activity edit proposal" });
     }
-  }
+  },
 );
 
 // Accept a user context event proposal from AI coach
@@ -2652,22 +2770,25 @@ router.post(
       });
 
       metadata.userContextEventProposals[proposalIndex].status = "accepted";
-      metadata.userContextEventProposals[proposalIndex].contextEventId = event.id;
+      metadata.userContextEventProposals[proposalIndex].contextEventId =
+        event.id;
       await prisma.message.update({
         where: { id: messageId },
         data: { metadata },
       });
 
       logger.info(
-        `User ${user.username} accepted user context event proposal: ${event.title}`
+        `User ${user.username} accepted user context event proposal: ${event.title}`,
       );
 
       res.json({ success: true, event });
     } catch (error) {
       logger.error("Error accepting user context event proposal:", error);
-      res.status(500).json({ error: "Failed to accept user context event proposal" });
+      res
+        .status(500)
+        .json({ error: "Failed to accept user context event proposal" });
     }
-  }
+  },
 );
 
 // Reject a user context event proposal from AI coach
@@ -2723,15 +2844,17 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} rejected user context event proposal: ${metadata.userContextEventProposals[proposalIndex].title}`
+        `User ${user.username} rejected user context event proposal: ${metadata.userContextEventProposals[proposalIndex].title}`,
       );
 
       res.json({ success: true });
     } catch (error) {
       logger.error("Error rejecting user context event proposal:", error);
-      res.status(500).json({ error: "Failed to reject user context event proposal" });
+      res
+        .status(500)
+        .json({ error: "Failed to reject user context event proposal" });
     }
-  }
+  },
 );
 
 // Submit AI overall satisfaction feedback
@@ -2762,7 +2885,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} submitted AI satisfaction feedback: ${liked ? "liked" : "disliked"}`
+        `User ${user.username} submitted AI satisfaction feedback: ${liked ? "liked" : "disliked"}`,
       );
 
       res.json({ success: true, feedback });
@@ -2770,7 +2893,7 @@ router.post(
       logger.error("Error submitting AI satisfaction feedback:", error);
       res.status(500).json({ error: "Failed to submit feedback" });
     }
-  }
+  },
 );
 
 // Classify whether a plan goal would benefit from coaching
@@ -2779,7 +2902,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const { planGoal } = req.body;
@@ -2795,7 +2918,7 @@ router.post(
       logger.error("Error classifying coaching need:", error);
       res.status(500).json({ error: "Failed to classify coaching need" });
     }
-  }
+  },
 );
 
 // Recommend activities based on plan goal
@@ -2804,7 +2927,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -2823,7 +2946,7 @@ router.post(
       const result = await aiService.recommendActivities(planGoal, activities);
 
       logger.info(
-        `Recommended ${result.recommendedActivityIds.length} activities for goal "${planGoal.substring(0, 50)}..."`
+        `Recommended ${result.recommendedActivityIds.length} activities for goal "${planGoal.substring(0, 50)}..."`,
       );
 
       res.json(result);
@@ -2831,7 +2954,7 @@ router.post(
       logger.error("Error recommending activities:", error);
       res.status(500).json({ error: "Failed to recommend activities" });
     }
-  }
+  },
 );
 
 // Trigger a coaching notification (week_recap or pre_activity)
@@ -2840,7 +2963,7 @@ router.post(
   requireAuth,
   async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
@@ -2896,10 +3019,7 @@ router.post(
           deletedAt: null,
           archivedAt: null,
           isPaused: false,
-          OR: [
-            { finishingDate: null },
-            { finishingDate: { gt: new Date() } },
-          ],
+          OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
         },
         include: {
           activities: true,
@@ -2945,9 +3065,12 @@ router.post(
 
       // Save multiple coach messages (one per draft)
       type DraftType = (typeof aiResponse.draftMessages)[number];
-      const savedMessages: Array<{ coachMsg: Awaited<ReturnType<typeof prisma.message.create>>; draft: DraftType }> = [];
+      const savedMessages: Array<{
+        coachMsg: Awaited<ReturnType<typeof prisma.message.create>>;
+        draft: DraftType;
+      }> = [];
       const hasNewPlanCreationProposal = aiResponse.draftMessages.some(
-        (draft) => (draft.planCreationProposals?.length || 0) > 0
+        (draft) => (draft.planCreationProposals?.length || 0) > 0,
       );
       for (const draft of aiResponse.draftMessages) {
         const coachMsg = await prisma.message.create({
@@ -2957,8 +3080,12 @@ router.post(
             content: draft.content,
             metadata: {
               planReplacements: draft.planReplacements || [],
-              planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
-              planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
+              planProposals: JSON.parse(
+                JSON.stringify(draft.planProposals || []),
+              ),
+              planCreationProposals: JSON.parse(
+                JSON.stringify(draft.planCreationProposals || []),
+              ),
               notificationType: type,
               ...(draft.toolCalls && {
                 toolCalls: JSON.parse(JSON.stringify(draft.toolCalls)),
@@ -2972,7 +3099,7 @@ router.post(
       if (hasNewPlanCreationProposal) {
         await cancelPendingPlanCreationProposals(
           chat.id,
-          savedMessages.map(({ coachMsg }) => coachMsg.id)
+          savedMessages.map(({ coachMsg }) => coachMsg.id),
         );
       }
 
@@ -2987,14 +3114,17 @@ router.post(
       await notificationService.createAndProcessNotification({
         userId: user.id,
         title: type === "week_recap" ? "Weekly Recap" : "Today's Plan",
-        message: type === "week_recap" ? "Your week analysis is ready!" : firstDraftContent.substring(0, 200),
+        message:
+          type === "week_recap"
+            ? "Your week analysis is ready!"
+            : firstDraftContent.substring(0, 200),
         type: "COACH",
         relatedId: chat.id,
         promptTag: type,
       });
 
       logger.info(
-        `Triggered ${type} notification for user ${user.username}, chat ${chat.id}, drafts: ${savedMessages.length}`
+        `Triggered ${type} notification for user ${user.username}, chat ${chat.id}, drafts: ${savedMessages.length}`,
       );
 
       const responseMessages = savedMessages.map(({ coachMsg, draft }) => ({
@@ -3020,7 +3150,7 @@ router.post(
         .status(500)
         .json({ error: "Failed to trigger coaching notification" });
     }
-  }
+  },
 );
 
 export const aiRouter: Router = router;

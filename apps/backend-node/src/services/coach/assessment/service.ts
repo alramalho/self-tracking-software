@@ -10,6 +10,7 @@ import {
 import {
   addDays,
   differenceInCalendarDays,
+  differenceInHours,
   endOfDay,
   format,
   isSameDay,
@@ -17,7 +18,10 @@ import {
   subDays,
 } from "date-fns";
 import dedent from "dedent";
-import { getCoachWeekBounds, getPreviousCoachWeekBounds } from "../../../utils/date";
+import {
+  getCoachWeekBounds,
+  getPreviousCoachWeekBounds,
+} from "../../../utils/date";
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
 import { coachAgentService } from "../agent";
@@ -54,7 +58,8 @@ interface RunOptions {
   now?: Date;
 }
 
-interface AssessOptions extends Required<Pick<RunOptions, "dry_run" | "force" | "now">> {
+interface AssessOptions
+  extends Required<Pick<RunOptions, "dry_run" | "force" | "now">> {
   bypassDuplicateCheck?: boolean;
   fallbackCheckin?: boolean;
 }
@@ -80,6 +85,9 @@ const AUTONOMOUS_PROMPT_TAG = "autonomous_coach";
 const AUTO_ACCEPT_HOURS = 48;
 const MILESTONE_AUTO_ACCEPT_NOTE =
   "Milestone changes require explicit user confirmation";
+const PLAN_ATTENTION_FOLLOW_UP_DELAYS_HOURS = [24, 48];
+const PLAN_ATTENTION_ARCHIVE_AFTER_HOURS = 7 * 24;
+const PLAN_ATTENTION_ARCHIVE_MIN_NOTIFICATIONS = 3;
 
 function patchContainsMilestoneChanges(patch: PlanProposalPatch): boolean {
   return !!(
@@ -89,6 +97,7 @@ function patchContainsMilestoneChanges(patch: PlanProposalPatch): boolean {
 
 type CoachInterventionType =
   | "INACTIVITY_ARCHIVE_PROPOSAL"
+  | "PLAN_ATTENTION_ARCHIVED"
   | "INACTIVITY_PAUSE_PROPOSAL"
   | "PLAN_ATTENTION"
   | "PLAN_ADJUSTMENT"
@@ -110,10 +119,12 @@ type CoachInterventionCandidate = {
   context: string;
   usesAgent: boolean;
   attentionItems?: CoachAttentionItem[];
+  escalationCount?: number;
 };
 
 const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "INACTIVITY_ARCHIVE_PROPOSAL",
+  "PLAN_ATTENTION_ARCHIVED",
   "INACTIVITY_PAUSE_PROPOSAL",
   "PLAN_ATTENTION",
   "PLAN_ADJUSTMENT",
@@ -125,7 +136,7 @@ const INTERVENTION_PRIORITY: CoachInterventionType[] = [
 ];
 
 function isRecurrentCoachAssessmentIntervention(
-  type: CoachInterventionType
+  type: CoachInterventionType,
 ): type is RecurrentCoachAssessmentInterventionType {
   return (
     type === "WEEK_PREP" ||
@@ -147,7 +158,7 @@ function activePlanWhere(now: Date) {
 
 export function isWithinPreferredCoachWindow(
   user: Pick<User, "timezone" | "preferredCoachingHour">,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): boolean {
   const userTime = new TZDate(now, user.timezone || "UTC");
   const userHour = userTime.getHours();
@@ -161,26 +172,44 @@ function hasPendingProposal(messages: Pick<Message, "metadata">[]): boolean {
     const planProposals = metadata?.planProposals || [];
     const activityLogProposals = metadata?.activityLogProposals || [];
     const activityEditProposals = metadata?.activityEditProposals || [];
-    return [...planProposals, ...activityLogProposals, ...activityEditProposals].some(
-      (proposal: any) => !proposal.status
-    );
+    return [
+      ...planProposals,
+      ...activityLogProposals,
+      ...activityEditProposals,
+    ].some((proposal: any) => !proposal.status);
   });
 }
 
 export class CoachAssessmentService {
   async runAutonomousCoachAssessment(
-    options: RunOptions = {}
+    options: RunOptions = {},
   ): Promise<RunResult> {
+    const environment =
+      process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
+    const productionDefault = environment === "production";
     const {
       filter_usernames = [],
-      dry_run = process.env.AUTONOMOUS_COACH_DRY_RUN !== "false",
       force = false,
       now = new Date(),
     } = options;
+    const dry_run =
+      options.dry_run ??
+      (process.env.AUTONOMOUS_COACH_DRY_RUN
+        ? process.env.AUTONOMOUS_COACH_DRY_RUN !== "false"
+        : !productionDefault);
 
-    const enabled = process.env.AUTONOMOUS_COACH_ENABLED === "true" || force;
+    const enabled =
+      force ||
+      process.env.AUTONOMOUS_COACH_ENABLED === "true" ||
+      (productionDefault && process.env.AUTONOMOUS_COACH_ENABLED !== "false");
     if (!enabled) {
-      return { dry_run, enabled: false, users_checked: 0, messages_sent: 0, results: [] };
+      return {
+        dry_run,
+        enabled: false,
+        users_checked: 0,
+        messages_sent: 0,
+        results: [],
+      };
     }
 
     const users = await prisma.user.findMany({
@@ -214,7 +243,10 @@ export class CoachAssessmentService {
         const result = await this.assessUser(user, { dry_run, force, now });
         results.push(result);
       } catch (error) {
-        logger.error(`Autonomous coach assessment failed for ${user.username}:`, error);
+        logger.error(
+          `Autonomous coach assessment failed for ${user.username}:`,
+          error,
+        );
         results.push({
           userId: user.id,
           username: user.username,
@@ -235,7 +267,7 @@ export class CoachAssessmentService {
 
   async runManualCoachAssessmentForUser(
     userId: string,
-    options: { now?: Date } = {}
+    options: { now?: Date } = {},
   ): Promise<UserAssessmentResult> {
     const now = options.now || new Date();
     const user = await prisma.user.findFirst({
@@ -288,7 +320,7 @@ export class CoachAssessmentService {
     });
 
     logger.info(
-      `[coach-assessment] manual status review user=${user.username} plans=${coachUser.plans.length} drafts=${aiResponse.draftMessages.length} skipped=${aiResponse.skipped}`
+      `[coach-assessment] manual status review user=${user.username} plans=${coachUser.plans.length} drafts=${aiResponse.draftMessages.length} skipped=${aiResponse.skipped}`,
     );
 
     if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
@@ -313,7 +345,7 @@ export class CoachAssessmentService {
       user,
       candidate,
       aiResponse.draftMessages,
-      "Coach assessment"
+      "Coach assessment",
     );
 
     return {
@@ -326,7 +358,9 @@ export class CoachAssessmentService {
     };
   }
 
-  private buildStatusReviewPrompt(attentionItems: CoachAttentionItem[] = []): string {
+  private buildStatusReviewPrompt(
+    attentionItems: CoachAttentionItem[] = [],
+  ): string {
     const attentionContext = formatCoachAttentionContext(attentionItems);
 
     return dedent`
@@ -356,7 +390,7 @@ export class CoachAssessmentService {
 
   private async runCoachSetupCheckin(
     user: CoachUser,
-    now: Date
+    now: Date,
   ): Promise<UserAssessmentResult> {
     const recentMessages = await this.getRecentCoachMessages(user.id);
     const reminders = await prisma.reminder.findMany({
@@ -364,11 +398,15 @@ export class CoachAssessmentService {
       orderBy: { triggerAt: "asc" },
     });
 
-    const activePlanSummary = user.plans.length > 0
-      ? user.plans
-          .map((plan) => `- ${plan.emoji || ""} ${plan.goal}${plan.outlineType === "TIMES_PER_WEEK" && plan.timesPerWeek ? ` (${plan.timesPerWeek}x/week)` : ""}`)
-          .join("\n")
-      : "No active plans.";
+    const activePlanSummary =
+      user.plans.length > 0
+        ? user.plans
+            .map(
+              (plan) =>
+                `- ${plan.emoji || ""} ${plan.goal}${plan.outlineType === "TIMES_PER_WEEK" && plan.timesPerWeek ? ` (${plan.timesPerWeek}x/week)` : ""}`,
+            )
+            .join("\n")
+        : "No active plans.";
 
     const aiResponse = await coachAgentService.generateResponse({
       user,
@@ -390,7 +428,10 @@ export class CoachAssessmentService {
       conversationHistory: recentMessages
         .slice(0, 8)
         .reverse()
-        .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+        .map((m) => ({
+          role: m.role === "USER" ? ("user" as const) : ("assistant" as const),
+          content: m.content,
+        })),
       plans: user.plans,
       reminders,
     });
@@ -404,11 +445,22 @@ export class CoachAssessmentService {
       usesAgent: true,
     };
 
-    const drafts = aiResponse.draftMessages.length > 0
-      ? aiResponse.draftMessages
-      : [{ content: "I do not see an active plan yet. What measurable goal do you want to start with?" }];
+    const drafts =
+      aiResponse.draftMessages.length > 0
+        ? aiResponse.draftMessages
+        : [
+            {
+              content:
+                "I do not see an active plan yet. What measurable goal do you want to start with?",
+            },
+          ];
 
-    const sent = await this.dispatchCoachDrafts(user, candidate, drafts, "Coach setup");
+    const sent = await this.dispatchCoachDrafts(
+      user,
+      candidate,
+      drafts,
+      "Coach setup",
+    );
 
     return {
       userId: user.id,
@@ -444,7 +496,7 @@ export class CoachAssessmentService {
     for (const message of messages) {
       if (message.chat.user?.proactiveCoachingEnabled === false) {
         logger.info(
-          `Skipping auto-accept for coach message ${message.id} because proactive coaching is disabled`
+          `Skipping auto-accept for coach message ${message.id} because proactive coaching is disabled`,
         );
         continue;
       }
@@ -477,7 +529,7 @@ export class CoachAssessmentService {
           if (patchContainsMilestoneChanges(patch)) {
             proposals[i].autoAcceptNote = MILESTONE_AUTO_ACCEPT_NOTE;
             logger.info(
-              `Skipped auto-accept for milestone proposal "${proposal.description}" on plan "${plan.goal}"`
+              `Skipped auto-accept for milestone proposal "${proposal.description}" on plan "${plan.goal}"`,
             );
             continue;
           }
@@ -491,7 +543,7 @@ export class CoachAssessmentService {
           accepted++;
 
           logger.info(
-            `Auto-accepted proposal "${proposal.description}" for plan "${plan.goal}" after ${AUTO_ACCEPT_HOURS}h`
+            `Auto-accepted proposal "${proposal.description}" for plan "${plan.goal}" after ${AUTO_ACCEPT_HOURS}h`,
           );
         } catch (error) {
           logger.error(`Failed to auto-accept proposal:`, error);
@@ -514,7 +566,7 @@ export class CoachAssessmentService {
 
   private async executeProposalOperations(
     plan: Plan & { activities: Activity[]; sessions: PlanSession[] },
-    operations: any[]
+    operations: any[],
   ): Promise<void> {
     for (const op of operations) {
       if (op.type === "add") {
@@ -524,7 +576,11 @@ export class CoachAssessmentService {
             planId: plan.id,
             activityId: op.activityId,
             date: new Date(
-              Date.UTC(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
+              Date.UTC(
+                sessionDate.getFullYear(),
+                sessionDate.getMonth(),
+                sessionDate.getDate(),
+              ),
             ),
             quantity: op.quantity,
             descriptiveGuide: op.descriptiveGuide || "",
@@ -535,11 +591,17 @@ export class CoachAssessmentService {
         const updateData: Record<string, unknown> = {};
         if (op.date) {
           const d = new Date(op.date);
-          updateData.date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+          updateData.date = new Date(
+            Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+          );
         }
         if (op.quantity !== undefined) updateData.quantity = op.quantity;
-        if (op.descriptiveGuide !== undefined) updateData.descriptiveGuide = op.descriptiveGuide;
-        await prisma.planSession.update({ where: { id: op.sessionId }, data: updateData });
+        if (op.descriptiveGuide !== undefined)
+          updateData.descriptiveGuide = op.descriptiveGuide;
+        await prisma.planSession.update({
+          where: { id: op.sessionId },
+          data: updateData,
+        });
       } else if (op.type === "remove") {
         await prisma.planSession.delete({ where: { id: op.sessionId } });
       } else if (op.type === "pause") {
@@ -571,12 +633,48 @@ export class CoachAssessmentService {
 
   private async assessUser(
     user: CoachUser,
-    options: AssessOptions
+    options: AssessOptions,
   ): Promise<UserAssessmentResult> {
-    const { now, force, dry_run, bypassDuplicateCheck = false, fallbackCheckin = false } = options;
+    const {
+      now,
+      force,
+      dry_run,
+      bypassDuplicateCheck = false,
+      fallbackCheckin = false,
+    } = options;
 
     const recentMessages = await this.getRecentCoachMessages(user.id);
     const pendingProposalExists = hasPendingProposal(recentMessages);
+    const rupturedAttentionItems = await this.findRupturedPlanAttentionItems(
+      user,
+      now,
+    );
+    if (rupturedAttentionItems.length > 0) {
+      if (dry_run) {
+        return {
+          userId: user.id,
+          username: user.username,
+          action: "skipped",
+          reason: `Dry run. Would archive ${rupturedAttentionItems.length} unresolved schedule gap${rupturedAttentionItems.length === 1 ? "" : "s"}`,
+        };
+      }
+
+      const sent = await this.archiveRupturedPlanAttentionItems(
+        user,
+        rupturedAttentionItems,
+        now,
+      );
+      return {
+        userId: user.id,
+        username: user.username,
+        action: "sent",
+        reason:
+          "Archived unresolved scheduled plan after repeated coach nudges",
+        sentMessageIds: sent.messageIds,
+        notificationId: sent.notificationId,
+      };
+    }
+
     const candidates = await this.buildInterventionCandidates(user, now, {
       force,
       pendingProposalExists,
@@ -584,12 +682,13 @@ export class CoachAssessmentService {
     });
     const candidate = await this.selectInterventionCandidate(user, candidates, {
       bypassDuplicateCheck,
+      now,
     });
 
     logger.info(
       `[coach-assessment] user=${user.username} historyMessages=${recentMessages.length} bypassDuplicateCheck=${bypassDuplicateCheck} candidates=[${candidates
         .map((c) => c.type)
-        .join(",")}] selected=${candidate?.type ?? "none"}`
+        .join(",")}] selected=${candidate?.type ?? "none"}`,
     );
 
     if (candidate && candidate.type !== "COACH_SETUP") {
@@ -602,7 +701,8 @@ export class CoachAssessmentService {
         candidate: candidate as any,
         brief,
       });
-      candidate.context += coachContextBriefService.formatSelectedInsight(selectedInsight);
+      candidate.context +=
+        coachContextBriefService.formatSelectedInsight(selectedInsight);
     }
 
     if (dry_run) {
@@ -644,7 +744,11 @@ export class CoachAssessmentService {
         conversationHistory: recentMessages
           .slice(0, 8)
           .reverse()
-          .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+          .map((m) => ({
+            role:
+              m.role === "USER" ? ("user" as const) : ("assistant" as const),
+            content: m.content,
+          })),
         plans: user.plans,
         reminders,
       });
@@ -655,7 +759,10 @@ export class CoachAssessmentService {
             type: "INACTIVITY_CHECKIN",
             reason: "User requested a coach assessment from the coach chat.",
             planIds: user.plans.map((plan) => plan.id),
-            targetDate: format(new TZDate(now, user.timezone || "UTC"), "yyyy-MM-dd"),
+            targetDate: format(
+              new TZDate(now, user.timezone || "UTC"),
+              "yyyy-MM-dd",
+            ),
             context: await this.buildContextSummary(user, now),
             usesAgent: true,
           };
@@ -669,15 +776,31 @@ export class CoachAssessmentService {
             conversationHistory: recentMessages
               .slice(0, 8)
               .reverse()
-              .map((m) => ({ role: m.role === "USER" ? "user" as const : "assistant" as const, content: m.content })),
+              .map((m) => ({
+                role:
+                  m.role === "USER"
+                    ? ("user" as const)
+                    : ("assistant" as const),
+                content: m.content,
+              })),
             plans: user.plans,
             reminders,
           });
-          const sent = await this.dispatchCoachDrafts(user, fallbackCandidate, [
-            ...(fallbackResponse.draftMessages.length > 0
-              ? fallbackResponse.draftMessages
-              : [{ content: "Quick check-in, what would make the next small step feel doable today?" }]),
-          ], "Coach check-in");
+          const sent = await this.dispatchCoachDrafts(
+            user,
+            fallbackCandidate,
+            [
+              ...(fallbackResponse.draftMessages.length > 0
+                ? fallbackResponse.draftMessages
+                : [
+                    {
+                      content:
+                        "Quick check-in, what would make the next small step feel doable today?",
+                    },
+                  ]),
+            ],
+            "Coach check-in",
+          );
 
           return {
             userId: user.id,
@@ -697,7 +820,11 @@ export class CoachAssessmentService {
         };
       }
 
-      const sent = await this.dispatchCoachDrafts(user, candidate, aiResponse.draftMessages);
+      const sent = await this.dispatchCoachDrafts(
+        user,
+        candidate,
+        aiResponse.draftMessages,
+      );
       return {
         userId: user.id,
         username: user.username,
@@ -716,7 +843,9 @@ export class CoachAssessmentService {
     };
   }
 
-  private buildAgentInterventionPrompt(candidate: CoachInterventionCandidate): string {
+  private buildAgentInterventionPrompt(
+    candidate: CoachInterventionCandidate,
+  ): string {
     const action =
       candidate.type === "INACTIVITY_ARCHIVE_PROPOSAL"
         ? "propose archiving the inactive plan with patch.archive"
@@ -771,9 +900,19 @@ export class CoachAssessmentService {
         emoji: string | null;
         outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
         timesPerWeek: number | null;
-        activities: Array<{ activityId?: string | null; title: string; measure: string; emoji: string; kind?: string | null }>;
+        activities: Array<{
+          activityId?: string | null;
+          title: string;
+          measure: string;
+          emoji: string;
+          kind?: string | null;
+        }>;
         finishingDate?: string | null;
-        milestones?: Array<{ description: string; date: string; criteria?: string | null }>;
+        milestones?: Array<{
+          description: string;
+          date: string;
+          criteria?: string | null;
+        }>;
         sessions?: Array<{
           activityTitle: string;
           date: string;
@@ -808,12 +947,12 @@ export class CoachAssessmentService {
       }>;
       toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
     }>,
-    notificationTitle?: string
+    notificationTitle?: string,
   ): Promise<{ messageIds: string[]; notificationId?: string }> {
     const { chat } = await this.ensureCoachChat(user);
     const messageIds: string[] = [];
     const hasNewPlanCreationProposal = drafts.some(
-      (draft) => (draft.planCreationProposals?.length || 0) > 0
+      (draft) => (draft.planCreationProposals?.length || 0) > 0,
     );
 
     for (const draft of drafts) {
@@ -836,8 +975,9 @@ export class CoachAssessmentService {
               activityLogProposals: draft.activityLogProposals || [],
               activityEditProposals: draft.activityEditProposals || [],
               coachAttentionItems: candidate.attentionItems || [],
+              escalationCount: candidate.escalationCount || 0,
               ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
-            })
+            }),
           ),
         },
       });
@@ -858,22 +998,28 @@ export class CoachAssessmentService {
         (d.planProposals && d.planProposals.length > 0) ||
         (d.activityLogProposals && d.activityLogProposals.length > 0) ||
         (d.activityEditProposals && d.activityEditProposals.length > 0) ||
-        (d.planCreationProposals && d.planCreationProposals.length > 0)
+        (d.planCreationProposals && d.planCreationProposals.length > 0),
     );
     const pendingActionCount = drafts.reduce(
       (count, draft) =>
         count +
-        (draft.planProposals?.filter((proposal) => !proposal.status).length || 0) +
-        (draft.planCreationProposals?.filter((proposal) => !proposal.status).length || 0) +
-        (draft.activityLogProposals?.filter((proposal) => !proposal.status).length || 0) +
-        (draft.activityEditProposals?.filter((proposal) => !proposal.status).length || 0),
-      0
+        (draft.planProposals?.filter((proposal) => !proposal.status).length ||
+          0) +
+        (draft.planCreationProposals?.filter((proposal) => !proposal.status)
+          .length || 0) +
+        (draft.activityLogProposals?.filter((proposal) => !proposal.status)
+          .length || 0) +
+        (draft.activityEditProposals?.filter((proposal) => !proposal.status)
+          .length || 0),
+      0,
     );
 
     const notification = await notificationService.createAndProcessNotification(
       {
         userId: user.id,
-        title: notificationTitle || this.getNotificationTitle(candidate.type, hasProposal),
+        title:
+          notificationTitle ||
+          this.getNotificationTitle(candidate.type, hasProposal),
         message: drafts[0]?.content?.substring(0, 200) || "",
         type: "COACH",
         relatedId: chat.id,
@@ -888,18 +1034,23 @@ export class CoachAssessmentService {
           messageIds,
           pendingActionCount,
           coachAttentionItems: candidate.attentionItems || [],
+          escalationCount: candidate.escalationCount || 0,
         },
       },
-      true
+      true,
     );
 
     return { messageIds, notificationId: notification?.id };
   }
 
-  private getNotificationTitle(type: CoachInterventionType, hasProposal: boolean): string {
+  private getNotificationTitle(
+    type: CoachInterventionType,
+    hasProposal: boolean,
+  ): string {
     if (hasProposal) return "Plan adjustment";
     const titles: Record<CoachInterventionType, string> = {
       INACTIVITY_ARCHIVE_PROPOSAL: "Plan archive suggestion",
+      PLAN_ATTENTION_ARCHIVED: "Plan archived",
       INACTIVITY_PAUSE_PROPOSAL: "Plan pause suggestion",
       PLAN_ATTENTION: "Plan needs attention",
       PLAN_ADJUSTMENT: "Plan adjustment",
@@ -917,7 +1068,11 @@ export class CoachAssessmentService {
   private async buildInterventionCandidates(
     user: CoachUser,
     now: Date,
-    options: { force: boolean; pendingProposalExists: boolean; fallbackCheckin?: boolean }
+    options: {
+      force: boolean;
+      pendingProposalExists: boolean;
+      fallbackCheckin?: boolean;
+    },
   ): Promise<CoachInterventionCandidate[]> {
     const timezone = user.timezone || "UTC";
     const nowInTz = new TZDate(now, timezone);
@@ -936,7 +1091,9 @@ export class CoachAssessmentService {
       candidates.push({
         type: "PLAN_ATTENTION",
         reason: attentionItems[0].title,
-        planIds: Array.from(new Set(attentionItems.flatMap((item) => item.planIds))),
+        planIds: Array.from(
+          new Set(attentionItems.flatMap((item) => item.planIds)),
+        ),
         targetWeekStart: currentWeekStartKey,
         context: formatCoachAttentionContext(attentionItems),
         usesAgent: true,
@@ -945,13 +1102,18 @@ export class CoachAssessmentService {
     }
 
     const planSummaries = await Promise.all(
-      user.plans.map((plan) => this.buildPlanAssessmentSummary(user, plan, now))
+      user.plans.map((plan) =>
+        this.buildPlanAssessmentSummary(user, plan, now),
+      ),
     );
 
     for (const summary of planSummaries) {
       const baseContext = summary.context;
 
-      if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 30) {
+      if (
+        summary.daysSinceLastActivity !== null &&
+        summary.daysSinceLastActivity >= 30
+      ) {
         candidates.push({
           type: "INACTIVITY_ARCHIVE_PROPOSAL",
           reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
@@ -960,7 +1122,10 @@ export class CoachAssessmentService {
           context: baseContext,
           usesAgent: true,
         });
-      } else if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 14) {
+      } else if (
+        summary.daysSinceLastActivity !== null &&
+        summary.daysSinceLastActivity >= 14
+      ) {
         candidates.push({
           type: "INACTIVITY_PAUSE_PROPOSAL",
           reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
@@ -986,7 +1151,11 @@ export class CoachAssessmentService {
         });
       }
 
-      if (summary.daysSinceLastActivity !== null && summary.daysSinceLastActivity >= 7 && summary.daysSinceLastActivity < 14) {
+      if (
+        summary.daysSinceLastActivity !== null &&
+        summary.daysSinceLastActivity >= 7 &&
+        summary.daysSinceLastActivity < 14
+      ) {
         candidates.push({
           type: "INACTIVITY_CHECKIN",
           reason: `${summary.plan.goal} has had no activity for ${summary.daysSinceLastActivity} days.`,
@@ -997,7 +1166,11 @@ export class CoachAssessmentService {
         });
       }
 
-      if (summary.totalSessionsThisWeek > 0 && summary.missedSessionsThisWeek === 0 && summary.completedSessionsThisWeek === summary.totalSessionsThisWeek) {
+      if (
+        summary.totalSessionsThisWeek > 0 &&
+        summary.missedSessionsThisWeek === 0 &&
+        summary.completedSessionsThisWeek === summary.totalSessionsThisWeek
+      ) {
         candidates.push({
           type: "CELEBRATION",
           reason: `${summary.plan.goal} has all planned sessions completed this week.`,
@@ -1010,8 +1183,15 @@ export class CoachAssessmentService {
     }
 
     if (options.force || this.isWeekPrepTime(user, now)) {
-      const { start: targetWeekStart, end: targetWeekEnd } = getCoachWeekBounds(now, timezone);
-      const weekSessions = this.getSessionsBetween(user.plans, targetWeekStart, targetWeekEnd);
+      const { start: targetWeekStart, end: targetWeekEnd } = getCoachWeekBounds(
+        now,
+        timezone,
+      );
+      const weekSessions = this.getSessionsBetween(
+        user.plans,
+        targetWeekStart,
+        targetWeekEnd,
+      );
       if (weekSessions.length > 0) {
         candidates.push({
           type: "WEEK_PREP",
@@ -1027,7 +1207,11 @@ export class CoachAssessmentService {
 
     if (options.force || localHour === 20) {
       const tomorrow = addDays(nowInTz, 1);
-      const tomorrowSessions = this.getSessionsBetween(user.plans, startOfDay(tomorrow), endOfDay(tomorrow));
+      const tomorrowSessions = this.getSessionsBetween(
+        user.plans,
+        startOfDay(tomorrow),
+        endOfDay(tomorrow),
+      );
       if (tomorrowSessions.length > 0) {
         candidates.push({
           type: "SESSION_PREP",
@@ -1041,22 +1225,28 @@ export class CoachAssessmentService {
       }
     }
 
-    if ((options.force || localDay === 1) && isWithinPreferredCoachWindow(user, now)) {
+    if (
+      (options.force || localDay === 1) &&
+      isWithinPreferredCoachWindow(user, now)
+    ) {
       const { start: previousWeekStart, end: previousWeekEnd } =
         getPreviousCoachWeekBounds(now, timezone);
       const activePlanIds = user.plans.map((p) => p.id);
-      const activityIds = user.plans.flatMap((p) => p.activities.map((a) => a.id));
-      const entries = activityIds.length > 0
-        ? await prisma.activityEntry.findMany({
-            where: {
-              userId: user.id,
-              deletedAt: null,
-              activityId: { in: activityIds },
-              datetime: { gte: previousWeekStart, lte: previousWeekEnd },
-            },
-            include: { activity: true },
-          })
-        : [];
+      const activityIds = user.plans.flatMap((p) =>
+        p.activities.map((a) => a.id),
+      );
+      const entries =
+        activityIds.length > 0
+          ? await prisma.activityEntry.findMany({
+              where: {
+                userId: user.id,
+                deletedAt: null,
+                activityId: { in: activityIds },
+                datetime: { gte: previousWeekStart, lte: previousWeekEnd },
+              },
+              include: { activity: true },
+            })
+          : [];
       if (entries.length > 0) {
         candidates.push({
           type: "WEEK_RECAP",
@@ -1066,7 +1256,11 @@ export class CoachAssessmentService {
           context: this.buildWeekRecapContext({
             previousWeekStart,
             previousWeekEnd,
-            sessions: this.getSessionsBetween(user.plans, previousWeekStart, previousWeekEnd),
+            sessions: this.getSessionsBetween(
+              user.plans,
+              previousWeekStart,
+              previousWeekEnd,
+            ),
             entries,
           }),
           usesAgent: true,
@@ -1088,15 +1282,255 @@ export class CoachAssessmentService {
     return candidates;
   }
 
+  private attentionItemMatchesCandidate(
+    item: CoachAttentionItem,
+    candidate: CoachInterventionCandidate,
+  ) {
+    if (
+      candidate.attentionItems?.some(
+        (candidateItem) => candidateItem.dedupeKey === item.dedupeKey,
+      )
+    ) {
+      return true;
+    }
+
+    return item.planIds.some((planId) => candidate.planIds.includes(planId));
+  }
+
+  private async getPlanAttentionNotificationHistory(
+    userId: string,
+    candidate: Pick<CoachInterventionCandidate, "planIds" | "attentionItems">,
+  ) {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId,
+        type: "COACH",
+        promptTag: AUTONOMOUS_PROMPT_TAG,
+        relatedData: {
+          path: ["interventionType"],
+          equals: "PLAN_ATTENTION",
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return notifications.filter((notification) => {
+      const relatedData = notification.relatedData as any;
+      const items = Array.isArray(relatedData?.coachAttentionItems)
+        ? relatedData.coachAttentionItems
+        : [];
+      const itemMatch = items.some((item: CoachAttentionItem) =>
+        this.attentionItemMatchesCandidate(
+          item,
+          candidate as CoachInterventionCandidate,
+        ),
+      );
+      const planIds = Array.isArray(relatedData?.planIds)
+        ? relatedData.planIds
+        : [];
+      const planMatch = planIds.some((planId: string) =>
+        candidate.planIds.includes(planId),
+      );
+
+      return itemMatch || planMatch;
+    });
+  }
+
+  private shouldSendPlanAttentionFollowUp(
+    history: Array<{ createdAt: Date }>,
+    now: Date,
+  ) {
+    if (history.length === 0) return true;
+    if (history.length > PLAN_ATTENTION_FOLLOW_UP_DELAYS_HOURS.length) {
+      return false;
+    }
+
+    const latest = history[0];
+    const requiredDelay =
+      PLAN_ATTENTION_FOLLOW_UP_DELAYS_HOURS[history.length - 1];
+    return differenceInHours(now, latest.createdAt) >= requiredDelay;
+  }
+
+  private withPlanAttentionEscalation(
+    candidate: CoachInterventionCandidate,
+    history: Array<{ createdAt: Date }>,
+    now: Date,
+  ): CoachInterventionCandidate {
+    if (history.length === 0) return candidate;
+
+    const firstSent = history[history.length - 1];
+    const hoursSinceFirst = differenceInHours(now, firstSent.createdAt);
+    const escalationCount = history.length;
+
+    return {
+      ...candidate,
+      escalationCount,
+      reason: `${candidate.reason}. This schedule gap is still unresolved after ${escalationCount} coach nudge${escalationCount === 1 ? "" : "s"}.`,
+      context: [
+        candidate.context,
+        "",
+        `Escalation: unresolved for ${hoursSinceFirst} hours since the first coach nudge. This is follow-up ${escalationCount + 1}; be more direct and concrete than the previous outreach while still helping the user repair the plan.`,
+      ].join("\n"),
+    };
+  }
+
+  private async findRupturedPlanAttentionItems(
+    user: CoachUser,
+    now: Date,
+  ): Promise<CoachAttentionItem[]> {
+    const attentionItems = deriveCoachAttentionItems({
+      user,
+      plans: user.plans,
+      now,
+    }).filter(
+      (item) =>
+        item.kind === "SPECIFIC_NO_FUTURE_SESSIONS" &&
+        item.severity === "critical",
+    );
+
+    const ruptured: CoachAttentionItem[] = [];
+    for (const item of attentionItems) {
+      const history = await this.getPlanAttentionNotificationHistory(user.id, {
+        planIds: item.planIds,
+        attentionItems: [item],
+      });
+      if (history.length < PLAN_ATTENTION_ARCHIVE_MIN_NOTIFICATIONS) continue;
+
+      const firstSent = history[history.length - 1];
+      if (
+        differenceInHours(now, firstSent.createdAt) >=
+        PLAN_ATTENTION_ARCHIVE_AFTER_HOURS
+      ) {
+        ruptured.push(item);
+      }
+    }
+
+    return ruptured;
+  }
+
+  private buildArchivedAttentionItem(
+    item: CoachAttentionItem,
+    now: Date,
+  ): CoachAttentionItem {
+    return {
+      ...item,
+      dedupeKey: `${item.dedupeKey}:archived:${format(now, "yyyy-MM-dd")}`,
+      kind: "SPECIFIC_AUTO_ARCHIVED",
+      severity: "critical",
+      title: `${item.planEmoji || ""} ${item.planGoal} was archived`.trim(),
+      message:
+        "The coach archived this plan after repeated unresolved schedule warnings. You can unarchive it when you are ready to rebuild the schedule.",
+      primaryAction: {
+        type: "VIEW_COACH_CHAT",
+        prompt: `Review why "${item.planGoal}" was archived and decide whether to restore it.`,
+      },
+      generatedAt: now.toISOString(),
+    };
+  }
+
+  private async archiveRupturedPlanAttentionItems(
+    user: User,
+    items: CoachAttentionItem[],
+    now: Date,
+  ): Promise<{ messageIds: string[]; notificationId?: string }> {
+    const planIds = Array.from(new Set(items.flatMap((item) => item.planIds)));
+    const plans = await prisma.plan.findMany({
+      where: {
+        id: { in: planIds },
+        userId: user.id,
+        deletedAt: null,
+        archivedAt: null,
+      },
+    });
+
+    if (plans.length === 0) return { messageIds: [] };
+
+    await prisma.plan.updateMany({
+      where: { id: { in: plans.map((plan) => plan.id) } },
+      data: {
+        archivedAt: now,
+        coachSuggestedTimesPerWeek: null,
+        coachNotes: null,
+      },
+    });
+
+    const { chat } = await this.ensureCoachChat(user);
+    const archivedItems = items.map((item) =>
+      this.buildArchivedAttentionItem(item, now),
+    );
+    const planList = plans
+      .map((plan) => `${plan.emoji || ""} ${plan.goal}`.trim())
+      .join(", ");
+    const content =
+      plans.length === 1
+        ? `I archived ${planList} because its schedule stayed unresolved after repeated coach nudges. You can unarchive it from old and archived plans when you are ready to rebuild it.`
+        : `I archived these plans because their schedules stayed unresolved after repeated coach nudges: ${planList}. You can unarchive them from old and archived plans when you are ready to rebuild them.`;
+
+    const message = await prisma.message.create({
+      data: {
+        chatId: chat.id,
+        role: "COACH",
+        content,
+        metadata: {
+          source: AUTONOMOUS_PROMPT_TAG,
+          interventionType: "PLAN_ATTENTION_ARCHIVED",
+          planIds,
+          coachAttentionItems: archivedItems,
+        },
+      },
+    });
+
+    await prisma.chat.update({
+      where: { id: chat.id },
+      data: { updatedAt: now },
+    });
+
+    const notification = await notificationService.createAndProcessNotification(
+      {
+        userId: user.id,
+        title: "Plan archived",
+        message: content,
+        type: "COACH",
+        relatedId: chat.id,
+        promptTag: AUTONOMOUS_PROMPT_TAG,
+        relatedData: {
+          type: "COACH_ASSESSMENT",
+          interventionType: "PLAN_ATTENTION_ARCHIVED",
+          planIds,
+          messageIds: [message.id],
+          pendingActionCount: 0,
+          coachAttentionItems: archivedItems,
+        },
+      },
+      true,
+    );
+
+    return { messageIds: [message.id], notificationId: notification?.id };
+  }
+
   private async selectInterventionCandidate(
     user: User,
     candidates: CoachInterventionCandidate[],
-    options: { bypassDuplicateCheck?: boolean } = {}
+    options: { bypassDuplicateCheck?: boolean; now?: Date } = {},
   ): Promise<CoachInterventionCandidate | null> {
+    const now = options.now || new Date();
     for (const type of INTERVENTION_PRIORITY) {
-      const matching = candidates.filter((candidate) => candidate.type === type);
+      const matching = candidates.filter(
+        (candidate) => candidate.type === type,
+      );
       for (const candidate of matching) {
         if (options.bypassDuplicateCheck) return candidate;
+        if (candidate.type === "PLAN_ATTENTION") {
+          const history = await this.getPlanAttentionNotificationHistory(
+            user.id,
+            candidate,
+          );
+          if (this.shouldSendPlanAttentionFollowUp(history, now)) {
+            return this.withPlanAttentionEscalation(candidate, history, now);
+          }
+          continue;
+        }
         const sent = await this.hasSentIntervention(user.id, candidate);
         if (!sent) return candidate;
       }
@@ -1104,7 +1538,10 @@ export class CoachAssessmentService {
     return null;
   }
 
-  private async hasSentIntervention(userId: string, candidate: CoachInterventionCandidate): Promise<boolean> {
+  private async hasSentIntervention(
+    userId: string,
+    candidate: CoachInterventionCandidate,
+  ): Promise<boolean> {
     const where: any = {
       userId,
       type: "COACH",
@@ -1137,13 +1574,16 @@ export class CoachAssessmentService {
     const localDay = nowInTz.getDay();
     const localHour = nowInTz.getHours();
     const preferredStartHour = user.preferredCoachingHour ?? 6;
-    return (localDay === 0 && localHour === 20) || (localDay === 1 && localHour === preferredStartHour);
+    return (
+      (localDay === 0 && localHour === 20) ||
+      (localDay === 1 && localHour === preferredStartHour)
+    );
   }
 
   private getSessionsBetween(
     plans: CoachPlan[],
     start: Date,
-    end: Date
+    end: Date,
   ): Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }> {
     return plans.flatMap((plan) =>
       plan.sessions
@@ -1151,20 +1591,26 @@ export class CoachAssessmentService {
         .map((session) => ({
           plan,
           session,
-          activity: plan.activities.find((activity) => activity.id === session.activityId)!,
+          activity: plan.activities.find(
+            (activity) => activity.id === session.activityId,
+          )!,
         }))
-        .filter((item) => item.activity)
+        .filter((item) => item.activity),
     );
   }
 
   private buildSessionContext(
     label: string,
-    sessions: Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }>
+    sessions: Array<{
+      plan: CoachPlan;
+      session: PlanSession;
+      activity: Activity;
+    }>,
   ): string {
     const lines = [`${label} sessions:`];
     for (const item of sessions) {
       lines.push(
-        `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`
+        `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`,
       );
     }
     return lines.join("\n");
@@ -1173,7 +1619,11 @@ export class CoachAssessmentService {
   private buildWeekRecapContext(params: {
     previousWeekStart: Date;
     previousWeekEnd: Date;
-    sessions: Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }>;
+    sessions: Array<{
+      plan: CoachPlan;
+      session: PlanSession;
+      activity: Activity;
+    }>;
     entries: Array<{
       activityId: string | null;
       datetime: Date;
@@ -1184,21 +1634,23 @@ export class CoachAssessmentService {
     const { previousWeekStart, previousWeekEnd, sessions, entries } = params;
     const lines = [
       `Previous week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")}`,
-      `Logged activities: ${entries
-        .map((entry) =>
-          entry.activity
-            ? `${format(entry.datetime, "yyyy-MM-dd")}: ${entry.activity.emoji || ""} ${entry.activity.title} (${entry.quantity} ${entry.activity.measure})`
-            : null
-        )
-        .filter(Boolean)
-        .join(", ") || "none"}`,
+      `Logged activities: ${
+        entries
+          .map((entry) =>
+            entry.activity
+              ? `${format(entry.datetime, "yyyy-MM-dd")}: ${entry.activity.emoji || ""} ${entry.activity.title} (${entry.quantity} ${entry.activity.measure})`
+              : null,
+          )
+          .filter(Boolean)
+          .join(", ") || "none"
+      }`,
     ];
 
     if (sessions.length > 0) {
       lines.push("Scheduled sessions:");
       for (const item of sessions) {
         lines.push(
-          `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji || ""} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`
+          `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji || ""} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`,
         );
       }
 
@@ -1207,7 +1659,7 @@ export class CoachAssessmentService {
           const matchingEntry = entries.find(
             (entry) =>
               entry.activityId === item.session.activityId &&
-              isSameDay(entry.datetime, item.session.date)
+              isSameDay(entry.datetime, item.session.date),
           );
           return matchingEntry ? { ...item, matchingEntry } : null;
         })
@@ -1217,7 +1669,7 @@ export class CoachAssessmentService {
         lines.push("Completed scheduled sessions with matching logs:");
         for (const item of completedSessions) {
           lines.push(
-            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. Planned guide: ${item.session.descriptiveGuide || "none"}. Matching log: ${item.matchingEntry.quantity} ${item.activity.measure}.`
+            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. Planned guide: ${item.session.descriptiveGuide || "none"}. Matching log: ${item.matchingEntry.quantity} ${item.activity.measure}.`,
           );
         }
       }
@@ -1227,15 +1679,15 @@ export class CoachAssessmentService {
           !entries.some(
             (entry) =>
               entry.activityId === item.session.activityId &&
-              isSameDay(entry.datetime, item.session.date)
-          )
+              isSameDay(entry.datetime, item.session.date),
+          ),
       );
 
       if (missedSessions.length > 0) {
         lines.push("Missed scheduled sessions:");
         for (const item of missedSessions) {
           lines.push(
-            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. No matching activity log found. Planned guide: ${item.session.descriptiveGuide || "none"}.`
+            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. No matching activity log found. Planned guide: ${item.session.descriptiveGuide || "none"}.`,
           );
         }
       }
@@ -1244,40 +1696,50 @@ export class CoachAssessmentService {
     return lines.join("\n");
   }
 
-  private async buildPlanAssessmentSummary(user: User, plan: CoachPlan, now: Date) {
+  private async buildPlanAssessmentSummary(
+    user: User,
+    plan: CoachPlan,
+    now: Date,
+  ) {
     const sevenDaysAgo = subDays(now, 7);
     const thirtyDaysAgo = subDays(now, 30);
     const ninetyDaysAgo = subDays(now, 90);
     const activityIds = plan.activities.map((a) => a.id);
-    const entries = activityIds.length > 0
-      ? await prisma.activityEntry.findMany({
-          where: {
-            userId: user.id,
-            deletedAt: null,
-            activityId: { in: activityIds },
-            datetime: { gte: ninetyDaysAgo, lte: now },
-          },
-          orderBy: { datetime: "desc" },
-        })
-      : [];
+    const entries =
+      activityIds.length > 0
+        ? await prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: activityIds },
+              datetime: { gte: ninetyDaysAgo, lte: now },
+            },
+            orderBy: { datetime: "desc" },
+          })
+        : [];
 
     const lastEntry = entries[0];
     const daysSinceLastActivity = lastEntry
       ? differenceInCalendarDays(now, lastEntry.datetime)
       : null;
     const sessionsThisWeek = plan.sessions.filter(
-      (s) => s.date >= startOfDay(sevenDaysAgo) && s.date < startOfDay(now)
+      (s) => s.date >= startOfDay(sevenDaysAgo) && s.date < startOfDay(now),
     );
     const completedSessionsThisWeek = sessionsThisWeek.filter((session) =>
       entries.some(
         (entry) =>
           entry.activityId === session.activityId &&
-          isSameDay(entry.datetime, session.date)
-      )
+          isSameDay(entry.datetime, session.date),
+      ),
     ).length;
-    const missedSessionsThisWeek = sessionsThisWeek.length - completedSessionsThisWeek;
-    const entriesLast7Days = entries.filter((e) => e.datetime >= sevenDaysAgo).length;
-    const entriesLast30Days = entries.filter((e) => e.datetime >= thirtyDaysAgo).length;
+    const missedSessionsThisWeek =
+      sessionsThisWeek.length - completedSessionsThisWeek;
+    const entriesLast7Days = entries.filter(
+      (e) => e.datetime >= sevenDaysAgo,
+    ).length;
+    const entriesLast30Days = entries.filter(
+      (e) => e.datetime >= thirtyDaysAgo,
+    ).length;
 
     const context = [
       `Plan: ${plan.emoji || ""} ${plan.goal}`,
@@ -1298,7 +1760,10 @@ export class CoachAssessmentService {
     };
   }
 
-  private async buildContextSummary(user: CoachUser, now: Date): Promise<string> {
+  private async buildContextSummary(
+    user: CoachUser,
+    now: Date,
+  ): Promise<string> {
     const sevenDaysAgo = subDays(now, 7);
     const thirtyDaysAgo = subDays(now, 30);
     const ninetyDaysAgo = subDays(now, 90);
@@ -1320,19 +1785,23 @@ export class CoachAssessmentService {
     });
 
     lines.push(`Today: ${format(now, "yyyy-MM-dd (EEEE)")}`);
-    lines.push(`Day of week: ${userDayOfWeek === 1 ? "Monday (recap day)" : format(now, "EEEE")}`);
-    lines.push("Grounding rule: Only activities listed under recent activity logs may be described as logged recently/lately. Active plans alone are not activity history.");
+    lines.push(
+      `Day of week: ${userDayOfWeek === 1 ? "Monday (recap day)" : format(now, "EEEE")}`,
+    );
+    lines.push(
+      "Grounding rule: Only activities listed under recent activity logs may be described as logged recently/lately. Active plans alone are not activity history.",
+    );
     lines.push(
       recentEntries.length > 0
         ? `Recent activity logs last 30 days: ${recentEntries
             .map((entry) =>
               entry.activity
                 ? `${format(entry.datetime, "yyyy-MM-dd")} ${entry.activity.emoji} ${entry.activity.title}`
-                : null
+                : null,
             )
             .filter(Boolean)
             .join("; ")}`
-        : "Recent activity logs last 30 days: none"
+        : "Recent activity logs last 30 days: none",
     );
     lines.push("");
 
@@ -1354,27 +1823,36 @@ export class CoachAssessmentService {
       const daysSinceLastActivity = lastEntry
         ? differenceInCalendarDays(now, lastEntry.datetime)
         : null;
-      const entriesLast7Days = entries.filter((e) => e.datetime >= sevenDaysAgo).length;
-      const entriesLast30Days = entries.filter((e) => e.datetime >= thirtyDaysAgo).length;
+      const entriesLast7Days = entries.filter(
+        (e) => e.datetime >= sevenDaysAgo,
+      ).length;
+      const entriesLast30Days = entries.filter(
+        (e) => e.datetime >= thirtyDaysAgo,
+      ).length;
 
       const sessionsLast7Days = plan.sessions.filter(
-        (s) => s.date >= sevenDaysAgo && s.date < startOfDay(now)
+        (s) => s.date >= sevenDaysAgo && s.date < startOfDay(now),
       );
       const totalSessions = sessionsLast7Days.length;
       const completedSessions = sessionsLast7Days.filter((session) =>
         entries.some(
           (entry) =>
             entry.activityId === session.activityId &&
-            format(entry.datetime, "yyyy-MM-dd") === format(session.date, "yyyy-MM-dd")
-        )
+            format(entry.datetime, "yyyy-MM-dd") ===
+              format(session.date, "yyyy-MM-dd"),
+        ),
       ).length;
       const missedSessions = totalSessions - completedSessions;
 
       lines.push(`Plan: ${plan.emoji || ""} ${plan.goal}`);
-      lines.push(`  Last activity: ${daysSinceLastActivity !== null ? `${daysSinceLastActivity} days ago` : "never"}`);
+      lines.push(
+        `  Last activity: ${daysSinceLastActivity !== null ? `${daysSinceLastActivity} days ago` : "never"}`,
+      );
       lines.push(`  Entries last 7 days: ${entriesLast7Days}`);
       lines.push(`  Entries last 30 days: ${entriesLast30Days}`);
-      lines.push(`  Sessions this week: ${completedSessions}/${totalSessions} completed, ${missedSessions} missed`);
+      lines.push(
+        `  Sessions this week: ${completedSessions}/${totalSessions} completed, ${missedSessions} missed`,
+      );
       lines.push("");
     }
 

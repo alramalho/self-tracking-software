@@ -2,7 +2,12 @@ import { createContext } from "react";
 import type { Chat, Message, MessagesContextType } from "@/contexts/messages";
 
 // Re-export types from messages for backwards compatibility
-export type { Chat, Message, ChatType, ChatParticipant } from "@/contexts/messages";
+export type {
+  Chat,
+  Message,
+  ChatType,
+  ChatParticipant,
+} from "@/contexts/messages";
 
 export interface MessageFeedback {
   id: string;
@@ -34,7 +39,10 @@ export interface CoachAssessmentResponse {
 
 export interface CoachAttentionItem {
   dedupeKey: string;
-  kind: "SPECIFIC_NO_FUTURE_SESSIONS" | "SPECIFIC_SCHEDULE_ENDING";
+  kind:
+    | "SPECIFIC_NO_FUTURE_SESSIONS"
+    | "SPECIFIC_SCHEDULE_ENDING"
+    | "SPECIFIC_AUTO_ARCHIVED";
   severity: "critical" | "warning" | "info";
   planIds: string[];
   planGoal: string;
@@ -43,7 +51,7 @@ export interface CoachAttentionItem {
   message: string;
   facts: Array<{ label: string; value: string }>;
   primaryAction: {
-    type: "START_PLAN_UPDATE";
+    type: "START_PLAN_UPDATE" | "VIEW_COACH_CHAT";
     prompt: string;
   };
   generatedAt: string;
@@ -80,10 +88,22 @@ export interface AIContextType extends MessagesContextType {
   isRejectingMetric: boolean;
 
   // Plan proposals
-  acceptProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  rejectProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  acceptPlanCreationProposal: (data: { messageId: string; proposalIndex: number }) => Promise<{ success: boolean; plan?: { id: string } }>;
-  rejectPlanCreationProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
+  acceptProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  rejectProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  acceptPlanCreationProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<{ success: boolean; plan?: { id: string } }>;
+  rejectPlanCreationProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
   proposePlanCreationChanges: (data: {
     messageId: string;
     proposalIndex: number;
@@ -92,15 +112,36 @@ export interface AIContextType extends MessagesContextType {
   }) => Promise<Message[]>;
 
   // Activity log proposals
-  acceptActivityLogProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  rejectActivityLogProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  acceptActivityEditProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  rejectActivityEditProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
-  acceptUserContextEventProposal: (data: { messageId: string; proposalIndex: number }) => Promise<{ success: boolean; event?: { id: string } }>;
-  rejectUserContextEventProposal: (data: { messageId: string; proposalIndex: number }) => Promise<void>;
+  acceptActivityLogProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  rejectActivityLogProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  acceptActivityEditProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  rejectActivityEditProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
+  acceptUserContextEventProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<{ success: boolean; event?: { id: string } }>;
+  rejectUserContextEventProposal: (data: {
+    messageId: string;
+    proposalIndex: number;
+  }) => Promise<void>;
 
   // AI satisfaction
-  submitAISatisfaction: (data: { liked: boolean; content?: string }) => Promise<void>;
+  submitAISatisfaction: (data: {
+    liked: boolean;
+    content?: string;
+  }) => Promise<void>;
   isSubmittingAISatisfaction: boolean;
 
   // Whitelist

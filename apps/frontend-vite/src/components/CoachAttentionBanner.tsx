@@ -16,7 +16,10 @@ import { type CoachAttentionItem } from "@/contexts/ai/types";
 import { useMessages } from "@/contexts/messages";
 import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { getCoachAvatar, getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import {
+  getCoachAvatar,
+  getCoachPersonalityConfig,
+} from "@/lib/coachPersonality";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -59,13 +62,14 @@ export function useCoachAttentionItems(enabled = true) {
       attentionItems.sort(
         (a, b) =>
           severityRank[a.severity] - severityRank[b.severity] ||
-          a.title.localeCompare(b.title)
+          a.title.localeCompare(b.title),
       ),
-    [attentionItems]
+    [attentionItems],
   );
 }
 
 function attentionHeadline(item: CoachAttentionItem) {
+  if (item.kind === "SPECIFIC_AUTO_ARCHIVED") return "Plan archived";
   return item.kind === "SPECIFIC_NO_FUTURE_SESSIONS"
     ? "Next sessions need planning"
     : "Next week needs planning";
@@ -106,8 +110,12 @@ export function CoachAttentionDrawer({
   const [step, setStep] = useState(0);
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const coachAvatar = getCoachAvatar(currentUser?.coachPersonality, "thinking");
-  const criticalCount = items.filter((item) => item.severity === "critical").length;
-  const warningCount = items.filter((item) => item.severity === "warning").length;
+  const criticalCount = items.filter(
+    (item) => item.severity === "critical",
+  ).length;
+  const warningCount = items.filter(
+    (item) => item.severity === "warning",
+  ).length;
   const activeItem = step > 0 ? items[step - 1] : null;
   const totalSteps = items.length + 1;
 
@@ -123,13 +131,16 @@ export function CoachAttentionDrawer({
       }),
     onSuccess: ({ chat, messages }) => {
       setCurrentChatId(chat.id);
-      queryClient.setQueryData(["messages", chat.id], (oldMessages: any[] = []) => {
-        const existingIds = new Set(oldMessages.map((message) => message.id));
-        return [
-          ...oldMessages,
-          ...messages.filter((message) => !existingIds.has(message.id)),
-        ];
-      });
+      queryClient.setQueryData(
+        ["messages", chat.id],
+        (oldMessages: any[] = []) => {
+          const existingIds = new Set(oldMessages.map((message) => message.id));
+          return [
+            ...oldMessages,
+            ...messages.filter((message) => !existingIds.has(message.id)),
+          ];
+        },
+      );
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({ queryKey: ["messages", chat.id] });
       queryClient.invalidateQueries({ queryKey: ["coach-attention"] });
@@ -137,11 +148,19 @@ export function CoachAttentionDrawer({
       navigate({ to: "/message-ai" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Coach could not prepare this update");
+      toast.error(
+        error?.response?.data?.error || "Coach could not prepare this update",
+      );
     },
   });
 
   const startPlanUpdate = (item: CoachAttentionItem, guidance?: string) => {
+    if (item.primaryAction.type === "VIEW_COACH_CHAT") {
+      onOpenChange(false);
+      navigate({ to: "/message-ai" });
+      return;
+    }
+
     startAttentionAction.mutate({ item, guidance });
   };
 
@@ -159,7 +178,9 @@ export function CoachAttentionDrawer({
                 key={index}
                 className={cn(
                   "h-1.5 rounded-full transition-all",
-                  index === step ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/30"
+                  index === step
+                    ? "w-6 bg-foreground"
+                    : "w-1.5 bg-muted-foreground/30",
                 )}
               />
             ))}
@@ -191,18 +212,23 @@ export function CoachAttentionDrawer({
                     {items.length} plan update{items.length === 1 ? "" : "s"}
                   </h2>
                   <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                    {aiCoach.name} found plans that need their next scheduled step.
+                    {aiCoach.name} found plans that need their next scheduled
+                    step.
                   </p>
 
                   <div className="mt-6 grid w-full grid-cols-2 gap-2">
                     <div className="rounded-2xl bg-muted/50 p-4">
-                      <p className="text-3xl font-semibold text-foreground">{criticalCount}</p>
+                      <p className="text-3xl font-semibold text-foreground">
+                        {criticalCount}
+                      </p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
                         ready to extend
                       </p>
                     </div>
                     <div className="rounded-2xl bg-muted/50 p-4">
-                      <p className="text-3xl font-semibold text-foreground">{warningCount}</p>
+                      <p className="text-3xl font-semibold text-foreground">
+                        {warningCount}
+                      </p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
                         ending soon
                       </p>
@@ -248,7 +274,10 @@ export function CoachAttentionDrawer({
                   </p>
 
                   <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                    Last planned: {formatHumanDate(factValue(activeItem, "Last planned session"))}
+                    Last planned:{" "}
+                    {formatHumanDate(
+                      factValue(activeItem, "Last planned session"),
+                    )}
                     {" · "}
                     Ends: {formatHumanDate(factValue(activeItem, "Plan end"))}
                   </p>
@@ -263,12 +292,16 @@ export function CoachAttentionDrawer({
                     {startAttentionAction.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    Let coach prepare the update
+                    {activeItem.primaryAction.type === "VIEW_COACH_CHAT"
+                      ? "Open coach chat"
+                      : "Let coach prepare the update"}
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setStep((current) => Math.max(0, current - 1))}
+                      onClick={() =>
+                        setStep((current) => Math.max(0, current - 1))
+                      }
                     >
                       <ChevronLeft className="mr-2 h-4 w-4" />
                       Back
@@ -276,7 +309,11 @@ export function CoachAttentionDrawer({
                     <Button
                       variant="outline"
                       disabled={step >= items.length}
-                      onClick={() => setStep((current) => Math.min(items.length, current + 1))}
+                      onClick={() =>
+                        setStep((current) =>
+                          Math.min(items.length, current + 1),
+                        )
+                      }
                     >
                       Next
                       <ChevronRight className="ml-2 h-4 w-4" />
@@ -332,16 +369,17 @@ export function CoachAttentionBanner() {
   const [open, setOpen] = useState(false);
   const [dismissedKeys, setDismissedKeys] = useLocalStorage<string[]>(
     "dismissed-coach-attention-items",
-    []
+    [],
   );
   const [openedKeys, setOpenedKeys] = useLocalStorage<string[]>(
     "opened-coach-attention-items",
-    []
+    [],
   );
 
   const visibleItems = useMemo(
-    () => attentionItems.filter((item) => !dismissedKeys.includes(item.dedupeKey)),
-    [attentionItems, dismissedKeys]
+    () =>
+      attentionItems.filter((item) => !dismissedKeys.includes(item.dedupeKey)),
+    [attentionItems, dismissedKeys],
   );
   const primaryItem = visibleItems[0];
 
@@ -369,7 +407,7 @@ export function CoachAttentionBanner() {
           "mb-4 w-full rounded-2xl border p-4 text-left shadow-sm transition-colors",
           primaryItem.severity === "critical"
             ? "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/15"
-            : "border-border bg-card hover:bg-muted/40"
+            : "border-border bg-card hover:bg-muted/40",
         )}
       >
         <div className="flex items-start gap-3">
@@ -399,7 +437,11 @@ export function CoachAttentionBanner() {
         </div>
       </button>
 
-      <CoachAttentionDrawer open={open} onOpenChange={setOpen} items={visibleItems} />
+      <CoachAttentionDrawer
+        open={open}
+        onOpenChange={setOpen}
+        items={visibleItems}
+      />
     </>
   );
 }
