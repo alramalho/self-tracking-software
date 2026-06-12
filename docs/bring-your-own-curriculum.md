@@ -21,39 +21,36 @@ the plan goal.
 - Relative paths are preserved (`notes/rules.md` stays `notes/rules.md`)
 - Re-uploading replaces the bundle: files you removed locally are removed
 
-## Option A: MCP server (recommended)
+## Option A: agent setup prompt (recommended)
 
-The backend exposes an MCP server at `https://api.tracking.so/mcp`
-(streamable HTTP). Any MCP client works — Claude Code, Claude.ai, Cursor.
-This is also the intended authoring loop: have your AI tool research and write
-the curriculum, then push it into tracking.so in the same session.
+Open **Settings → Integrations & API Keys** in the app, create an API key, and
+copy the generated **setup prompt** into your agent (Claude Code, Codex,
+Cursor). The prompt is fully readable before you send it; your agent then:
 
-### 1. Create a personal API key
+1. registers the MCP server (`https://api.tracking.so/mcp`, streamable HTTP,
+   your key as a Bearer token),
+2. installs the day-to-day usage skill from
+   [`https://api.tracking.so/skill.md`](https://api.tracking.so/skill.md) into
+   `~/.claude/skills/tracking-so/`,
+3. verifies the connection with `get_user_state`,
+4. and if your account has no plans yet, interviews you and creates your
+   first plan, asking whether you have a curriculum to attach.
 
-```sh
-curl -X POST https://api.tracking.so/api-keys \
-  -H "Authorization: Bearer <your session JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"label": "claude-code"}'
-```
-
-The response contains the key (`tsk_...`) exactly once — store it. Keys can be
-listed (`GET /api-keys`) and revoked (`DELETE /api-keys/:id`).
-
-### 2. Connect your MCP client
-
-Claude Code:
+Keys can be managed in the same settings view (or via `GET/POST /api-keys`,
+`DELETE /api-keys/:id`). Manual MCP registration, if you prefer:
 
 ```sh
-claude mcp add --transport http tracking-so https://api.tracking.so/mcp \
+claude mcp add --scope user --transport http tracking-so https://api.tracking.so/mcp \
   --header "Authorization: Bearer tsk_..."
 ```
 
-### 3. Use the tools
+### The tools
 
 | Tool | What it does |
 | --- | --- |
+| `get_user_state` | Profile, plans with schedule health, recent logging — the "where do I stand" call |
 | `list_plans` | Your active plans with ids, schedule state, and curriculum file counts |
+| `create_plan` | Create a plan: frequency habit or dated-session curriculum, activities, milestones |
 | `list_curriculum_files` | Files attached to a plan |
 | `read_curriculum_file` | Read one file (raw markdown) |
 | `replace_curriculum` | Replace the full bundle (removes files not included) |
@@ -98,8 +95,8 @@ exist and override the plan notes. The coach then uses its
 
 ## Roadmap
 
-- Settings UI for API keys (today: API only)
 - Checkbox write-back: logging a linked activity ticks the matching `- [ ]`
   item in your markdown, so the file reflects reality without manual editing
 - Folder sync (GitHub webhook / Obsidian plugin) so re-uploads happen
   automatically
+- `log_activity` over MCP, so agent work sessions feed your streaks directly

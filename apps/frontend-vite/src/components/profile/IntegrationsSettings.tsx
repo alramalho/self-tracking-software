@@ -97,7 +97,18 @@ export function IntegrationsSettings() {
   });
 
   const mcpCommand = createdKey
-    ? `claude mcp add --transport http tracking-so ${mcpUrl} --header "Authorization: Bearer ${createdKey.key}"`
+    ? `claude mcp add --scope user --transport http tracking-so ${mcpUrl} --header "Authorization: Bearer ${createdKey.key}"`
+    : null;
+
+  const setupPrompt = createdKey
+    ? `Set up tracking.so for me, step by step. Confirm each step's result before the next.
+
+1. Register the tracking.so MCP server.
+   - Claude Code: run \`claude mcp add --scope user --transport http tracking-so ${mcpUrl} --header "Authorization: Bearer ${createdKey.key}"\`
+   - Other MCP clients: it is a streamable HTTP server at ${mcpUrl}, authenticated with the header \`Authorization: Bearer ${createdKey.key}\`.
+2. Install the tracking.so usage skill (skip on clients without skills): run \`mkdir -p ~/.claude/skills/tracking-so && curl -fsSL ${backendUrl}/skill.md -o ~/.claude/skills/tracking-so/SKILL.md\`, then confirm the file starts with YAML frontmatter.
+3. Verify the connection: call the tracking-so \`get_user_state\` tool and give me a one-line summary of my account.
+4. If I have no plans yet, interview me briefly (goal, an emoji, frequency target or dated sessions, finishing date, which loggable activities) and create my first plan with \`create_plan\`. Then ask whether I have a self-built curriculum (markdown folder) to attach with \`replace_curriculum\`.`
     : null;
 
   return (
@@ -154,16 +165,32 @@ export function IntegrationsSettings() {
         )}
       </div>
 
-      {/* Step 2: connect */}
+      {/* Step 2: hand the setup to your agent */}
       <div className="space-y-3">
         <p className="text-sm font-medium text-foreground">
-          2. Connect Claude Code
+          2. Paste the setup prompt into your agent
         </p>
-        {mcpCommand ? (
-          <CopyableSnippet text={mcpCommand} label="MCP command" />
+        {setupPrompt && mcpCommand ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Your agent (Claude Code, Codex, Cursor) does the rest: registers
+              the MCP server, installs the usage skill, verifies the
+              connection, and onboards you if you have no plans yet. You can
+              read every step before sending it.
+            </p>
+            <CopyableSnippet text={setupPrompt} label="Setup prompt" />
+            <details className="text-sm text-muted-foreground">
+              <summary className="cursor-pointer">
+                Prefer manual setup? Just the MCP command
+              </summary>
+              <div className="mt-2">
+                <CopyableSnippet text={mcpCommand} label="MCP command" />
+              </div>
+            </details>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Create a key above and the ready-to-paste command appears here.
+            Create a key above and a ready-to-paste setup prompt appears here.
             Other MCP clients connect to{" "}
             <code className="font-mono text-xs">{mcpUrl}</code> with the key as
             a Bearer token.
@@ -171,22 +198,16 @@ export function IntegrationsSettings() {
         )}
       </div>
 
-      {/* Step 3: use it */}
+      {/* Step 3: what you get */}
       <div className="space-y-3">
         <p className="text-sm font-medium text-foreground">
-          3. Push your curriculum
+          3. Use it
         </p>
         <p className="text-sm text-muted-foreground">
-          In Claude Code, try a prompt like:
-        </p>
-        <CopyableSnippet
-          text={
-            "Read my curriculum folder and push it to my tracking.so plan using the tracking-so MCP tools (list_plans, then replace_curriculum)."
-          }
-          label="Prompt"
-        />
-        <p className="text-sm text-muted-foreground">
-          From then on your coach reads those files when preparing your weeks.
+          From then on your agent can check your plans, create new ones, and
+          push your self-built curriculum, and your coach plans your weeks from
+          those files. Try: {'"'}push my curriculum folder to my tracking.so
+          plan{'"'}.
         </p>
       </div>
 

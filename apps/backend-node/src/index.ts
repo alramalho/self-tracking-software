@@ -15,6 +15,7 @@ import express, { Express } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 
+import { TRACKING_SO_SKILL } from "./content/trackingSoSkill";
 import { errorHandler, responseMonitor } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
@@ -122,6 +123,11 @@ app.set("etag", false);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// Agent skill for MCP users (see docs/bring-your-own-curriculum.md)
+app.get("/skill.md", (_req, res) => {
+  res.type("text/markdown").send(TRACKING_SO_SKILL);
 });
 
 // Test exception endpoint (for testing error handling)
