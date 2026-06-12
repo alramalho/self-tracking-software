@@ -110,7 +110,28 @@ model User {
   // Reminders
   reminders Reminder[]
 
+  // Personal API keys (MCP / external integrations)
+  apiKeys ApiKey[]
+
   @@map("users")
+  @@schema("public")
+}
+
+// Personal API keys for programmatic access (MCP server, scripts).
+// Only the SHA-256 hash is stored; the plaintext key is shown once on creation.
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  keyHash    String    @unique
+  label      String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
   @@schema("public")
 }
 
@@ -487,6 +508,7 @@ model Plan {
   planGroupMembers  PlanGroupMember[]
   messages          Message[]
   achievementPosts  AchievementPost[]
+  curriculumFiles   PlanCurriculumFile[]
 
   @@index([userId, deletedAt])
   @@index([userId, deletedAt, archivedAt])
@@ -534,6 +556,24 @@ model PlanMilestone {
 
   @@index([planId])
   @@map("plan_milestones")
+  @@schema("public")
+}
+
+// User-authored curriculum markdown attached to a plan (e.g. an Obsidian
+// folder). The files are the source of truth for plan content; the coach
+// reads them via tools instead of relying on the plan notes field.
+model PlanCurriculumFile {
+  id        String   @id @default(cuid())
+  planId    String
+  path      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, path])
+  @@map("plan_curriculum_files")
   @@schema("public")
 }
 

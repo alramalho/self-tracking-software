@@ -40,6 +40,16 @@
 
 <br/>
 
+## Bring your own curriculum
+
+Attach your own markdown curriculum (an Obsidian folder, a git repo) to a plan
+and the AI coach reads it when planning your weeks — your files stay the source
+of truth for content, tracking.so keeps the accountability, streaks, and
+visuals. Works over MCP, so Claude Code / Cursor can author the curriculum and
+push it in one session.
+
+→ [Setup guide (MCP, API, script)](docs/bring-your-own-curriculum.md)
+
 ## Running locally
 
 To run the project locally, follow these steps:

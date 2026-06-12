@@ -13,6 +13,12 @@ import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
 import { runCategorizationJob } from "../services/planCategorizationService";
+import {
+  curriculumBundleSchema,
+  findDuplicatePaths,
+  listCurriculumFiles,
+  replaceCurriculum,
+} from "../services/planCurriculumService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -2412,6 +2418,148 @@ router.post(
     } catch (error) {
       logger.error("Error running plan categorization:", error);
       res.status(500).json({ error: "Failed to run plan categorization" });
+    }
+  }
+);
+
+async function findOwnedPlan(planId: string, userId: string) {
+  const plan = await prisma.plan.findFirst({
+    where: { id: planId, userId, deletedAt: null },
+    select: { id: true, goal: true },
+  });
+  return plan;
+}
+
+// Replace the curriculum bundle attached to a plan
+router.put(
+  "/:planId/curriculum",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const parsed = curriculumBundleSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({ error: "Invalid curriculum payload", details: parsed.error.issues });
+      }
+
+      const plan = await findOwnedPlan(planId, req.user!.id);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const duplicates = findDuplicatePaths(parsed.data.files);
+      if (duplicates.length > 0) {
+        return res
+          .status(400)
+          .json({ error: `Duplicate file paths: ${duplicates.join(", ")}` });
+      }
+
+      const { fileCount } = await replaceCurriculum(planId, parsed.data.files);
+
+      logger.info(
+        `User ${req.user!.id} replaced curriculum for plan ${planId} (${fileCount} files)`
+      );
+      res.json({ success: true, fileCount });
+    } catch (error) {
+      logger.error("Error updating plan curriculum:", error);
+      res.status(500).json({ error: "Failed to update plan curriculum" });
+    }
+  }
+);
+
+// List curriculum files for a plan
+router.get(
+  "/:planId/curriculum",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const plan = await findOwnedPlan(planId, req.user!.id);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const files = await listCurriculumFiles(planId);
+      res.json({ files });
+    } catch (error) {
+      logger.error("Error listing plan curriculum:", error);
+      res.status(500).json({ error: "Failed to list plan curriculum" });
+    }
+  }
+);
+
+// Read a single curriculum file
+router.get(
+  "/:planId/curriculum/file",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const { path } = req.query;
+      if (!path || typeof path !== "string") {
+        return res.status(400).json({ error: "path query param is required" });
+      }
+
+      const plan = await findOwnedPlan(planId, req.user!.id);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const file = await prisma.planCurriculumFile.findUnique({
+        where: { planId_path: { planId, path } },
+      });
+      if (!file) {
+        return res.status(404).json({ error: "Curriculum file not found" });
+      }
+
+      res.json({
+        path: file.path,
+        content: file.content,
+        updatedAt: file.updatedAt,
+      });
+    } catch (error) {
+      logger.error("Error reading plan curriculum file:", error);
+      res.status(500).json({ error: "Failed to read plan curriculum file" });
+    }
+  }
+);
+
+// Delete the curriculum bundle
+router.delete(
+  "/:planId/curriculum",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const plan = await findOwnedPlan(planId, req.user!.id);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const deleted = await prisma.planCurriculumFile.deleteMany({
+        where: { planId },
+      });
+      logger.info(
+        `User ${req.user!.id} deleted curriculum for plan ${planId} (${deleted.count} files)`
+      );
+      res.json({ success: true, deleted: deleted.count });
+    } catch (error) {
+      logger.error("Error deleting plan curriculum:", error);
+      res.status(500).json({ error: "Failed to delete plan curriculum" });
     }
   }
 );

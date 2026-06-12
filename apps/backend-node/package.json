@@ -21,6 +21,7 @@
     "talk-to-coach": "tsx scripts/talk_to_coach.ts",
     "coach:benchmark": "tsx scripts/coach-benchmark/evals/main.ts",
     "query-db": "tsx scripts/query_db.ts",
+    "upload-curriculum": "tsx scripts/upload_curriculum.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "send-telegram-message": "tsx scripts/send_telegram_message.ts"
@@ -46,6 +47,7 @@
     "@clerk/express": "^1.7.4",
     "@date-fns/tz": "^1.4.1",
     "@linear/sdk": "^60.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@openrouter/ai-sdk-provider": "^1.1.2",
     "@parse/node-apn": "^6.5.0",
     "@perplexity-ai/perplexity_ai": "^0.18.1",

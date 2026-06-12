@@ -33,6 +33,8 @@ import { clerkRouter } from "./routes/clerk";
 import { coachesRouter } from "./routes/coaches";
 import { contextEventsRouter } from "./routes/contextEvents";
 import { messagesRouter } from "./routes/messages";
+import { apiKeysRouter } from "./routes/apiKeys";
+import { mcpRouter } from "./routes/mcp";
 import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
 import { onboardingRouter } from "./routes/onboarding";
@@ -149,6 +151,8 @@ app.use("/context-events", contextEventsRouter);
 app.use("/stripe", stripeRouter);
 app.use("/reminders", remindersRouter);
 app.use("/utils", utilsRouter);
+app.use("/api-keys", apiKeysRouter);
+app.use("/mcp", mcpRouter);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler);

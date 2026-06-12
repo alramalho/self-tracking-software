@@ -36,6 +36,7 @@ export interface CoachAgentContext {
   memoriesContext?: string | null;
   recentActivityContext?: string | null;
   activityRecencyById?: Map<string, string>;
+  curriculumFileCountByPlanId?: Map<string, number>;
   onStatus?: (status: CoachStatus) => void | Promise<void>;
 }
 

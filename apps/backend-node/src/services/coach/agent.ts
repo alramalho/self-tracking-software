@@ -17,6 +17,7 @@ import { logger, serializeErrorForLog } from "../../utils/logger";
 import dedent from "dedent";
 import { TelegramService } from "../telegramService";
 import { getCoachPersonalityConfig } from "../coachPersonalityService";
+import { getCurriculumFileCounts } from "../planCurriculumService";
 import { webSearchService } from "../webSearchService";
 import { browserAgentService } from "../browserAgentService";
 import {
@@ -379,6 +380,7 @@ export class CoachAgentService {
       memoriesContext,
       recentActivityContext,
       activityRecencyById,
+      curriculumFileCountByPlanId,
       onStatus,
     } = context;
     const modelConfig = resolveCoachAgentModelConfig(context.model);
@@ -432,6 +434,7 @@ export class CoachAgentService {
           Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
           Finishing date: ${plan.finishingDate ? format(new Date(plan.finishingDate), "yyyy-MM-dd") : "none"}
+          ${(curriculumFileCountByPlanId?.get(plan.id) || 0) > 0 ? `Curriculum: ${curriculumFileCountByPlanId!.get(plan.id)} user-authored files attached. They are the source of truth over the notes below; read them with listCurriculumFiles/readCurriculumFile before proposing sessions or schedule changes for this plan.` : ""}
           ${notes ? `Roadmap / user notes:\n    ${notes.replace(/\n/g, "\n    ")}` : ""}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
           Activities: ${activities}
@@ -1606,6 +1609,114 @@ export class CoachAgentService {
             }
           },
         }),
+
+        listCurriculumFiles: tool({
+          description:
+            "List the user-authored curriculum files attached to the user's plans (their own learning plans, schedules, and rules as markdown). When a plan has curriculum files, they are the source of truth over the plan notes field: read the relevant ones before proposing sessions, weekly plans, or schedule repairs for that plan.",
+          inputSchema: z.object({
+            planId: z
+              .string()
+              .optional()
+              .describe(
+                "Restrict to one plan id from the active plan context. Omit to list files across all active plans."
+              ),
+          }),
+          execute: async ({ planId }) => {
+            try {
+              const planIds = plans
+                .map((plan) => plan.id)
+                .filter((id) => !planId || id === planId);
+              const files = await prisma.planCurriculumFile.findMany({
+                where: {
+                  planId: { in: planIds },
+                  plan: { userId: user.id },
+                },
+                select: {
+                  planId: true,
+                  path: true,
+                  content: true,
+                  updatedAt: true,
+                },
+                orderBy: [{ planId: "asc" }, { path: "asc" }],
+              });
+
+              const byPlan = plans
+                .filter((plan) => planIds.includes(plan.id))
+                .map((plan) => ({
+                  planId: plan.id,
+                  planGoal: plan.goal,
+                  files: files
+                    .filter((file) => file.planId === plan.id)
+                    .map((file) => ({
+                      path: file.path,
+                      bytes: Buffer.byteLength(file.content, "utf8"),
+                      updatedAt: file.updatedAt.toISOString(),
+                    })),
+                }))
+                .filter((plan) => plan.files.length > 0);
+
+              logger.info(
+                `listCurriculumFiles: user=${user.username} plans=${byPlan.length} files=${files.length}`
+              );
+              return { success: true as const, plans: byPlan };
+            } catch (error) {
+              logger.error("listCurriculumFiles tool failed:", error);
+              return {
+                success: false as const,
+                error:
+                  error instanceof Error ? error.message : "Unknown error",
+              };
+            }
+          },
+        }),
+
+        readCurriculumFile: tool({
+          description:
+            "Read one curriculum file attached to a plan. Returns the raw markdown. Wiki-style [[links]] in the content refer to other files in the same plan's curriculum; follow them with further reads when they are relevant.",
+          inputSchema: z.object({
+            planId: z
+              .string()
+              .describe("Plan id from the active plan context"),
+            path: z
+              .string()
+              .describe("File path exactly as returned by listCurriculumFiles"),
+          }),
+          execute: async ({ planId, path }) => {
+            try {
+              const file = await prisma.planCurriculumFile.findFirst({
+                where: { planId, path, plan: { userId: user.id } },
+              });
+              if (!file) {
+                return {
+                  success: false as const,
+                  error: "Curriculum file not found",
+                };
+              }
+
+              const MAX_CHARS = 24_000;
+              const truncated = file.content.length > MAX_CHARS;
+              logger.info(
+                `readCurriculumFile: user=${user.username} plan=${planId} path=${path} chars=${file.content.length}${truncated ? " (truncated)" : ""}`
+              );
+              return {
+                success: true as const,
+                path: file.path,
+                updatedAt: file.updatedAt.toISOString(),
+                truncated,
+                content: truncated
+                  ? `${file.content.slice(0, MAX_CHARS)}\n\n[...truncated, ${file.content.length - MAX_CHARS} characters omitted]`
+                  : file.content,
+              };
+            } catch (error) {
+              logger.error("readCurriculumFile tool failed:", error);
+              return {
+                success: false as const,
+                error:
+                  error instanceof Error ? error.message : "Unknown error",
+              };
+            }
+          },
+        }),
       },
     });
 
@@ -1902,10 +2013,12 @@ export class CoachAgentService {
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
-    const [recentActivityContext, activityRecencyById] = await Promise.all([
-      this.buildRecentActivityContext(user, now, activePlans),
-      this.buildActivityRecencyById(user.id, activePlans, now),
-    ]);
+    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId] =
+      await Promise.all([
+        this.buildRecentActivityContext(user, now, activePlans),
+        this.buildActivityRecencyById(user.id, activePlans, now),
+        getCurriculumFileCounts(activePlans.map((plan) => plan.id)),
+      ]);
 
     const agent = this.createAgent({
       user,
@@ -1916,6 +2029,7 @@ export class CoachAgentService {
       memoriesContext,
       recentActivityContext,
       activityRecencyById,
+      curriculumFileCountByPlanId,
       onStatus,
     });
 
