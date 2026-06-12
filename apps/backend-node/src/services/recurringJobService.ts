@@ -53,6 +53,8 @@ interface HourlyJobResult {
   activity_reminders_checked: number;
   activity_reminders_sent: string[];
   batched_notifications_sent: string[];
+  autonomous_coach_enabled: boolean;
+  autonomous_coach_dry_run: boolean;
   autonomous_coach_checked: number;
   autonomous_coach_sent: number;
   onboarding_inactive_checked: number;
@@ -264,6 +266,8 @@ export class RecurringJobService {
       activity_reminders_checked: 0,
       activity_reminders_sent: [],
       batched_notifications_sent: batchedNotificationResults.sent,
+      autonomous_coach_enabled: coachAssessmentResults.enabled,
+      autonomous_coach_dry_run: coachAssessmentResults.dry_run,
       autonomous_coach_checked: coachAssessmentResults.users_checked,
       autonomous_coach_sent: coachAssessmentResults.messages_sent,
       onboarding_inactive_checked: onboardingInactiveResults.checked,

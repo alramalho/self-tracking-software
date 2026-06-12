@@ -216,13 +216,10 @@ function isActivityMeasureChangeProposal(proposal: any) {
   );
 }
 
-function isActiveCoachPlan(plan: Plan, now: Date = new Date()): boolean {
-  return (
-    !plan.deletedAt &&
-    !plan.archivedAt &&
-    !plan.isPaused &&
-    (!plan.finishingDate || plan.finishingDate > now)
-  );
+// Plans past their finishingDate stay coach-visible until the user renews or
+// archives them, so the coach can drive that decision.
+function isActiveCoachPlan(plan: Plan): boolean {
+  return !plan.deletedAt && !plan.archivedAt && !plan.isPaused;
 }
 
 function formatActivityRecency(now: Date, lastLoggedAt?: Date | null): string {

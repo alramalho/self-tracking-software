@@ -7,7 +7,7 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import { useCoachAttentionItems } from "@/components/CoachAttentionBanner";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
-import { isAfter, subDays } from "date-fns";
+import { isAfter, startOfDay, subDays } from "date-fns";
 import { CoachCard } from "./CoachCard";
 import { CoachUpgradeCard } from "./CoachUpgradeCard";
 import { PlanCard } from "./PlanCard";
@@ -42,12 +42,19 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
     currentUser?.proactiveCoachingEnabled !== false;
   const coachAttentionItems = useCoachAttentionItems(showCoachCard);
 
+  // Plans past their finishingDate stay visible so they cannot be silently
+  // abandoned: they show as needing a decision until renewed or archived.
   const activePlans = plans?.filter(
-    (plan) =>
-      plan.deletedAt === null &&
-      !plan.archivedAt &&
-      (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
+    (plan) => plan.deletedAt === null && !plan.archivedAt
   );
+  const todayStart = startOfDay(new Date());
+  const planNeedsAttention = (plan: NonNullable<typeof activePlans>[number]) =>
+    (plan.finishingDate !== null &&
+      isAfter(todayStart, new Date(plan.finishingDate))) ||
+    (plan.outlineType === "SPECIFIC" &&
+      !(plan.sessions || []).some(
+        (session) => !isAfter(todayStart, new Date(session.date))
+      ));
   const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
   const recentActivityCount = activityEntries.filter((entry) => {
     const datetime = new Date(entry.datetime);
@@ -106,7 +113,13 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   }
 
   activePlans
-    ?.filter((plan) => plan.outlineType === "TIMES_PER_WEEK")
+    ?.filter(
+      (plan) =>
+        plan.outlineType === "TIMES_PER_WEEK" || planNeedsAttention(plan)
+    )
+    .sort(
+      (a, b) => Number(planNeedsAttention(b)) - Number(planNeedsAttention(a))
+    )
     .forEach((plan) => {
       cards.push({
         node: <PlanCard key={plan.id} plan={plan} />,

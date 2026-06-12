@@ -3,7 +3,10 @@ import { format } from "date-fns";
 import { getPreviousCoachWeekBounds } from "../../utils/date";
 import { deriveCoachAttentionItems } from "../coachAttentionService";
 import { coachContextBriefService } from "../coachContextBriefService";
-import { isWithinPreferredCoachWindow } from "../coach/assessment/service";
+import {
+  isWithinPreferredCoachWindow,
+  resolveAutonomousCoachUsernameFilter,
+} from "../coach/assessment/service";
 
 describe("coach assessment week bounds", () => {
   it("uses Sunday as the first day for previous-week recaps", () => {
@@ -159,6 +162,73 @@ describe("coach attention schedule rules", () => {
     });
 
     expect(items).toHaveLength(0);
+  });
+
+  it("flags plans past their finishing date regardless of outline type", () => {
+    const items = deriveCoachAttentionItems({
+      user,
+      now,
+      plans: [
+        plan({
+          id: "plan_specific",
+          finishingDate: new Date("2025-12-30T00:00:00.000Z"),
+          sessions: [session("2025-12-01")],
+        }),
+        plan({
+          id: "plan_tpw",
+          outlineType: "TIMES_PER_WEEK",
+          timesPerWeek: 3,
+          finishingDate: new Date("2025-04-04T00:00:00.000Z"),
+        }),
+      ],
+    });
+
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item.kind).toBe("PLAN_PAST_END_DATE");
+      expect(item.severity).toBe("critical");
+      expect(item.primaryAction.type).toBe("START_PLAN_UPDATE");
+    }
+  });
+
+  it("does not flag plans whose finishing date is today", () => {
+    const items = deriveCoachAttentionItems({
+      user,
+      now,
+      plans: [
+        plan({
+          finishingDate: new Date("2026-06-07T00:00:00.000Z"),
+          sessions: [session("2026-06-05")],
+        }),
+      ],
+    });
+
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe("SPECIFIC_NO_FUTURE_SESSIONS");
+  });
+});
+
+describe("autonomous coach username allowlist", () => {
+  it("defaults to the allowlist when no filter is given", () => {
+    expect(resolveAutonomousCoachUsernameFilter(["alex"], [])).toEqual([
+      "alex",
+    ]);
+  });
+
+  it("intersects an explicit filter with the allowlist", () => {
+    expect(
+      resolveAutonomousCoachUsernameFilter(["alex"], ["alex", "someone"]),
+    ).toEqual(["alex"]);
+    expect(
+      resolveAutonomousCoachUsernameFilter(["alex"], ["someone"]),
+    ).toEqual([]);
+  });
+
+  it("passes filters through when the allowlist is open", () => {
+    expect(resolveAutonomousCoachUsernameFilter(null, ["someone"])).toEqual([
+      "someone",
+    ]);
+    expect(resolveAutonomousCoachUsernameFilter(null, [])).toBeNull();
   });
 });
 

@@ -82,6 +82,27 @@ interface RunResult {
 }
 
 const AUTONOMOUS_PROMPT_TAG = "autonomous_coach";
+
+// Staged rollout: autonomous coaching only runs for these usernames.
+// Set AUTONOMOUS_COACH_USERNAMES to a comma-separated list, or "*" for everyone.
+export function getAutonomousCoachUsernameAllowlist(): string[] | null {
+  const raw = process.env.AUTONOMOUS_COACH_USERNAMES ?? "alex";
+  const usernames = raw
+    .split(",")
+    .map((username) => username.trim())
+    .filter(Boolean);
+  if (usernames.includes("*")) return null;
+  return usernames;
+}
+
+export function resolveAutonomousCoachUsernameFilter(
+  allowlist: string[] | null,
+  filterUsernames: string[],
+): string[] | null {
+  if (!allowlist) return filterUsernames.length > 0 ? filterUsernames : null;
+  if (filterUsernames.length === 0) return allowlist;
+  return filterUsernames.filter((username) => allowlist.includes(username));
+}
 const AUTO_ACCEPT_HOURS = 48;
 const MILESTONE_AUTO_ACCEPT_NOTE =
   "Milestone changes require explicit user confirmation";
@@ -147,12 +168,13 @@ function isRecurrentCoachAssessmentIntervention(
   );
 }
 
-function activePlanWhere(now: Date) {
+// Plans past their finishingDate stay included on purpose: the coach owns
+// driving them to a decision (renew or archive) until they leave this state.
+function activePlanWhere(_now: Date) {
   return {
     deletedAt: null,
     archivedAt: null,
     isPaused: false,
-    OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
   };
 }
 
@@ -212,14 +234,26 @@ export class CoachAssessmentService {
       };
     }
 
+    const usernameFilter = resolveAutonomousCoachUsernameFilter(
+      getAutonomousCoachUsernameAllowlist(),
+      filter_usernames,
+    );
+    if (usernameFilter && usernameFilter.length === 0) {
+      return {
+        dry_run,
+        enabled: true,
+        users_checked: 0,
+        messages_sent: 0,
+        results: [],
+      };
+    }
+
     const users = await prisma.user.findMany({
       where: {
         deletedAt: null,
         planType: { not: "FREE" },
         proactiveCoachingEnabled: true,
-        ...(filter_usernames.length > 0
-          ? { username: { in: filter_usernames } }
-          : {}),
+        ...(usernameFilter ? { username: { in: usernameFilter } } : {}),
         plans: {
           some: {
             ...activePlanWhere(now),
@@ -493,10 +527,22 @@ export class CoachAssessmentService {
     let accepted = 0;
     let errors = 0;
 
+    const allowlist = getAutonomousCoachUsernameAllowlist();
+
     for (const message of messages) {
       if (message.chat.user?.proactiveCoachingEnabled === false) {
         logger.info(
           `Skipping auto-accept for coach message ${message.id} because proactive coaching is disabled`,
+        );
+        continue;
+      }
+
+      if (
+        allowlist &&
+        !allowlist.includes(message.chat.user?.username || "")
+      ) {
+        logger.info(
+          `Skipping auto-accept for coach message ${message.id} because the user is outside the autonomous coach rollout`,
         );
         continue;
       }
@@ -846,13 +892,20 @@ export class CoachAssessmentService {
   private buildAgentInterventionPrompt(
     candidate: CoachInterventionCandidate,
   ): string {
+    const onlyPastEndDateItems =
+      (candidate.attentionItems?.length || 0) > 0 &&
+      candidate.attentionItems!.every(
+        (item) => item.kind === "PLAN_PAST_END_DATE",
+      );
     const action =
       candidate.type === "INACTIVITY_ARCHIVE_PROPOSAL"
         ? "propose archiving the inactive plan with patch.archive"
         : candidate.type === "INACTIVITY_PAUSE_PROPOSAL"
           ? "propose pausing the inactive plan with a single pause operation"
           : candidate.type === "PLAN_ATTENTION"
-            ? "explain the schedule gap and ask whether the user wants you to repair or extend the affected plan schedule"
+            ? onlyPastEndDateItems
+              ? "point out the plan is past its end date and ask whether it is done; if done propose archiving it with patch.archive, otherwise propose a new finishing date and the next useful steps"
+              : "explain the schedule gap and ask whether the user wants you to repair or extend the affected plan schedule"
             : "propose a realistic plan adjustment for the user's missed or at-risk sessions";
 
     return dedent`
@@ -1366,7 +1419,7 @@ export class CoachAssessmentService {
     return {
       ...candidate,
       escalationCount,
-      reason: `${candidate.reason}. This schedule gap is still unresolved after ${escalationCount} coach nudge${escalationCount === 1 ? "" : "s"}.`,
+      reason: `${candidate.reason}. This is still unresolved after ${escalationCount} coach nudge${escalationCount === 1 ? "" : "s"}.`,
       context: [
         candidate.context,
         "",
@@ -1385,7 +1438,8 @@ export class CoachAssessmentService {
       now,
     }).filter(
       (item) =>
-        item.kind === "SPECIFIC_NO_FUTURE_SESSIONS" &&
+        (item.kind === "SPECIFIC_NO_FUTURE_SESSIONS" ||
+          item.kind === "PLAN_PAST_END_DATE") &&
         item.severity === "critical",
     );
 
@@ -1420,7 +1474,9 @@ export class CoachAssessmentService {
       severity: "critical",
       title: `${item.planEmoji || ""} ${item.planGoal} was archived`.trim(),
       message:
-        "The coach archived this plan after repeated unresolved schedule warnings. You can unarchive it when you are ready to rebuild the schedule.",
+        item.kind === "PLAN_PAST_END_DATE"
+          ? "The coach archived this plan after its end date passed without a decision. You can unarchive it when you are ready to renew it."
+          : "The coach archived this plan after repeated unresolved schedule warnings. You can unarchive it when you are ready to rebuild the schedule.",
       primaryAction: {
         type: "VIEW_COACH_CHAT",
         prompt: `Review why "${item.planGoal}" was archived and decide whether to restore it.`,
@@ -1464,8 +1520,8 @@ export class CoachAssessmentService {
       .join(", ");
     const content =
       plans.length === 1
-        ? `I archived ${planList} because its schedule stayed unresolved after repeated coach nudges. You can unarchive it from old and archived plans when you are ready to rebuild it.`
-        : `I archived these plans because their schedules stayed unresolved after repeated coach nudges: ${planList}. You can unarchive them from old and archived plans when you are ready to rebuild them.`;
+        ? `I archived ${planList} because it stayed unresolved after repeated coach nudges. You can unarchive it from old and archived plans when you are ready to rebuild it.`
+        : `I archived these plans because they stayed unresolved after repeated coach nudges: ${planList}. You can unarchive them from old and archived plans when you are ready to rebuild them.`;
 
     const message = await prisma.message.create({
       data: {

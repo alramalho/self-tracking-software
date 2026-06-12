@@ -28,12 +28,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
 const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
 
-function activePlanWhere(now: Date) {
+// Plans past their finishingDate stay included so attention items can drive
+// them to a decision (renew or archive).
+function activePlanWhere(_now: Date) {
   return {
     deletedAt: null,
     archivedAt: null,
     isPaused: false,
-    OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
   };
 }
 

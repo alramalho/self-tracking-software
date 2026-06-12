@@ -65,8 +65,14 @@ export const CoachCard = ({
   const archivedCount = coachAttentionItems.filter(
     (item) => item.kind === "SPECIFIC_AUTO_ARCHIVED",
   ).length;
+  const pastEndCount = coachAttentionItems.filter(
+    (item) => item.kind === "PLAN_PAST_END_DATE",
+  ).length;
   const readyToExtendCount = coachAttentionItems.filter(
-    (item) => item.severity === "critical",
+    (item) =>
+      item.severity === "critical" &&
+      item.kind !== "SPECIFIC_AUTO_ARCHIVED" &&
+      item.kind !== "PLAN_PAST_END_DATE",
   ).length;
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
   const nextAssessmentAt = getNextAssessmentAt(now, preferredCoachingHour);
@@ -148,9 +154,11 @@ export const CoachCard = ({
               <p className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
                 {archivedCount > 0
                   ? "Coach warning needs review"
-                  : readyToExtendCount > 0
-                    ? `${readyToExtendCount} plan${readyToExtendCount === 1 ? "" : "s"} ready to extend`
-                    : "Next week needs planning"}
+                  : pastEndCount > 0
+                    ? `${pastEndCount} plan${pastEndCount === 1 ? "" : "s"} past end date`
+                    : readyToExtendCount > 0
+                      ? `${readyToExtendCount} plan${readyToExtendCount === 1 ? "" : "s"} ready to extend`
+                      : "Next week needs planning"}
               </p>
               <p className="mt-3 inline-flex items-center text-sm font-semibold text-amber-500">
                 Expand

@@ -15,7 +15,6 @@ import {
 import { type CoachAttentionItem } from "@/contexts/ai/types";
 import { useMessages } from "@/contexts/messages";
 import { useCurrentUser } from "@/contexts/users";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   getCoachAvatar,
   getCoachPersonalityConfig,
@@ -29,10 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  ShieldAlert,
-  X,
 } from "lucide-react";
-import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
@@ -70,6 +66,7 @@ export function useCoachAttentionItems(enabled = true) {
 
 function attentionHeadline(item: CoachAttentionItem) {
   if (item.kind === "SPECIFIC_AUTO_ARCHIVED") return "Plan archived";
+  if (item.kind === "PLAN_PAST_END_DATE") return "Plan passed its end date";
   return item.kind === "SPECIFIC_NO_FUTURE_SESSIONS"
     ? "Next sessions need planning"
     : "Next week needs planning";
@@ -222,7 +219,7 @@ export function CoachAttentionDrawer({
                         {criticalCount}
                       </p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
-                        ready to extend
+                        need a decision
                       </p>
                     </div>
                     <div className="rounded-2xl bg-muted/50 p-4">
@@ -335,113 +332,3 @@ export function CoachAttentionDrawer({
   );
 }
 
-export function CoachAttentionTrigger() {
-  const attentionItems = useCoachAttentionItems();
-  const [open, setOpen] = useState(false);
-
-  if (attentionItems.length === 0) return null;
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="relative rounded-full p-2 transition-colors duration-200 hover:bg-muted/50"
-        title="Plan updates"
-        aria-label="Plan updates"
-      >
-        <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-amber-400">
-          <span className="absolute inset-0 rounded-full bg-amber-400 motion-safe:animate-ping" />
-        </span>
-        <ShieldAlert size={24} className="text-amber-500" />
-      </button>
-      <CoachAttentionDrawer
-        open={open}
-        onOpenChange={setOpen}
-        items={attentionItems}
-      />
-    </>
-  );
-}
-
-export function CoachAttentionBanner() {
-  const attentionItems = useCoachAttentionItems();
-  const [open, setOpen] = useState(false);
-  const [dismissedKeys, setDismissedKeys] = useLocalStorage<string[]>(
-    "dismissed-coach-attention-items",
-    [],
-  );
-  const [openedKeys, setOpenedKeys] = useLocalStorage<string[]>(
-    "opened-coach-attention-items",
-    [],
-  );
-
-  const visibleItems = useMemo(
-    () =>
-      attentionItems.filter((item) => !dismissedKeys.includes(item.dedupeKey)),
-    [attentionItems, dismissedKeys],
-  );
-  const primaryItem = visibleItems[0];
-
-  useEffect(() => {
-    if (!primaryItem || primaryItem.severity !== "critical") return;
-    if (openedKeys.includes(primaryItem.dedupeKey)) return;
-
-    setOpen(true);
-    setOpenedKeys((keys) => [...keys, primaryItem.dedupeKey]);
-  }, [openedKeys, primaryItem, setOpenedKeys]);
-
-  if (!primaryItem) return null;
-
-  const dismissPrimary = (event: MouseEvent) => {
-    event.stopPropagation();
-    setDismissedKeys((keys) => [...keys, primaryItem.dedupeKey]);
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          "mb-4 w-full rounded-2xl border p-4 text-left shadow-sm transition-colors",
-          primaryItem.severity === "critical"
-            ? "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/15"
-            : "border-border bg-card hover:bg-muted/40",
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-background/70">
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-400">
-              <span className="absolute inset-0 rounded-full bg-amber-400 motion-safe:animate-ping" />
-            </span>
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              {primaryItem.title}
-            </p>
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-              {primaryItem.message}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={dismissPrimary}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-            aria-label="Dismiss plan update"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <ChevronRight className="mt-2 h-5 w-5 shrink-0 text-muted-foreground" />
-        </div>
-      </button>
-
-      <CoachAttentionDrawer
-        open={open}
-        onOpenChange={setOpen}
-        items={visibleItems}
-      />
-    </>
-  );
-}

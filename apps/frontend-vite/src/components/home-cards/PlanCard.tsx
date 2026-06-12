@@ -63,13 +63,34 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
   const emoji = plan.activities?.[0]?.emoji || plan.emoji || "🎯";
   const isSpecificPlan = plan.outlineType === "SPECIFIC";
 
+  const todayStart = startOfDay(new Date());
+  const isPastEndDate =
+    !!plan.finishingDate && isAfter(todayStart, new Date(plan.finishingDate));
+  const hasUpcomingSessions = (plan.sessions || []).some(
+    (session) => !isAfter(todayStart, new Date(session.date))
+  );
+  const needsPlanning =
+    !isPastEndDate && isSpecificPlan && !hasUpcomingSessions;
+  const statusLabel = isPastEndDate
+    ? "Past end date"
+    : needsPlanning
+      ? "Needs planning"
+      : null;
+
   return (
     <HomeCardShell
       onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })}
-      className="ring-0"
+      className={statusLabel ? "ring-1 ring-amber-500/40" : "ring-0"}
     >
       <div>
-        <span className="text-2xl">{emoji}</span>
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-2xl">{emoji}</span>
+          {statusLabel && (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-500">
+              {statusLabel}
+            </span>
+          )}
+        </div>
         <p className="text-sm font-medium text-foreground line-clamp-2 mt-1">
           {plan.goal}
         </p>
@@ -93,8 +114,16 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
 
             if (!nextSession || !nextActivity) {
               return (
-                <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                  No sessions scheduled.
+                <div
+                  className={
+                    statusLabel
+                      ? "rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-600"
+                      : "rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground"
+                  }
+                >
+                  {isPastEndDate
+                    ? "Ended. Archive it or renew it with your coach."
+                    : "No upcoming sessions. The coach can plan the next week."}
                 </div>
               );
             }

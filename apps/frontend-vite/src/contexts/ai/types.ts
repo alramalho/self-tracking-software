@@ -42,7 +42,8 @@ export interface CoachAttentionItem {
   kind:
     | "SPECIFIC_NO_FUTURE_SESSIONS"
     | "SPECIFIC_SCHEDULE_ENDING"
-    | "SPECIFIC_AUTO_ARCHIVED";
+    | "SPECIFIC_AUTO_ARCHIVED"
+    | "PLAN_PAST_END_DATE";
   severity: "critical" | "warning" | "info";
   planIds: string[];
   planGoal: string;

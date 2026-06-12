@@ -11,7 +11,8 @@ type AttentionPlan = Plan & {
 export type CoachAttentionKind =
   | "SPECIFIC_NO_FUTURE_SESSIONS"
   | "SPECIFIC_SCHEDULE_ENDING"
-  | "SPECIFIC_AUTO_ARCHIVED";
+  | "SPECIFIC_AUTO_ARCHIVED"
+  | "PLAN_PAST_END_DATE";
 
 export type CoachAttentionItem = {
   dedupeKey: string;
@@ -31,15 +32,9 @@ export type CoachAttentionItem = {
 };
 
 function isActivePlan(
-  plan: Pick<Plan, "deletedAt" | "archivedAt" | "isPaused" | "finishingDate">,
-  now: Date,
+  plan: Pick<Plan, "deletedAt" | "archivedAt" | "isPaused">,
 ) {
-  return (
-    !plan.deletedAt &&
-    !plan.archivedAt &&
-    !plan.isPaused &&
-    (!plan.finishingDate || plan.finishingDate > now)
-  );
+  return !plan.deletedAt && !plan.archivedAt && !plan.isPaused;
 }
 
 function dateKey(date: Date, timezone: string) {
@@ -51,6 +46,10 @@ function planLabel(plan: Pick<Plan, "emoji" | "goal">) {
 }
 
 function buildRepairPrompt(plan: AttentionPlan, kind: CoachAttentionKind) {
+  if (kind === "PLAN_PAST_END_DATE") {
+    return `Please review my plan "${plan.goal}". Its end date has passed. Use the plan notes and current progress, then help me decide: if it is done, propose archiving it; if I want to continue, propose a new finishing date and the next useful steps.`;
+  }
+
   if (kind === "SPECIFIC_NO_FUTURE_SESSIONS") {
     return `Please adapt my plan "${plan.goal}". It is a specific dated-session plan that has reached the end of its scheduled sessions. Use the plan notes and current progress, then propose the next useful sessions or ask one question if you need direction.`;
   }
@@ -75,8 +74,7 @@ export function deriveCoachAttentionItems(params: {
   const items: CoachAttentionItem[] = [];
 
   for (const plan of params.plans) {
-    if (!isActivePlan(plan, now)) continue;
-    if (plan.outlineType !== "SPECIFIC") continue;
+    if (!isActivePlan(plan)) continue;
 
     const sessions = [...(plan.sessions || [])].sort(
       (a, b) => a.date.getTime() - b.date.getTime(),
@@ -93,6 +91,35 @@ export function deriveCoachAttentionItems(params: {
     const finishingDate = plan.finishingDate
       ? dateKey(plan.finishingDate, timezone)
       : "No end date";
+
+    if (plan.finishingDate && dateKey(plan.finishingDate, timezone) < todayKey) {
+      items.push({
+        dedupeKey: `${plan.id}:PLAN_PAST_END_DATE`,
+        kind: "PLAN_PAST_END_DATE",
+        severity: "critical",
+        planIds: [plan.id],
+        planGoal: plan.goal,
+        planEmoji: plan.emoji || null,
+        title: `${label} passed its end date`,
+        message:
+          "This plan's end date has passed. The coach can mark it done and archive it, or set a new end date with the next steps.",
+        facts: [
+          { label: "Plan end", value: finishingDate },
+          {
+            label: "Last planned session",
+            value: lastSession ? dateKey(lastSession.date, timezone) : "None",
+          },
+        ],
+        primaryAction: {
+          type: "START_PLAN_UPDATE",
+          prompt: buildRepairPrompt(plan, "PLAN_PAST_END_DATE"),
+        },
+        generatedAt,
+      });
+      continue;
+    }
+
+    if (plan.outlineType !== "SPECIFIC") continue;
 
     if (futureSessions.length === 0) {
       items.push({
