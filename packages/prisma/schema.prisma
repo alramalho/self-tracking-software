@@ -480,6 +480,7 @@ model Plan {
   suggestedByCoachAt         DateTime?
   visibility                 Visibility         @default(PUBLIC)
   backgroundImageUrl         String?
+  sortOrder                  Int?
 
   // Current week state
   currentWeekState             PlanState?
@@ -513,6 +514,7 @@ model Plan {
   @@index([userId, deletedAt])
   @@index([userId, deletedAt, archivedAt])
   @@index([userId, id])
+  @@index([userId, deletedAt, sortOrder])
   @@index([createdAt])
   @@map("plans")
   @@schema("public")

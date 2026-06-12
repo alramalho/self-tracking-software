@@ -6,6 +6,7 @@ import {
   PlanOutlineType,
   PlanSession,
   PlanState,
+  Prisma,
   User,
 } from "@tsw/prisma";
 import { PlanProgressData, PlanProgressState } from "@tsw/prisma/types";
@@ -26,6 +27,28 @@ import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import { embeddingService } from "./embeddingService";
+
+const PLAN_DISPLAY_ORDER_BY = [
+  { sortOrder: "asc" },
+  { createdAt: "desc" },
+] satisfies Prisma.PlanOrderByWithRelationInput[];
+
+export async function getNextPlanSortOrder(
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma
+): Promise<number> {
+  const maxPlanSortOrder = await client.plan.aggregate({
+    where: {
+      userId,
+      deletedAt: null,
+    },
+    _max: {
+      sortOrder: true,
+    },
+  });
+
+  return (maxPlanSortOrder._max.sortOrder ?? -1) + 1;
+}
 
 function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -137,7 +160,7 @@ export class PlansService {
           },
           activities: true,
         },
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: PLAN_DISPLAY_ORDER_BY,
       });
 
       return plans.length > 0 ? plans[0] : null;

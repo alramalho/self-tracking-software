@@ -8,9 +8,8 @@ import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
 import { Archive, ArchiveRestore, Loader2, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { AnimatePresence, motion } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -18,6 +17,23 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { capitalize } from "@/lib/utils";
 import { twMerge } from "tailwind-merge";
+import {
+  DndContext,
+  type DragEndEvent,
+  type DragStartEvent,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Helper function to check if a plan is expired
 export const isPlanExpired = (plan: {
@@ -34,9 +50,18 @@ export const isPlanArchived = (plan: {
   return !!plan.archivedAt;
 };
 
-// Function to sort plans by creation date (newest first)
-const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
+const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
+
+// Function to sort plans by explicit order, falling back to creation date.
+const sortPlansByOrder = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
+    const orderA = a.sortOrder ?? UNORDERED_PLAN_SORT;
+    const orderB = b.sortOrder ?? UNORDERED_PLAN_SORT;
+
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };
@@ -45,6 +70,7 @@ interface PlanCardProps {
   plan: CompletePlan;
   isSelected: boolean;
   isLoading?: boolean;
+  isDragging?: boolean;
   onSelect: (planId: string) => void;
   onInactivePlanClick?: (plan: CompletePlan) => void;
 }
@@ -53,6 +79,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isSelected,
   isLoading = false,
+  isDragging = false,
   onSelect,
   onInactivePlanClick,
 }) => {
@@ -73,7 +100,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
   return (
     <div
       className={twMerge(
-        "relative rounded-lg"
+        "relative rounded-lg",
+        isDragging && "z-20 shadow-lg"
       )}
     >
       {isArchived && (
@@ -86,7 +114,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           isSelected
             ? variants.veryFadedBg
             : "hover:bg-muted/60"
-        }`}
+        } ${isDragging ? "ring-2 ring-primary/30 cursor-grabbing" : "cursor-grab"}`}
         onClick={handleCardClick}
         style={{ opacity: isInactive ? 0.5 : 1 }}
       >
@@ -120,6 +148,43 @@ const PlanCard: React.FC<PlanCardProps> = ({
   );
 };
 
+interface SortablePlanCardProps extends PlanCardProps {
+  disabled?: boolean;
+}
+
+const SortablePlanCard: React.FC<SortablePlanCardProps> = ({
+  plan,
+  disabled = false,
+  ...props
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: plan.id!,
+    disabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        touchAction: "manipulation",
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <PlanCard plan={plan} isDragging={isDragging} {...props} />
+    </div>
+  );
+};
+
 interface PlansRendererProps {
   initialSelectedPlanId?: string | null;
   scrollTo?: string;
@@ -129,7 +194,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
   scrollTo,
 }) => {
-  const { plans, isLoadingPlans, isFetchingPlans, upsertPlan, deletePlan, archivePlan, unarchivePlan, isArchivingPlan, isUnarchivingPlan } = usePlans();
+  const { plans, isLoadingPlans, isFetchingPlans, upsertPlan, updatePlans, deletePlan, archivePlan, unarchivePlan, isArchivingPlan, isUnarchivingPlan } = usePlans();
   const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const navigate = useNavigate();
@@ -145,16 +210,65 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const [isReactivating, setIsReactivating] = useState(false);
   const [showPlanLimitPopover, setShowPlanLimitPopover] = useState(false);
   const [settlingPlanId, setSettlingPlanId] = useState<string | null>(null);
+  const [optimisticPlanIds, setOptimisticPlanIds] = useState<string[] | null>(null);
+  const [draggingPlanId, setDraggingPlanId] = useState<string | null>(null);
+  const suppressNextSelectRef = useRef(false);
+
+  const baseOrderedPlans = useMemo(() => {
+    return plans ? sortPlansByOrder(plans as CompletePlan[]) : [];
+  }, [plans]);
 
   const orderedPlans = useMemo(() => {
-    return plans ? sortPlansByDate(plans as CompletePlan[]) : [];
-  }, [plans]);
+    if (!optimisticPlanIds) return baseOrderedPlans;
+
+    const plansById = new Map(baseOrderedPlans.map((plan) => [plan.id!, plan]));
+    const optimisticPlans = optimisticPlanIds
+      .map((planId) => plansById.get(planId))
+      .filter((plan): plan is CompletePlan => Boolean(plan));
+    const optimisticIdSet = new Set(optimisticPlanIds);
+    const remainingPlans = baseOrderedPlans.filter(
+      (plan) => !optimisticIdSet.has(plan.id!)
+    );
+
+    return [...optimisticPlans, ...remainingPlans];
+  }, [baseOrderedPlans, optimisticPlanIds]);
 
   const displayedPlans = useMemo(() => {
     return showOldPlans
       ? orderedPlans
       : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
   }, [orderedPlans, showOldPlans]);
+
+  const displayedPlanIds = useMemo(() => {
+    return displayedPlans.map((plan) => plan.id!);
+  }, [displayedPlans]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 350,
+        tolerance: 8,
+      },
+    })
+  );
+
+  useEffect(() => {
+    if (!optimisticPlanIds) return;
+
+    const planIds = new Set(baseOrderedPlans.map((plan) => plan.id!));
+    const isCurrentPlanSet =
+      optimisticPlanIds.length === planIds.size &&
+      optimisticPlanIds.every((planId) => planIds.has(planId));
+
+    if (!isCurrentPlanSet) {
+      setOptimisticPlanIds(null);
+    }
+  }, [baseOrderedPlans, optimisticPlanIds]);
 
   useEffect(() => {
     setSelectedPlanId(initialSelectedPlanId);
@@ -258,6 +372,11 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   }
 
   const handlePlanSelect = (planId: string) => {
+    if (suppressNextSelectRef.current) {
+      suppressNextSelectRef.current = false;
+      return;
+    }
+
     if (activeSelectedPlanId === planId) {
       setSelectedPlanId(null);
     } else {
@@ -330,37 +449,82 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingPlanId(String(event.active.id));
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setDraggingPlanId(null);
+
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
+
+    if (!overId || activeId === overId) return;
+
+    const oldIndex = displayedPlanIds.indexOf(activeId);
+    const newIndex = displayedPlanIds.indexOf(overId);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    suppressNextSelectRef.current = true;
+    window.setTimeout(() => {
+      suppressNextSelectRef.current = false;
+    }, 250);
+
+    const reorderedDisplayedPlans = arrayMove(displayedPlans, oldIndex, newIndex);
+    const displayedIdSet = new Set(displayedPlanIds);
+    const displayedQueue = [...reorderedDisplayedPlans];
+    const nextOrderedPlans = orderedPlans.map((plan) => {
+      if (!displayedIdSet.has(plan.id!)) return plan;
+      return displayedQueue.shift() ?? plan;
+    });
+    const nextPlanIds = nextOrderedPlans.map((plan) => plan.id!);
+
+    setOptimisticPlanIds(nextPlanIds);
+
+    try {
+      await updatePlans({
+        updates: nextOrderedPlans.map((plan, index) => ({
+          planId: plan.id!,
+          updates: { sortOrder: index },
+        })),
+        muteNotifications: true,
+      });
+    } catch (error) {
+      setOptimisticPlanIds(orderedPlans.map((plan) => plan.id!));
+      toast.error("Failed to reorder plans");
+      console.error("Failed to reorder plans:", error);
+    }
+  };
+
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
-        <AnimatePresence mode="popLayout">
-          {displayedPlans.map((plan, index) => (
-            <motion.div
-              key={plan.id}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                layout: { type: "spring", stiffness: 350, damping: 25 },
-                opacity: { duration: 0.2 },
-                delay: isPlanExpired(plan) && !showOldPlans ? 0 : index * 0.03
-              }}
-            >
-              <PlanCard
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setDraggingPlanId(null)}
+        >
+          <SortableContext items={displayedPlanIds} strategy={rectSortingStrategy}>
+            {displayedPlans.map((plan) => (
+              <SortablePlanCard
+                key={plan.id}
                 plan={plan}
                 isSelected={activeSelectedPlanId === plan.id}
                 isLoading={
                   activeSelectedPlanId === plan.id &&
                   (settlingPlanId === plan.id || isFetchingPlans)
                 }
+                isDragging={draggingPlanId === plan.id}
                 onSelect={handlePlanSelect}
                 onInactivePlanClick={handleInactivePlanClick}
               />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+            ))}
+          </SortableContext>
+        </DndContext>
         <Button
           variant="outline"
           className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"

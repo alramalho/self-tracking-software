@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
-import { plansService } from "../services/plansService";
+import { getNextPlanSortOrder, plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
 import { runCategorizationJob } from "../services/planCategorizationService";
@@ -24,6 +24,10 @@ import { prisma } from "../utils/prisma";
 
 const router = Router();
 const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
+const PLAN_DISPLAY_ORDER_BY = [
+  { sortOrder: "asc" },
+  { createdAt: "desc" },
+] satisfies Prisma.PlanOrderByWithRelationInput[];
 
 // Configure multer for memory storage
 const upload = multer({
@@ -222,7 +226,7 @@ router.get(
           },
           milestones: true,
         },
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: PLAN_DISPLAY_ORDER_BY,
       });
 
       // Batch load progress for all plans
@@ -605,7 +609,7 @@ router.get(
           },
           activities: true,
         },
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: PLAN_DISPLAY_ORDER_BY,
       });
 
       // Transform the data to match expected format
@@ -1552,6 +1556,7 @@ router.post(
               timesPerWeek: planData.timesPerWeek,
               coachId: planData.coachId || null,
               backgroundImageUrl: planData.backgroundImageUrl,
+              sortOrder: await getNextPlanSortOrder(req.user!.id, tx),
 
               // Connect activities directly - handle both activities array and activityIds array
               ...(planData.activities && {
@@ -1894,6 +1899,7 @@ router.post(
               outlineType: templatePlan.outlineType,
               timesPerWeek: templatePlan.timesPerWeek,
               planGroupId: planGroup.id,
+              sortOrder: await getNextPlanSortOrder(req.user!.id, tx),
               // Connect to the newly created activities
               activities: {
                 connect: newActivities.map((activity) => ({

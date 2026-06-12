@@ -16,6 +16,7 @@ import {
   executePlanProposalPatch,
   getProposalPatch,
 } from "../services/planProposalPatchService";
+import { getNextPlanSortOrder } from "../services/plansService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
@@ -1928,6 +1929,7 @@ router.post(
               outlineType === "TIMES_PER_WEEK"
                 ? proposal.timesPerWeek || null
                 : null,
+            sortOrder: await getNextPlanSortOrder(user.id, tx),
             activities:
               activityIds.length > 0
                 ? { connect: activityIds.map((id) => ({ id })) }
