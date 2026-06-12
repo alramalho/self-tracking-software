@@ -1,5 +1,6 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import DeleteAccountDialog from "@/components/DeleteAccountDialog";
+import { IntegrationsSettings } from "@/components/profile/IntegrationsSettings";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
@@ -17,6 +18,7 @@ import {
   ChevronLeft,
   CreditCard,
   GraduationCap,
+  KeyRound,
   Loader2,
   LogOut,
   Moon,
@@ -61,6 +63,7 @@ export type ActiveView =
   | "editProfile"
   | "color"
   | "themeMode"
+  | "integrations"
   | "admin";
 
 // Define view depths for animation direction
@@ -70,6 +73,7 @@ const viewLevels: Record<ActiveView, number> = {
   editProfile: 2,
   color: 1,
   themeMode: 1,
+  integrations: 1,
   admin: 1,
 };
 
@@ -473,6 +477,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       open={true}
                       onClose={() => navigateTo("main")}
                     />
+                  </div>
+                );
+              case "integrations":
+                return (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigateTo("main")}
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronLeft size={18} /> Back to Settings
+                    </Button>
+                    <IntegrationsSettings />
                   </div>
                 );
               case "admin":
@@ -889,6 +906,15 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       >
                         <GraduationCap size={28} />
                         <span>Coach Profile</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-start px-0 gap-2"
+                        onClick={() => navigateTo("integrations")}
+                      >
+                        <KeyRound size={28} />
+                        <span>Integrations & API Keys</span>
                       </Button>
 
                       <Button
