@@ -1498,17 +1498,6 @@ function MessageAIPage() {
                   <ArrowLeft size={20} />
                 </Button>
                 <div className="relative flex items-center">
-                  {hasCoachAttention && (
-                    <button
-                      type="button"
-                      className="absolute -left-1 top-1/2 z-20 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1 rounded-full border border-background bg-amber-500 px-2 text-xs font-bold text-background shadow-lg motion-safe:animate-pulse"
-                      onClick={() => setShowCoachAttentionDrawer(true)}
-                      aria-label={`${coachAttentionCount} plan update${coachAttentionCount === 1 ? "" : "s"} need attention`}
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span>{coachAttentionCount}</span>
-                    </button>
-                  )}
                   <button
                     className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                     onClick={() => navigate({ to: "/manage-ai-coach" })}
@@ -1522,6 +1511,16 @@ function MessageAIPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {hasCoachAttention && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowCoachAttentionDrawer(true)}
+                    aria-label={`${coachAttentionCount} plan update${coachAttentionCount === 1 ? "" : "s"} need attention`}
+                  >
+                    <AlertTriangle size={18} className="text-amber-500" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
