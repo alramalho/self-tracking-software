@@ -14,6 +14,7 @@ import {
 } from "@/contexts/ai/service";
 import { type CoachAttentionItem } from "@/contexts/ai/types";
 import { useMessages } from "@/contexts/messages";
+import { usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import {
   getCoachAvatar,
@@ -24,10 +25,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Archive,
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  MessageCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
@@ -103,6 +106,7 @@ export function CoachAttentionDrawer({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setCurrentChatId } = useMessages();
+  const { archivePlan, isArchivingPlan } = usePlans();
   const { currentUser } = useCurrentUser();
   const [step, setStep] = useState(0);
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
@@ -159,6 +163,21 @@ export function CoachAttentionDrawer({
     }
 
     startAttentionAction.mutate({ item, guidance });
+  };
+
+  const archivePastEndDatePlan = async (item: CoachAttentionItem) => {
+    const planId = item.planIds[0];
+    if (!planId) return;
+
+    await archivePlan(planId);
+    await queryClient.invalidateQueries({ queryKey: ["coach-attention"] });
+
+    if (items.length <= 1) {
+      onOpenChange(false);
+      return;
+    }
+
+    setStep((current) => Math.min(current, items.length - 1));
   };
 
   return (
@@ -289,10 +308,31 @@ export function CoachAttentionDrawer({
                     {startAttentionAction.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
+                    {activeItem.kind === "PLAN_PAST_END_DATE" &&
+                      !startAttentionAction.isPending && (
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                      )}
                     {activeItem.primaryAction.type === "VIEW_COACH_CHAT"
                       ? "Open coach chat"
+                      : activeItem.kind === "PLAN_PAST_END_DATE"
+                        ? "Talk to coach"
                       : "Let coach prepare the update"}
                   </Button>
+                  {activeItem.kind === "PLAN_PAST_END_DATE" && (
+                    <Button
+                      className="w-full rounded-2xl"
+                      variant="outline"
+                      disabled={isArchivingPlan || startAttentionAction.isPending}
+                      onClick={() => archivePastEndDatePlan(activeItem)}
+                    >
+                      {isArchivingPlan ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Archive className="mr-2 h-4 w-4" />
+                      )}
+                      Archive plan
+                    </Button>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
@@ -331,4 +371,3 @@ export function CoachAttentionDrawer({
     </Drawer>
   );
 }
-
