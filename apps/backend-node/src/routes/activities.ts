@@ -230,6 +230,7 @@ async function findSharedActivityCandidates(
             sourceEmoji: entry.activity!.emoji,
             sourceDatetime: entry.datetime,
             sourceKind: entry.activity!.kind as any,
+            sourceTimezone: entry.timezone,
             sourceLatitude: entry.latitude,
             sourceLongitude: entry.longitude,
             candidateTitle: candidate.activity.title,
@@ -237,6 +238,7 @@ async function findSharedActivityCandidates(
             candidateEmoji: candidate.activity.emoji,
             candidateDatetime: candidate.datetime,
             candidateKind: candidate.activity.kind as any,
+            candidateTimezone: candidate.timezone,
             candidateLatitude: candidate.latitude,
             candidateLongitude: candidate.longitude,
           })
@@ -355,6 +357,7 @@ async function canLinkActivityEntries(
     sourceEmoji: ownEntry.activity.emoji,
     sourceDatetime: ownEntry.datetime,
     sourceKind: ownEntry.activity.kind as any,
+    sourceTimezone: ownEntry.timezone,
     sourceLatitude: ownEntry.latitude,
     sourceLongitude: ownEntry.longitude,
     candidateTitle: candidateEntry.activity.title,
@@ -362,6 +365,7 @@ async function canLinkActivityEntries(
     candidateEmoji: candidateEntry.activity.emoji,
     candidateDatetime: candidateEntry.datetime,
     candidateKind: candidateEntry.activity.kind as any,
+    candidateTimezone: candidateEntry.timezone,
     candidateLatitude: candidateEntry.latitude,
     candidateLongitude: candidateEntry.longitude,
   });

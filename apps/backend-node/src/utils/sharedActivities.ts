@@ -6,6 +6,7 @@ export interface SharedActivityMatchInput {
   sourceEmoji: string;
   sourceDatetime: Date;
   sourceKind?: ActivityKind;
+  sourceTimezone?: string | null;
   sourceLatitude?: number | null;
   sourceLongitude?: number | null;
   candidateTitle: string;
@@ -13,9 +14,12 @@ export interface SharedActivityMatchInput {
   candidateEmoji: string;
   candidateDatetime: Date;
   candidateKind?: ActivityKind;
+  candidateTimezone?: string | null;
   candidateLatitude?: number | null;
   candidateLongitude?: number | null;
 }
+
+const MAX_SHARED_ACTIVITY_DISTANCE_KM = 25;
 
 export function normalizeActivityLabel(value: string): string {
   return value
@@ -77,9 +81,45 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
+function hasPreciseLocation(
+  latitude?: number | null,
+  longitude?: number | null
+): latitude is number {
+  return latitude != null && longitude != null;
+}
+
+function hasCompatibleLocation(input: SharedActivityMatchInput): boolean {
+  const sourceHasPreciseLocation = hasPreciseLocation(
+    input.sourceLatitude,
+    input.sourceLongitude
+  );
+  const candidateHasPreciseLocation = hasPreciseLocation(
+    input.candidateLatitude,
+    input.candidateLongitude
+  );
+
+  if (sourceHasPreciseLocation && candidateHasPreciseLocation) {
+    return (
+      haversineKm(
+        input.sourceLatitude!,
+        input.sourceLongitude!,
+        input.candidateLatitude!,
+        input.candidateLongitude!
+      ) <= MAX_SHARED_ACTIVITY_DISTANCE_KM
+    );
+  }
+
+  return (
+    !!input.sourceTimezone &&
+    !!input.candidateTimezone &&
+    input.sourceTimezone === input.candidateTimezone
+  );
+}
+
 export function scoreSharedActivityCandidate(input: SharedActivityMatchInput): number {
   if (!isSameCalendarDay(input.sourceDatetime, input.candidateDatetime)) return 0;
   if (!hasSemanticMatch(input)) return 0;
+  if (!hasCompatibleLocation(input)) return 0;
 
   const minutesApart = Math.abs(
     input.sourceDatetime.getTime() - input.candidateDatetime.getTime()

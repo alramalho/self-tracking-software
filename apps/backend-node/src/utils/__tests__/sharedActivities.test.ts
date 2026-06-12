@@ -17,10 +17,12 @@ describe("shared activity matching", () => {
       sourceMeasure: "km",
       sourceEmoji: "🏃",
       sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Run",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-06T10:25:00Z"),
+      candidateTimezone: "Europe/Lisbon",
     };
 
     expect(scoreSharedActivityCandidate(input)).toBeGreaterThanOrEqual(100);
@@ -33,10 +35,12 @@ describe("shared activity matching", () => {
       sourceMeasure: "km",
       sourceEmoji: "🏃",
       sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Read",
       candidateMeasure: "pages",
       candidateEmoji: "📚",
       candidateDatetime: new Date("2026-05-06T10:10:00Z"),
+      candidateTimezone: "Europe/Lisbon",
     })).toBe(0);
   });
 
@@ -46,10 +50,12 @@ describe("shared activity matching", () => {
       sourceMeasure: "km",
       sourceEmoji: "🏃",
       sourceDatetime: new Date("2026-05-06T08:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Run",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-06T20:00:00Z"),
+      candidateTimezone: "Europe/Lisbon",
     })).toBeGreaterThanOrEqual(50);
   });
 
@@ -59,10 +65,12 @@ describe("shared activity matching", () => {
       sourceMeasure: "km",
       sourceEmoji: "🏃",
       sourceDatetime: new Date("2026-05-06T23:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Run",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-07T01:00:00Z"),
+      candidateTimezone: "Europe/Lisbon",
     })).toBe(0);
   });
 
@@ -79,11 +87,13 @@ describe("shared activity matching", () => {
       sourceEmoji: "🏃",
       sourceDatetime: new Date("2026-05-06T10:00:00Z"),
       sourceKind: "running" as const,
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Running",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-06T10:15:00Z"),
       candidateKind: "running" as const,
+      candidateTimezone: "Europe/Lisbon",
     };
 
     expect(scoreSharedActivityCandidate(input)).toBeGreaterThanOrEqual(50);
@@ -97,11 +107,13 @@ describe("shared activity matching", () => {
       sourceEmoji: "🏋️",
       sourceDatetime: new Date("2026-05-06T10:00:00Z"),
       sourceKind: "gym",
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Running",
       candidateMeasure: "km",
       candidateEmoji: "🏃",
       candidateDatetime: new Date("2026-05-06T10:05:00Z"),
       candidateKind: "running",
+      candidateTimezone: "Europe/Lisbon",
     })).toBe(0);
   });
 
@@ -112,13 +124,68 @@ describe("shared activity matching", () => {
       sourceEmoji: "🧶",
       sourceDatetime: new Date("2026-05-06T10:00:00Z"),
       sourceKind: "other" as const,
+      sourceTimezone: "Europe/Lisbon",
       candidateTitle: "Knitting",
       candidateMeasure: "minutes",
       candidateEmoji: "🧶",
       candidateDatetime: new Date("2026-05-06T10:10:00Z"),
       candidateKind: "other" as const,
+      candidateTimezone: "Europe/Lisbon",
     };
 
     expect(scoreSharedActivityCandidate(input)).toBeGreaterThanOrEqual(50);
+  });
+
+  it("rejects precise locations that are too far apart", () => {
+    expect(scoreSharedActivityCandidate({
+      sourceTitle: "Run",
+      sourceMeasure: "km",
+      sourceEmoji: "🏃",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
+      sourceLatitude: 38.7223,
+      sourceLongitude: -9.1393,
+      candidateTitle: "Run",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-06T10:10:00Z"),
+      candidateTimezone: "Europe/Berlin",
+      candidateLatitude: 52.52,
+      candidateLongitude: 13.405,
+    })).toBe(0);
+  });
+
+  it("matches nearby precise locations", () => {
+    expect(scoreSharedActivityCandidate({
+      sourceTitle: "Run",
+      sourceMeasure: "km",
+      sourceEmoji: "🏃",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
+      sourceLatitude: 38.7223,
+      sourceLongitude: -9.1393,
+      candidateTitle: "Run",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-06T10:10:00Z"),
+      candidateTimezone: "Europe/Lisbon",
+      candidateLatitude: 38.7369,
+      candidateLongitude: -9.1427,
+    })).toBeGreaterThanOrEqual(50);
+  });
+
+  it("rejects timezone mismatches when precise location is unavailable", () => {
+    expect(scoreSharedActivityCandidate({
+      sourceTitle: "Run",
+      sourceMeasure: "km",
+      sourceEmoji: "🏃",
+      sourceDatetime: new Date("2026-05-06T10:00:00Z"),
+      sourceTimezone: "Europe/Lisbon",
+      candidateTitle: "Run",
+      candidateMeasure: "km",
+      candidateEmoji: "🏃",
+      candidateDatetime: new Date("2026-05-06T10:10:00Z"),
+      candidateTimezone: "Europe/Berlin",
+    })).toBe(0);
   });
 });
