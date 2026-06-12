@@ -73,6 +73,10 @@ const allowedOrigins = [
   "https://app.tracking.so/",
   "https://test-migration.tracking.so",
   "https://test-migration.tracking.so/",
+  // Capacitor iOS/Android WebView origins (the native app talks to prod too)
+  "capacitor://localhost",
+  "http://localhost",
+  "ionic://localhost",
 ];
 
 if (ENVIRONMENT === "development") {
@@ -82,10 +86,6 @@ if (ENVIRONMENT === "development") {
   allowedOrigins.push("http://localhost:5174");
   allowedOrigins.push("http://localhost:4173");
   allowedOrigins.push("https://tracking-so.localhost");
-  // Capacitor iOS/Android WebView origins
-  allowedOrigins.push("capacitor://localhost");
-  allowedOrigins.push("http://localhost");
-  allowedOrigins.push("ionic://localhost");
 }
 
 app.use(

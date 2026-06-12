@@ -13,6 +13,22 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// listUsers() paginates (default 50/page) — a single call misses existing users
+// past the first page and would create duplicate accounts on social sign-in
+async function findUserByEmail(email: string) {
+  const perPage = 1000;
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    if (error) throw error;
+    const match = data.users.find((u) => u.email === email);
+    if (match) return match;
+    if (data.users.length < perPage) return undefined;
+  }
+}
+
 /**
  * Exchange iOS Google idToken for Supabase session
  * POST /auth/ios-google-signin
@@ -37,9 +53,7 @@ router.post("/ios-google-signin", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid token payload" });
     }
 
-    // Check if user exists in Supabase by listing users with this email
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = users.users?.find((u) => u.email === payload.email);
+    const existingUser = await findUserByEmail(payload.email);
 
     let userId: string;
 
@@ -122,11 +136,7 @@ router.post("/ios-apple-signin", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid Apple token" });
     }
 
-    // Check if user exists in Supabase by listing users with this email
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = users.users?.find(
-      (u) => u.email === appleResponse.email
-    );
+    const existingUser = await findUserByEmail(appleResponse.email);
 
     let userId: string;
     let fullName = "";
