@@ -19,7 +19,7 @@ interface CreatedApiKey extends ApiKeySummary {
 }
 
 const DOCS_URL =
-  "https://github.com/alramalho/self-tracking-software/blob/main/docs/bring-your-own-curriculum.md";
+  "https://tracking.so/docs/bring-your-own-curriculum";
 
 function CopyableSnippet({ text, label }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);

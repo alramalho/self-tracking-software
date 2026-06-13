@@ -48,7 +48,7 @@ of truth for content, tracking.so keeps the accountability, streaks, and
 visuals. Works over MCP, so Claude Code / Cursor can author the curriculum and
 push it in one session.
 
-→ [Setup guide (MCP, API, script)](docs/bring-your-own-curriculum.md)
+→ [Setup guide (MCP, API, script)](https://tracking.so/docs/bring-your-own-curriculum)
 
 ## Running locally
 

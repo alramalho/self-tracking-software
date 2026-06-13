@@ -125,7 +125,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Agent skill for MCP users (see docs/bring-your-own-curriculum.md)
+// Agent skill for MCP users (see https://tracking.so/docs/bring-your-own-curriculum)
 app.get("/skill.md", (_req, res) => {
   res.type("text/markdown").send(TRACKING_SO_SKILL);
 });
