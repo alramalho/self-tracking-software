@@ -3,7 +3,7 @@ import {
   type ActivityEntry,
   type MetricEntry,
 } from "@tsw/prisma";
-import { isSameDay } from "date-fns";
+import { addDays, endOfDay, isSameDay, startOfDay, subDays } from "date-fns";
 
 export const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 export const MINIMUM_ENTRIES = 7;
@@ -13,6 +13,50 @@ export interface MetricCorrelation {
   activity: Activity;
   correlation: number;
 }
+
+export interface MetricContextEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  occurredAt: Date | null;
+  endedAt: Date | null;
+}
+
+export interface MetricEventImpact {
+  event: MetricContextEvent;
+  duringAverage: number;
+  baselineAverage: number;
+  delta: number;
+  duringEntryCount: number;
+  baselineEntryCount: number;
+  startedAt: Date;
+  endedAt: Date;
+}
+
+const EVENT_BASELINE_WINDOW_DAYS = 30;
+const MINIMUM_EVENT_RANGE_ENTRIES = 2;
+const MINIMUM_SINGLE_DAY_EVENT_ENTRIES = 1;
+const MINIMUM_EVENT_BASELINE_ENTRIES = 5;
+const MINIMUM_EVENT_DELTA = 0.7;
+
+const averageRating = (entries: MetricEntry[]) =>
+  entries.reduce((sum, entry) => sum + entry.rating, 0) / entries.length;
+
+const resolveEventRange = (event: MetricContextEvent) => {
+  const rawStart = event.occurredAt || event.endedAt;
+  if (!rawStart) return null;
+
+  const start = startOfDay(new Date(rawStart));
+  const end = endOfDay(new Date(event.endedAt || rawStart));
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+
+  return start <= end
+    ? { startedAt: start, endedAt: end }
+    : { startedAt: startOfDay(end), endedAt: endOfDay(start) };
+};
 
 // Calculate Pearson correlation coefficient
 const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
@@ -165,6 +209,77 @@ export const getNegativeCorrelations = (
     activities,
     activityEntries
   ).filter((correlation) => correlation.correlation < 0);
+};
+
+export const getMetricEventImpacts = (
+  metricId: string,
+  entries: MetricEntry[],
+  events: MetricContextEvent[],
+): MetricEventImpact[] => {
+  const metricEntries = entries
+    .filter((entry) => entry.metricId === metricId && !entry.skipped)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+  if (metricEntries.length < MINIMUM_ENTRIES) return [];
+
+  return events
+    .map((event) => {
+      const range = resolveEventRange(event);
+      if (!range) return null;
+
+      const { startedAt, endedAt } = range;
+      const duringEntries = metricEntries.filter((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        return entryDate >= startedAt && entryDate <= endedAt;
+      });
+      const eventSpansMultipleDays = !isSameDay(startedAt, endedAt);
+      const minimumDuringEntries = eventSpansMultipleDays
+        ? MINIMUM_EVENT_RANGE_ENTRIES
+        : MINIMUM_SINGLE_DAY_EVENT_ENTRIES;
+
+      if (duringEntries.length < minimumDuringEntries) return null;
+
+      const baselineStart = subDays(startedAt, EVENT_BASELINE_WINDOW_DAYS);
+      const baselineEnd = addDays(endedAt, EVENT_BASELINE_WINDOW_DAYS);
+      let baselineEntries = metricEntries.filter((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        const isInsideEvent = entryDate >= startedAt && entryDate <= endedAt;
+        const isInsideWindow =
+          entryDate >= baselineStart && entryDate <= baselineEnd;
+        return !isInsideEvent && isInsideWindow;
+      });
+
+      if (baselineEntries.length < MINIMUM_EVENT_BASELINE_ENTRIES) {
+        baselineEntries = metricEntries.filter((entry) => {
+          const entryDate = new Date(entry.createdAt);
+          return entryDate < startedAt || entryDate > endedAt;
+        });
+      }
+
+      if (baselineEntries.length < MINIMUM_EVENT_BASELINE_ENTRIES) return null;
+
+      const duringAverage = averageRating(duringEntries);
+      const baselineAverage = averageRating(baselineEntries);
+      const delta = duringAverage - baselineAverage;
+
+      if (Math.abs(delta) < MINIMUM_EVENT_DELTA) return null;
+
+      return {
+        event,
+        duringAverage,
+        baselineAverage,
+        delta,
+        duringEntryCount: duringEntries.length,
+        baselineEntryCount: baselineEntries.length,
+        startedAt,
+        endedAt,
+      };
+    })
+    .filter((impact): impact is MetricEventImpact => impact !== null)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 };
 
 // Get last 7 days of data for a metric

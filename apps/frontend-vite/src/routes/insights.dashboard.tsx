@@ -13,7 +13,9 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useContextEvents } from "@/contexts/context-events";
 import { useMetrics } from "@/contexts/metrics";
+import { getMetricEventImpacts } from "@/contexts/metrics/lib";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useFeedback } from "@/hooks/useFeedback";
@@ -26,7 +28,7 @@ import { type Metric, type MetricEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, Loader2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Divider from "@/components/Divider";
 
 export const Route = createFileRoute("/insights/dashboard")({
@@ -43,6 +45,7 @@ function InsightsDashboardPage() {
     isLoadingMetrics,
   } = useMetrics();
   const { activities, activityEntries } = useActivities();
+  const { data: contextEvents = [] } = useContextEvents();
   const { currentUser } = useCurrentUser();
 
   const navigate = useNavigate();
@@ -71,6 +74,20 @@ function InsightsDashboardPage() {
       setSelectedMetricId(userMetrics[0].id);
     }
   }, [userMetrics, selectedMetricId]);
+
+  const selectedMetric = userMetrics?.find((m) => m.id === selectedMetricId);
+  const selectedMetricEntries = entries?.filter(
+    (e) => e.metricId === selectedMetricId
+  ) || [];
+  const selectedMetricEventImpacts = useMemo(() => {
+    if (!selectedMetricId) return [];
+
+    return getMetricEventImpacts(
+      selectedMetricId,
+      entries || [],
+      contextEvents,
+    );
+  }, [contextEvents, entries, selectedMetricId]);
 
   if (isUserOnFreePlan && (hasLoadedMetricsAndEntries && userMetrics?.length === 0)) {
     navigate({ to: "/insights/onboarding" });
@@ -420,12 +437,6 @@ function InsightsDashboardPage() {
     }
   };
 
-  // Get selected metric and its data
-  const selectedMetric = userMetrics?.find((m) => m.id === selectedMetricId);
-  const selectedMetricEntries = entries?.filter(
-    (e) => e.metricId === selectedMetricId
-  ) || [];
-
   // Render insights when we have enough data
   return (
     <div className="mx-auto p-6 max-w-2xl space-y-8">
@@ -602,6 +613,7 @@ function InsightsDashboardPage() {
                       entries={selectedMetricEntries}
                       metricEmoji={selectedMetric.emoji}
                       metricTitle={selectedMetric.title}
+                      eventImpacts={selectedMetricEventImpacts}
                     />
 
                     {/* Day of Week Insights */}

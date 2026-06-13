@@ -1,15 +1,17 @@
 import { useTheme } from "@/contexts/theme/useTheme";
+import { type MetricEventImpact } from "@/contexts/metrics/lib";
 import { type MetricEntry } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
-import { format, differenceInWeeks } from "date-fns";
+import { format, differenceInWeeks, endOfDay, startOfDay } from "date-fns";
 import { ChevronRight } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface MetricHeatmapProps {
   entries: MetricEntry[];
   metricEmoji?: string;
   metricTitle?: string;
+  eventImpacts?: MetricEventImpact[];
 }
 
 // Colors for metric intensity (0-5 rating scale)
@@ -45,6 +47,7 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
   entries,
   metricEmoji,
   metricTitle,
+  eventImpacts = [],
 }) => {
   const { isLightMode } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -91,6 +94,32 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
       count: ratings.reduce((a, b) => a + b, 0) / ratings.length, // average
     })
   );
+
+  const getEventImpactsForDate = (date: Date) => {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+
+    return eventImpacts.filter(
+      (impact) => impact.startedAt <= dayEnd && impact.endedAt >= dayStart
+    );
+  };
+
+  const datesWithEventImpacts = useMemo(() => {
+    const dateKeys = new Set<string>();
+
+    for (const impact of eventImpacts) {
+      let currentDate = startOfDay(impact.startedAt);
+      const finalDate = startOfDay(impact.endedAt);
+
+      while (currentDate <= finalDate) {
+        dateKeys.add(format(currentDate, "yyyy/MM/dd"));
+        currentDate = new Date(currentDate);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
+    return dateKeys;
+  }, [eventImpacts]);
 
   // Scroll to the right (today) on mount
   useEffect(() => {
@@ -158,6 +187,7 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
     const avgRating = entriesOnDate.length > 0
       ? entriesOnDate.reduce((sum, e) => sum + e.rating, 0) / entriesOnDate.length
       : null;
+    const eventImpactsOnDate = getEventImpactsForDate(selectedDate);
 
     return (
       <div className="p-4 bg-muted/70 backdrop-blur-sm rounded-xl w-full max-w-md mb-4">
@@ -178,6 +208,28 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                 Average of {entriesOnDate.length} entries
               </p>
             )}
+          </div>
+        )}
+        {eventImpactsOnDate.length > 0 && (
+          <div className="mt-4 space-y-2 border-t border-border/60 pt-3 text-left">
+            <p className="text-xs font-medium uppercase text-muted-foreground">
+              Context
+            </p>
+            {eventImpactsOnDate.slice(0, 3).map((impact) => (
+              <div key={impact.event.id} className="text-sm">
+                <div className="font-medium text-foreground">
+                  {impact.event.title}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {format(impact.startedAt, "MMM d")}
+                  {!isSameCalendarDate(impact.startedAt, impact.endedAt) &&
+                    ` - ${format(impact.endedAt, "MMM d")}`}
+                  {" · "}
+                  {impact.delta > 0 ? "+" : ""}
+                  {impact.delta.toFixed(1)} vs baseline
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -238,6 +290,8 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                 const todayCellId = isCurrentDay
                   ? "metric-heatmap-today-cell"
                   : undefined;
+                const dateKey = format(dateObj, "yyyy/MM/dd");
+                const hasEventImpact = datesWithEventImpacts.has(dateKey);
 
                 // Check if selected
                 const isSelected = selectedDate &&
@@ -290,6 +344,16 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
                         rx={4}
                       />
                     )}
+                    {hasEventImpact && (
+                      <circle
+                        cx={Number(props.x) + 15}
+                        cy={Number(props.y) + 5}
+                        r={3}
+                        fill="transparent"
+                        stroke="#3B82F6"
+                        strokeWidth={1.5}
+                      />
+                    )}
                   </g>
                 );
               }}
@@ -329,9 +393,19 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
         </div>
         <span>High</span>
         {metricEmoji && <span className="ml-2">{metricEmoji}</span>}
+        {eventImpacts.length > 0 && (
+          <span className="ml-2 inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full border border-blue-500" />
+            Context
+          </span>
+        )}
       </div>
     </div>
   );
 };
+
+function isSameCalendarDate(a: Date, b: Date) {
+  return format(a, "yyyy-MM-dd") === format(b, "yyyy-MM-dd");
+}
 
 export default MetricHeatmap;
