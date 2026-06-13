@@ -1,62 +1,86 @@
-## Capacitor iOS Development
+# Capacitor iOS + watchOS Development
 
-### Env setting 
+No Xcode GUI needed for day-to-day dev — everything runs from the CLI. Xcode is only required for the App Store archive/upload step (signing) and editing target capabilities.
 
-Make sure your frontend points to the local network server:
-
-First, print your local network address
-
-```
-ipconfig getifaddr en0
-```
-
-Then, use that in the frontend .env
-```
-VITE_BACKEND_URL=http://192.168.10.183:3000
-VITE_SUPABASE_API_URL=http://192.168.10.183:55321
-VITE_SUPABASE_OAUTH_REDIRECT_URL=http://192.168.10.183:55321/auth/v1/callback
-```
-
-and backend
-```
-SUPABASE_URL=http://192.168.10.183:55321
-```
-
-⚠️ Make sure your iPhone is connected to the same Wi-Fi as your server so they can connect.
-
-### Build Flow
-
-After making code or environment variable changes:
+## One-time setup
 
 ```bash
-# 1. Build the Vite app (bakes env vars into JS bundle)
-pnpm build
-
-# 2. Sync to iOS project (copies build output to Xcode project)
-npx cap sync ios
-
-# 3. Open in Xcode
-npx cap open ios
+# xcode-select points at CommandLineTools on this machine; either fix it once:
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+# ...or prefix every xcodebuild/simctl session with:
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 ```
 
-Or as a single command:
+Simulator pair (iPhone + Watch). Already created; recreate if sims get deleted:
+
 ```bash
-pnpm build && npx cap sync ios && npx cap open ios
+xcrun simctl list devices available          # find UDIDs
+xcrun simctl pair <WATCH_UDID> <PHONE_UDID>
 ```
 
+Current pair (2026-06): iPhone 17 Pro `BBB81AAE-3112-49F3-B7F1-A4BBFC3033C1`, Watch Series 11 46mm `5E464650-9B61-4C37-BD5E-496D42D50B61`.
 
+## Env modes
 
-### Why Rebuild?
+Vite bakes `import.meta.env.*` into the JS bundle **at build time** — changing `.env*` always requires a rebuild, `cap sync` alone never picks it up.
 
-- **Code changes**: Need `pnpm build` to compile
-- **`.env` changes**: Vite replaces `import.meta.env.*` at build time, so env vars are baked into the bundle
-- **`npx cap sync`**: Only copies files, doesn't rebuild
+| Mode | Command | Env file | Points at |
+|---|---|---|---|
+| prod (default for sim testing) | `vite build --mode proddb` | `.env.proddb` | `api.tracking.so` + prod Supabase |
+| LAN dev | `vite build --mode cap` | `.env.cap` | your Mac's LAN IP (update it: `ipconfig getifaddr en0`) |
 
-### Quick Reference
+LAN mode caveats: phone/sim must reach your Mac's IP; the **watch app ignores env** — its URLs are hardcoded in `TrackingWatch/APIService.swift` and `TrackingWatch/AuthManager.swift` (prod only); Apple Sign-In needs HTTPS, so LAN requires a tunnel.
 
-| Command | What it does |
-|---------|--------------|
-| `pnpm build` | Build Vite app |
-| `npx cap sync ios` | Copy build to iOS project |
-| `npx cap open ios` | Open Xcode |
-| `npx cap run ios` | Build & run on device/simulator |
+## The loop: change → build → simulate
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+PHONE=BBB81AAE-3112-49F3-B7F1-A4BBFC3033C1
+WATCH=5E464650-9B61-4C37-BD5E-496D42D50B61
+
+# 0. boot sims (once per session)
+xcrun simctl boot $PHONE; xcrun simctl boot $WATCH; open -a Simulator
+
+# 1. web build + copy into ios/App/App/public/
+pnpm exec vite build --mode proddb && npx cap sync ios
+
+# 2. native build — WATCH FIRST, then App (the App scheme deliberately has no
+#    dependency on the watch target; same -derivedDataPath so the embed step finds it)
+cd ios/App
+xcodebuild -workspace App.xcworkspace -scheme TrackingWatch -configuration Debug \
+  -destination "id=$WATCH" -derivedDataPath build/sim build
+xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug \
+  -destination "id=$PHONE" -derivedDataPath build/sim build
+
+# 3. install + launch
+cd build/sim/Build/Products
+xcrun simctl install $PHONE Debug-iphonesimulator/App.app
+xcrun simctl launch $PHONE so.tracking.app
+xcrun simctl install $WATCH Debug-watchsimulator/TrackingWatch.app
+xcrun simctl launch $WATCH so.tracking.app.watchkitapp
+```
+
+Swift-only changes: skip step 1. Web-only changes: still need all three steps — web assets are copied into `App.app` during the xcodebuild "Copy public" phase, so there is no install-only shortcut.
+
+Useful extras:
+
+```bash
+xcrun simctl io $PHONE screenshot /tmp/shot.png        # screenshot
+xcrun simctl spawn $PHONE log stream --predicate 'process == "App"'  # live logs
+xcrun simctl ui $PHONE appearance dark                 # dark system appearance
+```
+
+## Gotchas (each cost real debugging time)
+
+- **Never build with `CODE_SIGNING_ALLOWED=NO`** — it strips entitlements, which silently breaks Sign in with Apple ("Failed to sign in" with no useful log). Simulator builds ad-hoc sign by default and keep entitlements; just don't override.
+- **Apple Sign-In on a simulator** additionally requires being signed into an Apple Account in the sim (Settings → sign in). Without it the native sheet errors out.
+- **Watch build order**: TrackingWatch scheme must be built before App, into the same `-derivedDataPath`, or the "Embed Watch Content" copy fails (build still exits 0 — check for `TrackingWatch.app` inside `App.app/Watch/`).
+- **CocoaPods isn't installed** on this machine; `cap sync` warns and skips `pod install`. Fine as long as `Podfile.lock` matches `Pods/Manifest.lock` (`diff` them). If a plugin is added/updated, pods must actually be installed (`brew install cocoapods`).
+- **`WKCompanionAppBundleIdentifier`** must stay in `ios/App/TrackingWatch/Info.plist` — install fails without it (and App Store validation would reject it).
+- White bars in safe areas = missing `viewport-fit=cover` in the index.html viewport meta + `backgroundColor` in `capacitor.config.ts`. Both set; don't regress them.
+- If `cap sync` dies with ``Could not delete `ios/App/build` because it was not created by the build system``: `xattr -w com.apple.xcode.CreatedByBuildSystem true ios/App/build` (happens after CLI builds with a custom `-derivedDataPath`).
+- Project wiring (watch target, embed phase) is generated by `ios/App/setup_watch_target.rb` (idempotent). Rollback: restore `ios/App/project.pbxproj.backup`.
+
+## App Store
+
+Archive/upload needs real signing — do it in Xcode (`npx cap open ios`, then Product → Archive → Distribute). Pre-submission state and blockers: see `ios/WATCH_SETUP.md` and the repo-root `RELEASE_CHECKLIST.md` (watch AppIcon images still missing as of 2026-06).
