@@ -294,10 +294,7 @@ function LogPage() {
       <DifficultyLogPopover
         open={showDifficultyPopover}
         onClose={handleDifficultyDone}
-        onSubmit={async (difficulty, privateNotes) => {
-          await handleDifficultySubmit(difficulty, privateNotes);
-          handleDifficultyDone();
-        }}
+        onSubmit={handleDifficultySubmit}
         activityTitle={selectedActivity?.title}
         activityEmoji={selectedActivity?.emoji}
       />

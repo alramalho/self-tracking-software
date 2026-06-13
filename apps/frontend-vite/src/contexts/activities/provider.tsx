@@ -236,14 +236,43 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       if ((data.entry as any).difficulty !== undefined)
         payload.difficulty = (data.entry as any).difficulty;
 
-      await api.put(`/activities/activity-entries/${data.entry.id}`, payload);
+      const response = await api.put(
+        `/activities/activity-entries/${data.entry.id}`,
+        payload
+      );
+      return response.data as ActivityEntry;
     },
-    onSuccess: async (_, { muteNotification }) => {
-      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
-      queryClient.refetchQueries({ queryKey: ["timeline"] });
+    onSuccess: async (updatedEntry, { entry, muteNotification }) => {
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old) {
+            void queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+            return old;
+          }
+          return old.map((currentEntry) =>
+            currentEntry.id === updatedEntry.id
+              ? { ...currentEntry, ...updatedEntry }
+              : currentEntry
+          );
+        }
+      );
 
-      // Refetch plans to update progress after entry update
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
+      queryClient.setQueryData(["timeline"], (old: TimelineCache | undefined) =>
+        updateTimelineActivityEntries(old, (entries) =>
+          entries.map((currentEntry) =>
+            currentEntry.id === updatedEntry.id
+              ? { ...currentEntry, ...updatedEntry }
+              : currentEntry
+          )
+        )
+      );
+
+      const affectsPlanProgress =
+        entry.quantity !== undefined || entry.datetime !== undefined;
+      if (affectsPlanProgress) {
+        await queryClient.refetchQueries({ queryKey: ["plans"] });
+      }
 
       if (!muteNotification) {
         toast.success("Activity updated successfully!");
@@ -776,7 +805,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
     upsertActivity: upsertActivityMutation.mutateAsync,
     isUpsertingActivity: upsertActivityMutation.isPending,
-    upsertActivityEntry: upsertActivityEntryMutation.mutateAsync,
+    upsertActivityEntry: async (data) => {
+      await upsertActivityEntryMutation.mutateAsync(data);
+    },
     isUpsertingActivityEntry: upsertActivityEntryMutation.isPending,
 
     deleteActivity: deleteActivityMutation.mutateAsync,

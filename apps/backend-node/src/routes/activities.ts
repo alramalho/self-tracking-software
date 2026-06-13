@@ -964,9 +964,11 @@ router.put(
         },
       });
 
-      // Invalidate progress cache for all plans using this activity
-      // This ensures the next fetch will recompute progress with fresh data
-      if (existingEntry.activityId) {
+      // Only quantity/date changes affect plan progress. Difficulty and private
+      // notes are coach context, so keep that save path fast.
+      const affectsPlanProgress =
+        quantity !== undefined || datetime !== undefined;
+      if (affectsPlanProgress && existingEntry.activityId) {
         await prisma.plan.updateMany({
           where: {
             userId: req.user!.id,
