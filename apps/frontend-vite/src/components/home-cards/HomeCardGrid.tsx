@@ -25,6 +25,8 @@ type HomeGridCard = {
   span: 1 | 2;
 };
 
+const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
+
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { plans, isLoadingPlans } = usePlans();
   const { activityEntries, isLoadingActivityEntries } = useActivities();
@@ -47,6 +49,18 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const activePlans = plans?.filter(
     (plan) => plan.deletedAt === null && !plan.archivedAt
   );
+  const orderedActivePlans = activePlans
+    ? [...activePlans].sort((a, b) => {
+        const orderA = a.sortOrder ?? UNORDERED_PLAN_SORT;
+        const orderB = b.sortOrder ?? UNORDERED_PLAN_SORT;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+    : undefined;
   const todayStart = startOfDay(new Date());
   const planNeedsAttention = (plan: NonNullable<typeof activePlans>[number]) =>
     (plan.finishingDate !== null &&
@@ -105,20 +119,17 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       span: 1,
     });
   }
-  if (activePlans?.some((plan) => plan.outlineType === "SPECIFIC" && (plan.sessions || []).length > 0)) {
+  if (orderedActivePlans?.some((plan) => plan.outlineType === "SPECIFIC" && (plan.sessions || []).length > 0)) {
     cards.push({
-      node: <UpcomingSessionsCard key="upcoming-sessions" plans={activePlans} />,
+      node: <UpcomingSessionsCard key="upcoming-sessions" plans={orderedActivePlans} />,
       span: 2,
     });
   }
 
-  activePlans
+  orderedActivePlans
     ?.filter(
       (plan) =>
         plan.outlineType === "TIMES_PER_WEEK" || planNeedsAttention(plan)
-    )
-    .sort(
-      (a, b) => Number(planNeedsAttention(b)) - Number(planNeedsAttention(a))
     )
     .forEach((plan) => {
       cards.push({
