@@ -20,6 +20,15 @@ function markOnboardingActivity(req: AuthenticatedRequest) {
   void onboardingNotificationService.markOnboardingActivity(req.user!.id);
 }
 
+function fallbackExtractedPlans(message: string): {
+  plans: Array<{ goal: string; emoji: string; goalReason: string | null }>;
+} {
+  const goal = message.trim().replace(/\s+/g, " ").slice(0, 120);
+  return {
+    plans: goal ? [{ goal, emoji: "🎯", goalReason: null }] : [],
+  };
+}
+
 router.post(
   "/suggest-goal-reasons",
   requireAuth,
@@ -66,10 +75,20 @@ router.post(
         ? `${conversationHistory}\n${req.user!.name || req.user!.username || "User"} (just now): ${message}`
         : `${req.user!.name || req.user!.username || "User"}: ${message}`;
 
+      const extractedPlansPromise = aiService
+        .extractPlans(message)
+        .catch((error) => {
+          logger.warn(
+            "Plan extraction failed during goal check, using fallback:",
+            error
+          );
+          return fallbackExtractedPlans(message);
+        });
+
       // Run parallel analysis
       const [questionAnalysis, extractedPlans] = await Promise.all([
         aiService.analyzeQuestionCoverage(fullConversation, question_checks),
-        aiService.extractPlans(message),
+        extractedPlansPromise,
       ]);
 
       const response: any = {

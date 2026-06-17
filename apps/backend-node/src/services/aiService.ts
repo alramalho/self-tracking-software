@@ -1172,7 +1172,7 @@ export class AIService {
       plans: z.array(
         z.object({
           goal: z.string(),
-          emoji: z.string().length(1).or(z.string().length(2)),
+          emoji: z.string().min(1).max(16),
           goalReason: z.string().nullable(),
         })
       ),
