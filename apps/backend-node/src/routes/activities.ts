@@ -5,6 +5,7 @@ import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { classifyActivityKind } from "../services/activityCategorizationService";
+import { generateActivityReflectionReasons } from "../services/activityReflectionReasonService";
 import { updateActivityWithMeasureConversion } from "../services/activityUpdateService";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
@@ -24,6 +25,18 @@ function normalizeOptionalText(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeDifficulty(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const allowed = new Set([
+    "very_easy",
+    "easy",
+    "moderate",
+    "hard",
+    "very_hard",
+  ]);
+  return allowed.has(value) ? value : undefined;
 }
 
 function redactActivityEntryPrivateNotes(
@@ -984,6 +997,62 @@ router.put(
     } catch (error) {
       logger.error("Error updating activity entry:", error);
       res.status(500).json({ error: "Failed to update activity entry" });
+    }
+  }
+);
+
+router.post(
+  "/activity-entries/:activityEntryId/reflection-reasons",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+      const difficulty = normalizeDifficulty(req.body?.difficulty);
+
+      if (!difficulty) {
+        return res.status(400).json({ error: "Invalid difficulty" });
+      }
+
+      const entry = await prisma.activityEntry.findFirst({
+        where: {
+          id: activityEntryId,
+          userId: req.user!.id,
+          deletedAt: null,
+        },
+        include: {
+          activity: {
+            select: {
+              title: true,
+              measure: true,
+              emoji: true,
+            },
+          },
+        },
+      });
+
+      if (!entry?.activity) {
+        return res.status(404).json({ error: "Activity entry not found" });
+      }
+
+      const reasons = await generateActivityReflectionReasons({
+        activity: entry.activity,
+        entry: {
+          quantity: entry.quantity,
+          datetime: entry.datetime,
+          description: entry.description,
+        },
+        difficulty,
+      });
+
+      res.json({ reasons });
+    } catch (error) {
+      logger.error("Error generating activity reflection reasons:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to generate activity reflection reasons" });
     }
   }
 );

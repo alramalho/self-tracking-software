@@ -295,6 +295,7 @@ function LogPage() {
         open={showDifficultyPopover}
         onClose={handleDifficultyDone}
         onSubmit={handleDifficultySubmit}
+        activityEntryId={currentEntryId}
         activityTitle={selectedActivity?.title}
         activityEmoji={selectedActivity?.emoji}
       />

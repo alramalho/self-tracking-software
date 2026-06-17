@@ -1,6 +1,7 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useApiWithAuth } from "@/api";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -28,12 +29,14 @@ export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
   { value: "very_hard", label: "Very Hard", emoji: "🥵" },
 ];
 
-const REFLECTION_REASONS = ["Pattern", "Focus", "Time", "Energy", "Bugs", "Other"];
-
 interface DifficultyLogPopoverProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (difficulty: DifficultyLevel, privateNotes?: string) => Promise<void>;
+  onSubmit: (
+    difficulty: DifficultyLevel,
+    privateNotes?: string
+  ) => Promise<void>;
+  activityEntryId?: string | null;
   activityTitle?: string;
   activityEmoji?: string;
 }
@@ -42,24 +45,65 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
   open,
   onClose,
   onSubmit,
+  activityEntryId,
   activityTitle,
   activityEmoji,
 }) => {
+  const api = useApiWithAuth();
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<DifficultyLevel | null>(null);
+  const [reflectionReasons, setReflectionReasons] = useState<string[]>([]);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [reflection, setReflection] = useState("");
   const [showReflectionDetail, setShowReflectionDetail] = useState(false);
+  const [isLoadingReasons, setIsLoadingReasons] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setSelectedDifficulty(null);
+      setReflectionReasons([]);
       setSelectedReasons([]);
       setReflection("");
       setShowReflectionDetail(false);
+      setIsLoadingReasons(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !activityEntryId || !selectedDifficulty) {
+      setReflectionReasons([]);
+      setSelectedReasons([]);
+      setIsLoadingReasons(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingReasons(true);
+    setSelectedReasons([]);
+
+    api
+      .post<{ reasons: string[] }>(
+        `/activities/activity-entries/${activityEntryId}/reflection-reasons`,
+        { difficulty: selectedDifficulty }
+      )
+      .then((response) => {
+        if (cancelled) return;
+        setReflectionReasons(response.data.reasons);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load reflection reasons:", error);
+        setReflectionReasons([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingReasons(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityEntryId, api, open, selectedDifficulty]);
 
   const shouldPromptReflection =
     selectedDifficulty === "hard" || selectedDifficulty === "very_hard";
@@ -68,7 +112,7 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
   const privateNotes = useMemo(() => {
     const parts = [
       selectedReasons.length
-        ? `What made it hard: ${selectedReasons.join(", ")}.`
+        ? `Coach should know: ${selectedReasons.join(", ")}.`
         : "",
       reflection.trim(),
     ].filter(Boolean);
@@ -158,7 +202,9 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
               )}
             >
               <span className="text-2xl">{option.emoji}</span>
-              <span className="font-medium text-foreground">{option.label}</span>
+              <span className="font-medium text-foreground">
+                {option.label}
+              </span>
             </button>
           ))}
         </motion.div>
@@ -173,26 +219,33 @@ export const DifficultyLogPopover: React.FC<DifficultyLogPopoverProps> = ({
               <>
                 <div>
                   <p className="mb-2 text-sm font-medium text-foreground">
-                    What should your coach remember?
+                    What should your coach know?
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {REFLECTION_REASONS.map((reason) => (
-                      <button
-                        key={reason}
-                        type="button"
-                        onClick={() => toggleReason(reason)}
-                        disabled={isSubmitting}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                          selectedReasons.includes(reason)
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border bg-card text-muted-foreground hover:bg-accent/50"
-                        )}
-                      >
-                        {reason}
-                      </button>
-                    ))}
-                  </div>
+                  {isLoadingReasons ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading options...
+                    </div>
+                  ) : reflectionReasons.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {reflectionReasons.map((reason) => (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => toggleReason(reason)}
+                          disabled={isSubmitting}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                            selectedReasons.includes(reason)
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border bg-card text-muted-foreground hover:bg-accent/50"
+                          )}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {showReflectionDetail ? (
                   <Textarea
