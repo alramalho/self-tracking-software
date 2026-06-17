@@ -3,8 +3,12 @@ import { subHours, subDays } from "date-fns";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { TelegramService } from "./telegramService";
+import type { OnboardingCompletionPlan } from "./onboardingNotificationTypes";
 
 const TELEGRAM_MESSAGE_LIMIT = 3900;
+const PLAN_NOTES_SUMMARY_LIMIT = 450;
+const ACTIVITY_LIST_LIMIT = 12;
+const SESSION_PREVIEW_LIMIT = 4;
 
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
@@ -34,6 +38,94 @@ function formatUser(user: Pick<User, "id" | "username" | "email" | "createdAt" |
   ].join("\n");
 }
 
+function formatDate(value: Date | null) {
+  return value?.toISOString().slice(0, 10) || "not set";
+}
+
+function compactText(value: string | null | undefined, maxLength: number) {
+  if (!value) return null;
+
+  const compacted = value.replace(/\s+/g, " ").trim();
+  if (!compacted) return null;
+
+  return truncate(compacted, maxLength);
+}
+
+function describePlanCadence(plan: OnboardingCompletionPlan) {
+  if (plan.outlineType === "TIMES_PER_WEEK") {
+    return `${plan.timesPerWeek || "unknown"}x/week`;
+  }
+
+  if (plan.sessions.length === 0) {
+    return "specific schedule, no sessions found";
+  }
+
+  const firstSession = plan.sessions[0];
+  const lastSession = plan.sessions[plan.sessions.length - 1];
+
+  return `${plan.sessions.length} scheduled sessions from ${formatDate(firstSession.date)} to ${formatDate(lastSession.date)}`;
+}
+
+function formatPlanActivities(plan: OnboardingCompletionPlan) {
+  const activityLines = plan.activities
+    .slice(0, ACTIVITY_LIST_LIMIT)
+    .map((activity) => {
+      const measure = compactText(activity.measure, 80);
+      const label = `${activity.emoji || ""} ${activity.title}`.trim();
+      return measure ? `- ${label} (${measure})` : `- ${label}`;
+    });
+
+  const remainingCount = plan.activities.length - activityLines.length;
+  if (remainingCount > 0) {
+    activityLines.push(`- +${remainingCount} more`);
+  }
+
+  return activityLines.length > 0 ? activityLines : ["- none found"];
+}
+
+function formatSessionPreview(plan: OnboardingCompletionPlan) {
+  if (plan.sessions.length === 0) return [];
+
+  return [
+    `First sessions: ${plan.sessions
+      .slice(0, SESSION_PREVIEW_LIMIT)
+      .map((session) => {
+        const label =
+          `${formatDate(session.date)} ${session.activity.emoji || ""} ${session.activity.title}`.trim();
+        return session.quantity
+          ? `${label} - ${session.quantity} ${session.activity.measure}`
+          : label;
+      })
+      .join("; ")}${plan.sessions.length > SESSION_PREVIEW_LIMIT ? "; ..." : ""}`,
+  ];
+}
+
+function formatPlanSummary(plan: OnboardingCompletionPlan | null) {
+  if (!plan) {
+    return ["", "Plan created:", "No non-deleted plan found for this user."];
+  }
+
+  const goal = `${plan.emoji || ""} ${plan.goal}`.trim();
+  const goalReason = compactText(plan.goalReason, PLAN_NOTES_SUMMARY_LIMIT);
+  const notes = compactText(plan.notes, PLAN_NOTES_SUMMARY_LIMIT);
+
+  return [
+    "",
+    "Plan created:",
+    `Goal: ${goal}`,
+    goalReason ? `Reason: ${goalReason}` : null,
+    `Cadence: ${describePlanCadence(plan)}`,
+    `Finishing date: ${formatDate(plan.finishingDate)}`,
+    plan.estimatedWeeks ? `Estimated weeks: ${plan.estimatedWeeks}` : null,
+    plan.coachId ? `Coach ID: ${plan.coachId}` : null,
+    notes ? `Notes: ${notes}` : null,
+    ...formatSessionPreview(plan),
+    "",
+    `Included activities (${plan.activities.length}):`,
+    ...formatPlanActivities(plan),
+  ].filter((line): line is string => line !== null);
+}
+
 class OnboardingNotificationService {
   private telegram = new TelegramService();
 
@@ -50,27 +142,56 @@ class OnboardingNotificationService {
 
   async sendOnboardingCompleted(user: User) {
     try {
-      const planCount = await prisma.plan.count({
-        where: {
-          userId: user.id,
-          deletedAt: null,
-        },
-      });
+      const [planCount, latestPlan] = await Promise.all([
+        prisma.plan.count({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+          },
+        }),
+        prisma.plan.findFirst({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          include: {
+            activities: {
+              where: {
+                deletedAt: null,
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+            sessions: {
+              orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+              include: {
+                activity: true,
+              },
+            },
+          },
+        }),
+      ]);
 
       const durationMinutes = Math.max(
         0,
         Math.round((Date.now() - user.createdAt.getTime()) / 60000)
       );
 
+      const report = [
+        "ONBOARDING COMPLETED",
+        "",
+        formatUser(user),
+        `Duration: ${durationMinutes} minutes since signup`,
+        `Plans: ${planCount}`,
+        ...formatPlanSummary(latestPlan),
+        "",
+        `Time: ${new Date().toISOString()}`,
+      ].join("\n");
+
       await this.telegram.sendPlainMessage(
-        [
-          "ONBOARDING COMPLETED",
-          "",
-          formatUser(user),
-          `Duration: ${durationMinutes} minutes since signup`,
-          `Plans: ${planCount}`,
-          `Time: ${new Date().toISOString()}`,
-        ].join("\n")
+        truncate(report, TELEGRAM_MESSAGE_LIMIT)
       );
     } catch (error) {
       logger.error("Failed to send onboarding completion Telegram notification:", error);
