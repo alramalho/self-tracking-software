@@ -1470,18 +1470,18 @@ function MessageAIPage() {
 
   if (isLoadingChats) {
     return (
-      <div className="flex h-screen bg-background items-center justify-center">
+      <div className="flex h-full max-h-full bg-background items-center justify-center overflow-hidden">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background relative z-50 overflow-hidden">
-      <div className="grid flex-1 grid-cols-1 grid-rows-1 w-full max-w-full overflow-hidden">
+    <div className="relative z-50 flex h-full max-h-full w-full overflow-hidden overscroll-none bg-background">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 w-full max-w-full overflow-hidden">
         <div
           ref={topChromeRef}
-          className="z-30 col-start-1 row-start-1 self-start sticky top-0 bg-gradient-to-b from-background via-background/90 to-background/0"
+          className="z-30 col-start-1 row-start-1 self-start bg-gradient-to-b from-background via-background/90 to-background/0"
      
         >
    
@@ -1646,7 +1646,7 @@ function MessageAIPage() {
 
         {/* Messages */}
         <div
-          className="z-0 col-start-1 row-start-1 min-h-0 overflow-y-auto"
+          className="z-0 col-start-1 row-start-1 h-full min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
           ref={messagesContainerRef}
           style={{
             paddingTop: chromeInsets.top,

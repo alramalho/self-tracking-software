@@ -226,7 +226,8 @@ export default function GeneralInitializer({
             id="main-scroll-container"
             ref={scrollContainerRef}
             className={cn(
-              "absolute inset-0 overflow-auto",
+              "absolute inset-0",
+              isDmsPage ? "overflow-hidden" : "overflow-auto",
               showsBottomNav && !isDesktop ? "pb-[5.9rem]" : "",
               showsBottomNav && isDesktop ? "left-0" : ""
             )}

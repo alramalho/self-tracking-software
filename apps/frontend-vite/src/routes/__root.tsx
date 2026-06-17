@@ -110,7 +110,7 @@ function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isGetCoached
         <NotificationsProvider>
           <main
             className={cn(
-              "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
+              "relative h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-hidden bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
               (isSignedIn && isDesktop && !isDownloadPage && !isGetCoachedPage) ? "ml-64" : ""
             )}
           >
