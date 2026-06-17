@@ -26,7 +26,6 @@ export type CoachEvalFixture = {
   user: Record<string, any>;
   plans?: Array<Record<string, any>>;
   activityEntries?: Array<Record<string, any>>;
-  reminders?: Array<Record<string, any>>;
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
   memoriesContext?: string | null;
 };

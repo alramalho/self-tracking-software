@@ -166,7 +166,7 @@ async function main(): Promise<void> {
 
   const now = new Date();
 
-  const [plans, reminders, history] = await Promise.all([
+  const [plans, history] = await Promise.all([
     prisma.plan.findMany({
       where: {
         userId: user.id,
@@ -181,13 +181,6 @@ async function main(): Promise<void> {
         milestones: true,
       },
       orderBy: [{ createdAt: "desc" }],
-    }),
-    prisma.reminder.findMany({
-      where: {
-        userId: user.id,
-        status: "PENDING",
-      },
-      orderBy: { triggerAt: "asc" },
     }),
     args.history > 0
       ? prisma.message.findMany({
@@ -249,7 +242,6 @@ async function main(): Promise<void> {
       imageAttachments,
       conversationHistory,
       plans,
-      reminders,
       memoriesContext: null,
       onStatus: (status) => {
         console.log(chalk.dim(`[status] ${status}`));

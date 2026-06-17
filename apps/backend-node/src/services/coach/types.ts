@@ -3,7 +3,6 @@ import type {
   Plan,
   PlanMilestone,
   PlanSession,
-  Reminder,
   User,
 } from "@tsw/prisma";
 
@@ -30,7 +29,6 @@ export type ActiveCoachPlan = Plan & {
 export interface CoachAgentContext {
   user: User;
   plans: ActiveCoachPlan[];
-  reminders: Reminder[];
   conversationHistory: CoachConversationMessage[];
   model?: string;
   memoriesContext?: string | null;
@@ -65,7 +63,6 @@ export type CoachGenerateResponseParams = {
   imageAttachments?: ImageAttachment[];
   conversationHistory: CoachConversationMessage[];
   plans: ActiveCoachPlan[];
-  reminders: Reminder[];
   model?: string;
   memoriesContext?: string | null;
   onStatus?: (status: CoachStatus) => void | Promise<void>;

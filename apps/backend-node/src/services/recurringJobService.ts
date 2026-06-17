@@ -1,6 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { addDays, addMonths, setHours, setMinutes } from "date-fns";
-import { JobType, User, Reminder } from "@tsw/prisma";
+import { JobType, User } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { notificationService } from "./notificationService";
@@ -48,10 +47,6 @@ interface HourlyJobResult {
   message: string;
   started_for_users: string[];
   total_users_checked: number;
-  reminders_processed: number;
-  reminders_sent: string[];
-  activity_reminders_checked: number;
-  activity_reminders_sent: string[];
   batched_notifications_sent: string[];
   autonomous_coach_enabled: boolean;
   autonomous_coach_dry_run: boolean;
@@ -223,15 +218,11 @@ export class RecurringJobService {
 
   /**
    * Internal hourly job execution (without tracking)
-   * Note: Old plan coaching notifications have been disabled in favor of the new AI reminders system
    */
   private async executeHourlyJob(
     options: HourlyJobOptions = {}
   ): Promise<HourlyJobResult> {
     logger.info("Starting hourly job execution");
-
-    // Process due reminders
-    const reminderResults = await this.processDueReminders();
 
     // Process batched social notifications
     const batchedNotificationResults = await this.processBatchedNotifications();
@@ -254,17 +245,13 @@ export class RecurringJobService {
     }
 
     logger.info(
-      `Hourly job completed: ${reminderResults.processed} reminders processed, ${reminderResults.sent.length} sent, ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
+      `Hourly job completed: ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
     );
 
     return {
-      message: `Processed ${reminderResults.processed} reminders (${reminderResults.sent.length} sent), ${batchedNotificationResults.sent.length} batched notifications sent.`,
+      message: `Processed ${batchedNotificationResults.sent.length} batched notifications.`,
       started_for_users: [],
       total_users_checked: 0,
-      reminders_processed: reminderResults.processed,
-      reminders_sent: reminderResults.sent,
-      activity_reminders_checked: 0,
-      activity_reminders_sent: [],
       batched_notifications_sent: batchedNotificationResults.sent,
       autonomous_coach_enabled: coachAssessmentResults.enabled,
       autonomous_coach_dry_run: coachAssessmentResults.dry_run,
@@ -273,146 +260,6 @@ export class RecurringJobService {
       onboarding_inactive_checked: onboardingInactiveResults.checked,
       onboarding_inactive_notified: onboardingInactiveResults.notified,
     };
-  }
-
-  /**
-   * Process reminders that are due to trigger
-   */
-  private async processDueReminders(): Promise<{
-    processed: number;
-    sent: string[];
-  }> {
-    const now = new Date();
-    const sent: string[] = [];
-
-    try {
-      // Find all reminders that are due (triggerAt <= now and status = PENDING)
-      const dueReminders = await prisma.reminder.findMany({
-        where: {
-          status: "PENDING",
-          triggerAt: {
-            lte: now,
-          },
-        },
-        include: {
-          user: true,
-        },
-      });
-
-      logger.info(`Found ${dueReminders.length} due reminders to process`);
-
-      for (const reminder of dueReminders) {
-        try {
-          // Send notification to the user
-          await notificationService.createAndProcessNotification({
-            userId: reminder.userId,
-            title: "Reminder",
-            message: reminder.message,
-            type: "COACH",
-            relatedId: reminder.id,
-            relatedData: {
-              reminderId: reminder.id,
-              isRecurring: reminder.isRecurring,
-            },
-          });
-
-          sent.push(reminder.message);
-          logger.info(
-            `Sent reminder "${reminder.message}" to user ${reminder.user.username}`
-          );
-
-          if (reminder.isRecurring) {
-            // Calculate next trigger time
-            const nextTriggerAt = this.calculateNextReminderTrigger(reminder);
-
-            if (nextTriggerAt) {
-              await prisma.reminder.update({
-                where: { id: reminder.id },
-                data: {
-                  triggerAt: nextTriggerAt,
-                  lastTriggeredAt: now,
-                },
-              });
-              logger.info(
-                `Scheduled next occurrence of recurring reminder ${reminder.id} for ${nextTriggerAt}`
-              );
-            }
-          } else {
-            // Mark one-time reminder as completed
-            await prisma.reminder.update({
-              where: { id: reminder.id },
-              data: {
-                status: "COMPLETED",
-                lastTriggeredAt: now,
-              },
-            });
-          }
-        } catch (error) {
-          logger.error(
-            `Failed to process reminder ${reminder.id}:`,
-            error
-          );
-          // Continue with other reminders
-        }
-      }
-
-      return {
-        processed: dueReminders.length,
-        sent,
-      };
-    } catch (error) {
-      logger.error("Error processing due reminders:", error);
-      return {
-        processed: 0,
-        sent: [],
-      };
-    }
-  }
-
-  /**
-   * Calculate the next trigger time for a recurring reminder
-   */
-  private calculateNextReminderTrigger(reminder: Reminder): Date | null {
-    const currentTrigger = new Date(reminder.triggerAt);
-    const hours = currentTrigger.getHours();
-    const minutes = currentTrigger.getMinutes();
-
-    switch (reminder.recurringType) {
-      case "DAILY":
-        // Next day at the same time
-        return addDays(currentTrigger, 1);
-
-      case "WEEKLY": {
-        // Find the next occurrence based on recurringDays
-        if (!reminder.recurringDays || reminder.recurringDays.length === 0) {
-          // Default to same day next week
-          return addDays(currentTrigger, 7);
-        }
-
-        const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-        const currentDayIndex = currentTrigger.getDay();
-
-        // Find the next valid day
-        for (let i = 1; i <= 7; i++) {
-          const nextDayIndex = (currentDayIndex + i) % 7;
-          const nextDayName = dayNames[nextDayIndex];
-          if (reminder.recurringDays.includes(nextDayName)) {
-            const nextDate = addDays(currentTrigger, i);
-            return setMinutes(setHours(nextDate, hours), minutes);
-          }
-        }
-
-        // Fallback to same day next week
-        return addDays(currentTrigger, 7);
-      }
-
-      case "MONTHLY":
-        // Same day next month
-        return addMonths(currentTrigger, 1);
-
-      default:
-        return null;
-    }
   }
 
   private async processBatchedNotifications(): Promise<{

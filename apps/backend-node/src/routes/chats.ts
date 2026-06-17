@@ -227,14 +227,6 @@ async function runCoachV2MessagePipeline(params: {
     orderBy: [{ createdAt: "desc" }],
   });
 
-  const reminders = await prisma.reminder.findMany({
-    where: {
-      userId: user.id,
-      status: "PENDING",
-    },
-    orderBy: { triggerAt: "asc" },
-  });
-
   const memoryQuery =
     message.trim() ||
     (imageAttachments?.length ? "User attached an image for the coach to inspect." : "");
@@ -250,7 +242,6 @@ async function runCoachV2MessagePipeline(params: {
       sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
       milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
     }>,
-    reminders,
     memoriesContext,
     onStatus,
     reportContext: {

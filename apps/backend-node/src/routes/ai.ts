@@ -2160,14 +2160,6 @@ router.post(
         orderBy: [{ createdAt: "desc" }],
       });
 
-      const reminders = await prisma.reminder.findMany({
-        where: {
-          userId: user.id,
-          status: "PENDING",
-        },
-        orderBy: { triggerAt: "asc" },
-      });
-
       const internalPrompt = [
         "The user proposed changes to a pending plan creation proposal.",
         "This is a structured UI action, not a normal chat message. Review the requested version and respond briefly.",
@@ -2200,7 +2192,6 @@ router.post(
         message: internalPrompt,
         conversationHistory,
         plans,
-        reminders,
         memoriesContext,
       });
 
@@ -3032,15 +3023,6 @@ router.post(
         orderBy: [{ createdAt: "desc" }],
       });
 
-      // Fetch active reminders
-      const reminders = await prisma.reminder.findMany({
-        where: {
-          userId: user.id,
-          status: "PENDING",
-        },
-        orderBy: { triggerAt: "asc" },
-      });
-
       // Build the internal prompt based on notification type
       let internalPrompt: string;
       if (type === "week_recap") {
@@ -3063,7 +3045,6 @@ router.post(
         message: internalPrompt,
         conversationHistory: [],
         plans,
-        reminders,
       });
 
       // Save multiple coach messages (one per draft)

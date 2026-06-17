@@ -34,7 +34,6 @@ const emptyAlexFixture = (id: string) => ({
   user: alexUser(id),
   plans: [],
   activityEntries: [],
-  reminders: [],
   conversationHistory: [],
 });
 

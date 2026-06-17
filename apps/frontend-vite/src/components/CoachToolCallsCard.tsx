@@ -1,7 +1,7 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { Calendar, Plus, Pencil, Trash2, Search, CheckCircle2, XCircle, Bell, ExternalLink } from "lucide-react";
+import { Calendar, Plus, Pencil, Trash2, Search, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import React, { useState, useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useQuery } from "@tanstack/react-query";
@@ -16,14 +16,6 @@ interface ToolCall {
 interface PlanAdaptationChange {
   operation: string;
   sessionId?: string;
-  success: boolean;
-  error?: string;
-}
-
-interface ReminderChange {
-  operation: string;
-  reminderId?: string;
-  message?: string;
   success: boolean;
   error?: string;
 }
@@ -289,15 +281,11 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
   const planAdaptations = toolCalls.filter(
     (tc) => tc.tool === "adaptPlanSessions"
   );
-  const reminderOperations = toolCalls.filter(
-    (tc) => tc.tool === "manageReminders"
-  );
-  const webSearches = toolCalls.filter((tc) => tc.tool === "webSearch");
 
   // Extract sources from web searches
   const sources = useMemo(() => extractSources(toolCalls, content), [toolCalls, content]);
 
-  if (planAdaptations.length === 0 && reminderOperations.length === 0 && sources.length === 0) {
+  if (planAdaptations.length === 0 && sources.length === 0) {
     return null;
   }
 
@@ -322,32 +310,6 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
         return "Updated session";
       case "remove":
         return "Removed session";
-      default:
-        return operation;
-    }
-  };
-
-  const getReminderOperationIcon = (operation: string) => {
-    switch (operation) {
-      case "create":
-        return <Plus className="h-3.5 w-3.5" />;
-      case "update":
-        return <Pencil className="h-3.5 w-3.5" />;
-      case "delete":
-        return <Trash2 className="h-3.5 w-3.5" />;
-      default:
-        return <Bell className="h-3.5 w-3.5" />;
-    }
-  };
-
-  const getReminderOperationLabel = (operation: string) => {
-    switch (operation) {
-      case "create":
-        return "Created reminder";
-      case "update":
-        return "Updated reminder";
-      case "delete":
-        return "Deleted reminder";
       default:
         return operation;
     }
@@ -412,72 +374,6 @@ export const CoachToolCallsCard: React.FC<CoachToolCallsCardProps> = ({
                     {getOperationIcon(change.operation)}
                     {getOperationLabel(change.operation)}
                   </span>
-                  {change.error && (
-                    <span className="text-red-500 text-[10px]">
-                      ({change.error})
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Reminder Operations */}
-      {reminderOperations.map((tc, idx) => {
-        const result = tc.result as {
-          success: boolean;
-          changes: ReminderChange[];
-          error?: string;
-        } | undefined;
-
-        if (!result?.changes || result.changes.length === 0) return null;
-
-        return (
-          <div
-            key={`reminder-${idx}`}
-            className={cn(
-              "rounded-xl p-3",
-              variants.veryFadedBg,
-              "border",
-              variants.border
-            )}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-2 mb-2">
-              <Bell className="h-5 w-5 text-foreground" />
-              <span className="text-sm font-medium text-foreground">
-                Reminders Updated
-              </span>
-            </div>
-
-            {/* Changes list */}
-            <div className="flex flex-col gap-1.5">
-              {result.changes.map((change, changeIdx) => (
-                <div
-                  key={`reminder-change-${changeIdx}`}
-                  className={cn(
-                    "flex items-center gap-2 text-xs rounded-lg px-2 py-1.5",
-                    change.success
-                      ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                      : "bg-red-500/10 text-red-700 dark:text-red-400"
-                  )}
-                >
-                  {change.success ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                  )}
-                  <span className="flex items-center gap-1.5">
-                    {getReminderOperationIcon(change.operation)}
-                    {getReminderOperationLabel(change.operation)}
-                  </span>
-                  {change.message && (
-                    <span className="text-muted-foreground truncate max-w-[150px]">
-                      "{change.message}"
-                    </span>
-                  )}
                   {change.error && (
                     <span className="text-red-500 text-[10px]">
                       ({change.error})

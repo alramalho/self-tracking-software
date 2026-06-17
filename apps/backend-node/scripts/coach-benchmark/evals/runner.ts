@@ -196,7 +196,7 @@ async function runOne(params: {
   try {
     const fixture = createJobFixture(params.test.fixture, params.model, params.run);
     const user = await seedFixture(params.prisma, fixture);
-    const { plans, reminders } = await loadRuntimeContext(params.prisma, user.id);
+    const { plans } = await loadRuntimeContext(params.prisma, user.id);
 
     const startedAt = process.hrtime.bigint();
     const response = await params.requestContext.run({ user }, () =>
@@ -205,7 +205,6 @@ async function runOne(params: {
         message: params.test.userMessage,
         conversationHistory: fixture.conversationHistory || [],
         plans,
-        reminders,
         memoriesContext: fixture.memoriesContext || null,
         model: params.model,
       })
@@ -296,8 +295,6 @@ function createJobFixture(
     for (const session of plan.sessions || []) collectId(idMap, session, suffix);
     for (const milestone of plan.milestones || []) collectId(idMap, milestone, suffix);
   }
-  for (const reminder of cloned.reminders || []) collectId(idMap, reminder, suffix);
-
   for (const plan of cloned.plans || []) {
     for (const session of plan.sessions || []) {
       if (session.activityId && idMap.has(session.activityId)) {
@@ -418,7 +415,6 @@ async function cleanupBenchmarkUser(prisma: any, userId: string): Promise<void> 
   const planIds = plans.map((plan: any) => plan.id);
 
   await prisma.activityEntry.deleteMany({ where: { userId } });
-  await prisma.reminder.deleteMany({ where: { userId } });
 
   const sessionDeleteOr = [];
   if (planIds.length > 0) sessionDeleteOr.push({ planId: { in: planIds } });
@@ -520,48 +516,26 @@ async function seedFixture(prisma: any, fixture: CoachEvalFixture): Promise<any>
     });
   }
 
-  for (const reminderInput of fixture.reminders || []) {
-    await prisma.reminder.create({
-      data: {
-        id: reminderInput.id,
-        userId: user.id,
-        message: reminderInput.message,
-        triggerAt: new Date(reminderInput.triggerAt),
-        isRecurring: reminderInput.isRecurring || false,
-        recurringType: reminderInput.recurringType || null,
-        recurringDays: reminderInput.recurringDays || [],
-        status: reminderInput.status || "PENDING",
-      },
-    });
-  }
-
   return user;
 }
 
 async function loadRuntimeContext(prisma: any, userId: string): Promise<{
   plans: any[];
-  reminders: any[];
 }> {
   const now = new Date();
-  const [plans, reminders] = await Promise.all([
-    prisma.plan.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-        archivedAt: null,
-        isPaused: false,
-        OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
-      },
-      include: { activities: true, sessions: true, milestones: true },
-      orderBy: [{ createdAt: "desc" }],
-    }),
-    prisma.reminder.findMany({
-      where: { userId, status: "PENDING" },
-      orderBy: { triggerAt: "asc" },
-    }),
-  ]);
+  const plans = await prisma.plan.findMany({
+    where: {
+      userId,
+      deletedAt: null,
+      archivedAt: null,
+      isPaused: false,
+      OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
+    },
+    include: { activities: true, sessions: true, milestones: true },
+    orderBy: [{ createdAt: "desc" }],
+  });
 
-  return { plans, reminders };
+  return { plans };
 }
 
 function summarize(results: CoachEvalRunResult[]): CoachEvalSummaryRow[] {

@@ -335,10 +335,6 @@ export class CoachAssessmentService {
 
     // Manual assessment is a fresh introductory status review: call the coach
     // brain directly instead of going through the proactive intervention picker.
-    const reminders = await prisma.reminder.findMany({
-      where: { userId: user.id, status: "PENDING" },
-      orderBy: { triggerAt: "asc" },
-    });
     const attentionItems = deriveCoachAttentionItems({
       user,
       plans: coachUser.plans,
@@ -350,7 +346,6 @@ export class CoachAssessmentService {
       message: this.buildStatusReviewPrompt(attentionItems),
       conversationHistory: [],
       plans: coachUser.plans,
-      reminders,
     });
 
     logger.info(
@@ -427,10 +422,6 @@ export class CoachAssessmentService {
     now: Date,
   ): Promise<UserAssessmentResult> {
     const recentMessages = await this.getRecentCoachMessages(user.id);
-    const reminders = await prisma.reminder.findMany({
-      where: { userId: user.id, status: "PENDING" },
-      orderBy: { triggerAt: "asc" },
-    });
 
     const activePlanSummary =
       user.plans.length > 0
@@ -467,7 +458,6 @@ export class CoachAssessmentService {
           content: m.content,
         })),
       plans: user.plans,
-      reminders,
     });
 
     const candidate: CoachInterventionCandidate = {
@@ -771,11 +761,6 @@ export class CoachAssessmentService {
       };
     }
 
-    const reminders = await prisma.reminder.findMany({
-      where: { userId: user.id, status: "PENDING" },
-      orderBy: { triggerAt: "asc" },
-    });
-
     if (candidate.usesAgent) {
       const message = isRecurrentCoachAssessmentIntervention(candidate.type)
         ? buildRecurrentCoachAssessmentPrompt({
@@ -796,7 +781,6 @@ export class CoachAssessmentService {
             content: m.content,
           })),
         plans: user.plans,
-        reminders,
       });
 
       if (aiResponse.skipped || aiResponse.draftMessages.length === 0) {
@@ -830,7 +814,6 @@ export class CoachAssessmentService {
                 content: m.content,
               })),
             plans: user.plans,
-            reminders,
           });
           const sent = await this.dispatchCoachDrafts(
             user,
