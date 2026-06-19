@@ -86,6 +86,7 @@ model User {
   chatParticipations      ChatParticipant[]
   feedback                Feedback[]
   sentMessages            Message[]         @relation("SentMessages")
+  coachConcerns           CoachConcern[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -506,6 +507,7 @@ model Plan {
   messages          Message[]
   achievementPosts  AchievementPost[]
   curriculumFiles   PlanCurriculumFile[]
+  coachConcerns     CoachConcern[]
 
   @@index([userId, deletedAt])
   @@index([userId, deletedAt, archivedAt])
@@ -819,7 +821,57 @@ model JobRun {
   @@schema("public")
 }
 
+// Durable, reconcilable record of something the coach wants to address for a user.
+// One row per (user, plan, kind); detectors upsert it, the reconciler raises/escalates it.
+model CoachConcern {
+  id        String             @id @default(cuid())
+  userId    String
+  planId    String?
+  kind      String
+  dedupeKey String // `${kind}:${planId ?? "_"}` — stable identity, avoids Postgres NULL-distinct
+  status    CoachConcernStatus @default(OPEN)
+  severity  Int                @default(0) // ordering priority when several concerns are due
+  data      Json? // detector evidence the agent phrases from (stats, missed sessions, ...)
+
+  // Lifecycle
+  raisedCount     Int       @default(0)
+  firstDetectedAt DateTime  @default(now())
+  lastDetectedAt  DateTime  @default(now()) // refreshed each detection tick while still true
+  lastRaisedAt    DateTime? // when we last messaged the user about it
+  nextEligibleAt  DateTime? // earliest next raise (escalation schedule)
+  snoozedUntil    DateTime?
+  resolvedAt      DateTime?
+  resolvedReason  String? // user_acted | user_dismissed | auto_archive | stale
+
+  // Linkage to what was last sent about this concern
+  lastMessageId      String?
+  lastNotificationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, status])
+  @@index([planId])
+  @@map("coach_concerns")
+  @@schema("public")
+}
+
 // Enums
+enum CoachConcernStatus {
+  OPEN
+  RAISED
+  ESCALATED
+  RESOLVED
+  SNOOZED
+  ARCHIVED
+
+  @@schema("public")
+}
+
 enum JobType {
   HOURLY
   DAILY

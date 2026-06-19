@@ -13,16 +13,25 @@ export type CoachAgentModelConfig = {
 };
 
 export const KIMI_K26_MODEL = "moonshotai/kimi-k2.6";
+export const GLM_52_MODEL = "zai/glm-5.2";
 export const DEFAULT_COACH_AGENT_MODEL = KIMI_K26_MODEL;
+// Autonomous/proactive coach uses a stronger model: it reliably attaches plan
+// proposals (kimi often skips the tool). Latency is irrelevant off the cron, so
+// the slower GLM is worth it here while interactive chat stays on the default.
+export const DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL = GLM_52_MODEL;
 export const DEFAULT_COACH_AGENT_VISION_MODEL = "openai/gpt-4.1";
-const KIMI_K26_PROVIDER_ORDER = [
-  "baseten",
-  "togetherai"
-];
+
 const DEFAULT_COACH_AGENT_FALLBACK_MODELS = [
   "openai/gpt-5.4-mini",
   "anthropic/claude-sonnet-4.6",
 ];
+
+// Per-model gateway routing. Add a model + its preferred provider order here
+// rather than introducing new constants/branches.
+const COACH_MODEL_ROUTING: Record<string, { providerOrder: string[] }> = {
+  [KIMI_K26_MODEL]: { providerOrder: ["baseten", "togetherai"] },
+  [GLM_52_MODEL]: { providerOrder: ["baseten"] },
+};
 
 function getCoachAgentFallbackModels(): string[] {
   const configuredModels = process.env.COACH_AGENT_FALLBACK_MODELS
@@ -38,14 +47,22 @@ function getCoachAgentFallbackModels(): string[] {
 function getGatewayRoutingForModel(
   model: string
 ): CoachAgentGatewayRouting | undefined {
-  if (model === KIMI_K26_MODEL) {
-    return {
-      order: KIMI_K26_PROVIDER_ORDER,
-      models: getCoachAgentFallbackModels(),
-    };
-  }
+  const routing = COACH_MODEL_ROUTING[model];
+  if (!routing) return undefined;
 
-  return undefined;
+  return {
+    order: routing.providerOrder,
+    models: getCoachAgentFallbackModels(),
+  };
+}
+
+// Model id for the autonomous/proactive coach path (env-overridable). Pass this
+// to generateResponse({ model }); gateway routing is applied downstream.
+export function resolveAutonomousCoachAgentModel(): string {
+  return (
+    process.env.AUTONOMOUS_COACH_AGENT_MODEL?.trim() ||
+    DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL
+  );
 }
 
 export function resolveCoachAgentModelConfig(

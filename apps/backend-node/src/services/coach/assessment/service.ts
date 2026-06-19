@@ -25,6 +25,7 @@ import {
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
 import { coachAgentService } from "../agent";
+import { resolveAutonomousCoachAgentModel } from "../../coachAgentModelConfig";
 import {
   deriveCoachAttentionItems,
   formatCoachAttentionContext,
@@ -342,6 +343,7 @@ export class CoachAssessmentService {
     });
 
     const aiResponse = await coachAgentService.generateResponse({
+      model: resolveAutonomousCoachAgentModel(),
       user,
       message: this.buildStatusReviewPrompt(attentionItems),
       conversationHistory: [],
@@ -770,6 +772,7 @@ export class CoachAssessmentService {
           })
         : this.buildAgentInterventionPrompt(candidate);
       const aiResponse = await coachAgentService.generateResponse({
+        model: resolveAutonomousCoachAgentModel(),
         user,
         message,
         conversationHistory: recentMessages
@@ -797,6 +800,7 @@ export class CoachAssessmentService {
             usesAgent: true,
           };
           const fallbackResponse = await coachAgentService.generateResponse({
+            model: resolveAutonomousCoachAgentModel(),
             user,
             message: buildRecurrentCoachAssessmentPrompt({
               interventionType: "INACTIVITY_CHECKIN",
@@ -872,7 +876,7 @@ export class CoachAssessmentService {
     };
   }
 
-  private buildAgentInterventionPrompt(
+  buildAgentInterventionPrompt(
     candidate: CoachInterventionCandidate,
   ): string {
     const onlyPastEndDateItems =
