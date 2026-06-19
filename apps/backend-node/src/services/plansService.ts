@@ -172,7 +172,8 @@ export class PlansService {
 
   async getPlanWeekStats(
     planWithActivities: Plan & { activities: any[] },
-    user: User
+    user: User,
+    now: Date = new Date()
   ): Promise<{
     numActiveDaysInTheWeek: number;
     numLeftDaysInTheWeek: number;
@@ -181,7 +182,7 @@ export class PlansService {
   }> {
     // Use user's timezone or default to UTC
     const timezone = user.timezone || "UTC";
-    const currentDate = new Date();
+    const currentDate = now;
 
     // Convert to user's timezone for accurate week calculation
     const userCurrentDate = toMidnightUTCDate(
@@ -189,7 +190,7 @@ export class PlansService {
     );
 
     // Get the weeks data which includes current week
-    const weeks = await this.getPlanWeeks(planWithActivities, user);
+    const weeks = await this.getPlanWeeks(planWithActivities, user, undefined, now);
 
     // Find the current week from the weeks data
     const currentWeekStart = toMidnightUTCDate(
@@ -275,6 +276,38 @@ export class PlansService {
     };
   }
 
+  // Pure PlanState derivation from week stats (no DB / clock access). Shared by the
+  // cache writer (recalculateCurrentWeekState) and as-of-T readers (computeCurrentWeekState).
+  deriveWeekStateFromStats(stats: {
+    numActiveDaysInTheWeek: number;
+    numLeftDaysInTheWeek: number;
+    numActiveDaysLeftInTheWeek: number;
+    daysCompletedThisWeek: number;
+  }): PlanState {
+    if (stats.numActiveDaysLeftInTheWeek <= 0) {
+      return PlanState.COMPLETED;
+    }
+    const marginForError = Math.max(
+      -1,
+      stats.numLeftDaysInTheWeek - stats.numActiveDaysLeftInTheWeek
+    );
+    if (marginForError < 0) return PlanState.FAILED;
+    if (marginForError >= 2) return PlanState.ON_TRACK;
+    return PlanState.AT_RISK;
+  }
+
+  // Read-only week state evaluated at an arbitrary `now`. Unlike
+  // recalculateCurrentWeekState this never writes the cache or fires transitions,
+  // so it is safe to call repeatedly from detectors and the backtest harness.
+  async computeCurrentWeekState(
+    planWithActivities: Plan & { activities: Activity[] },
+    user: User,
+    now: Date = new Date()
+  ): Promise<PlanState> {
+    const stats = await this.getPlanWeekStats(planWithActivities, user, now);
+    return this.deriveWeekStateFromStats(stats);
+  }
+
   async recalculateCurrentWeekState(
     plan: Plan,
     user: User
@@ -294,40 +327,8 @@ export class PlansService {
         throw new Error(`Plan ${plan.id} not found`);
       }
 
-      const {
-        numActiveDaysInTheWeek,
-        numLeftDaysInTheWeek,
-        numActiveDaysLeftInTheWeek,
-        daysCompletedThisWeek,
-      } = await this.getPlanWeekStats(planWithRelations, user);
-
-      // Determine the state based on completion vs planned activities
-      let newState: PlanState;
-      if (numActiveDaysLeftInTheWeek <= 0) {
-        newState = PlanState.COMPLETED;
-      } else {
-        const marginForError = Math.max(
-          -1,
-          numLeftDaysInTheWeek - numActiveDaysLeftInTheWeek
-        );
-
-        if (marginForError < 0) {
-          logger.debug(
-            `Margin (${marginForError}) is less than 0 - plan is failed`
-          );
-          newState = PlanState.FAILED;
-        } else if (marginForError >= 2) {
-          logger.debug(
-            `Margin (${marginForError}) is greater than 2 - plan is on track`
-          );
-          newState = PlanState.ON_TRACK;
-        } else {
-          logger.debug(
-            `Margin (${marginForError}) is between 0 and 2 - plan is at risk`
-          );
-          newState = PlanState.AT_RISK;
-        }
-      }
+      const stats = await this.getPlanWeekStats(planWithRelations, user);
+      const newState = this.deriveWeekStateFromStats(stats);
 
       // Update the plan's current week state
       const oldState = planWithRelations.currentWeekState;
@@ -946,7 +947,8 @@ export class PlansService {
     date: Date,
     plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
     userActivities: Activity[],
-    userTimezone: string = "UTC"
+    userTimezone: string = "UTC",
+    now: Date = new Date()
   ): Promise<{
     startDate: Date;
     activities: Activity[];
@@ -965,13 +967,16 @@ export class PlansService {
       plan.activities?.some((a) => a.id === activity.id)
     );
 
-    // Get activity entries for this week
+    // Get activity entries for this week. The `lte: now` cap keeps as-of-T reads
+    // faithful (never count entries logged after the evaluation moment); in the
+    // live path now is the present so it is a no-op against `lt: nextWeekStart`.
     const planActivityEntriesThisWeek = await prisma.activityEntry.findMany({
       where: {
         activityId: { in: plan.activities.map((a) => a.id) },
         datetime: {
           gte: weekStart,
           lt: nextWeekStart,
+          lte: now,
         },
         deletedAt: null,
       },
@@ -1084,7 +1089,8 @@ export class PlansService {
   private async getPlanWeeks(
     plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
     user: User,
-    startDate?: Date
+    startDate?: Date,
+    now: Date = new Date()
   ): Promise<Array<PlanWeek>> {
     // Get user activities
     const userActivities = await prisma.activity.findMany({
@@ -1135,7 +1141,7 @@ export class PlansService {
       startOfWeek(actualStartDate, { weekStartsOn: 0 })
     );
     const planEndDate = new Date(
-      plan.finishingDate || addWeeks(new Date(), this.LIFESTYLE_WEEKS)
+      plan.finishingDate || addWeeks(now, this.LIFESTYLE_WEEKS)
     );
 
     // Use user's timezone for consistent day counting
@@ -1152,7 +1158,8 @@ export class PlansService {
         weekStart,
         planWithSessions,
         userActivities,
-        userTimezone
+        userTimezone,
+        now
       );
       weeks.push(weekData);
       weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
@@ -1163,7 +1170,8 @@ export class PlansService {
       user,
       weeks,
       userActivities,
-      userTimezone
+      userTimezone,
+      now
     );
   }
 
@@ -1172,14 +1180,15 @@ export class PlansService {
     user: User,
     weeks: Array<PlanWeek>,
     userActivities?: Activity[],
-    userTimezone: string = user.timezone || "UTC"
+    userTimezone: string = user.timezone || "UTC",
+    now: Date = new Date()
   ): Promise<Array<PlanWeek>> {
     if (plan.outlineType !== PlanOutlineType.TIMES_PER_WEEK) {
       return weeks;
     }
 
     const currentWeekStart = toMidnightUTCDate(
-      startOfWeek(new TZDate(new Date(), userTimezone), { weekStartsOn: 0 })
+      startOfWeek(new TZDate(now, userTimezone), { weekStartsOn: 0 })
     );
     const hasCurrentWeek = weeks.some((week) =>
       isSameDay(new Date(week.startDate), currentWeekStart)
@@ -1198,7 +1207,8 @@ export class PlansService {
       currentWeekStart,
       plan,
       activities,
-      userTimezone
+      userTimezone,
+      now
     );
 
     return [...weeks, currentWeekData].sort(
