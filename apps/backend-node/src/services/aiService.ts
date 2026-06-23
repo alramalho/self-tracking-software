@@ -12,6 +12,7 @@ import { getCurrentUser } from "../utils/requestContext";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import type { PlansService } from "./plansService";
 import { planGenerationPipeline } from "./planGenerationPipeline";
+import { OPENROUTER_GLM_52_MODEL } from "./aiModelIds";
 const DEFAULT_WEEKS = 8;
 
 export class AIService {
@@ -577,7 +578,7 @@ export class AIService {
       schema: UnifiedCoachResponseSchema,
       systemPrompt,
       options: {
-        model: "x-ai/grok-4.1-fast",
+        model: OPENROUTER_GLM_52_MODEL,
         temperature: 0.3,
       },
     })) as {

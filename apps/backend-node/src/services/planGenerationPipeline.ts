@@ -8,6 +8,7 @@ import { format, startOfWeek } from "date-fns";
 import dedent from "dedent";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
+import { OPENROUTER_GLM_52_MODEL } from "./aiModelIds";
 
 const DEFAULT_MAX_WEEKS = 2;
 
@@ -223,7 +224,7 @@ export class PlanGenerationPipeline {
       })),
     });
 
-    const activityModel = "x-ai/grok-4.1-fast";
+    const activityModel = OPENROUTER_GLM_52_MODEL;
     const activitySystem = dedent`
         You are an expert at designing trackable activities for habit plans.
 
