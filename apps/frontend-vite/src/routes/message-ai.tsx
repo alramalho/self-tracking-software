@@ -1,4 +1,5 @@
 import { CoachToolCallsCard } from "@/components/CoachToolCallsCard";
+import { CoachActionsCard } from "@/components/CoachActionsCard";
 import { MessageBubble, MessageMarkdown } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
 import { MessageImageAttachments } from "@/components/MessageImageAttachments";
@@ -1785,6 +1786,11 @@ function MessageAIPage() {
                         }`}
                     >
                       <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
+                        {isCoachMessage && message.status === "SENT" && (
+                          <span className="self-start rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                            New
+                          </span>
+                        )}
                         <div
                           className={cn(
                             "flex min-w-0 max-w-full items-end gap-1",
@@ -2024,6 +2030,10 @@ function MessageAIPage() {
                             content={message.content}
                             plans={plans?.map(p => ({ id: p.id, goal: p.goal, emoji: p.emoji }))}
                           />
+                        )}
+
+                        {isCoachMessage && message.coachAttentionItems && message.coachAttentionItems.length > 0 && (
+                          <CoachActionsCard items={message.coachAttentionItems} />
                         )}
 
                         {isCoachMessage && message.userRecommendations && (

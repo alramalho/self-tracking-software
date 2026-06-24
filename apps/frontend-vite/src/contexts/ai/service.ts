@@ -75,6 +75,19 @@ export async function startCoachAttentionAction(
   };
 }
 
+// Dismiss an informational coach attention item (e.g. a "plan archived" notice)
+// without opening the chat. Concludes the backing notification.
+export async function dismissCoachAttentionItem(
+  api: AxiosInstance,
+  data: { dedupeKey?: string; planIds?: string[] }
+): Promise<{ success: boolean; dismissed: number }> {
+  const response = await api.post<{ success: boolean; dismissed: number }>(
+    "/ai/coach/attention/dismiss",
+    data
+  );
+  return response.data;
+}
+
 // Update chat title (coach-specific)
 export async function updateChatTitle(
   api: AxiosInstance,
