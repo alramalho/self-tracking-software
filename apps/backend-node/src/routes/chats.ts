@@ -8,6 +8,7 @@ import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
+import { concludeResolvedAutonomousCoachNotifications } from "../services/autonomousCoachNotificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
@@ -1733,6 +1734,17 @@ router.post(
               `Concluded week_recap notifications for chat ${chatId}, user ${user.username}`
             );
           }
+        }
+
+        // Conclude informational autonomous coach notifications (e.g. plan-archived
+        // notices) whose message has now been read. The helper leaves any
+        // notification with pending proposals untouched.
+        for (const msg of markedMessages) {
+          await concludeResolvedAutonomousCoachNotifications(
+            user.id,
+            chatId,
+            msg.id
+          );
         }
       }
 

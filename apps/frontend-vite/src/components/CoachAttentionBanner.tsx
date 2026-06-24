@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/drawer";
 import { useSession } from "@/contexts/auth";
 import {
+  dismissCoachAttentionItem,
   getCoachAttentionItems,
   startCoachAttentionAction,
 } from "@/contexts/ai/service";
@@ -27,6 +28,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive,
   AlertTriangle,
+  Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -65,6 +67,12 @@ export function useCoachAttentionItems(enabled = true) {
       ),
     [attentionItems],
   );
+}
+
+// Archived = a "done" informational notice (the coach already acted); everything
+// else is a pending action the user still needs to resolve.
+function isArchivedItem(item: CoachAttentionItem) {
+  return item.kind === "SPECIFIC_AUTO_ARCHIVED";
 }
 
 function attentionHeadline(item: CoachAttentionItem) {
@@ -111,12 +119,8 @@ export function CoachAttentionDrawer({
   const [step, setStep] = useState(0);
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const coachAvatar = getCoachAvatar(currentUser?.coachPersonality, "thinking");
-  const criticalCount = items.filter(
-    (item) => item.severity === "critical",
-  ).length;
-  const warningCount = items.filter(
-    (item) => item.severity === "warning",
-  ).length;
+  const archivedCount = items.filter(isArchivedItem).length;
+  const actionableCount = items.length - archivedCount;
   const activeItem = step > 0 ? items[step - 1] : null;
   const totalSteps = items.length + 1;
 
@@ -152,6 +156,25 @@ export function CoachAttentionDrawer({
       toast.error(
         error?.response?.data?.error || "Coach could not prepare this update",
       );
+    },
+  });
+
+  const dismissAttention = useMutation({
+    mutationFn: (item: CoachAttentionItem) =>
+      dismissCoachAttentionItem(api, {
+        dedupeKey: item.dedupeKey,
+        planIds: item.planIds,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coach-attention"] });
+      if (items.length <= 1) {
+        onOpenChange(false);
+        return;
+      }
+      setStep((current) => Math.min(current, items.length - 1));
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || "Could not dismiss this notice");
     },
   });
 
@@ -235,18 +258,18 @@ export function CoachAttentionDrawer({
                   <div className="mt-6 grid w-full grid-cols-2 gap-2">
                     <div className="rounded-2xl bg-muted/50 p-4">
                       <p className="text-3xl font-semibold text-foreground">
-                        {criticalCount}
+                        {actionableCount}
                       </p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
-                        need a decision
+                        need action
                       </p>
                     </div>
                     <div className="rounded-2xl bg-muted/50 p-4">
                       <p className="text-3xl font-semibold text-foreground">
-                        {warningCount}
+                        {archivedCount}
                       </p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">
-                        ending soon
+                        archived
                       </p>
                     </div>
                   </div>
@@ -318,6 +341,21 @@ export function CoachAttentionDrawer({
                         ? "Talk to coach"
                       : "Let coach prepare the update"}
                   </Button>
+                  {isArchivedItem(activeItem) && (
+                    <Button
+                      className="w-full rounded-2xl"
+                      variant="outline"
+                      disabled={dismissAttention.isPending}
+                      onClick={() => dismissAttention.mutate(activeItem)}
+                    >
+                      {dismissAttention.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="mr-2 h-4 w-4" />
+                      )}
+                      Got it
+                    </Button>
+                  )}
                   {activeItem.kind === "PLAN_PAST_END_DATE" && (
                     <Button
                       className="w-full rounded-2xl"

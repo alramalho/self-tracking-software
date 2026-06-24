@@ -600,6 +600,9 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       // Invalidate notifications so concluded week_recap notifications are reflected
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      // Reading an informational coach message (e.g. a plan-archived notice)
+      // concludes its notification server-side; refresh the attention banner.
+      queryClient.invalidateQueries({ queryKey: ["coach-attention"] });
     },
   });
 

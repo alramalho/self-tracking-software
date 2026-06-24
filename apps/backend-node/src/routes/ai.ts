@@ -6,6 +6,11 @@ import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { coachAssessmentService } from "../services/coach/assessment/service";
 import { deriveCoachAttentionItems } from "../services/coachAttentionService";
+import {
+  AUTONOMOUS_COACH_PROMPT_TAG,
+  concludeResolvedAutonomousCoachNotifications,
+  dismissArchivedCoachNotifications,
+} from "../services/autonomousCoachNotificationService";
 import { coachAgentService } from "../services/coach/agent";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
@@ -27,7 +32,6 @@ import type { CoachAttentionItem } from "../services/coachAttentionService";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const telegramService = new TelegramService();
-const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
 
 // Plans past their finishingDate stay included so attention items can drive
 // them to a decision (renew or archive).
@@ -241,82 +245,38 @@ function buildPlanCreationDiffs(originalProposal: any, requestedProposal: any) {
   });
 }
 
-function hasPendingCoachActions(metadata: unknown): boolean {
-  const data = metadata as any;
-  const planProposals = Array.isArray(data?.planProposals)
-    ? data.planProposals
-    : [];
-  const activityLogProposals = Array.isArray(data?.activityLogProposals)
-    ? data.activityLogProposals
-    : [];
-  const activityEditProposals = Array.isArray(data?.activityEditProposals)
-    ? data.activityEditProposals
-    : [];
-  const planCreationProposals = Array.isArray(data?.planCreationProposals)
-    ? data.planCreationProposals
-    : [];
+router.post(
+  "/coach/attention/dismiss",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const dedupeKey =
+        typeof req.body?.dedupeKey === "string" ? req.body.dedupeKey : undefined;
+      const planIds = Array.isArray(req.body?.planIds)
+        ? req.body.planIds.filter((id: unknown): id is string => typeof id === "string")
+        : undefined;
 
-  return (
-    [
-      ...planProposals,
-      ...activityLogProposals,
-      ...activityEditProposals,
-      ...planCreationProposals,
-    ].some((proposal) => !proposal.status) ||
-    (data?.metricReplacement && !data.metricReplacement.status)
-  );
-}
+      if (!dedupeKey && (!planIds || planIds.length === 0)) {
+        return res
+          .status(400)
+          .json({ error: "dedupeKey or planIds is required" });
+      }
 
-async function concludeResolvedAutonomousCoachNotifications(
-  userId: string,
-  chatId: string,
-  messageId: string,
-) {
-  const notifications = await prisma.notification.findMany({
-    where: {
-      userId,
-      type: "COACH",
-      promptTag: AUTONOMOUS_COACH_PROMPT_TAG,
-      relatedId: chatId,
-      status: { not: "CONCLUDED" },
-    },
-  });
-
-  const matchingNotifications = notifications.filter((notification) => {
-    const relatedData = notification.relatedData as any;
-    return (
-      Array.isArray(relatedData?.messageIds) &&
-      relatedData.messageIds.includes(messageId)
-    );
-  });
-
-  for (const notification of matchingNotifications) {
-    const relatedData = notification.relatedData as any;
-    const messageIds = relatedData.messageIds.filter(
-      (id: unknown) => typeof id === "string",
-    );
-    const messages = await prisma.message.findMany({
-      where: { id: { in: messageIds } },
-      select: { metadata: true },
-    });
-    const hasPendingActions = messages.some((message) =>
-      hasPendingCoachActions(message.metadata),
-    );
-
-    if (!hasPendingActions) {
-      await prisma.notification.update({
-        where: { id: notification.id },
-        data: {
-          status: "CONCLUDED",
-          concludedAt: new Date(),
-        },
+      const dismissed = await dismissArchivedCoachNotifications(user.id, {
+        dedupeKey,
+        planIds,
       });
-      logger.info(
-        `Concluded autonomous coach notification ${notification.id} after pending actions were resolved`,
-      );
+      res.json({ success: true, dismissed });
+    } catch (error) {
+      logger.error("Error dismissing coach attention item:", error);
+      res.status(500).json({ error: "Failed to dismiss coach attention item" });
     }
-  }
-}
+  },
+);
 
 router.post(
   "/coach/run-assessment",
