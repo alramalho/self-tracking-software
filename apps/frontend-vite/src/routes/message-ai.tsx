@@ -1785,12 +1785,21 @@ function MessageAIPage() {
                       className={`flex min-w-0 max-w-full gap-3 overflow-visible ${isUserMessage ? "flex-row-reverse" : "flex-row"
                         }`}
                     >
-                      <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
-                        {isCoachMessage && message.status === "SENT" && (
-                          <span className="self-start rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                            New
-                          </span>
-                        )}
+                      <div className="relative flex min-w-0 max-w-full flex-col gap-1 overflow-visible">
+                        <AnimatePresence>
+                          {isCoachMessage && message.status === "SENT" && (
+                            <motion.span
+                              key="unread-pill"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="pointer-events-none absolute -top-2 right-1 z-10 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400"
+                            >
+                              New
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
                         <div
                           className={cn(
                             "flex min-w-0 max-w-full items-end gap-1",
