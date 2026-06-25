@@ -85,6 +85,25 @@ export const isPlanExpired = (plan: {
   return new Date(plan.finishingDate) < new Date();
 };
 
+const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
+
+const sortPlansByPersonOrder = <
+  T extends { sortOrder?: number | null; createdAt: Date | string },
+>(
+  plans: T[]
+): T[] => {
+  return [...plans].sort((a, b) => {
+    const orderA = a.sortOrder ?? UNORDERED_PLAN_SORT;
+    const orderB = b.sortOrder ?? UNORDERED_PLAN_SORT;
+
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+};
+
 function userifyPlansProgress(plansProgress: PlanProgressData[]): {
   totalStreaks: number;
   totalHabits: number;
@@ -962,29 +981,22 @@ function ProfilePage() {
                 <div className="space-y-4 mt-4">
                   {profileActivePlans &&
                     profileActivePlans.length > 0 &&
-                    [...profileActivePlans]
-                      .sort((a, b) => {
-                        return (
-                          new Date(b.createdAt).getTime() -
-                          new Date(a.createdAt).getTime()
-                        );
-                      })
-                      .map((plan) => (
-                        <ProfilePlanCard
-                          key={plan.id}
-                          plan={plan as any}
-                          activities={activities}
-                          activityEntries={activityEntries}
-                          isOwnProfile={isOwnProfile}
-                          onBadgeClick={(badgeType) =>
-                            setBadgeExplainer({
-                              open: true,
-                              planIds: [plan.id],
-                              badgeType,
-                            })
-                          }
-                        />
-                      ))}
+                    sortPlansByPersonOrder(profileActivePlans).map((plan) => (
+                      <ProfilePlanCard
+                        key={plan.id}
+                        plan={plan as any}
+                        activities={activities}
+                        activityEntries={activityEntries}
+                        isOwnProfile={isOwnProfile}
+                        onBadgeClick={(badgeType) =>
+                          setBadgeExplainer({
+                            open: true,
+                            planIds: [plan.id],
+                            badgeType,
+                          })
+                        }
+                      />
+                    ))}
                   {(!profileActivePlans || profileActivePlans.length === 0) && (
                     <div className="space-y-4 py-8 text-center">
                       <p className="text-muted-foreground">

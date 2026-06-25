@@ -1,5 +1,6 @@
 import recommendationsService from "@/services/recommendationsService";
 import { createClient } from "@supabase/supabase-js";
+import { type Prisma } from "@tsw/prisma";
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import Stripe from "stripe";
@@ -26,6 +27,10 @@ import { prisma } from "../utils/prisma";
 
 export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
+const PLAN_DISPLAY_ORDER_BY = [
+  { sortOrder: "asc" },
+  { createdAt: "desc" },
+] satisfies Prisma.PlanOrderByWithRelationInput[];
 
 // Initialize Stripe client
 const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
@@ -693,6 +698,7 @@ usersRouter.post(
                 where: { deletedAt: null },
               },
             },
+            orderBy: PLAN_DISPLAY_ORDER_BY,
           },
           activities: {
             where: { deletedAt: null },
