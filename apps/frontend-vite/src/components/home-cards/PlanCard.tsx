@@ -7,6 +7,7 @@ import {
   isAfter,
   startOfDay,
 } from "date-fns";
+import type { ActivityEntry } from "@tsw/prisma";
 import type { PlanProgressData } from "@tsw/prisma/types";
 import { CalendarDays, Flame, Sprout, Rocket } from "lucide-react";
 import { HomeCardShell } from "./HomeCardShell";
@@ -16,6 +17,7 @@ const LIFESTYLE_WEEKS = 9;
 
 interface PlanCardProps {
   plan: CompletePlan & { progress: PlanProgressData };
+  activityEntries?: ActivityEntry[];
 }
 
 const getPlannedActivityCount = (
@@ -29,7 +31,7 @@ const getPlannedActivityCount = (
   return Array.isArray(plannedActivities) ? plannedActivities.length : 0;
 };
 
-export const PlanCard = ({ plan }: PlanCardProps) => {
+export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
   const navigate = useNavigate();
 
   const { weeks, achievement } = plan.progress;
@@ -46,8 +48,17 @@ export const PlanCard = ({ plan }: PlanCardProps) => {
     plan.outlineType === "TIMES_PER_WEEK" ? (plan.timesPerWeek ?? 0) : 0;
   const totalPlanned = progressPlanned || planTarget;
 
+  const planActivityIds = new Set(plan.activities?.map((activity) => activity.id));
+  const completedActivities = activityEntries
+    ? activityEntries.filter(
+        (entry) =>
+          entry.activityId &&
+          planActivityIds.has(entry.activityId) &&
+          isSameWeek(new Date(entry.datetime), new Date())
+      )
+    : currentWeek?.completedActivities || [];
   const uniqueDays = new Set(
-    (currentWeek?.completedActivities || []).map((entry: any) =>
+    completedActivities.map((entry: any) =>
       format(new Date(entry.datetime || entry.date), "yyyy-MM-dd")
     )
   );

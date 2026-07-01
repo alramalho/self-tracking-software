@@ -33,11 +33,16 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   wrapperClassName,
 }) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen && open) {
+      onClose();
+    }
+  };
 
   if (isDesktop) {
     return (
       <div className={cn("max-w-lg mx-auto", wrapperClassName, !open && "hidden")}>
-        <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogContent className={`px-4 pb-4 ${className}`}>
             <DialogTitle className="sr-only">{title}</DialogTitle>
             {children}
@@ -48,7 +53,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   } else {
     return (
       <div className={cn("max-w-lg mx-auto", wrapperClassName, !open && "hidden")}>
-        <Drawer open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
+        <Drawer open={open} onOpenChange={handleOpenChange}>
           <DrawerContent className={`px-4 pb-4 ${className}`}>
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             {!unclosable && displayIcon && (

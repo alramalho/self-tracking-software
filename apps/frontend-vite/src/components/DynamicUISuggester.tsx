@@ -40,6 +40,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   headerIcon?: React.ReactNode;
   submitButtonText?: string;
   emptySubmitButtonText?: string;
+  onEmptySubmit?: () => Promise<void> | void;
   onSubmit: (text: string) => Promise<T | void>;
   shouldRenderChildren?: boolean;
   renderIntermediateComponents?: () => React.ReactNode;
@@ -64,6 +65,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   questionsChecks,
   submitButtonText = "Send",
   emptySubmitButtonText,
+  onEmptySubmit,
   onSubmit,
   renderChildren,
   headerIcon,
@@ -260,6 +262,24 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     setText(value);
   };
 
+  const hasInputText = text.trim().length > 0;
+
+  const handlePrimarySubmit = async () => {
+    if (!hasInputText && onEmptySubmit) {
+      setIsSubmitting(true);
+      try {
+        await onEmptySubmit();
+      } catch (error) {
+        console.error("Error handling empty submit:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    await submitMutation.mutateAsync(text);
+  };
+
   const renderedChildren =
     renderChildren && extractedData && renderChildren(extractedData);
 
@@ -374,17 +394,17 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             className={`w-full rounded-xl ${
               allQuestionsChecked ? "bg-card" : ""
             }`}
-            onClick={() => submitMutation.mutateAsync(text)}
+            onClick={handlePrimarySubmit}
             disabled={
-              (disableEmptySubmit && text.length === 0) ||
-              (canSubmit && !canSubmit() && !text) ||
+              (disableEmptySubmit && !hasInputText) ||
+              (canSubmit && !canSubmit() && !hasInputText) ||
               isRecording ||
               isLoading ||
               isSubmitting
             }
-            loading={isLoading}
+            loading={isLoading || (!hasInputText && isSubmitting)}
           >
-            {text.length > 0
+            {hasInputText
               ? submitButtonText
               : emptySubmitButtonText ?? submitButtonText ?? "Send"}
             {allQuestionsChecked ? " again" : ""}

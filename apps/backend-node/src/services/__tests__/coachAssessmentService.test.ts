@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { format } from "date-fns";
 import { getPreviousCoachWeekBounds } from "../../utils/date";
 import { deriveCoachAttentionItems } from "../coachAttentionService";
-import { coachContextBriefService } from "../coachContextBriefService";
+import { pickInsightForCandidate } from "../coach/assessment/contextBrief";
 import {
   isWithinPreferredCoachWindow,
   resolveAutonomousCoachUsernameFilter,
@@ -234,16 +234,12 @@ describe("autonomous coach username allowlist", () => {
 
 describe("coach context brief insight picker", () => {
   const baseBrief = {
-    generatedAt: "2026-05-20T12:00:00.000Z",
-    lookbackDays: 14,
     planMotivators: [
       {
         planId: "plan_1",
         goal: "Eat better",
         selectedReason: "Build self-esteem",
         discardedReasons: ["Have more energy"],
-        coachNotesExcerpt:
-          "Suggested reasons not selected: Have more energy",
       },
     ],
     difficultyPatterns: [
@@ -267,11 +263,10 @@ describe("coach context brief insight picker", () => {
       summary:
         "The user tracks 3 metrics but has not logged any metric entries for 21 days.",
     },
-    metricPatterns: [] as [],
   };
 
   it("prefers difficulty for plan adjustments", () => {
-    const insight = coachContextBriefService.pickInsightForCandidate({
+    const insight = pickInsightForCandidate({
       candidate: { type: "PLAN_ADJUSTMENT", planIds: ["plan_1"] },
       brief: baseBrief,
     });
@@ -281,7 +276,7 @@ describe("coach context brief insight picker", () => {
   });
 
   it("prefers the selected goal reason for session prep", () => {
-    const insight = coachContextBriefService.pickInsightForCandidate({
+    const insight = pickInsightForCandidate({
       candidate: { type: "SESSION_PREP", planIds: ["plan_1"] },
       brief: baseBrief,
     });
@@ -291,7 +286,7 @@ describe("coach context brief insight picker", () => {
   });
 
   it("uses metrics logging gap for week prep", () => {
-    const insight = coachContextBriefService.pickInsightForCandidate({
+    const insight = pickInsightForCandidate({
       candidate: { type: "WEEK_PREP", planIds: ["plan_1"] },
       brief: baseBrief,
     });

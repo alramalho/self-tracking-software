@@ -1,16 +1,15 @@
-/* eslint-disable react-refresh/only-export-components */
 "use client";
 
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { RecommendedUsers } from "@/components/RecommendedUsers";
+import { SATISFACTORY_PARTNER_MATCH_MIN_SCORE } from "@/components/recommendations/partnerRecommendationFilters";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useActivities } from "@/contexts/activities/useActivities";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import { Search, Send, Users } from "lucide-react";
+import { Loader2, Search, Send, Users } from "lucide-react";
 import { useState } from "react";
 
 const OptionCard = ({
@@ -43,64 +42,16 @@ const OptionCard = ({
 };
 
 const CommunityPartnerFinder = () => {
-  const {
-    completeStep,
-    planId,
-    planGoal,
-    planEmoji,
-    planActivities,
-    planTimesPerWeek,
-    selectedPlan,
-    wantsCoaching,
-  } = useOnboarding();
+  const { completeStep, planId, selectedPlan } = useOnboarding();
   const { shareOrCopyReferralLink } = useShareOrCopy();
-  const { upsertPlan, isLoadingPlans } = usePlans();
-  const { upsertActivity } = useActivities();
+  const { isLoadingPlans } = usePlans();
   const [communitySearchOpen, setCommunitySearchOpen] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
   const { isLoadingCurrentUser } = useCurrentUser();
+  const partnerPlanId = selectedPlan?.id || planId;
 
-  // Create a self-guided plan with TIMES_PER_WEEK type
-  const createSelfGuidedPlan = async () => {
-    // Create activities first
-    const activityIds = new Set(planActivities.map((activity) => activity.id));
-    await Promise.all(
-      Array.from(activityIds).map((id) => {
-        const activity = planActivities.find((a) => a.id === id);
-        if (!activity) return;
-        return upsertActivity({
-          activity: activity,
-          muteNotification: true,
-        });
-      })
-    );
-
-    // Create the plan with TIMES_PER_WEEK type
-    await upsertPlan({
-      planId: planId,
-      updates: {
-        id: planId,
-        goal: planGoal || "My Goal",
-        emoji: planEmoji || "🎯",
-        outlineType: "TIMES_PER_WEEK",
-        timesPerWeek: planTimesPerWeek,
-        activities: planActivities,
-        sessions: [], // No AI-generated sessions for self-guided
-        milestones: [],
-      },
-    });
-  };
-
-  const handleContinue = async () => {
+  const completeOnboarding = () => {
     setIsContinuing(true);
-
-    console.log("handleContinue values:", { selectedPlan, wantsCoaching, planActivities });
-
-    // If self-guided (no selectedPlan from AI), create the plan now
-    if (!selectedPlan && !wantsCoaching && planActivities.length > 0) {
-      await createSelfGuidedPlan();
-    }
-
     completeStep(
       "community-partner-finder",
       { partnerType: null },
@@ -146,11 +97,12 @@ const CommunityPartnerFinder = () => {
         {/* Skip link */}
         <div className="text-center">
           <button
-            onClick={handleContinue}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => completeOnboarding()}
+            className="inline-flex items-center justify-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-70"
             disabled={isContinuing}
           >
-            Skip for now
+            {isContinuing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isContinuing ? "Skipping..." : "Skip for now"}
           </button>
         </div>
       </div>
@@ -178,7 +130,10 @@ const CommunityPartnerFinder = () => {
           </div>
         ) : (
           <div className="space-y-6 mt-4">
-            <RecommendedUsers selectedPlanId={planId} />
+            <RecommendedUsers
+              selectedPlanId={partnerPlanId}
+              minScore={SATISFACTORY_PARTNER_MATCH_MIN_SCORE}
+            />
           </div>
         )}
       </AppleLikePopover>

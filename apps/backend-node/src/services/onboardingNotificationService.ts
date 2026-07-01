@@ -3,12 +3,18 @@ import { subHours, subDays } from "date-fns";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { TelegramService } from "./telegramService";
-import type { OnboardingCompletionPlan } from "./onboardingNotificationTypes";
+import type {
+  OnboardingCompletionPlan,
+  OnboardingProgressActivity,
+  OnboardingProgressPlan,
+  OnboardingProgressSnapshot,
+} from "./onboardingNotificationTypes";
 
 const TELEGRAM_MESSAGE_LIMIT = 3900;
 const PLAN_NOTES_SUMMARY_LIMIT = 450;
 const ACTIVITY_LIST_LIMIT = 12;
 const SESSION_PREVIEW_LIMIT = 4;
+const SELECTION_TEXT_LIMIT = 220;
 
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
@@ -49,6 +55,185 @@ function compactText(value: string | null | undefined, maxLength: number) {
   if (!compacted) return null;
 
   return truncate(compacted, maxLength);
+}
+
+function formatNullable(value: string | number | boolean | null | undefined) {
+  if (value === null || value === undefined || value === "") return "not selected";
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
+function formatStepLabel(stepId: string | null | undefined) {
+  if (!stepId) return "unknown";
+  return stepId
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseOnboardingProgressSnapshot(
+  value: unknown
+): OnboardingProgressSnapshot | null {
+  if (!isObjectRecord(value)) return null;
+  return value as OnboardingProgressSnapshot;
+}
+
+function formatOnboardingProgressActivity(activity: OnboardingProgressActivity) {
+  const label = compactText(
+    `${activity.emoji || ""} ${activity.title || "Untitled activity"}`.trim(),
+    90
+  );
+  const measure = compactText(activity.measure, 60);
+  return measure ? `${label} (${measure})` : label || "Untitled activity";
+}
+
+function formatOnboardingProgressActivities(
+  activities: OnboardingProgressActivity[] | null | undefined
+) {
+  if (!activities || activities.length === 0) return ["- none selected"];
+
+  const lines = activities
+    .slice(0, ACTIVITY_LIST_LIMIT)
+    .map((activity) => `- ${formatOnboardingProgressActivity(activity)}`);
+
+  const remainingCount = activities.length - lines.length;
+  if (remainingCount > 0) {
+    lines.push(`- +${remainingCount} more`);
+  }
+
+  return lines;
+}
+
+function formatOnboardingProgressPlan(
+  label: string,
+  plan: OnboardingProgressPlan | null | undefined
+) {
+  if (!plan) return [`${label}: not selected`];
+
+  const goal = compactText(
+    `${plan.emoji || ""} ${plan.goal || "Untitled plan"}`.trim(),
+    SELECTION_TEXT_LIMIT
+  );
+
+  return [
+    `${label}: ${goal}`,
+    plan.goalReason
+      ? `  Reason: ${compactText(plan.goalReason, SELECTION_TEXT_LIMIT)}`
+      : null,
+    plan.outlineType ? `  Type: ${plan.outlineType}` : null,
+    plan.timesPerWeek ? `  Frequency: ${plan.timesPerWeek}x/week` : null,
+    plan.estimatedWeeks ? `  Estimated weeks: ${plan.estimatedWeeks}` : null,
+    plan.coachId ? `  Coach ID: ${plan.coachId}` : null,
+    typeof plan.sessionsCount === "number"
+      ? `  Sessions generated: ${plan.sessionsCount}`
+      : null,
+  ].filter((line): line is string => line !== null);
+}
+
+function formatOnboardingCoachSelection(
+  selections: NonNullable<OnboardingProgressSnapshot["selections"]>
+) {
+  if (selections.selectedCoach) {
+    return [
+      selections.selectedCoach.name || selections.selectedCoach.username,
+      selections.selectedCoach.title,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+  }
+
+  if (selections.wantsCoaching === true) {
+    return `AI (${formatNullable(selections.coachPersonality)})`;
+  }
+
+  if (selections.wantsCoaching === false) {
+    return "self-guided";
+  }
+
+  return "not selected";
+}
+
+function formatOnboardingProgress(
+  progress: unknown,
+  progressUpdatedAt: Date | null | undefined
+) {
+  const snapshot = parseOnboardingProgressSnapshot(progress);
+  if (!snapshot) {
+    return [
+      "",
+      "Dropped at:",
+      "Stage: unknown",
+      "",
+      "Selections:",
+      "- no onboarding progress snapshot saved",
+    ];
+  }
+
+  const selections = snapshot.selections || {};
+  const currentStep = snapshot.currentStep || null;
+  const stepLabel = snapshot.currentStepLabel || formatStepLabel(currentStep);
+  const stepPosition =
+    snapshot.currentStepIndex && snapshot.totalSteps
+      ? ` (${snapshot.currentStepIndex}/${snapshot.totalSteps})`
+      : "";
+  const completedLabels =
+    snapshot.completedStepLabels && snapshot.completedStepLabels.length > 0
+      ? snapshot.completedStepLabels.join(", ")
+      : "none";
+
+  const generatedPlanLines =
+    selections.generatedPlans && selections.generatedPlans.length > 0
+      ? selections.generatedPlans.flatMap((plan, index) =>
+          formatOnboardingProgressPlan(`Generated plan ${index + 1}`, plan)
+        )
+      : ["Generated plans: none"];
+
+  return [
+    "",
+    "Dropped at:",
+    `Stage: ${stepLabel}${stepPosition}`,
+    `Step ID: ${formatNullable(currentStep)}`,
+    `Completed steps: ${completedLabels}`,
+    progressUpdatedAt
+      ? `Progress snapshot updated: ${progressUpdatedAt.toISOString()}`
+      : null,
+    "",
+    "Selections:",
+    `Goal: ${compactText(
+      `${selections.planEmoji || ""} ${selections.planGoal || ""}`.trim(),
+      SELECTION_TEXT_LIMIT
+    ) || "not selected"}`,
+    `Goal reason: ${
+      compactText(selections.planGoalReason, SELECTION_TEXT_LIMIT) ||
+      "not selected"
+    }`,
+    selections.planCoachNotes
+      ? `Reason notes: ${compactText(selections.planCoachNotes, SELECTION_TEXT_LIMIT)}`
+      : null,
+    `Frequency: ${formatNullable(selections.planTimesPerWeek)}${
+      selections.planTimesPerWeek ? "x/week" : ""
+    }`,
+    `Starting level: ${
+      compactText(selections.planProgress, SELECTION_TEXT_LIMIT) ||
+      "not selected"
+    }`,
+    `Plan type: ${formatNullable(selections.planType)}`,
+    `Wants coaching: ${formatNullable(selections.wantsCoaching)}`,
+    `Coach: ${formatOnboardingCoachSelection(selections)}`,
+    `Push granted: ${formatNullable(selections.isPushGranted)}`,
+    `Community partner: ${formatNullable(selections.partnerType)}`,
+    "",
+    `Selected activities (${selections.planActivities?.length || 0}):`,
+    ...formatOnboardingProgressActivities(selections.planActivities),
+    "",
+    ...generatedPlanLines,
+    ...formatOnboardingProgressPlan("Selected plan", selections.selectedPlan),
+  ].filter((line): line is string => line !== null);
 }
 
 function describePlanCadence(plan: OnboardingCompletionPlan) {
@@ -274,14 +459,22 @@ class OnboardingNotificationService {
         });
 
         await this.telegram.sendPlainMessage(
-          [
-            "ONBOARDING DROPPED",
-            "",
-            formatUser(user),
-            `Plans: ${planCount}`,
-            "Reason: onboarding incomplete with at least 1 hour of inactivity",
-            `Time: ${now.toISOString()}`,
-          ].join("\n")
+          truncate(
+            [
+              "ONBOARDING DROPPED",
+              "",
+              formatUser(user),
+              `Plans: ${planCount}`,
+              "Reason: onboarding incomplete with at least 1 hour of inactivity",
+              ...formatOnboardingProgress(
+                user.onboardingProgress,
+                user.onboardingProgressUpdatedAt
+              ),
+              "",
+              `Time: ${now.toISOString()}`,
+            ].join("\n"),
+            TELEGRAM_MESSAGE_LIMIT
+          )
         );
 
         notified.push(user.username || user.email);

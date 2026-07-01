@@ -247,6 +247,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
 
     // Build select object to only fetch columns that exist in source database
     const sourceUserSelect = buildSelectForExistingColumns(sourceUserColumns);
+    const targetUserSelect = buildSelectForExistingColumns(targetUserColumns);
 
     const users = await sourcePrisma.user.findMany({
       select: sourceUserSelect as any,
@@ -285,6 +286,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
           ...updateData,
           ...(commonColumns.has("referredById") ? { referredById: null } : {}), // Will be updated in second pass
         } as any,
+        select: targetUserSelect as any,
       });
     }
 
@@ -296,6 +298,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
           await targetPrisma.user.update({
             where: { id },
             data: { referredById },
+            select: targetUserSelect as any,
           });
         }
       }
@@ -934,14 +937,16 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
     );
 
     // Find your user (the one you'll log in as)
-    const myUser = await targetPrisma.user.findUnique({
+    const myUser = (await targetPrisma.user.findUnique({
       where: { email: LOGIN_EMAIL },
-    });
+      select: targetUserSelect as any,
+    })) as Record<string, any> | null;
 
     // Find the target user to impersonate
-    const targetUser = await targetPrisma.user.findUnique({
+    const targetUser = (await targetPrisma.user.findUnique({
       where: { username: impersonateUser },
-    });
+      select: targetUserSelect as any,
+    })) as Record<string, any> | null;
 
     if (!targetUser || !myUser) {
       console.warn(
@@ -966,9 +971,10 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
           `⚠️  No auth id available for ${LOGIN_EMAIL}; could not set up impersonation.`
         );
       } else {
-        const authOwner = await targetPrisma.user.findUnique({
+        const authOwner = (await targetPrisma.user.findUnique({
           where: { supabaseAuthId: loginAuthId },
-        });
+          select: targetUserSelect as any,
+        })) as Record<string, any> | null;
 
         await targetPrisma.$transaction(async (tx) => {
           if (authOwner && authOwner.id !== targetUser.id) {
@@ -977,6 +983,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
               data: {
                 supabaseAuthId: `--impersonating-${impersonateUser}-${authOwner.id}--`,
               },
+              select: targetUserSelect as any,
             });
           }
 
@@ -985,6 +992,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
             data: {
               supabaseAuthId: loginAuthId,
             },
+            select: targetUserSelect as any,
           });
         });
 

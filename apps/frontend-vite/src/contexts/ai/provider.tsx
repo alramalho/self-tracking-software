@@ -374,6 +374,26 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
             return { ...msg, activityLogProposals: updated };
           })
       );
+      queryClient.invalidateQueries({
+        queryKey: ["messages", messagesContext.currentChatId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
+
+      void Promise.all([
+        queryClient.refetchQueries({ queryKey: ["activity-entries"] }),
+        queryClient.refetchQueries({ queryKey: ["plans"] }),
+      ]).catch((error) => {
+        handleQueryError(
+          error,
+          "Failed to refresh activity data after AI activity log"
+        );
+      });
       toast.success("Activity logged!");
     },
     onError: (error) => {

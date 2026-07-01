@@ -50,6 +50,8 @@ model User {
   recommendationsLastCalculatedAt DateTime?
   onboardingCompletedAt           DateTime?
   onboardingDropNotifiedAt         DateTime?
+  onboardingProgress               Json?
+  onboardingProgressUpdatedAt      DateTime?
   lastSeenTimelineAt              DateTime?
 
   // Daily checkin settings

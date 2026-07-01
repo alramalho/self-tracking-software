@@ -74,6 +74,7 @@ export interface OnboardingState {
   selectedPlan: CompletePlan | null;
   planGoal: string | null;
   planGoalReason: string | null;
+  planCoachNotes?: string | null;
   planEmoji: string | null;
   planActivities: Activity[];
   planProgress: string | null;

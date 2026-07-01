@@ -21,7 +21,7 @@ import {
   executePlanProposalPatch,
   getProposalPatch,
 } from "../services/planProposalPatchService";
-import { getNextPlanSortOrder } from "../services/plansService";
+import { getNextPlanSortOrder, plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
@@ -2361,8 +2361,9 @@ router.post(
         },
       });
 
+      let activityEntry: { id: string };
       if (existingEntry) {
-        await prisma.activityEntry.update({
+        activityEntry = await prisma.activityEntry.update({
           where: { id: existingEntry.id },
           data: {
             quantity: existingEntry.quantity + proposal.quantity,
@@ -2379,7 +2380,7 @@ router.post(
           },
         });
       } else {
-        await prisma.activityEntry.create({
+        activityEntry = await prisma.activityEntry.create({
           data: {
             activityId: proposal.activityId,
             userId: user.id,
@@ -2392,6 +2393,47 @@ router.post(
         });
       }
 
+      const [affectedPlans] = await Promise.all([
+        prisma.plan.findMany({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+            activities: {
+              some: {
+                id: activity.id,
+              },
+            },
+          },
+        }),
+        prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lastActiveAt: new Date(),
+          },
+        }),
+      ]);
+
+      const affectedPlanIds = affectedPlans.map((plan) => plan.id);
+      if (affectedPlanIds.length > 0) {
+        await prisma.plan.updateMany({
+          where: { id: { in: affectedPlanIds } },
+          data: { progressCalculatedAt: null },
+        });
+      }
+
+      if (user.planType === "PLUS") {
+        for (const plan of affectedPlans) {
+          void plansService
+            .recalculateCurrentWeekState(plan, user)
+            .catch((error) => {
+              logger.error(
+                `Error recalculating plan state for plan ${plan.id} after AI activity log acceptance:`,
+                error,
+              );
+            });
+        }
+      }
+
       // Update proposal status in metadata
       metadata.activityLogProposals[proposalIndex].status = "accepted";
       await prisma.message.update({
@@ -2400,7 +2442,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date}`,
+        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date} (entry ${activityEntry.id})`,
       );
 
       res.json({ success: true });

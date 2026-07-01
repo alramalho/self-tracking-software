@@ -133,7 +133,13 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
     )
     .forEach((plan) => {
       cards.push({
-        node: <PlanCard key={plan.id} plan={plan} />,
+        node: (
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            activityEntries={activityEntries}
+          />
+        ),
         span: 1,
       });
     });

@@ -21,6 +21,9 @@ const ESCALATION_DELAYS_BY_KIND: Record<string, number[]> = {
   inactivity_pause: [48, 96],
   inactivity_archive: [48, 96],
   plan_adjustment: [48, 96],
+  // Metric-logging nudge: one-and-done. Raise once, then park (it auto-resolves
+  // the moment the user logs a metric).
+  metric_logging_gap: [],
 };
 const PARK_HOURS = 365 * 24;
 

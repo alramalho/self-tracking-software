@@ -3,7 +3,8 @@
 import api from "@/lib/api";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
-import { UserRound, Route, Check, Users } from "lucide-react";
+import { UserRound, Route, Check } from "lucide-react";
+import { getCoachAvatar } from "@/lib/coachPersonality";
 import { useEffect, useState } from "react";
 
 const CoachingSelector = () => {
@@ -38,11 +39,25 @@ const CoachingSelector = () => {
       value: true,
       title: "Coaching",
       description: "Get a coach that checks in when your plan needs attention",
-      icon: Users,
+      icon: (
+        <div className="flex items-center justify-center -space-x-3">
+          <img
+            src={getCoachAvatar("CHAMPION", "coachSmiling")}
+            alt="Helly"
+            className="h-12 w-12 object-contain"
+          />
+          <img
+            src={getCoachAvatar("STRATEGIST", "coachSmiling")}
+            alt="Oli"
+            className="h-12 w-12 object-contain"
+          />
+        </div>
+      ),
       features: [
+        "Free trial",
         "Proactive check-ins for missed, stale, or upcoming work",
         "Plan changes suggested only when they help",
-        "AI or Human coached",
+        "Choose Helly or Oli as your AI coach",
         "Great for: progressive and clear objective plans",
       ],
     },
@@ -51,8 +66,9 @@ const CoachingSelector = () => {
       value: false,
       title: "Self-Guided",
       description: "Build your own routine with activities you choose",
-      icon: UserRound,
+      icon: <UserRound className="h-8 w-8 text-muted-foreground" />,
       features: [
+        "Free",
         "On a times per week basis",
         "Great for: recurring habits, simple tracking",
       ],
@@ -75,7 +91,6 @@ const CoachingSelector = () => {
 
       <div className="space-y-4">
         {options.map((option) => {
-          const Icon = option.icon;
           const isRecommended = recommendsCoaching !== null && option.value === recommendsCoaching;
 
           return (
@@ -86,12 +101,12 @@ const CoachingSelector = () => {
                 isRecommended ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20" : "border-border"
               }`}
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-muted">
-                  <Icon className="w-6 h-6 text-muted-foreground" />
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="flex h-16 w-20 items-center justify-center rounded-lg bg-muted">
+                  {option.icon}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                <div className="w-full">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <h3 className="text-lg font-semibold text-foreground">
                       {option.title}
                     </h3>
@@ -104,11 +119,11 @@ const CoachingSelector = () => {
                   <p className="text-sm mt-1 text-muted-foreground">
                     {option.description}
                   </p>
-                  <ul className="mt-3 space-y-1">
+                  <ul className="mt-4 space-y-2 text-left">
                     {option.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
                         <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        {feature}
+                        <span>{feature}</span>
                       </li>
                     ))}
                   </ul>

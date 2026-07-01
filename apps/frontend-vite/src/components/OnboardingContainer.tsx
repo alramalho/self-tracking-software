@@ -15,7 +15,7 @@ export const OnboardingContainer = ({
   }, [posthog, name]);
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
+    <div className="h-full min-h-0 w-full overflow-y-auto overscroll-contain px-4 pb-8 pt-12 [-webkit-overflow-scrolling:touch]">
       <div className="space-y-6 w-full max-w-md mx-auto">{children}</div>
     </div>
   );

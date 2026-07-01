@@ -16,6 +16,64 @@ import dedent from "dedent";
 
 const router = Router();
 
+const onboardingProgressActivitySchema = z.object({
+  id: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  emoji: z.string().nullable().optional(),
+  measure: z.string().nullable().optional(),
+});
+
+const onboardingProgressCoachSchema = z.object({
+  id: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  username: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+});
+
+const onboardingProgressPlanSchema = z.object({
+  id: z.string().nullable().optional(),
+  goal: z.string().nullable().optional(),
+  emoji: z.string().nullable().optional(),
+  goalReason: z.string().nullable().optional(),
+  outlineType: z.string().nullable().optional(),
+  timesPerWeek: z.number().int().nullable().optional(),
+  estimatedWeeks: z.number().int().nullable().optional(),
+  coachId: z.string().nullable().optional(),
+  activities: z.array(onboardingProgressActivitySchema).optional(),
+  sessionsCount: z.number().int().nullable().optional(),
+});
+
+const onboardingProgressSnapshotSchema = z.object({
+  snapshotVersion: z.number().int().optional(),
+  currentStep: z.string().min(1),
+  currentStepLabel: z.string().nullable().optional(),
+  currentStepIndex: z.number().int().nullable().optional(),
+  totalSteps: z.number().int().nullable().optional(),
+  completedSteps: z.array(z.string()).default([]),
+  completedStepLabels: z.array(z.string()).optional(),
+  selections: z
+    .object({
+      planId: z.string().nullable().optional(),
+      planGoal: z.string().nullable().optional(),
+      planGoalReason: z.string().nullable().optional(),
+      planCoachNotes: z.string().nullable().optional(),
+      planEmoji: z.string().nullable().optional(),
+      planType: z.string().nullable().optional(),
+      planTimesPerWeek: z.number().int().nullable().optional(),
+      planProgress: z.string().nullable().optional(),
+      wantsCoaching: z.boolean().nullable().optional(),
+      coachPersonality: z.string().nullable().optional(),
+      selectedCoachId: z.string().nullable().optional(),
+      selectedCoach: onboardingProgressCoachSchema.nullable().optional(),
+      partnerType: z.string().nullable().optional(),
+      isPushGranted: z.boolean().nullable().optional(),
+      planActivities: z.array(onboardingProgressActivitySchema).optional(),
+      generatedPlans: z.array(onboardingProgressPlanSchema).optional(),
+      selectedPlan: onboardingProgressPlanSchema.nullable().optional(),
+    })
+    .default({}),
+});
+
 function markOnboardingActivity(req: AuthenticatedRequest) {
   void onboardingNotificationService.markOnboardingActivity(req.user!.id);
 }
@@ -28,6 +86,37 @@ function fallbackExtractedPlans(message: string): {
     plans: goal ? [{ goal, emoji: "🎯", goalReason: null }] : [],
   };
 }
+
+router.post(
+  "/progress",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+      const parsed = onboardingProgressSnapshotSchema.safeParse(req.body);
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: "invalid onboarding progress" });
+      }
+
+      const now = new Date();
+      const progress = JSON.parse(JSON.stringify(parsed.data));
+
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          lastActiveAt: now,
+          onboardingProgress: progress,
+          onboardingProgressUpdatedAt: now,
+        },
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Error saving onboarding progress:", error);
+      res.status(500).json({ error: "Failed to save onboarding progress" });
+    }
+  }
+);
 
 router.post(
   "/suggest-goal-reasons",

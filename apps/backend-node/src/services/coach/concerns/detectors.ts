@@ -33,6 +33,9 @@ export const CONCERN_KIND = {
   INACTIVITY_PAUSE: "inactivity_pause",
   INACTIVITY_CHECKIN: "inactivity_checkin",
   PLAN_ADJUSTMENT: "plan_adjustment",
+  // User-level: tracks metrics but has stopped logging them. Modeled as a concern
+  // (not a lens) so it dedupes and auto-resolves the moment they log again.
+  METRIC_LOGGING_GAP: "metric_logging_gap",
 } as const;
 
 // Severity ordering mirrors the legacy INTERVENTION_PRIORITY for the problem
@@ -43,7 +46,11 @@ const SEVERITY = {
   ATTENTION_BASE: 70,
   PLAN_ADJUSTMENT: 60,
   INACTIVITY_CHECKIN: 20,
+  // Lowest priority: only surfaces in a quiet week, never displaces a real problem.
+  METRIC_LOGGING_GAP: 15,
 } as const;
+
+const METRIC_GAP_LOOKBACK_DAYS = 14;
 
 function attentionSeverityBump(severity: CoachAttentionItem["severity"]): number {
   if (severity === "critical") return 20;
@@ -182,5 +189,53 @@ export async function detectConcernsForUser(
 
   }
 
+  // 3. User-level: metric-logging gap (no plan).
+  const metricGap = await detectMetricLoggingGap(user.id, now);
+  if (metricGap) {
+    observations.push({
+      userId: user.id,
+      planId: null,
+      kind: CONCERN_KIND.METRIC_LOGGING_GAP,
+      severity: SEVERITY.METRIC_LOGGING_GAP,
+      data: metricGap,
+    });
+  }
+
   return observations;
+}
+
+// The user tracks at least one metric but has logged none in the lookback window.
+// Returns the concern's evidence, or null when there is nothing to nudge.
+async function detectMetricLoggingGap(
+  userId: string,
+  now: Date
+): Promise<Record<string, unknown> | null> {
+  const from = subDays(now, METRIC_GAP_LOOKBACK_DAYS);
+  const [metricCount, entriesInLookback, latestEntry] = await Promise.all([
+    prisma.metric.count({ where: { userId } }),
+    prisma.metricEntry.count({
+      where: { userId, createdAt: { gte: from, lte: now } },
+    }),
+    prisma.metricEntry.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  if (metricCount === 0 || entriesInLookback > 0) return null;
+
+  const daysSinceLastLog = latestEntry
+    ? differenceInCalendarDays(now, latestEntry.createdAt)
+    : null;
+
+  return {
+    metricCount,
+    daysSinceLastLog,
+    lookbackDays: METRIC_GAP_LOOKBACK_DAYS,
+    summary:
+      daysSinceLastLog === null
+        ? `Tracks ${metricCount} metric${metricCount === 1 ? "" : "s"} but has never logged an entry.`
+        : `Tracks ${metricCount} metric${metricCount === 1 ? "" : "s"} but has not logged a metric in ${daysSinceLastLog} days.`,
+  };
 }

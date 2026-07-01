@@ -6,7 +6,7 @@ import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
-import { addMonths, isBefore } from "date-fns";
+import { addMonths } from "date-fns";
 import { Archive, ArchiveRestore, Loader2, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -16,6 +16,11 @@ import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { capitalize } from "@/lib/utils";
+import {
+  isActivePlanForSelection,
+  isPlanArchived,
+  isPlanExpired,
+} from "@/utils/planVisibility";
 import { twMerge } from "tailwind-merge";
 import {
   DndContext,
@@ -34,21 +39,6 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
-// Helper function to check if a plan is expired
-export const isPlanExpired = (plan: {
-  finishingDate: Date | null;
-}): boolean => {
-  if (!plan.finishingDate) return false;
-  return isBefore(plan.finishingDate, new Date());
-};
-
-// Helper function to check if a plan is archived
-export const isPlanArchived = (plan: {
-  archivedAt?: Date | null;
-}): boolean => {
-  return !!plan.archivedAt;
-};
 
 const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
 
@@ -236,7 +226,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const displayedPlans = useMemo(() => {
     return showOldPlans
       ? orderedPlans
-      : orderedPlans.filter((plan) => !isPlanExpired(plan) && !isPlanArchived(plan));
+      : orderedPlans.filter(isActivePlanForSelection);
   }, [orderedPlans, showOldPlans]);
 
   const displayedPlanIds = useMemo(() => {

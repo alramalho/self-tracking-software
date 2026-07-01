@@ -9,15 +9,18 @@ import {
 } from "@/components/ui/drawer";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
 import { Eye, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 type SuggestedActivity = { title: string; emoji: string; measure: string };
+type SuggestionTone = "theme" | "blue";
 
 interface CoachActivitySuggestionCardProps {
   suggestion: SuggestedActivity;
   planGoal?: string | null;
   isCreating?: boolean;
+  tone?: SuggestionTone;
   onAccept: () => void | Promise<void>;
   onReject: () => void;
 }
@@ -26,10 +29,12 @@ export function CoachActivitySuggestionCard({
   suggestion,
   planGoal,
   isCreating = false,
+  tone = "theme",
   onAccept,
   onReject,
 }: CoachActivitySuggestionCardProps) {
   const themeColors = useThemeColors();
+  const colors = tone === "blue" ? getThemeVariants("blue") : themeColors;
   const [open, setOpen] = useState(false);
 
   const handleAccept = async () => {
@@ -44,11 +49,16 @@ export function CoachActivitySuggestionCard({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <div
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={isCreating}
+        aria-label={`Review ${suggestion.title} suggestion`}
         className={cn(
-          "flex items-center w-full rounded-lg border-2 border-dashed p-3 transition-all",
-          themeColors.border,
-          themeColors.veryFadedBg
+          "flex items-center w-full rounded-lg border-2 border-dashed p-3 text-left transition-all",
+          "cursor-pointer disabled:cursor-default disabled:opacity-80",
+          colors.border,
+          colors.veryFadedBg
         )}
       >
         <span className="text-3xl mr-3">{suggestion.emoji}</span>
@@ -63,15 +73,11 @@ export function CoachActivitySuggestionCard({
             New activity suggestion
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          disabled={isCreating}
-          aria-label={`Review ${suggestion.title} suggestion`}
+        <span
           className={cn(
-            "p-2 rounded-full transition-colors disabled:pointer-events-none disabled:opacity-50",
-            themeColors.text,
-            themeColors.hover
+            "p-2 rounded-full transition-colors",
+            colors.text,
+            !isCreating && colors.hover
           )}
         >
           {isCreating ? (
@@ -79,8 +85,8 @@ export function CoachActivitySuggestionCard({
           ) : (
             <Eye className="w-4 h-4" />
           )}
-        </button>
-      </div>
+        </span>
+      </button>
 
       <DrawerContent className="px-4 pb-4">
         <DrawerHeader className="px-0 text-left">
@@ -94,8 +100,8 @@ export function CoachActivitySuggestionCard({
         <div
           className={cn(
             "rounded-lg border p-4",
-            themeColors.brightBorder,
-            themeColors.veryFadedBg
+            colors.brightBorder,
+            colors.veryFadedBg
           )}
         >
           <div className="flex items-center gap-3">
@@ -127,7 +133,7 @@ export function CoachActivitySuggestionCard({
               onClick={handleAccept}
               disabled={isCreating}
               loading={isCreating}
-              className={themeColors.button.solid}
+              className={colors.button.solid}
             >
               Accept
             </Button>
