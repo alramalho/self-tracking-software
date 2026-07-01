@@ -483,6 +483,155 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
     );
   };
 
+  const renderCoachPersonalityCards = () => {
+    if (humanCoach) return null;
+
+    return (
+      <div className="grid grid-cols-2 gap-2 px-2 py-2">
+        {coachPersonalityOptions.map((coach) => {
+          const selected = selectedPersonality === coach.id;
+
+          return (
+            <button
+              key={coach.id}
+              type="button"
+              disabled={coachPersonalityDisabled}
+              onClick={() => selectPersonality(coach.id)}
+              aria-label={`Select ${coach.label}`}
+              className={cn(
+                "relative flex min-h-[9.75rem] w-full flex-col items-center rounded-lg border p-3 text-center transition-all disabled:cursor-not-allowed disabled:opacity-70",
+                selected
+                  ? coach.accentClassName
+                  : "border-border bg-card/70 hover:bg-accent/50"
+              )}
+            >
+              {selected && (
+                <Check
+                  className={cn(
+                    "absolute right-2 top-2 h-4 w-4",
+                    coachTextClassName[coach.id]
+                  )}
+                />
+              )}
+              <img
+                src={getCoachAvatar(
+                  coach.id,
+                  selected ? "coachSmiling" : "neutral"
+                )}
+                alt={coach.label}
+                className="h-16 w-16 object-contain"
+              />
+              <div className="mt-2 min-w-0 space-y-1">
+                <p className="text-sm font-semibold leading-tight text-foreground">
+                  {coach.label}
+                </p>
+                <p className="text-xs font-medium leading-snug text-foreground">
+                  {coach.shortChoice}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const demoPopoverTitle =
+    activeDemo === "home"
+      ? "Coach homepage demo"
+      : activeDemo === "plan-action"
+        ? "Coach plan action demo"
+        : "Coach metrics demo";
+
+  const renderDemoPopoverContent = () => {
+    if (activeDemo === "home") {
+      return (
+        <div className="pt-5">
+          <p className="mb-4 text-md text-muted-foreground font-semibold">
+            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage,{" "}
+            {aiCoach.name} keeps the plan state and pending actions easy to
+            spot.
+          </p>
+          <MockHomeActionCards personality={selectedPersonality} />
+        </div>
+      );
+    }
+
+    if (activeDemo === "plan-action") {
+      return (
+        <div className="space-y-3 pt-4">
+          <p className="text-sm text-muted-foreground font-semibold">
+            On the <Target className="w-5 h-5 inline-block mb-1" /> Plans page,{" "}
+            {aiCoach.name} can explain the risk and show the exact change to
+            accept or reject.
+          </p>
+          <MockCoachActionMessages personality={selectedPersonality} />
+        </div>
+      );
+    }
+
+    if (activeDemo === "metrics") {
+      return (
+        <div className="flex flex-col gap-2 pt-5">
+          <p className="text-md text-muted-foreground">
+            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage,
+            you will be prompted with a daily metric log.
+          </p>
+          <div className="text-left pb-5 pointer-events-none">
+            <MetricIsland
+              metric={dummyMetric}
+              isLoggedToday={false}
+              className="bg-card"
+            />
+            <p className="text-md text-muted-foreground mt-3">
+              You can then find both a weekly view of your metrics and useful
+              correlations.
+            </p>
+            <MetricWeeklyView
+              metric={dummyMetric}
+              weekData={[3, 4, 0, 5, 4, 3, 4]}
+              color="blue"
+              hasAnyData={true}
+              positiveCorrelations={[
+                {
+                  activity: {
+                    id: "exercise",
+                    title: "Exercise",
+                    emoji: "🏃‍♂️",
+                    measure: "minutes",
+                  } as Activity,
+                  correlation: 0.65,
+                },
+                {
+                  activity: {
+                    id: "meditation",
+                    title: "Meditation",
+                    emoji: "🧘‍♂️",
+                    measure: "minutes",
+                  } as Activity,
+                  correlation: 0.45,
+                },
+              ]}
+              className="bg-card"
+            />
+            <p className="text-md text-muted-foreground mt-3">
+              Or an even more in-depth view on the
+              <br />
+              <img
+                src={getCoachAvatar(selectedPersonality, "coachSmiling")}
+                alt=""
+                className="mb-1 inline-block h-6 w-6 object-contain"
+              />{" "}
+              Insights page.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <>
       <div className="w-full max-w-lg space-y-2">
@@ -560,56 +709,6 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
           )}
         </p>
       </div>
-
-      {!humanCoach && (
-        <div className="grid gap-2 px-2 py-2">
-          {coachPersonalityOptions.map((coach) => {
-            const selected = selectedPersonality === coach.id;
-
-            return (
-              <button
-                key={coach.id}
-                type="button"
-                disabled={coachPersonalityDisabled}
-                onClick={() => selectPersonality(coach.id)}
-                className={cn(
-                  "relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-70",
-                  selected
-                    ? coach.accentClassName
-                    : "border-border bg-card/70 hover:bg-accent/50"
-                )}
-              >
-                <img
-                  src={getCoachAvatar(
-                    coach.id,
-                    selected ? "coachSmiling" : "neutral"
-                  )}
-                  alt={coach.label}
-                  className="h-12 w-12 shrink-0 object-contain"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {coach.label}
-                    </p>
-                    {selected && (
-                      <Check
-                        className={cn("h-4 w-4", coachTextClassName[coach.id])}
-                      />
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-xs font-medium text-foreground">
-                    {coach.shortChoice}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                    {coach.description}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {inlineDemos && !humanCoach && (
         <div className="space-y-1 py-2">
@@ -692,102 +791,21 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
         </>
       )}
 
+      {renderCoachPersonalityCards()}
+
       {children}
     </div>
 
-      <AppleLikePopover
-        open={activeDemo === "home"}
-        onClose={() => setActiveDemo(null)}
-        title="Coach homepage demo"
-        className="max-w-md"
-      >
-        <div className="pt-5">
-          <p className="mb-4 text-md text-muted-foreground font-semibold">
-            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage,{" "}
-            {aiCoach.name} keeps the plan state and pending actions easy to
-            spot.
-          </p>
-          <MockHomeActionCards personality={selectedPersonality} />
-        </div>
-      </AppleLikePopover>
-
-      <AppleLikePopover
-        open={activeDemo === "plan-action"}
-        onClose={() => setActiveDemo(null)}
-        title="Coach plan action demo"
-        className="max-w-md"
-      >
-        <div className="space-y-3 pt-4">
-          <p className="text-sm text-muted-foreground font-semibold">
-            On the <Target className="w-5 h-5 inline-block mb-1" /> Plans page,{" "}
-            {aiCoach.name} can explain the risk and show the exact change to
-            accept or reject.
-          </p>
-          <MockCoachActionMessages personality={selectedPersonality} />
-        </div>
-      </AppleLikePopover>
-
-      <AppleLikePopover
-        open={activeDemo === "metrics"}
-        onClose={() => setActiveDemo(null)}
-        title="Coach metrics demo"
-        className="max-w-md"
-      >
-        <div className="flex flex-col gap-2 pt-5">
-          <p className="text-md text-muted-foreground">
-            In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage,
-            you will be prompted with a daily metric log.
-          </p>
-          <div className="text-left pb-5 pointer-events-none">
-            <MetricIsland
-              metric={dummyMetric}
-              isLoggedToday={false}
-              className="bg-card"
-            />
-            <p className="text-md text-muted-foreground mt-3">
-              You can then find both a weekly view of your metrics and useful
-              correlations.
-            </p>
-            <MetricWeeklyView
-              metric={dummyMetric}
-              weekData={[3, 4, 0, 5, 4, 3, 4]}
-              color="blue"
-              hasAnyData={true}
-              positiveCorrelations={[
-                {
-                  activity: {
-                    id: "exercise",
-                    title: "Exercise",
-                    emoji: "🏃‍♂️",
-                    measure: "minutes",
-                  } as Activity,
-                  correlation: 0.65,
-                },
-                {
-                  activity: {
-                    id: "meditation",
-                    title: "Meditation",
-                    emoji: "🧘‍♂️",
-                    measure: "minutes",
-                  } as Activity,
-                  correlation: 0.45,
-                },
-              ]}
-              className="bg-card"
-            />
-            <p className="text-md text-muted-foreground mt-3">
-              Or an even more in-depth view on the
-              <br />
-              <img
-                src={getCoachAvatar(aiCoachPersonality, "coachSmiling")}
-                alt=""
-                className="mb-1 inline-block h-6 w-6 object-contain"
-              />{" "}
-              Insights page.
-            </p>
-          </div>
-        </div>
-      </AppleLikePopover>
+      {activeDemo && (
+        <AppleLikePopover
+          open={true}
+          onClose={() => setActiveDemo(null)}
+          title={demoPopoverTitle}
+          className="max-w-md"
+        >
+          {renderDemoPopoverContent()}
+        </AppleLikePopover>
+      )}
     </>
   );
 };

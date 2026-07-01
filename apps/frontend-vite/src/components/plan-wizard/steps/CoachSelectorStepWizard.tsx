@@ -6,7 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { useCurrentUser } from "@/contexts/users";
-import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import {
+  getCoachPersonalityConfig,
+  type CoachPersonality,
+} from "@/lib/coachPersonality";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, useMemo } from "react";
 
@@ -35,6 +38,8 @@ const CoachSelectorStepWizard = () => {
   const { setSelectedCoachId, completeStep, coachPersonality, setCoachPersonality } = usePlanCreation();
   const { currentUser, updateUser, isUpdatingUser } = useCurrentUser();
   const api = useApiWithAuth();
+  const [draftCoachPersonality, setDraftCoachPersonality] =
+    useState<CoachPersonality>(() => getCoachPersonalityConfig(coachPersonality).id);
 
   const [selectedCoachForPreview, setSelectedCoachForPreview] = useState<HumanCoach | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -56,9 +61,11 @@ const CoachSelectorStepWizard = () => {
 
   useEffect(() => {
     if (currentUser?.coachPersonality) {
-      setCoachPersonality(currentUser.coachPersonality);
+      setDraftCoachPersonality(
+        getCoachPersonalityConfig(currentUser.coachPersonality).id
+      );
     }
-  }, [currentUser?.coachPersonality, setCoachPersonality]);
+  }, [currentUser?.coachPersonality]);
 
   const handleSelectCoach = async (coachId: string | null) => {
     const selectedCoach = coachId
@@ -76,9 +83,10 @@ const CoachSelectorStepWizard = () => {
       : null;
 
     setSelectedCoachId(coachId, coachInfo);
+    setCoachPersonality(draftCoachPersonality);
     if (!coachId) {
       await updateUser({
-        updates: { coachPersonality },
+        updates: { coachPersonality: draftCoachPersonality },
         muteNotifications: true,
       });
     }
@@ -90,13 +98,13 @@ const CoachSelectorStepWizard = () => {
     setSelectedCoachForPreview(coach);
     setIsDrawerOpen(true);
   };
-  const selectedAICoach = getCoachPersonalityConfig(coachPersonality);
+  const selectedAICoach = getCoachPersonalityConfig(draftCoachPersonality);
 
   return (
     <div className="w-full max-w-lg space-y-5">
       <AICoachFeaturePreview
-        aiCoachPersonality={coachPersonality}
-        onCoachPersonalitySelect={setCoachPersonality}
+        aiCoachPersonality={draftCoachPersonality}
+        onCoachPersonalitySelect={setDraftCoachPersonality}
         coachPersonalityDisabled={isUpdatingUser}
       >
         <Button

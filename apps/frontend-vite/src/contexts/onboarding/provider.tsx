@@ -5,13 +5,15 @@ import { useCurrentUser } from "@/contexts/users";
 import useConfetti from "@/hooks/useConfetti";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useApiWithAuth } from "@/lib/api";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity } from "@tsw/prisma";
 import { usePostHog } from "posthog-js/react";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
 import { DEFAULT_COACH_PERSONALITY, type CoachPersonality } from "@/lib/coachPersonality";
+import { buildOnboardingProgressSnapshot } from "./progressSnapshot";
 import { OnboardingContext, type OnboardingContextValue, type OnboardingState, type OnboardingStep } from "./types";
 
 interface OnboardingProviderProps {
@@ -28,6 +30,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   const { updateUser, refetchCurrentUser } = useCurrentUser();
   const { sideCannons } = useConfetti();
   const { isPushGranted } = useNotifications();
+  const api = useApiWithAuth();
+  const lastSyncedProgressRef = useRef<string | null>(null);
   const [onboardingState, setOnboardingState] = useLocalStorage<OnboardingState>(
     "onboarding-state",
     {
@@ -37,6 +41,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       selectedPlan: null as CompletePlan | null,
       planGoal: null as string | null,
       planGoalReason: null as string | null,
+      planCoachNotes: null as string | null,
       planEmoji: null as string | null,
       planActivities: [] as Activity[],
       planProgress: null as string | null,
@@ -82,6 +87,26 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       }));
     }
   }, [isPushGranted]);
+
+  useEffect(() => {
+    if (!onboardingState.currentStep) return;
+
+    const snapshot = buildOnboardingProgressSnapshot(onboardingState, steps);
+    const serializedSnapshot = JSON.stringify(snapshot);
+    if (lastSyncedProgressRef.current === serializedSnapshot) return;
+
+    const timeoutId = window.setTimeout(() => {
+      lastSyncedProgressRef.current = serializedSnapshot;
+      api.post("/onboarding/progress", snapshot, { timeout: 10000 }).catch((error) => {
+        console.warn("Failed to sync onboarding progress:", error);
+        if (lastSyncedProgressRef.current === serializedSnapshot) {
+          lastSyncedProgressRef.current = null;
+        }
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [api, onboardingState, steps]);
 
   const setCurrentStep = (stepId: string) => {
     setOnboardingState((prevState) => ({ ...prevState, currentStep: stepId }));

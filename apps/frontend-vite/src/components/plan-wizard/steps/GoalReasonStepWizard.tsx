@@ -1,5 +1,5 @@
 import { useApiWithAuth } from "@/api";
-import { Button } from "@/components/ui/button";
+import { StickyStepActions } from "@/components/onboarding/sticky-step-actions/StickyStepActions";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
@@ -70,7 +70,7 @@ const GoalReasonStepWizard = () => {
   const hasSelection = selected.length > 0 && (!showOther || selected.length > 1 || customReason.trim());
 
   return (
-    <div className="flex flex-col items-center text-center space-y-6">
+    <div className="flex max-h-[calc(100dvh-2rem)] w-full flex-col items-center space-y-6 overflow-y-auto px-1 pb-36 pt-8 text-center">
       <Heart className="w-16 h-16 text-blue-600" />
 
       <div>
@@ -152,22 +152,13 @@ const GoalReasonStepWizard = () => {
         </div>
       )}
 
-      <div className="w-full space-y-3">
-        <Button
-          className="w-full"
-          onClick={handleSubmit}
-          disabled={!hasSelection}
-        >
-          Continue
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full text-muted-foreground"
-          onClick={handleSkip}
-        >
-          Skip for now
-        </Button>
-      </div>
+      <StickyStepActions
+        primaryLabel="Continue"
+        onPrimaryClick={handleSubmit}
+        primaryDisabled={!hasSelection}
+        secondaryLabel="Skip for now"
+        onSecondaryClick={handleSkip}
+      />
     </div>
   );
 };

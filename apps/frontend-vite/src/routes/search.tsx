@@ -1,6 +1,5 @@
 import { useApiWithAuth } from "@/api";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { CollapsibleSelfUserCard } from "@/components/CollapsibleSelfUserCard";
 import { RecommendedUsers } from "@/components/RecommendedUsers";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,10 +8,10 @@ import { usePlans } from "@/contexts/plans";
 import { useRecommendations } from "@/contexts/recommendations";
 import { useCurrentUser } from "@/contexts/users";
 import { useNotifications } from "@/hooks/useNotifications";
+import { isActivePlanForSelection } from "@/utils/planVisibility";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { isAfter } from "date-fns";
 import { Bell, ChevronDown, RefreshCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
@@ -29,13 +28,7 @@ function SearchPage() {
   const { refetchRecommendations } = useRecommendations();
 
   const activePlans = useMemo(
-    () =>
-      plans?.filter(
-        (plan) =>
-          plan.deletedAt === null &&
-          (plan.finishingDate === null ||
-            isAfter(plan.finishingDate, new Date()))
-      ) || [],
+    () => plans?.filter(isActivePlanForSelection) || [],
     [plans]
   );
 
@@ -44,10 +37,22 @@ function SearchPage() {
   );
   const [isRecomputingForPlan, setIsRecomputingForPlan] = useState(false);
 
-  // Update selected plan when active plans load
-  if (activePlans.length > 0 && !selectedPlanId) {
-    setSelectedPlanId(activePlans[0].id);
-  }
+  useEffect(() => {
+    if (activePlans.length === 0) {
+      if (selectedPlanId) {
+        setSelectedPlanId(null);
+      }
+      return;
+    }
+
+    const selectedPlanStillActive = activePlans.some(
+      (plan) => plan.id === selectedPlanId
+    );
+
+    if (!selectedPlanId || !selectedPlanStillActive) {
+      setSelectedPlanId(activePlans[0].id);
+    }
+  }, [activePlans, selectedPlanId]);
 
   function refreshRecommendations() {
     api.post("/users/compute-recommendations", {
@@ -70,7 +75,7 @@ function SearchPage() {
       });
       await refetchRecommendations();
       toast.success("Recommendations updated!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to update recommendations");
     } finally {
       setIsRecomputingForPlan(false);

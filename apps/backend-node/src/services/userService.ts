@@ -110,7 +110,7 @@ export class UserService {
     return user;
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User> {
+  async updateUser(id: string, data: Prisma.UserUpdateInput): Promise<User> {
     return prisma.user.update({
       where: { id },
       data,

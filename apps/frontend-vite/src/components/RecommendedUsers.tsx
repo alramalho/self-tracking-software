@@ -1,4 +1,5 @@
 import { MatchScoreExplainer } from "@/components/MatchScoreExplainer";
+import { getDedupedUserRecommendations } from "@/components/recommendations/partnerRecommendationFilters";
 import { SendMessagePopover } from "@/components/SendMessagePopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRecommendations } from "@/contexts/recommendations";
@@ -11,12 +12,14 @@ import React, { useState } from "react";
 
 interface RecommendedUsersProps {
   selectedPlanId: string | null;
+  minScore?: number;
 }
 
 type SortBy = "overall" | "goals" | "location" | "age";
 
 export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
   selectedPlanId,
+  minScore,
 }) => {
   const {
     recommendations,
@@ -39,33 +42,10 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
-  // Filter recommendations by selected plan
-  const userRecommendations = recommendations.filter((rec) => {
-    if (rec.recommendationObjectType !== "USER") return false;
-
-    // Filter by selected plan if specified
-    if (
-      selectedPlanId &&
-      typeof rec.metadata === "object" &&
-      rec.metadata !== null
-    ) {
-      return (rec.metadata as any).relativeToPlanId === selectedPlanId;
-    }
-
-    return true;
-  });
-
-  const deduplicatedRecommendations = userRecommendations.reduce((acc, rec) => {
-    const existing = acc.find(
-      (r) => r.recommendationObjectId === rec.recommendationObjectId
-    );
-    if (!existing || rec.score > existing.score) {
-      return acc
-        .filter((r) => r.recommendationObjectId !== rec.recommendationObjectId)
-        .concat(rec);
-    }
-    return acc;
-  }, [] as typeof userRecommendations);
+  const deduplicatedRecommendations = getDedupedUserRecommendations(
+    recommendations,
+    { selectedPlanId, minScore }
+  );
 
   // Sort recommendations based on user preference
   const sortedRecommendations = [...deduplicatedRecommendations].sort(

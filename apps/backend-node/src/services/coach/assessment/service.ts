@@ -31,7 +31,11 @@ import {
   formatCoachAttentionContext,
   type CoachAttentionItem,
 } from "../../coachAttentionService";
-import { coachContextBriefService } from "../../coachContextBriefService";
+import {
+  buildCoachContextBrief,
+  formatSelectedInsight,
+  pickInsightForCandidate,
+} from "./contextBrief";
 import { getCoachPersonalityConfig } from "../../coachPersonalityService";
 import { notificationService } from "../../notificationService";
 import { cancelPendingPlanCreationProposals } from "../../planCreationProposalStatusService";
@@ -602,73 +606,6 @@ export class CoachAssessmentService {
     return { processed, accepted, errors };
   }
 
-  private async executeProposalOperations(
-    plan: Plan & { activities: Activity[]; sessions: PlanSession[] },
-    operations: any[],
-  ): Promise<void> {
-    for (const op of operations) {
-      if (op.type === "add") {
-        const sessionDate = new Date(op.date);
-        await prisma.planSession.create({
-          data: {
-            planId: plan.id,
-            activityId: op.activityId,
-            date: new Date(
-              Date.UTC(
-                sessionDate.getFullYear(),
-                sessionDate.getMonth(),
-                sessionDate.getDate(),
-              ),
-            ),
-            quantity: op.quantity,
-            descriptiveGuide: op.descriptiveGuide || "",
-            isCoachSuggested: true,
-          },
-        });
-      } else if (op.type === "update") {
-        const updateData: Record<string, unknown> = {};
-        if (op.date) {
-          const d = new Date(op.date);
-          updateData.date = new Date(
-            Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
-          );
-        }
-        if (op.quantity !== undefined) updateData.quantity = op.quantity;
-        if (op.descriptiveGuide !== undefined)
-          updateData.descriptiveGuide = op.descriptiveGuide;
-        await prisma.planSession.update({
-          where: { id: op.sessionId },
-          data: updateData,
-        });
-      } else if (op.type === "remove") {
-        await prisma.planSession.delete({ where: { id: op.sessionId } });
-      } else if (op.type === "pause") {
-        const pauseHistory = ((plan as any).pauseHistory as any[]) || [];
-        pauseHistory.push({
-          pausedAt: new Date().toISOString(),
-          reason: op.reason || "Coach paused due to inactivity",
-        });
-        await prisma.plan.update({
-          where: { id: plan.id },
-          data: {
-            isPaused: true,
-            pauseReason: op.reason || "Coach paused due to inactivity",
-            pauseHistory,
-          },
-        });
-      } else if (op.type === "archive") {
-        await prisma.plan.update({
-          where: { id: plan.id },
-          data: {
-            archivedAt: new Date(),
-            coachSuggestedTimesPerWeek: null,
-            coachNotes: null,
-          },
-        });
-      }
-    }
-  }
-
   private async assessUser(
     user: CoachUser,
     options: AssessOptions,
@@ -730,17 +667,16 @@ export class CoachAssessmentService {
     );
 
     if (candidate && candidate.type !== "COACH_SETUP") {
-      const brief = await coachContextBriefService.buildCoachContextBrief({
+      const brief = await buildCoachContextBrief({
         user,
         plans: user.plans,
         now,
       });
-      const selectedInsight = coachContextBriefService.pickInsightForCandidate({
+      const selectedInsight = pickInsightForCandidate({
         candidate: candidate as any,
         brief,
       });
-      candidate.context +=
-        coachContextBriefService.formatSelectedInsight(selectedInsight);
+      candidate.context += formatSelectedInsight(selectedInsight);
     }
 
     if (dry_run) {
