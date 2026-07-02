@@ -1,5 +1,6 @@
 
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
+import { CoachPlansOverview } from "@/components/plans/CoachPlansOverview";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
@@ -490,6 +491,8 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const hasExpiredOrArchivedPlans = orderedPlans.some((plan) => isPlanExpired(plan) || isPlanArchived(plan));
   return (
     <div className="space-y-6">
+      <CoachPlansOverview plans={orderedPlans} />
+
       <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
         <DndContext
           sensors={sensors}

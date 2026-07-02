@@ -1,3 +1,5 @@
+import type { PlanWeekEntry, PlanWeekPlan } from "@tsw/prisma/plan-week";
+
 export type CoachContextBriefCandidate = {
   type:
     | "INACTIVITY_ARCHIVE_PROPOSAL"
@@ -48,3 +50,10 @@ export type SelectedCoachInsight = {
   kind: "goal_reason" | "difficulty_pattern" | "metrics_logging_gap";
   text: string;
 } | null;
+
+export type AssessmentWeeklyOverviewInput = {
+  plans: PlanWeekPlan[];
+  entries: PlanWeekEntry[];
+  now: Date;
+  timezone?: string | null;
+};

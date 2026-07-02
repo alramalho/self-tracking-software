@@ -8,6 +8,10 @@ import {
   User,
 } from "@tsw/prisma";
 import {
+  buildPlanWeekProjection,
+  type PlanWeekSummary,
+} from "@tsw/prisma/plan-week";
+import {
   addDays,
   differenceInCalendarDays,
   differenceInHours,
@@ -48,6 +52,7 @@ import {
   buildRecurrentCoachAssessmentPrompt,
   type RecurrentCoachAssessmentInterventionType,
 } from "./prompt";
+import { buildAssessmentWeeklyOverview } from "./weeklyOverview";
 
 type CoachPlan = Plan & {
   activities: Activity[];
@@ -1062,6 +1067,10 @@ export class CoachAssessmentService {
       plans: user.plans,
       now,
     });
+    const visibleWeeklyOverviewContext =
+      await this.buildVisibleWeeklyOverviewContext(user, now);
+    const withVisibleWeeklyOverview = (context: string) =>
+      [visibleWeeklyOverviewContext, context].filter(Boolean).join("\n\n");
 
     if (attentionItems.length > 0) {
       candidates.push({
@@ -1071,7 +1080,9 @@ export class CoachAssessmentService {
           new Set(attentionItems.flatMap((item) => item.planIds)),
         ),
         targetWeekStart: currentWeekStartKey,
-        context: formatCoachAttentionContext(attentionItems),
+        context: withVisibleWeeklyOverview(
+          formatCoachAttentionContext(attentionItems),
+        ),
         usesAgent: true,
         attentionItems,
       });
@@ -1084,7 +1095,7 @@ export class CoachAssessmentService {
     );
 
     for (const summary of planSummaries) {
-      const baseContext = summary.context;
+      const baseContext = withVisibleWeeklyOverview(summary.context);
 
       if (
         summary.daysSinceLastActivity !== null &&
@@ -1112,14 +1123,24 @@ export class CoachAssessmentService {
         });
       }
 
+      const flexiblePlanNeedsAdjustment =
+        summary.weeklySummary &&
+        summary.plan.outlineType === "TIMES_PER_WEEK" &&
+        (summary.weeklySummary.status === "overloaded" ||
+          summary.weeklySummary.status === "at_risk");
+
       if (
         !options.pendingProposalExists &&
         (summary.missedSessionsThisWeek >= 3 ||
-          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || ""))
+          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || "") ||
+          flexiblePlanNeedsAdjustment)
       ) {
+        const reason = flexiblePlanNeedsAdjustment && summary.weeklySummary
+          ? `${summary.plan.goal} has ${summary.weeklySummary.remaining} weekly session${summary.weeklySummary.remaining === 1 ? "" : "s"} left across ${summary.weeklySummary.openDays} open day${summary.weeklySummary.openDays === 1 ? "" : "s"}.`
+          : `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`;
         candidates.push({
           type: "PLAN_ADJUSTMENT",
-          reason: `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`,
+          reason,
           planIds: [summary.plan.id],
           targetWeekStart: currentWeekStartKey,
           context: baseContext,
@@ -1175,7 +1196,9 @@ export class CoachAssessmentService {
           planIds: Array.from(new Set(weekSessions.map((s) => s.plan.id))),
           sessionIds: weekSessions.map((s) => s.session.id),
           targetWeekStart: format(targetWeekStart, "yyyy-MM-dd"),
-          context: this.buildSessionContext("Upcoming week", weekSessions),
+          context: withVisibleWeeklyOverview(
+            this.buildSessionContext("Upcoming week", weekSessions),
+          ),
           usesAgent: true,
         });
       }
@@ -1195,7 +1218,9 @@ export class CoachAssessmentService {
           planIds: Array.from(new Set(tomorrowSessions.map((s) => s.plan.id))),
           sessionIds: tomorrowSessions.map((s) => s.session.id),
           targetDate: format(tomorrow, "yyyy-MM-dd"),
-          context: this.buildSessionContext("Tomorrow", tomorrowSessions),
+          context: withVisibleWeeklyOverview(
+            this.buildSessionContext("Tomorrow", tomorrowSessions),
+          ),
           usesAgent: true,
         });
       }
@@ -1229,16 +1254,18 @@ export class CoachAssessmentService {
           reason: `User logged ${entries.length} activit${entries.length === 1 ? "y" : "ies"} last week.`,
           planIds: activePlanIds,
           targetWeekStart: format(previousWeekStart, "yyyy-MM-dd"),
-          context: this.buildWeekRecapContext({
-            previousWeekStart,
-            previousWeekEnd,
-            sessions: this.getSessionsBetween(
-              user.plans,
+          context: withVisibleWeeklyOverview(
+            this.buildWeekRecapContext({
               previousWeekStart,
               previousWeekEnd,
-            ),
-            entries,
-          }),
+              sessions: this.getSessionsBetween(
+                user.plans,
+                previousWeekStart,
+                previousWeekEnd,
+              ),
+              entries,
+            }),
+          ),
           usesAgent: true,
         });
       }
@@ -1595,6 +1622,37 @@ export class CoachAssessmentService {
     return lines.join("\n");
   }
 
+  private async buildVisibleWeeklyOverviewContext(
+    user: CoachUser,
+    now: Date,
+  ): Promise<string> {
+    const timezone = user.timezone || "UTC";
+    const { start: currentWeekStart } = getCoachWeekBounds(now, timezone);
+    const visibleWindowEnd = endOfDay(addDays(currentWeekStart, 13));
+    const activityIds = Array.from(
+      new Set(user.plans.flatMap((plan) => plan.activities.map((a) => a.id))),
+    );
+    const entries =
+      activityIds.length > 0
+        ? await prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: activityIds },
+              datetime: { gte: currentWeekStart, lte: visibleWindowEnd },
+            },
+            orderBy: { datetime: "asc" },
+          })
+        : [];
+
+    return buildAssessmentWeeklyOverview({
+      plans: user.plans,
+      entries,
+      now,
+      timezone,
+    });
+  }
+
   private buildWeekRecapContext(params: {
     previousWeekStart: Date;
     previousWeekEnd: Date;
@@ -1719,6 +1777,22 @@ export class CoachAssessmentService {
     const entriesLast30Days = entries.filter(
       (e) => e.datetime >= thirtyDaysAgo,
     ).length;
+    const weeklySummary =
+      plan.outlineType === "TIMES_PER_WEEK"
+        ? buildPlanWeekProjection({
+            plans: [plan],
+            entries,
+            now,
+            timezone: user.timezone || "UTC",
+            weekCount: 2,
+          }).summaries.find((summary) => summary.weekIndex === 0) ?? null
+        : null;
+    const weeklyPressure =
+      weeklySummary && weeklySummary.status === "overloaded"
+        ? `overloaded by ${weeklySummary.overflow} session${weeklySummary.overflow === 1 ? "" : "s"}`
+        : weeklySummary && weeklySummary.status === "at_risk"
+          ? `tight, ${weeklySummary.slackDays} spare day${weeklySummary.slackDays === 1 ? "" : "s"}`
+          : weeklySummary?.status.replace("_", " ") ?? null;
 
     const context = [
       `Plan: ${plan.emoji || ""} ${plan.goal}`,
@@ -1726,8 +1800,11 @@ export class CoachAssessmentService {
       `Last activity: ${daysSinceLastActivity !== null ? `${daysSinceLastActivity} days ago` : "never"}`,
       `Entries last 7 days: ${entriesLast7Days}`,
       `Entries last 30 days: ${entriesLast30Days}`,
+      weeklySummary
+        ? `Times-per-week progress: ${weeklySummary.completedDays}/${weeklySummary.target} completed days, ${weeklySummary.remaining} remaining, ${weeklySummary.openDays} open days left, ${weeklyPressure}.`
+        : null,
       `Recent sessions: ${completedSessionsThisWeek}/${sessionsThisWeek.length} completed, ${missedSessionsThisWeek} missed`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     return {
       plan,
@@ -1735,6 +1812,7 @@ export class CoachAssessmentService {
       totalSessionsThisWeek: sessionsThisWeek.length,
       completedSessionsThisWeek,
       missedSessionsThisWeek,
+      weeklySummary: weeklySummary as PlanWeekSummary | null,
       context,
     };
   }
@@ -1748,21 +1826,27 @@ export class CoachAssessmentService {
     const ninetyDaysAgo = subDays(now, 90);
     const userDayOfWeek = new TZDate(now, user.timezone || "UTC").getDay();
     const lines: string[] = [];
-    const recentEntries = await prisma.activityEntry.findMany({
-      where: {
-        userId: user.id,
-        deletedAt: null,
-        activityId: { not: null },
-        activity: { deletedAt: null },
-        datetime: { gte: thirtyDaysAgo, lte: now },
-      },
-      include: {
-        activity: { select: { title: true, emoji: true, measure: true } },
-      },
-      orderBy: { datetime: "desc" },
-      take: 12,
-    });
+    const [visibleWeeklyOverviewContext, recentEntries] = await Promise.all([
+      this.buildVisibleWeeklyOverviewContext(user, now),
+      prisma.activityEntry.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          activityId: { not: null },
+          activity: { deletedAt: null },
+          datetime: { gte: thirtyDaysAgo, lte: now },
+        },
+        include: {
+          activity: { select: { title: true, emoji: true, measure: true } },
+        },
+        orderBy: { datetime: "desc" },
+        take: 12,
+      }),
+    ]);
 
+    lines.push(visibleWeeklyOverviewContext);
+    lines.push("");
+    lines.push("Additional assessment context:");
     lines.push(`Today: ${format(now, "yyyy-MM-dd (EEEE)")}`);
     lines.push(
       `Day of week: ${userDayOfWeek === 1 ? "Monday (recap day)" : format(now, "EEEE")}`,
@@ -1822,6 +1906,22 @@ export class CoachAssessmentService {
         ),
       ).length;
       const missedSessions = totalSessions - completedSessions;
+      const weeklySummary =
+        plan.outlineType === "TIMES_PER_WEEK"
+          ? buildPlanWeekProjection({
+              plans: [plan],
+              entries,
+              now,
+              timezone: user.timezone || "UTC",
+              weekCount: 2,
+            }).summaries.find((summary) => summary.weekIndex === 0) ?? null
+          : null;
+      const weeklyPressure =
+        weeklySummary && weeklySummary.status === "overloaded"
+          ? `overloaded by ${weeklySummary.overflow}`
+          : weeklySummary && weeklySummary.status === "at_risk"
+            ? `tight, ${weeklySummary.slackDays} spare days`
+            : weeklySummary?.status.replace("_", " ") ?? null;
 
       lines.push(`Plan: ${plan.emoji || ""} ${plan.goal}`);
       lines.push(
@@ -1829,6 +1929,11 @@ export class CoachAssessmentService {
       );
       lines.push(`  Entries last 7 days: ${entriesLast7Days}`);
       lines.push(`  Entries last 30 days: ${entriesLast30Days}`);
+      if (weeklySummary) {
+        lines.push(
+          `  Times-per-week progress: ${weeklySummary.completedDays}/${weeklySummary.target} completed days, ${weeklySummary.remaining} remaining, ${weeklySummary.openDays} open days left, ${weeklyPressure}`,
+        );
+      }
       lines.push(
         `  Sessions this week: ${completedSessions}/${totalSessions} completed, ${missedSessions} missed`,
       );
