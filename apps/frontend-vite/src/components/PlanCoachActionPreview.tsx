@@ -1,6 +1,5 @@
 import { useApiWithAuth } from "@/api";
 import { useAI } from "@/contexts/ai";
-import { type Message } from "@/contexts/messages";
 import { type CompletePlan } from "@/contexts/plans";
 import { getPlanCoachActionMessages } from "@/contexts/plans/service";
 import { useCurrentUser } from "@/contexts/users";
@@ -9,155 +8,13 @@ import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
-import {
-  PlanProposalCard,
-  type ResolvedOperation,
-} from "./PlanProposalCard";
+import { PlanProposalCard } from "./PlanProposalCard";
+import { getPendingCoachPlanProposalsForPlan } from "./plans/coachPlanProposal";
 
 type PlanCoachActionPreviewProps = {
   selectedPlan: CompletePlan;
   className?: string;
 };
-
-function hasProposalChanges(proposal: any): boolean {
-  const patch = proposal?.patch;
-  return !!(
-    proposal?.operations?.length ||
-    patch?.archive ||
-    patch?.plan ||
-    patch?.sessions?.upsert?.length ||
-    patch?.sessions?.deleteIds?.length ||
-    patch?.milestones?.upsert?.length ||
-    patch?.milestones?.deleteIds?.length
-  );
-}
-
-function resolveLegacyOperation(
-  op: any,
-  plan: CompletePlan
-): ResolvedOperation {
-  if (op.type === "archive") {
-    return { type: "archive" };
-  }
-
-  if (op.type === "update_plan") {
-    return {
-      type: "update_plan",
-      goal: op.goal,
-      goalReason: op.goalReason,
-      notes: op.notes,
-      finishingDate: op.finishingDate,
-      timesPerWeek: op.timesPerWeek,
-    };
-  }
-
-  const activity = plan.activities?.find((item) => item.id === op.activityId);
-  return {
-    date: op.date,
-    type: op.type,
-    quantity: op.quantity,
-    activityName: activity?.title || "Activity",
-    activityEmoji: activity?.emoji || "📋",
-    activityMeasure: activity?.measure || "",
-    descriptiveGuide: op.descriptiveGuide,
-  };
-}
-
-function toDateString(value: Date | string | null | undefined) {
-  if (!value) return undefined;
-  return value instanceof Date ? value.toISOString() : value;
-}
-
-function resolvePatchOperations(
-  patch: any,
-  plan: CompletePlan
-): ResolvedOperation[] {
-  const resolved: ResolvedOperation[] = [];
-
-  if (!patch) return resolved;
-
-  if (patch.archive) {
-    resolved.push({ type: "archive" });
-  }
-
-  if (patch.plan) {
-    resolved.push({
-      type: "update_plan",
-      goal: patch.plan.goal,
-      goalReason: patch.plan.goalReason,
-      notes: patch.plan.notes,
-      finishingDate: patch.plan.finishingDate,
-      timesPerWeek: patch.plan.timesPerWeek,
-    });
-  }
-
-  for (const session of patch.sessions?.upsert || []) {
-    const existing = plan.sessions?.find((item) => item.id === session.id);
-    const activityId = session.activityId || existing?.activityId;
-    const activity = plan.activities?.find((item) => item.id === activityId);
-    resolved.push({
-      type: session.id ? "update_session" : "add_session",
-      date: toDateString(session.date || existing?.date),
-      quantity: session.quantity || existing?.quantity,
-      activityName: activity?.title || "Activity",
-      activityEmoji: activity?.emoji || "📋",
-      activityMeasure: activity?.measure || "",
-      descriptiveGuide: session.descriptiveGuide,
-    });
-  }
-
-  for (const sessionId of patch.sessions?.deleteIds || []) {
-    const existing = plan.sessions?.find((item) => item.id === sessionId);
-    const activity = plan.activities?.find(
-      (item) => item.id === existing?.activityId
-    );
-    resolved.push({
-      type: "delete_session",
-      date: toDateString(existing?.date),
-      quantity: existing?.quantity,
-      activityName: activity?.title || "Session",
-      activityEmoji: activity?.emoji || "📋",
-      activityMeasure: activity?.measure || "",
-    });
-  }
-
-  for (const milestone of patch.milestones?.upsert || []) {
-    const existing = plan.milestones?.find((item) => item.id === milestone.id);
-    resolved.push({
-      type: milestone.id ? "update_milestone" : "add_milestone",
-      milestoneDescription:
-        milestone.description || existing?.description || "Milestone",
-      milestoneDate: toDateString(milestone.date || existing?.date),
-      milestoneProgress: milestone.progress ?? existing?.progress,
-      milestoneCriteria: milestone.criteria ?? existing?.criteria,
-    });
-  }
-
-  for (const milestoneId of patch.milestones?.deleteIds || []) {
-    const existing = plan.milestones?.find((item) => item.id === milestoneId);
-    resolved.push({
-      type: "delete_milestone",
-      milestoneDescription: existing?.description || "Milestone",
-      milestoneDate: toDateString(existing?.date),
-      milestoneProgress: existing?.progress,
-    });
-  }
-
-  return resolved;
-}
-
-function getPendingPlanProposals(message: Message, planId: string) {
-  return (
-    message.planProposals
-      ?.map((proposal, originalIndex) => ({ proposal, originalIndex }))
-      .filter(
-        ({ proposal }) =>
-          proposal.planId === planId &&
-          !proposal.status &&
-          hasProposalChanges(proposal)
-      ) || []
-  );
-}
 
 export function PlanCoachActionPreview({
   selectedPlan,
@@ -178,7 +35,8 @@ export function PlanCoachActionPreview({
   });
 
   const messagesWithActions = messages.filter(
-    (message) => getPendingPlanProposals(message, selectedPlan.id).length > 0
+    (message) =>
+      getPendingCoachPlanProposalsForPlan(message, selectedPlan).length > 0
   );
 
   if (messages.length === 0 || messagesWithActions.length === 0) {
@@ -226,9 +84,9 @@ export function PlanCoachActionPreview({
 
         <div className="min-w-0 flex-1 space-y-2">
           {messages.map((message) => {
-            const pendingProposals = getPendingPlanProposals(
+            const pendingProposals = getPendingCoachPlanProposalsForPlan(
               message,
-              selectedPlan.id
+              selectedPlan
             );
 
             return (
@@ -244,28 +102,21 @@ export function PlanCoachActionPreview({
                   </div>
                 </MessageBubble>
 
-                {pendingProposals.map(({ proposal, originalIndex }) => {
-                  const operations = proposal.patch
-                    ? resolvePatchOperations(proposal.patch, selectedPlan)
-                    : (proposal.operations || []).map((operation) =>
-                        resolveLegacyOperation(operation, selectedPlan)
-                      );
-
-                  return (
-                    <PlanProposalCard
-                      key={`${message.id}-${originalIndex}`}
-                      messageId={message.id}
-                      proposalIndex={originalIndex}
-                      planGoal={proposal.planGoal}
-                      planEmoji={proposal.planEmoji}
-                      description={proposal.description}
-                      operations={operations}
-                      status={proposal.status}
-                      onAccept={handleAcceptProposal}
-                      onReject={handleRejectProposal}
-                    />
-                  );
-                })}
+                {pendingProposals.map(({ proposal, originalIndex, operations }) => (
+                  <PlanProposalCard
+                    key={`${message.id}-${originalIndex}`}
+                    messageId={message.id}
+                    proposalIndex={originalIndex}
+                    planGoal={proposal.planGoal}
+                    planEmoji={proposal.planEmoji}
+                    description={proposal.description}
+                    operations={operations}
+                    plan={selectedPlan}
+                    status={proposal.status}
+                    onAccept={handleAcceptProposal}
+                    onReject={handleRejectProposal}
+                  />
+                ))}
               </div>
             );
           })}

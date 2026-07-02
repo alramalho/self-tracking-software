@@ -9,6 +9,7 @@ import {
 } from "../../utils/aiSdk";
 import { z } from "zod/v4";
 import type { Plan, User } from "@tsw/prisma";
+import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { prisma } from "../../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { activitySummarizer } from "../activitySummarizer";
@@ -1682,11 +1683,32 @@ export class CoachAgentService {
     });
     const currentWeekRollups = buildPlanRollups(currentWeekEntries);
     const previousWeekRollups = buildPlanRollups(previousWeekEntries);
+    const weekProjection = buildPlanWeekProjection({
+      plans,
+      entries: currentWeekEntries,
+      now,
+      timezone: user.timezone || "UTC",
+      weekCount: 2,
+    });
+    const flexiblePlanRollups = weekProjection.summaries
+      .filter((summary) => summary.outlineType === "TIMES_PER_WEEK")
+      .map((summary) => {
+        const label = summary.weekIndex === 0 ? "current week" : "next week";
+        const pressure =
+          summary.status === "overloaded"
+            ? `overloaded by ${summary.overflow} session${summary.overflow === 1 ? "" : "s"}`
+            : summary.status === "at_risk"
+              ? `tight, ${summary.slackDays} spare day${summary.slackDays === 1 ? "" : "s"}`
+              : summary.status.replace("_", " ");
+        return `- ${summary.planEmoji || ""} ${summary.planGoal} (${label}): ${summary.completedDays}/${summary.target} completed days, ${summary.remaining} remaining, ${summary.openDays} open days left, ${pressure}.`;
+      });
 
     return [
       `Lookback: last ${days} days.`,
       `Logged activity counts: ${summary || "none"}.`,
-      "Times-per-week completion rule: every logged activity entry linked to a times-per-week plan counts as one completion, regardless of whether the activity measure is sessions, km, minutes, or something else.",
+      "Times-per-week completion rule: each unique local day with a linked activity log counts as one completion, regardless of whether the activity measure is sessions, km, minutes, or something else.",
+      "Flexible weekly plan pressure:",
+      ...(flexiblePlanRollups.length > 0 ? flexiblePlanRollups : ["- none"]),
       `Current week-to-date (the week the user is in now): ${format(currentWeekStart, "yyyy-MM-dd")} to ${format(now, "yyyy-MM-dd")}.`,
       "Current week-to-date plan rollups:",
       ...(currentWeekRollups.length > 0 ? currentWeekRollups : ["- none"]),
