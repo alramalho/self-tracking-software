@@ -122,6 +122,13 @@ const DEFAULT_TIMELINE_LIMIT = 20;
 const MAX_TIMELINE_LIMIT = 30;
 const HABIT_BONUS_POINTS = 25;
 const LIFESTYLE_BONUS_POINTS = 100;
+const POINTS_ACTIVITY_ENTRY_WHERE = {
+  deletedAt: null,
+  activityId: { not: null },
+  activity: {
+    deletedAt: null,
+  },
+} satisfies Prisma.ActivityEntryWhereInput;
 
 type TimelineCursor = {
   ts: string;
@@ -161,11 +168,7 @@ async function getAccountStats(userId: string) {
     prisma.activityEntry.count({
       where: {
         userId,
-        deletedAt: null,
-        activityId: { not: null },
-        activity: {
-          deletedAt: null,
-        },
+        ...POINTS_ACTIVITY_ENTRY_WHERE,
       },
     }),
     prisma.plan.findMany({
@@ -2172,7 +2175,7 @@ usersRouter.get(
           _count: {
             select: {
               activityEntries: {
-                where: { deletedAt: null },
+                where: POINTS_ACTIVITY_ENTRY_WHERE,
               },
             },
           },
@@ -2194,8 +2197,8 @@ usersRouter.get(
         for (const plan of user.plans) {
           const ps = plan.progressState as any;
           if (!ps) continue;
-          if (ps.habitAchievement?.isAchieved) habitBonus += 25;
-          if (ps.lifestyleAchievement?.isAchieved) lifestyleBonus += 100;
+          if (ps.habitAchievement?.isAchieved) habitBonus += HABIT_BONUS_POINTS;
+          if (ps.lifestyleAchievement?.isAchieved) lifestyleBonus += LIFESTYLE_BONUS_POINTS;
           const streak = ps.achievement?.streak || 0;
           if (streak > bestStreak) bestStreak = streak;
         }
