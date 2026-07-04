@@ -11,6 +11,7 @@ import {
   sendMessageStream,
   getCoachResponseStatus,
   rewriteMessageStream,
+  retryCoachAssessmentMessage,
   createDirectChat,
   markMessagesAsRead,
   clearCoachHistory,
@@ -85,6 +86,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const [pendingStaggeredMessages, setPendingStaggeredMessages] = useState<Message[]>([]);
   const [coachResponseStatus, setCoachResponseStatus] = useState<"thinking" | "searching" | "browsing" | "drafting" | null>(null);
+  const [retryingCoachAssessmentMessageId, setRetryingCoachAssessmentMessageId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const staggerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -541,6 +543,42 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const retryCoachAssessmentMessageMutation = useMutation({
+    mutationFn: async (data: { messageId: string; chatId?: string }) => {
+      setRetryingCoachAssessmentMessageId(data.messageId);
+      return await retryCoachAssessmentMessage(api, data.messageId);
+    },
+    onSuccess: ({ message, retried }, { chatId }) => {
+      const replaceMessage = (oldMessages: Message[] = []) =>
+        oldMessages.map((oldMessage) =>
+          oldMessage.id === message.id ? message : oldMessage
+        );
+
+      if (chatId) {
+        queryClient.setQueryData(["messages", chatId], replaceMessage);
+      }
+      queryClient.setQueriesData<Message[]>(
+        { queryKey: ["messages"] },
+        (oldMessages) => (oldMessages ? replaceMessage(oldMessages) : oldMessages)
+      );
+
+      if (!retried || message.error) {
+        toast.error("Retry failed");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      handleQueryError(error, "Failed to retry coach assessment");
+      toast.error("Failed to retry coach assessment");
+    },
+    onSettled: () => {
+      setRetryingCoachAssessmentMessageId(null);
+    },
+  });
+
   const createDirectChatMutation = useMutation({
     mutationFn: async (userId: string) => {
       return await createDirectChat(api, userId);
@@ -699,12 +737,17 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoadingMessages: messages.isLoading,
     sendMessage: sendMessageMutation.mutateAsync,
     rewriteMessage: rewriteMessageMutation.mutateAsync,
+    retryCoachAssessmentMessage: async (data) => {
+      const result = await retryCoachAssessmentMessageMutation.mutateAsync(data);
+      return result.message;
+    },
     isSendingMessage: sendMessageMutation.isPending,
     coachResponseStatus: coachResponseStatus || coachResponseWaitState.status,
     isAwaitingCoachResponse: coachResponseWaitState.isAwaiting,
     coachResponseTimedOut: coachResponseWaitState.isTimedOut,
     coachResponseErrorMessage: coachResponseWaitState.errorMessage,
     isRewritingMessage: rewriteMessageMutation.isPending,
+    retryingCoachAssessmentMessageId,
     pendingStaggeredMessages,
     createDirectChat: createDirectChatMutation.mutateAsync,
     isCreatingDirectChat: createDirectChatMutation.isPending,

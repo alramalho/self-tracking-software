@@ -4,14 +4,20 @@ import { subDays } from "date-fns";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
-import { coachAssessmentService } from "../services/coach/assessment/service";
+import {
+  CoachAssessmentRetryError,
+  coachAssessmentService,
+} from "../services/coach/assessment/service";
 import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import {
   AUTONOMOUS_COACH_PROMPT_TAG,
   concludeResolvedAutonomousCoachNotifications,
   dismissArchivedCoachNotifications,
 } from "../services/autonomousCoachNotificationService";
-import { coachAgentService } from "../services/coach/agent";
+import {
+  COACH_GENERATION_ERROR_MESSAGE,
+  coachAgentService,
+} from "../services/coach/agent";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
@@ -306,6 +312,34 @@ router.post(
   },
 );
 
+router.post(
+  "/coach/messages/:messageId/retry",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<Response | void> => {
+    try {
+      const user = req.user!;
+      const { messageId } = req.params;
+      const result =
+        await coachAssessmentService.retryCoachAssessmentMessageForUser(
+          user.id,
+          messageId,
+        );
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof CoachAssessmentRetryError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      logger.error("Error retrying coach assessment message:", error);
+      res.status(500).json({ error: "Failed to retry coach assessment" });
+    }
+  },
+);
+
 router.get(
   "/coach/attention",
   requireAuth,
@@ -460,6 +494,11 @@ router.get(
                 };
               }
             }
+            const isCoachGenerationError =
+              metadata.error === true ||
+              metadata.coachGenerationStatus === "error" ||
+              (metadata.source === AUTONOMOUS_COACH_PROMPT_TAG &&
+                msg.content === COACH_GENERATION_ERROR_MESSAGE);
 
             return {
               id: msg.id,
@@ -475,6 +514,13 @@ router.get(
               coachAttentionItems: metadata.coachAttentionItems || [],
               userRecommendations: metadata.userRecommendations || null,
               toolCalls: metadata.toolCalls || null,
+              error: isCoachGenerationError,
+              coachGenerationStatus:
+                metadata.coachGenerationStatus ||
+                (isCoachGenerationError ? "error" : undefined),
+              retryable: metadata.retryable ?? isCoachGenerationError,
+              retryCount: metadata.retryCount || 0,
+              source: metadata.source || null,
               createdAt: msg.createdAt,
               feedback: msg.feedback,
             };

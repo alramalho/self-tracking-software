@@ -2,9 +2,23 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { type MetricEventImpact } from "@/contexts/metrics/lib";
 import { type MetricEntry } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
-import { format, differenceInWeeks, endOfDay, startOfDay } from "date-fns";
+import {
+  addWeeks,
+  differenceInWeeks,
+  endOfDay,
+  format,
+  startOfDay,
+  startOfWeek,
+  subWeeks,
+} from "date-fns";
 import { ChevronRight } from "lucide-react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface MetricHeatmapProps {
@@ -43,6 +57,12 @@ const getColorForRating = (rating: number, isLightMode: boolean): string => {
   return colors[index] || colors[0];
 };
 
+const MINIMUM_WEEKS_TO_DISPLAY = 5;
+const WEEKS_AFTER_TODAY = 1;
+
+const toUtcDate = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+
 export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
   entries,
   metricEmoji,
@@ -61,22 +81,21 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
 
   const firstEntry = sortedEntries[0];
   const startDate = firstEntry
-    ? new Date(
-        Date.UTC(
-          new Date(firstEntry.createdAt).getFullYear(),
-          new Date(firstEntry.createdAt).getMonth(),
-          new Date(firstEntry.createdAt).getDate()
-        )
-      )
-    : new Date();
+    ? toUtcDate(startOfWeek(new Date(firstEntry.createdAt)))
+    : toUtcDate(subWeeks(new Date(), 2));
 
   const today = new Date();
-  const endDate = new Date(
-    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
-  );
+  const endDateCandidate = toUtcDate(addWeeks(today, WEEKS_AFTER_TODAY));
+  const endDate =
+    differenceInWeeks(endDateCandidate, startDate) < MINIMUM_WEEKS_TO_DISPLAY
+      ? addWeeks(startDate, MINIMUM_WEEKS_TO_DISPLAY)
+      : endDateCandidate;
 
   // Calculate number of weeks
-  const numberOfWeeks = Math.max(differenceInWeeks(endDate, startDate) + 2, 8);
+  const numberOfWeeks = Math.max(
+    differenceInWeeks(endDate, startDate),
+    MINIMUM_WEEKS_TO_DISPLAY
+  );
 
   // Build heatmap data - aggregate by date (average if multiple entries per day)
   const dateToRatings = new Map<string, number[]>();
@@ -121,15 +140,46 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
     return dateKeys;
   }, [eventImpacts]);
 
-  // Scroll to the right (today) on mount
+  const scrollTodayIntoHeatmapView = useCallback(
+    (behavior: ScrollBehavior = "auto") => {
+      const scrollContainer = scrollContainerRef.current;
+      if (!scrollContainer) return;
+
+      const todayCell = document.getElementById("metric-heatmap-today-cell");
+
+      if (todayCell) {
+        const cellRect = todayCell.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetLeft =
+          scrollContainer.scrollLeft +
+          cellRect.left -
+          containerRect.left -
+          scrollContainer.clientWidth / 2 +
+          cellRect.width / 2;
+        const maxLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+
+        scrollContainer.scrollTo({
+          left: Math.max(0, Math.min(targetLeft, maxLeft)),
+          behavior,
+        });
+        return;
+      }
+
+      scrollContainer.scrollTo({
+        left: scrollContainer.scrollWidth,
+        behavior,
+      });
+    },
+    []
+  );
+
+  // Show the current week by default without changing the page's vertical scroll.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
-      }
+      scrollTodayIntoHeatmapView();
     }, 100);
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [heatmapData.length, scrollTodayIntoHeatmapView]);
 
   // Intersection Observer to detect when today's cell is visible
   useEffect(() => {
@@ -159,14 +209,7 @@ export const MetricHeatmap: React.FC<MetricHeatmapProps> = ({
   }, [heatmapData.length]);
 
   const scrollToToday = () => {
-    const todayCell = document.getElementById("metric-heatmap-today-cell");
-    if (todayCell) {
-      todayCell.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
-    }
+    scrollTodayIntoHeatmapView("smooth");
   };
 
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

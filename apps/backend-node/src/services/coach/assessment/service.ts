@@ -28,7 +28,11 @@ import {
 } from "../../../utils/date";
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
-import { coachAgentService } from "../agent";
+import {
+  COACH_GENERATION_ERROR_MESSAGE,
+  coachAgentService,
+} from "../agent";
+import type { CoachDraftMessage } from "../types";
 import { resolveAutonomousCoachAgentModel } from "../../coachAgentModelConfig";
 import {
   deriveCoachAttentionItems,
@@ -153,6 +157,15 @@ type CoachInterventionCandidate = {
   escalationCount?: number;
 };
 
+export class CoachAssessmentRetryError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "INACTIVITY_ARCHIVE_PROPOSAL",
   "PLAN_ATTENTION_ARCHIVED",
@@ -165,6 +178,18 @@ const INTERVENTION_PRIORITY: CoachInterventionType[] = [
   "INACTIVITY_CHECKIN",
   "CELEBRATION",
 ];
+const COACH_INTERVENTION_TYPES = [
+  ...INTERVENTION_PRIORITY,
+  "COACH_SETUP",
+  "STATUS_REVIEW",
+] as const satisfies readonly CoachInterventionType[];
+
+function isCoachInterventionType(value: unknown): value is CoachInterventionType {
+  return (
+    typeof value === "string" &&
+    (COACH_INTERVENTION_TYPES as readonly string[]).includes(value)
+  );
+}
 
 function isRecurrentCoachAssessmentIntervention(
   type: CoachInterventionType,
@@ -395,6 +420,400 @@ export class CoachAssessmentService {
       reason: "Sent STATUS_REVIEW",
       sentMessageIds: sent.messageIds,
       notificationId: sent.notificationId,
+    };
+  }
+
+  async retryCoachAssessmentMessageForUser(userId: string, messageId: string) {
+    const existingMessage = await prisma.message.findFirst({
+      where: {
+        id: messageId,
+        role: "COACH",
+        chat: {
+          userId,
+          type: "COACH",
+        },
+      },
+      include: { feedback: true },
+    });
+
+    if (!existingMessage) {
+      throw new CoachAssessmentRetryError(404, "Coach message not found");
+    }
+
+    const metadata =
+      existingMessage.metadata && typeof existingMessage.metadata === "object"
+        ? (existingMessage.metadata as Record<string, any>)
+        : {};
+
+    if (!this.isRetryableCoachGenerationError(existingMessage, metadata)) {
+      throw new CoachAssessmentRetryError(
+        409,
+        "Coach message is not retryable",
+      );
+    }
+
+    const referenceNow = existingMessage.createdAt;
+    const user = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null,
+      },
+      include: {
+        plans: {
+          where: {
+            ...activePlanWhere(referenceNow),
+          },
+          include: { activities: true, sessions: true, milestones: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new CoachAssessmentRetryError(404, "User not found");
+    }
+
+    const coachUser = user as CoachUser;
+    const candidate = await this.buildRetryCandidateFromMessage(
+      coachUser,
+      metadata,
+      referenceNow,
+    );
+    const recentMessages = (await this.getRecentCoachMessages(user.id))
+      .filter(
+        (message) =>
+          message.id !== existingMessage.id &&
+          message.createdAt < existingMessage.createdAt,
+      )
+      .slice(0, 8);
+    const prompt =
+      candidate.type === "STATUS_REVIEW"
+        ? this.buildStatusReviewPrompt(candidate.attentionItems || [])
+        : isRecurrentCoachAssessmentIntervention(candidate.type)
+          ? buildRecurrentCoachAssessmentPrompt({
+              interventionType: candidate.type,
+              reason: candidate.reason,
+              context: candidate.context,
+            })
+          : this.buildAgentInterventionPrompt(candidate);
+
+    const aiResponse = await coachAgentService.generateResponse({
+      model: resolveAutonomousCoachAgentModel(),
+      user,
+      message: prompt,
+      conversationHistory:
+        candidate.type === "STATUS_REVIEW"
+          ? []
+          : recentMessages.reverse().map((message) => ({
+              role:
+                message.role === "USER"
+                  ? ("user" as const)
+                  : ("assistant" as const),
+              content: message.content,
+            })),
+      plans: coachUser.plans,
+    });
+
+    const retryCount = Number(metadata.retryCount || 0) + 1;
+    const failedDraft = aiResponse.draftMessages.find((draft) => draft.error);
+    if (aiResponse.skipped || aiResponse.draftMessages.length === 0 || failedDraft) {
+      const failedMetadata = this.buildCoachAssessmentMessageMetadata(
+        candidate,
+        {
+          content: existingMessage.content,
+          error: true,
+        },
+        {
+          error: true,
+          coachGenerationStatus: "error",
+          retryable: true,
+          retryCount,
+          originalErrorContent:
+            metadata.originalErrorContent || existingMessage.content,
+          lastRetryFailedAt: new Date().toISOString(),
+          lastRetryReason:
+            aiResponse.skipReason ||
+            (failedDraft ? "Coach generation failed again" : "Agent produced no assessment"),
+        },
+      );
+      const updatedMessage = await prisma.message.update({
+        where: { id: existingMessage.id },
+        data: { metadata: failedMetadata },
+        include: { feedback: true },
+      });
+
+      return {
+        retried: false,
+        message: this.serializeCoachAssessmentMessage(updatedMessage, coachUser.plans),
+      };
+    }
+
+    const combinedDraft = this.combineCoachDrafts(aiResponse.draftMessages);
+    const successMetadata = this.buildCoachAssessmentMessageMetadata(
+      candidate,
+      combinedDraft,
+      {
+        error: false,
+        coachGenerationStatus: "retried_success",
+        retryable: false,
+        retryCount,
+        retriedAt: new Date().toISOString(),
+        originalErrorContent:
+          metadata.originalErrorContent || existingMessage.content,
+      },
+    );
+    const updatedMessage = await prisma.message.update({
+      where: { id: existingMessage.id },
+      data: {
+        content: combinedDraft.content,
+        metadata: successMetadata,
+      },
+      include: { feedback: true },
+    });
+
+    if ((combinedDraft.planCreationProposals?.length || 0) > 0) {
+      await cancelPendingPlanCreationProposals(
+        updatedMessage.chatId,
+        [updatedMessage.id],
+      );
+    }
+
+    await prisma.chat.update({
+      where: { id: updatedMessage.chatId },
+      data: { updatedAt: new Date() },
+    });
+
+    return {
+      retried: true,
+      message: this.serializeCoachAssessmentMessage(updatedMessage, coachUser.plans),
+    };
+  }
+
+  private isRetryableCoachGenerationError(
+    message: Pick<Message, "content" | "role">,
+    metadata: Record<string, any>,
+  ) {
+    if (message.role !== "COACH") return false;
+    if (metadata.source !== AUTONOMOUS_PROMPT_TAG) return false;
+    if (metadata.coachGenerationStatus === "retried_success") return false;
+
+    return (
+      metadata.error === true ||
+      metadata.coachGenerationStatus === "error" ||
+      message.content === COACH_GENERATION_ERROR_MESSAGE
+    );
+  }
+
+  private async buildRetryCandidateFromMessage(
+    user: CoachUser,
+    metadata: Record<string, any>,
+    referenceNow: Date,
+  ): Promise<CoachInterventionCandidate> {
+    const interventionType = metadata.interventionType;
+    if (!isCoachInterventionType(interventionType)) {
+      throw new CoachAssessmentRetryError(
+        409,
+        "Coach message has no retryable assessment type",
+      );
+    }
+
+    const planIds = Array.isArray(metadata.planIds)
+      ? metadata.planIds.filter((id: unknown): id is string => typeof id === "string")
+      : user.plans.map((plan) => plan.id);
+    const attentionItems = Array.isArray(metadata.coachAttentionItems)
+      ? metadata.coachAttentionItems
+      : deriveCoachAttentionItems({
+          user,
+          plans: user.plans,
+          now: referenceNow,
+        });
+
+    if (interventionType === "STATUS_REVIEW") {
+      return {
+        type: "STATUS_REVIEW",
+        reason: "Retrying a failed coach assessment.",
+        planIds,
+        context: formatCoachAttentionContext(attentionItems),
+        usesAgent: true,
+        attentionItems,
+      };
+    }
+
+    const candidates = await this.buildInterventionCandidates(user, referenceNow, {
+      force: true,
+      pendingProposalExists: false,
+      fallbackCheckin: true,
+    });
+    const matchingCandidate = candidates.find(
+      (candidate) =>
+        candidate.type === interventionType &&
+        this.retryCandidateMatchesMetadata(candidate, metadata),
+    );
+    if (matchingCandidate) return matchingCandidate;
+
+    return {
+      type: interventionType,
+      reason: "Retrying a failed proactive coach assessment.",
+      planIds,
+      sessionIds: Array.isArray(metadata.sessionIds)
+        ? metadata.sessionIds.filter(
+            (id: unknown): id is string => typeof id === "string",
+          )
+        : [],
+      targetDate:
+        typeof metadata.targetDate === "string" ? metadata.targetDate : undefined,
+      targetWeekStart:
+        typeof metadata.targetWeekStart === "string"
+          ? metadata.targetWeekStart
+          : undefined,
+      context: await this.buildContextSummary(user, referenceNow),
+      usesAgent: true,
+      attentionItems,
+      escalationCount:
+        typeof metadata.escalationCount === "number"
+          ? metadata.escalationCount
+          : 0,
+    };
+  }
+
+  private retryCandidateMatchesMetadata(
+    candidate: CoachInterventionCandidate,
+    metadata: Record<string, any>,
+  ) {
+    if (
+      typeof metadata.targetDate === "string" &&
+      candidate.targetDate !== metadata.targetDate
+    ) {
+      return false;
+    }
+
+    if (
+      typeof metadata.targetWeekStart === "string" &&
+      candidate.targetWeekStart !== metadata.targetWeekStart
+    ) {
+      return false;
+    }
+
+    const planIds = Array.isArray(metadata.planIds)
+      ? metadata.planIds.filter((id: unknown): id is string => typeof id === "string")
+      : [];
+    if (
+      planIds.length > 0 &&
+      !candidate.planIds.some((planId) => planIds.includes(planId))
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private combineCoachDrafts(drafts: CoachDraftMessage[]): CoachDraftMessage {
+    const collect = <K extends keyof CoachDraftMessage>(key: K) =>
+      drafts.flatMap((draft) => {
+        const value = draft[key];
+        return Array.isArray(value) ? value : [];
+      });
+
+    return {
+      content: drafts
+        .map((draft) => draft.content.trim())
+        .filter(Boolean)
+        .join("\n\n"),
+      planReplacements: collect("planReplacements"),
+      planProposals: collect("planProposals"),
+      planCreationProposals: collect("planCreationProposals"),
+      activityLogProposals: collect("activityLogProposals"),
+      activityEditProposals: collect("activityEditProposals"),
+      userContextEventProposals: collect("userContextEventProposals"),
+      toolCalls: collect("toolCalls"),
+    };
+  }
+
+  private buildCoachAssessmentMessageMetadata(
+    candidate: CoachInterventionCandidate,
+    draft: CoachDraftMessage,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const isGenerationError = draft.error === true;
+
+    return JSON.parse(
+      JSON.stringify({
+        source: AUTONOMOUS_PROMPT_TAG,
+        interventionType: candidate.type,
+        targetDate: candidate.targetDate,
+        targetWeekStart: candidate.targetWeekStart,
+        planIds: candidate.planIds,
+        sessionIds: candidate.sessionIds || [],
+        planReplacements: draft.planReplacements || [],
+        planProposals: draft.planProposals || [],
+        planCreationProposals: draft.planCreationProposals || [],
+        activityLogProposals: draft.activityLogProposals || [],
+        activityEditProposals: draft.activityEditProposals || [],
+        userContextEventProposals: draft.userContextEventProposals || [],
+        coachAttentionItems: candidate.attentionItems || [],
+        escalationCount: candidate.escalationCount || 0,
+        error: isGenerationError,
+        coachGenerationStatus: isGenerationError ? "error" : "ok",
+        retryable: isGenerationError,
+        retryCount: 0,
+        ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
+        ...overrides,
+      }),
+    );
+  }
+
+  private serializeCoachAssessmentMessage(
+    message: Message & { feedback?: unknown[] },
+    plans: CoachPlan[],
+  ) {
+    const metadata =
+      message.metadata && typeof message.metadata === "object"
+        ? (message.metadata as Record<string, any>)
+        : {};
+    const isError = this.isRetryableCoachGenerationError(message, metadata);
+    const planReplacements =
+      metadata.planReplacements
+        ?.map((replacement: any) => {
+          const plan = plans.find(
+            (candidatePlan) =>
+              candidatePlan.goal.toLowerCase() ===
+              replacement.planGoal?.toLowerCase(),
+          );
+          return plan
+            ? {
+                textToReplace: replacement.textToReplace,
+                plan: {
+                  id: plan.id,
+                  goal: plan.goal,
+                  emoji: plan.emoji,
+                },
+              }
+            : null;
+        })
+        .filter(Boolean) || [];
+
+    return {
+      id: message.id,
+      chatId: message.chatId,
+      role: message.role,
+      content: message.content,
+      status: message.status,
+      planReplacements,
+      metricReplacement: null,
+      planProposals: metadata.planProposals || [],
+      planCreationProposals: metadata.planCreationProposals || [],
+      activityLogProposals: metadata.activityLogProposals || [],
+      activityEditProposals: metadata.activityEditProposals || [],
+      userContextEventProposals: metadata.userContextEventProposals || [],
+      coachAttentionItems: metadata.coachAttentionItems || [],
+      toolCalls: metadata.toolCalls || null,
+      error: isError,
+      coachGenerationStatus:
+        metadata.coachGenerationStatus || (isError ? "error" : undefined),
+      retryable: metadata.retryable ?? isError,
+      retryCount: metadata.retryCount || 0,
+      source: metadata.source || null,
+      createdAt: message.createdAt,
+      feedback: message.feedback || [],
     };
   }
 
@@ -862,72 +1281,7 @@ export class CoachAssessmentService {
   private async dispatchCoachDrafts(
     user: User,
     candidate: CoachInterventionCandidate,
-    drafts: Array<{
-      content: string;
-      planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
-      planProposals?: Array<{
-        planId: string;
-        planGoal: string;
-        planEmoji: string | null;
-        description: string;
-        patch: unknown;
-        operations?: unknown[];
-        status: null;
-      }>;
-      planCreationProposals?: Array<{
-        goal: string;
-        goalReason: string | null;
-        notes?: string | null;
-        emoji: string | null;
-        outlineType?: "SPECIFIC" | "TIMES_PER_WEEK" | null;
-        timesPerWeek: number | null;
-        activities: Array<{
-          activityId?: string | null;
-          title: string;
-          measure: string;
-          emoji: string;
-          kind?: string | null;
-        }>;
-        finishingDate?: string | null;
-        milestones?: Array<{
-          description: string;
-          date: string;
-          criteria?: string | null;
-        }>;
-        sessions?: Array<{
-          activityTitle: string;
-          date: string;
-          quantity?: number | null;
-          descriptiveGuide?: string | null;
-        }>;
-        description: string;
-        status: null;
-      }>;
-      activityLogProposals?: Array<{
-        activityId: string;
-        activityName: string;
-        activityEmoji: string;
-        activityMeasure: string;
-        quantity: number;
-        date: string;
-        time?: string;
-        description?: string;
-        privateNotes?: string;
-        difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard";
-        status: null;
-      }>;
-      activityEditProposals?: Array<{
-        activityId: string;
-        activityName: string;
-        activityEmoji: string;
-        description: string;
-        original: unknown;
-        requested: unknown;
-        measureConversion: unknown;
-        status: null;
-      }>;
-      toolCalls?: Array<{ tool: string; args: unknown; result: unknown }>;
-    }>,
+    drafts: CoachDraftMessage[],
     notificationTitle?: string,
   ): Promise<{ messageIds: string[]; notificationId?: string }> {
     const { chat } = await this.ensureCoachChat(user);
@@ -937,6 +1291,7 @@ export class CoachAssessmentService {
     );
 
     for (const draft of drafts) {
+      const isGenerationError = draft.error === true;
       const message = await prisma.message.create({
         data: {
           chatId: chat.id,
@@ -957,6 +1312,10 @@ export class CoachAssessmentService {
               activityEditProposals: draft.activityEditProposals || [],
               coachAttentionItems: candidate.attentionItems || [],
               escalationCount: candidate.escalationCount || 0,
+              error: isGenerationError,
+              coachGenerationStatus: isGenerationError ? "error" : "ok",
+              retryable: isGenerationError,
+              retryCount: 0,
               ...(draft.toolCalls && { toolCalls: draft.toolCalls }),
             }),
           ),
