@@ -164,6 +164,9 @@ export interface Message {
   userAction?: UserAction | null;
   imageAttachments?: ImageAttachment[] | null;
   error?: boolean;
+  coachGenerationStatus?: "ok" | "error" | "retried_success" | string;
+  retryable?: boolean;
+  retryCount?: number;
   /** Origin tag, e.g. "autonomous_coach" for proactive coach assessment messages. */
   source?: string | null;
 }
@@ -218,12 +221,14 @@ export interface MessagesContextType {
   // Mutations
   sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }) => Promise<Message[]>;
   rewriteMessage: (data: { chatId: string; cacheChatId?: string; messageId: string; message: string }) => Promise<Message[]>;
+  retryCoachAssessmentMessage: (data: { messageId: string; chatId?: string }) => Promise<Message>;
   isSendingMessage: boolean;
   coachResponseStatus: "thinking" | "searching" | "browsing" | "drafting" | null;
   isAwaitingCoachResponse: boolean;
   coachResponseTimedOut: boolean;
   coachResponseErrorMessage: string | null;
   isRewritingMessage: boolean;
+  retryingCoachAssessmentMessageId: string | null;
   pendingStaggeredMessages: Message[];
   createDirectChat: (userId: string) => Promise<Chat>;
   isCreatingDirectChat: boolean;

@@ -6,6 +6,7 @@ import type {
   PlanWeekProjection,
   PlanWeekProjectionInput,
   PlanWeekScheduledSession,
+  PlanWeekSession,
   PlanWeekSummary,
 } from "./types";
 
@@ -234,6 +235,16 @@ export function buildPlanWeekProjection(
       .filter((entry) => entry.activityId && planActivityIds.has(entry.activityId))
       .map((entry) => getPlanWeekDateKey(entry.datetime, input.timezone));
 
+    // Dated sessions on a TIMES_PER_WEEK plan (e.g. coach-suggested schedules)
+    // pin ghost placement to those days instead of the even spread.
+    const sessionByDateKey = new Map<string, PlanWeekSession>();
+    for (const session of plan.sessions ?? []) {
+      const dateKey = getPlanWeekDateKey(session.date, "UTC");
+      if (!sessionByDateKey.has(dateKey)) {
+        sessionByDateKey.set(dateKey, session);
+      }
+    }
+
     for (let weekIndex = 0; weekIndex < weekCount; weekIndex += 1) {
       const weekStart = addDaysToDateKey(weekStartKey, weekIndex * 7);
       const weekEndExclusive = addDaysToDateKey(weekStart, 7);
@@ -263,18 +274,55 @@ export function buildPlanWeekProjection(
         })
       );
 
-      placeFlexibleCells(
-        openDays,
-        remaining,
-        {
-          activityId: activity.id,
-          planId: plan.id,
-          title: plan.goal,
-          emoji: plan.emoji,
-          state: plan.currentWeekState ?? null,
-        },
-        flexibleCells
+      const cellBase = {
+        activityId: activity.id,
+        planId: plan.id,
+        title: plan.goal,
+        emoji: plan.emoji,
+        state: plan.currentWeekState ?? null,
+      };
+
+      const pinnedDays = openDays
+        .filter((day) => sessionByDateKey.has(day.toISOString().slice(0, 10)))
+        .slice(0, remaining);
+      const pinnedKeys = new Set(
+        pinnedDays.map((day) => day.toISOString().slice(0, 10))
       );
+
+      for (const date of pinnedDays) {
+        const dateKey = date.toISOString().slice(0, 10);
+        const session = sessionByDateKey.get(dateKey);
+        const sessionActivity = plan.activities?.find(
+          (item) => item.id === session?.activityId
+        );
+        flexibleCells.push({
+          ...cellBase,
+          activityId: sessionActivity?.id ?? activity.id,
+          emoji: sessionActivity?.emoji ?? plan.emoji,
+          date,
+          dateKey,
+          kind: "ghost",
+        });
+      }
+
+      const surplus = remaining - pinnedDays.length;
+      const unpinnedOpenDays = openDays.filter(
+        (day) => !pinnedKeys.has(day.toISOString().slice(0, 10))
+      );
+      if (surplus > 0 && unpinnedOpenDays.length === 0 && openDays.length > 0) {
+        // Every open day is pinned; keep the overflow signal on the last one.
+        const overflowDate = openDays[openDays.length - 1];
+        for (let i = 0; i < surplus; i += 1) {
+          flexibleCells.push({
+            ...cellBase,
+            date: overflowDate,
+            dateKey: overflowDate.toISOString().slice(0, 10),
+            kind: "overflow",
+          });
+        }
+      } else {
+        placeFlexibleCells(unpinnedOpenDays, surplus, cellBase, flexibleCells);
+      }
     }
   }
 

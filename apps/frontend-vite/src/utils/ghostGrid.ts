@@ -50,6 +50,8 @@ export function isActiveVisiblePlan(plan: CompletePlan): boolean {
  *   `timesPerWeek`. When more ghosts are needed than open days remain, the
  *   surplus renders as `overflow` — which is exactly the condition the backend
  *   reports as `FAILED`.
+ * - Dated sessions on a TIMES_PER_WEEK plan (e.g. an accepted coach schedule)
+ *   pin ghosts to those days; only the surplus spreads evenly.
  */
 export function computeGridCells(
   plans: CompletePlan[] | undefined,

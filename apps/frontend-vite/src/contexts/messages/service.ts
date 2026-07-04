@@ -280,6 +280,21 @@ export async function rewriteMessageStream(
   }
 }
 
+export async function retryCoachAssessmentMessage(
+  api: AxiosInstance,
+  messageId: string
+): Promise<{ message: Message; retried: boolean }> {
+  const response = await api.post<{
+    message: MessageApiResponse;
+    retried: boolean;
+  }>(`/ai/coach/messages/${messageId}/retry`);
+
+  return {
+    message: deserializeMessage(response.data.message),
+    retried: response.data.retried,
+  };
+}
+
 // Create a direct message chat with another user
 export async function createDirectChat(
   api: AxiosInstance,

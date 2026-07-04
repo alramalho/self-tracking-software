@@ -2,13 +2,19 @@ import { Response, Router } from "express";
 import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
-import { coachAgentService } from "../services/coach/agent";
+import {
+  COACH_GENERATION_ERROR_MESSAGE,
+  coachAgentService,
+} from "../services/coach/agent";
 import { toCoachConversationHistory } from "../services/coachConversationHistoryService";
 import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
-import { concludeResolvedAutonomousCoachNotifications } from "../services/autonomousCoachNotificationService";
+import {
+  AUTONOMOUS_COACH_PROMPT_TAG,
+  concludeResolvedAutonomousCoachNotifications,
+} from "../services/autonomousCoachNotificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
@@ -862,6 +868,11 @@ router.get(
                   };
                 }
               }
+              const isCoachGenerationError =
+                metadata.error === true ||
+                metadata.coachGenerationStatus === "error" ||
+                (metadata.source === AUTONOMOUS_COACH_PROMPT_TAG &&
+                  msg.content === COACH_GENERATION_ERROR_MESSAGE);
 
               return {
                 id: msg.id,
@@ -879,7 +890,12 @@ router.get(
                 coachAttentionItems: metadata.coachAttentionItems || [],
                 userRecommendations: metadata.userRecommendations || null,
                 toolCalls: metadata.toolCalls || null,
-                error: metadata.error || false,
+                error: isCoachGenerationError,
+                coachGenerationStatus:
+                  metadata.coachGenerationStatus ||
+                  (isCoachGenerationError ? "error" : undefined),
+                retryable: metadata.retryable ?? isCoachGenerationError,
+                retryCount: metadata.retryCount || 0,
                 source: metadata.source || null,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,

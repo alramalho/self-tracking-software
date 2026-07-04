@@ -68,6 +68,8 @@ type CoachRepairFailure = {
 
 const TELEGRAM_MESSAGE_LIMIT = 3900;
 const MAX_COACH_GENERATION_ATTEMPTS = 3;
+export const COACH_GENERATION_ERROR_MESSAGE =
+  "Sorry, I ran into an issue processing your message. The team has been notified.";
 
 function truncateForReport(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
@@ -2283,7 +2285,7 @@ export class CoachAgentService {
       });
       return {
         draftMessages: [{
-          content: "Sorry, I ran into an issue processing your message. The team has been notified.",
+          content: COACH_GENERATION_ERROR_MESSAGE,
           error: true,
         }],
       };

@@ -41,7 +41,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, ArrowLeft, X, Settings, AlertCircle, AlertTriangle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check } from "lucide-react";
+import { Loader2, ArrowLeft, X, Settings, AlertCircle, AlertTriangle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check, RotateCcw } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
@@ -462,12 +462,14 @@ function MessageAIPage() {
     isLoadingMessages,
     sendMessage,
     rewriteMessage,
+    retryCoachAssessmentMessage,
     isSendingMessage,
     coachResponseStatus,
     isAwaitingCoachResponse,
     coachResponseTimedOut,
     coachResponseErrorMessage,
     isRewritingMessage,
+    retryingCoachAssessmentMessageId,
     pendingStaggeredMessages,
     isLoadingChats,
     markMessagesAsRead,
@@ -913,6 +915,19 @@ function MessageAIPage() {
     setActiveActionMessageId((current) =>
       current === messageId ? null : messageId
     );
+  };
+
+  const handleRetryCoachAssessment = async (message: Message) => {
+    if (!message.id || retryingCoachAssessmentMessageId === message.id) return;
+
+    try {
+      await retryCoachAssessmentMessage({
+        messageId: message.id,
+        chatId: message.chatId || currentChatId || undefined,
+      });
+    } catch (error) {
+      console.error("Failed to retry coach assessment:", error);
+    }
   };
 
   const handleAcceptMetric = async (messageId: string, metricId: string, rating: number) => {
@@ -1695,6 +1710,13 @@ function MessageAIPage() {
                 const isCoachMessage = message.role === "COACH";
                 const isAssessmentMessage =
                   isCoachMessage && message.source === "autonomous_coach";
+                const isRetryingCoachAssessment =
+                  retryingCoachAssessmentMessageId === message.id;
+                const canRetryCoachAssessment =
+                  isCoachMessage &&
+                  message.error &&
+                  message.source === "autonomous_coach" &&
+                  message.retryable !== false;
 
                 const prevMessage = allMessages[index - 1];
                 const nextMessage = allMessages[index + 1];
@@ -1826,9 +1848,15 @@ function MessageAIPage() {
                                   : "bg-muted/60"
                               }
                             >
-                              <div className="min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+                              <motion.div
+                                animate={{
+                                  opacity: isRetryingCoachAssessment ? 0.38 : 1,
+                                }}
+                                transition={{ duration: 0.18, ease: "easeOut" }}
+                                className="min-w-0 break-words text-sm [overflow-wrap:anywhere]"
+                              >
                                 {renderMessageContent(messageForRendering)}
-                              </div>
+                              </motion.div>
                             </MessageBubble>
                           )}
                         </div>
@@ -1905,7 +1933,37 @@ function MessageAIPage() {
                           )}
                         </AnimatePresence>
 
-                        {isCoachMessage && message.error && (
+                        {canRetryCoachAssessment && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -2 }}
+                            transition={{ duration: 0.16, ease: "easeOut" }}
+                            className="flex items-center gap-2 px-1 pt-0.5 text-[11px] font-medium text-red-500/85"
+                          >
+                            <AlertCircle size={12} className="shrink-0" />
+                            <span>Coach hit a generation issue</span>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleRetryCoachAssessment(message);
+                              }}
+                              disabled={isRetryingCoachAssessment}
+                              className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-80"
+                              title="Retry coach assessment"
+                              aria-label="Retry coach assessment"
+                            >
+                              {isRetryingCoachAssessment ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <RotateCcw size={13} />
+                              )}
+                            </button>
+                          </motion.div>
+                        )}
+
+                        {isCoachMessage && message.error && !canRetryCoachAssessment && (
                           <div className="flex items-center gap-1 px-1">
                             <AlertCircle size={12} className="text-red-500" />
                             <span className="text-xs text-muted-foreground">We are investigating this issue</span>
