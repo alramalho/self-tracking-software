@@ -498,6 +498,14 @@ model Plan {
   pauseReason  String?
   pauseHistory Json?    // Array of {pausedAt: DateTime, resumedAt?: DateTime, reason?: String}
 
+  // Who plans the content of this plan's weeks. EXTERNAL_AGENT means a
+  // connected agent (over MCP) owns week content; the coach stays on
+  // accountability and steps back in when the agent goes stale.
+  contentPlanner          ContentPlanner @default(COACH)
+  // Last time a connected agent WROTE to this plan over MCP (curriculum,
+  // sessions, plan fields). Reads don't count: presence means synced state.
+  externalAgentLastSyncAt DateTime?
+
   // Relations
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   planGroup         PlanGroup?        @relation(fields: [planGroupId], references: [id])
@@ -952,6 +960,13 @@ enum PlanState {
   AT_RISK
   FAILED
   COMPLETED
+
+  @@schema("public")
+}
+
+enum ContentPlanner {
+  COACH
+  EXTERNAL_AGENT
 
   @@schema("public")
 }

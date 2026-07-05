@@ -9,8 +9,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   addWeeks,
+  differenceInCalendarDays,
   endOfWeek,
   format,
+  formatDistanceToNowStrict,
   isFuture,
   isSameWeek,
   startOfWeek,
@@ -18,6 +20,7 @@ import {
 } from "date-fns";
 import {
   Archive,
+  Bot,
   Check,
   Loader2,
   Maximize2,
@@ -622,6 +625,41 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
 
   const isPlanPaused = (selectedPlan as any).isPaused;
 
+  const isAgentManaged =
+    (selectedPlan as any).contentPlanner === "EXTERNAL_AGENT";
+  const agentLastSyncAt = (selectedPlan as any).externalAgentLastSyncAt as
+    | Date
+    | null
+    | undefined;
+  const agentSyncIsStale =
+    !agentLastSyncAt ||
+    differenceInCalendarDays(new Date(), agentLastSyncAt) >= 3;
+
+  const handleToggleContentPlanner = async (checked: boolean) => {
+    if (!selectedPlan.id) return;
+    try {
+      await updatePlans({
+        updates: [
+          {
+            planId: selectedPlan.id,
+            updates: {
+              contentPlanner: checked ? "EXTERNAL_AGENT" : "COACH",
+            } as any,
+          },
+        ],
+        muteNotifications: true,
+      });
+      toast.success(
+        checked
+          ? "Your connected AI now plans this plan's weeks"
+          : "Your coach now plans this plan's weeks"
+      );
+    } catch (error) {
+      console.error("Failed to update content planner:", error);
+      toast.error("Failed to update who plans this plan");
+    }
+  };
+
   const handleSaveCoachingTime = async (startHour: number) => {
     if (!currentUser) return;
 
@@ -737,6 +775,34 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
                   <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Paused</span>
                 </div>
               )}
+              {isAgentManaged && (
+                <div
+                  className={`flex items-center gap-1 mr-2 px-2 py-1 rounded-full ${
+                    agentSyncIsStale
+                      ? "bg-amber-100 dark:bg-amber-900/30"
+                      : "bg-sky-100 dark:bg-sky-900/30"
+                  }`}
+                >
+                  <Bot
+                    className={`h-4 w-4 ${
+                      agentSyncIsStale
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-sky-600 dark:text-sky-400"
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      agentSyncIsStale
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-sky-600 dark:text-sky-400"
+                    }`}
+                  >
+                    {agentLastSyncAt
+                      ? `Teacher · synced ${formatDistanceToNowStrict(agentLastSyncAt, { addSuffix: true })}`
+                      : "Teacher · never synced"}
+                  </span>
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -806,6 +872,27 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
             notes={selectedPlan.notes}
             onSave={handleSavePlanNotes}
             isSaving={isUpdatingPlans}
+          />
+        </div>
+      </AnimatedSection>
+
+      <AnimatedSection delay={backgroundImageUrl ? 0.14 : 0.07}>
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border p-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">
+              Weeks planned by your connected AI
+            </p>
+            <p className="text-xs text-muted-foreground">
+              If you work through this plan with Claude or another connected
+              agent, it plans your weeks' content and keeps them synced — your
+              coach stays on accountability. Connect one in Settings →
+              Integrations.
+            </p>
+          </div>
+          <Switch
+            checked={isAgentManaged}
+            onCheckedChange={handleToggleContentPlanner}
+            disabled={isUpdatingPlans}
           />
         </div>
       </AnimatedSection>

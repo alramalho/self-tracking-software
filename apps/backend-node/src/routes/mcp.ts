@@ -1,6 +1,12 @@
+import { TZDate } from "@date-fns/tz";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { User } from "@tsw/prisma";
+import {
+  addDaysToDateKey,
+  buildPlanWeekProjection,
+} from "@tsw/prisma/plan-week";
+import { differenceInCalendarDays, format } from "date-fns";
 import { NextFunction, Response, Router } from "express";
 import { z } from "zod/v4";
 import { AuthenticatedRequest } from "../middleware/auth";
@@ -13,6 +19,11 @@ import {
   replaceCurriculum,
   upsertCurriculumFiles,
 } from "../services/planCurriculumService";
+import {
+  executePlanProposalPatch,
+  type PlanProposalPatch,
+} from "../services/planProposalPatchService";
+import { plansService } from "../services/plansService";
 import { hashApiKey } from "./apiKeys";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -89,6 +100,20 @@ function parseDateOnly(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// Presence for the coach's liveness ladder: a write over MCP means the
+// connected agent synced state. Best-effort — never fails the tool call.
+async function stampExternalAgentSync(planIds: string[]): Promise<void> {
+  if (planIds.length === 0) return;
+  try {
+    await prisma.plan.updateMany({
+      where: { id: { in: planIds } },
+      data: { externalAgentLastSyncAt: new Date() },
+    });
+  } catch (error) {
+    logger.error("[mcp] failed to stamp externalAgentLastSyncAt:", error);
+  }
+}
+
 function buildMcpServer(user: User): McpServer {
   const server = new McpServer({
     name: "tracking-so",
@@ -100,7 +125,7 @@ function buildMcpServer(user: User): McpServer {
     {
       title: "Get user state",
       description:
-        "Get an overview of the user's tracking.so account: profile, active plans with schedule health, curriculum attachment, and recent logging activity. Call this first to decide whether the user needs onboarding (no plans), plan repairs (plans without future sessions), or is on track.",
+        "Get an overview of the user's tracking.so account: profile, active plans with this-week and next-week schedules, milestones, curriculum attachment, sync state, and recent logging. Call this first to decide whether the user needs onboarding (no plans), plan repairs, or is on track.",
       inputSchema: {},
     },
     async () => {
@@ -120,8 +145,25 @@ function buildMcpServer(user: User): McpServer {
             finishingDate: true,
             isPaused: true,
             currentWeekState: true,
+            contentPlanner: true,
+            externalAgentLastSyncAt: true,
             _count: { select: { curriculumFiles: true } },
-            sessions: { select: { date: true } },
+            sessions: {
+              select: {
+                id: true,
+                date: true,
+                activityId: true,
+                quantity: true,
+                descriptiveGuide: true,
+              },
+            },
+            activities: {
+              select: { id: true, title: true, emoji: true, measure: true },
+            },
+            milestones: {
+              select: { description: true, date: true, progress: true },
+              orderBy: { date: "asc" },
+            },
           },
           orderBy: { createdAt: "desc" },
         }),
@@ -131,9 +173,57 @@ function buildMcpServer(user: User): McpServer {
             deletedAt: null,
             datetime: { gte: thirtyDaysAgo },
           },
-          select: { datetime: true },
+          select: { datetime: true, activityId: true },
         }),
       ]);
+
+      const projection = buildPlanWeekProjection({
+        plans,
+        entries: recentEntries,
+        now,
+        timezone: user.timezone,
+        weekCount: 2,
+      });
+      const activityTitleById = new Map(
+        plans.flatMap((plan) =>
+          plan.activities.map((activity) => [activity.id, activity.title]),
+        ),
+      );
+
+      const buildWeekView = (planId: string, weekIndex: number) => {
+        const weekStartKey = addDaysToDateKey(
+          projection.weekStartKey,
+          weekIndex * 7,
+        );
+        const weekEndExclusiveKey = addDaysToDateKey(weekStartKey, 7);
+        const sessions = projection.scheduledSessions
+          .filter(
+            (session) =>
+              session.planId === planId &&
+              session.dateKey >= weekStartKey &&
+              session.dateKey < weekEndExclusiveKey,
+          )
+          .map((session) => ({
+            date: session.dateKey,
+            activityTitle: activityTitleById.get(session.activityId) ?? null,
+            quantity: session.quantity ?? null,
+            descriptiveGuide: session.descriptiveGuide || undefined,
+          }));
+        const summary = projection.summaries.find(
+          (item) => item.planId === planId && item.weekIndex === weekIndex,
+        );
+        return {
+          weekStart: weekStartKey,
+          sessions,
+          // TIMES_PER_WEEK plans get a computed weekly summary; SPECIFIC
+          // plans are defined by their dated sessions alone.
+          target: summary?.target ?? null,
+          completedDays: summary?.completedDays ?? null,
+          remaining: summary?.remaining ?? null,
+          openDays: summary?.openDays ?? null,
+          status: summary?.status ?? null,
+        };
+      };
 
       return textResult({
         profile: {
@@ -143,19 +233,46 @@ function buildMcpServer(user: User): McpServer {
           planType: user.planType,
           proactiveCoachingEnabled: user.proactiveCoachingEnabled,
         },
-        plans: plans.map((plan) => ({
-          planId: plan.id,
-          goal: plan.goal,
-          emoji: plan.emoji,
-          outlineType: plan.outlineType,
-          timesPerWeek: plan.timesPerWeek,
-          finishingDate: plan.finishingDate,
-          isPaused: plan.isPaused,
-          currentWeekState: plan.currentWeekState,
-          futureSessions: plan.sessions.filter((s) => s.date >= now).length,
-          pastEndDate: !!plan.finishingDate && plan.finishingDate < now,
-          curriculumFiles: plan._count.curriculumFiles,
-        })),
+        plans: plans.map((plan) => {
+          const planActivityIds = new Set(
+            plan.activities.map((activity) => activity.id),
+          );
+          const lastPlanEntry = recentEntries
+            .filter(
+              (entry) =>
+                entry.activityId && planActivityIds.has(entry.activityId),
+            )
+            .reduce<Date | null>(
+              (latest, entry) =>
+                !latest || entry.datetime > latest ? entry.datetime : latest,
+              null,
+            );
+          return {
+            planId: plan.id,
+            goal: plan.goal,
+            emoji: plan.emoji,
+            outlineType: plan.outlineType,
+            timesPerWeek: plan.timesPerWeek,
+            finishingDate: plan.finishingDate,
+            isPaused: plan.isPaused,
+            currentWeekState: plan.currentWeekState,
+            contentPlanner: plan.contentPlanner,
+            lastAgentSyncAt: plan.externalAgentLastSyncAt,
+            futureSessions: plan.sessions.filter((s) => s.date >= now).length,
+            pastEndDate: !!plan.finishingDate && plan.finishingDate < now,
+            curriculumFiles: plan._count.curriculumFiles,
+            daysSinceLastActivity: lastPlanEntry
+              ? differenceInCalendarDays(now, lastPlanEntry)
+              : null,
+            milestones: plan.milestones.map((milestone) => ({
+              description: milestone.description,
+              date: format(milestone.date, "yyyy-MM-dd"),
+              progress: milestone.progress ?? 0,
+            })),
+            thisWeek: buildWeekView(plan.id, 0),
+            nextWeek: buildWeekView(plan.id, 1),
+          };
+        }),
         activity: {
           entriesLast7Days: recentEntries.filter(
             (entry) => entry.datetime >= sevenDaysAgo
@@ -233,6 +350,12 @@ function buildMcpServer(user: User): McpServer {
           )
           .max(20)
           .optional(),
+        contentPlanner: z
+          .enum(["COACH", "EXTERNAL_AGENT"])
+          .optional()
+          .describe(
+            "Who plans this plan's week content. Set EXTERNAL_AGENT when you will maintain the schedule and curriculum yourself; the in-app coach then stays on accountability while you keep syncing. Defaults to COACH."
+          ),
       },
     },
     async (input) => {
@@ -331,6 +454,8 @@ function buildMcpServer(user: User): McpServer {
             notes: input.notes || null,
             emoji: input.emoji || "🎯",
             finishingDate,
+            contentPlanner: input.contentPlanner || "COACH",
+            externalAgentLastSyncAt: new Date(),
             outlineType: input.outlineType,
             timesPerWeek:
               input.outlineType === "TIMES_PER_WEEK"
@@ -382,6 +507,363 @@ function buildMcpServer(user: User): McpServer {
   );
 
   server.registerTool(
+    "update_plan",
+    {
+      title: "Update plan",
+      description:
+        "Update an existing plan's fields: finishing date, notes, goal, weekly frequency, milestones, or who plans its week content. Use this to renegotiate a finishing date the user agreed to, keep milestones' progress honest, or mark a plan as maintained by you (contentPlanner EXTERNAL_AGENT). Confirm changes with the user first.",
+      inputSchema: {
+        planId: z.string(),
+        goal: z.string().min(1).max(200).optional(),
+        notes: z.string().max(5000).nullable().optional(),
+        finishingDate: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("YYYY-MM-DD, or null to clear"),
+        timesPerWeek: z.number().int().min(1).max(7).optional(),
+        contentPlanner: z
+          .enum(["COACH", "EXTERNAL_AGENT"])
+          .optional()
+          .describe(
+            "EXTERNAL_AGENT: you own week content and keep it synced; the in-app coach stays on accountability. COACH: hand week planning back to the in-app coach."
+          ),
+        milestones: z
+          .array(
+            z.object({
+              id: z
+                .string()
+                .optional()
+                .describe("Existing milestone id to update; omit to create"),
+              description: z.string().min(1).max(300),
+              date: z.string().describe("YYYY-MM-DD"),
+              progress: z.number().min(0).max(100).optional(),
+            })
+          )
+          .max(20)
+          .optional(),
+      },
+    },
+    async (input) => {
+      const plan = await findOwnedPlan(input.planId, user.id);
+      if (!plan) return errorResult("Plan not found");
+      if (input.finishingDate && !parseDateOnly(input.finishingDate)) {
+        return errorResult("finishingDate must be YYYY-MM-DD");
+      }
+
+      const planPatch: NonNullable<PlanProposalPatch["plan"]> = {};
+      if (input.goal !== undefined) planPatch.goal = input.goal;
+      if (input.notes !== undefined) planPatch.notes = input.notes;
+      if (input.finishingDate !== undefined) {
+        planPatch.finishingDate = input.finishingDate;
+      }
+      if (input.timesPerWeek !== undefined) {
+        planPatch.timesPerWeek = input.timesPerWeek;
+      }
+
+      const patch: PlanProposalPatch = {};
+      if (Object.keys(planPatch).length > 0) patch.plan = planPatch;
+      if (input.milestones && input.milestones.length > 0) {
+        patch.milestones = { upsert: input.milestones };
+      }
+
+      try {
+        if (patch.plan || patch.milestones) {
+          await executePlanProposalPatch({
+            planId: input.planId,
+            patch,
+            userId: user.id,
+          });
+        }
+        if (input.contentPlanner) {
+          await prisma.plan.update({
+            where: { id: input.planId },
+            data: { contentPlanner: input.contentPlanner },
+          });
+        }
+      } catch (error) {
+        return errorResult(
+          error instanceof Error ? error.message : "Plan update failed"
+        );
+      }
+      await stampExternalAgentSync([input.planId]);
+
+      const updated = await prisma.plan.findUnique({
+        where: { id: input.planId },
+        select: {
+          goal: true,
+          notes: true,
+          finishingDate: true,
+          timesPerWeek: true,
+          contentPlanner: true,
+          milestones: {
+            select: { id: true, description: true, date: true, progress: true },
+            orderBy: { date: "asc" },
+          },
+        },
+      });
+      logger.info(
+        `[mcp] user=${user.username} updated plan ${input.planId}`
+      );
+      return textResult({ success: true, planId: input.planId, plan: updated });
+    }
+  );
+
+  server.registerTool(
+    "upsert_sessions",
+    {
+      title: "Upsert sessions",
+      description:
+        "Add, update, or delete dated sessions on an existing plan — use this to extend the schedule week by week as the curriculum progresses. Sessions you create are marked agent-suggested; on TIMES_PER_WEEK plans they act as day-placement hints rather than extra targets. Schedule 1-2 weeks ahead, not the whole plan.",
+      inputSchema: {
+        planId: z.string(),
+        sessions: z
+          .array(
+            z.object({
+              id: z
+                .string()
+                .optional()
+                .describe("Existing session id to update; omit to create"),
+              activityTitle: z
+                .string()
+                .optional()
+                .describe(
+                  "Must match one of the plan's activities. Required for new sessions"
+                ),
+              date: z.string().optional().describe("YYYY-MM-DD"),
+              quantity: z.number().min(1).optional(),
+              descriptiveGuide: z.string().max(2000).optional(),
+            })
+          )
+          .max(100)
+          .optional(),
+        deleteIds: z.array(z.string()).max(200).optional(),
+      },
+    },
+    async (input) => {
+      const plan = await prisma.plan.findFirst({
+        where: { id: input.planId, userId: user.id, deletedAt: null },
+        select: {
+          id: true,
+          goal: true,
+          activities: { select: { id: true, title: true } },
+        },
+      });
+      if (!plan) return errorResult("Plan not found");
+      if (!input.sessions?.length && !input.deleteIds?.length) {
+        return errorResult("Provide sessions to upsert or deleteIds");
+      }
+
+      const activityIdByTitle = new Map(
+        plan.activities.map((activity) => [
+          activity.title.toLowerCase(),
+          activity.id,
+        ])
+      );
+      const upserts: Array<{
+        id?: string;
+        activityId?: string;
+        date?: string;
+        quantity?: number;
+        descriptiveGuide?: string;
+      }> = [];
+      for (const session of input.sessions || []) {
+        let activityId: string | undefined;
+        if (session.activityTitle) {
+          activityId = activityIdByTitle.get(session.activityTitle.toLowerCase());
+          if (!activityId) {
+            return errorResult(
+              `Activity "${session.activityTitle}" is not on this plan. Plan activities: ${plan.activities.map((a) => a.title).join(", ") || "none"}`
+            );
+          }
+        }
+        if (!session.id && (!activityId || !session.date || !session.quantity)) {
+          return errorResult(
+            "New sessions need activityTitle, date, and quantity"
+          );
+        }
+        if (session.date && !parseDateOnly(session.date)) {
+          return errorResult(`Session date "${session.date}" must be YYYY-MM-DD`);
+        }
+        upserts.push({
+          id: session.id,
+          activityId,
+          date: session.date,
+          quantity: session.quantity,
+          descriptiveGuide: session.descriptiveGuide,
+        });
+      }
+
+      try {
+        await executePlanProposalPatch({
+          planId: input.planId,
+          patch: {
+            sessions: {
+              upsert: upserts,
+              deleteIds: input.deleteIds,
+            },
+          },
+          userId: user.id,
+        });
+      } catch (error) {
+        return errorResult(
+          error instanceof Error ? error.message : "Session upsert failed"
+        );
+      }
+      await stampExternalAgentSync([input.planId]);
+
+      const now = new Date();
+      const futureSessions = await prisma.planSession.count({
+        where: { planId: input.planId, date: { gte: now } },
+      });
+      logger.info(
+        `[mcp] user=${user.username} upserted sessions plan=${input.planId} upserts=${upserts.length} deletes=${input.deleteIds?.length ?? 0}`
+      );
+      return textResult({
+        success: true,
+        planId: input.planId,
+        upserted: upserts.length,
+        deleted: input.deleteIds?.length ?? 0,
+        futureSessions,
+      });
+    }
+  );
+
+  server.registerTool(
+    "log_activity",
+    {
+      title: "Log activity",
+      description:
+        "Log an activity entry for the user — record work that actually happened (e.g. after a study session). Logging feeds streaks, weekly targets, and the coach's picture of adherence. If an entry for the same activity and day exists, the quantity is added to it. Only log work the user confirmed doing.",
+      inputSchema: {
+        activityTitle: z
+          .string()
+          .describe("Must match one of the user's existing activities"),
+        date: z.string().describe("YYYY-MM-DD, the user's local day"),
+        quantity: z.number().min(1),
+        description: z.string().max(1000).optional(),
+      },
+    },
+    async (input) => {
+      const activity = await prisma.activity.findFirst({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          title: { equals: input.activityTitle, mode: "insensitive" },
+        },
+      });
+      if (!activity) {
+        const titles = await prisma.activity.findMany({
+          where: { userId: user.id, deletedAt: null },
+          select: { title: true },
+          take: 20,
+        });
+        return errorResult(
+          `Activity "${input.activityTitle}" not found. Existing activities: ${titles.map((t) => t.title).join(", ") || "none"}`
+        );
+      }
+
+      const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.date.trim());
+      if (!dateMatch) return errorResult("date must be YYYY-MM-DD");
+      const [, year, month, day] = dateMatch;
+      const timezone = user.timezone || "UTC";
+      const dayStart = new Date(
+        new TZDate(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          0,
+          0,
+          0,
+          timezone
+        ).getTime()
+      );
+      if (Number.isNaN(dayStart.getTime())) {
+        return errorResult("date must be a valid YYYY-MM-DD");
+      }
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const entryDatetime = new Date(
+        dayStart.getTime() + 12 * 60 * 60 * 1000
+      );
+
+      // Same-local-day merge: MCP logs are date-granular, so exact-datetime
+      // matching (the in-app rule) would always duplicate. One day, one entry.
+      const existingEntry = await prisma.activityEntry.findFirst({
+        where: {
+          userId: user.id,
+          activityId: activity.id,
+          deletedAt: null,
+          datetime: { gte: dayStart, lt: dayEnd },
+        },
+      });
+
+      const entry = existingEntry
+        ? await prisma.activityEntry.update({
+            where: { id: existingEntry.id },
+            data: {
+              quantity: existingEntry.quantity + input.quantity,
+              description: input.description || existingEntry.description,
+            },
+          })
+        : await prisma.activityEntry.create({
+            data: {
+              userId: user.id,
+              activityId: activity.id,
+              quantity: input.quantity,
+              datetime: entryDatetime,
+              timezone,
+              description: input.description || null,
+            },
+          });
+
+      const affectedPlans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          archivedAt: null,
+          activities: { some: { id: activity.id } },
+        },
+      });
+      await Promise.all([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { lastActiveAt: new Date() },
+        }),
+        prisma.plan.updateMany({
+          where: { id: { in: affectedPlans.map((p) => p.id) } },
+          data: { progressCalculatedAt: null },
+        }),
+      ]);
+      if (user.planType === "PLUS") {
+        for (const affectedPlan of affectedPlans) {
+          void plansService
+            .recalculateCurrentWeekState(affectedPlan, user)
+            .catch((error) =>
+              logger.error(
+                `[mcp] week state recalc failed plan=${affectedPlan.id}:`,
+                error
+              )
+            );
+        }
+      }
+      await stampExternalAgentSync(affectedPlans.map((p) => p.id));
+
+      logger.info(
+        `[mcp] user=${user.username} logged ${input.quantity} ${activity.measure} of "${activity.title}" on ${input.date}${existingEntry ? " (merged)" : ""}`
+      );
+      return textResult({
+        success: true,
+        entryId: entry.id,
+        activityTitle: activity.title,
+        date: input.date,
+        merged: !!existingEntry,
+        quantityForDay: entry.quantity,
+        plansTouched: affectedPlans.map((p) => p.goal),
+      });
+    }
+  );
+
+  server.registerTool(
     "list_plans",
     {
       title: "List plans",
@@ -401,6 +883,8 @@ function buildMcpServer(user: User): McpServer {
           timesPerWeek: true,
           finishingDate: true,
           isPaused: true,
+          contentPlanner: true,
+          externalAgentLastSyncAt: true,
           _count: { select: { curriculumFiles: true } },
           sessions: { select: { date: true } },
         },
@@ -416,6 +900,8 @@ function buildMcpServer(user: User): McpServer {
           timesPerWeek: plan.timesPerWeek,
           finishingDate: plan.finishingDate,
           isPaused: plan.isPaused,
+          contentPlanner: plan.contentPlanner,
+          lastAgentSyncAt: plan.externalAgentLastSyncAt,
           futureSessions: plan.sessions.filter((s) => s.date >= now).length,
           curriculumFiles: plan._count.curriculumFiles,
         }))
@@ -486,6 +972,7 @@ function buildMcpServer(user: User): McpServer {
         return errorResult(`Duplicate file paths: ${duplicates.join(", ")}`);
       }
       const { fileCount } = await replaceCurriculum(planId, files);
+      await stampExternalAgentSync([planId]);
       logger.info(
         `[mcp] user=${user.username} replaced curriculum plan=${planId} files=${fileCount}`
       );
@@ -509,6 +996,7 @@ function buildMcpServer(user: User): McpServer {
         return errorResult(`Duplicate file paths: ${duplicates.join(", ")}`);
       }
       const { fileCount } = await upsertCurriculumFiles(planId, files);
+      await stampExternalAgentSync([planId]);
       logger.info(
         `[mcp] user=${user.username} upserted curriculum plan=${planId} files=${fileCount}`
       );

@@ -17,6 +17,13 @@ import {
   deriveCoachAttentionItems,
   type CoachAttentionItem,
 } from "../../coachAttentionService";
+import {
+  daysSinceExternalAgentSync,
+  EXTERNAL_AGENT_FRESH_DAYS,
+  isExternalAgentManaged,
+  parseStatusDaysBehind,
+  readExternalAgentStatusFile,
+} from "../externalAgentPresence";
 import type { ConcernObservation } from "./types";
 
 export type DetectorPlan = Plan & {
@@ -36,6 +43,12 @@ export const CONCERN_KIND = {
   // User-level: tracks metrics but has stopped logging them. Modeled as a concern
   // (not a lens) so it dedupes and auto-resolves the moment they log again.
   METRIC_LOGGING_GAP: "metric_logging_gap",
+  // Connected agent owns this plan's week content but has stopped syncing
+  // while the user is still logging. Auto-resolves on the next agent write.
+  AGENT_SYNC_STALE: "agent_sync_stale",
+  // Forward-looking pace-vs-deadline drift: overdue milestones or the agent's
+  // status file reporting the user materially behind schedule.
+  DEADLINE_AT_RISK: "deadline_at_risk",
 } as const;
 
 // Severity ordering mirrors the legacy INTERVENTION_PRIORITY for the problem
@@ -44,7 +57,11 @@ const SEVERITY = {
   INACTIVITY_ARCHIVE: 90,
   INACTIVITY_PAUSE: 80,
   ATTENTION_BASE: 70,
+  // Deadline drift outranks week-level adjustment: it is the goal itself slipping.
+  DEADLINE_AT_RISK: 65,
   PLAN_ADJUSTMENT: 60,
+  // Sync-hygiene nudge: above a plain check-in, far below real problems.
+  AGENT_SYNC_STALE: 25,
   INACTIVITY_CHECKIN: 20,
   // Lowest priority: only surfaces in a quiet week, never displaces a real problem.
   METRIC_LOGGING_GAP: 15,
@@ -187,6 +204,27 @@ export async function detectConcernsForUser(
       });
     }
 
+    const agentSyncStale = detectAgentSyncStale(plan, summary, now);
+    if (agentSyncStale) {
+      observations.push({
+        userId: user.id,
+        planId: plan.id,
+        kind: CONCERN_KIND.AGENT_SYNC_STALE,
+        severity: SEVERITY.AGENT_SYNC_STALE,
+        data: agentSyncStale,
+      });
+    }
+
+    const deadlineAtRisk = await detectDeadlineAtRisk(plan, now);
+    if (deadlineAtRisk) {
+      observations.push({
+        userId: user.id,
+        planId: plan.id,
+        kind: CONCERN_KIND.DEADLINE_AT_RISK,
+        severity: SEVERITY.DEADLINE_AT_RISK,
+        data: deadlineAtRisk,
+      });
+    }
   }
 
   // 3. User-level: metric-logging gap (no plan).
@@ -202,6 +240,93 @@ export async function detectConcernsForUser(
   }
 
   return observations;
+}
+
+const DEADLINE_STATUS_DAYS_BEHIND_THRESHOLD = 7;
+
+// The plan's week content is owned by a connected agent that has stopped
+// syncing (>= 3 days) while the user is still logging. The 2x2: if the user
+// is also inactive, the inactivity concerns own the conversation instead.
+function detectAgentSyncStale(
+  plan: DetectorPlan,
+  summary: Awaited<ReturnType<typeof summarizePlanAdherenceAsOf>>,
+  now: Date
+): Record<string, unknown> | null {
+  if (!isExternalAgentManaged(plan)) return null;
+
+  const daysSinceSync = daysSinceExternalAgentSync(plan, now);
+  const daysSincePlanCreated = differenceInCalendarDays(now, plan.createdAt);
+  const neverSyncedLongEnough =
+    daysSinceSync === null &&
+    daysSincePlanCreated >= EXTERNAL_AGENT_FRESH_DAYS;
+  const syncIsStale =
+    daysSinceSync !== null && daysSinceSync >= EXTERNAL_AGENT_FRESH_DAYS;
+  if (!neverSyncedLongEnough && !syncIsStale) return null;
+
+  const userStillActive =
+    summary.daysSinceLastActivity !== null &&
+    summary.daysSinceLastActivity <= 7;
+  if (!userStillActive) return null;
+
+  return {
+    goal: plan.goal,
+    daysSinceAgentSync: daysSinceSync,
+    daysSinceLastActivity: summary.daysSinceLastActivity,
+    summary:
+      daysSinceSync === null
+        ? `"${plan.goal}" is marked as planned by a connected agent, but the agent has never synced.`
+        : `The connected agent planning "${plan.goal}" has not synced in ${daysSinceSync} days while the user kept logging.`,
+  };
+}
+
+// Forward-looking deadline drift: an overdue milestone below 100%, or the
+// connected agent's status file reporting the user materially behind.
+async function detectDeadlineAtRisk(
+  plan: DetectorPlan,
+  now: Date
+): Promise<Record<string, unknown> | null> {
+  const overdueMilestones = plan.milestones
+    .filter(
+      (milestone) => milestone.date < now && (milestone.progress ?? 0) < 100
+    )
+    .map((milestone) => ({
+      description: milestone.description,
+      date: milestone.date,
+      progress: milestone.progress ?? 0,
+      daysOverdue: differenceInCalendarDays(now, milestone.date),
+    }));
+
+  let statusDaysBehind: number | null = null;
+  if (isExternalAgentManaged(plan)) {
+    const statusFile = await readExternalAgentStatusFile(plan.id);
+    if (statusFile) statusDaysBehind = parseStatusDaysBehind(statusFile);
+  }
+  const materiallyBehind =
+    statusDaysBehind !== null &&
+    statusDaysBehind >= DEADLINE_STATUS_DAYS_BEHIND_THRESHOLD;
+
+  if (overdueMilestones.length === 0 && !materiallyBehind) return null;
+
+  const parts: string[] = [];
+  if (overdueMilestones.length > 0) {
+    const worst = overdueMilestones[0];
+    parts.push(
+      `Milestone "${worst.description}" was due ${worst.daysOverdue} day${worst.daysOverdue === 1 ? "" : "s"} ago at ${worst.progress}% progress.`
+    );
+  }
+  if (materiallyBehind) {
+    parts.push(
+      `The connected agent reports the user ${statusDaysBehind} days behind schedule.`
+    );
+  }
+
+  return {
+    goal: plan.goal,
+    finishingDate: plan.finishingDate,
+    overdueMilestones,
+    statusDaysBehind,
+    summary: parts.join(" "),
+  };
 }
 
 // The user tracks at least one metric but has logged none in the lookback window.

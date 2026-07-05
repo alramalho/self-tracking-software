@@ -57,6 +57,13 @@ import {
   type RecurrentCoachAssessmentInterventionType,
 } from "./prompt";
 import { buildAssessmentWeeklyOverview } from "./weeklyOverview";
+import {
+  coachDefersWeekContent,
+  daysSinceExternalAgentSync,
+  getExternalAgentPresenceTier,
+  isExternalAgentManaged,
+  readExternalAgentStatusFile,
+} from "../externalAgentPresence";
 
 type CoachPlan = Plan & {
   activities: Activity[];
@@ -1428,8 +1435,21 @@ export class CoachAssessmentService {
     });
     const visibleWeeklyOverviewContext =
       await this.buildVisibleWeeklyOverviewContext(user, now);
+    const externalAgentContext = await this.buildExternalAgentContext(
+      user,
+      now,
+    );
     const withVisibleWeeklyOverview = (context: string) =>
-      [visibleWeeklyOverviewContext, context].filter(Boolean).join("\n\n");
+      [visibleWeeklyOverviewContext, externalAgentContext, context]
+        .filter(Boolean)
+        .join("\n\n");
+    // Plans whose week content a live connected agent owns: the coach stays
+    // on accountability for these and skips content-planning interventions.
+    const deferredPlanIds = new Set(
+      user.plans
+        .filter((plan) => coachDefersWeekContent(plan, now))
+        .map((plan) => plan.id),
+    );
 
     if (attentionItems.length > 0) {
       candidates.push({
@@ -1490,6 +1510,7 @@ export class CoachAssessmentService {
 
       if (
         !options.pendingProposalExists &&
+        !deferredPlanIds.has(summary.plan.id) &&
         (summary.missedSessionsThisWeek >= 3 ||
           ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || "") ||
           flexiblePlanNeedsAdjustment)
@@ -1547,7 +1568,7 @@ export class CoachAssessmentService {
         user.plans,
         targetWeekStart,
         targetWeekEnd,
-      );
+      ).filter((item) => !deferredPlanIds.has(item.plan.id));
       if (weekSessions.length > 0) {
         candidates.push({
           type: "WEEK_PREP",
@@ -1569,7 +1590,7 @@ export class CoachAssessmentService {
         user.plans,
         startOfDay(tomorrow),
         endOfDay(tomorrow),
-      );
+      ).filter((item) => !deferredPlanIds.has(item.plan.id));
       if (tomorrowSessions.length > 0) {
         candidates.push({
           type: "SESSION_PREP",
@@ -2010,6 +2031,60 @@ export class CoachAssessmentService {
       now,
       timezone,
     });
+  }
+
+  // Context block for plans whose week content a connected agent plans over
+  // MCP. Tells the coach whose turn it is (liveness ladder) and inlines the
+  // agent's status.md progression contract when present.
+  private async buildExternalAgentContext(
+    user: CoachUser,
+    now: Date,
+  ): Promise<string> {
+    const managedPlans = user.plans.filter(isExternalAgentManaged);
+    if (managedPlans.length === 0) return "";
+
+    const lines = ["External agent status:"];
+    for (const plan of managedPlans) {
+      const tier = getExternalAgentPresenceTier(
+        plan.externalAgentLastSyncAt,
+        now,
+      );
+      const days = daysSinceExternalAgentSync(plan, now);
+      const syncedLabel =
+        days === null
+          ? "never synced"
+          : days === 0
+            ? "synced today"
+            : `last synced ${days} day${days === 1 ? "" : "s"} ago`;
+      lines.push(
+        `- "${plan.goal}": week content is planned by the user's connected agent (${syncedLabel}).`,
+      );
+      if (tier === "fresh") {
+        lines.push(
+          "  The agent owns this plan's week content. Do not plan or adjust its sessions; stay on accountability: logging, deadline realism, celebration.",
+        );
+      } else if (tier === "stale") {
+        lines.push(
+          `  The agent has not synced in ${days} days. If you message the user, fold in ONE gentle line asking whether the sessions are still happening or the agent just has not synced.`,
+        );
+      } else {
+        lines.push(
+          "  The agent appears inactive. Week planning falls back to you: coach this plan normally and offer to take week planning back over.",
+        );
+      }
+
+      const statusFile = await readExternalAgentStatusFile(plan.id);
+      if (statusFile) {
+        lines.push("  Agent status file (status.md):");
+        lines.push(
+          statusFile
+            .split("\n")
+            .map((line) => `    ${line}`)
+            .join("\n"),
+        );
+      }
+    }
+    return lines.join("\n");
   }
 
   private buildWeekRecapContext(params: {
