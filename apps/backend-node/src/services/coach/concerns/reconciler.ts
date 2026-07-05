@@ -24,6 +24,11 @@ const ESCALATION_DELAYS_BY_KIND: Record<string, number[]> = {
   // Metric-logging nudge: one-and-done. Raise once, then park (it auto-resolves
   // the moment the user logs a metric).
   metric_logging_gap: [],
+  // Connected-agent sync gap: soft hygiene nudge, resolves the moment the
+  // agent syncs again. Raise once, follow up after 4 days, then park.
+  agent_sync_stale: [96],
+  // Deadline drift is strategic, not urgent: nudge every ~3 days.
+  deadline_at_risk: [72, 144],
 };
 const PARK_HOURS = 365 * 24;
 

@@ -12,6 +12,7 @@ import { recurringJobService } from "../services/recurringJobService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { userService } from "../services/userService";
+import { withExtraCorsOrigins } from "../utils/corsOrigins";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "@/services/aiService";
@@ -277,14 +278,14 @@ router.get(
 );
 
 // Public error logging endpoint (with rate limiting)
-const ALLOWED_ORIGINS = new Set([
+const ALLOWED_ORIGINS = new Set(withExtraCorsOrigins([
   "https://tracking.so",
   "https://app.tracking.so",
   "http://localhost:3001",
   "http://localhost:5173",
   "http://localhost:4173",
   "https://tracking-so.localhost",
-]);
+]));
 
 const BLACKLISTED_IPS = new Set<string>();
 const MAX_ERROR_LENGTH = 1000;

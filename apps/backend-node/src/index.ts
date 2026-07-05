@@ -21,6 +21,7 @@ import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
 import { cronScheduler } from "./services/cronScheduler";
 import { redisService } from "./services/redisService";
+import { withExtraCorsOrigins } from "./utils/corsOrigins";
 import { prisma } from "./utils/prisma";
 
 // Import routes
@@ -67,7 +68,7 @@ app.use(helmet());
 app.use(compression());
 
 // CORS configuration
-const allowedOrigins = [
+const allowedOrigins = withExtraCorsOrigins([
   "https://tracking.so",
   "https://app.tracking.so",
   "https://app.tracking.so/",
@@ -77,7 +78,7 @@ const allowedOrigins = [
   "capacitor://localhost",
   "http://localhost",
   "ionic://localhost",
-];
+]);
 
 if (ENVIRONMENT === "development") {
   allowedOrigins.push("https://alex-trackingso.loca.lt");

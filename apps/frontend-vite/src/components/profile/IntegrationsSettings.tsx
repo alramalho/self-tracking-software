@@ -114,11 +114,14 @@ export function IntegrationsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Connect your AI tools</h2>
+        <h2 className="text-lg font-semibold">Bring your own teacher</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Personal API keys let tools like Claude Code talk to your tracking.so
-          account over MCP: manage your plans and attach your own markdown
-          curriculum that your coach reads when planning your weeks.{" "}
+          Work through a plan with Claude (or another AI) on your own machine?
+          Connect it and it keeps your plan&apos;s curriculum, schedule, and
+          weekly status in sync — so your coach here always knows where you
+          actually are. Your coach stays on accountability: your rhythm, your
+          deadline, your wins. Your connected teacher plans the content of your
+          weeks. If it goes quiet, your coach steps back in.{" "}
           <a
             href={DOCS_URL}
             target="_blank"
@@ -204,10 +207,12 @@ export function IntegrationsSettings() {
           3. Use it
         </p>
         <p className="text-sm text-muted-foreground">
-          From then on your agent can check your plans, create new ones, and
-          push your self-built curriculum, and your coach plans your weeks from
-          those files. Try: {'"'}push my curriculum folder to my tracking.so
-          plan{'"'}.
+          From then on your agent can check your plans, create and extend
+          schedules, log the work you do together, and keep your curriculum
+          synced. On any plan, flip {'"'}Weeks planned by your connected AI{'"'}
+          {" "}to hand it week planning — the plan shows when it last synced,
+          and your coach steps back in if it goes quiet. Try: {'"'}push my
+          curriculum folder to my tracking.so plan{'"'}.
         </p>
       </div>
 

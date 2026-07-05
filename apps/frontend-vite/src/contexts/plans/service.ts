@@ -46,6 +46,7 @@ type PlanApiResponse = Omit<
   | "finishingDate"
   | "deletedAt"
   | "suggestedByCoachAt"
+  | "externalAgentLastSyncAt"
   | "sessions"
   | "milestones"
   | "planGroup"
@@ -56,6 +57,7 @@ type PlanApiResponse = Omit<
   finishingDate: string | null;
   deletedAt: string | null;
   suggestedByCoachAt: string | null;
+  externalAgentLastSyncAt: string | null;
   sessions: Array<
     Omit<
       PlanWithRelationsBase["sessions"][number],
@@ -137,6 +139,7 @@ const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
     "deletedAt",
     "finishingDate",
     "suggestedByCoachAt",
+    "externalAgentLastSyncAt",
     "sessions.date",
     "sessions.createdAt",
     "sessions.updatedAt",
