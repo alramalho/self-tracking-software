@@ -11,6 +11,7 @@ import {
   type DetectorPlan,
   type DetectorUser,
 } from "./detectors";
+import { coachDefersWeekContent } from "../externalAgentPresence";
 import { isWithinPreferredCoachWindow } from "./time";
 
 // A lens is NOT a stored problem. It is an ephemeral angle to assess the user
@@ -60,10 +61,16 @@ export async function computeActiveLenses(
   const localHour = nowInTz.getHours();
   const lenses: ReviewLens[] = [];
 
+  // Week-content lenses skip plans a live connected agent plans — same
+  // deferral rule as the live candidate path.
+  const contentPlans = user.plans.filter(
+    (plan) => !coachDefersWeekContent(plan, now)
+  );
+
   // Week-start angle: heads-up about the week's planned sessions.
   if (isWeekStartTime(user, now)) {
     const { start, end } = getCoachWeekBounds(now, timezone);
-    const weekSessions = sessionsBetween(user.plans, start, end);
+    const weekSessions = sessionsBetween(contentPlans, start, end);
     if (weekSessions.length > 0) {
       lenses.push({
         kind: LENS_KIND.WEEK_START,
@@ -77,7 +84,7 @@ export async function computeActiveLenses(
     const tomorrow = new TZDate(now, timezone);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowSessions = sessionsBetween(
-      user.plans,
+      contentPlans,
       startOfDay(tomorrow),
       endOfDay(tomorrow)
     );

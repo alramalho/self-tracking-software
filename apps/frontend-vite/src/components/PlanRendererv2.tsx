@@ -341,6 +341,18 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     enabled: !!(selectedPlan as any).coachId,
   });
 
+  // A connected agent exists iff the user has an active API key
+  const { data: apiKeysData } = useQuery({
+    queryKey: ["api-keys"],
+    queryFn: async () => {
+      const response = await api.get<{ keys: Array<{ id: string }> }>(
+        "/api-keys"
+      );
+      return response.data;
+    },
+  });
+  const hasConnectedAgent = (apiKeysData?.keys?.length ?? 0) > 0;
+
   // Find the coach for this plan
   const planCoach = useMemo(() => {
     if (!humanCoaches || !(selectedPlan as any).coachId) return null;
@@ -631,9 +643,31 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
     | Date
     | null
     | undefined;
-  const agentSyncIsStale =
-    !agentLastSyncAt ||
-    differenceInCalendarDays(new Date(), agentLastSyncAt) >= 3;
+  // Mirrors the backend ladder: fresh <3d (agent owns weeks), stale 3-7d or
+  // never (nudge to sync), dark >=7d (coach has resumed planning).
+  const agentSyncDays = agentLastSyncAt
+    ? differenceInCalendarDays(new Date(), agentLastSyncAt)
+    : null;
+  const agentSyncTier: "fresh" | "stale" | "dark" =
+    agentSyncDays !== null && agentSyncDays < 3
+      ? "fresh"
+      : agentSyncDays !== null && agentSyncDays >= 7
+        ? "dark"
+        : "stale";
+  const agentChipStyles = {
+    fresh: {
+      pill: "bg-sky-100 dark:bg-sky-900/30",
+      content: "text-sky-600 dark:text-sky-400",
+    },
+    stale: {
+      pill: "bg-amber-100 dark:bg-amber-900/30",
+      content: "text-amber-600 dark:text-amber-400",
+    },
+    dark: {
+      pill: "bg-gray-100 dark:bg-gray-800/60",
+      content: "text-gray-500 dark:text-gray-400",
+    },
+  }[agentSyncTier];
 
   const handleToggleContentPlanner = async (checked: boolean) => {
     if (!selectedPlan.id) return;
@@ -777,29 +811,17 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               )}
               {isAgentManaged && (
                 <div
-                  className={`flex items-center gap-1 mr-2 px-2 py-1 rounded-full ${
-                    agentSyncIsStale
-                      ? "bg-amber-100 dark:bg-amber-900/30"
-                      : "bg-sky-100 dark:bg-sky-900/30"
-                  }`}
+                  className={`flex items-center gap-1 mr-2 px-2 py-1 rounded-full ${agentChipStyles.pill}`}
                 >
-                  <Bot
-                    className={`h-4 w-4 ${
-                      agentSyncIsStale
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-sky-600 dark:text-sky-400"
-                    }`}
-                  />
+                  <Bot className={`h-4 w-4 ${agentChipStyles.content}`} />
                   <span
-                    className={`text-sm font-medium ${
-                      agentSyncIsStale
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-sky-600 dark:text-sky-400"
-                    }`}
+                    className={`text-sm font-medium ${agentChipStyles.content}`}
                   >
-                    {agentLastSyncAt
-                      ? `Teacher · synced ${formatDistanceToNowStrict(agentLastSyncAt, { addSuffix: true })}`
-                      : "Teacher · never synced"}
+                    {agentSyncTier === "dark"
+                      ? "Teacher quiet · coach took over"
+                      : agentLastSyncAt
+                        ? `Teacher · synced ${formatDistanceToNowStrict(agentLastSyncAt, { addSuffix: true })}`
+                        : "Teacher · never synced"}
                   </span>
                 </div>
               )}
@@ -876,26 +898,27 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </div>
       </AnimatedSection>
 
-      <AnimatedSection delay={backgroundImageUrl ? 0.14 : 0.07}>
-        <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border p-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">
-              Weeks planned by your connected AI
-            </p>
-            <p className="text-xs text-muted-foreground">
-              If you work through this plan with Claude or another connected
-              agent, it plans your weeks' content and keeps them synced — your
-              coach stays on accountability. Connect one in Settings →
-              Integrations.
-            </p>
+      {(hasConnectedAgent || isAgentManaged) && (
+        <AnimatedSection delay={backgroundImageUrl ? 0.14 : 0.07}>
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                Weeks planned by your connected AI
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Your connected agent plans this plan's weeks and keeps them
+                synced — your coach stays on accountability and steps back in
+                if the agent goes quiet.
+              </p>
+            </div>
+            <Switch
+              checked={isAgentManaged}
+              onCheckedChange={handleToggleContentPlanner}
+              disabled={isUpdatingPlans}
+            />
           </div>
-          <Switch
-            checked={isAgentManaged}
-            onCheckedChange={handleToggleContentPlanner}
-            disabled={isUpdatingPlans}
-          />
-        </div>
-      </AnimatedSection>
+        </AnimatedSection>
+      )}
 
       {/* AI Coach Overview */}
       {!planCoach && (
