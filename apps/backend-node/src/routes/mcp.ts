@@ -94,10 +94,22 @@ function parseDateOnly(value: string | null | undefined): Date | null {
   if (!value) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) return null;
-  const date = new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  );
-  return Number.isNaN(date.getTime()) ? null : date;
+  const [year, month, day] = [
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+  ];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(date.getTime())) return null;
+  // Reject calendar-invalid dates (2026-02-31) that Date.UTC silently rolls over.
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return date;
 }
 
 // Presence for the coach's liveness ladder: a write over MCP means the
@@ -190,27 +202,38 @@ function buildMcpServer(user: User): McpServer {
         ),
       );
 
-      const buildWeekView = (planId: string, weekIndex: number) => {
+      // Sessions come from the raw rows (not the projection) so ids are
+      // round-trippable via upsert_sessions and TIMES_PER_WEEK day-placement
+      // hints stay visible. @db.Date is UTC midnight; slice gives the stored day.
+      const buildWeekView = (
+        plan: (typeof plans)[number],
+        weekIndex: number,
+      ) => {
         const weekStartKey = addDaysToDateKey(
           projection.weekStartKey,
           weekIndex * 7,
         );
         const weekEndExclusiveKey = addDaysToDateKey(weekStartKey, 7);
-        const sessions = projection.scheduledSessions
+        const sessions = plan.sessions
+          .map((session) => ({
+            ...session,
+            dateKey: session.date.toISOString().slice(0, 10),
+          }))
           .filter(
             (session) =>
-              session.planId === planId &&
               session.dateKey >= weekStartKey &&
               session.dateKey < weekEndExclusiveKey,
           )
+          .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
           .map((session) => ({
+            id: session.id,
             date: session.dateKey,
             activityTitle: activityTitleById.get(session.activityId) ?? null,
-            quantity: session.quantity ?? null,
+            quantity: session.quantity,
             descriptiveGuide: session.descriptiveGuide || undefined,
           }));
         const summary = projection.summaries.find(
-          (item) => item.planId === planId && item.weekIndex === weekIndex,
+          (item) => item.planId === plan.id && item.weekIndex === weekIndex,
         );
         return {
           weekStart: weekStartKey,
@@ -266,11 +289,12 @@ function buildMcpServer(user: User): McpServer {
               : null,
             milestones: plan.milestones.map((milestone) => ({
               description: milestone.description,
-              date: format(milestone.date, "yyyy-MM-dd"),
+              // @db.Date is UTC midnight; server-local format() would shift it.
+              date: milestone.date.toISOString().slice(0, 10),
               progress: milestone.progress ?? 0,
             })),
-            thisWeek: buildWeekView(plan.id, 0),
-            nextWeek: buildWeekView(plan.id, 1),
+            thisWeek: buildWeekView(plan, 0),
+            nextWeek: buildWeekView(plan, 1),
           };
         }),
         activity: {
@@ -330,7 +354,7 @@ function buildMcpServer(user: User): McpServer {
             z.object({
               activityTitle: z.string().describe("Must match an activity title"),
               date: z.string().describe("YYYY-MM-DD"),
-              quantity: z.number().min(1),
+              quantity: z.number().int().min(1),
               descriptiveGuide: z
                 .string()
                 .max(2000)
@@ -537,7 +561,7 @@ function buildMcpServer(user: User): McpServer {
                 .describe("Existing milestone id to update; omit to create"),
               description: z.string().min(1).max(300),
               date: z.string().describe("YYYY-MM-DD"),
-              progress: z.number().min(0).max(100).optional(),
+              progress: z.number().int().min(0).max(100).optional(),
             })
           )
           .max(20)
@@ -549,6 +573,13 @@ function buildMcpServer(user: User): McpServer {
       if (!plan) return errorResult("Plan not found");
       if (input.finishingDate && !parseDateOnly(input.finishingDate)) {
         return errorResult("finishingDate must be YYYY-MM-DD");
+      }
+      for (const milestone of input.milestones || []) {
+        if (!parseDateOnly(milestone.date)) {
+          return errorResult(
+            `Milestone date "${milestone.date}" must be YYYY-MM-DD`
+          );
+        }
       }
 
       const planPatch: NonNullable<PlanProposalPatch["plan"]> = {};
@@ -568,17 +599,19 @@ function buildMcpServer(user: User): McpServer {
       }
 
       try {
+        // Idempotent write first: if the milestone-carrying patch fails after
+        // it, a verbatim retry cannot duplicate milestones.
+        if (input.contentPlanner) {
+          await prisma.plan.update({
+            where: { id: input.planId },
+            data: { contentPlanner: input.contentPlanner },
+          });
+        }
         if (patch.plan || patch.milestones) {
           await executePlanProposalPatch({
             planId: input.planId,
             patch,
             userId: user.id,
-          });
-        }
-        if (input.contentPlanner) {
-          await prisma.plan.update({
-            where: { id: input.planId },
-            data: { contentPlanner: input.contentPlanner },
           });
         }
       } catch (error) {
@@ -631,7 +664,7 @@ function buildMcpServer(user: User): McpServer {
                   "Must match one of the plan's activities. Required for new sessions"
                 ),
               date: z.string().optional().describe("YYYY-MM-DD"),
-              quantity: z.number().min(1).optional(),
+              quantity: z.number().int().min(1).optional(),
               descriptiveGuide: z.string().max(2000).optional(),
             })
           )
@@ -647,6 +680,7 @@ function buildMcpServer(user: User): McpServer {
           id: true,
           goal: true,
           activities: { select: { id: true, title: true } },
+          sessions: { select: { id: true, activityId: true, date: true } },
         },
       });
       if (!plan) return errorResult("Plan not found");
@@ -658,6 +692,14 @@ function buildMcpServer(user: User): McpServer {
         plan.activities.map((activity) => [
           activity.title.toLowerCase(),
           activity.id,
+        ])
+      );
+      // Same activity + same day already scheduled -> update instead of
+      // create, so re-syncs never accumulate duplicate sessions.
+      const existingSessionByKey = new Map(
+        plan.sessions.map((session) => [
+          `${session.activityId}:${session.date.toISOString().slice(0, 10)}`,
+          session.id,
         ])
       );
       const upserts: Array<{
@@ -685,8 +727,13 @@ function buildMcpServer(user: User): McpServer {
         if (session.date && !parseDateOnly(session.date)) {
           return errorResult(`Session date "${session.date}" must be YYYY-MM-DD`);
         }
+        const dedupedId =
+          session.id ??
+          (activityId && session.date
+            ? existingSessionByKey.get(`${activityId}:${session.date}`)
+            : undefined);
         upserts.push({
-          id: session.id,
+          id: dedupedId,
           activityId,
           date: session.date,
           quantity: session.quantity,
@@ -694,8 +741,9 @@ function buildMcpServer(user: User): McpServer {
         });
       }
 
+      let sessionChanges: Array<{ operation: string; id?: string }> = [];
       try {
-        await executePlanProposalPatch({
+        const { changes } = await executePlanProposalPatch({
           planId: input.planId,
           patch: {
             sessions: {
@@ -705,6 +753,9 @@ function buildMcpServer(user: User): McpServer {
           },
           userId: user.id,
         });
+        sessionChanges = changes
+          .filter((change) => change.entity === "session")
+          .map(({ operation, id }) => ({ operation, id }));
       } catch (error) {
         return errorResult(
           error instanceof Error ? error.message : "Session upsert failed"
@@ -722,7 +773,7 @@ function buildMcpServer(user: User): McpServer {
       return textResult({
         success: true,
         planId: input.planId,
-        upserted: upserts.length,
+        changes: sessionChanges,
         deleted: input.deleteIds?.length ?? 0,
         futureSessions,
       });
@@ -740,7 +791,7 @@ function buildMcpServer(user: User): McpServer {
           .string()
           .describe("Must match one of the user's existing activities"),
         date: z.string().describe("YYYY-MM-DD, the user's local day"),
-        quantity: z.number().min(1),
+        quantity: z.number().int().min(1).describe("Whole number, in the activity's measure"),
         description: z.string().max(1000).optional(),
       },
     },
@@ -763,27 +814,21 @@ function buildMcpServer(user: User): McpServer {
         );
       }
 
-      const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.date.trim());
-      if (!dateMatch) return errorResult("date must be YYYY-MM-DD");
-      const [, year, month, day] = dateMatch;
+      const validDate = parseDateOnly(input.date);
+      if (!validDate) return errorResult("date must be a valid YYYY-MM-DD");
+      const year = validDate.getUTCFullYear();
+      const monthIndex = validDate.getUTCMonth();
+      const day = validDate.getUTCDate();
       const timezone = user.timezone || "UTC";
+      // Local calendar-day bounds via TZDate (not +24h): DST days are 23/25h.
       const dayStart = new Date(
-        new TZDate(
-          Number(year),
-          Number(month) - 1,
-          Number(day),
-          0,
-          0,
-          0,
-          timezone
-        ).getTime()
+        new TZDate(year, monthIndex, day, 0, 0, 0, timezone).getTime()
       );
-      if (Number.isNaN(dayStart.getTime())) {
-        return errorResult("date must be a valid YYYY-MM-DD");
-      }
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(
+        new TZDate(year, monthIndex, day + 1, 0, 0, 0, timezone).getTime()
+      );
       const entryDatetime = new Date(
-        dayStart.getTime() + 12 * 60 * 60 * 1000
+        new TZDate(year, monthIndex, day, 12, 0, 0, timezone).getTime()
       );
 
       // Same-local-day merge: MCP logs are date-granular, so exact-datetime
@@ -813,6 +858,7 @@ function buildMcpServer(user: User): McpServer {
               datetime: entryDatetime,
               timezone,
               description: input.description || null,
+              source: "mcp",
             },
           });
 

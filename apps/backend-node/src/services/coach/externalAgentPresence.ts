@@ -69,6 +69,8 @@ export async function getExternalAgentLastSeenAt(
   return result._max.lastUsedAt ?? null;
 }
 
+// Full content — parse signals (days_behind) from this, never from the
+// context-truncated form.
 export async function readExternalAgentStatusFile(
   planId: string,
 ): Promise<string | null> {
@@ -78,7 +80,10 @@ export async function readExternalAgentStatusFile(
   });
   if (!file) return null;
   const content = file.content.trim();
-  if (!content) return null;
+  return content || null;
+}
+
+export function truncateStatusForContext(content: string): string {
   return content.length > STATUS_FILE_CONTEXT_MAX_CHARS
     ? `${content.slice(0, STATUS_FILE_CONTEXT_MAX_CHARS)}\n[truncated]`
     : content;

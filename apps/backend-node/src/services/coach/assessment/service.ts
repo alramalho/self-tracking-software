@@ -63,6 +63,7 @@ import {
   getExternalAgentPresenceTier,
   isExternalAgentManaged,
   readExternalAgentStatusFile,
+  truncateStatusForContext,
 } from "../externalAgentPresence";
 
 type CoachPlan = Plan & {
@@ -127,6 +128,8 @@ export function resolveAutonomousCoachUsernameFilter(
 const AUTO_ACCEPT_HOURS = 48;
 const MILESTONE_AUTO_ACCEPT_NOTE =
   "Milestone changes require explicit user confirmation";
+const AGENT_MANAGED_AUTO_ACCEPT_NOTE =
+  "A connected agent plans this plan's weeks; accept or reject explicitly";
 const PLAN_ATTENTION_FOLLOW_UP_DELAYS_HOURS = [24, 48];
 const PLAN_ATTENTION_ARCHIVE_AFTER_HOURS = 7 * 24;
 const PLAN_ATTENTION_ARCHIVE_MIN_NOTIFICATIONS = 3;
@@ -982,6 +985,7 @@ export class CoachAssessmentService {
         const proposal = proposals[i];
         if (proposal.status) continue;
         if (proposal.autoAcceptNote === MILESTONE_AUTO_ACCEPT_NOTE) continue;
+        if (proposal.autoAcceptNote === AGENT_MANAGED_AUTO_ACCEPT_NOTE) continue;
 
         processed++;
         changed = true;
@@ -995,6 +999,16 @@ export class CoachAssessmentService {
           if (!plan) {
             proposals[i].status = "auto_accepted";
             proposals[i].autoAcceptNote = "Plan no longer exists";
+            continue;
+          }
+
+          // Accept-time liveness check: never auto-apply a stale coach patch
+          // on top of a schedule a live connected agent owns.
+          if (coachDefersWeekContent(plan, now)) {
+            proposals[i].autoAcceptNote = AGENT_MANAGED_AUTO_ACCEPT_NOTE;
+            logger.info(
+              `Skipped auto-accept for agent-managed plan "${plan.goal}"`,
+            );
             continue;
           }
 
@@ -1451,19 +1465,30 @@ export class CoachAssessmentService {
         .map((plan) => plan.id),
     );
 
-    if (attentionItems.length > 0) {
+    // Schedule-gap warnings are the live agent's steady state (it refills
+    // week by week), so they stay out of PLAN_ATTENTION for deferred plans.
+    // Past-end-date stays: renegotiating the deadline is the coach's job.
+    const visibleAttentionItems = attentionItems.filter(
+      (item) =>
+        !(
+          (item.kind === "SPECIFIC_SCHEDULE_ENDING" ||
+            item.kind === "SPECIFIC_NO_FUTURE_SESSIONS") &&
+          item.planIds.every((planId) => deferredPlanIds.has(planId))
+        ),
+    );
+    if (visibleAttentionItems.length > 0) {
       candidates.push({
         type: "PLAN_ATTENTION",
-        reason: attentionItems[0].title,
+        reason: visibleAttentionItems[0].title,
         planIds: Array.from(
-          new Set(attentionItems.flatMap((item) => item.planIds)),
+          new Set(visibleAttentionItems.flatMap((item) => item.planIds)),
         ),
         targetWeekStart: currentWeekStartKey,
         context: withVisibleWeeklyOverview(
-          formatCoachAttentionContext(attentionItems),
+          formatCoachAttentionContext(visibleAttentionItems),
         ),
         usesAgent: true,
-        attentionItems,
+        attentionItems: visibleAttentionItems,
       });
     }
 
@@ -1508,24 +1533,36 @@ export class CoachAssessmentService {
         (summary.weeklySummary.status === "overloaded" ||
           summary.weeklySummary.status === "at_risk");
 
-      if (
-        !options.pendingProposalExists &&
-        !deferredPlanIds.has(summary.plan.id) &&
-        (summary.missedSessionsThisWeek >= 3 ||
-          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || "") ||
-          flexiblePlanNeedsAdjustment)
-      ) {
-        const reason = flexiblePlanNeedsAdjustment && summary.weeklySummary
-          ? `${summary.plan.goal} has ${summary.weeklySummary.remaining} weekly session${summary.weeklySummary.remaining === 1 ? "" : "s"} left across ${summary.weeklySummary.openDays} open day${summary.weeklySummary.openDays === 1 ? "" : "s"}.`
-          : `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`;
-        candidates.push({
-          type: "PLAN_ADJUSTMENT",
-          reason,
-          planIds: [summary.plan.id],
-          targetWeekStart: currentWeekStartKey,
-          context: baseContext,
-          usesAgent: true,
-        });
+      const needsAdjustment =
+        summary.missedSessionsThisWeek >= 3 ||
+        ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || "") ||
+        flexiblePlanNeedsAdjustment;
+
+      if (!options.pendingProposalExists && needsAdjustment) {
+        if (!deferredPlanIds.has(summary.plan.id)) {
+          const reason = flexiblePlanNeedsAdjustment && summary.weeklySummary
+            ? `${summary.plan.goal} has ${summary.weeklySummary.remaining} weekly session${summary.weeklySummary.remaining === 1 ? "" : "s"} left across ${summary.weeklySummary.openDays} open day${summary.weeklySummary.openDays === 1 ? "" : "s"}.`
+            : `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`;
+          candidates.push({
+            type: "PLAN_ADJUSTMENT",
+            reason,
+            planIds: [summary.plan.id],
+            targetWeekStart: currentWeekStartKey,
+            context: baseContext,
+            usesAgent: true,
+          });
+        } else {
+          // The agent owns the schedule, but a collapsing week is still the
+          // coach's to notice: planning-free accountability check-in.
+          candidates.push({
+            type: "INACTIVITY_CHECKIN",
+            reason: `${summary.plan.goal} is behind this week on an agent-managed plan.`,
+            planIds: [summary.plan.id],
+            targetWeekStart: currentWeekStartKey,
+            context: baseContext,
+            usesAgent: true,
+          });
+        }
       }
 
       if (
@@ -1762,6 +1799,13 @@ export class CoachAssessmentService {
     user: CoachUser,
     now: Date,
   ): Promise<CoachAttentionItem[]> {
+    // Never hard-archive a plan whose week content a live connected agent
+    // maintains — a dry schedule there is the agent's cadence, not rupture.
+    const deferredPlanIds = new Set(
+      user.plans
+        .filter((plan) => coachDefersWeekContent(plan, now))
+        .map((plan) => plan.id),
+    );
     const attentionItems = deriveCoachAttentionItems({
       user,
       plans: user.plans,
@@ -1770,7 +1814,8 @@ export class CoachAssessmentService {
       (item) =>
         (item.kind === "SPECIFIC_NO_FUTURE_SESSIONS" ||
           item.kind === "PLAN_PAST_END_DATE") &&
-        item.severity === "critical",
+        item.severity === "critical" &&
+        !item.planIds.some((planId) => deferredPlanIds.has(planId)),
     );
 
     const ruptured: CoachAttentionItem[] = [];
@@ -2077,7 +2122,7 @@ export class CoachAssessmentService {
       if (statusFile) {
         lines.push("  Agent status file (status.md):");
         lines.push(
-          statusFile
+          truncateStatusForContext(statusFile)
             .split("\n")
             .map((line) => `    ${line}`)
             .join("\n"),

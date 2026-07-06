@@ -97,8 +97,14 @@ function parseDateOnly(value: string, field: string): Date {
     throw new Error(`${field} must be a valid date`);
   }
 
+  // UTC getters: "YYYY-MM-DD" parses as UTC midnight, and server-local getters
+  // would shift it a day on hosts west of UTC.
   return new Date(
-    Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+    Date.UTC(
+      parsed.getUTCFullYear(),
+      parsed.getUTCMonth(),
+      parsed.getUTCDate()
+    )
   );
 }
 

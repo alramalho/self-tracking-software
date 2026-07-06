@@ -1,5 +1,6 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 import { plansService } from "@/services/plansService";
+import { TZDate } from "@date-fns/tz";
 import { ActivityEntry } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
@@ -636,8 +637,10 @@ router.post(
         }
       }
 
-      // Check if entry already exists for this date
-      const existingEntry = await prisma.activityEntry.findFirst({
+      // Check if entry already exists for this date. Agent-logged (MCP)
+      // entries sit at a synthetic local noon, so they also merge with an app
+      // log of the same local day — otherwise agent-then-app double-counts.
+      let existingEntry = await prisma.activityEntry.findFirst({
         where: {
           activityId: activityId,
           userId: req.user!.id,
@@ -645,6 +648,45 @@ router.post(
           deletedAt: null,
         },
       });
+      let mergedAgentEntry = false;
+      if (!existingEntry) {
+        const loggedAt = new TZDate(
+          new Date(iso_date_string),
+          timezone || "UTC"
+        );
+        const localDayStart = new Date(
+          new TZDate(
+            loggedAt.getFullYear(),
+            loggedAt.getMonth(),
+            loggedAt.getDate(),
+            0,
+            0,
+            0,
+            timezone || "UTC"
+          ).getTime()
+        );
+        const localDayEnd = new Date(
+          new TZDate(
+            loggedAt.getFullYear(),
+            loggedAt.getMonth(),
+            loggedAt.getDate() + 1,
+            0,
+            0,
+            0,
+            timezone || "UTC"
+          ).getTime()
+        );
+        existingEntry = await prisma.activityEntry.findFirst({
+          where: {
+            activityId: activityId,
+            userId: req.user!.id,
+            source: "mcp",
+            datetime: { gte: localDayStart, lt: localDayEnd },
+            deletedAt: null,
+          },
+        });
+        mergedAgentEntry = !!existingEntry;
+      }
 
       let entry: ActivityEntry;
       const normalizedPrivateNotes = normalizeOptionalText(privateNotes);
@@ -659,6 +701,10 @@ router.post(
               normalizedPrivateNotes !== undefined
                 ? normalizedPrivateNotes
                 : existingEntry.privateNotes,
+            // The user's real log time replaces the agent's synthetic noon.
+            ...(mergedAgentEntry
+              ? { datetime: iso_date_string, source: "app" }
+              : {}),
           },
         });
       } else {

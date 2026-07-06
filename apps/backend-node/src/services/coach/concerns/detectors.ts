@@ -18,6 +18,7 @@ import {
   type CoachAttentionItem,
 } from "../../coachAttentionService";
 import {
+  coachDefersWeekContent,
   daysSinceExternalAgentSync,
   EXTERNAL_AGENT_FRESH_DAYS,
   isExternalAgentManaged,
@@ -190,10 +191,13 @@ export async function detectConcernsForUser(
       });
     }
 
+    // Same deferral rule as the live candidate path: a live connected agent
+    // owns week content, so the ledger raises no adjustment concern for it.
     if (
-      summary.missedSessionsThisWeek >= 3 ||
-      summary.weekState === "AT_RISK" ||
-      summary.weekState === "FAILED"
+      !coachDefersWeekContent(plan, now) &&
+      (summary.missedSessionsThisWeek >= 3 ||
+        summary.weekState === "AT_RISK" ||
+        summary.weekState === "FAILED")
     ) {
       observations.push({
         userId: user.id,
@@ -255,17 +259,21 @@ function detectAgentSyncStale(
   if (!isExternalAgentManaged(plan)) return null;
 
   const daysSinceSync = daysSinceExternalAgentSync(plan, now);
-  const daysSincePlanCreated = differenceInCalendarDays(now, plan.createdAt);
+  // Never-synced grace runs from the last plan update, not creation: flipping
+  // contentPlanner on an old plan should get the same 3-day head start.
+  const daysSincePlanTouched = differenceInCalendarDays(now, plan.updatedAt);
   const neverSyncedLongEnough =
     daysSinceSync === null &&
-    daysSincePlanCreated >= EXTERNAL_AGENT_FRESH_DAYS;
+    daysSincePlanTouched >= EXTERNAL_AGENT_FRESH_DAYS;
   const syncIsStale =
     daysSinceSync !== null && daysSinceSync >= EXTERNAL_AGENT_FRESH_DAYS;
   if (!neverSyncedLongEnough && !syncIsStale) return null;
 
+  // Strict bound: at exactly 7 days without logging, inactivity_checkin owns
+  // the conversation — the two concerns must not both fire.
   const userStillActive =
     summary.daysSinceLastActivity !== null &&
-    summary.daysSinceLastActivity <= 7;
+    summary.daysSinceLastActivity < 7;
   if (!userStillActive) return null;
 
   return {
@@ -285,16 +293,27 @@ async function detectDeadlineAtRisk(
   plan: DetectorPlan,
   now: Date
 ): Promise<Record<string, unknown> | null> {
-  const overdueMilestones = plan.milestones
-    .filter(
-      (milestone) => milestone.date < now && (milestone.progress ?? 0) < 100
-    )
-    .map((milestone) => ({
-      description: milestone.description,
-      date: milestone.date,
-      progress: milestone.progress ?? 0,
-      daysOverdue: differenceInCalendarDays(now, milestone.date),
-    }));
+  // Past the finishing date the whole plan needs a renew-or-archive decision
+  // (attention_plan_past_end_date owns that); milestone nagging would double up.
+  const planPastEndDate = !!plan.finishingDate && plan.finishingDate < now;
+  const overdueMilestones = planPastEndDate
+    ? []
+    : plan.milestones
+        .filter(
+          (milestone) =>
+            milestone.date < now &&
+            // Untracked milestones (progress never set) only count on
+            // agent-managed plans, where the agent keeps progress honest.
+            // Elsewhere they are decorative and would nag forever.
+            (milestone.progress !== null || isExternalAgentManaged(plan)) &&
+            (milestone.progress ?? 0) < 100
+        )
+        .map((milestone) => ({
+          description: milestone.description,
+          date: milestone.date,
+          progress: milestone.progress ?? 0,
+          daysOverdue: differenceInCalendarDays(now, milestone.date),
+        }));
 
   let statusDaysBehind: number | null = null;
   if (isExternalAgentManaged(plan)) {
