@@ -23,6 +23,7 @@ import { webSearchService } from "../webSearchService";
 import { browserAgentService } from "../browserAgentService";
 import {
   buildCoachAgentProviderOptions,
+  resolveCoachAgentTemperature,
   resolveCoachAgentModelConfig,
   resolveCoachAgentVisionModelConfig,
 } from "../coachAgentModelConfig";
@@ -496,9 +497,10 @@ export class CoachAgentService {
       );
     };
 
+    const temperature = resolveCoachAgentTemperature(modelConfig.model);
     const agent = new ToolLoopAgent({
       model: gateway(modelConfig.model),
-      temperature: 0.5,
+      ...(temperature === undefined ? {} : { temperature }),
       providerOptions: buildCoachAgentProviderOptions(user, modelConfig),
       stopWhen: shouldStopAfterStep,
       instructions: {

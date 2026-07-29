@@ -12,13 +12,9 @@ export type CoachAgentModelConfig = {
   gateway?: CoachAgentGatewayRouting;
 };
 
-export const KIMI_K26_MODEL = "moonshotai/kimi-k2.6";
-export const GLM_52_MODEL = "zai/glm-5.2";
-export const DEFAULT_COACH_AGENT_MODEL = KIMI_K26_MODEL;
-// Autonomous/proactive coach uses a stronger model: it reliably attaches plan
-// proposals (kimi often skips the tool). Latency is irrelevant off the cron, so
-// the slower GLM is worth it here while interactive chat stays on the default.
-export const DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL = GLM_52_MODEL;
+export const KIMI_K3_MODEL = "moonshotai/kimi-k3";
+export const DEFAULT_COACH_AGENT_MODEL = KIMI_K3_MODEL;
+export const DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL = KIMI_K3_MODEL;
 export const DEFAULT_COACH_AGENT_VISION_MODEL = "openai/gpt-4.1";
 
 const DEFAULT_COACH_AGENT_FALLBACK_MODELS = [
@@ -29,9 +25,15 @@ const DEFAULT_COACH_AGENT_FALLBACK_MODELS = [
 // Per-model gateway routing. Add a model + its preferred provider order here
 // rather than introducing new constants/branches.
 const COACH_MODEL_ROUTING: Record<string, { providerOrder: string[] }> = {
-  [KIMI_K26_MODEL]: { providerOrder: ["baseten", "togetherai"] },
-  [GLM_52_MODEL]: { providerOrder: ["baseten"] },
+  [KIMI_K3_MODEL]: { providerOrder: ["baseten", "fireworks"] },
 };
+
+export function resolveCoachAgentTemperature(
+  model: string
+): number | undefined {
+  // Kimi K3 fixes temperature at 1.0 and rejects requests that override it.
+  return model === KIMI_K3_MODEL ? undefined : 0.5;
+}
 
 function getCoachAgentFallbackModels(): string[] {
   const configuredModels = process.env.COACH_AGENT_FALLBACK_MODELS

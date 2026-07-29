@@ -67,7 +67,6 @@ export interface AIContextType extends MessagesContextType {
   isCreatingCoachChat: boolean;
   runCoachAssessment: () => Promise<CoachAssessmentResponse>;
   isRunningCoachAssessment: boolean;
-  lastCoachNoReportAt: string | null;
 
   // Chat title (coach-specific)
   updateChatTitle: (data: { chatId: string; title: string }) => Promise<Chat>;

@@ -535,6 +535,21 @@ router.get(
       // Transform chats to include useful information
       // Only the latest coach chat should report unread count
       const latestCoachChatId = chats.find((c) => c.type === "COACH")?.id;
+      const latestCoachMessage = latestCoachChatId
+        ? await prisma.message.findFirst({
+            where: {
+              chatId: latestCoachChatId,
+              role: "COACH",
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              content: true,
+              createdAt: true,
+              readAt: true,
+            },
+          })
+        : null;
 
       const transformedChats = await Promise.all(
         chats.map(async (chat) => {
@@ -591,6 +606,15 @@ router.get(
                     lastMessage.role === "USER" ? user.name : coachPersonality.displayName,
                 }
               : undefined,
+            latestCoachMessage:
+              chat.id === latestCoachChatId && latestCoachMessage
+                ? {
+                    id: latestCoachMessage.id,
+                    content: latestCoachMessage.content,
+                    createdAt: latestCoachMessage.createdAt,
+                    isUnread: latestCoachMessage.readAt === null,
+                  }
+                : undefined,
           };
         })
       );
