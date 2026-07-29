@@ -15,6 +15,7 @@ import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
 import { UpcomingSessionsCard } from "./UpcomingSessionsCard";
 import { useCurrentUser } from "@/contexts/users";
+import { useMessages } from "@/contexts/messages";
 
 interface HomeCardGridProps {
   onOpenMetricsLog: () => void;
@@ -33,8 +34,9 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { metrics } = useMetrics();
   const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
-  const { isUserAIWhitelisted, lastCoachNoReportAt } = useAI();
+  const { isUserAIWhitelisted } = useAI();
   const { currentUser } = useCurrentUser();
+  const { chats, isLoadingChats } = useMessages();
   const { setShowUpgradePopover } = useUpgrade();
 
   const isUserOnFreePlan = userPlanType === "FREE";
@@ -70,6 +72,9 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
         (session) => !isAfter(todayStart, new Date(session.date))
       ));
   const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
+  const latestCoachMessage = chats?.find(
+    (chat) => chat.type === "COACH"
+  )?.latestCoachMessage;
   const recentActivityCount = activityEntries.filter((entry) => {
     const datetime = new Date(entry.datetime);
     return datetime >= subDays(new Date(), 30);
@@ -102,9 +107,9 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
           key="coach"
           attentionCount={pendingCoachNotifications.length}
           activePlanCount={activePlans?.length ?? 0}
-          isLoadingPlans={isLoadingPlans}
+          isLoading={isLoadingPlans || isLoadingChats}
           reviewPlanId={firstPendingPlanId}
-          lastCoachNoReportAt={lastCoachNoReportAt}
+          latestCoachMessage={latestCoachMessage}
           coachAttentionItems={coachAttentionItems}
         />
       ),

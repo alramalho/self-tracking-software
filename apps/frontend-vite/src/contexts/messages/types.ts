@@ -183,6 +183,13 @@ export interface ChatParticipant {
   leftAt?: string | Date | null;
 }
 
+export interface LatestCoachMessagePreview {
+  id: string;
+  content: string;
+  createdAt: string | Date;
+  isUnread: boolean;
+}
+
 export interface Chat {
   id: string;
   type: ChatType;
@@ -204,6 +211,7 @@ export interface Chat {
     senderName?: string;
     createdAt: string | Date;
   };
+  latestCoachMessage?: LatestCoachMessagePreview;
 }
 
 export interface MessagesContextType {

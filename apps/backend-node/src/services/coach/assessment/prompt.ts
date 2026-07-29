@@ -10,28 +10,33 @@ export type RecurrentCoachAssessmentInterventionType =
 export const RECURRENT_COACH_ASSESSMENT_PROMPT = dedent`
   You are doing a recurrent coach assessment.
 
-  Use the provided assessment context only. Decide whether to send a short proactive coach message.
+  Use the provided assessment context only. This outreach must change what the
+  user should do next. Lead with the concrete risk or decision, then give one
+  specific action.
 
-  If the context shows a logged activity matching a scheduled session with a descriptive guide, do not assume the guide was followed. Ask whether they followed the planned guide, and in the same check-in ask what changed or got in the way if they did something different, because that may matter for future coaching.
+  Never message just because the user logged or completed an activity, a new week
+  started, a session is tomorrow, or a recap is available. Never ask "how did it
+  go?", "how did it feel?", or whether a planned guide was followed after a
+  routine log. Treat a completed log as settled unless the context contains
+  explicit evidence that requires a plan change.
 
-  If the context lists missed scheduled sessions, name the missed session, ask what got in the way, and say their answer determines whether to adapt, scale, or reschedule. Do not ask whether the guide was followed.
-
-  If no matching log exists, do not ask whether the guide was followed. Focus on preparation, recovery, celebration, or the next small step.
+  Ask a question only when the answer is required to choose or apply the action.
+  Do not manufacture a check-in question to keep the conversation going.
 
   Do not attach plan proposals or activity log proposals unless the assessment instruction explicitly asks for one. Default to draftMessages only.
 `;
 
 const INTERVENTION_GUIDANCE: Record<RecurrentCoachAssessmentInterventionType, string> = {
   WEEK_PREP:
-    "Prepare the user for the upcoming week. Focus on what matters, likely friction, and the first concrete action.",
+    "Only surface a time-sensitive conflict that requires action before the week starts.",
   SESSION_PREP:
-    "Prepare the user for tomorrow's planned session. Reduce friction and make the next action clear.",
+    "Only surface a concrete blocker that requires action before tomorrow's session.",
   WEEK_RECAP:
-    "Give a brief recap of the previous week and one forward-looking next step.",
+    "Only surface a result that requires a specific change to the current plan.",
   INACTIVITY_CHECKIN:
-    "Check in after a gap without guilt. Make the next small step feel clear.",
+    "State the immediate risk and the single smallest action that keeps the plan viable.",
   CELEBRATION:
-    "Acknowledge completed work and reinforce the behavior that led to it.",
+    "Do not praise by default. Only name a concrete progression the completion now unlocks.",
 };
 
 export function buildRecurrentCoachAssessmentPrompt(params: {
@@ -55,8 +60,8 @@ export function buildRecurrentCoachAssessmentPrompt(params: {
     ${params.context}
 
     Required style:
-    - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
-    - Sound natural, like a sharp friend texting. Avoid stacked critiques and coaching jargon.
+    - Use one short message of at most 2 sentences.
+    - Sound direct and natural. No praise sandwich, motivational filler, or coaching jargon.
     - Do not mention internal labels like intervention type, metadata, or scoring.
     - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context.
   `;

@@ -24,7 +24,6 @@ import {
 import dedent from "dedent";
 import {
   getCoachWeekBounds,
-  getPreviousCoachWeekBounds,
 } from "../../../utils/date";
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
@@ -840,7 +839,7 @@ export class CoachAssessmentService {
 
       Required:
       - Treat COACH ATTENTION ITEMS as the assessment agenda. If any critical item exists,
-        mention the highest-severity item before praise.
+        lead with the highest-severity item.
       - Open with a brief read on where they stand across their active plans, using
         USER'S PLANS + RECENT ACTIVITY FACTS only.
       - Distinguish current week-to-date from the last fully completed week. Do not
@@ -850,9 +849,14 @@ export class CoachAssessmentService {
       - If a SPECIFIC plan has no future sessions, call it a schedule setup gap,
         not proof the user failed the goal.
       - Give a one-line status-vs-goal take per meaningful plan (on track / slipping / strong).
-      - End with one concrete, realistic next step, or a single question to align focus.
-      - Use 2-3 short messages. Keep each to 1-2 short sentences. Sound like a sharp
-        friend texting, not a report.
+      - Include one concrete next step only when the evidence calls for action.
+      - Never ask "how did it go?", "how did it feel?", or another generic check-in
+        question after a logged activity. Ask only when the answer is required to
+        choose or apply a plan change.
+      - Use one short message of at most 3 sentences. This message doubles as the
+        coach summary on the home card, so put the current status first.
+      - Sound direct and natural. No praise sandwich, motivational filler, or
+        stacked critiques.
       - Don't invent activity the user hasn't logged. If a plan has no recent activity, say so plainly.
     `;
   }
@@ -1294,8 +1298,10 @@ export class CoachAssessmentService {
       - If the selected intervention is PLAN_ATTENTION, call missing future sessions a schedule setup gap, not proof the user failed the goal.
       - Use at most one personal insight from the coach context brief, and only if it makes the proposal clearer.
       - When saying the user logged, did, trained, or practiced something recently/lately, rely only on explicit recent activity logs in the context or readActivities output. Active plans are not recent activity evidence.
-      - Default to 1-2 short messages. Keep each message to 1-2 short sentences.
-      - Sound natural, like a sharp friend texting. Avoid stacked critiques and coaching jargon.
+      - Lead with the concrete risk or decision. Give one action; do not pad it with routine praise.
+      - Never ask "how did it go?", "how did it feel?", or another generic retrospective question.
+      - Ask only when the answer is required to choose or apply the plan action.
+      - Use one short message of at most 2 sentences. Sound direct and natural.
     `;
   }
 
@@ -1437,8 +1443,6 @@ export class CoachAssessmentService {
   ): Promise<CoachInterventionCandidate[]> {
     const timezone = user.timezone || "UTC";
     const nowInTz = new TZDate(now, timezone);
-    const localHour = nowInTz.getHours();
-    const localDay = nowInTz.getDay();
     const { start: currentWeekStart } = getCoachWeekBounds(now, timezone);
     const currentWeekStartKey = format(currentWeekStart, "yyyy-MM-dd");
     const candidates: CoachInterventionCandidate[] = [];
@@ -1531,12 +1535,15 @@ export class CoachAssessmentService {
         summary.weeklySummary &&
         summary.plan.outlineType === "TIMES_PER_WEEK" &&
         (summary.weeklySummary.status === "overloaded" ||
-          summary.weeklySummary.status === "at_risk");
+          (summary.weeklySummary.status === "at_risk" &&
+            summary.weeklySummary.slackDays === 0));
 
+      const scheduledPlanNeedsAdjustment =
+        summary.plan.outlineType !== "TIMES_PER_WEEK" &&
+        (summary.missedSessionsThisWeek >= 3 ||
+          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || ""));
       const needsAdjustment =
-        summary.missedSessionsThisWeek >= 3 ||
-        ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || "") ||
-        flexiblePlanNeedsAdjustment;
+        scheduledPlanNeedsAdjustment || flexiblePlanNeedsAdjustment;
 
       if (!options.pendingProposalExists && needsAdjustment) {
         if (!deferredPlanIds.has(summary.plan.id)) {
@@ -1565,127 +1572,8 @@ export class CoachAssessmentService {
         }
       }
 
-      if (
-        summary.daysSinceLastActivity !== null &&
-        summary.daysSinceLastActivity >= 7 &&
-        summary.daysSinceLastActivity < 14
-      ) {
-        candidates.push({
-          type: "INACTIVITY_CHECKIN",
-          reason: `${summary.plan.goal} has had no activity for ${summary.daysSinceLastActivity} days.`,
-          planIds: [summary.plan.id],
-          targetWeekStart: currentWeekStartKey,
-          context: baseContext,
-          usesAgent: true,
-        });
-      }
-
-      if (
-        summary.totalSessionsThisWeek > 0 &&
-        summary.missedSessionsThisWeek === 0 &&
-        summary.completedSessionsThisWeek === summary.totalSessionsThisWeek
-      ) {
-        candidates.push({
-          type: "CELEBRATION",
-          reason: `${summary.plan.goal} has all planned sessions completed this week.`,
-          planIds: [summary.plan.id],
-          targetWeekStart: currentWeekStartKey,
-          context: baseContext,
-          usesAgent: true,
-        });
-      }
-    }
-
-    if (options.force || this.isWeekPrepTime(user, now)) {
-      const { start: targetWeekStart, end: targetWeekEnd } = getCoachWeekBounds(
-        now,
-        timezone,
-      );
-      const weekSessions = this.getSessionsBetween(
-        user.plans,
-        targetWeekStart,
-        targetWeekEnd,
-      ).filter((item) => !deferredPlanIds.has(item.plan.id));
-      if (weekSessions.length > 0) {
-        candidates.push({
-          type: "WEEK_PREP",
-          reason: `User has ${weekSessions.length} coached session${weekSessions.length === 1 ? "" : "s"} planned for the coming week.`,
-          planIds: Array.from(new Set(weekSessions.map((s) => s.plan.id))),
-          sessionIds: weekSessions.map((s) => s.session.id),
-          targetWeekStart: format(targetWeekStart, "yyyy-MM-dd"),
-          context: withVisibleWeeklyOverview(
-            this.buildSessionContext("Upcoming week", weekSessions),
-          ),
-          usesAgent: true,
-        });
-      }
-    }
-
-    if (options.force || localHour === 20) {
-      const tomorrow = addDays(nowInTz, 1);
-      const tomorrowSessions = this.getSessionsBetween(
-        user.plans,
-        startOfDay(tomorrow),
-        endOfDay(tomorrow),
-      ).filter((item) => !deferredPlanIds.has(item.plan.id));
-      if (tomorrowSessions.length > 0) {
-        candidates.push({
-          type: "SESSION_PREP",
-          reason: `User has ${tomorrowSessions.length} coached session${tomorrowSessions.length === 1 ? "" : "s"} planned tomorrow.`,
-          planIds: Array.from(new Set(tomorrowSessions.map((s) => s.plan.id))),
-          sessionIds: tomorrowSessions.map((s) => s.session.id),
-          targetDate: format(tomorrow, "yyyy-MM-dd"),
-          context: withVisibleWeeklyOverview(
-            this.buildSessionContext("Tomorrow", tomorrowSessions),
-          ),
-          usesAgent: true,
-        });
-      }
-    }
-
-    if (
-      (options.force || localDay === 1) &&
-      isWithinPreferredCoachWindow(user, now)
-    ) {
-      const { start: previousWeekStart, end: previousWeekEnd } =
-        getPreviousCoachWeekBounds(now, timezone);
-      const activePlanIds = user.plans.map((p) => p.id);
-      const activityIds = user.plans.flatMap((p) =>
-        p.activities.map((a) => a.id),
-      );
-      const entries =
-        activityIds.length > 0
-          ? await prisma.activityEntry.findMany({
-              where: {
-                userId: user.id,
-                deletedAt: null,
-                activityId: { in: activityIds },
-                datetime: { gte: previousWeekStart, lte: previousWeekEnd },
-              },
-              include: { activity: true },
-            })
-          : [];
-      if (entries.length > 0) {
-        candidates.push({
-          type: "WEEK_RECAP",
-          reason: `User logged ${entries.length} activit${entries.length === 1 ? "y" : "ies"} last week.`,
-          planIds: activePlanIds,
-          targetWeekStart: format(previousWeekStart, "yyyy-MM-dd"),
-          context: withVisibleWeeklyOverview(
-            this.buildWeekRecapContext({
-              previousWeekStart,
-              previousWeekEnd,
-              sessions: this.getSessionsBetween(
-                user.plans,
-                previousWeekStart,
-                previousWeekEnd,
-              ),
-              entries,
-            }),
-          ),
-          usesAgent: true,
-        });
-      }
+      // Routine inactivity and completion are intentionally silent. The coach
+      // only reaches out once there is a concrete decision or rescue action.
     }
 
     if (options.force && options.fallbackCheckin && candidates.length === 0) {
@@ -1999,54 +1887,6 @@ export class CoachAssessmentService {
     return false;
   }
 
-  private isWeekPrepTime(user: User, now: Date): boolean {
-    const timezone = user.timezone || "UTC";
-    const nowInTz = new TZDate(now, timezone);
-    const localDay = nowInTz.getDay();
-    const localHour = nowInTz.getHours();
-    const preferredStartHour = user.preferredCoachingHour ?? 6;
-    return (
-      (localDay === 0 && localHour === 20) ||
-      (localDay === 1 && localHour === preferredStartHour)
-    );
-  }
-
-  private getSessionsBetween(
-    plans: CoachPlan[],
-    start: Date,
-    end: Date,
-  ): Array<{ plan: CoachPlan; session: PlanSession; activity: Activity }> {
-    return plans.flatMap((plan) =>
-      plan.sessions
-        .filter((session) => session.date >= start && session.date <= end)
-        .map((session) => ({
-          plan,
-          session,
-          activity: plan.activities.find(
-            (activity) => activity.id === session.activityId,
-          )!,
-        }))
-        .filter((item) => item.activity),
-    );
-  }
-
-  private buildSessionContext(
-    label: string,
-    sessions: Array<{
-      plan: CoachPlan;
-      session: PlanSession;
-      activity: Activity;
-    }>,
-  ): string {
-    const lines = [`${label} sessions:`];
-    for (const item of sessions) {
-      lines.push(
-        `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`,
-      );
-    }
-    return lines.join("\n");
-  }
-
   private async buildVisibleWeeklyOverviewContext(
     user: CoachUser,
     now: Date,
@@ -2129,86 +1969,6 @@ export class CoachAssessmentService {
         );
       }
     }
-    return lines.join("\n");
-  }
-
-  private buildWeekRecapContext(params: {
-    previousWeekStart: Date;
-    previousWeekEnd: Date;
-    sessions: Array<{
-      plan: CoachPlan;
-      session: PlanSession;
-      activity: Activity;
-    }>;
-    entries: Array<{
-      activityId: string | null;
-      datetime: Date;
-      quantity: number;
-      activity?: Pick<Activity, "title" | "emoji" | "measure"> | null;
-    }>;
-  }): string {
-    const { previousWeekStart, previousWeekEnd, sessions, entries } = params;
-    const lines = [
-      `Previous week: ${format(previousWeekStart, "yyyy-MM-dd")} to ${format(previousWeekEnd, "yyyy-MM-dd")}`,
-      `Logged activities: ${
-        entries
-          .map((entry) =>
-            entry.activity
-              ? `${format(entry.datetime, "yyyy-MM-dd")}: ${entry.activity.emoji || ""} ${entry.activity.title} (${entry.quantity} ${entry.activity.measure})`
-              : null,
-          )
-          .filter(Boolean)
-          .join(", ") || "none"
-      }`,
-    ];
-
-    if (sessions.length > 0) {
-      lines.push("Scheduled sessions:");
-      for (const item of sessions) {
-        lines.push(
-          `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.emoji || ""} ${item.activity.title} (${item.session.quantity} ${item.activity.measure}) for plan "${item.plan.goal}". Guide: ${item.session.descriptiveGuide || "none"}`,
-        );
-      }
-
-      const completedSessions = sessions
-        .map((item) => {
-          const matchingEntry = entries.find(
-            (entry) =>
-              entry.activityId === item.session.activityId &&
-              isSameDay(entry.datetime, item.session.date),
-          );
-          return matchingEntry ? { ...item, matchingEntry } : null;
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null);
-
-      if (completedSessions.length > 0) {
-        lines.push("Completed scheduled sessions with matching logs:");
-        for (const item of completedSessions) {
-          lines.push(
-            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. Planned guide: ${item.session.descriptiveGuide || "none"}. Matching log: ${item.matchingEntry.quantity} ${item.activity.measure}.`,
-          );
-        }
-      }
-
-      const missedSessions = sessions.filter(
-        (item) =>
-          !entries.some(
-            (entry) =>
-              entry.activityId === item.session.activityId &&
-              isSameDay(entry.datetime, item.session.date),
-          ),
-      );
-
-      if (missedSessions.length > 0) {
-        lines.push("Missed scheduled sessions:");
-        for (const item of missedSessions) {
-          lines.push(
-            `- ${format(item.session.date, "yyyy-MM-dd")}: ${item.activity.title}. No matching activity log found. Planned guide: ${item.session.descriptiveGuide || "none"}.`,
-          );
-        }
-      }
-    }
-
     return lines.join("\n");
   }
 

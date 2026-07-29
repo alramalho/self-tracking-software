@@ -1,67 +1,44 @@
 import { useCurrentUser } from "@/contexts/users";
 import { CoachAttentionDrawer } from "@/components/CoachAttentionBanner";
 import { type CoachAttentionItem } from "@/contexts/ai/types";
+import { type LatestCoachMessagePreview } from "@/contexts/messages/types";
 import {
   getCoachAvatar,
   getCoachPersonalityConfig,
 } from "@/lib/coachPersonality";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ChevronRight, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { formatCoachMessagePreview } from "./coachMessagePreview";
 import { HomeCardShell } from "./HomeCardShell";
 
 interface CoachCardProps {
   attentionCount: number;
   activePlanCount: number;
-  isLoadingPlans?: boolean;
+  isLoading?: boolean;
   reviewPlanId?: string;
-  lastCoachNoReportAt?: string | null;
+  latestCoachMessage?: LatestCoachMessagePreview;
   coachAttentionItems?: CoachAttentionItem[];
 }
-
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
-const NO_REPORT_VISIBLE_MS = HOUR_MS;
-
-const getNextAssessmentAt = (now: Date, preferredHour: number) => {
-  const next = new Date(now);
-  next.setHours(preferredHour, 0, 0, 0);
-
-  if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
-  }
-
-  return next;
-};
-
-const formatSingleUnitDuration = (from: Date, to: Date) => {
-  const diffMs = Math.max(0, to.getTime() - from.getTime());
-
-  const days = Math.floor(diffMs / DAY_MS);
-  if (days >= 1) return `${days}d`;
-
-  const hours = Math.floor(diffMs / HOUR_MS);
-  if (hours >= 1) return `${hours}h`;
-
-  return `${Math.max(1, Math.ceil(diffMs / MINUTE_MS))}m`;
-};
 
 export const CoachCard = ({
   attentionCount,
   activePlanCount,
-  isLoadingPlans = false,
+  isLoading = false,
   reviewPlanId,
-  lastCoachNoReportAt,
+  latestCoachMessage,
   coachAttentionItems = [],
 }: CoachCardProps) => {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
-  const [now, setNow] = useState(() => new Date());
   const [isAttentionDrawerOpen, setIsAttentionDrawerOpen] = useState(false);
   const aiCoach = getCoachPersonalityConfig(currentUser?.coachPersonality);
   const hasActivePlans = activePlanCount > 0;
   const hasPlanUpdates = coachAttentionItems.length > 0;
+  const hasLatestUnreadMessage = latestCoachMessage?.isUnread === true;
+  const coachMessagePreview = latestCoachMessage
+    ? formatCoachMessagePreview(latestCoachMessage.content)
+    : null;
   const archivedCount = coachAttentionItems.filter(
     (item) => item.kind === "SPECIFIC_AUTO_ARCHIVED",
   ).length;
@@ -74,32 +51,23 @@ export const CoachCard = ({
       item.kind !== "SPECIFIC_AUTO_ARCHIVED" &&
       item.kind !== "PLAN_PAST_END_DATE",
   ).length;
-  const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
-  const nextAssessmentAt = getNextAssessmentAt(now, preferredCoachingHour);
-  const nextAssessmentLabel = formatSingleUnitDuration(now, nextAssessmentAt);
-  const noReportAtMs = lastCoachNoReportAt
-    ? new Date(lastCoachNoReportAt).getTime()
-    : Number.NaN;
-  const hasRecentNoReport =
-    Number.isFinite(noReportAtMs) &&
-    now.getTime() - noReportAtMs < NO_REPORT_VISIBLE_MS;
   const avatar = getCoachAvatar(
     currentUser?.coachPersonality,
-    hasPlanUpdates || attentionCount > 0
+    hasPlanUpdates || attentionCount > 0 || hasLatestUnreadMessage
       ? "thinking"
       : hasActivePlans
         ? "coachSmiling"
         : "sad",
   );
 
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
   const openCard = () => {
     if (hasPlanUpdates) {
       setIsAttentionDrawerOpen(true);
+      return;
+    }
+
+    if (hasLatestUnreadMessage) {
+      navigate({ to: "/message-ai" });
       return;
     }
 
@@ -169,7 +137,7 @@ export const CoachCard = ({
         ) : (
           <>
             <div className="relative w-14 h-14">
-              {attentionCount > 0 && (
+              {(attentionCount > 0 || hasLatestUnreadMessage) && (
                 <div className="absolute inset-0 rounded-full animate-ping bg-amber-400/30" />
               )}
               <img
@@ -178,19 +146,37 @@ export const CoachCard = ({
                 className="w-14 h-14 rounded-full object-contain relative z-10"
               />
             </div>
-            {isLoadingPlans ? (
+            {isLoading ? (
               <div className="flex items-center gap-2 text-base font-medium text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
+            ) : hasLatestUnreadMessage && latestCoachMessage ? (
+              <div className="min-w-0">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-500">
+                  {`New from ${aiCoach.name}`}
+                </p>
+                <p className="line-clamp-4 text-base font-medium leading-snug text-foreground">
+                  {coachMessagePreview}
+                </p>
+              </div>
+            ) : attentionCount > 0 ? (
+              <p className="text-base font-medium text-muted-foreground">
+                {`${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`}
+              </p>
+            ) : latestCoachMessage ? (
+              <div className="min-w-0">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {`${aiCoach.name}'s take`}
+                </p>
+                <p className="line-clamp-4 text-base font-medium leading-snug text-foreground">
+                  {coachMessagePreview}
+                </p>
+              </div>
             ) : (
               <p className="text-base font-medium text-muted-foreground">
-                {attentionCount > 0
-                  ? `${attentionCount} coach action${attentionCount > 1 ? "s" : ""} pending`
-                  : hasActivePlans
-                    ? hasRecentNoReport
-                      ? "Coach has nothing to report"
-                      : `Next coach assessment in ${nextAssessmentLabel}`
-                    : "No active plans"}
+                {hasActivePlans
+                  ? "Nothing needs your attention"
+                  : "No active plans"}
               </p>
             )}
           </>
