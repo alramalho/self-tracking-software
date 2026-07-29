@@ -627,7 +627,12 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
         return oldChats.map((chat) => {
           if (chat.id === chatId) {
             const newCount = Math.max(0, (chat.unreadCount || 0) - messageIds.length);
-            return { ...chat, unreadCount: newCount };
+            const latestCoachMessage =
+              chat.latestCoachMessage &&
+              messageIds.includes(chat.latestCoachMessage.id)
+                ? { ...chat.latestCoachMessage, isUnread: false }
+                : chat.latestCoachMessage;
+            return { ...chat, unreadCount: newCount, latestCoachMessage };
           }
           return chat;
         });

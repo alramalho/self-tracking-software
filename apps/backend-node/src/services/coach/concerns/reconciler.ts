@@ -31,6 +31,19 @@ const ESCALATION_DELAYS_BY_KIND: Record<string, number[]> = {
   deadline_at_risk: [72, 144],
 };
 const PARK_HOURS = 365 * 24;
+const ACTIONABLE_CONCERN_KINDS = new Set([
+  "inactivity_archive",
+  "inactivity_pause",
+  "plan_adjustment",
+  "deadline_at_risk",
+]);
+
+function isActionableConcern(concern: CoachConcern): boolean {
+  return (
+    concern.kind.startsWith("attention_") ||
+    ACTIONABLE_CONCERN_KINDS.has(concern.kind)
+  );
+}
 
 function escalationDelaysFor(kind: string): number[] {
   if (kind in ESCALATION_DELAYS_BY_KIND) return ESCALATION_DELAYS_BY_KIND[kind];
@@ -41,8 +54,8 @@ function escalationDelaysFor(kind: string): number[] {
 export interface DispatchInput {
   user: DetectorUser;
   now: Date;
-  // The single message addresses these due concerns (problems) framed through
-  // these active lenses (angles). Either may be empty, but not both.
+  // The single message addresses these due concerns (problems), optionally
+  // framed through active routine lenses (angles).
   concerns: CoachConcern[];
   lenses: ReviewLens[];
 }
@@ -59,8 +72,7 @@ export interface DispatchSink {
   dispatch(input: DispatchInput): Promise<DispatchOutcome>;
 }
 
-// "Did we proactively contact this user, and when?" Decoupled from concerns so a
-// lens-only message (which raises no concern) still counts. Prod reads the last
+// "Did we proactively contact this user, and when?" Prod reads the last
 // autonomous COACH notification; the backtest uses an in-memory log.
 export interface ContactLog {
   lastContactAt(userId: string): Promise<Date | null>;
@@ -139,12 +151,16 @@ export async function runOutboundReconcile(
     }
   }
 
-  const due = await coachConcernService.getDue(user.id, now); // severity desc, oldest first
-  const lenses = await computeActiveLenses(user, now);
-  if (due.length === 0 && lenses.length === 0) {
+  const due = (await coachConcernService.getDue(user.id, now)).filter(
+    isActionableConcern
+  ); // severity desc, oldest first
+  if (due.length === 0) {
     return { dispatched: false, reason: "nothing_to_say" };
   }
 
+  // Routine recap/prep/celebration lenses may sharpen a real intervention, but
+  // never create outreach by themselves.
+  const lenses = await computeActiveLenses(user, now);
   const batch = due.slice(0, MAX_BATCH);
   const outcome = await sink.dispatch({ user, now, concerns: batch, lenses });
 

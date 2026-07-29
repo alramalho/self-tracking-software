@@ -7,6 +7,40 @@ import {
   isWithinPreferredCoachWindow,
   resolveAutonomousCoachUsernameFilter,
 } from "../coach/assessment/service";
+import { buildRecurrentCoachAssessmentPrompt } from "../coach/assessment/prompt";
+import {
+  DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL,
+  DEFAULT_COACH_AGENT_MODEL,
+  KIMI_K3_MODEL,
+  resolveCoachAgentTemperature,
+} from "../coachAgentModelConfig";
+
+describe("coach model defaults", () => {
+  it("uses Kimi K3 without overriding its fixed temperature", () => {
+    expect(DEFAULT_COACH_AGENT_MODEL).toBe(KIMI_K3_MODEL);
+    expect(DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL).toBe(KIMI_K3_MODEL);
+    expect(resolveCoachAgentTemperature(KIMI_K3_MODEL)).toBeUndefined();
+  });
+});
+
+describe("recurrent coach assessment prompt", () => {
+  it("makes routine logs silent and forbids generic retrospective questions", () => {
+    const prompt = buildRecurrentCoachAssessmentPrompt({
+      interventionType: "INACTIVITY_CHECKIN",
+      reason: "The plan is at risk.",
+      context: "One remaining miss would fail the week.",
+    });
+    const normalizedPrompt = prompt.replace(/\s+/g, " ");
+
+    expect(normalizedPrompt).toContain(
+      "Never message just because the user logged or completed an activity"
+    );
+    expect(normalizedPrompt).toContain('Never ask "how did it go?"');
+    expect(normalizedPrompt).toContain(
+      "Ask a question only when the answer is required to choose or apply the action"
+    );
+  });
+});
 
 describe("coach assessment week bounds", () => {
   it("uses Sunday as the first day for previous-week recaps", () => {
