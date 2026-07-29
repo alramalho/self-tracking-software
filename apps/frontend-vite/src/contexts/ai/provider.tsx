@@ -50,13 +50,6 @@ const cancelPendingPlanCreationProposalsInCache = (
     return changed ? { ...message, planCreationProposals } : message;
   });
 
-const COACH_NO_REPORT_STORAGE_KEY = "tracking-so:last-coach-no-report-at";
-
-const readLastCoachNoReportAt = () => {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(COACH_NO_REPORT_STORAGE_KEY);
-};
-
 export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -67,9 +60,6 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   const isUserAIWhitelisted = ["liocas", "alex"].includes(
     currentUser?.username || ""
   );
-  const [lastCoachNoReportAt, setLastCoachNoReportAt] = React.useState<
-    string | null
-  >(readLastCoachNoReportAt);
 
   // Get base messaging functionality from MessagesProvider
   const messagesContext = useMessages();
@@ -100,19 +90,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     mutationFn: async () => {
       return await runCoachAssessment(api);
     },
-    onSuccess: (response) => {
-      if (response.result.action === "agent_skipped") {
-        const noReportAt = new Date().toISOString();
-        setLastCoachNoReportAt(noReportAt);
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(COACH_NO_REPORT_STORAGE_KEY, noReportAt);
-        }
-      } else {
-        setLastCoachNoReportAt(null);
-        if (typeof window !== "undefined") {
-          window.localStorage.removeItem(COACH_NO_REPORT_STORAGE_KEY);
-        }
-      }
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({
         queryKey: ["messages", messagesContext.currentChatId],
@@ -557,7 +535,6 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isCreatingCoachChat: createCoachChatMutation.isPending,
     runCoachAssessment: runCoachAssessmentMutation.mutateAsync,
     isRunningCoachAssessment: runCoachAssessmentMutation.isPending,
-    lastCoachNoReportAt,
     updateChatTitle: updateChatTitleMutation.mutateAsync,
     isUpdatingChatTitle: updateChatTitleMutation.isPending,
     submitFeedback: submitFeedbackMutation.mutateAsync,
