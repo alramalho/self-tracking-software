@@ -1,7 +1,8 @@
 import { useApiWithAuth } from "@/api";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { CoachActionsCard } from "@/components/CoachActionsCard";
-import { MessageBubble, MessageMarkdown } from "@/components/MessageBubble";
+import { MessageEntityMarkdown } from "@/components/MessageEntityMarkdown";
+import { MessageBubble } from "@/components/MessageBubble";
 import { PlanProposalCard } from "@/components/PlanProposalCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAI } from "@/contexts/ai";
@@ -111,7 +112,7 @@ function AssessmentMessage({
         className="bg-muted/60"
       >
         <div className="text-sm">
-          <MessageMarkdown>{message.content}</MessageMarkdown>
+          <MessageEntityMarkdown content={message.content} />
         </div>
       </MessageBubble>
 
