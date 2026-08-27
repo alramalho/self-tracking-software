@@ -52,6 +52,8 @@ services:
     env_file:
       - path: .env
         required: false
+      - path: database-local.env
+        required: true
     environment:
       PORT: "3000"
       HOST: "0.0.0.0"

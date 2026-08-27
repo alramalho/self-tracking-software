@@ -26,7 +26,7 @@ Vite bakes `import.meta.env.*` into the JS bundle **at build time** — changing
 
 | Mode | Command | Env file | Points at |
 |---|---|---|---|
-| prod (default for sim testing) | `vite build --mode proddb` | `.env.proddb` | `api.tracking.so` + prod Supabase |
+| prod (default for sim testing) | `vite build --mode proddb` | `.env.proddb` | `api.tracking.so` + production Clerk |
 | LAN dev | `vite build --mode cap` | `.env.cap` | your Mac's LAN IP (update it: `ipconfig getifaddr en0`) |
 
 LAN mode caveats: phone/sim must reach your Mac's IP; the **watch app ignores env** — its URLs are hardcoded in `TrackingWatch/APIService.swift` and `TrackingWatch/AuthManager.swift` (prod only); Apple Sign-In needs HTTPS, so LAN requires a tunnel.
