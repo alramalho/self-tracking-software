@@ -47,7 +47,7 @@ function heuristicKind(input: ActivityKindInput): ActivityKind {
 }
 
 export async function classifyActivityKind(
-  input: ActivityKindInput
+  input: ActivityKindInput,
 ): Promise<ActivityKind> {
   const fallback = heuristicKind(input);
 
@@ -58,7 +58,7 @@ export async function classifyActivityKind(
   try {
     const result = await generateText({
       model: gateway(
-        process.env.ACTIVITY_CATEGORY_MODEL || "openai/gpt-5.4-mini"
+        process.env.ACTIVITY_CATEGORY_MODEL || "openai/gpt-5.6-luna",
       ),
       output: Output.object({
         schema: activityKindSchema,

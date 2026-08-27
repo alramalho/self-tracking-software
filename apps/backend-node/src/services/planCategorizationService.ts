@@ -1,4 +1,4 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { gateway } from "@ai-sdk/gateway";
 import { generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
@@ -7,42 +7,21 @@ import { PLAN_CATEGORY_KEYS } from "../constants/planCategories";
 
 const BATCH_SIZE = 10;
 
-function getOpenRouter() {
-  const headers: Record<string, string> = {};
-
-  if (process.env.HELICONE_API_KEY) {
-    headers["Helicone-Auth"] = `Bearer ${process.env.HELICONE_API_KEY}`;
-  }
-  if (process.env.NODE_ENV) {
-    headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-  }
-
-  return createOpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY!,
-    baseURL: process.env.HELICONE_API_KEY
-      ? "https://openrouter.helicone.ai/api/v1"
-      : undefined,
-    headers,
-  });
-}
-
 async function categorizePlans(
-  plans: { id: string; goal: string }[]
+  plans: { id: string; goal: string }[],
 ): Promise<{ planId: string; category: string }[]> {
   const schema = z.object({
     results: z.array(
       z.object({
         planId: z.string(),
         category: z.enum(PLAN_CATEGORY_KEYS as [string, ...string[]]),
-      })
+      }),
     ),
   });
 
   const categoryList = PLAN_CATEGORY_KEYS.join(", ");
-  const openrouter = getOpenRouter();
-
   const { object } = await generateObject({
-    model: openrouter.chat("google/gemini-3-flash-preview"),
+    model: gateway("google/gemini-3-flash-preview"),
     schema,
     prompt: `Categorize each plan goal into exactly one category from: ${categoryList}
 
@@ -87,7 +66,7 @@ export async function runCategorizationJob(): Promise<{
   }
 
   logger.info(
-    `Plan categorization done: ${categorized} categorized, ${errors} errors`
+    `Plan categorization done: ${categorized} categorized, ${errors} errors`,
   );
   return { categorized, errors };
 }

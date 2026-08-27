@@ -1,13 +1,10 @@
 import Perplexity from "@perplexity-ai/perplexity_ai";
+import { gateway } from "@ai-sdk/gateway";
 import { generateObject, generateText } from "../utils/aiSdk";
-import {
-  createOpenRouter,
-  OpenRouterProvider,
-} from "@openrouter/ai-sdk-provider";
 import dedent from "dedent";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
-import { getCurrentUser } from "../utils/requestContext";
+import { DEFAULT_AI_GATEWAY_MODEL } from "./aiModelIds";
 
 export interface ResearchParams {
   goal: string;
@@ -24,7 +21,6 @@ export interface ResearchResult {
 
 class PerplexityAiService {
   private perplexity: Perplexity | null = null;
-  private openrouter: OpenRouterProvider;
 
   constructor() {
     if (process.env.PERPLEXITY_API_KEY) {
@@ -35,38 +31,9 @@ class PerplexityAiService {
       logger.warn("PERPLEXITY_API_KEY not set - research will use fallback");
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not set");
+    if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
+      throw new Error("AI_GATEWAY_API_KEY is not set");
     }
-
-    this.openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.HELICONE_API_KEY
-        ? "https://openrouter.helicone.ai/api/v1"
-        : undefined,
-      headers: this.getHeaders(),
-    });
-  }
-
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
-    const user = getCurrentUser();
-
-    if (process.env.HELICONE_API_KEY) {
-      headers["Helicone-Auth"] = `Bearer ${process.env.HELICONE_API_KEY}`;
-    }
-
-    if (user?.id) {
-      headers["Helicone-User-Id"] = user.id;
-    }
-    if (user?.username) {
-      headers["Helicone-Property-Username"] = user.username;
-    }
-    if (process.env.NODE_ENV) {
-      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-    }
-
-    return headers;
   }
 
   private categorizeExperience(experience: string): string {
@@ -135,7 +102,7 @@ class PerplexityAiService {
         for (const result of searchResults.results) {
           if (result.snippet) {
             rawFindings.push(
-              `Source: ${result.title}\n${result.snippet.substring(0, 500)}`
+              `Source: ${result.title}\n${result.snippet.substring(0, 500)}`,
             );
           }
         }
@@ -143,7 +110,7 @@ class PerplexityAiService {
         if (rawFindings.length > 0) {
           findings = rawFindings.slice(0, 5).join("\n\n---\n\n");
           logger.info(
-            `Perplexity research completed with ${rawFindings.length} sources`
+            `Perplexity research completed with ${rawFindings.length} sources`,
           );
         }
       } catch (error) {
@@ -203,7 +170,7 @@ class PerplexityAiService {
 
     try {
       const synthesis = await generateText({
-        model: this.openrouter.chat("openai/gpt-5.4-mini"),
+        model: gateway(DEFAULT_AI_GATEWAY_MODEL),
         system: dedent`
           You are a coach synthesizing research findings into actionable guidelines.
           Extract the most relevant and practical information for the user's specific situation.
@@ -266,10 +233,19 @@ class PerplexityAiService {
 
     try {
       const { object } = await generateObject({
-        model: this.openrouter.chat("openai/gpt-5.2-chat"),
+        model: gateway(DEFAULT_AI_GATEWAY_MODEL),
         schema: z.object({
-          isMilestoneGoal: z.boolean().describe("Whether this goal has a clear endpoint (true) or is ongoing/lifestyle (false)"),
-          estimatedWeeks: z.number().nullable().describe("Estimated weeks to achieve the goal, or null if ongoing"),
+          isMilestoneGoal: z
+            .boolean()
+            .describe(
+              "Whether this goal has a clear endpoint (true) or is ongoing/lifestyle (false)",
+            ),
+          estimatedWeeks: z
+            .number()
+            .nullable()
+            .describe(
+              "Estimated weeks to achieve the goal, or null if ongoing",
+            ),
           reasoning: z.string().describe("Brief explanation of the estimate"),
         }),
         system: dedent`
@@ -302,7 +278,9 @@ class PerplexityAiService {
         temperature: 0,
       });
 
-      logger.info(`Duration estimate for "${goal}": ${object.estimatedWeeks} weeks (${object.reasoning})`);
+      logger.info(
+        `Duration estimate for "${goal}": ${object.estimatedWeeks} weeks (${object.reasoning})`,
+      );
       return object.estimatedWeeks;
     } catch (error) {
       logger.warn("Error estimating duration:", error);

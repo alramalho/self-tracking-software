@@ -1,2 +1,2 @@
-// OpenRouter and AI Gateway use different provider prefixes for Z.ai models.
-export const OPENROUTER_GLM_52_MODEL = "z-ai/glm-5.2";
+export const GPT_56_LUNA_MODEL = "openai/gpt-5.6-luna";
+export const DEFAULT_AI_GATEWAY_MODEL = GPT_56_LUNA_MODEL;

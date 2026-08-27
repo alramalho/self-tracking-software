@@ -40,18 +40,24 @@ class WebSearchService {
         apiKey: process.env.PERPLEXITY_API_KEY,
       });
     } else {
-      logger.warn("PERPLEXITY_API_KEY not set - Perplexity web search will be unavailable");
+      logger.warn(
+        "PERPLEXITY_API_KEY not set - Perplexity web search will be unavailable",
+      );
     }
 
     if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
       logger.warn(
-        "AI_GATEWAY_API_KEY not set and VERCEL env absent - OpenAI web search requires the Vercel AI Gateway key"
+        "AI_GATEWAY_API_KEY not set and VERCEL env absent - OpenAI web search requires the Vercel AI Gateway key",
       );
     }
   }
 
   normalizeQueries(input: WebSearchInput): string[] {
-    const queries = input.queries?.length ? input.queries : input.query ? [input.query] : [];
+    const queries = input.queries?.length
+      ? input.queries
+      : input.query
+        ? [input.query]
+        : [];
     return queries.map((query) => query.trim()).filter(Boolean);
   }
 
@@ -89,7 +95,7 @@ class WebSearchService {
       }));
 
       logger.info(
-        `Perplexity web search for "${queries.join(" | ")}" returned ${results.length} results`
+        `Perplexity web search for "${queries.join(" | ")}" returned ${results.length} results`,
       );
 
       return {
@@ -142,7 +148,9 @@ class WebSearchService {
             : "medium";
 
       const result = await generateText({
-        model: gateway.languageModel(process.env.OPENAI_WEB_SEARCH_MODEL || "openai/gpt-5.4-mini"),
+        model: gateway.languageModel(
+          process.env.OPENAI_WEB_SEARCH_MODEL || "openai/gpt-5.6-luna",
+        ),
         prompt: [
           "Search the web for the following query or alternate queries.",
           "Return exact facts found from the web. Use the web_search tool when current or link-specific information is needed.",
@@ -193,13 +201,15 @@ class WebSearchService {
       });
 
       const seenUrls = new Set<string>();
-      const citedResults = [...sourceResults, ...toolSourceResults].filter((result) => {
-        if (!result.url || seenUrls.has(result.url)) {
-          return false;
-        }
-        seenUrls.add(result.url);
-        return true;
-      });
+      const citedResults = [...sourceResults, ...toolSourceResults].filter(
+        (result) => {
+          if (!result.url || seenUrls.has(result.url)) {
+            return false;
+          }
+          seenUrls.add(result.url);
+          return true;
+        },
+      );
 
       const results =
         citedResults.length > 0
@@ -213,7 +223,7 @@ class WebSearchService {
             ];
 
       logger.info(
-        `OpenAI web search for "${queries.join(" | ")}" returned ${results.length} normalized results`
+        `OpenAI web search for "${queries.join(" | ")}" returned ${results.length} normalized results`,
       );
 
       return {

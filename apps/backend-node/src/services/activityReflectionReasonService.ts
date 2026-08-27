@@ -29,7 +29,7 @@ function fallbackReasons(input: ActivityReflectionReasonInput): string[] {
 
   if (
     /\b(run|walk|cycle|bike|swim|km|mi|mile|steps?)\b/.test(
-      `${title} ${measure}`
+      `${title} ${measure}`,
     )
   ) {
     reasons.add("Pace");
@@ -66,7 +66,7 @@ function normalizeReasons(reasons: string[]): string[] {
 }
 
 export async function generateActivityReflectionReasons(
-  input: ActivityReflectionReasonInput
+  input: ActivityReflectionReasonInput,
 ): Promise<string[]> {
   const fallback = fallbackReasons(input);
 
@@ -77,7 +77,7 @@ export async function generateActivityReflectionReasons(
   try {
     const result = await generateText({
       model: gateway(
-        process.env.ACTIVITY_REFLECTION_REASONS_MODEL || "openai/gpt-5.4-mini"
+        process.env.ACTIVITY_REFLECTION_REASONS_MODEL || "openai/gpt-5.6-luna",
       ),
       output: Output.object({
         schema: reflectionReasonsSchema,
@@ -120,7 +120,7 @@ export async function generateActivityReflectionReasons(
         error,
         activityTitle: input.activity.title,
         difficulty: input.difficulty,
-      }
+      },
     );
     return fallback;
   }

@@ -1,14 +1,10 @@
-import {
-  createOpenRouter,
-  OpenRouterProvider,
-} from "@openrouter/ai-sdk-provider";
+import { gateway } from "@ai-sdk/gateway";
 import { createGateway, generateImage, generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
 import { format, startOfWeek } from "date-fns";
 import dedent from "dedent";
 import { logger } from "../utils/logger";
-import { getCurrentUser } from "../utils/requestContext";
-import { OPENROUTER_GLM_52_MODEL } from "./aiModelIds";
+import { DEFAULT_AI_GATEWAY_MODEL } from "./aiModelIds";
 
 const DEFAULT_MAX_WEEKS = 2;
 
@@ -70,41 +66,10 @@ export interface PipelineResult {
  * Research is done externally via perplexityAiService and passed in.
  */
 export class PlanGenerationPipeline {
-  private openrouter: OpenRouterProvider;
-
   constructor() {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not set");
+    if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
+      throw new Error("AI_GATEWAY_API_KEY is not set");
     }
-
-    this.openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.HELICONE_API_KEY
-        ? "https://openrouter.helicone.ai/api/v1"
-        : undefined,
-      headers: this.getHeaders(),
-    });
-  }
-
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
-    const user = getCurrentUser();
-
-    if (process.env.HELICONE_API_KEY) {
-      headers["Helicone-Auth"] = `Bearer ${process.env.HELICONE_API_KEY}`;
-    }
-
-    if (user?.id) {
-      headers["Helicone-User-Id"] = user.id;
-    }
-    if (user?.username) {
-      headers["Helicone-Property-Username"] = user.username;
-    }
-    if (process.env.NODE_ENV) {
-      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-    }
-
-    return headers;
   }
 
   /**
@@ -115,10 +80,13 @@ export class PlanGenerationPipeline {
   async generatePlan(params: PlanGenerationParams): Promise<PipelineResult> {
     const maxWeeks = params.maxWeeks ?? DEFAULT_MAX_WEEKS;
     const trace: PipelineTraceStep[] = [];
-    logger.info(`Starting plan generation pipeline for goal: "${params.goal}" (generating ${maxWeeks} weeks)`);
+    logger.info(
+      `Starting plan generation pipeline for goal: "${params.goal}" (generating ${maxWeeks} weeks)`,
+    );
 
     // Use provided research findings or fall back to defaults
-    const researchFindings = params.researchFindings || this.getDefaultResearchFindings(params);
+    const researchFindings =
+      params.researchFindings || this.getDefaultResearchFindings(params);
     if (params.researchFindings) {
       logger.info("Using provided research findings");
     } else {
@@ -130,11 +98,23 @@ export class PlanGenerationPipeline {
     if (params.activities && params.activities.length > 0) {
       activities = params.activities;
       logger.info(`Using ${activities.length} provided activities`);
-      trace.push({ stage: "activity-generation", model: "skipped (provided)", prompt: "", response: activities, durationMs: 0 });
+      trace.push({
+        stage: "activity-generation",
+        model: "skipped (provided)",
+        prompt: "",
+        response: activities,
+        durationMs: 0,
+      });
     } else {
       try {
-        activities = await this.generateActivities(params, researchFindings, trace);
-        logger.info(`Activity Generation completed: ${activities.length} (${activities.map(a => `${a.title} (${a.measure})`).join(", ")}) activities`);
+        activities = await this.generateActivities(
+          params,
+          researchFindings,
+          trace,
+        );
+        logger.info(
+          `Activity Generation completed: ${activities.length} (${activities.map((a) => `${a.title} (${a.measure})`).join(", ")}) activities`,
+        );
       } catch (error) {
         logger.error("Activity Generation failed", error);
         throw new Error("Failed to generate activities for plan");
@@ -144,8 +124,16 @@ export class PlanGenerationPipeline {
     // Stage 2: Generate sessions for the first N weeks only
     let sessions: GeneratedSession[];
     try {
-      sessions = await this.generateSessions(params, researchFindings, activities, maxWeeks, trace);
-      logger.info(`Session Generation completed: ${sessions.length} sessions for ${maxWeeks} weeks`);
+      sessions = await this.generateSessions(
+        params,
+        researchFindings,
+        activities,
+        maxWeeks,
+        trace,
+      );
+      logger.info(
+        `Session Generation completed: ${sessions.length} sessions for ${maxWeeks} weeks`,
+      );
     } catch (error) {
       logger.error("Session Generation failed", error);
       // Fall back to basic session generation
@@ -154,16 +142,25 @@ export class PlanGenerationPipeline {
 
     // Stage 3: Generate images from coach-provided imagePrompts
     // Returns immediately with imageUrls empty — caller can await imageGeneration if needed
-    const imageGeneration = this.generateImagesFromPrompts(sessions, activities, trace)
+    const imageGeneration = this.generateImagesFromPrompts(
+      sessions,
+      activities,
+      trace,
+    )
       .then((updated) => {
         // Mutate sessions in place so the trace upload picks them up
         for (let i = 0; i < updated.length; i++) {
           sessions[i].imageUrls = updated[i].imageUrls;
         }
-        logger.info(`Image Generation completed for ${sessions.length} sessions`);
+        logger.info(
+          `Image Generation completed for ${sessions.length} sessions`,
+        );
       })
       .catch((error) => {
-        logger.warn("Image Generation failed, continuing without images", error);
+        logger.warn(
+          "Image Generation failed, continuing without images",
+          error,
+        );
       });
 
     return {
@@ -177,16 +174,33 @@ export class PlanGenerationPipeline {
 
   private categorizeExperience(experience: string): string {
     const lowerExp = experience.toLowerCase();
-    if (lowerExp.includes("beginner") || lowerExp.includes("never") || lowerExp.includes("new") || lowerExp.includes("starting")) {
+    if (
+      lowerExp.includes("beginner") ||
+      lowerExp.includes("never") ||
+      lowerExp.includes("new") ||
+      lowerExp.includes("starting")
+    ) {
       return "complete beginner";
     }
-    if (lowerExp.includes("some") || lowerExp.includes("little") || lowerExp.includes("occasionally")) {
+    if (
+      lowerExp.includes("some") ||
+      lowerExp.includes("little") ||
+      lowerExp.includes("occasionally")
+    ) {
       return "beginner with some experience";
     }
-    if (lowerExp.includes("regular") || lowerExp.includes("often") || lowerExp.includes("weekly")) {
+    if (
+      lowerExp.includes("regular") ||
+      lowerExp.includes("often") ||
+      lowerExp.includes("weekly")
+    ) {
       return "intermediate";
     }
-    if (lowerExp.includes("advanced") || lowerExp.includes("years") || lowerExp.includes("experienced")) {
+    if (
+      lowerExp.includes("advanced") ||
+      lowerExp.includes("years") ||
+      lowerExp.includes("experienced")
+    ) {
       return "experienced";
     }
     return "beginner"; // Default
@@ -210,21 +224,37 @@ export class PlanGenerationPipeline {
   private async generateActivities(
     params: PlanGenerationParams,
     researchFindings: string,
-    trace: PipelineTraceStep[]
+    trace: PipelineTraceStep[],
   ): Promise<ActivityInput[]> {
     const { goal, userAge, experience, timesPerWeek } = params;
     const experienceLevel = this.categorizeExperience(experience);
 
     const ActivitiesSchema = z.object({
-      activities: z.array(z.object({
-        id: z.string().describe("Unique ID for the activity, format: 'new_1', 'new_2', etc."),
-        title: z.string().describe("Short, concise activity name (2-3 words max)"),
-        measure: z.string().describe("Unit of measurement: 'minutes', 'times', 'km', 'reps', 'pages', etc."),
-        emoji: z.string().describe("Hard requirement: ONE emoji only, even if activity is allusive to multiple activities (e.g run/walk pairs)"),
-      })),
+      activities: z.array(
+        z.object({
+          id: z
+            .string()
+            .describe(
+              "Unique ID for the activity, format: 'new_1', 'new_2', etc.",
+            ),
+          title: z
+            .string()
+            .describe("Short, concise activity name (2-3 words max)"),
+          measure: z
+            .string()
+            .describe(
+              "Unit of measurement: 'minutes', 'times', 'km', 'reps', 'pages', etc.",
+            ),
+          emoji: z
+            .string()
+            .describe(
+              "Hard requirement: ONE emoji only, even if activity is allusive to multiple activities (e.g run/walk pairs)",
+            ),
+        }),
+      ),
     });
 
-    const activityModel = OPENROUTER_GLM_52_MODEL;
+    const activityModel = DEFAULT_AI_GATEWAY_MODEL;
     const activitySystem = dedent`
         You are an expert at designing trackable activities for habit plans.
 
@@ -261,15 +291,24 @@ export class PlanGenerationPipeline {
 
     const t0 = Date.now();
     const result = await generateObject({
-      model: this.openrouter.chat(activityModel),
+      model: gateway(activityModel),
       schema: ActivitiesSchema,
       system: activitySystem,
       prompt: activityPrompt,
       temperature: 0.3,
     });
-    trace.push({ stage: "activity-generation", model: activityModel, systemPrompt: activitySystem, prompt: activityPrompt, response: result.object, durationMs: Date.now() - t0 });
+    trace.push({
+      stage: "activity-generation",
+      model: activityModel,
+      systemPrompt: activitySystem,
+      prompt: activityPrompt,
+      response: result.object,
+      durationMs: Date.now() - t0,
+    });
 
-    logger.info(`Generated ${result.object.activities.length} activities for goal: "${goal}"`);
+    logger.info(
+      `Generated ${result.object.activities.length} activities for goal: "${goal}"`,
+    );
     return result.object.activities;
   }
 
@@ -282,7 +321,7 @@ export class PlanGenerationPipeline {
     researchFindings: string,
     activities: ActivityInput[],
     maxWeeks: number,
-    trace: PipelineTraceStep[]
+    trace: PipelineTraceStep[],
   ): Promise<GeneratedSession[]> {
     const { goal, timesPerWeek, experience } = params;
     const experienceLevel = this.categorizeExperience(experience);
@@ -293,28 +332,53 @@ export class PlanGenerationPipeline {
 
     // Build a single enum where each option is a complete activity string
     // Format: "id::title::measure" - this forces the AI to pick a valid combination
-    const activityOptions = activities.map(a => `${a.id}::${a.title}::${a.measure}`) as [string, ...string[]];
+    const activityOptions = activities.map(
+      (a) => `${a.id}::${a.title}::${a.measure}`,
+    ) as [string, ...string[]];
 
     // Build display string for the prompt to help AI understand the options
     const activityDisplayList = activities
-      .map(a => `- "${a.id}::${a.title}::${a.measure}" (quantity in ${a.measure})`)
+      .map(
+        (a) =>
+          `- "${a.id}::${a.title}::${a.measure}" (quantity in ${a.measure})`,
+      )
       .join("\n");
 
     const SessionsSchema = z.object({
-      weeks: z.array(z.object({
-        weekNumber: z.number(),
-        weekStartDate: z.string(),
-        sessions: z.array(z.object({
-          date: z.string().describe("Session date in YYYY-MM-DD format"),
-          activity: z.enum(activityOptions).describe(`Pick one of the available activities. The format is "id::title::measure". The measure tells you what unit to use for quantity.`),
-          quantity: z.number().describe("Amount in the measure unit from the activity you picked. For 'minutes': 15-60 for beginners. For 'miles': 1-5 for beginners. For 'km': 2-8 for beginners."),
-          descriptiveGuide: z.string().describe("2-3 sentences. Reference the quantity with correct measure (e.g. 'This 20-minute session...' or 'These 3 miles...')."),
-          imagePrompts: z.array(z.string()).describe("0-2 prompts for generating accompanying visual aids for this session. Each prompt should describe a specific illustration that adds visual information the text cannot — e.g. body posture/form, movement phases, breathing patterns, progression visualization. Leave empty if the session doesn't benefit from visuals (e.g. reading, journaling). Do NOT repeat the session description as text in the image — the image should show what words can't."),
-        })),
-      })),
+      weeks: z.array(
+        z.object({
+          weekNumber: z.number(),
+          weekStartDate: z.string(),
+          sessions: z.array(
+            z.object({
+              date: z.string().describe("Session date in YYYY-MM-DD format"),
+              activity: z
+                .enum(activityOptions)
+                .describe(
+                  `Pick one of the available activities. The format is "id::title::measure". The measure tells you what unit to use for quantity.`,
+                ),
+              quantity: z
+                .number()
+                .describe(
+                  "Amount in the measure unit from the activity you picked. For 'minutes': 15-60 for beginners. For 'miles': 1-5 for beginners. For 'km': 2-8 for beginners.",
+                ),
+              descriptiveGuide: z
+                .string()
+                .describe(
+                  "2-3 sentences. Reference the quantity with correct measure (e.g. 'This 20-minute session...' or 'These 3 miles...').",
+                ),
+              imagePrompts: z
+                .array(z.string())
+                .describe(
+                  "0-2 prompts for generating accompanying visual aids for this session. Each prompt should describe a specific illustration that adds visual information the text cannot — e.g. body posture/form, movement phases, breathing patterns, progression visualization. Leave empty if the session doesn't benefit from visuals (e.g. reading, journaling). Do NOT repeat the session description as text in the image — the image should show what words can't.",
+                ),
+            }),
+          ),
+        }),
+      ),
     });
 
-    const sessionModel = "openai/gpt-5.2-chat";
+    const sessionModel = DEFAULT_AI_GATEWAY_MODEL;
     const sessionSystem = dedent`
         You are a personal coach creating a ${maxWeeks}-week progressive plan.
 
@@ -361,13 +425,20 @@ export class PlanGenerationPipeline {
 
     const t0 = Date.now();
     const result = await generateObject({
-      model: this.openrouter.chat(sessionModel),
+      model: gateway(sessionModel),
       schema: SessionsSchema,
       system: sessionSystem,
       prompt: sessionPrompt,
       temperature: 0.3,
     });
-    trace.push({ stage: "session-generation", model: sessionModel, systemPrompt: sessionSystem, prompt: sessionPrompt, response: result.object, durationMs: Date.now() - t0 });
+    trace.push({
+      stage: "session-generation",
+      model: sessionModel,
+      systemPrompt: sessionSystem,
+      prompt: sessionPrompt,
+      response: result.object,
+      durationMs: Date.now() - t0,
+    });
 
     // Flatten weeks into sessions array, parsing the "id::title::measure" format
     const sessions: GeneratedSession[] = [];
@@ -386,7 +457,7 @@ export class PlanGenerationPipeline {
       }
     }
 
-     return sessions;
+    return sessions;
   }
 
   /**
@@ -395,20 +466,32 @@ export class PlanGenerationPipeline {
   private async generateImagesFromPrompts(
     sessions: GeneratedSession[],
     activities: ActivityInput[],
-    trace: PipelineTraceStep[]
+    trace: PipelineTraceStep[],
   ): Promise<GeneratedSession[]> {
     const t0 = Date.now();
 
-    const jobs: { si: number; pi: number; prompt: string; kind?: string }[] = [];
+    const jobs: { si: number; pi: number; prompt: string; kind?: string }[] =
+      [];
     for (let si = 0; si < sessions.length; si++) {
-      const activity = activities.find(a => a.id === sessions[si].activityId);
+      const activity = activities.find((a) => a.id === sessions[si].activityId);
       for (let pi = 0; pi < sessions[si].imagePrompts.length; pi++) {
-        jobs.push({ si, pi, prompt: sessions[si].imagePrompts[pi], kind: activity?.kind });
+        jobs.push({
+          si,
+          pi,
+          prompt: sessions[si].imagePrompts[pi],
+          kind: activity?.kind,
+        });
       }
     }
 
     if (jobs.length === 0) {
-      trace.push({ stage: "image-generation", model: "skipped", prompt: "no imagePrompts from coach", response: [], durationMs: 0 });
+      trace.push({
+        stage: "image-generation",
+        model: "skipped",
+        prompt: "no imagePrompts from coach",
+        response: [],
+        durationMs: 0,
+      });
       return sessions;
     }
 
@@ -418,17 +501,25 @@ export class PlanGenerationPipeline {
           const imageUrl = await this.generateImage(job.prompt, job.kind);
           return { ...job, imageUrl };
         } catch (error) {
-          logger.warn(`Failed to generate image for session ${job.si} prompt ${job.pi}`, error);
+          logger.warn(
+            `Failed to generate image for session ${job.si} prompt ${job.pi}`,
+            error,
+          );
           return { ...job, imageUrl: null as string | null };
         }
-      })
+      }),
     );
 
     trace.push({
       stage: "image-generation",
       model: "openai/gpt-image-2 (low/medium by kind)",
       prompt: `${jobs.length} images from coach prompts`,
-      response: results.map(r => ({ session: r.si, kind: r.kind, prompt: r.prompt, hasImage: !!r.imageUrl })),
+      response: results.map((r) => ({
+        session: r.si,
+        kind: r.kind,
+        prompt: r.prompt,
+        hasImage: !!r.imageUrl,
+      })),
       durationMs: Date.now() - t0,
     });
 
@@ -449,8 +540,13 @@ export class PlanGenerationPipeline {
   // Gym/boxing/bouldering need medium quality for form detail, everything else is fine at low
   private static MEDIUM_QUALITY_KINDS = new Set(["gym"]);
 
-  private async generateImage(prompt: string, kind?: string): Promise<string | null> {
-    const quality = PlanGenerationPipeline.MEDIUM_QUALITY_KINDS.has(kind || "") ? "medium" : "low";
+  private async generateImage(
+    prompt: string,
+    kind?: string,
+  ): Promise<string | null> {
+    const quality = PlanGenerationPipeline.MEDIUM_QUALITY_KINDS.has(kind || "")
+      ? "medium"
+      : "low";
     const apiKey = process.env.AI_GATEWAY_API_KEY;
     if (!apiKey) {
       logger.warn("AI_GATEWAY_API_KEY not set, skipping image generation");
@@ -502,7 +598,7 @@ export class PlanGenerationPipeline {
   private generateBasicSessions(
     params: PlanGenerationParams,
     activities: ActivityInput[],
-    maxWeeks: number
+    maxWeeks: number,
   ): GeneratedSession[] {
     const sessions: GeneratedSession[] = [];
     const { timesPerWeek } = params;

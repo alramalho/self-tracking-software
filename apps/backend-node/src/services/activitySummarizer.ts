@@ -1,11 +1,7 @@
-import {
-  createOpenRouter,
-  OpenRouterProvider,
-} from "@openrouter/ai-sdk-provider";
+import { gateway } from "@ai-sdk/gateway";
 import { generateText } from "../utils/aiSdk";
 import { format } from "date-fns";
 import { logger } from "../utils/logger";
-import { getCurrentUser } from "../utils/requestContext";
 
 interface SummarizeInput {
   activityEntries: Array<{
@@ -29,31 +25,6 @@ interface SummarizeInput {
 }
 
 class ActivitySummarizer {
-  private getOpenRouter(): OpenRouterProvider {
-    const user = getCurrentUser();
-
-    const headers: Record<string, string> = {
-      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    };
-
-    if (user?.id) {
-      headers["Helicone-User-Id"] = user.id;
-    }
-    if (user?.username) {
-      headers["Helicone-Property-Username"] = user.username;
-    }
-    if (process.env.NODE_ENV) {
-      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-    }
-
-    return createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY!,
-      baseURL: "https://openrouter.helicone.ai/api/v1",
-      headers,
-    });
-  }
-
   async summarize(input: SummarizeInput): Promise<string> {
     const { activityEntries, metricEntries, plannedSessions, dateRange } =
       input;
@@ -70,7 +41,7 @@ class ActivitySummarizer {
       const dateKey = format(new Date(s.date), "yyyy-MM-dd (EEE)");
       if (!sessionsByDate[dateKey]) sessionsByDate[dateKey] = [];
       sessionsByDate[dateKey].push(
-        `${s.activity.emoji} ${s.activity.title}: ${s.quantity} ${s.activity.measure}`
+        `${s.activity.emoji} ${s.activity.title}: ${s.quantity} ${s.activity.measure}`,
       );
     }
     if (Object.keys(sessionsByDate).length > 0) {
@@ -78,7 +49,7 @@ class ActivitySummarizer {
         "PLANNED SESSIONS:\n" +
           Object.entries(sessionsByDate)
             .map(([date, sessions]) => `  ${date}: ${sessions.join(", ")}`)
-            .join("\n")
+            .join("\n"),
       );
     } else {
       parts.push("PLANNED SESSIONS: None scheduled");
@@ -102,7 +73,9 @@ class ActivitySummarizer {
       }
       if (e.privateNotes?.trim()) {
         if (!reflectionsByDate[dateKey]) reflectionsByDate[dateKey] = [];
-        reflectionsByDate[dateKey].push(`${actTitle}: ${e.privateNotes.trim()}`);
+        reflectionsByDate[dateKey].push(
+          `${actTitle}: ${e.privateNotes.trim()}`,
+        );
       }
     }
     if (Object.keys(entriesByDate).length > 0) {
@@ -110,7 +83,7 @@ class ActivitySummarizer {
         "COMPLETED ACTIVITIES:\n" +
           Object.entries(entriesByDate)
             .map(([date, entries]) => `  ${date}: ${entries.join(", ")}`)
-            .join("\n")
+            .join("\n"),
       );
     } else {
       parts.push("COMPLETED ACTIVITIES: None recorded");
@@ -122,7 +95,7 @@ class ActivitySummarizer {
         "DIFFICULTY REPORTS:\n" +
           Object.entries(difficultiesByDate)
             .map(([date, entries]) => `  ${date}: ${entries.join(", ")}`)
-            .join("\n")
+            .join("\n"),
       );
     } else {
       parts.push("DIFFICULTY REPORTS: No difficulty reported");
@@ -134,7 +107,7 @@ class ActivitySummarizer {
         "PRIVATE REFLECTIONS:\n" +
           Object.entries(reflectionsByDate)
             .map(([date, entries]) => `  ${date}: ${entries.join(" | ")}`)
-            .join("\n")
+            .join("\n"),
       );
     } else {
       parts.push("PRIVATE REFLECTIONS: No private reflections recorded");
@@ -155,7 +128,7 @@ class ActivitySummarizer {
         "METRIC RECORDINGS:\n" +
           Object.entries(metricsByDate)
             .map(([date, entries]) => `  ${date}: ${entries.join(", ")}`)
-            .join("\n")
+            .join("\n"),
       );
     } else {
       parts.push("METRIC RECORDINGS: No metrics recorded");
@@ -164,9 +137,8 @@ class ActivitySummarizer {
     const rawData = parts.join("\n\n");
 
     try {
-      const openRouter = this.getOpenRouter();
       const result = await generateText({
-        model: openRouter.chat("google/gemini-3-flash-preview"),
+        model: gateway("google/gemini-3-flash-preview"),
         system: `You are a data summarizer. Given raw user activity tracking data for a date range, produce a concise plain text summary covering:
 1. Activities completed vs planned (per activity, grouped by day)
 2. Difficulty reports (explicitly state "no difficulty reported" if none)

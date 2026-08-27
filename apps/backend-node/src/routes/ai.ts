@@ -261,9 +261,13 @@ router.post(
     try {
       const user = req.user!;
       const dedupeKey =
-        typeof req.body?.dedupeKey === "string" ? req.body.dedupeKey : undefined;
+        typeof req.body?.dedupeKey === "string"
+          ? req.body.dedupeKey
+          : undefined;
       const planIds = Array.isArray(req.body?.planIds)
-        ? req.body.planIds.filter((id: unknown): id is string => typeof id === "string")
+        ? req.body.planIds.filter(
+            (id: unknown): id is string => typeof id === "string",
+          )
         : undefined;
 
       if (!dedupeKey && (!planIds || planIds.length === 0)) {
@@ -1294,7 +1298,7 @@ Make it more polished and compelling while keeping the user's authentic voice an
         prompt,
         systemPrompt,
         options: {
-          model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+          model: process.env.AI_GATEWAY_MODEL || "openai/gpt-5.6-luna",
           temperature: 0.7,
         },
       });
