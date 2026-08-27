@@ -1,6 +1,3 @@
-import {
-  createOpenRouter,
-} from "@openrouter/ai-sdk-provider";
 import { writeFileSync, mkdirSync } from "fs";
 import { join, resolve } from "path";
 import * as dotenv from "dotenv";
@@ -26,10 +23,6 @@ async function loadAISDK(): Promise<void> {
   });
 }
 
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
 // --- Config ---
 
 const CONCURRENCY = 5;
@@ -44,7 +37,7 @@ const IMAGE_MODELS = [
 ];
 
 // Coach model — same as pipeline uses
-const COACH_MODEL = "openai/gpt-5.2-chat";
+const COACH_MODEL = "openai/gpt-5.6-luna";
 
 interface TestSession {
   plan: string;
@@ -112,7 +105,7 @@ async function generateCoachImagePrompts(
   });
 
   const result = await generateObject({
-    model: openrouter.chat(COACH_MODEL),
+    model: gateway.languageModel(COACH_MODEL),
     schema,
     system: dedent`
       You are a personal coach. For each session below, decide whether accompanying

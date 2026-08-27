@@ -1,18 +1,14 @@
-import {
-  createOpenRouter,
-  OpenRouterProvider,
-} from "@openrouter/ai-sdk-provider";
+import { gateway } from "@ai-sdk/gateway";
 import { Activity, Plan, PlanOutlineType, User } from "@tsw/prisma";
 import { generateObject, generateText } from "../utils/aiSdk";
 import dedent from "dedent";
 import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
-import { getCurrentUser } from "../utils/requestContext";
 import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import type { PlansService } from "./plansService";
 import { planGenerationPipeline } from "./planGenerationPipeline";
-import { OPENROUTER_GLM_52_MODEL } from "./aiModelIds";
+import { DEFAULT_AI_GATEWAY_MODEL } from "./aiModelIds";
 const DEFAULT_WEEKS = 8;
 
 export class AIService {
@@ -22,52 +18,11 @@ export class AIService {
 
   constructor(plansService?: PlansService) {
     this.plansService = plansService;
-    this.model = process.env.OPENROUTER_MODEL || "openai/gpt-5.4-mini";
+    this.model = process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
 
-    if (!process.env.OPENROUTER_API_KEY || !process.env.HELICONE_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY or HELICONE_API_KEY is not set");
+    if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
+      throw new Error("AI_GATEWAY_API_KEY is not set");
     }
-  }
-
-  private getOpenRouterWithUserId(): OpenRouterProvider {
-    const user = getCurrentUser();
-
-    const headers = {
-      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    };
-
-    if (user?.id) {
-      headers["Helicone-User-Id"] = user.id;
-    } else {
-      logger.debug("No user ID found, skipping Helicone-User-Id header");
-    }
-
-    if (user?.username) {
-      headers["Helicone-Property-Username"] = user.username;
-    }
-
-    if (process.env.NODE_ENV) {
-      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
-    }
-
-    return createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: "https://openrouter.helicone.ai/api/v1",
-      headers,
-      fetch: (url, options) => {
-        const logOptions = { ...options };
-        if (options?.body && typeof options.body === "string") {
-          try {
-            logOptions.body = JSON.parse(options.body);
-          } catch {
-            // Keep original if not valid JSON
-          }
-        }
-        logger.debug("Fetching:", url, JSON.stringify(logOptions, null, 2));
-        return fetch(url, options);
-      },
-    });
   }
 
   /**
@@ -75,13 +30,13 @@ export class AIService {
    */
   private replacePromptVariables(
     template: string,
-    variables: Record<string, string>
+    variables: Record<string, string>,
   ): string {
     let result = template;
     for (const [key, value] of Object.entries(variables)) {
       result = result.replace(
         new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-        value || ""
+        value || "",
       );
     }
     return result;
@@ -92,7 +47,7 @@ export class AIService {
    */
   private async buildSimplifiedPlansContext(
     plans: any[],
-    user: User
+    user: User,
   ): Promise<string> {
     if (plans.length === 0) return "";
 
@@ -107,7 +62,7 @@ export class AIService {
           try {
             const progressData = await this.plansService.getPlanProgress(
               plan,
-              user
+              user,
             );
             const { currentWeekStats } = progressData;
 
@@ -120,7 +75,7 @@ export class AIService {
               const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 });
               const daysLeft = Math.ceil(
                 (endOfWeekDate.getTime() - now.getTime()) /
-                  (1000 * 60 * 60 * 24)
+                  (1000 * 60 * 60 * 24),
               );
 
               // Determine week status
@@ -144,7 +99,7 @@ export class AIService {
         }
 
         return baseContext;
-      })
+      }),
     );
 
     return "\n\nUser's current plans:\n" + planContexts.join("\n");
@@ -217,10 +172,10 @@ export class AIService {
       const availableRecommendations = await Promise.all(
         topRecommendations.map(async (rec) => {
           const recUser = recommendationsData.users.find(
-            (u) => u.id === rec.recommendationObjectId
+            (u) => u.id === rec.recommendationObjectId,
           );
           const recPlans = recommendationsData.plans.filter(
-            (p) => p.userId === rec.recommendationObjectId
+            (p) => p.userId === rec.recommendationObjectId,
           );
           const primaryPlan = recPlans[0];
 
@@ -229,7 +184,7 @@ export class AIService {
 
           if (metadata?.planSimScore && metadata.planSimScore > 0.5) {
             matchReasons.push(
-              `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`
+              `Similar goals (${Math.round(metadata.planSimScore * 100)}% match)`,
             );
           }
           if (metadata?.geoSimScore && metadata.geoSimScore > 0.7) {
@@ -281,7 +236,7 @@ export class AIService {
                 }
               : undefined,
           };
-        })
+        }),
       );
 
       // 4. Build context string for prompt
@@ -367,7 +322,7 @@ export class AIService {
         schema: z
           .string()
           .describe(
-            "Your internal step-by-step reasoning about this response. Think through: (1) What is the user's current state and needs? (2) What message stage is this (rapport building, advice, structured enhancements)? (3) Which optional fields should I populate and why? Be thorough and reflective."
+            "Your internal step-by-step reasoning about this response. Think through: (1) What is the user's current state and needs? (2) What message stage is this (rapport building, advice, structured enhancements)? (3) Which optional fields should I populate and why? Be thorough and reflective.",
           ),
         optional: false,
       },
@@ -382,7 +337,7 @@ export class AIService {
         schema: z
           .string()
           .describe(
-            "Your conversational response text (2-3 sentences). Start with genuine conversation, not structured enhancements."
+            "Your conversational response text (2-3 sentences). Start with genuine conversation, not structured enhancements.",
           ),
         optional: false,
       },
@@ -401,16 +356,16 @@ export class AIService {
               textToReplace: z
                 .string()
                 .describe(
-                  "EXACT substring from messageContent to replace with plan link"
+                  "EXACT substring from messageContent to replace with plan link",
                 ),
               planGoal: z
                 .string()
                 .describe("Exact plan goal from user's plans list"),
-            })
+            }),
           )
           .optional()
           .describe(
-            "Populate when you naturally reference the user's plans in messageContent. Creates inline clickable plan links."
+            "Populate when you naturally reference the user's plans in messageContent. Creates inline clickable plan links.",
           ),
         optional: true,
       },
@@ -429,7 +384,7 @@ export class AIService {
             textToReplace: z
               .string()
               .describe(
-                "EXACT substring from messageContent to replace with metric suggestion"
+                "EXACT substring from messageContent to replace with metric suggestion",
               ),
             metricTitle: z
               .string()
@@ -442,7 +397,7 @@ export class AIService {
           })
           .optional()
           .describe(
-            "Populate when user expresses clear emotional sentiment (happy, tired, stressed, amazing, etc.). Your primary job is tracking - extract emotions proactively."
+            "Populate when user expresses clear emotional sentiment (happy, tired, stressed, amazing, etc.). Your primary job is tracking - extract emotions proactively.",
           ),
         optional: true,
       },
@@ -460,7 +415,7 @@ export class AIService {
           .array(z.string())
           .optional()
           .describe(
-            "Array of user IDs to recommend. Populate only after you've discussed accountability benefits in messageContent. Select from available recommendations list."
+            "Array of user IDs to recommend. Populate only after you've discussed accountability benefits in messageContent. Select from available recommendations list.",
           ),
         optional: true,
       },
@@ -578,7 +533,7 @@ export class AIService {
       schema: UnifiedCoachResponseSchema,
       systemPrompt,
       options: {
-        model: OPENROUTER_GLM_52_MODEL,
+        model: DEFAULT_AI_GATEWAY_MODEL,
         temperature: 0.3,
       },
     })) as {
@@ -617,7 +572,7 @@ export class AIService {
       resolvedUserRecommendations = aiResponse.userRecommendations
         .map((userId) => {
           const recommendation = availableRecommendations.find(
-            (rec) => rec.userId === userId
+            (rec) => rec.userId === userId,
           );
           return recommendation || null;
         })
@@ -629,7 +584,7 @@ export class AIService {
         `(plans: ${aiResponse.planReplacements?.length || 0}, ` +
         `metrics: ${aiResponse.metricReplacement ? 1 : 0}, ` +
         `recommendations: ${resolvedUserRecommendations?.length || 0})` +
-        `\nReasoning: ${aiResponse.reasoning}`
+        `\nReasoning: ${aiResponse.reasoning}`,
     );
 
     return {
@@ -662,11 +617,9 @@ export class AIService {
       console.log("Messages:", messages);
       console.log("System prompt:", systemPrompt);
 
-      const openrouter = this.getOpenRouterWithUserId();
-
       // Use either messages or prompt (messages takes precedence)
       const generateParams: any = {
-        model: openrouter.chat(options.model),
+        model: gateway(options.model),
         temperature: options.temperature,
       };
 
@@ -712,11 +665,9 @@ export class AIService {
     try {
       logger.debug("Generating structured response with model:", this.model);
 
-      const openrouter = this.getOpenRouterWithUserId();
-
       // Use either messages or prompt (messages takes precedence)
       const generateParams: any = {
-        model: openrouter.chat(options.model),
+        model: gateway(options.model),
         schema,
         temperature: options.temperature,
       };
@@ -745,7 +696,7 @@ export class AIService {
   // Activity extraction from text
   async extractActivities(
     message: string,
-    userContext?: string
+    userContext?: string,
   ): Promise<{
     activities: Array<{
       activityId?: string;
@@ -766,7 +717,7 @@ export class AIService {
           measure: z.string(),
           date: z.string(),
           description: z.string().optional(),
-        })
+        }),
       ),
       confidence: z.number().min(0).max(1),
     });
@@ -792,7 +743,7 @@ export class AIService {
   // Metrics extraction from text
   async extractMetrics(
     message: string,
-    userContext?: string
+    userContext?: string,
   ): Promise<{
     metrics: Array<{
       metric_id?: string;
@@ -811,7 +762,7 @@ export class AIService {
           rating: z.number().min(1).max(10),
           date: z.string(),
           notes: z.string().optional(),
-        })
+        }),
       ),
       confidence: z.number().min(0).max(1),
     });
@@ -837,7 +788,7 @@ export class AIService {
   // Plan creation from user goals with AI response
   async createPlanWithResponse(
     goals: string,
-    userContext?: string
+    userContext?: string,
   ): Promise<{
     plan: {
       title: string;
@@ -871,7 +822,7 @@ export class AIService {
           emoji: z.string(),
           frequency_per_week: z.number().min(1).max(7),
           target_quantity: z.number().min(1),
-        })
+        }),
       ),
       ai_response: z.string(),
       confidence: z.number().min(0).max(1),
@@ -900,7 +851,7 @@ export class AIService {
   // Plan creation from user goals (separate method for backwards compatibility)
   async createPlan(
     goals: string,
-    userContext?: string
+    userContext?: string,
   ): Promise<{
     plan: {
       title: string;
@@ -933,7 +884,7 @@ export class AIService {
           emoji: z.string(),
           frequency_per_week: z.number().min(1).max(7),
           target_quantity: z.number().min(1),
-        })
+        }),
       ),
       confidence: z.number().min(0).max(1),
     });
@@ -959,7 +910,7 @@ export class AIService {
   // Generate motivational messages
   async generateMotivationalMessage(
     userProfile: string,
-    context: string
+    context: string,
   ): Promise<string> {
     const systemPrompt =
       `You are a supportive wellness coach. Generate motivational messages that are:` +
@@ -994,7 +945,7 @@ export class AIService {
   private async buildPlanContext(
     userName: string,
     plan: Plan & { activities: Activity[] },
-    user: User
+    user: User,
   ): Promise<string> {
     let achievement;
     let currentWeekStats;
@@ -1003,7 +954,7 @@ export class AIService {
       try {
         const progressData = await this.plansService.getPlanProgress(
           plan,
-          user
+          user,
         );
         achievement = progressData.achievement;
         currentWeekStats = progressData.currentWeekStats;
@@ -1017,7 +968,7 @@ export class AIService {
     const now = new Date();
     const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
     const daysLeft = Math.ceil(
-      (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     let context = `${userName}'s plan: "${plan.goal}"`;
@@ -1063,7 +1014,7 @@ export class AIService {
   // Extract activities for plan creation
   async extractActivitiesForPlan(
     message: string,
-    userContext?: string
+    userContext?: string,
   ): Promise<{
     activities: Array<{
       title: string;
@@ -1080,7 +1031,7 @@ export class AIService {
           emoji: z.string(),
           measure: z.string(),
           reasoning: z.string(),
-        })
+        }),
       ),
       confidence: z.number().min(0).max(1),
     });
@@ -1117,7 +1068,7 @@ export class AIService {
   // Check if conversation answers specific questions
   async analyzeQuestionCoverage(
     conversation: string,
-    questions: Record<string, string>
+    questions: Record<string, string>,
   ): Promise<{
     all_answered: boolean;
     results: Array<{
@@ -1136,7 +1087,7 @@ export class AIService {
           answered: z.boolean(),
           reasoning: z.string(),
           confidence: z.number().min(0).max(1),
-        })
+        }),
       ),
       follow_up_message: z.string(),
     });
@@ -1175,7 +1126,7 @@ export class AIService {
           goal: z.string(),
           emoji: z.string().min(1).max(16),
           goalReason: z.string().nullable(),
-        })
+        }),
       ),
     });
 
@@ -1230,7 +1181,9 @@ export class AIService {
    * Coached plans are for progressive goals with clear objectives that need structure.
    * Self-guided plans are for recurring habits with fixed frequency.
    */
-  async classifyCoachingNeed(planGoal: string): Promise<{ needsCoaching: boolean }> {
+  async classifyCoachingNeed(
+    planGoal: string,
+  ): Promise<{ needsCoaching: boolean }> {
     const schema = z.object({
       needsCoaching: z.boolean(),
     });
@@ -1268,31 +1221,40 @@ export class AIService {
 
   async recommendActivities(
     planGoal: string,
-    existingActivities: { id: string; title: string; emoji: string | null }[]
+    existingActivities: { id: string; title: string; emoji: string | null }[],
   ): Promise<{
     recommendedActivityIds: string[];
-    suggestedNewActivities: Array<{ title: string; emoji: string; measure: string }>;
+    suggestedNewActivities: Array<{
+      title: string;
+      emoji: string;
+      measure: string;
+    }>;
   }> {
     const schema = z.object({
-      recommendedActivityIds: z.array(z.string()).describe(
-        "Array of activity IDs from existing activities that are most relevant to the plan goal"
-      ),
-      suggestedNewActivities: z.array(
-        z.object({
-          title: z.string(),
-          emoji: z.string(),
-          measure: z.string(),
-        })
-      ).describe(
-        "New activities to suggest when existing ones don't fully cover the goal. Max 2-3."
-      ),
+      recommendedActivityIds: z
+        .array(z.string())
+        .describe(
+          "Array of activity IDs from existing activities that are most relevant to the plan goal",
+        ),
+      suggestedNewActivities: z
+        .array(
+          z.object({
+            title: z.string(),
+            emoji: z.string(),
+            measure: z.string(),
+          }),
+        )
+        .describe(
+          "New activities to suggest when existing ones don't fully cover the goal. Max 2-3.",
+        ),
     });
 
-    const activitiesList = existingActivities.length > 0
-      ? existingActivities
-          .map((a) => `- ID: "${a.id}" | ${a.emoji || ""} ${a.title}`)
-          .join("\n")
-      : "(no existing activities)";
+    const activitiesList =
+      existingActivities.length > 0
+        ? existingActivities
+            .map((a) => `- ID: "${a.id}" | ${a.emoji || ""} ${a.title}`)
+            .join("\n")
+        : "(no existing activities)";
 
     const systemPrompt = dedent`
       You are an activity recommendation expert. Given a user's plan goal and their existing activities,
@@ -1336,7 +1298,7 @@ export class AIService {
 
   async generateCoachMessage(
     user: User,
-    plan: Plan & { activities: Activity[] }
+    plan: Plan & { activities: Activity[] },
   ): Promise<{ title: string; message: string }> {
     const userName = user.name || user.username || "there";
 
@@ -1357,12 +1319,12 @@ export class AIService {
       title: z
         .string()
         .describe(
-          "A short, punchy title (3-5 words) summarizing the coaching update"
+          "A short, punchy title (3-5 words) summarizing the coaching update",
         ),
       message: z
         .string()
         .describe(
-          "A brief, personalized coaching message (1-2 sentences) with actionable advice"
+          "A brief, personalized coaching message (1-2 sentences) with actionable advice",
         ),
     });
 
@@ -1400,7 +1362,9 @@ export class AIService {
     reason: string;
     context: string;
   }): Promise<{ title: string; message: string }> {
-    const coachPersonality = getCoachPersonalityConfig(params.user.coachPersonality);
+    const coachPersonality = getCoachPersonalityConfig(
+      params.user.coachPersonality,
+    );
     const userName = params.user.name || params.user.username || "there";
 
     const schema = z.object({
@@ -1408,18 +1372,19 @@ export class AIService {
       message: z.string().describe("A concise coach message, 1-3 sentences"),
     });
 
-    const interventionGuidance: Record<typeof params.interventionType, string> = {
-      WEEK_PREP:
-        "Prepare the user for the upcoming week. Focus on what matters, likely friction, and the first concrete action.",
-      SESSION_PREP:
-        "Prepare the user for tomorrow's planned session. Reduce friction and make the next action clear.",
-      WEEK_RECAP:
-        "Give a brief recap of the previous week and one forward-looking next step.",
-      INACTIVITY_CHECKIN:
-        "Check in after a gap without guilt. Make the next small step feel clear.",
-      CELEBRATION:
-        "Acknowledge completed work and reinforce the behavior that led to it.",
-    };
+    const interventionGuidance: Record<typeof params.interventionType, string> =
+      {
+        WEEK_PREP:
+          "Prepare the user for the upcoming week. Focus on what matters, likely friction, and the first concrete action.",
+        SESSION_PREP:
+          "Prepare the user for tomorrow's planned session. Reduce friction and make the next action clear.",
+        WEEK_RECAP:
+          "Give a brief recap of the previous week and one forward-looking next step.",
+        INACTIVITY_CHECKIN:
+          "Check in after a gap without guilt. Make the next small step feel clear.",
+        CELEBRATION:
+          "Acknowledge completed work and reinforce the behavior that led to it.",
+      };
 
     return this.generateStructuredResponse({
       schema,
@@ -1455,13 +1420,13 @@ export class AIService {
   async generatePostActivityMessage(
     user: User,
     plan: Plan & { activities: Activity[] },
-    activityEntry: { activityId: string; quantity: number; datetime: Date }
+    activityEntry: { activityId: string; quantity: number; datetime: Date },
   ): Promise<{ title: string; message: string }> {
     const userName = user.name || user.username || "there";
 
     // Find the activity details
     const activity = plan.activities.find(
-      (a) => a.id === activityEntry.activityId
+      (a) => a.id === activityEntry.activityId,
     );
     if (!activity) {
       throw new Error(`Activity ${activityEntry.activityId} not found in plan`);
@@ -1471,12 +1436,12 @@ export class AIService {
       title: z
         .string()
         .describe(
-          "A short, celebratory title (2-4 words) acknowledging the achievement"
+          "A short, celebratory title (2-4 words) acknowledging the achievement",
         ),
       message: z
         .string()
         .describe(
-          "A brief congratulatory message (1-2 sentences) that celebrates completion and asks how it went or how they feel"
+          "A brief congratulatory message (1-2 sentences) that celebrates completion and asks how it went or how they feel",
         ),
     });
 
@@ -1552,24 +1517,26 @@ export class AIService {
           finishingDate = new Date(params.finishingDate);
         } else {
           finishingDate = new Date(
-            today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000
+            today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000,
           );
         }
         const weeks = Math.ceil(
-          (finishingDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000)
+          (finishingDate.getTime() - today.getTime()) /
+            (7 * 24 * 60 * 60 * 1000),
         );
 
         const pipelineResult = await planGenerationPipeline.generatePlan({
           goal: params.goal,
-          activities: params.activities?.length > 0
-            ? params.activities.map((a: any) => ({
-                id: a.id,
-                title: a.title,
-                measure: a.measure,
-                emoji: a.emoji,
-                kind: a.kind,
-              }))
-            : [], // Empty array - pipeline will generate activities
+          activities:
+            params.activities?.length > 0
+              ? params.activities.map((a: any) => ({
+                  id: a.id,
+                  title: a.title,
+                  measure: a.measure,
+                  emoji: a.emoji,
+                  kind: a.kind,
+                }))
+              : [], // Empty array - pipeline will generate activities
           userAge: params.userAge ?? null,
           experience: params.experience,
           timesPerWeek: params.timesPerWeek ?? params.sessionsPerWeek ?? 3,
@@ -1610,11 +1577,11 @@ export class AIService {
         finishingDate = new Date(params.finishingDate);
       } else {
         finishingDate = new Date(
-          today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000
+          today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000,
         );
       }
       const weeks = Math.ceil(
-        (finishingDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        (finishingDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000),
       );
 
       console.log(`The plan has weeks: ${weeks}`);
@@ -1656,7 +1623,7 @@ export class AIService {
         const sessionContext = existingSessions
           .map((s: any) => {
             const activity = params.activities.find(
-              (a) => a.id === s.activityId
+              (a) => a.id === s.activityId,
             );
             const sessionDate = new Date(s.date).toLocaleDateString("en-US", {
               month: "short",
@@ -1710,17 +1677,17 @@ export class AIService {
         date: z
           .string()
           .describe(
-            `The date of the session in YYYY-MM-DD format. Must be after ${format(new Date(), "yyyy-MM-dd")} (today).`
+            `The date of the session in YYYY-MM-DD format. Must be after ${format(new Date(), "yyyy-MM-dd")} (today).`,
           ),
         activity_name: z
           .enum(params.activities.map((a) => a.title))
           .describe(
-            "The name of the activity to be performed. Should have no emoji to match exactly with the activity title."
+            "The name of the activity to be performed. Should have no emoji to match exactly with the activity title.",
           ),
         quantity: z
           .number()
           .describe(
-            "The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way."
+            "The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way.",
           ),
       });
 
@@ -1728,12 +1695,12 @@ export class AIService {
         week_start_date: z
           .enum(weekStartDates as [string, ...string[]])
           .describe(
-            `The start date of the week in YYYY-MM-DD format. Must be one of: ${weekStartDates.join(", ")}`
+            `The start date of the week in YYYY-MM-DD format. Must be one of: ${weekStartDates.join(", ")}`,
           ),
         reasoning: z
           .string()
           .describe(
-            "A step by step thinking outlining the week's outlook given current and leftover progress. Must be deep and reflective."
+            "A step by step thinking outlining the week's outlook given current and leftover progress. Must be deep and reflective.",
           ),
         sessions: z
           .array(GeneratedSession)
@@ -1744,7 +1711,7 @@ export class AIService {
         reasoning: z
           .string()
           .describe(
-            "A reflection on what is the goal and how does that affect the sessions progression."
+            "A reflection on what is the goal and how does that affect the sessions progression.",
           ),
         weeks: z
           .array(GeneratedSessionWeek)
@@ -1769,13 +1736,14 @@ export class AIService {
       }> = [];
       for (const week of response.weeks) {
         logger.info(
-          `Week starting ${week.week_start_date}. Has ${week.sessions.length} sessions.`
+          `Week starting ${week.week_start_date}. Has ${week.sessions.length} sessions.`,
         );
 
         for (const session of week.sessions) {
           // Find matching activity
           const activity = params.activities.find(
-            (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
+            (a) =>
+              a.title.toLowerCase() === session.activity_name.toLowerCase(),
           );
 
           if (activity) {
@@ -1833,7 +1801,7 @@ export class AIService {
       for (let sessionNum = 0; sessionNum < sessionsPerWeek; sessionNum++) {
         const sessionDate = new Date(params.startDate);
         sessionDate.setDate(
-          params.startDate.getDate() + week * 7 + sessionNum * 2
+          params.startDate.getDate() + week * 7 + sessionNum * 2,
         ); // Every other day
 
         const activity =
@@ -1872,7 +1840,7 @@ export class AIService {
         quantity: number;
         descriptiveGuide?: string;
       }>;
-    }
+    },
   ): Promise<string> {
     const currentDate = new Date().toLocaleDateString("en-US", {
       month: "short",
@@ -1914,7 +1882,7 @@ export class AIService {
           type: "times_reduced" | "none";
           oldTimesPerWeek?: number;
           newTimesPerWeek?: number;
-        }
+        },
       ) => {
         const performanceMap = {
           FAILED: "poor",
@@ -1955,7 +1923,7 @@ export class AIService {
               type: "times_reduced",
               oldTimesPerWeek: 4,
               newTimesPerWeek: 3,
-            }
+            },
           ),
         },
         {
@@ -1969,7 +1937,7 @@ export class AIService {
             [{ title: "Reading", measure: "pages" }],
             "COMPLETED",
             "I want to read more books this year",
-            { type: "none" }
+            { type: "none" },
           ),
         },
         {
@@ -1983,7 +1951,7 @@ export class AIService {
             [{ title: "Yoga", measure: "minutes" }],
             "AT_RISK",
             "I want to practice yoga regularly",
-            { type: "none" }
+            { type: "none" },
           ),
         },
         {
@@ -1997,7 +1965,7 @@ export class AIService {
             [{ title: "Writing", measure: "words" }],
             "AT_RISK",
             "I want to write consistently",
-            { type: "none" }
+            { type: "none" },
           ),
         },
         {
@@ -2011,7 +1979,7 @@ export class AIService {
             [{ title: "Swimming", measure: "laps" }],
             "ON_TRACK",
             "I want to improve my swimming endurance",
-            { type: "none" }
+            { type: "none" },
           ),
         },
         {
@@ -2032,7 +2000,7 @@ export class AIService {
               type: "times_reduced",
               oldTimesPerWeek: 5,
               newTimesPerWeek: 4,
-            }
+            },
           ),
         },
         {
@@ -2046,7 +2014,7 @@ export class AIService {
             [{ title: "Cooking", measure: "meals" }],
             "COMPLETED",
             "I want to cook more meals at home",
-            { type: "none" }
+            { type: "none" },
           ),
         },
         {
@@ -2066,7 +2034,7 @@ export class AIService {
                   oldTimesPerWeek: changes.oldTimesPerWeek,
                   newTimesPerWeek: changes.newTimesPerWeek,
                 }
-              : { type: "none" }
+              : { type: "none" },
           ),
         },
       ];
@@ -2097,7 +2065,7 @@ export class AIService {
           ];
         } else {
           throw new Error(
-            "oldSessions and newSessions in changes are required for SPECIFIC plan types with sessions_downgraded"
+            "oldSessions and newSessions in changes are required for SPECIFIC plan types with sessions_downgraded",
           );
         }
       } else {
@@ -2107,12 +2075,12 @@ export class AIService {
             activityId: string;
             quantity: number;
             descriptiveGuide?: string;
-          }>
+          }>,
         ) => {
           return sessions
             .map((session) => {
               const activity = planActivities.find(
-                (a) => a.id === session.activityId
+                (a) => a.id === session.activityId,
               );
               const sessionDate = new Date(session.date).toLocaleDateString(
                 "en-US",
@@ -2121,7 +2089,7 @@ export class AIService {
                   day: "numeric",
                   year: "numeric",
                   weekday: "long",
-                }
+                },
               );
               return `–${activity?.title || "Unknown"} (${session.quantity} ${activity?.measure || "units"}) on ${sessionDate}`;
             })
@@ -2142,7 +2110,7 @@ export class AIService {
             descriptiveGuide?: string;
           }>,
           state: typeof newPlanState,
-          planGoal: string
+          planGoal: string,
         ) => {
           const performanceMap = {
             FAILED: "poor",
@@ -2197,7 +2165,7 @@ export class AIService {
                 },
               ],
               "FAILED",
-              "I want to build strength for daily activities"
+              "I want to build strength for daily activities",
             ),
           },
           {
@@ -2237,7 +2205,7 @@ export class AIService {
                 },
               ],
               "FAILED",
-              "I want to improve flexibility and reduce stress"
+              "I want to improve flexibility and reduce stress",
             ),
           },
           {
@@ -2251,7 +2219,7 @@ export class AIService {
               changes.oldSessions,
               changes.newSessions,
               newPlanState,
-              plan.goal
+              plan.goal,
             ),
           },
         ];
@@ -2259,9 +2227,8 @@ export class AIService {
     }
 
     try {
-      const openrouter = this.getOpenRouterWithUserId();
       const result = await generateText({
-        model: openrouter.chat("openai/gpt-5.4-mini"),
+        model: gateway(DEFAULT_AI_GATEWAY_MODEL),
         messages,
         temperature: 1,
       });

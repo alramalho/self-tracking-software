@@ -14,12 +14,14 @@ import {
   KIMI_K3_MODEL,
   resolveCoachAgentTemperature,
 } from "../coachAgentModelConfig";
+import { GPT_56_LUNA_MODEL } from "../aiModelIds";
 
 describe("coach model defaults", () => {
-  it("uses Kimi K3 without overriding its fixed temperature", () => {
-    expect(DEFAULT_COACH_AGENT_MODEL).toBe(KIMI_K3_MODEL);
-    expect(DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL).toBe(KIMI_K3_MODEL);
+  it("uses GPT-5.6 Luna while preserving Kimi K3's fixed temperature", () => {
+    expect(DEFAULT_COACH_AGENT_MODEL).toBe(GPT_56_LUNA_MODEL);
+    expect(DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL).toBe(GPT_56_LUNA_MODEL);
     expect(resolveCoachAgentTemperature(KIMI_K3_MODEL)).toBeUndefined();
+    expect(resolveCoachAgentTemperature(GPT_56_LUNA_MODEL)).toBe(0.5);
   });
 });
 
