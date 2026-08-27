@@ -1,7 +1,7 @@
 FROM node:22-alpine AS builder
 
 # Install pnpm and OpenSSL for Prisma
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.10.0
 RUN apk add --no-cache openssl
 
 WORKDIR /app
@@ -29,7 +29,7 @@ RUN pnpm --filter backend-node build
 FROM node:22-alpine AS production
 
 # Install pnpm and OpenSSL for Prisma
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.10.0
 RUN apk add --no-cache openssl
 
 WORKDIR /app

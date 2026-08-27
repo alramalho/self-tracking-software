@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhotoUploader from "@/components/ui/PhotoUploader";
 import { Switch } from "@/components/ui/switch";
-import { useSupabaseUser } from "@/contexts/auth/provider";
 import { useCurrentUser } from "@/contexts/users";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
@@ -122,10 +121,10 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
 }) => {
-  const { supabaseUser } = useSupabaseUser();
-  const [firstName, setFirstName] = useState(supabaseUser?.user_metadata.firstName || "");
-  const [lastName, setLastName] = useState(supabaseUser?.user_metadata.lastName || "");
-  const { updateUser } = useCurrentUser();
+  const { currentUser, updateUser } = useCurrentUser();
+  const [initialFirstName, ...initialLastName] = currentUser?.name?.trim().split(/\s+/) ?? [];
+  const [firstName, setFirstName] = useState(initialFirstName || "");
+  const [lastName, setLastName] = useState(initialLastName.join(" "));
 
   const handleSave = async () => {
     try {

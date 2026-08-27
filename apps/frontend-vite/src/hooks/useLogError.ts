@@ -1,6 +1,7 @@
-import { authService } from "@/services/auth";
+import { useAuth } from "@/contexts/auth";
 
 export const useLogError = () => {
+  const { userId } = useAuth();
   const handleQueryError = (
     error: Error & { digest?: string; response?: any; status?: number },
     customErrorMessage: string
@@ -44,14 +45,6 @@ export const useLogError = () => {
       return;
     }
 
-    let userSupabaseId;
-    try {
-      const { data } = await authService.getCurrentUser();
-      userSupabaseId = data.user?.id;
-    } catch (e) {
-      console.debug("Could not fetch user for error logging");
-    }
-
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
       if (!backendUrl) {
@@ -71,7 +64,7 @@ export const useLogError = () => {
           referrer: document.referrer || "direct",
           user_agent: window.navigator.userAgent,
           timestamp: new Date().toISOString(),
-          user_supabase_id: userSupabaseId,
+          user_clerk_id: userId,
         }),
       });
     } catch (e) {

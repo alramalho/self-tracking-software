@@ -87,6 +87,7 @@ services:
     logging: *betterstack-logging
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./tracking-preview:/srv/tracking-preview:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:

@@ -24,3 +24,48 @@ api.tracking.so {
 		format console
 	}
 }
+
+amigos.89.167.84.67.nip.io, amigosdochapim.org {
+	encode zstd gzip
+
+	reverse_proxy amigos:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-For {remote}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+tracking-api.89.167.84.67.nip.io {
+	encode zstd gzip
+
+	reverse_proxy backend-localdb:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-For {remote}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+tracking-stage.89.167.84.67.nip.io, stage.tracking.so {
+	encode zstd gzip
+
+	root * /srv/tracking-preview
+	try_files {path} /index.html
+	file_server
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -87,9 +87,10 @@ router.post("/webhook", async (req: Request, res: Response) => {
       logger.info(`No external accounts found for user ${userClerkId}`);
     }
 
+    const displayName = [firstName, lastName].filter(Boolean).join(" ");
     const userData = {
       email: emailAddress,
-      name: `${firstName} ${lastName}`,
+      name: displayName || undefined,
       username: username?.toLowerCase() || emailAddress.split("@")[0],
       clerkId: userClerkId,
       picture,
@@ -120,9 +121,13 @@ router.post("/webhook", async (req: Request, res: Response) => {
         message: "User created successfully",
       });
     } else if (eventType === "user.updated") {
-      const user = await prisma.user.findUnique({
+      let user = await prisma.user.findUnique({
         where: { clerkId: userClerkId },
       });
+
+      if (!user) {
+        user = await prisma.user.findUnique({ where: { email: emailAddress } });
+      }
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });

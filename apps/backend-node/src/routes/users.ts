@@ -1,5 +1,5 @@
 import recommendationsService from "@/services/recommendationsService";
-import { createClient } from "@supabase/supabase-js";
+import { clerkClient } from "@clerk/express";
 import { type Prisma } from "@tsw/prisma";
 import { Request, Response, Router } from "express";
 import multer from "multer";
@@ -36,12 +36,6 @@ const PLAN_DISPLAY_ORDER_BY = [
 const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
   apiVersion: "2025-07-30.basil",
 });
-
-// Initialize Supabase Admin client for user deletion
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Configure multer for memory storage
 const upload = multer({
@@ -305,7 +299,7 @@ usersRouter.delete(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const supabaseAuthId = req.user!.supabaseAuthId;
+      const clerkId = req.user!.clerkId;
       const stripeSubscriptionId = req.user!.stripeSubscriptionId;
       const userEmail = req.user!.email;
       const username = req.user!.username || "unknown";
@@ -350,13 +344,13 @@ usersRouter.delete(
         where: { id: userId },
       });
 
-      // Delete the Supabase Auth user (permanent deletion for Apple Store compliance)
-      if (supabaseAuthId) {
+      // Delete the Clerk user (permanent deletion for Apple Store compliance)
+      if (clerkId) {
         try {
-          await supabaseAdmin.auth.admin.deleteUser(supabaseAuthId);
-          logger.info(`Deleted Supabase Auth user: ${supabaseAuthId}`);
+          await clerkClient.users.deleteUser(clerkId);
+          logger.info(`Deleted Clerk user: ${clerkId}`);
         } catch (authError) {
-          logger.error("Failed to delete Supabase Auth user:", authError);
+          logger.error("Failed to delete Clerk user:", authError);
           // Continue even if auth deletion fails - user data is already deleted from DB
         }
       }

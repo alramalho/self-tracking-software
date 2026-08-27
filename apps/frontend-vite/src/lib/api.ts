@@ -1,5 +1,4 @@
 import axios from "axios";
-import { supabase } from "@/services/supabase";
 
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
@@ -10,17 +9,25 @@ const api = axios.create({
   timeout: 120000,
 });
 
+type AuthTokenProvider = () => Promise<string | null>;
+let authTokenProvider: AuthTokenProvider = async () => null;
+
+export function setAuthTokenProvider(provider: AuthTokenProvider) {
+  authTokenProvider = provider;
+}
+
+export function getAuthToken() {
+  return authTokenProvider();
+}
+
 // Add auth interceptor ONCE globally
 // This gets the fresh token on every request instead of capturing stale closures
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Get the current session directly from Supabase (always fresh)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
+      const token = await getAuthToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
       console.error("Failed to get auth token:", error);

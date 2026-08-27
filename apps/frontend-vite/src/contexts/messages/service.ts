@@ -1,7 +1,7 @@
 import { type AxiosInstance } from "axios";
+import { getAuthToken } from "@/lib/api";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 import { type Chat, type ImageAttachment, type Message } from "./types";
-import { supabase } from "@/services/supabase";
 
 export type { Chat, Message } from "./types";
 
@@ -88,15 +88,11 @@ export async function getCoachResponseStatus(
 }
 
 async function getStreamHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const token = await getAuthToken();
 
   return {
     "Content-Type": "application/json",
-    ...(session?.access_token
-      ? { Authorization: `Bearer ${session.access_token}` }
-      : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 

@@ -6,6 +6,7 @@ public class WatchAuthPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "WatchAuth"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "sendTokens", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearTokens", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func sendTokens(_ call: CAPPluginCall) {
@@ -16,6 +17,11 @@ public class WatchAuthPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         WatchSessionManager.shared.sendAuthTokens(accessToken: accessToken, refreshToken: refreshToken)
+        call.resolve()
+    }
+
+    @objc func clearTokens(_ call: CAPPluginCall) {
+        WatchSessionManager.shared.clearAuthTokens()
         call.resolve()
     }
 }

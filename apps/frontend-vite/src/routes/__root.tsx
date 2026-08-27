@@ -16,6 +16,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createRootRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { Home, Squirrel } from "lucide-react";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 
@@ -72,20 +73,26 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <AuthProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{ persister: localStoragePersister }}
-      >
-        <UsersProvider>
-          <ThemeProvider>
-            <GlobalDataProvider>
-              <ThemedLayout />
-            </GlobalDataProvider>
-          </ThemeProvider>
-        </UsersProvider>
-      </PersistQueryClientProvider>
-    </AuthProvider>
+    <ClerkProvider
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      signInUrl="/signin"
+      afterSignOutUrl="/signin"
+    >
+      <AuthProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister: localStoragePersister }}
+        >
+          <UsersProvider>
+            <ThemeProvider>
+              <GlobalDataProvider>
+                <ThemedLayout />
+              </GlobalDataProvider>
+            </ThemeProvider>
+          </UsersProvider>
+        </PersistQueryClientProvider>
+      </AuthProvider>
+    </ClerkProvider>
   );
 }
 

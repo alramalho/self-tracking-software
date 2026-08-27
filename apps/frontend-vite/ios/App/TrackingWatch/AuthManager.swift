@@ -10,8 +10,7 @@ class AuthManager: ObservableObject {
 
     private let keychainServiceAccess = "so.tracking.app.watch.access"
     private let keychainServiceRefresh = "so.tracking.app.watch.refresh"
-    private let supabaseUrl = "https://ujclnxeqzouaxbwkbdbk.supabase.co"
-    private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqY2xueGVxem91YXhid2tiZGJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2OTAyMzEsImV4cCI6MjA3MTI2NjIzMX0.sm9eDAtSLD644G0ZYAtbydqxUB7lHbAQbeuYN9wrTvc"
+    private let backendUrl = "https://api.tracking.so"
 
     private init() {
         loadTokens()
@@ -57,16 +56,14 @@ class AuthManager: ObservableObject {
             return nil
         }
 
-        guard let url = URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token") else {
+        guard let url = URL(string: "\(backendUrl)/auth/watch-refresh") else {
             return nil
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
-        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.httpBody = try? JSONEncoder().encode(["refresh_token": refreshToken])
+        request.httpBody = try? JSONEncoder().encode(["refreshToken": refreshToken])
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -75,9 +72,9 @@ class AuthManager: ObservableObject {
                 clearTokens()
                 return nil
             }
-            let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
-            setTokens(access: tokenResponse.access_token, refresh: tokenResponse.refresh_token)
-            return tokenResponse.access_token
+            let tokenResponse = try JSONDecoder().decode(WatchTokenResponse.self, from: data)
+            setTokens(access: tokenResponse.accessToken, refresh: tokenResponse.refreshToken)
+            return tokenResponse.accessToken
         } catch {
             clearTokens()
             return nil
@@ -85,14 +82,13 @@ class AuthManager: ObservableObject {
     }
 
     func handleAppleSignIn(identityToken: String) async -> Bool {
-        let backendUrl = "https://api.tracking.so"
         guard let url = URL(string: "\(backendUrl)/auth/ios-apple-signin") else { return false }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = ["identityToken": identityToken]
+        let body: [String: Any] = ["identityToken": identityToken, "client": "watch"]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
@@ -100,36 +96,8 @@ class AuthManager: ObservableObject {
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else { return false }
 
-            let signInResponse = try JSONDecoder().decode(AppleSignInResponse.self, from: data)
-
-            guard let verifyUrl = URL(string: signInResponse.verificationUrl),
-                  let components = URLComponents(url: verifyUrl, resolvingAgainstBaseURL: false),
-                  let tokenHash = components.queryItems?.first(where: { $0.name == "token" })?.value else {
-                return false
-            }
-
-            return await verifyMagicLink(tokenHash: tokenHash)
-        } catch {
-            return false
-        }
-    }
-
-    private func verifyMagicLink(tokenHash: String) async -> Bool {
-        guard let url = URL(string: "\(supabaseUrl)/auth/v1/verify?type=magiclink&token=\(tokenHash)") else {
-            return false
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else { return false }
-
-            let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
-            setTokens(access: tokenResponse.access_token, refresh: tokenResponse.refresh_token)
+            let tokenResponse = try JSONDecoder().decode(WatchTokenResponse.self, from: data)
+            setTokens(access: tokenResponse.accessToken, refresh: tokenResponse.refreshToken)
             return true
         } catch {
             return false
@@ -141,6 +109,8 @@ class AuthManager: ObservableObject {
         guard parts.count == 3 else { return true }
 
         var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
         while base64.count % 4 != 0 { base64.append("=") }
 
         guard let data = Data(base64Encoded: base64),

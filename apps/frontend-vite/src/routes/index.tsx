@@ -150,10 +150,6 @@ function HomePage() {
     enabled: !!currentUser?.coachProfile,
   });
 
-  useEffect(() => {
-    console.log({VITE_SUPABASE_API_URL: import.meta.env.VITE_SUPABASE_API_URL})
-  }, []);
-
   const unopenedNotifications =
     notifications?.filter((n) => {
       // Exclude engagement notifications
