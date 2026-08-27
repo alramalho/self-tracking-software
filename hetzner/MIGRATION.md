@@ -2,7 +2,7 @@
 
 ## Goal
 
-Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/ALB + WAF + cron Lambda, ~$108/mo) onto a self-managed Hetzner Cloud VM. Keep external deps (Supabase Postgres, Pinecone, Clerk, Stripe, AWS S3/SES) untouched.
+Run the `tracking.so` backend and PostgreSQL database on the Hetzner VM. Keep Pinecone, Clerk, Stripe, and AWS S3/SES as external services.
 
 ## Status
 
@@ -10,12 +10,13 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
 - **VM**: `tsw-backend` (CPX32, 4 vCPU / 8 GB / 160 GB, `hel1`) at `89.167.84.67` / `2a01:4f9:c014:5c59::1`. ~€13.6/mo.
 - **Bootstrap**: Docker 29.4.1, Docker Compose v5.1.3, UFW 22/80/443 (via [cloud-init.yaml](./cloud-init.yaml))
 - **Stack on box**: backend container + Caddy 2 TLS termination → Let's Encrypt ([docker-compose.yml](./docker-compose.yml), [Caddyfile](./Caddyfile)). Active remote directory is `/root/tracking-so-hetzner`.
+- **Database**: PostgreSQL 16 + pgvector runs in the shared `platform-postgres` container. Production uses the `tracking_cutover` database through the root-only `database-local.env` file.
 - **DNS**: `api-hetzner.tracking.so` and `api.tracking.so` A + AAAA resolve to Hetzner.
 - **Deploy**: currently GitHub Actions/GHCR-backed on the box; local manual deploy script exists but is not the active remote layout. Treat [hetzner/.env.prod](./.env.prod) as the local secret source of truth for the Hetzner runtime env.
 - **Env**: active box env has `API_DOMAIN=api-hetzner.tracking.so, api.tracking.so`, so Caddy serves both hostnames.
 - **Error-notifier cleanup**: [errorHandler.ts](../apps/backend-node/src/middleware/errorHandler.ts) now pages only on 5xx; killed the `allowed-routes.txt` / WAF allow-list premise
 - **Verified**: `https://api-hetzner.tracking.so/health` → `{"status":"ok"}` HTTP 200 via Caddy.
-- **Web smoke test**: `test-migration.tracking.so` Vercel preview is configured with `VITE_BACKEND_URL=https://api-hetzner.tracking.so`; Supabase auth redirect allow-list includes the test domain; login + activity update worked against Hetzner.
+- **Web smoke test**: `stage.tracking.so` serves the staging frontend from the VPS. Clerk login and authenticated user, activity, metric, plan, chat, and timeline reads were verified against the VPS database.
 - **Production cutover**: `app.tracking.so` now reaches Hetzner through `https://api.tracking.so`; verified `/health` via Caddy and production login/data loading after adding missing `messages.readAt`.
 
 ### Inventory captured (for teardown)
@@ -49,7 +50,7 @@ Move `tracking.so` backend off AWS (Flightcontrol-managed Fargate + CloudFront/A
 
 ### Nice-to-haves (after teardown is stable)
 - **Log shipping**: compose is wired for Fluent Bit → Better Stack. Deployment requires `BETTERSTACK_INGESTING_HOST` and `BETTERSTACK_SOURCE_TOKEN` in the Hetzner runtime env.
-- **Backups**: Supabase Postgres is managed so no DB backup concern, but VM state (Caddy data, any runtime-generated files) is unsnapshotted. A Hetzner snapshot schedule would be prudent (~€0.5/mo).
+- **Backups**: PostgreSQL is now self-managed. Add encrypted off-host database backups and a Hetzner snapshot schedule before removing the temporary cutover dump.
 - **Healthcheck false-positive**: compose reports backend `unhealthy` despite serving 200s — `wget` check needs tuning or swap to a curl-based probe.
 - **Separate AWS cleanup pass** for the unrelated dead-side-project stacks (Fidel '22, HippoPrototype '23, Jarvis, AGR, BuildingIdentifier, yThinkingApp, parts of redditleads). Likely ~$5-15/mo cumulative.
 

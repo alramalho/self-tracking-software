@@ -6,7 +6,7 @@ Ship the tracking.so iOS app via Capacitor (reusing the existing web FE) **with 
 
 1. List the user's activities (pulled from the existing backend at `https://api.tracking.so`).
 2. Log an activity entry from the watch.
-3. Inherit the iPhone's Supabase auth session via `WatchConnectivity`, with Sign-in-with-Apple fallback directly on the watch.
+3. Inherit VPS-issued watch tokens from the iPhone via `WatchConnectivity`, with Sign in with Apple fallback directly on the watch.
 
 ---
 
@@ -20,14 +20,14 @@ Ship the tracking.so iOS app via Capacitor (reusing the existing web FE) **with 
   - `App/WatchSessionManager.swift` — activates `WCSession`, `transferUserInfo({access_token, refresh_token})`.
   - `App/WatchAuthPlugin.swift` — Capacitor plugin `WatchAuth.sendTokens()` calling the session manager.
 - Frontend bridge wired in `src/contexts/auth/provider.tsx` — calls `WatchAuth.sendTokens()` after login/auth state change.
-- Backend endpoint `/auth/ios-apple-signin` (apps/backend-node/src/routes/auth.ts:106) verifies Apple `identityToken` and returns a Supabase verification URL.
+- Backend endpoint `/auth/ios-apple-signin` verifies the Apple `identityToken`, links the Clerk user, and returns VPS-issued watch tokens.
 
 ### Apple Watch app
 - `TrackingWatch` watchOS 10.0 target, bundle `so.tracking.app.watchkitapp`, team `7P4CMS849D`.
 - Entitlements: Sign in with Apple, App Group `group.so.tracking.app`.
 - Source files registered in target:
   - `TrackingWatchApp.swift` — root scene, routes to `ActivityListView` or `LoginView`.
-  - `AuthManager.swift` — tokens in Keychain; JWT expiry check; refresh via Supabase; Apple-Sign-In → `/auth/ios-apple-signin` → Supabase magiclink verify.
+  - `AuthManager.swift` — tokens in Keychain; JWT expiry check; refresh via `/auth/watch-refresh`; Apple Sign-In → `/auth/ios-apple-signin`.
   - `ConnectivityService.swift` — receives tokens from the iPhone via `WCSession`.
   - `LoginView.swift` — `SignInWithAppleButton` fallback for watch-only login.
   - `ActivityListView.swift` — list + sign-out button.
@@ -63,7 +63,7 @@ Ship the tracking.so iOS app via Capacitor (reusing the existing web FE) **with 
   cd apps/frontend-vite/ios/App && pod install
   ```
 - [ ] **Pick env mode** (prod vs LAN) and rebuild the Vite bundle:
-  - Prod end-to-end (recommended first): set `VITE_BACKEND_URL=https://api.tracking.so`, Supabase URL/anon key to prod values from `.env.proddb`, then `pnpm build && npx cap sync ios`. Matches what the Watch Swift code hardcodes.
+  - Prod end-to-end (recommended first): set `VITE_BACKEND_URL=https://api.tracking.so` and `VITE_CLERK_PUBLISHABLE_KEY` to the production Clerk public key, then `pnpm build && npx cap sync ios`.
   - LAN dev: requires editing `TrackingWatch/APIService.swift:5` and `TrackingWatch/AuthManager.swift:13-14` to LAN URLs **and** setting up an HTTPS tunnel (ngrok/Cloudflare) because Apple Sign-In requires HTTPS.
 - [ ] **Signing & capabilities on the Watch target** (Xcode → TrackingWatch → Signing & Capabilities):
   - Team = `7P4CMS849D`, automatic signing.
@@ -79,7 +79,7 @@ Ship the tracking.so iOS app via Capacitor (reusing the existing web FE) **with 
 ### Known quirks / nice-to-haves
 - [ ] `WCSession.transferUserInfo` is queued, not instant. If token delivery is flaky, consider adding `updateApplicationContext` as a faster sibling path, or a manual "send tokens" button in iPhone settings.
 - [ ] Watch `AppIcon.appiconset` has no images yet (`Contents.json` only). Needed before App Store submission.
-- [ ] Hardcoded Supabase URL + anon key in `TrackingWatch/AuthManager.swift` — acceptable for anon key (public), but consider moving to a build-time xcconfig for clarity.
+- [ ] Move the hardcoded production backend URL in `TrackingWatch/AuthManager.swift` to the existing watch build configuration.
 - [ ] Watch APNs not wired. When/if we want push to the watch, use the APNs key at `apple-stuff/AuthKey_MG38JC6M33.p8` (Key ID `MG38JC6M33`) and register remote notifications on the watch side.
 - [ ] `quantity Int` mismatch: backend stores Int, watch UI supports 0.5 increments for hour/km/mile measures but we round to Int on send. Either drop the 0.5 step on watch UI, or change the DB column to Float (out of scope).
 
