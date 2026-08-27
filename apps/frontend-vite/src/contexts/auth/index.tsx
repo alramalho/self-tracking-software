@@ -1,1 +1,1 @@
-export { AuthProvider, useAuth, useSession, useSupabaseUser as useUser } from "./provider";
+export { AuthProvider, useAuth, useSession, useUser } from "./provider";

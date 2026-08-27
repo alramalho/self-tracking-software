@@ -22,7 +22,6 @@
     "injectWorkspacePackages": true
   },
   "devDependencies": {
-    "supabase": "^2.33.9",
     "turbo": "^2.5.5"
   }
 }

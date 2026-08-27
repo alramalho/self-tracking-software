@@ -164,20 +164,6 @@ async function confirmMigration(impersonateUser: string): Promise<boolean> {
   });
 }
 
-async function getLocalSupabaseAuthIdForEmail(
-  email: string
-): Promise<string | null> {
-  const authUsers = await targetPrisma.$queryRaw<Array<{ id: string }>>`
-    SELECT id::text as id
-    FROM auth.users
-    WHERE lower(email) = lower(${email})
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
-
-  return authUsers[0]?.id ?? null;
-}
-
 async function clearTargetDatabase() {
   console.info("Clearing target database...");
 
@@ -931,7 +917,7 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
       console.info("Skipping job runs; source or target table does not exist");
     }
 
-    // Post-processing: Impersonate user by swapping supabaseAuthId
+    // Post-processing: Impersonate a user by moving the development Clerk mapping.
     console.info(
       `Post-processing: Setting up impersonation for ${impersonateUser}...`
     );
@@ -957,22 +943,14 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
         `Impersonation target '${impersonateUser}' is already ${LOGIN_EMAIL}; no auth stitching needed.`
       );
     } else {
-      const localLoginAuthId = await getLocalSupabaseAuthIdForEmail(LOGIN_EMAIL);
-      const loginAuthId = localLoginAuthId ?? myUser.supabaseAuthId;
-
-      if (!localLoginAuthId) {
+      const loginClerkId = myUser.clerkId;
+      if (!loginClerkId) {
         console.warn(
-          `⚠️  No local Supabase auth.users row found for ${LOGIN_EMAIL}; falling back to the migrated app auth id. Log in once locally, then rerun this command if impersonation still resolves to Alex.`
-        );
-      }
-
-      if (!loginAuthId) {
-        console.warn(
-          `⚠️  No auth id available for ${LOGIN_EMAIL}; could not set up impersonation.`
+          `⚠️  No Clerk ID available for ${LOGIN_EMAIL}; could not set up impersonation.`
         );
       } else {
         const authOwner = (await targetPrisma.user.findUnique({
-          where: { supabaseAuthId: loginAuthId },
+          where: { clerkId: loginClerkId },
           select: targetUserSelect as any,
         })) as Record<string, any> | null;
 
@@ -980,18 +958,14 @@ async function migrateData(impersonateUser = parseArgs().impersonateUser) {
           if (authOwner && authOwner.id !== targetUser.id) {
             await tx.user.update({
               where: { id: authOwner.id },
-              data: {
-                supabaseAuthId: `--impersonating-${impersonateUser}-${authOwner.id}--`,
-              },
+              data: { clerkId: null },
               select: targetUserSelect as any,
             });
           }
 
           await tx.user.update({
             where: { id: targetUser.id },
-            data: {
-              supabaseAuthId: loginAuthId,
-            },
+            data: { clerkId: loginClerkId },
             select: targetUserSelect as any,
           });
         });

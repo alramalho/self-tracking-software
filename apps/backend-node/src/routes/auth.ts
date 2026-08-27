@@ -1,110 +1,89 @@
-import { createClient } from "@supabase/supabase-js";
+import { clerkClient } from "@clerk/express";
 import appleSignin from "apple-signin-auth";
 import type { Request, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import { OAuth2Client } from "google-auth-library";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import {
+  issueWatchAuthTokens,
+  verifyWatchRefreshToken,
+} from "../services/auth/watchTokenService";
+import { TelegramService } from "../services/telegramService";
+import { userService } from "../services/userService";
 
 const router: Router = createRouter();
-
 const googleClient = new OAuth2Client(process.env.GOOGLE_IOS_CLIENT_ID);
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// listUsers() paginates (default 50/page) — a single call misses existing users
-// past the first page and would create duplicate accounts on social sign-in
-async function findUserByEmail(email: string) {
-  const perPage = 1000;
-  for (let page = 1; ; page++) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage,
-    });
-    if (error) throw error;
-    const match = data.users.find((u) => u.email === email);
-    if (match) return match;
-    if (data.users.length < perPage) return undefined;
-  }
+interface NativeAuthProfile {
+  email: string;
+  name?: string;
+  picture?: string;
 }
 
-/**
- * Exchange iOS Google idToken for Supabase session
- * POST /auth/ios-google-signin
- * Body: { idToken: string }
- */
+async function createNativeSession(profile: NativeAuthProfile) {
+  const clerkUsers = await clerkClient.users.getUserList({
+    emailAddress: [profile.email],
+    limit: 1,
+  });
+
+  let clerkUser = clerkUsers.data[0];
+  if (!clerkUser) {
+    const [firstName, ...lastNameParts] = profile.name?.trim().split(/\s+/) ?? [];
+    clerkUser = await clerkClient.users.createUser({
+      emailAddress: [profile.email],
+      firstName: firstName || undefined,
+      lastName: lastNameParts.join(" ") || undefined,
+      skipPasswordRequirement: true,
+    });
+  }
+
+  let databaseUser = await userService.getUserByClerkIdOrEmail(
+    clerkUser.id,
+    profile.email
+  );
+
+  if (!databaseUser) {
+    databaseUser = await userService.createUserFromClerk({
+      clerkId: clerkUser.id,
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture,
+    });
+    const telegramService = new TelegramService();
+    void telegramService.sendMessage(`🎉 New user! (${databaseUser.email})`);
+  }
+
+  const signInToken = await clerkClient.signInTokens.createSignInToken({
+    userId: clerkUser.id,
+    expiresInSeconds: 60,
+  });
+
+  return { ticket: signInToken.token, databaseUser };
+}
+
 router.post("/ios-google-signin", async (req: Request, res: Response) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, client } = req.body;
+    if (!idToken) return res.status(400).json({ error: "idToken is required" });
 
-    if (!idToken) {
-      return res.status(400).json({ error: "idToken is required" });
-    }
-
-    // Verify the iOS token with Google
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: process.env.GOOGLE_IOS_CLIENT_ID,
     });
-
     const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
+    if (!payload?.email) {
       return res.status(400).json({ error: "Invalid token payload" });
     }
 
-    const existingUser = await findUserByEmail(payload.email);
+    const session = await createNativeSession({
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+    });
 
-    let userId: string;
-
-    if (existingUser) {
-      // User exists, use their ID
-      userId = existingUser.id;
-    } else {
-      // Create new user in Supabase
-      const { data: newUser, error: createError } =
-        await supabaseAdmin.auth.admin.createUser({
-          email: payload.email,
-          email_confirm: true,
-          user_metadata: {
-            full_name: payload.name,
-            avatar_url: payload.picture,
-            provider: "google",
-          },
-        });
-
-      if (createError || !newUser.user) {
-        console.error("Error creating user:", createError);
-        return res.status(500).json({ error: "Failed to create user" });
-      }
-
-      userId = newUser.user.id;
-    }
-
-    // Create a session token for this user
-    const { data: sessionData, error: sessionError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: payload.email,
-      });
-
-    if (sessionError || !sessionData) {
-      console.error("Error generating session:", sessionError);
-      return res.status(500).json({ error: "Failed to generate session" });
-    }
-
-    // Return the verification token that the client can use
     return res.json({
-      user: {
-        id: userId,
-        email: payload.email,
-        user_metadata: {
-          full_name: payload.name,
-          avatar_url: payload.picture,
-        },
-      },
-      // Client should use this verification URL to sign in
-      verificationUrl: sessionData.properties.action_link,
+      ticket: session.ticket,
+      ...(client === "watch" ? issueWatchAuthTokens(session.databaseUser.id) : {}),
     });
   } catch (error) {
     console.error("iOS Google sign-in error:", error);
@@ -112,95 +91,61 @@ router.post("/ios-google-signin", async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Exchange iOS Apple identityToken for Supabase session
- * POST /auth/ios-apple-signin
- * Body: { identityToken: string, user?: { firstName?: string, lastName?: string } }
- */
 router.post("/ios-apple-signin", async (req: Request, res: Response) => {
   try {
-    const { identityToken, user } = req.body;
-
+    const { identityToken, user, client } = req.body;
     if (!identityToken) {
       return res.status(400).json({ error: "identityToken is required" });
     }
 
-    // Verify the Apple identityToken (JWT)
-    // Note: Native iOS Sign in with Apple uses the Bundle ID as audience, not the Service ID
     const appleResponse = await appleSignin.verifyIdToken(identityToken, {
-      audience: "so.tracking.app", // Bundle ID for native iOS tokens
-      ignoreExpiration: false, // Set to true only for testing if needed
+      audience: "so.tracking.app",
+      ignoreExpiration: false,
     });
-
     if (!appleResponse.sub || !appleResponse.email) {
       return res.status(400).json({ error: "Invalid Apple token" });
     }
 
-    const existingUser = await findUserByEmail(appleResponse.email);
+    const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+    const session = await createNativeSession({
+      email: appleResponse.email,
+      name: fullName || undefined,
+    });
 
-    let userId: string;
-    let fullName = "";
-
-    // Build full name from Apple's user data (only provided on first sign-in)
-    if (user?.firstName || user?.lastName) {
-      fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
-    }
-
-    if (existingUser) {
-      // User exists, use their ID
-      userId = existingUser.id;
-      // Keep existing name if no new name provided
-      if (!fullName && existingUser.user_metadata?.full_name) {
-        fullName = existingUser.user_metadata.full_name;
-      }
-    } else {
-      // Create new user in Supabase
-      const { data: newUser, error: createError } =
-        await supabaseAdmin.auth.admin.createUser({
-          email: appleResponse.email,
-          email_confirm: true,
-          user_metadata: {
-            full_name: fullName || appleResponse.email?.split("@")[0], // Fallback to email prefix
-            provider: "apple",
-            apple_sub: appleResponse.sub,
-          },
-        });
-
-      if (createError || !newUser.user) {
-        console.error("Error creating user:", createError);
-        return res.status(500).json({ error: "Failed to create user" });
-      }
-
-      userId = newUser.user.id;
-    }
-
-    // Create a session token for this user
-    const { data: sessionData, error: sessionError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: appleResponse.email,
-      });
-
-    if (sessionError || !sessionData) {
-      console.error("Error generating session:", sessionError);
-      return res.status(500).json({ error: "Failed to generate session" });
-    }
-
-    // Return the verification token that the client can use
     return res.json({
-      user: {
-        id: userId,
-        email: appleResponse.email,
-        user_metadata: {
-          full_name: fullName,
-        },
-      },
-      // Client should use this verification URL to sign in
-      verificationUrl: sessionData.properties.action_link,
+      ticket: session.ticket,
+      ...(client === "watch" ? issueWatchAuthTokens(session.databaseUser.id) : {}),
     });
   } catch (error) {
     console.error("iOS Apple sign-in error:", error);
     return res.status(500).json({ error: "Authentication failed" });
+  }
+});
+
+router.post(
+  "/watch-tokens",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    return res.json(issueWatchAuthTokens(req.user!.id));
+  }
+);
+
+router.post("/watch-refresh", async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.body?.refreshToken;
+    if (!refreshToken) {
+      return res.status(400).json({ error: "refreshToken is required" });
+    }
+
+    const claims = verifyWatchRefreshToken(refreshToken);
+    const user = await userService.getUserById(claims.sub);
+    if (!user || user.deletedAt) {
+      return res.status(401).json({ error: "Invalid refresh token" });
+    }
+
+    return res.json(issueWatchAuthTokens(user.id));
+  } catch {
+    return res.status(401).json({ error: "Invalid refresh token" });
   }
 });
 

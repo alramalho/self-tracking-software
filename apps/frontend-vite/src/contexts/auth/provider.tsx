@@ -1,169 +1,114 @@
+import { setAuthTokenProvider } from "@/lib/api";
 import { authService } from "@/services/auth";
-import { type Session, type User } from "@supabase/supabase-js";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { createContext, useContext, useEffect, useState } from "react";
-
-interface WatchAuthPlugin {
-  sendTokens(options: { accessToken: string; refreshToken: string }): Promise<void>;
-}
+import {
+  useAuth as useClerkAuth,
+  useClerk,
+  useSignIn,
+} from "@clerk/clerk-react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { AuthContextType, NativeAuthTokens, WatchAuthPlugin } from "./types";
 
 const WatchAuth = registerPlugin<WatchAuthPlugin>("WatchAuth");
-
-interface AuthContextType {
-  supabaseUser: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  isLoaded: boolean;
-  isSignedIn: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  getToken: () => Promise<string | null>;
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [supabaseUser, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
-  
-  const sendTokensToWatch = (session: Session | null) => {
-    if (!Capacitor.isNativePlatform() || !session?.access_token || !session?.refresh_token) return;
-    WatchAuth.sendTokens({
-      accessToken: session.access_token,
-      refreshToken: session.refresh_token,
-    }).catch(() => {});
-  };
+  const clerkAuth = useClerkAuth();
+  const { signOut: clerkSignOut } = useClerk();
+  const { isLoaded: isSignInLoaded, signIn, setActive } = useSignIn();
+  const [isNativeAuthLoading, setIsNativeAuthLoading] = useState(false);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        await authService.initializeSocialLogin();
-        const { data } = await authService.getCurrentUser();
-        setUser(data.user);
-        setSession(data.session);
-        sendTokensToWatch(data.session);
-      } catch (error) {
-        console.error("Failed to initialize auth:", error);
-      } finally {
-        setIsLoading(false);
-        setIsLoaded(true);
-      }
-    };
+    setAuthTokenProvider(() => clerkAuth.getToken());
+    return () => setAuthTokenProvider(async () => null);
+  }, [clerkAuth.getToken]);
 
-    initializeAuth();
-
-    const {
-      data: { subscription },
-    } = authService.onAuthStateChange((event, session) => {
-      console.log("🔐 Auth state changed:", event);
-      console.log("🔐 Session:", session);
-      console.log("🔐 User:", session?.user);
-
-      // Log OAuth errors from URL
-      const params = new URLSearchParams(window.location.search);
-      if (params.has('error')) {
-        console.error("🔴 OAuth Error:", {
-          error: params.get('error'),
-          error_code: params.get('error_code'),
-          error_description: params.get('error_description'),
-        });
-      }
-
-      setSession(session);
-      setUser(session?.user ?? null);
-      sendTokensToWatch(session);
-      setIsLoading(false);
-      setIsLoaded(true);
+  useEffect(() => {
+    void authService.initializeSocialLogin().catch((error) => {
+      console.error("Failed to initialize native social login", error);
     });
-
-    return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !clerkAuth.isSignedIn) return;
+
+    const sendWatchTokens = async () => {
+      const accessToken = await clerkAuth.getToken();
+      if (!accessToken) return;
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+      const response = await fetch(`${backendUrl}/auth/watch-tokens`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) return;
+
+      const tokens = (await response.json()) as NativeAuthTokens;
+      await WatchAuth.sendTokens(tokens);
+    };
+
+    void sendWatchTokens().catch(() => {});
+  }, [clerkAuth.isSignedIn, clerkAuth.sessionId]);
+
+  const completeNativeSignIn = async (ticket: string) => {
+    if (!isSignInLoaded || !signIn || !setActive) {
+      throw new Error("Authentication is still loading");
+    }
+
+    const result = await signIn.create({ strategy: "ticket", ticket });
+    if (result.status !== "complete" || !result.createdSessionId) {
+      throw new Error("Clerk did not complete the native sign-in");
+    }
+    await setActive({ session: result.createdSessionId });
+  };
+
   const signInWithGoogle = async () => {
-    setIsLoading(true);
+    setIsNativeAuthLoading(true);
     try {
-      await authService.signInWithGoogle();
+      await completeNativeSignIn(await authService.getGoogleSignInTicket());
     } finally {
-      setIsLoading(false);
+      setIsNativeAuthLoading(false);
     }
   };
 
   const signInWithApple = async () => {
-    setIsLoading(true);
+    setIsNativeAuthLoading(true);
     try {
-      await authService.signInWithApple();
+      await completeNativeSignIn(await authService.getAppleSignInTicket());
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signInWithEmail = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      await authService.signInWithEmail(email, password);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signUpWithEmail = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      await authService.signUpWithEmail(email, password);
-    } finally {
-      setIsLoading(false);
+      setIsNativeAuthLoading(false);
     }
   };
 
   const signOut = async () => {
-    setIsLoading(true);
-    try {
-      await authService.signOut();
-    } finally {
-      setIsLoading(false);
+    if (Capacitor.isNativePlatform()) {
+      await WatchAuth.clearTokens().catch(() => {});
     }
+    await clerkSignOut();
   };
 
-  const getToken = async () => {
-    return session?.access_token ?? null;
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        supabaseUser,
-        session,
-        isLoading,
-        isLoaded,
-        isSignedIn: !!supabaseUser,
-        signInWithGoogle,
-        signInWithApple,
-        signInWithEmail,
-        signUpWithEmail,
-        signOut,
-        getToken,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      userId: clerkAuth.userId ?? null,
+      isLoading: !clerkAuth.isLoaded || isNativeAuthLoading,
+      isLoaded: clerkAuth.isLoaded,
+      isSignedIn: Boolean(clerkAuth.isSignedIn),
+      signInWithGoogle,
+      signInWithApple,
+      signOut,
+      getToken: clerkAuth.getToken,
+    }),
+    [clerkAuth, isNativeAuthLoading]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }
 
 export const useSession = useAuth;
-export const useSupabaseUser = () => {
-  const { supabaseUser, isLoading, isLoaded, isSignedIn } = useAuth();
-  return { supabaseUser, isLoading, isLoaded, isSignedIn };
-};
+export const useUser = useAuth;

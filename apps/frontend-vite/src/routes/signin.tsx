@@ -21,6 +21,7 @@ function SignInPage() {
   return (
     <AuthLayout>
       <SignIn
+        forceRedirectUrl={redirect_url ?? "/"}
         onSuccess={() => {
           navigate({ to: redirect_url ?? "/" });
         }}

@@ -52,33 +52,27 @@ export class UserService {
     });
   }
 
-  async getUserBySupabaseAuthId(supabaseAuthId: string): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { supabaseAuthId },
-    });
-  }
-
   async getUserByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { email },
     });
   }
 
-  async createUserFromSocialLogin(data: {
+  async createUserFromClerk(data: {
     email: string;
-    supabaseAuthId: string;
+    clerkId: string;
     name?: string;
     picture?: string;
   }): Promise<User> {
     // Create user with a reserved pending username pattern
     // This allows the user to be created without a real username
     // and prompts them to choose one after OAuth completes
-    const pendingUsername = `__pending__${data.supabaseAuthId}`;
+    const pendingUsername = `__pending__${data.clerkId}`;
 
     return prisma.user.create({
       data: {
         email: data.email,
-        supabaseAuthId: data.supabaseAuthId,
+        clerkId: data.clerkId,
         name: data.name,
         picture: data.picture,
         username: pendingUsername,
@@ -86,24 +80,20 @@ export class UserService {
     });
   }
 
-  // Migration helper: try supabaseAuthId first, fallback to email lookup
-  async getUserBySupabaseAuthIdOrEmail(
-    supabaseAuthId: string,
+  async getUserByClerkIdOrEmail(
+    clerkId: string,
     email: string
   ): Promise<User | null> {
-    // Try supabaseAuthId first
-    let user = await this.getUserBySupabaseAuthId(supabaseAuthId);
+    let user = await this.getUserByClerkId(clerkId);
 
     if (!user) {
-      // Fallback to email lookup for migrating users
       user = await this.getUserByEmail(email);
 
-      // If found by email, update with supabaseAuthId for future lookups
       if (user) {
         logger.info(
-          `Migrating user ${user.id} (${email}) to Supabase Auth ID: ${supabaseAuthId}`
+          `Linking user ${user.id} (${email}) to Clerk user ${clerkId}`
         );
-        user = await this.updateUser(user.id, { supabaseAuthId });
+        user = await this.updateUser(user.id, { clerkId });
       }
     }
 

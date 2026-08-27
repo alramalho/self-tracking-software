@@ -22,7 +22,6 @@ model User {
   username                        String?            @unique
   timezone                        String?            @default("Europe/Berlin")
   clerkId                         String?            @unique
-  supabaseAuthId                  String?            @unique
   language                        String?            @default("English")
   planType                        PlanType           @default(FREE)
   lastActiveAt                    DateTime?

@@ -1,0 +1,31 @@
+services:
+  backend-localdb:
+    image: ${BACKEND_IMAGE:-ghcr.io/alramalho/tracking-so-backend:a7e656084b54}
+    container_name: tsw-backend-localdb
+    restart: unless-stopped
+    env_file:
+      - .env
+      - database-local.env
+    environment:
+      PORT: "3000"
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      ENVIRONMENT: staging-localdb
+      CRON_ENABLED: "false"
+      REDIS_URL: redis://tsw-redis:6379
+      EXTRA_CORS_ORIGINS: https://tracking-software-vite-cor19zvlw-alramalhos-projects.vercel.app,https://tracking-stage.89.167.84.67.nip.io,https://stage.tracking.so
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - shared_web
+
+networks:
+  shared_web:
+    external: true
+    name: tracking-so-hetzner_web

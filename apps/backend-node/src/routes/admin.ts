@@ -1,7 +1,7 @@
 import { TelegramService } from "@/services/telegramService";
 import { User } from "@tsw/prisma";
 import { Plan as CompletePlan } from "@tsw/prisma/types";
-import { createClient } from "@supabase/supabase-js";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
@@ -19,17 +19,13 @@ import { aiService } from "@/services/aiService";
 
 const ADMIN_USERNAMES = ["liocas", "alex"];
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || "http://127.0.0.1:55321",
-  process.env.SUPABASE_ANON_KEY!
-);
-
 const telegramService = new TelegramService();
 interface AdminRequest extends Request {
   adminVerified?: boolean;
 }
 
 const router = Router();
+router.use(clerkMiddleware());
 
 // Rate limiter for public endpoints
 const publicRateLimit = rateLimit({
@@ -40,7 +36,7 @@ const publicRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-// Admin authentication middleware — accepts ADMIN_API_KEY or Supabase JWT from admin users
+// Admin authentication middleware — accepts ADMIN_API_KEY or a Clerk session from an admin user.
 const adminAuth = async (
   req: AdminRequest,
   res: Response,
@@ -65,18 +61,14 @@ const adminAuth = async (
       return;
     }
 
-    // Fall back to Supabase JWT from an admin user
-    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
-    if (!error && supabaseUser) {
-      const dbUser = await userService.getUserBySupabaseAuthIdOrEmail(
-        supabaseUser.id,
-        supabaseUser.email!
-      );
-      if (dbUser?.username && ADMIN_USERNAMES.includes(dbUser.username)) {
-        req.adminVerified = true;
-        next();
-        return;
-      }
+    const { userId: clerkUserId } = getAuth(req);
+    const dbUser = clerkUserId
+      ? await userService.getUserByClerkId(clerkUserId)
+      : null;
+    if (dbUser?.username && ADMIN_USERNAMES.includes(dbUser.username)) {
+      req.adminVerified = true;
+      next();
+      return;
     }
 
     res.status(401).json({ error: "Invalid admin token" });
@@ -292,7 +284,7 @@ const MAX_ERROR_LENGTH = 1000;
 
 interface ErrorLogRequest {
   error_message: string;
-  user_supabase_id?: string;
+  user_clerk_id?: string;
   error_digest?: string;
   url: string;
   referrer: string;
@@ -327,21 +319,19 @@ router.post(
 
       // Get user if exists
       let user: User | null = null;
-      if (errorData.user_supabase_id) {
+      if (errorData.user_clerk_id) {
         try {
-          user = await userService.getUserBySupabaseAuthId(
-            errorData.user_supabase_id
-          );
+          user = await userService.getUserByClerkId(errorData.user_clerk_id);
         } catch (error) {
           logger.warn(
-            `User with supabase_id '${errorData.user_supabase_id}' not found`
+            `User with Clerk ID '${errorData.user_clerk_id}' not found`
           );
         }
       }
 
       // Create error context
       const context = {
-        user_supabase_id: errorData.user_supabase_id,
+        user_clerk_id: errorData.user_clerk_id,
         user_username: user?.username || "unknown",
         error_message: errorData.error_message,
         error_digest: errorData.error_digest,

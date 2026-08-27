@@ -19,6 +19,10 @@ class ConnectivityService: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        if userInfo["clear_tokens"] as? Bool == true {
+            Task { @MainActor in AuthManager.shared.clearTokens() }
+            return
+        }
         guard let accessToken = userInfo["access_token"] as? String,
               let refreshToken = userInfo["refresh_token"] as? String else { return }
 
@@ -28,6 +32,10 @@ class ConnectivityService: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        if message["clear_tokens"] as? Bool == true {
+            Task { @MainActor in AuthManager.shared.clearTokens() }
+            return
+        }
         guard let accessToken = message["access_token"] as? String,
               let refreshToken = message["refresh_token"] as? String else { return }
 

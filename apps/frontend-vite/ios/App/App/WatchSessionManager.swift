@@ -32,6 +32,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate {
         session.transferUserInfo(userInfo)
     }
 
+    func clearAuthTokens() {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        WCSession.default.transferUserInfo(["clear_tokens": true])
+    }
+
     // MARK: - WCSessionDelegate
 
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {

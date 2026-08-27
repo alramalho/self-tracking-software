@@ -29,19 +29,7 @@ struct LogActivityRequest: Encodable {
     let timezone: String
 }
 
-struct AppleSignInResponse: Codable {
-    let user: AppleSignInUser
-    let verificationUrl: String
-}
-
-struct AppleSignInUser: Codable {
-    let id: String
-    let email: String
-}
-
-struct TokenResponse: Codable {
-    let access_token: String
-    let refresh_token: String
-    let token_type: String?
-    let expires_in: Int?
+struct WatchTokenResponse: Codable {
+    let accessToken: String
+    let refreshToken: String
 }
