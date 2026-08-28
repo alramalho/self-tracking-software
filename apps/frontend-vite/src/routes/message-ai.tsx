@@ -49,6 +49,16 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "@tanstack/react-router";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
 import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import {
+  getCoachConversationStarter,
+  isCoachConversationStarterId,
+  type CoachConversationStarterId,
+} from "@tsw/prisma/coach-conversation-starters";
+
+interface VirtualCoachStarter {
+  starterId: CoachConversationStarterId;
+  message: Message & { isVirtualCoachStarter: true };
+}
 
 // Helper to format relative dates for dividers
 function formatRelativeDate(date: Date): string {
@@ -438,9 +448,13 @@ function MessageWithReadTracking({
 export const Route = createFileRoute("/message-ai")({
   validateSearch: (
     search: Record<string, unknown>
-  ): { coachPrompt?: string } => ({
+  ): { coachPrompt?: string; coachStarter?: string } => ({
     coachPrompt:
       typeof search.coachPrompt === "string" ? search.coachPrompt : undefined,
+    coachStarter:
+      typeof search.coachStarter === "string"
+        ? search.coachStarter
+        : undefined,
   }),
   component: MessageAIPage,
 });
@@ -448,7 +462,7 @@ export const Route = createFileRoute("/message-ai")({
 function MessageAIPage() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
-  const { coachPrompt } = Route.useSearch();
+  const { coachPrompt, coachStarter } = Route.useSearch();
   const { plans } = usePlans();
   const { activities, activityEntries } = useActivities();
   const themeColors = useThemeColors();
@@ -514,6 +528,8 @@ function MessageAIPage() {
   const coachAttentionItems = useCoachAttentionItems();
   const [inputValue, setInputValue] = useState("");
   const [consumedCoachPrompt, setConsumedCoachPrompt] = useState<string | null>(null);
+  const [virtualCoachStarter, setVirtualCoachStarter] =
+    useState<VirtualCoachStarter | null>(null);
   const [editingMessage, setEditingMessage] = useState<{
     id: string;
     chatId: string;
@@ -546,6 +562,25 @@ function MessageAIPage() {
     setConsumedCoachPrompt(coachPrompt);
     navigate({ to: "/message-ai", search: {}, replace: true });
   }, [coachPrompt, consumedCoachPrompt, navigate]);
+
+  useEffect(() => {
+    if (!isCoachConversationStarterId(coachStarter)) return;
+
+    const firstName =
+      currentUser?.name?.split(" ")[0] || currentUser?.username || "there";
+    setVirtualCoachStarter({
+      starterId: coachStarter,
+      message: {
+        id: `virtual-coach-starter-${coachStarter}`,
+        role: "COACH",
+        content: getCoachConversationStarter(coachStarter, firstName),
+        status: "READ",
+        createdAt: new Date(),
+        isVirtualCoachStarter: true,
+      },
+    });
+    navigate({ to: "/message-ai", search: {}, replace: true });
+  }, [coachStarter, currentUser?.name, currentUser?.username, navigate]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initiallyScrolledChatIdRef = useRef<string | null>(null);
@@ -683,10 +718,13 @@ function MessageAIPage() {
 
   // Coach messages include previous coach chats so visible context matches coach memory.
   const allMessages = useMemo(() => {
-    return [...(messages || [])].sort((a, b) =>
+    return [
+      ...(messages || []),
+      ...(virtualCoachStarter ? [virtualCoachStarter.message] : []),
+    ].sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-  }, [messages]);
+  }, [messages, virtualCoachStarter]);
 
   const updateActiveDateLabel = useCallback(() => {
     const container = messagesContainerRef.current;
@@ -846,6 +884,8 @@ function MessageAIPage() {
       clearPendingSession();
     }
 
+    const starterToPersist = virtualCoachStarter;
+    setVirtualCoachStarter(null);
     setTimeout(scrollToBottom, 50);
 
     try {
@@ -854,9 +894,11 @@ function MessageAIPage() {
         chatId: currentChatId,
         coachVersion: "v2",
         imageAttachments,
+        coachStarterId: starterToPersist?.starterId,
       });
     } catch (error) {
       console.error("Failed to send message:", error);
+      setVirtualCoachStarter(starterToPersist);
       throw error;
     }
   };
@@ -1735,7 +1777,10 @@ function MessageAIPage() {
                   isAssessmentMessage && !nextIsAssessment;
 
                 // Show feedback only on the last coach message before a non-coach message (or end of list)
-                const isLastInCoachGroup = isCoachMessage && (!nextMessage || nextMessage.role !== "COACH");
+                const isLastInCoachGroup =
+                  isCoachMessage &&
+                  !message.isVirtualCoachStarter &&
+                  (!nextMessage || nextMessage.role !== "COACH");
 
                 const prevIsUser = prevMessage && (prevMessage.role === "USER" || prevMessage.senderId === currentUser?.id);
                 const prevIsCoach = prevMessage && prevMessage.role === "COACH";

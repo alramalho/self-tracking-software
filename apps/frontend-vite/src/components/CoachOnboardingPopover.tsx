@@ -187,8 +187,8 @@ export function CoachOnboardingPopover({
                       Choose your coach
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Pick the coaching style you want, or keep the coach quiet
-                      unless you start the conversation.
+                      Pick the style for your weekly recap, or keep the coach
+                      quiet unless you start the conversation.
                     </p>
                   </div>
 
@@ -212,11 +212,11 @@ export function CoachOnboardingPopover({
                       2 of 3
                     </p>
                     <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-                      Choose check-in time
+                      Choose recap time
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {aiCoach.name} will use this window for plan updates and
-                      check-ins when timing is flexible.
+                      {aiCoach.name} will send one Monday message that recaps
+                      last week and plans the week ahead.
                     </p>
                   </div>
 
@@ -276,7 +276,7 @@ export function CoachOnboardingPopover({
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {aiCoach.name} can watch plan progress, surface plan
-                      updates, and suggest concrete actions.
+                      updates, and summarize it in one weekly message.
                     </p>
                   </div>
 
@@ -297,7 +297,7 @@ export function CoachOnboardingPopover({
                             Proactive coaching is on
                           </p>
                           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            Usually around{" "}
+                            Mondays, usually around{" "}
                             {getFormattedLabel(preferredCoachingHour)}.
                           </p>
                         </div>

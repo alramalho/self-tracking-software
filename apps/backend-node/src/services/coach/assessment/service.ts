@@ -24,6 +24,7 @@ import {
 import dedent from "dedent";
 import {
   getCoachWeekBounds,
+  getPreviousCoachWeekBounds,
 } from "../../../utils/date";
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
@@ -55,7 +56,10 @@ import {
   buildRecurrentCoachAssessmentPrompt,
   type RecurrentCoachAssessmentInterventionType,
 } from "./prompt";
-import { buildAssessmentWeeklyOverview } from "./weeklyOverview";
+import {
+  buildAssessmentWeeklyOverview,
+  buildWeeklyReviewOverview,
+} from "./weeklyOverview";
 import {
   coachDefersWeekContent,
   daysSinceExternalAgentSync,
@@ -1435,7 +1439,7 @@ export class CoachAssessmentService {
   private async buildInterventionCandidates(
     user: CoachUser,
     now: Date,
-    options: {
+    _options: {
       force: boolean;
       pendingProposalExists: boolean;
       fallbackCheckin?: boolean;
@@ -1445,149 +1449,63 @@ export class CoachAssessmentService {
     const nowInTz = new TZDate(now, timezone);
     const { start: currentWeekStart } = getCoachWeekBounds(now, timezone);
     const currentWeekStartKey = format(currentWeekStart, "yyyy-MM-dd");
-    const candidates: CoachInterventionCandidate[] = [];
+    const isWeeklyReviewWindow =
+      nowInTz.getDay() === 1 && isWithinPreferredCoachWindow(user, now);
+
+    if (!_options.force && !isWeeklyReviewWindow) return [];
+
+    const { start: previousWeekStart } = getPreviousCoachWeekBounds(
+      now,
+      timezone,
+    );
+    const { end: currentWeekEnd } = getCoachWeekBounds(now, timezone);
+    const activityIds = Array.from(
+      new Set(user.plans.flatMap((plan) => plan.activities.map((a) => a.id))),
+    );
+    const entries =
+      activityIds.length > 0
+        ? await prisma.activityEntry.findMany({
+            where: {
+              userId: user.id,
+              deletedAt: null,
+              activityId: { in: activityIds },
+              datetime: { gte: previousWeekStart, lte: currentWeekEnd },
+            },
+            orderBy: { datetime: "asc" },
+          })
+        : [];
     const attentionItems = deriveCoachAttentionItems({
       user,
       plans: user.plans,
       now,
     });
-    const visibleWeeklyOverviewContext =
-      await this.buildVisibleWeeklyOverviewContext(user, now);
+    const weeklyReviewContext = buildWeeklyReviewOverview({
+      plans: user.plans,
+      entries,
+      now,
+      timezone,
+    });
     const externalAgentContext = await this.buildExternalAgentContext(
       user,
       now,
     );
-    const withVisibleWeeklyOverview = (context: string) =>
-      [visibleWeeklyOverviewContext, externalAgentContext, context]
-        .filter(Boolean)
-        .join("\n\n");
-    // Plans whose week content a live connected agent owns: the coach stays
-    // on accountability for these and skips content-planning interventions.
-    const deferredPlanIds = new Set(
-      user.plans
-        .filter((plan) => coachDefersWeekContent(plan, now))
-        .map((plan) => plan.id),
-    );
 
-    // Schedule-gap warnings are the live agent's steady state (it refills
-    // week by week), so they stay out of PLAN_ATTENTION for deferred plans.
-    // Past-end-date stays: renegotiating the deadline is the coach's job.
-    const visibleAttentionItems = attentionItems.filter(
-      (item) =>
-        !(
-          (item.kind === "SPECIFIC_SCHEDULE_ENDING" ||
-            item.kind === "SPECIFIC_NO_FUTURE_SESSIONS") &&
-          item.planIds.every((planId) => deferredPlanIds.has(planId))
-        ),
-    );
-    if (visibleAttentionItems.length > 0) {
-      candidates.push({
-        type: "PLAN_ATTENTION",
-        reason: visibleAttentionItems[0].title,
-        planIds: Array.from(
-          new Set(visibleAttentionItems.flatMap((item) => item.planIds)),
-        ),
-        targetWeekStart: currentWeekStartKey,
-        context: withVisibleWeeklyOverview(
-          formatCoachAttentionContext(visibleAttentionItems),
-        ),
-        usesAgent: true,
-        attentionItems: visibleAttentionItems,
-      });
-    }
-
-    const planSummaries = await Promise.all(
-      user.plans.map((plan) =>
-        this.buildPlanAssessmentSummary(user, plan, now),
-      ),
-    );
-
-    for (const summary of planSummaries) {
-      const baseContext = withVisibleWeeklyOverview(summary.context);
-
-      if (
-        summary.daysSinceLastActivity !== null &&
-        summary.daysSinceLastActivity >= 30
-      ) {
-        candidates.push({
-          type: "INACTIVITY_ARCHIVE_PROPOSAL",
-          reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
-          planIds: [summary.plan.id],
-          targetWeekStart: currentWeekStartKey,
-          context: baseContext,
-          usesAgent: true,
-        });
-      } else if (
-        summary.daysSinceLastActivity !== null &&
-        summary.daysSinceLastActivity >= 14
-      ) {
-        candidates.push({
-          type: "INACTIVITY_PAUSE_PROPOSAL",
-          reason: `${summary.plan.goal} has been inactive for ${summary.daysSinceLastActivity} days.`,
-          planIds: [summary.plan.id],
-          targetWeekStart: currentWeekStartKey,
-          context: baseContext,
-          usesAgent: true,
-        });
-      }
-
-      const flexiblePlanNeedsAdjustment =
-        summary.weeklySummary &&
-        summary.plan.outlineType === "TIMES_PER_WEEK" &&
-        (summary.weeklySummary.status === "overloaded" ||
-          (summary.weeklySummary.status === "at_risk" &&
-            summary.weeklySummary.slackDays === 0));
-
-      const scheduledPlanNeedsAdjustment =
-        summary.plan.outlineType !== "TIMES_PER_WEEK" &&
-        (summary.missedSessionsThisWeek >= 3 ||
-          ["AT_RISK", "FAILED"].includes(summary.plan.currentWeekState || ""));
-      const needsAdjustment =
-        scheduledPlanNeedsAdjustment || flexiblePlanNeedsAdjustment;
-
-      if (!options.pendingProposalExists && needsAdjustment) {
-        if (!deferredPlanIds.has(summary.plan.id)) {
-          const reason = flexiblePlanNeedsAdjustment && summary.weeklySummary
-            ? `${summary.plan.goal} has ${summary.weeklySummary.remaining} weekly session${summary.weeklySummary.remaining === 1 ? "" : "s"} left across ${summary.weeklySummary.openDays} open day${summary.weeklySummary.openDays === 1 ? "" : "s"}.`
-            : `${summary.plan.goal} is ${summary.plan.currentWeekState || "missing sessions"} with ${summary.missedSessionsThisWeek} missed sessions this week.`;
-          candidates.push({
-            type: "PLAN_ADJUSTMENT",
-            reason,
-            planIds: [summary.plan.id],
-            targetWeekStart: currentWeekStartKey,
-            context: baseContext,
-            usesAgent: true,
-          });
-        } else {
-          // The agent owns the schedule, but a collapsing week is still the
-          // coach's to notice: planning-free accountability check-in.
-          candidates.push({
-            type: "INACTIVITY_CHECKIN",
-            reason: `${summary.plan.goal} is behind this week on an agent-managed plan.`,
-            planIds: [summary.plan.id],
-            targetWeekStart: currentWeekStartKey,
-            context: baseContext,
-            usesAgent: true,
-          });
-        }
-      }
-
-      // Routine inactivity and completion are intentionally silent. The coach
-      // only reaches out once there is a concrete decision or rescue action.
-    }
-
-    if (options.force && options.fallbackCheckin && candidates.length === 0) {
-      candidates.push({
-        type: "INACTIVITY_CHECKIN",
-        reason: "User requested a coach assessment from the coach chat.",
+    return [
+      {
+        type: "WEEK_RECAP",
+        reason: "The user's single weekly recap and upcoming-week plan is due.",
         planIds: user.plans.map((plan) => plan.id),
-        targetDate: format(nowInTz, "yyyy-MM-dd"),
-        context: await this.buildContextSummary(user, now),
+        targetWeekStart: currentWeekStartKey,
+        context: [
+          weeklyReviewContext,
+          externalAgentContext,
+          formatCoachAttentionContext(attentionItems),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
         usesAgent: true,
-      });
-    }
-
-    return candidates;
+      },
+    ];
   }
 
   private attentionItemMatchesCandidate(

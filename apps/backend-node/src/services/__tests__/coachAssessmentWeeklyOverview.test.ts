@@ -1,7 +1,58 @@
 import { describe, expect, it } from "vitest";
-import { buildAssessmentWeeklyOverview } from "../coach/assessment/weeklyOverview";
+import {
+  buildAssessmentWeeklyOverview,
+  buildWeeklyReviewOverview,
+} from "../coach/assessment/weeklyOverview";
 
 describe("coach assessment weekly overview", () => {
+  it("combines the completed week recap with the new week's plan", () => {
+    const overview = buildWeeklyReviewOverview({
+      now: new Date("2026-07-06T08:00:00.000Z"),
+      timezone: "UTC",
+      plans: [
+        {
+          id: "plan_train",
+          goal: "train 4 times a week",
+          emoji: "🏃",
+          outlineType: "TIMES_PER_WEEK",
+          timesPerWeek: 4,
+          currentWeekState: null,
+          activities: [
+            {
+              id: "activity_run",
+              title: "Run",
+              emoji: "🏃",
+              measure: "sessions",
+            },
+          ],
+          sessions: [],
+        },
+      ],
+      entries: [
+        {
+          activityId: "activity_run",
+          datetime: new Date("2026-06-28T08:00:00.000Z"),
+        },
+        {
+          activityId: "activity_run",
+          datetime: new Date("2026-06-30T08:00:00.000Z"),
+        },
+        {
+          activityId: "activity_run",
+          datetime: new Date("2026-07-02T08:00:00.000Z"),
+        },
+      ],
+    });
+
+    expect(overview).toContain("Weekly recap and plan:");
+    expect(overview).toContain("Last week summary:");
+    expect(overview).toContain("Window: 2026-06-28 to 2026-07-04.");
+    expect(overview).toContain("3/4 completed days");
+    expect(overview).toContain("This week summary:");
+    expect(overview).toContain("Window: 2026-07-05 to 2026-07-11.");
+    expect(overview).toContain("Suggested flexible days:");
+  });
+
   it("formats multiple plans as a visible week-first overview", () => {
     const overview = buildAssessmentWeeklyOverview({
       now: new Date("2026-07-02T12:00:00.000Z"),

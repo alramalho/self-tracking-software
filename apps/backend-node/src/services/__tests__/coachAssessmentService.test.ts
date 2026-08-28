@@ -15,6 +15,25 @@ import {
   resolveCoachAgentTemperature,
 } from "../coachAgentModelConfig";
 import { GPT_56_LUNA_MODEL } from "../aiModelIds";
+import {
+  COACH_CONVERSATION_STARTER_IDS,
+  getCoachConversationStarter,
+} from "@tsw/prisma/coach-conversation-starters";
+
+describe("coach conversation starters", () => {
+  it("contains only the approved homepage copy", () => {
+    expect(
+      COACH_CONVERSATION_STARTER_IDS.map((id) =>
+        getCoachConversationStarter(id, "Alex"),
+      ),
+    ).toEqual([
+      "You got this, Alex",
+      "Still on track?",
+      "Done is better than perfect",
+      "Consistency beats intensity",
+    ]);
+  });
+});
 
 describe("coach model defaults", () => {
   it("uses GPT-5.6 Luna while preserving Kimi K3's fixed temperature", () => {
@@ -26,6 +45,20 @@ describe("coach model defaults", () => {
 });
 
 describe("recurrent coach assessment prompt", () => {
+  it("makes the weekly outreach a combined recap and plan", () => {
+    const prompt = buildRecurrentCoachAssessmentPrompt({
+      interventionType: "WEEK_RECAP",
+      reason: "Weekly review is due.",
+      context: "Last week: 3/4. This week: train Tue, Thu, Sat, Sun.",
+    });
+    const normalizedPrompt = prompt.replace(/\s+/g, " ");
+
+    expect(normalizedPrompt).toContain("one proactive coach message for the week");
+    expect(normalizedPrompt).toContain("A factual recap of last week's result");
+    expect(normalizedPrompt).toContain("A concise plan for this week");
+    expect(normalizedPrompt).toContain("Always produce exactly one message");
+  });
+
   it("makes routine logs silent and forbids generic retrospective questions", () => {
     const prompt = buildRecurrentCoachAssessmentPrompt({
       interventionType: "INACTIVITY_CHECKIN",

@@ -1,4 +1,5 @@
 import { createContext } from "react";
+import type { CoachConversationStarterId } from "@tsw/prisma/coach-conversation-starters";
 
 export interface ToolCall {
   tool: string;
@@ -190,6 +191,14 @@ export interface LatestCoachMessagePreview {
   isUnread: boolean;
 }
 
+export interface SendMessageInput {
+  message: string;
+  chatId: string;
+  coachVersion?: "v1" | "v2";
+  imageAttachments?: ImageAttachment[];
+  coachStarterId?: CoachConversationStarterId;
+}
+
 export interface Chat {
   id: string;
   type: ChatType;
@@ -227,7 +236,7 @@ export interface MessagesContextType {
   isLoadingMessages: boolean;
 
   // Mutations
-  sendMessage: (data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }) => Promise<Message[]>;
+  sendMessage: (data: SendMessageInput) => Promise<Message[]>;
   rewriteMessage: (data: { chatId: string; cacheChatId?: string; messageId: string; message: string }) => Promise<Message[]>;
   retryCoachAssessmentMessage: (data: { messageId: string; chatId?: string }) => Promise<Message>;
   isSendingMessage: boolean;

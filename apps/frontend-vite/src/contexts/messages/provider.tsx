@@ -24,6 +24,7 @@ import {
   type Chat,
   type ImageAttachment,
   type Message,
+  type SendMessageInput,
 } from "./types";
 
 const CURRENT_CHAT_STORAGE_KEY = "tracking-so-current-chat-id";
@@ -264,7 +265,7 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }) => {
+    mutationFn: async (data: SendMessageInput) => {
       // Optimistically add user message to the cache immediately
       const userMessage: Message = {
         id: `temp-${Date.now()}`,
@@ -315,8 +316,13 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
       const persistedUserMessage = responseMessages.find(
         (msg) => msg.role === "USER" && msg.content === message
       );
+      const conversationStarters = responseMessages.filter(
+        (msg) => msg.source === "homepage_conversation_starter"
+      );
       const coachMessages = responseMessages.filter(
-        (msg) => msg.id !== persistedUserMessage?.id
+        (msg) =>
+          msg.id !== persistedUserMessage?.id &&
+          msg.source !== "homepage_conversation_starter"
       );
       const newProposalMessageIds = new Set(coachMessages.map((msg) => msg.id));
       const shouldCancelPendingPlanCreations = coachMessages.some(hasPlanCreationProposal);
@@ -330,9 +336,20 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
           const withoutTemp = preparedMessages.filter(
             (msg) => !(msg.id.startsWith("temp-") && msg.content === message)
           );
-          if (!persistedUserMessage) return withoutTemp;
-          const exists = withoutTemp.some((msg) => msg.id === persistedUserMessage.id);
-          return exists ? withoutTemp : [...withoutTemp, persistedUserMessage];
+          const withConversationStarters = conversationStarters.reduce(
+            (nextMessages, starter) =>
+              nextMessages.some((msg) => msg.id === starter.id)
+                ? nextMessages
+                : [...nextMessages, starter],
+            withoutTemp,
+          );
+          if (!persistedUserMessage) return withConversationStarters;
+          const exists = withConversationStarters.some(
+            (msg) => msg.id === persistedUserMessage.id
+          );
+          return exists
+            ? withConversationStarters
+            : [...withConversationStarters, persistedUserMessage];
         }
       );
 

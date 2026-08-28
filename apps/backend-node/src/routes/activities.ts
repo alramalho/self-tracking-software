@@ -804,36 +804,8 @@ router.post(
             );
           });
 
-        // Schedule post-activity celebration message (30-90 seconds after logging)
-        // Use a random delay to make it feel more natural
-        const delayMs = 30000 + Math.random() * 60000; // 30s to 90s
-        setTimeout(async () => {
-          try {
-            // Fetch fresh plan data with activities
-            const planWithActivities = await prisma.plan.findUnique({
-              where: { id: plan.id },
-              include: { activities: true },
-            });
-
-            if (planWithActivities) {
-              await plansService.processPostActivityCoaching(
-                req.user!,
-                planWithActivities,
-                entry
-              );
-            }
-          } catch (error) {
-            logger.error(
-              `Error in delayed post-activity coaching for user ${req.user!.username}:`,
-              error
-            );
-            // Silently fail - don't affect the user experience
-          }
-        }, delayMs);
-
-        logger.info(
-          `Scheduled post-activity coaching for user ${req.user!.username} in ${Math.round(delayMs / 1000)}s`
-        );
+        // Proactive coaching is intentionally weekly. Activity logs update plan
+        // state immediately, but they no longer create one-off coach messages.
       }
 
       let sharedActivityInvite: Awaited<

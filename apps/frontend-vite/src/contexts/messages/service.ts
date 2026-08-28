@@ -1,7 +1,7 @@
 import { type AxiosInstance } from "axios";
 import { getAuthToken } from "@/lib/api";
 import { normalizeApiResponse } from "../../utils/dateUtils";
-import { type Chat, type ImageAttachment, type Message } from "./types";
+import { type Chat, type Message, type SendMessageInput } from "./types";
 
 export type { Chat, Message } from "./types";
 
@@ -47,7 +47,7 @@ export async function getMessages(
 // Send message to any chat type (coach, direct, group)
 export async function sendMessage(
   api: AxiosInstance,
-  data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] }
+  data: SendMessageInput,
 ): Promise<Message[]> {
   const response = await api.post<{ messages?: MessageApiResponse[]; message: MessageApiResponse }>(
     `/chats/${data.chatId}/messages`,
@@ -55,6 +55,7 @@ export async function sendMessage(
       message: data.message,
       coachVersion: data.coachVersion,
       imageAttachments: data.imageAttachments,
+      coachStarterId: data.coachStarterId,
     }
   );
   // New multi-message format (v2) or fallback to single message
@@ -193,7 +194,7 @@ async function readMessageStreamResponse(
 
 export async function sendMessageStream(
   api: AxiosInstance,
-  data: { message: string; chatId: string; coachVersion?: "v1" | "v2"; imageAttachments?: ImageAttachment[] },
+  data: SendMessageInput,
   onStatus?: (status: CoachResponseStatus) => void
 ): Promise<Message[]> {
   const baseURL = api.defaults.baseURL || "";
@@ -213,6 +214,7 @@ export async function sendMessageStream(
           message: data.message,
           coachVersion: data.coachVersion,
           imageAttachments: data.imageAttachments,
+          coachStarterId: data.coachStarterId,
         }),
         signal: controller.signal,
       }

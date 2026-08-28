@@ -107,9 +107,8 @@ function ManageAICoachPage() {
                 className="text-muted-foreground mt-0.5 shrink-0"
               />
               <p className="text-sm text-muted-foreground">
-                Your coach watches plan progress, upcoming sessions, weekly
-                patterns, inactivity, and wins. The most urgent useful message
-                gets sent first.
+                Once a week, your coach recaps the week you finished and lays
+                out the week ahead in one message.
               </p>
             </div>
           </div>
@@ -134,11 +133,11 @@ function ManageAICoachPage() {
                 />
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Coach can check in first
+                    Weekly recap
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Plan updates, autonomous coach messages, coach actions,
-                    and scheduled check-ins use this setting.
+                    One message every Monday. There are no activity-by-activity
+                    or midweek check-ins.
                   </p>
                 </div>
               </div>
@@ -173,8 +172,7 @@ function ManageAICoachPage() {
                       Usually around {getFormattedLabel(preferredCoachingHour)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Prep messages and check-ins use this window when timing is
-                      flexible.
+                      Your Monday recap uses this window.
                     </p>
                   </div>
                 </div>
