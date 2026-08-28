@@ -19,6 +19,11 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
 import { coachResponseStatusService } from "../services/coachResponseStatusService";
+import {
+  getCoachConversationStarter,
+  isCoachConversationStarterId,
+  type CoachConversationStarterId,
+} from "@tsw/prisma/coach-conversation-starters";
 
 const router = Router();
 
@@ -96,6 +101,52 @@ function normalizeImageAttachments(value: unknown): ImageAttachment[] {
 
     return { id, url, mediaType, filename };
   });
+}
+
+function normalizeCoachStarterId(
+  value: unknown,
+): CoachConversationStarterId | null {
+  if (value === undefined || value === null) return null;
+  if (!isCoachConversationStarterId(value)) {
+    throw new RouteError(400, "Invalid coach conversation starter");
+  }
+  return value;
+}
+
+async function persistCoachConversationStarter(input: {
+  chatId: string;
+  user: User;
+  starterId: CoachConversationStarterId | null;
+}) {
+  if (!input.starterId) return null;
+
+  const firstName =
+    input.user.name?.split(" ")[0] || input.user.username || "there";
+  const createdAt = new Date();
+  const message = await prisma.message.create({
+    data: {
+      chatId: input.chatId,
+      role: "COACH",
+      content: getCoachConversationStarter(input.starterId, firstName),
+      status: "READ",
+      readAt: createdAt,
+      metadata: {
+        source: "homepage_conversation_starter",
+        coachStarterId: input.starterId,
+      },
+      createdAt,
+    },
+  });
+
+  return {
+    id: message.id,
+    chatId: message.chatId,
+    role: message.role,
+    content: message.content,
+    status: message.status,
+    source: "homepage_conversation_starter",
+    createdAt: message.createdAt,
+  };
 }
 
 function serializeSystemMessage(
@@ -540,6 +591,10 @@ router.get(
             where: {
               chatId: latestCoachChatId,
               role: "COACH",
+              metadata: {
+                path: ["interventionType"],
+                equals: "WEEK_RECAP",
+              },
             },
             orderBy: { createdAt: "desc" },
             select: {
@@ -1047,6 +1102,7 @@ router.post(
       const { message, coachVersion } = req.body;
       const messageText = typeof message === "string" ? message : "";
       const imageAttachments = normalizeImageAttachments(req.body.imageAttachments);
+      const coachStarterId = normalizeCoachStarterId(req.body.coachStarterId);
       const hasMessageText = messageText.trim().length > 0;
 
       if (!hasMessageText && imageAttachments.length === 0) {
@@ -1072,6 +1128,12 @@ router.post(
       if (!chat) {
         return res.status(404).json({ error: "Coach chat not found" });
       }
+
+      const persistedCoachStarter = await persistCoachConversationStarter({
+        chatId,
+        user,
+        starterId: coachStarterId,
+      });
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -1133,6 +1195,9 @@ router.post(
           }),
         logLabel: "Coach v2 stream chat",
       });
+      if (persistedCoachStarter) {
+        payload.messages.unshift(persistedCoachStarter);
+      }
 
       await coachResponseStatusService.complete({
         chatId,
@@ -1179,6 +1244,7 @@ router.post(
       const { message, coachVersion } = req.body;
       const messageText = typeof message === "string" ? message : "";
       const imageAttachments = normalizeImageAttachments(req.body.imageAttachments);
+      const coachStarterId = normalizeCoachStarterId(req.body.coachStarterId);
       const hasMessageText = messageText.trim().length > 0;
 
       if (!hasMessageText && imageAttachments.length === 0) {
@@ -1209,6 +1275,15 @@ router.post(
       if (!chat) {
         return res.status(404).json({ error: "Chat not found" });
       }
+
+      const persistedCoachStarter =
+        chat.type === "COACH"
+          ? await persistCoachConversationStarter({
+              chatId,
+              user,
+              starterId: coachStarterId,
+            })
+          : null;
 
       // Save user message
       const userMessage = await prisma.message.create({
@@ -1246,6 +1321,9 @@ router.post(
             serializedUserMessage,
             logLabel: "Coach v2 chat",
           });
+          if (persistedCoachStarter) {
+            payload.messages.unshift(persistedCoachStarter);
+          }
 
           return res.json(payload);
         }
@@ -1471,7 +1549,11 @@ router.post(
 
         return res.json({
           userMessage: serializedUserMessage,
-          messages: [serializedUserMessage, serializedCoachMessage],
+          messages: [
+            ...(persistedCoachStarter ? [persistedCoachStarter] : []),
+            serializedUserMessage,
+            serializedCoachMessage,
+          ],
           message: serializedCoachMessage,
         });
       }

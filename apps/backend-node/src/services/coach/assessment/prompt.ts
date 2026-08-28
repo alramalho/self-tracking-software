@@ -44,6 +44,28 @@ export function buildRecurrentCoachAssessmentPrompt(params: {
   reason: string;
   context: string;
 }): string {
+  if (params.interventionType === "WEEK_RECAP") {
+    return dedent`
+      You are writing the user's one proactive coach message for the week.
+
+      Always produce exactly one message that combines:
+      1. A factual recap of last week's result for each active plan.
+      2. A concise plan for this week, using fixed sessions and suggested flexible days from the context.
+
+      If the context contains a real plan risk or missing schedule, include the single most important adjustment or question. Otherwise, do not manufacture a problem or ask a generic check-in question.
+
+      Assessment context:
+      ${params.context}
+
+      Required style:
+      - Use one compact message of at most 4 short sentences.
+      - Lead with last week's result, then move directly to this week's plan.
+      - Sound direct and natural. No praise sandwich, motivational filler, or coaching jargon.
+      - Do not mention internal labels, metadata, scoring, or that this is an automated assessment.
+      - Do not invent activity the user has not logged.
+    `;
+  }
+
   return dedent`
     ${RECURRENT_COACH_ASSESSMENT_PROMPT}
 

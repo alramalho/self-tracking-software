@@ -1,12 +1,9 @@
 import { usePlans } from "@/contexts/plans";
 import { useMetrics } from "@/contexts/metrics";
-import { useDataNotifications } from "@/contexts/notifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { useCoachAttentionItems } from "@/components/CoachAttentionBanner";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
-import { getPendingCoachActionNotifications } from "@/utils/coachNotifications";
 import { isAfter, startOfDay, subDays } from "date-fns";
 import { CoachCard } from "./CoachCard";
 import { CoachUpgradeCard } from "./CoachUpgradeCard";
@@ -29,22 +26,20 @@ type HomeGridCard = {
 const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
 
 export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
-  const { plans, isLoadingPlans } = usePlans();
+  const { plans } = usePlans();
   const { activityEntries, isLoadingActivityEntries } = useActivities();
   const { metrics } = useMetrics();
-  const { notifications } = useDataNotifications();
   const { userPlanType } = usePaidPlan();
   const { isUserAIWhitelisted } = useAI();
   const { currentUser } = useCurrentUser();
-  const { chats, isLoadingChats } = useMessages();
+  const { chats } = useMessages();
   const { setShowUpgradePopover } = useUpgrade();
 
   const isUserOnFreePlan = userPlanType === "FREE";
-  const showCoachCard =
+  const canUseCoach =
     !isUserOnFreePlan &&
     isUserAIWhitelisted &&
     currentUser?.proactiveCoachingEnabled !== false;
-  const coachAttentionItems = useCoachAttentionItems(showCoachCard);
 
   // Plans past their finishingDate stay visible so they cannot be silently
   // abandoned: they show as needing a decision until renewed or archived.
@@ -71,7 +66,6 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
       !(plan.sessions || []).some(
         (session) => !isAfter(todayStart, new Date(session.date))
       ));
-  const pendingCoachNotifications = getPendingCoachActionNotifications(notifications);
   const latestCoachMessage = chats?.find(
     (chat) => chat.type === "COACH"
   )?.latestCoachMessage;
@@ -99,21 +93,14 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
     });
   }
 
-  if (showCoachCard) {
-    const firstPendingPlanId = (pendingCoachNotifications[0]?.relatedData as any)?.planIds?.[0];
+  if (canUseCoach && latestCoachMessage?.isUnread) {
     cards.push({
       node: (
         <CoachCard
           key="coach"
-          attentionCount={pendingCoachNotifications.length}
-          activePlanCount={activePlans?.length ?? 0}
-          isLoading={isLoadingPlans || isLoadingChats}
-          reviewPlanId={firstPendingPlanId}
-          latestCoachMessage={latestCoachMessage}
-          coachAttentionItems={coachAttentionItems}
         />
       ),
-      span: coachAttentionItems.length > 0 ? 2 : 1,
+      span: 1,
     });
   }
 

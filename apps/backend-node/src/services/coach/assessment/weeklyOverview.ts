@@ -7,7 +7,7 @@ import {
   type PlanWeekScheduledSession,
   type PlanWeekSummary,
 } from "@tsw/prisma/plan-week";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import type { AssessmentWeeklyOverviewInput } from "./types";
 
 const WEEK_LABELS = ["This week", "Next week"] as const;
@@ -136,17 +136,46 @@ function buildWeekSection(input: {
 export function buildAssessmentWeeklyOverview(
   input: AssessmentWeeklyOverviewInput,
 ) {
+  return buildWeeklyOverview({
+    input,
+    projectionNow: input.now,
+    weekLabels: WEEK_LABELS,
+  });
+}
+
+export function buildWeeklyReviewOverview(
+  input: AssessmentWeeklyOverviewInput,
+) {
+  return buildWeeklyOverview({
+    input,
+    projectionNow: subDays(input.now, 7),
+    weekLabels: ["Last week", "This week"],
+    title: "Weekly recap and plan",
+  });
+}
+
+function buildWeeklyOverview({
+  input,
+  projectionNow,
+  weekLabels,
+  title = "Visible weekly overview",
+}: {
+  input: AssessmentWeeklyOverviewInput;
+  projectionNow: Date;
+  weekLabels: readonly [string, string];
+  title?: string;
+}) {
   const timezone = input.timezone || "UTC";
   const projection = buildPlanWeekProjection({
     plans: input.plans,
     entries: input.entries,
-    now: input.now,
+    now: projectionNow,
     timezone,
     weekCount: 2,
   });
   const today = format(new TZDate(input.now, timezone), "yyyy-MM-dd (EEEE)");
   const lines = [
-    "Visible weekly overview:",
+    `${title}:`,
     `Today: ${today}.`,
     "Times-per-week completion rule: each unique local day with a linked activity log counts as one completion.",
     "",
@@ -157,7 +186,7 @@ export function buildAssessmentWeeklyOverview(
     "",
   ];
 
-  for (const [weekIndex, label] of WEEK_LABELS.entries()) {
+  for (const [weekIndex, label] of weekLabels.entries()) {
     const weekStartKey = addDaysToDateKey(projection.weekStartKey, weekIndex * 7);
     lines.push(
       buildWeekSection({
@@ -171,7 +200,7 @@ export function buildAssessmentWeeklyOverview(
       }),
     );
 
-    if (weekIndex < WEEK_LABELS.length - 1) {
+    if (weekIndex < weekLabels.length - 1) {
       lines.push("");
     }
   }
