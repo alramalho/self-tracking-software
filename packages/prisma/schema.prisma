@@ -14,43 +14,43 @@ datasource db {
 }
 
 model User {
-  id                              String             @id @default(cuid())
-  name                            String?
-  profile                         String?
-  picture                         String?
-  age                             Int?
-  username                        String?            @unique
-  timezone                        String?            @default("Europe/Berlin")
-  clerkId                         String?            @unique
-  language                        String?            @default("English")
-  planType                        PlanType           @default(FREE)
-  lastActiveAt                    DateTime?
-  email                           String             @unique
-  createdAt                       DateTime           @default(now())
-  deletedAt                       DateTime?
-  isPwaInstalled                  Boolean            @default(false)
-  isPwaNotificationsEnabled       Boolean            @default(false)
-  lookingForAp                    Boolean?           @default(true)
+  id                        String    @id @default(cuid())
+  name                      String?
+  profile                   String?
+  picture                   String?
+  age                       Int?
+  username                  String?   @unique
+  timezone                  String?   @default("Europe/Berlin")
+  clerkId                   String?   @unique
+  language                  String?   @default("English")
+  planType                  PlanType  @default(FREE)
+  lastActiveAt              DateTime?
+  email                     String    @unique
+  createdAt                 DateTime  @default(now())
+  deletedAt                 DateTime?
+  isPwaInstalled            Boolean   @default(false)
+  isPwaNotificationsEnabled Boolean   @default(false)
+  lookingForAp              Boolean?  @default(true)
 
   // Web Push (PWA) fields
-  pwaSubscriptionEndpoint         String?
-  pwaSubscriptionKey              String?
-  pwaSubscriptionAuthToken        String?
+  pwaSubscriptionEndpoint  String?
+  pwaSubscriptionKey       String?
+  pwaSubscriptionAuthToken String?
 
   // iOS Native Push fields
-  isIosNotificationsEnabled       Boolean            @default(false)
-  iosDeviceToken                  String?
-  iosDeviceTokenUpdatedAt         DateTime?
+  isIosNotificationsEnabled Boolean   @default(false)
+  iosDeviceToken            String?
+  iosDeviceTokenUpdatedAt   DateTime?
 
   unactivatedEmailSentAt          DateTime?
-  themeBaseColor                  ThemeColor         @default(BLUE)
-  themeMode                       ThemeMode          @default(DARK)
-  recommendationsOutdated         Boolean            @default(false)
+  themeBaseColor                  ThemeColor @default(BLUE)
+  themeMode                       ThemeMode  @default(DARK)
+  recommendationsOutdated         Boolean    @default(false)
   recommendationsLastCalculatedAt DateTime?
   onboardingCompletedAt           DateTime?
-  onboardingDropNotifiedAt         DateTime?
-  onboardingProgress               Json?
-  onboardingProgressUpdatedAt      DateTime?
+  onboardingDropNotifiedAt        DateTime?
+  onboardingProgress              Json?
+  onboardingProgressUpdatedAt     DateTime?
   lastSeenTimelineAt              DateTime?
 
   // Daily checkin settings
@@ -58,36 +58,36 @@ model User {
   dailyCheckinTime DailyCheckinTime?
 
   // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-  preferredCoachingHour Int? @default(6) // Default to 6-8am
-  coachPersonality CoachPersonality @default(CHAMPION)
+  preferredCoachingHour      Int?             @default(6) // Default to 6-8am
+  coachPersonality           CoachPersonality @default(CHAMPION)
   coachOnboardingCompletedAt DateTime?
-  proactiveCoachingEnabled Boolean @default(true)
+  proactiveCoachingEnabled   Boolean          @default(true)
 
   // Stripe settings
-  stripeCustomerId         String?            @unique
+  stripeCustomerId         String? @unique
   stripeSubscriptionId     String?
   stripeSubscriptionStatus String?
 
   // Relations
-  activities              Activity[]
-  activityEntries         ActivityEntry[]
-  metrics                 Metric[]
-  metricEntries           MetricEntry[]
-  contextEvents           UserContextEvent[]
-  plans                   Plan[]
-  notifications           Notification[]
-  planGroupMemberships    PlanGroupMember[] @relation("PlanGroupMember")
-  planGroupInvitesSent    PlanGroupMember[] @relation("PlanGroupMemberInviter")
-  planInviteLinksCreated  PlanInviteLink[]
-  recommendations         Recommendation[]
-  reactionsSent           Reaction[]
-  commentsSent            Comment[]
-  coaches                 Coach[]
-  chats                   Chat[]
-  chatParticipations      ChatParticipant[]
-  feedback                Feedback[]
-  sentMessages            Message[]         @relation("SentMessages")
-  coachConcerns           CoachConcern[]
+  activities             Activity[]
+  activityEntries        ActivityEntry[]
+  metrics                Metric[]
+  metricEntries          MetricEntry[]
+  contextEvents          UserContextEvent[]
+  plans                  Plan[]
+  notifications          Notification[]
+  planGroupMemberships   PlanGroupMember[]  @relation("PlanGroupMember")
+  planGroupInvitesSent   PlanGroupMember[]  @relation("PlanGroupMemberInviter")
+  planInviteLinksCreated PlanInviteLink[]
+  recommendations        Recommendation[]
+  reactionsSent          Reaction[]
+  commentsSent           Comment[]
+  coaches                Coach[]
+  chats                  Chat[]
+  chatParticipations     ChatParticipant[]
+  feedback               Feedback[]
+  sentMessages           Message[]          @relation("SentMessages")
+  coachConcerns          CoachConcern[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -99,17 +99,22 @@ model User {
   referredById  String?
 
   // Achievement posts
-  achievementPosts AchievementPost[]
-  sharedActivitiesCreated     SharedActivity[]       @relation("SharedActivityCreatedBy")
-  sharedActivityEntries       SharedActivityEntry[]
-  sharedActivityInvitesSent   SharedActivityInvite[]  @relation("SharedActivityInviteInviter")
+  achievementPosts              AchievementPost[]
+  sharedActivitiesCreated       SharedActivity[]       @relation("SharedActivityCreatedBy")
+  sharedActivityEntries         SharedActivityEntry[]
+  sharedActivityInvitesSent     SharedActivityInvite[] @relation("SharedActivityInviteInviter")
   sharedActivityInvitesReceived SharedActivityInvite[] @relation("SharedActivityInviteInvitee")
 
   // Level celebration tracking
   celebratedLevelThreshold Int?
 
   // Personal API keys (MCP / external integrations)
-  apiKeys ApiKey[]
+  apiKeys                      ApiKey[]
+  healthIntegrations           HealthIntegration[]
+  healthDailyMetrics           HealthDailyMetric[]
+  healthWorkouts               HealthWorkout[]
+  healthSleepSamples           HealthSleepSample[]
+  healthWorkoutReconciliations HealthWorkoutReconciliation[]
 
   @@map("users")
   @@schema("public")
@@ -155,16 +160,16 @@ model Connection {
 }
 
 model Activity {
-  id              String              @id @default(cuid())
-  userId          String
-  title           String
-  measure         String
-  emoji           String
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @default(now()) @updatedAt
-  colorHex        String?
-  deletedAt       DateTime?
-  kind            String              @default("other")
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  measure   String
+  emoji     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  colorHex  String?
+  deletedAt DateTime?
+  kind      String    @default("other")
 
   // Relations
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -180,13 +185,13 @@ model Activity {
 }
 
 model ActivityEntry {
-  id          String    @id @default(cuid())
-  activityId  String?
-  userId      String
-  quantity    Int
-  datetime    DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now()) @updatedAt
+  id           String    @id @default(cuid())
+  activityId   String?
+  userId       String
+  quantity     Int
+  datetime     DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
   description  String?
   privateNotes String?
   deletedAt    DateTime?
@@ -214,13 +219,14 @@ model ActivityEntry {
   durationSeconds Int?
 
   // Relations
-  activity  Activity?  @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reactions      Reaction[]
-  comments       Comment[]
-  locationPoints LocationPoint[]
-  sharedActivityEntry SharedActivityEntry?
+  activity                       Activity?                     @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  user                           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions                      Reaction[]
+  comments                       Comment[]
+  locationPoints                 LocationPoint[]
+  sharedActivityEntry            SharedActivityEntry?
   sharedActivityInvitesInitiated SharedActivityInvite[]
+  healthWorkoutReconciliations   HealthWorkoutReconciliation[]
 
   @@index([userId, deletedAt])
   @@index([userId, datetime, deletedAt])
@@ -232,8 +238,154 @@ model ActivityEntry {
   @@schema("public")
 }
 
+model HealthIntegration {
+  id                  String    @id @default(cuid())
+  userId              String
+  provider            String    @default("apple_health")
+  deviceId            String
+  requestedDataTypes  String[]  @default([])
+  initialSyncStartAt  DateTime?
+  lastSyncStartedAt   DateTime?
+  lastSyncCompletedAt DateTime?
+  lastSyncErrorAt     DateTime?
+  lastSyncError       String?
+  disconnectedAt      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyMetrics HealthDailyMetric[]
+  workouts     HealthWorkout[]
+  sleepSamples HealthSleepSample[]
+
+  @@unique([userId, provider, deviceId])
+  @@index([userId, provider, disconnectedAt])
+  @@map("health_integrations")
+  @@schema("public")
+}
+
+model HealthDailyMetric {
+  id             String   @id @default(cuid())
+  userId         String
+  integrationId  String?
+  provider       String   @default("apple_health")
+  localDate      String   @db.VarChar(10)
+  metric         String
+  aggregation    String
+  value          Float
+  unit           String
+  sourceBundleId String   @default("__healthkit_merged__")
+  sourceName     String?
+  timezone       String?
+  sampleCount    Int?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integration HealthIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, provider, localDate, metric, aggregation, sourceBundleId])
+  @@index([userId, metric, localDate])
+  @@index([userId, localDate])
+  @@index([integrationId])
+  @@map("health_daily_metrics")
+  @@schema("public")
+}
+
+model HealthWorkout {
+  id                String    @id @default(cuid())
+  userId            String
+  integrationId     String?
+  provider          String    @default("apple_health")
+  externalId        String
+  activityTypeCode  Int
+  activityTypeName  String
+  startAt           DateTime
+  endAt             DateTime
+  durationSeconds   Float
+  activeEnergyKcal  Float?
+  distanceMeters    Float?
+  sourceBundleId    String
+  sourceName        String?
+  sourceProductType String?
+  deviceName        String?
+  deviceModel       String?
+  timezone          String?
+  metadata          Json?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integration    HealthIntegration?           @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  reconciliation HealthWorkoutReconciliation?
+
+  @@unique([userId, provider, externalId])
+  @@index([userId, startAt, deletedAt])
+  @@index([userId, activityTypeName, startAt])
+  @@index([integrationId])
+  @@map("health_workouts")
+  @@schema("public")
+}
+
+model HealthSleepSample {
+  id                String    @id @default(cuid())
+  userId            String
+  integrationId     String?
+  provider          String    @default("apple_health")
+  externalId        String
+  stageCode         Int
+  stage             String
+  startAt           DateTime
+  endAt             DateTime
+  sourceBundleId    String
+  sourceName        String?
+  sourceProductType String?
+  deviceName        String?
+  deviceModel       String?
+  timezone          String?
+  metadata          Json?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integration HealthIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, provider, externalId])
+  @@index([userId, startAt, deletedAt])
+  @@index([userId, stage, startAt])
+  @@index([integrationId])
+  @@map("health_sleep_samples")
+  @@schema("public")
+}
+
+model HealthWorkoutReconciliation {
+  id              String   @id @default(cuid())
+  userId          String
+  healthWorkoutId String   @unique
+  activityEntryId String?
+  action          String
+  matchConfidence Float?
+  matchReasons    Json?
+  createdActivity Boolean  @default(false)
+  confirmedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  healthWorkout HealthWorkout  @relation(fields: [healthWorkoutId], references: [id], onDelete: Cascade)
+  activityEntry ActivityEntry? @relation(fields: [activityEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, action])
+  @@index([activityEntryId])
+  @@map("health_workout_reconciliations")
+  @@schema("public")
+}
+
 model LocationPoint {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   activityEntryId String
   latitude        Float
   longitude       Float
@@ -241,9 +393,9 @@ model LocationPoint {
   accuracy        Float?
   speed           Float?
   timestamp       DateTime
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
 
-  activityEntry   ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
 
   @@index([activityEntryId, timestamp])
   @@index([timestamp])
@@ -260,9 +412,9 @@ model Reaction {
   createdAt         DateTime @default(now())
 
   // Relations
-  activityEntry  ActivityEntry?  @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  activityEntry   ActivityEntry?   @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
   achievementPost AchievementPost? @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([activityEntryId, userId, emoji])
   @@unique([achievementPostId, userId, emoji])
@@ -282,9 +434,9 @@ model Comment {
   deletedAt         DateTime?
 
   // Relations
-  activityEntry  ActivityEntry?  @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  activityEntry   ActivityEntry?   @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
   achievementPost AchievementPost? @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityEntryId, deletedAt])
   @@index([achievementPostId, deletedAt])
@@ -321,13 +473,13 @@ model AchievementPost {
 }
 
 model AchievementImage {
-  id                String          @id @default(cuid())
+  id                String    @id @default(cuid())
   achievementPostId String
   s3Path            String
   url               String?
   expiresAt         DateTime?
-  sortOrder         Int             @default(0) // To maintain image order
-  createdAt         DateTime        @default(now())
+  sortOrder         Int       @default(0) // To maintain image order
+  createdAt         DateTime  @default(now())
 
   // Relations
   achievementPost AchievementPost @relation(fields: [achievementPostId], references: [id], onDelete: Cascade)
@@ -337,10 +489,9 @@ model AchievementImage {
   @@schema("public")
 }
 
-
 model SharedActivity {
-  id          String                @id @default(cuid())
-  createdAt   DateTime              @default(now())
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
   createdById String
 
   createdBy User                  @relation("SharedActivityCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
@@ -432,17 +583,17 @@ model MetricEntry {
 }
 
 model UserContextEvent {
-  id              String                  @id @default(cuid())
+  id              String                 @id @default(cuid())
   userId          String
   title           String
   description     String?
   occurredAt      DateTime?
   endedAt         DateTime?
-  source          UserContextEventSource  @default(USER_REPORTED)
+  source          UserContextEventSource @default(USER_REPORTED)
   sourceMessageId String?
   confidence      Float?
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
   deletedAt       DateTime?
 
   // Relations
@@ -478,7 +629,7 @@ model Plan {
   internalNotes              String?
   estimatedWeeks             Int?
   suggestedByCoachAt         DateTime?
-  visibility                 Visibility         @default(PUBLIC)
+  visibility                 Visibility                   @default(PUBLIC)
   backgroundImageUrl         String?
   sortOrder                  Int?
 
@@ -495,9 +646,9 @@ model Plan {
   goalChanged Boolean @default(true)
 
   // Pause state
-  isPaused     Boolean  @default(false)
+  isPaused     Boolean @default(false)
   pauseReason  String?
-  pauseHistory Json?    // Array of {pausedAt: DateTime, resumedAt?: DateTime, reason?: String}
+  pauseHistory Json? // Array of {pausedAt: DateTime, resumedAt?: DateTime, reason?: String}
 
   // Who plans the content of this plan's weeks. EXTERNAL_AGENT means a
   // connected agent (over MCP) owns week content; the coach stays on
@@ -508,17 +659,17 @@ model Plan {
   externalAgentLastSyncAt DateTime?
 
   // Relations
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planGroup         PlanGroup?        @relation(fields: [planGroupId], references: [id])
-  coach             Coach?            @relation(fields: [coachId], references: [id], onDelete: SetNull)
-  sessions          PlanSession[]
-  activities        Activity[]
-  milestones        PlanMilestone[]
-  planGroupMembers  PlanGroupMember[]
-  messages          Message[]
-  achievementPosts  AchievementPost[]
-  curriculumFiles   PlanCurriculumFile[]
-  coachConcerns     CoachConcern[]
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planGroup        PlanGroup?           @relation(fields: [planGroupId], references: [id])
+  coach            Coach?               @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  sessions         PlanSession[]
+  activities       Activity[]
+  milestones       PlanMilestone[]
+  planGroupMembers PlanGroupMember[]
+  messages         Message[]
+  achievementPosts AchievementPost[]
+  curriculumFiles  PlanCurriculumFile[]
+  coachConcerns    CoachConcern[]
 
   @@index([userId, deletedAt])
   @@index([userId, deletedAt, archivedAt])
@@ -606,7 +757,7 @@ model PlanGroupMember {
   id          String          @id @default(cuid())
   planGroupId String
   userId      String
-  planId      String?         // their plan copy in this group
+  planId      String? // their plan copy in this group
   role        PlanGroupRole   @default(MEMBER)
   status      PlanGroupStatus @default(INVITED)
   invitedById String?
@@ -667,9 +818,9 @@ model Coach {
 model Chat {
   id          String   @id @default(cuid())
   type        ChatType @default(COACH)
-  userId      String?  // For COACH type chats
-  coachId     String?  // For COACH type chats
-  planGroupId String?  // For GROUP type chats
+  userId      String? // For COACH type chats
+  coachId     String? // For COACH type chats
+  planGroupId String? // For GROUP type chats
   title       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -720,9 +871,9 @@ model Message {
   createdAt DateTime      @default(now())
 
   // Relations
-  chat     Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  plan     Plan?             @relation(fields: [planId], references: [id], onDelete: Cascade)
-  sender   User?             @relation("SentMessages", fields: [senderId], references: [id], onDelete: SetNull)
+  chat     Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  plan     Plan?            @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender   User?            @relation("SentMessages", fields: [senderId], references: [id], onDelete: SetNull)
   emotions MessageEmotion[]
   feedback Feedback[]
 
@@ -1082,9 +1233,9 @@ enum AchievementType {
 }
 
 enum ChatType {
-  COACH  // User <-> Coach conversation
+  COACH // User <-> Coach conversation
   DIRECT // User <-> User conversation
-  GROUP  // Plan group chat
+  GROUP // Plan group chat
 
   @@schema("public")
 }

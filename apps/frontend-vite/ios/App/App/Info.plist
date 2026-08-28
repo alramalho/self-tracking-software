@@ -66,8 +66,10 @@
 		<string>Choose a photo to share with your activity progress.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>Save a photo to your library.</string>
-		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Your location is used to tag where your activities take place.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to tag where your activities take place.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Import your workouts, activity, sleep, and recovery data so tracking.so can show your progress and reconcile completed workouts.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<key>NSPrivacyPolicyURL</key>

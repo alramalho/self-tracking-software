@@ -8,6 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		1198288A2E98F4F100D86568 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119828892E98F4F100D86568 /* PrivacyInfo.xcprivacy */; };
+		A20000000000000000000001 /* AppleHealthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* AppleHealthPlugin.swift */; };
+		A20000000000000000000002 /* HealthKitReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* HealthKitReader.swift */; };
+		A20000000000000000000003 /* HealthKitTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* HealthKitTypes.swift */; };
+		A20000000000000000000004 /* TrackingBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* TrackingBridgeViewController.swift */; };
+		A20000000000000000000005 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* HealthKit.framework */; };
 		1F2654DF9BC27E4909C1BFEA /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7A06D64EB00E7F0144ED99 /* AuthManager.swift */; };
 		2A8B10DF9516B20DCE738983 /* TrackingWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB170709B62603C94092402 /* TrackingWatchApp.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
@@ -47,6 +52,11 @@
 
 /* Begin PBXFileReference section */
 		0ED913DC18D982DC51CB6B9C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000001 /* AppleHealthPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleHealthPlugin.swift; sourceTree = "<group>"; };
+		A10000000000000000000002 /* HealthKitReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitReader.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* HealthKitTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypes.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* TrackingBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingBridgeViewController.swift; sourceTree = "<group>"; };
+		A10000000000000000000005 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		119828892E98F4F100D86568 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = App/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1198288B2E9905D900D86568 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1F5025FC7BCD31DB60E16885 /* Models.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -90,6 +100,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A20000000000000000000005 /* HealthKit.framework in Frameworks */,
 				A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,6 +111,7 @@
 		27E2DDA53C4D2A4D1A88CE4A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000005 /* HealthKit.framework */,
 				AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */,
 				3059D0441C580755B682B79C /* watchOS */,
 			);
@@ -138,6 +150,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A30000000000000000000001 /* Health */,
+				A10000000000000000000004 /* TrackingBridgeViewController.swift */,
 				1198288B2E9905D900D86568 /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -151,6 +165,16 @@
 				601C6DD268862E95535B9857 /* WatchAuthPlugin.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000001 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000001 /* AppleHealthPlugin.swift */,
+				A10000000000000000000002 /* HealthKitReader.swift */,
+				A10000000000000000000003 /* HealthKitTypes.swift */,
+			);
+			path = Health;
 			sourceTree = "<group>";
 		};
 		7F8756D8B27F46E3366F6CEA /* Pods */ = {
@@ -327,6 +351,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A20000000000000000000001 /* AppleHealthPlugin.swift in Sources */,
+				A20000000000000000000002 /* HealthKitReader.swift in Sources */,
+				A20000000000000000000003 /* HealthKitTypes.swift in Sources */,
+				A20000000000000000000004 /* TrackingBridgeViewController.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				86EA604B06593B82C6956B7A /* WatchSessionManager.swift in Sources */,
 				7A7BFAECA0D3E0FF9050AA2F /* WatchAuthPlugin.swift in Sources */,
