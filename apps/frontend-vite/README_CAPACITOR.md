@@ -26,7 +26,7 @@ Vite bakes `import.meta.env.*` into the JS bundle **at build time** — changing
 
 | Mode | Command | Env file | Points at |
 |---|---|---|---|
-| prod (default for sim testing) | `vite build --mode proddb` | `.env.proddb` | `api.tracking.so` + production Clerk |
+| prod (device, simulator, and release testing) | `pnpm build:ios` | `.env.proddb` | `api.tracking.so` + production auth |
 | LAN dev | `vite build --mode cap` | `.env.cap` | your Mac's LAN IP (update it: `ipconfig getifaddr en0`) |
 
 LAN mode caveats: phone/sim must reach your Mac's IP; the **watch app ignores env** — its URLs are hardcoded in `TrackingWatch/APIService.swift` and `TrackingWatch/AuthManager.swift` (prod only); Apple Sign-In needs HTTPS, so LAN requires a tunnel.
@@ -42,7 +42,7 @@ WATCH=5E464650-9B61-4C37-BD5E-496D42D50B61
 xcrun simctl boot $PHONE; xcrun simctl boot $WATCH; open -a Simulator
 
 # 1. web build + copy into ios/App/App/public/
-pnpm exec vite build --mode proddb && npx cap sync ios
+pnpm build:ios && npx cap sync ios
 
 # 2. native build — WATCH FIRST, then App (the App scheme deliberately has no
 #    dependency on the watch target; same -derivedDataPath so the embed step finds it)
@@ -83,4 +83,4 @@ xcrun simctl ui $PHONE appearance dark                 # dark system appearance
 
 ## App Store
 
-Archive/upload needs real signing — do it in Xcode (`npx cap open ios`, then Product → Archive → Distribute). Pre-submission state and blockers: see `ios/WATCH_SETUP.md` and the repo-root `RELEASE_CHECKLIST.md` (watch AppIcon images still missing as of 2026-06).
+Archive/upload needs real signing — do it in Xcode (`npx cap open ios`, then Product → Archive → Distribute). Pre-submission state and blockers: see `ios/WATCH_SETUP.md`.
