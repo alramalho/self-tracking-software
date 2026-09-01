@@ -1,92 +1,96 @@
-# iOS Capacitor app + Apple Watch companion — setup status
+# iOS + Apple Watch release status
 
-## Goal
+Last audited: 2026-09-01
 
-Ship the tracking.so iOS app via Capacitor (reusing the existing web FE) **with a companion Apple Watch app** that can:
+## Current state
 
-1. List the user's activities (pulled from the existing backend at `https://api.tracking.so`).
-2. Log an activity entry from the watch.
-3. Inherit VPS-issued watch tokens from the iPhone via `WatchConnectivity`, with Sign in with Apple fallback directly on the watch.
+The repository contains a Capacitor iOS app and a native watchOS companion. The production API at `https://api.tracking.so` exposes the activity, watch-token refresh, and Apple Sign-In routes used by the Watch app.
 
----
+No current signed archive (`.xcarchive`), uploaded build, or TestFlight build was found. The existing local simulator output predates the latest Watch and Apple Health changes and is not release evidence.
 
-## Report — what's in place
+## Targets and release configuration
 
-### iPhone (Capacitor) app
-- Capacitor project at `apps/frontend-vite/ios/App/App.xcworkspace`.
-- App target bundle ID: `so.tracking.app`, team `7P4CMS849D`, iOS 14.0 deployment.
-- Entitlements: Sign in with Apple, App Group `group.so.tracking.app`, APNs env=development.
-- New Swift bridge files registered in the **App** target:
-  - `App/WatchSessionManager.swift` — activates `WCSession`, `transferUserInfo({access_token, refresh_token})`.
-  - `App/WatchAuthPlugin.swift` — Capacitor plugin `WatchAuth.sendTokens()` calling the session manager.
-- Frontend bridge wired in `src/contexts/auth/provider.tsx` — calls `WatchAuth.sendTokens()` after login/auth state change.
-- Backend endpoint `/auth/ios-apple-signin` verifies the Apple `identityToken`, links the Clerk user, and returns VPS-issued watch tokens.
+- Workspace: `apps/frontend-vite/ios/App/App.xcworkspace`
+- iOS app: `so.tracking.app`, iOS 15.0+
+- Watch app: `so.tracking.app.watchkitapp`, watchOS 10.0+
+- Apple team: `7P4CMS849D`
+- Marketing version: `1.0`
+- Build number: `20260901`
+- Shared archive scheme: `App` (builds the Watch target before the iOS app)
 
-### Apple Watch app
-- `TrackingWatch` watchOS 10.0 target, bundle `so.tracking.app.watchkitapp`, team `7P4CMS849D`.
-- Entitlements: Sign in with Apple, App Group `group.so.tracking.app`.
-- Source files registered in target:
-  - `TrackingWatchApp.swift` — root scene, routes to `ActivityListView` or `LoginView`.
-  - `AuthManager.swift` — tokens in Keychain; JWT expiry check; refresh via `/auth/watch-refresh`; Apple Sign-In → `/auth/ios-apple-signin`.
-  - `ConnectivityService.swift` — receives tokens from the iPhone via `WCSession`.
-  - `LoginView.swift` — `SignInWithAppleButton` fallback for watch-only login.
-  - `ActivityListView.swift` — list + sign-out button.
-  - `LogActivityView.swift` — quantity picker + log button, haptic feedback.
-  - `APIService.swift` — `GET /activities/` and `POST /activities/log-activity` (multipart) against `https://api.tracking.so`.
-  - `Models.swift` — `Activity`, `ActivityEntry`, token/Apple-signin DTOs.
-- `Assets.xcassets` (AccentColor + empty AppIcon set) registered as target resource.
-- `Info.plist` has `WKApplication=true`.
+## Implemented integration
 
-### Project wiring
-- **Embed Watch Content** copy-files phase on the App target (destination `$(CONTENTS_FOLDER_PATH)/Watch`, references `TrackingWatch.app`). No explicit target dependency — Xcode handles multi-platform SDK resolution implicitly; a direct dependency breaks CLI builds because it propagates the iOS SDK to the watch target.
-- Idempotent Ruby setup script at `ios/App/setup_watch_target.rb` (uses `xcodeproj` gem 1.27.0). Re-run if the project needs re-provisioning.
-- Backup of the pre-change `project.pbxproj` at `ios/App/project.pbxproj.backup`.
+### iPhone app
 
-### Verification done
-- `xcodebuild -list` → both schemes present (`App`, `TrackingWatch`).
-- `xcodebuild -target TrackingWatch -sdk watchsimulator … build` → **BUILD SUCCEEDED**.
-- `xcodebuild -target TrackingWatch -showBuildSettings` → `SDKROOT=watchos`, `PRODUCT_BUNDLE_IDENTIFIER=so.tracking.app.watchkitapp`, `WATCHOS_DEPLOYMENT_TARGET=10.0`, `CODE_SIGN_ENTITLEMENTS=TrackingWatch/TrackingWatch.entitlements`.
-- `npx cap sync ios` — copied `dist/` → `ios/App/App/public/`, registered plugins, updated Podfile with missing `CapacitorGeolocation` pod.
+- Activates `WatchConnectivity` and sends VPS-issued access and refresh tokens after login.
+- Keeps the latest authentication payload and retries it after session activation or Watch state changes.
+- Uses application context for latest-state delivery, user-info transfer for queued delivery, and an immediate message when the Watch is reachable.
+- Responds when the Watch explicitly requests the latest credentials.
+- Includes Sign in with Apple, App Groups, HealthKit, and the privacy manifest.
+- Hides Stripe purchase and subscription-management links in the native iOS shell. The first release is therefore an existing-subscriber companion rather than an in-app digital purchase flow.
 
-### Bug fixes while reading the watch code
-- `Models.swift:9` — `colorHex` made optional (DB field is nullable; was crashing decode).
-- `APIService.swift:66` — send `quantity` as `String(Int(quantity.rounded()))`; backend does `parseInt` and would silently truncate decimal strings.
+### Watch app
 
----
+- Receives authentication through all supported `WatchConnectivity` delivery paths and requests credentials on activation/reachability.
+- Can fall back to direct Sign in with Apple.
+- Refreshes the dedicated watch token through `/auth/watch-refresh`.
+- Fetches activities and logs activity entries against the production API.
+- Handles nullable activity colors and unauthorized responses without depending on localized error strings.
+- Has a referenced, fully opaque 1024×1024 App Store icon.
 
-## Missing TODOs
+### Backend
 
-### Blocking the first test run
-- [ ] **Re-point `xcode-select` at Xcode and install pods** (CLT-only shell right now):
-  ```bash
-  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-  cd apps/frontend-vite/ios/App && pod install
-  ```
-- [ ] **Pick env mode** (prod vs LAN) and rebuild the Vite bundle:
-  - Prod end-to-end (recommended first): set `VITE_BACKEND_URL=https://api.tracking.so` and `VITE_CLERK_PUBLISHABLE_KEY` to the production Clerk public key, then `pnpm build && npx cap sync ios`.
-  - LAN dev: requires editing `TrackingWatch/APIService.swift:5` and `TrackingWatch/AuthManager.swift:13-14` to LAN URLs **and** setting up an HTTPS tunnel (ngrok/Cloudflare) because Apple Sign-In requires HTTPS.
-- [ ] **Signing & capabilities on the Watch target** (Xcode → TrackingWatch → Signing & Capabilities):
-  - Team = `7P4CMS849D`, automatic signing.
-  - Re-add capabilities so provisioning profile picks them up: Sign in with Apple, App Groups (`group.so.tracking.app`).
-- [ ] **Apple Developer portal** — confirm the `so.tracking.app.watchkitapp` App ID exists with Sign-In-with-Apple enabled and is grouped under the primary `so.tracking.app` App ID. Xcode normally creates this automatically; only intervene if it errors.
+- `/auth/ios-apple-signin` accepts Apple identity tokens issued to either the iOS app bundle or the Watch app bundle.
+- `/auth/watch-refresh` exchanges the Watch refresh token for a new access token.
+- The production service has the Watch auth configuration and routes, but the broadened Watch Apple-token audience change in this branch still needs the normal production deployment.
 
-### Testing
-- [ ] Build App scheme on a paired iPhone+Watch destination (device or simulator pair).
-- [ ] Log in on iPhone, confirm watch auto-receives tokens and shows `ActivityListView`.
-- [ ] Tap activity → adjust quantity → Log → confirm entry in web app.
-- [ ] Sign out on watch → confirm `LoginView` shows → test watch-only Apple Sign-In path.
+## Validation completed
 
-### Known quirks / nice-to-haves
-- [ ] `WCSession.transferUserInfo` is queued, not instant. If token delivery is flaky, consider adding `updateApplicationContext` as a faster sibling path, or a manual "send tokens" button in iPhone settings.
-- [ ] Watch `AppIcon.appiconset` has no images yet (`Contents.json` only). Needed before App Store submission.
-- [ ] Move the hardcoded production backend URL in `TrackingWatch/AuthManager.swift` to the existing watch build configuration.
-- [ ] Watch APNs not wired. When/if we want push to the watch, use the APNs key at `apple-stuff/AuthKey_MG38JC6M33.p8` (Key ID `MG38JC6M33`) and register remote notifications on the watch side.
-- [ ] `quantity Int` mismatch: backend stores Int, watch UI supports 0.5 increments for hour/km/mile measures but we round to Int on send. Either drop the 0.5 step on watch UI, or change the DB column to Float (out of scope).
+- Frontend production build and TypeScript project build.
+- Backend TypeScript build.
+- Apple Health backend tests: 11 passing.
+- Swift parser validation for the Watch sources and iPhone Watch bridge.
+- Property-list, entitlements, asset catalog, and shared-scheme XML validation.
+- App icon dimensions and alpha-channel checks.
 
-### Rollback
-If the Xcode project ever gets into a bad state from the setup script:
-```bash
-cp apps/frontend-vite/ios/App/project.pbxproj.backup \
-   apps/frontend-vite/ios/App/App.xcodeproj/project.pbxproj
-```
-Then re-run `ruby apps/frontend-vite/ios/App/setup_watch_target.rb` — it's idempotent.
+A signed compile/archive cannot run on the current machine yet because only Apple Command Line Tools are installed. CocoaPods is also unavailable. `cap sync ios` copied the current production web bundle and updated Capacitor plugins, then stopped at the native dependency step for those reasons.
+
+## Remaining release blockers
+
+1. Install Xcode 26.3 and select it:
+
+   ```bash
+   sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+   ```
+
+2. Install CocoaPods and refresh native dependencies:
+
+   ```bash
+   cd apps/frontend-vite/ios/App
+   pod install
+   ```
+
+3. Sign into Xcode and App Store Connect with the team account, then confirm:
+
+   - Automatic signing succeeds for both bundle IDs.
+   - `so.tracking.app.watchkitapp` exists and has Sign in with Apple and App Groups enabled.
+   - App Group `group.so.tracking.app` is attached to both targets.
+   - The App Store Connect app record, agreements, tax, and banking state are ready.
+
+4. Deploy the backend Apple audience change through the normal production deployment.
+
+5. Run the paired-device acceptance test:
+
+   - Install the App scheme on a paired iPhone and Apple Watch.
+   - Sign in on iPhone and confirm activities appear on Watch without Watch-side login.
+   - Log an activity from Watch and verify it in the iOS/web app.
+   - Sign out and test direct Watch Sign in with Apple.
+   - Verify Apple Health permission, import, and duplicate handling on a physical iPhone.
+
+6. Archive the shared `App` scheme with the generic iOS device destination, validate, and upload to App Store Connect.
+
+7. Complete App Store metadata: privacy answers, age rating, support/privacy URLs, iPhone screenshots, Watch screenshots, review notes, and export-compliance answers. Release through TestFlight first, then submit the same validated build for review.
+
+## Product decision after the first release
+
+The native app currently avoids external purchase calls to action so it can operate as a free companion for existing subscribers. If Plus must be purchasable inside the iOS app, implement StoreKit/In-App Purchase and App Store receipt-to-entitlement synchronization before exposing an upgrade button in the native shell.

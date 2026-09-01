@@ -13,6 +13,7 @@ import { userService } from "../services/userService";
 
 const router: Router = createRouter();
 const googleClient = new OAuth2Client(process.env.GOOGLE_IOS_CLIENT_ID);
+const appleAppAudiences = ["so.tracking.app", "so.tracking.app.watchkitapp"];
 
 interface NativeAuthProfile {
   email: string;
@@ -99,7 +100,7 @@ router.post("/ios-apple-signin", async (req: Request, res: Response) => {
     }
 
     const appleResponse = await appleSignin.verifyIdToken(identityToken, {
-      audience: "so.tracking.app",
+      audience: appleAppAudiences,
       ignoreExpiration: false,
     });
     if (!appleResponse.sub || !appleResponse.email) {

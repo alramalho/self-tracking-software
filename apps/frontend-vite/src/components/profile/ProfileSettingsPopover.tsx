@@ -50,6 +50,7 @@ import {
 import ThemeModeSwitcher from "./ThemeModeSwitcher";
 import { useNavigate } from "@tanstack/react-router";
 import { useDemoAchievement } from "@/contexts/demo-achievement/useDemoAchievement";
+import { Capacitor } from "@capacitor/core";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -57,6 +58,9 @@ interface ProfileSettingsPopoverProps {
   initialActiveView?: ActiveView | null;
   redirectTo?: string | null;
 }
+
+const isNativeIOS =
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
 // Define possible views including sub-views
 export type ActiveView =
@@ -876,7 +880,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         )}
                       >
                         On {capitalize(userPlanType || "FREE")} Plan
-                        {isUserFree && (
+                        {isUserFree && !isNativeIOS && (
                           <SquareArrowUp
                             onClick={() => setShowUpgradePopover(true)}
                             size={20}
@@ -906,7 +910,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           />
                         </div>
                       </div>
-                      {userPlanType !== "FREE" && (
+                      {userPlanType !== "FREE" && !isNativeIOS && (
                         <Button
                           variant="ghost"
                           className="w-full flex items-center justify-start px-0 gap-2"

@@ -6,7 +6,7 @@ struct Activity: Codable, Identifiable {
     let title: String
     let emoji: String
     let measure: String
-    let colorHex: String
+    let colorHex: String?
     let createdAt: String
     let deletedAt: String?
 }

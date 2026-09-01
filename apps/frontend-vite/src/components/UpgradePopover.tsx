@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser } from "@/contexts/users";
+import { Capacitor } from "@capacitor/core";
 import { Check, CheckCircle } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import Lottie from "react-lottie";
-import starAnimation from "../../public/animations/star.lottie.json";
 
 interface UpgradePopoverProps {
   open: boolean;
@@ -132,6 +131,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   }, [refetchCurrentUser, open]);
   
   const isUserPremium = currentUser?.planType === 'PLUS';
+  const isNativeIOS =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
   const planFeatures = [
     "Unlimited plans & activities",
@@ -141,6 +142,61 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   ];
 
   const currentTier = pricingTiers.find((tier) => tier.id === selectedTier)!;
+
+  if (isNativeIOS) {
+    return (
+      <AppleLikePopover open={open} onClose={onClose}>
+        <div className="space-y-8 pt-6 pb-12">
+          <AICoachFeaturePreview
+            aiCoachPersonality={currentUser?.coachPersonality}
+            inlineDemos
+          />
+          <Card className="p-6 rounded-2xl">
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-lg font-semibold">tracking.so Plus</h3>
+                <p className="text-sm text-muted-foreground">
+                  Extra tools for consistency and coaching
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-0">
+                {planFeatures.map((feature) => (
+                  <div
+                    key={feature}
+                    className="flex items-center gap-2 py-1.5 text-sm"
+                  >
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-muted-foreground flex-1">
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {isUserPremium ? (
+                <Button
+                  className="w-full rounded-xl bg-green-500 hover:bg-emerald-700 text-lg py-6"
+                  onClick={onClose}
+                >
+                  <CheckCircle className="mr-2 w-4 h-4" />
+                  Continue
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Button className="w-full rounded-xl text-lg py-6" disabled>
+                    Plus requires an existing subscription
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Existing subscribers can sign in with the same account to
+                    use Plus features.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </AppleLikePopover>
+    );
+  }
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>

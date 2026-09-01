@@ -15,29 +15,43 @@ class ConnectivityService: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         if let error = error {
             print("[Watch] WCSession activation failed: \(error.localizedDescription)")
+            return
         }
+
+        handleAuthPayload(session.receivedApplicationContext)
+        requestLatestAuth(from: session)
     }
 
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        if userInfo["clear_tokens"] as? Bool == true {
-            Task { @MainActor in AuthManager.shared.clearTokens() }
-            return
-        }
-        guard let accessToken = userInfo["access_token"] as? String,
-              let refreshToken = userInfo["refresh_token"] as? String else { return }
+        handleAuthPayload(userInfo)
+    }
 
-        Task { @MainActor in
-            AuthManager.shared.setTokens(access: accessToken, refresh: refreshToken)
-        }
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        handleAuthPayload(applicationContext)
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        if message["clear_tokens"] as? Bool == true {
+        handleAuthPayload(message)
+    }
+
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        requestLatestAuth(from: session)
+    }
+
+    private func requestLatestAuth(from session: WCSession) {
+        guard session.activationState == .activated, session.isReachable else { return }
+        session.sendMessage(["request_auth": true], replyHandler: nil) { error in
+            print("[Watch] Failed to request auth from iPhone: \(error.localizedDescription)")
+        }
+    }
+
+    private func handleAuthPayload(_ payload: [String: Any]) {
+        if payload["clear_tokens"] as? Bool == true {
             Task { @MainActor in AuthManager.shared.clearTokens() }
             return
         }
-        guard let accessToken = message["access_token"] as? String,
-              let refreshToken = message["refresh_token"] as? String else { return }
+        guard let accessToken = payload["access_token"] as? String,
+              let refreshToken = payload["refresh_token"] as? String else { return }
 
         Task { @MainActor in
             AuthManager.shared.setTokens(access: accessToken, refresh: refreshToken)
