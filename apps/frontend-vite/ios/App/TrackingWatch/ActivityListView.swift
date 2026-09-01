@@ -56,7 +56,7 @@ struct ActivityListView: View {
         errorMessage = nil
         do {
             activities = try await APIService.shared.fetchActivities()
-        } catch let error as APIError where error.errorDescription == "Please sign in again" {
+        } catch APIError.unauthorized {
             authManager.clearTokens()
         } catch {
             errorMessage = error.localizedDescription

@@ -15,10 +15,21 @@ WATCH_BUNDLE_ID = 'so.tracking.app.watchkitapp'
 PARENT_BUNDLE_ID = 'so.tracking.app'
 TEAM_ID = '7P4CMS849D'
 WATCHOS_DEPLOYMENT_TARGET = '10.0'
+IOS_DEPLOYMENT_TARGET = '15.0'
 SWIFT_VERSION = '5.0'
+BUILD_NUMBER = '20260901'
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
 app_target = project.targets.find { |t| t.name == APP_TARGET_NAME } or abort("App target not found")
+
+project.build_configurations.each do |config|
+  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET
+end
+
+app_target.build_configurations.each do |config|
+  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET
+  config.build_settings['CURRENT_PROJECT_VERSION'] = BUILD_NUMBER
+end
 
 # --- 1) Add WatchSessionManager + WatchAuthPlugin to App target ---
 
@@ -106,7 +117,7 @@ watch_target.build_configurations.each do |config|
   s['CODE_SIGN_ENTITLEMENTS']           = "#{WATCH_TARGET_NAME}/TrackingWatch.entitlements"
   s['INFOPLIST_FILE']                   = "#{WATCH_TARGET_NAME}/Info.plist"
   s['GENERATE_INFOPLIST_FILE']          = 'NO'
-  s['CURRENT_PROJECT_VERSION']          = '1'
+  s['CURRENT_PROJECT_VERSION']          = BUILD_NUMBER
   s['MARKETING_VERSION']                = '1.0'
   s['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
   s['SUPPORTS_MACCATALYST']             = 'NO'
