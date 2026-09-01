@@ -10,6 +10,7 @@
     "gen": "tsr generate",
     "build": "tsr generate && tsc -b && vite build",
     "build:cap": "tsr generate && tsc -b && vite build --mode cap",
+    "build:ios": "tsr generate && tsc -b && vite build --mode proddb",
     "start": "vite preview",
     "serve": "vite preview --host --port 4173",
     "lint": "eslint .",
