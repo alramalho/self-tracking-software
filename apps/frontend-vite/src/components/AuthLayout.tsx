@@ -8,12 +8,8 @@ interface AuthLayoutProps {
 
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   return (
-    <div
-    // [background-image:linear-gradient(#eaedf1_1px,transparent_1px),linear-gradient(to_right,#eef0f3_1px,#f8fafc_1px)]
-    // [background-size:20px_20px] flex flex-col items-center justify-center p-4
-      className={`relative w-full mx-auto min-h-dvh bg-muted/80 flex justify-center items-center`}
-    >
-      <div className="w-full max-w-md space-y-8 flex flex-col items-center justify-center">
+    <div className="relative w-full min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/80">
+      <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center gap-6 px-4 py-6 sm:py-10">
         <div className="text-center">
           <div className="mx-auto w-fit -translate-x-[2px]">
             <Lottie
@@ -25,11 +21,11 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   preserveAspectRatio: "xMidYMid slice"
                 }
               }}
-              height={150}
-              width={150}
+              height={96}
+              width={96}
             />
           </div>
-          <h2 className="mt-10 text-3xl font-bold tracking-tight text-foreground">
+          <h2 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Welcome to your{" "}
             <span className="text-blue-500 break-normal text-nowrap">
               tracking.so<span className="text-blue-300">ftware</span>
@@ -39,7 +35,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             Track your journey with friends
           </p>
         </div>
-        <div className="mx-auto w-fit">{children}</div>
+        <div className="w-full">{children}</div>
       </div>
     </div>
   );

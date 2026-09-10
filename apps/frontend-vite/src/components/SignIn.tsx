@@ -17,6 +17,7 @@ export const SignIn: React.FC<SignInProps> = ({
   const { signInWithGoogle, signInWithApple } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEmailSignIn, setShowEmailSignIn] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
   const runNativeSignIn = async (provider: "google" | "apple") => {
@@ -35,7 +36,7 @@ export const SignIn: React.FC<SignInProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
-      {isNative && (
+      {isNative && !showEmailSignIn ? (
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
@@ -63,24 +64,47 @@ export const SignIn: React.FC<SignInProps> = ({
               </Button>
             )}
             {error && <p className="text-sm text-destructive text-center">{error}</p>}
+            <Button
+              type="button"
+              onClick={() => setShowEmailSignIn(true)}
+              disabled={isLoading}
+              className="w-full"
+              variant="ghost"
+            >
+              Sign in with email
+            </Button>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {isNative && (
+            <Button
+              type="button"
+              onClick={() => setShowEmailSignIn(false)}
+              variant="ghost"
+              className="w-full"
+            >
+              Back to sign-in options
+            </Button>
+          )}
+          <ClerkSignIn
+            routing="hash"
+            fallbackRedirectUrl={forceRedirectUrl}
+            appearance={
+              isNative
+                ? {
+                    elements: {
+                      rootBox: { width: "100%" },
+                      cardBox: { width: "100%", maxWidth: "100%" },
+                      socialButtons: { display: "none" },
+                      dividerRow: { display: "none" },
+                    },
+                  }
+                : undefined
+            }
+          />
+        </>
       )}
-
-      <ClerkSignIn
-        routing="hash"
-        fallbackRedirectUrl={forceRedirectUrl}
-        appearance={
-          isNative
-            ? {
-                elements: {
-                  socialButtonsBlockButton: "hidden",
-                  dividerRow: "hidden",
-                },
-              }
-            : undefined
-        }
-      />
     </div>
   );
 };
