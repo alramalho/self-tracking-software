@@ -652,7 +652,13 @@ export class AIService {
     }>;
     schema: z.ZodSchema<T>;
     systemPrompt?: string;
-    options?: { model: string; temperature: number };
+    // providerOptions is forwarded verbatim to the AI SDK, so callers can set
+    // provider-specific call settings such as openai.reasoningEffort.
+    options?: {
+      model: string;
+      temperature: number;
+      providerOptions?: Record<string, Record<string, unknown>>;
+    };
   }): Promise<T> {
     const {
       prompt,
@@ -671,6 +677,10 @@ export class AIService {
         schema,
         temperature: options.temperature,
       };
+
+      if (options.providerOptions) {
+        generateParams.providerOptions = options.providerOptions;
+      }
 
       if (systemPrompt) {
         generateParams.system = systemPrompt;
