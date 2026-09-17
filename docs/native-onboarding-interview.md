@@ -65,4 +65,6 @@ Repeat the native command with `E2E_THEME=LIGHT`. Do not edit app source during 
 
 ## Delivered release
 
-Local production build 35 is verified and hosted with these changes, including native dictation and the dedicated coach validation transition. The complete downloaded IPA matches its verified SHA-256 and contains ExpoAudio plus all UI markers. Installation metadata and exact reproduction commands are in [the frontend build guide](../apps/frontend-expo/BUILDING.md). No Expo cloud build quota, OTA publication or App Store submission was used.
+The interview gate now runs on `openai/gpt-5.6-luna` at `reasoningEffort: "xhigh"` in production as image `local/tracking-so-backend:onboarding-luna-20260917` (base `onboarding-parakeet-20260916b`). Commit `28dbc1f0` carries the change; prod deploys that image through the `hetzner/onboarding-luna-overlay.Dockerfile` overlay rather than a build from `main`, because the onboarding module tree is still untracked there.
+
+That was a **backend-only** change, so it needs no new IPA. The current published app remains local production build 49 (verified and hosted); its IPA and installer metadata, with exact reproduction commands, are in [the frontend build guide](../apps/frontend-expo/BUILDING.md). No Expo cloud build quota, OTA publication or App Store submission was used.
