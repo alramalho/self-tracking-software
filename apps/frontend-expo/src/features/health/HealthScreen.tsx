@@ -167,8 +167,8 @@ export function GarminContent() {
             </Copy>
             {latestSync.backfillStatus === "accepted" && (
               <Copy muted>
-                Garmin accepted the rolling 180-day historical request. Older
-                workouts will appear when Garmin delivers the backfill.
+                Garmin accepted the 30-day historical request. Workouts will
+                appear when Garmin delivers the backfill.
               </Copy>
             )}
             {latestSync.backfillStatus === "rate_limited" && (
@@ -185,9 +185,8 @@ export function GarminContent() {
             )}
             {latestSync.backfillStatus === "unavailable" && (
               <Copy muted>
-                Garmin rejected this historical window. The next sync will try
-                the next window; no historical import is running in the
-                background.
+                Garmin rejected this historical request. No older history is
+                being retried in the background.
               </Copy>
             )}
             {latestSync.backfillStatus === "missing_permission" && (
@@ -211,9 +210,8 @@ export function GarminContent() {
         )}
         {health.garmin.status?.backfillInProgress && (
           <Copy muted>
-            Historical Garmin import is queued, not running in the background.
-            Each sync tries another window until the last 180 days are
-            covered.
+            Garmin's one-time 30-day historical import is queued, not running
+            in the background. Each sync checks another supported data type.
           </Copy>
         )}
         {health.garmin.status?.lastSyncCompletedAt && (

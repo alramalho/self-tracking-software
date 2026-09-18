@@ -45,10 +45,11 @@ import type {
 
 const REQUEST_TOKEN_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_SYNC_DAYS = 14;
-const INITIAL_BACKFILL_DAYS = 180;
-const MAX_BACKFILL_DAYS = 180;
-// Garmin rejected the larger ranges in the live Lia probe. Keep each request
-// conservative and roll through multiple windows for the wider history.
+const INITIAL_BACKFILL_DAYS = 30;
+const MAX_BACKFILL_DAYS = 30;
+// Garmin's developer tools accepted the recent 30-day window but rejected
+// older July/August windows. The API does not expose an arbitrary historical
+// rolling window, so do not keep retrying dates Garmin cannot backfill.
 const MAX_BACKFILL_WINDOW_DAYS = 30;
 const MAX_PULL_WINDOW_SECONDS = 23 * 60 * 60;
 const SYNC_OVERLAP_SECONDS = 2 * 24 * 60 * 60;
@@ -727,10 +728,19 @@ export async function syncGarminForUser(
       hasHistoricalDataExport: permissions.includes("HISTORICAL_DATA_EXPORT"),
     });
 
+    const requestedBackfillDays = Math.min(
+      MAX_BACKFILL_DAYS,
+      Math.max(1, Math.floor(options.backfillDays ?? INITIAL_BACKFILL_DAYS)),
+    );
+    const requestedBackfillStart = Math.max(
+      0,
+      nowSeconds - requestedBackfillDays * 24 * 60 * 60,
+    );
     const hasPendingBackfill =
       stored.integration.backfillTargetStartSeconds != null &&
       stored.integration.backfillCursorSeconds != null &&
-      stored.integration.backfillSummaryType != null;
+      stored.integration.backfillSummaryType != null &&
+      stored.integration.backfillTargetStartSeconds >= requestedBackfillStart;
     const shouldProcessBackfill =
       options.requestBackfill !== false &&
       (hasPendingBackfill ||
@@ -746,14 +756,6 @@ export async function syncGarminForUser(
         });
       }
       if (counts.backfillStatus !== "missing_permission") {
-        const requestedBackfillDays = Math.min(
-          MAX_BACKFILL_DAYS,
-          Math.max(1, Math.floor(options.backfillDays ?? INITIAL_BACKFILL_DAYS)),
-        );
-        const requestedBackfillStart = Math.max(
-          0,
-          nowSeconds - requestedBackfillDays * 24 * 60 * 60,
-        );
         const backfillStart = hasPendingBackfill
           ? stored.integration.backfillTargetStartSeconds!
           : requestedBackfillStart;

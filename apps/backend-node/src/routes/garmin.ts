@@ -106,11 +106,11 @@ router.post(
         Number.isInteger(requestedDays) && requestedDays > 0
           ? Math.min(requestedDays, 7)
           : 14;
-      const requestedBackfillDays = Number(req.body?.backfillDays ?? 180);
+      const requestedBackfillDays = Number(req.body?.backfillDays ?? 30);
       const backfillDays =
         Number.isInteger(requestedBackfillDays) && requestedBackfillDays > 0
-          ? Math.min(requestedBackfillDays, 180)
-          : 180;
+          ? Math.min(requestedBackfillDays, 30)
+          : 30;
       const result = await syncGarminForUser(req.user!.id, {
         days,
         requestBackfill: true,

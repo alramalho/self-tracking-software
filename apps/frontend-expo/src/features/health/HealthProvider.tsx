@@ -283,7 +283,7 @@ export function HealthProvider({ children }: ChildrenProps) {
         "/health/garmin/sync",
         {
           days: 7,
-          backfillDays: 180,
+          backfillDays: 30,
           forceBackfill:
             (garminStatus.data?.importStats.workoutCount ?? 0) === 0,
         },
