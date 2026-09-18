@@ -51,6 +51,8 @@ const MAX_BACKFILL_DAYS = 30;
 // older July/August windows. The API does not expose an arbitrary historical
 // rolling window, so do not keep retrying dates Garmin cannot backfill.
 const MAX_BACKFILL_WINDOW_DAYS = 30;
+const BACKFILL_STALE_AFTER_DAYS =
+  MAX_BACKFILL_DAYS + MAX_BACKFILL_WINDOW_DAYS;
 const MAX_PULL_WINDOW_SECONDS = 23 * 60 * 60;
 const SYNC_OVERLAP_SECONDS = 2 * 24 * 60 * 60;
 const GARMIN_DEVICE_PREFIX = "garmin:";
@@ -267,7 +269,8 @@ export const getGarminStatus = async (
       integration?.backfillTargetStartSeconds != null &&
       integration.backfillCursorSeconds != null &&
       integration.backfillTargetStartSeconds >=
-        Math.floor(Date.now() / 1000) - MAX_BACKFILL_DAYS * 24 * 60 * 60,
+        Math.floor(Date.now() / 1000) -
+          BACKFILL_STALE_AFTER_DAYS * 24 * 60 * 60,
     lastSyncStartedAt: integration?.lastSyncStartedAt?.toISOString() ?? null,
     lastSyncCompletedAt:
       integration?.lastSyncCompletedAt?.toISOString() ?? null,
@@ -741,11 +744,13 @@ export async function syncGarminForUser(
       0,
       nowSeconds - requestedBackfillDays * 24 * 60 * 60,
     );
+    const staleBackfillCutoff =
+      nowSeconds - BACKFILL_STALE_AFTER_DAYS * 24 * 60 * 60;
     const hasPendingBackfill =
       stored.integration.backfillTargetStartSeconds != null &&
       stored.integration.backfillCursorSeconds != null &&
       stored.integration.backfillSummaryType != null &&
-      stored.integration.backfillTargetStartSeconds >= requestedBackfillStart;
+      stored.integration.backfillTargetStartSeconds >= staleBackfillCutoff;
     const shouldProcessBackfill =
       options.requestBackfill !== false &&
       (hasPendingBackfill ||
