@@ -813,16 +813,57 @@ export function VoiceLogDrawer({
               <Text style={{ color: c.text, fontWeight: "600" }}>
                 {preview.note.title}
               </Text>
-              <Text style={{ color: c.text, lineHeight: 22 }}>
-                {preview.note.text}
-              </Text>
+              {noteRepeatsTranscript ? (
+                <Text style={{ color: c.muted, lineHeight: 20, fontSize: 13 }}>
+                  The full note above will be kept privately for your coach.
+                </Text>
+              ) : (
+                <Text style={{ color: c.text, lineHeight: 22 }}>
+                  {preview.note.text}
+                </Text>
+              )}
               <Text style={{ color: c.muted, fontSize: 12 }}>
                 Private to you and your coach
               </Text>
             </View>
           </View>
 
-          {!!preview.unresolved.length && (
+          {!!coachContextItems.length && (
+            <View testID="voice-log-coach-context" style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Compass size={16} color={c.accent} />
+                <Text style={{ color: c.text, fontSize: 13, fontWeight: "700" }}>
+                  Plan direction
+                </Text>
+              </View>
+              <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+                Useful context for what your coach should keep in mind next.
+              </Text>
+              <View
+                style={{
+                  gap: 8,
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: c.accent + "0d",
+                  borderWidth: 1,
+                  borderColor: c.accent + "38",
+                }}
+              >
+                {coachContextItems.map((item) => (
+                  <View key={`${item.text}-${item.reason}`} style={{ gap: 3 }}>
+                    <Text style={{ color: c.text, fontSize: 14, lineHeight: 20 }}>
+                      “{item.text}”
+                    </Text>
+                    <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+                      Kept with your private note · not logged as a completed activity
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {!!notIncludedItems.length && (
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <AlertCircle size={16} color={c.muted} />
@@ -834,7 +875,7 @@ export function VoiceLogDrawer({
                 We left these out because they were not clear enough to log.
               </Copy>
               <View style={{ gap: 8 }}>
-                {preview.unresolved.map((item) => (
+                {notIncludedItems.map((item) => (
                   <View key={`${item.text}-${item.reason}`} style={{ gap: 2 }}>
                     <Text style={{ color: c.text, fontSize: 14 }}>“{item.text}”</Text>
                     <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
