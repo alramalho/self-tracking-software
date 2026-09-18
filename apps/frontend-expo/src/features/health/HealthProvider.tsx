@@ -11,7 +11,11 @@ import { useCurrentUser } from "@/data/queries";
 import { healthBridge } from "@/native/health/bridge";
 import type { AppleHealthStatus } from "@/native/health/types";
 import type { ChildrenProps } from "@/core/types";
-import type { GarminStatus, HealthContextValue } from "./types";
+import type {
+  GarminStatus,
+  GarminSyncResult,
+  HealthContextValue,
+} from "./types";
 import type { SleepScoresResponse } from "./sleep-types";
 import type { WorkoutReconciliationPreview } from "./workout-types";
 import { uploadHealth } from "./upload";
@@ -34,6 +38,8 @@ export function HealthProvider({ children }: ChildrenProps) {
     [error, setError] = useState<unknown>();
   const [garminBusy, setGarminBusy] = useState(false),
     [garminError, setGarminError] = useState<unknown>();
+  const [lastGarminSyncResult, setLastGarminSyncResult] =
+    useState<GarminSyncResult | null>(null);
   const alive = useRef(true),
     running = useRef(false),
     ready = useRef<Promise<void>>(Promise.resolve()),
@@ -273,7 +279,11 @@ export function HealthProvider({ children }: ChildrenProps) {
     setGarminBusy(true);
     setGarminError(undefined);
     try {
-      await api.post("/health/garmin/sync", { days: 7 });
+      const response = await api.post<{ result: GarminSyncResult }>(
+        "/health/garmin/sync",
+        { days: 7 },
+      );
+      setLastGarminSyncResult(response.data.result);
       await Promise.all([
         garminStatus.refetch(),
         client.invalidateQueries({ queryKey: ["health"] }),
@@ -291,6 +301,7 @@ export function HealthProvider({ children }: ChildrenProps) {
     setGarminError(undefined);
     try {
       await api.delete("/health/garmin", { params: { deleteData } });
+      setLastGarminSyncResult(null);
       await Promise.all([
         garminStatus.refetch(),
         client.invalidateQueries({ queryKey: ["health"] }),
@@ -324,6 +335,7 @@ export function HealthProvider({ children }: ChildrenProps) {
         disconnect,
         garmin: {
           status: garminStatus.data,
+          lastSyncResult: lastGarminSyncResult,
           busy: garminBusy,
           error: garminError ?? garminStatus.error,
           connect: connectGarmin,

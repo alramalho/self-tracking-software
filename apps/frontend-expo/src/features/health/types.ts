@@ -23,8 +23,20 @@ export interface GarminStatus {
   importStats: GarminImportStats;
 }
 
+export interface GarminSyncResult {
+  counts: {
+    dailyMetrics: number;
+    workouts: number;
+    sleepSamples: number;
+    summaryTypes: number;
+    backfillRequested: boolean;
+  };
+  lastSyncCompletedAt: string | null;
+}
+
 export interface GarminContextValue {
   status: GarminStatus | undefined;
+  lastSyncResult: GarminSyncResult | null;
   busy: boolean;
   error: unknown;
   connect: () => Promise<void>;

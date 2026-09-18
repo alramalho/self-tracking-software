@@ -115,6 +115,8 @@ export function GarminContent() {
   const c = useColors();
   const health = useHealth();
   const [disconnectingGarmin, setDisconnectingGarmin] = useState(false);
+  const importStats = health.garmin.status?.importStats;
+  const latestSync = health.garmin.lastSyncResult?.counts;
 
   return (
     <>
@@ -146,6 +148,32 @@ export function GarminContent() {
           >
             Sync Garmin now
           </Button>
+        )}
+        {latestSync && (
+          <View
+            accessibilityLabel="Latest Garmin sync results"
+            style={{
+              gap: 4,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: c.soft,
+            }}
+          >
+            <Text style={{ color: c.text, fontWeight: "600" }}>
+              Latest sync
+            </Text>
+            <Copy muted>
+              {`${latestSync.workouts} workouts · ${latestSync.sleepSamples} sleep samples · ${latestSync.dailyMetrics} daily metrics`}
+            </Copy>
+            {latestSync.workouts === 0 && (
+              <Copy muted>No Garmin workouts were found in this sync window.</Copy>
+            )}
+          </View>
+        )}
+        {!latestSync && importStats && importStats.dataEndDate && (
+          <Copy muted>
+            {`Imported history: ${importStats.workoutCount} workouts · ${importStats.sleepSampleCount} sleep samples · ${importStats.dailyMetricCount} daily metrics`}
+          </Copy>
         )}
         {health.garmin.status?.lastSyncCompletedAt && (
           <Copy muted>{`Last synced ${new Date(health.garmin.status.lastSyncCompletedAt).toLocaleString()}`}</Copy>
