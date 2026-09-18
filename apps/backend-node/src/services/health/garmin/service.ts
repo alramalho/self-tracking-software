@@ -203,6 +203,7 @@ export const getGarminStatus = async (
         connectedAt: true,
         initialSyncStartedAt: true,
         backfillRequestedAt: true,
+        backfillTargetStartSeconds: true,
         backfillCursorSeconds: true,
         lastSyncStartedAt: true,
         lastSyncCompletedAt: true,
@@ -262,7 +263,11 @@ export const getGarminStatus = async (
       integration?.initialSyncStartedAt?.toISOString() ?? null,
     backfillRequestedAt:
       integration?.backfillRequestedAt?.toISOString() ?? null,
-    backfillInProgress: integration?.backfillCursorSeconds != null,
+    backfillInProgress:
+      integration?.backfillTargetStartSeconds != null &&
+      integration.backfillCursorSeconds != null &&
+      integration.backfillTargetStartSeconds >=
+        Math.floor(Date.now() / 1000) - MAX_BACKFILL_DAYS * 24 * 60 * 60,
     lastSyncStartedAt: integration?.lastSyncStartedAt?.toISOString() ?? null,
     lastSyncCompletedAt:
       integration?.lastSyncCompletedAt?.toISOString() ?? null,
