@@ -165,14 +165,53 @@ export function GarminContent() {
             <Copy muted>
               {`${latestSync.workouts} workouts · ${latestSync.sleepSamples} sleep samples · ${latestSync.dailyMetrics} daily metrics`}
             </Copy>
+            {latestSync.backfillStatus === "accepted" && (
+              <Copy muted>
+                Garmin accepted the rolling 180-day historical request. Older
+                workouts will appear when Garmin delivers the backfill.
+              </Copy>
+            )}
+            {latestSync.backfillStatus === "rate_limited" && (
+              <Copy muted>
+                Garmin is rate-limiting historical backfill. Try again later;
+                the live sync still completed.
+              </Copy>
+            )}
+            {latestSync.backfillStatus === "already_requested" && (
+              <Copy muted>
+                Garmin already has this historical window queued. The next
+                sync will continue the rolling import.
+              </Copy>
+            )}
+            {latestSync.backfillStatus === "unavailable" && (
+              <Copy muted>
+                Garmin rejected this historical window; the rolling import
+                will continue with the next window on a later sync.
+              </Copy>
+            )}
+            {latestSync.backfillStatus === "missing_permission" && (
+              <Copy muted>
+                Garmin did not grant historical-data permission, so only new
+                workouts can sync.
+              </Copy>
+            )}
             {latestSync.workouts === 0 && (
-              <Copy muted>No Garmin workouts were found in this sync window.</Copy>
+              <Copy muted>
+                No workouts arrived in this sync window. The total below is
+                the imported history.
+              </Copy>
             )}
           </View>
         )}
-        {!latestSync && importStats && importStats.dataEndDate && (
+        {importStats && (
           <Copy muted>
-            {`Imported history: ${importStats.workoutCount} workouts · ${importStats.sleepSampleCount} sleep samples · ${importStats.dailyMetricCount} daily metrics`}
+            {`Imported history: ${importStats.workoutCount} workouts · ${importStats.sleepSampleCount} sleep samples · ${importStats.dailyMetricCount} daily metrics${importStats.dataStartDate && importStats.dataEndDate ? ` · ${importStats.dataStartDate}–${importStats.dataEndDate}` : ""}`}
+          </Copy>
+        )}
+        {health.garmin.status?.backfillInProgress && (
+          <Copy muted>
+            Rolling Garmin history import is in progress. Each sync advances
+            another window until the last 180 days are covered.
           </Copy>
         )}
         {health.garmin.status?.lastSyncCompletedAt && (

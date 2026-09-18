@@ -281,7 +281,12 @@ export function HealthProvider({ children }: ChildrenProps) {
     try {
       const response = await api.post<{ result: GarminSyncResult }>(
         "/health/garmin/sync",
-        { days: 7 },
+        {
+          days: 7,
+          backfillDays: 180,
+          forceBackfill:
+            (garminStatus.data?.importStats.workoutCount ?? 0) === 0,
+        },
       );
       setLastGarminSyncResult(response.data.result);
       await Promise.all([

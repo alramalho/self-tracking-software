@@ -404,6 +404,9 @@ model GarminIntegration {
   permissions              String[]  @default([])
   initialSyncStartedAt     DateTime?
   backfillRequestedAt      DateTime?
+  backfillTargetStartSeconds Int?
+  backfillCursorSeconds    Int?
+  backfillSummaryType      String?
   syncCursorSeconds        Int?
   lastSyncStartedAt        DateTime?
   lastSyncCompletedAt      DateTime?

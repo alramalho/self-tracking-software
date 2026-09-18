@@ -45,7 +45,11 @@ import type {
 
 const REQUEST_TOKEN_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_SYNC_DAYS = 14;
-const INITIAL_BACKFILL_DAYS = 30;
+const INITIAL_BACKFILL_DAYS = 180;
+const MAX_BACKFILL_DAYS = 180;
+// Garmin rejected the larger ranges in the live Lia probe. Keep each request
+// conservative and roll through multiple windows for the wider history.
+const MAX_BACKFILL_WINDOW_DAYS = 30;
 const MAX_PULL_WINDOW_SECONDS = 23 * 60 * 60;
 const SYNC_OVERLAP_SECONDS = 2 * 24 * 60 * 60;
 const GARMIN_DEVICE_PREFIX = "garmin:";
@@ -53,6 +57,7 @@ const SYNC_SUMMARY_TYPES = [
   "dailies",
   "sleeps",
   "activities",
+  "manuallyUpdatedActivities",
   "hrv",
   "allDayRespiration",
   "pulseox",
@@ -102,7 +107,7 @@ const isAllowedGarminCallbackUrl = (
 };
 
 const asJson = (
-  value: Record<string, unknown> | undefined,
+  value: unknown,
 ): Prisma.InputJsonValue | Prisma.JsonNullValueInput =>
   value == null
     ? Prisma.JsonNull
@@ -135,12 +140,45 @@ const isIgnorableApiError = (error: unknown): boolean =>
 // below from importing the data that is already available.
 const isIgnorableBackfillError = (error: unknown): boolean =>
   error instanceof GarminApiError &&
-  [400, 403, 404, 405, 429, 501].includes(error.status);
+  [400, 403, 404, 405, 409, 429, 501].includes(error.status);
+
+const backfillStatusForError = (
+  error: unknown,
+): "already_requested" | "rate_limited" | "unavailable" => {
+  if (error instanceof GarminApiError && error.status === 409) {
+    return "already_requested";
+  }
+  if (error instanceof GarminApiError && error.status === 429) {
+    return "rate_limited";
+  }
+  return "unavailable";
+};
 
 const garminDeviceId = (garminUserId: string): string =>
   `${GARMIN_DEVICE_PREFIX}${garminUserId}`;
 
 const requestedDataTypes = [...WEBHOOK_SUMMARY_TYPES];
+
+async function refreshGarminPermissions(
+  userId: string,
+  config: GarminOAuthConfig,
+  accessToken: GarminAccessToken,
+): Promise<string[]> {
+  try {
+    const permissions = await getGarminPermissions(config, accessToken);
+    await prisma.garminIntegration.updateMany({
+      where: { userId, disconnectedAt: null },
+      data: { permissions },
+    });
+    return permissions;
+  } catch (error) {
+    logger.warn("Garmin permissions refresh failed", {
+      userId,
+      status: error instanceof GarminApiError ? error.status : undefined,
+    });
+    return [];
+  }
+}
 
 export const getGarminStatus = async (
   userId: string,
@@ -163,6 +201,7 @@ export const getGarminStatus = async (
         connectedAt: true,
         initialSyncStartedAt: true,
         backfillRequestedAt: true,
+        backfillCursorSeconds: true,
         lastSyncStartedAt: true,
         lastSyncCompletedAt: true,
         lastSyncError: true,
@@ -221,6 +260,7 @@ export const getGarminStatus = async (
       integration?.initialSyncStartedAt?.toISOString() ?? null,
     backfillRequestedAt:
       integration?.backfillRequestedAt?.toISOString() ?? null,
+    backfillInProgress: integration?.backfillCursorSeconds != null,
     lastSyncStartedAt: integration?.lastSyncStartedAt?.toISOString() ?? null,
     lastSyncCompletedAt:
       integration?.lastSyncCompletedAt?.toISOString() ?? null,
@@ -365,14 +405,15 @@ export const finishGarminConnection = async (
     });
   });
 
-  void syncGarminForUser(request.userId, { requestBackfill: true }).catch(
-    (error) => {
-      logger.error("Initial Garmin Connect sync failed", {
-        userId: request.userId,
-        error,
-      });
-    },
-  );
+  void syncGarminForUser(request.userId, {
+    requestBackfill: true,
+    forceBackfill: true,
+  }).catch((error) => {
+    logger.error("Initial Garmin Connect sync failed", {
+      userId: request.userId,
+      error,
+    });
+  });
 };
 
 export const getGarminOAuthReturnUrl = async (
@@ -395,6 +436,9 @@ export const getStoredGarminAccessToken = async (
     garminUserId: string | null;
     syncCursorSeconds: number | null;
     backfillRequestedAt: Date | null;
+    backfillTargetStartSeconds: number | null;
+    backfillCursorSeconds: number | null;
+    backfillSummaryType: string | null;
     initialSyncStartedAt: Date | null;
     disconnectedAt: Date | null;
   };
@@ -410,6 +454,9 @@ export const getStoredGarminAccessToken = async (
       accessTokenSecretEncrypted: true,
       syncCursorSeconds: true,
       backfillRequestedAt: true,
+      backfillTargetStartSeconds: true,
+      backfillCursorSeconds: true,
+      backfillSummaryType: true,
       initialSyncStartedAt: true,
       disconnectedAt: true,
     },
@@ -432,6 +479,9 @@ export const getStoredGarminAccessToken = async (
       garminUserId: integration.garminUserId,
       syncCursorSeconds: integration.syncCursorSeconds,
       backfillRequestedAt: integration.backfillRequestedAt,
+      backfillTargetStartSeconds: integration.backfillTargetStartSeconds,
+      backfillCursorSeconds: integration.backfillCursorSeconds,
+      backfillSummaryType: integration.backfillSummaryType,
       initialSyncStartedAt: integration.initialSyncStartedAt,
       disconnectedAt: integration.disconnectedAt,
     },
@@ -603,6 +653,13 @@ export async function syncGarminForUser(
     sleepSamples: 0,
     summaryTypes: new Set<string>(),
     backfillRequested: false,
+    backfillStatus: "not_requested" as
+      | "not_requested"
+      | "accepted"
+      | "already_requested"
+      | "rate_limited"
+      | "unavailable"
+      | "missing_permission",
   };
   const activityIds = new Set<string>();
 
@@ -657,40 +714,122 @@ export async function syncGarminForUser(
       },
     });
 
-    if (
+    const permissions = await refreshGarminPermissions(
+      userId,
+      stored.config,
+      stored.accessToken,
+    );
+    logger.info("Garmin permissions refreshed", {
+      userId,
+      permissionCount: permissions.length,
+      hasActivityExport: permissions.includes("ACTIVITY_EXPORT"),
+      hasHistoricalDataExport: permissions.includes("HISTORICAL_DATA_EXPORT"),
+    });
+
+    const hasPendingBackfill =
+      stored.integration.backfillTargetStartSeconds != null &&
+      stored.integration.backfillCursorSeconds != null &&
+      stored.integration.backfillSummaryType != null;
+    const shouldProcessBackfill =
       options.requestBackfill !== false &&
-      !stored.integration.backfillRequestedAt
-    ) {
-      const backfillStart = Math.max(
-        0,
-        nowSeconds - INITIAL_BACKFILL_DAYS * 24 * 60 * 60,
-      );
-      for (const summaryType of BACKFILL_SUMMARY_TYPES) {
+      (hasPendingBackfill ||
+        options.forceBackfill ||
+        !stored.integration.backfillRequestedAt);
+
+    if (shouldProcessBackfill) {
+      if (!permissions.includes("HISTORICAL_DATA_EXPORT")) {
+        counts.backfillStatus = "missing_permission";
+        logger.warn("Garmin historical backfill skipped without permission", {
+          userId,
+          permissions,
+        });
+      }
+      if (counts.backfillStatus !== "missing_permission") {
+        const requestedBackfillDays = Math.min(
+          MAX_BACKFILL_DAYS,
+          Math.max(1, Math.floor(options.backfillDays ?? INITIAL_BACKFILL_DAYS)),
+        );
+        const requestedBackfillStart = Math.max(
+          0,
+          nowSeconds - requestedBackfillDays * 24 * 60 * 60,
+        );
+        const backfillStart = hasPendingBackfill
+          ? stored.integration.backfillTargetStartSeconds!
+          : requestedBackfillStart;
+        const windowStart = hasPendingBackfill
+          ? stored.integration.backfillCursorSeconds!
+          : requestedBackfillStart;
+        const summaryType = hasPendingBackfill
+          ? stored.integration.backfillSummaryType!
+          : BACKFILL_SUMMARY_TYPES[0];
+        const windowEnd = Math.min(
+          nowSeconds,
+          windowStart + MAX_BACKFILL_WINDOW_DAYS * 24 * 60 * 60,
+        );
+
+        if (!hasPendingBackfill) {
+          await prisma.garminIntegration.update({
+            where: { userId },
+            data: {
+              backfillTargetStartSeconds: backfillStart,
+              backfillCursorSeconds: windowStart,
+              backfillSummaryType: summaryType,
+            },
+          });
+        }
+
+        let advanceBackfill = false;
         try {
           await requestGarminBackfill(
             stored.config,
             stored.accessToken,
             summaryType,
-            backfillStart,
-            nowSeconds,
+            windowStart,
+            windowEnd,
           );
           counts.backfillRequested = true;
+          counts.backfillStatus = "accepted";
+          advanceBackfill = true;
         } catch (error) {
           if (!isIgnorableBackfillError(error)) throw error;
+          counts.backfillStatus = backfillStatusForError(error);
+          advanceBackfill =
+            !(error instanceof GarminApiError) || error.status !== 429;
           logger.warn("Garmin backfill endpoint rejected a summary type", {
             userId,
             summaryType,
+            windowStart,
+            windowEnd,
             status: error instanceof GarminApiError ? error.status : undefined,
           });
         }
+
+        if (advanceBackfill) {
+          const summaryIndex = BACKFILL_SUMMARY_TYPES.indexOf(
+            summaryType as (typeof BACKFILL_SUMMARY_TYPES)[number],
+          );
+          const nextSummaryType = BACKFILL_SUMMARY_TYPES[summaryIndex + 1];
+          const nextWindowStart = nextSummaryType ? windowStart : windowEnd;
+          const complete = !nextSummaryType && windowEnd >= nowSeconds;
+          await prisma.garminIntegration.update({
+            where: { userId },
+            data: complete
+              ? {
+                  backfillRequestedAt: now,
+                  backfillTargetStartSeconds: null,
+                  backfillCursorSeconds: null,
+                  backfillSummaryType: null,
+                }
+              : {
+                  backfillRequestedAt: now,
+                  backfillTargetStartSeconds: backfillStart,
+                  backfillCursorSeconds: nextWindowStart,
+                  backfillSummaryType:
+                    nextSummaryType ?? BACKFILL_SUMMARY_TYPES[0],
+                },
+          });
+        }
       }
-      // Do not retry the whole backfill batch on every manual sync. A Garmin
-      // 403/429 is expected for some projects, and the regular pull below is
-      // still useful for the data currently available to this user.
-      await prisma.garminIntegration.update({
-        where: { userId },
-        data: { backfillRequestedAt: now },
-      });
     }
 
     for (
@@ -785,6 +924,7 @@ export async function syncGarminForUser(
         sleepSamples: counts.sleepSamples,
         summaryTypes: counts.summaryTypes.size,
         backfillRequested: counts.backfillRequested,
+        backfillStatus: counts.backfillStatus,
       },
       lastSyncCompletedAt: completedAt.toISOString(),
     };
@@ -814,7 +954,10 @@ export async function syncAllGarminIntegrations(): Promise<void> {
   });
   for (const integration of integrations) {
     try {
-      await syncGarminForUser(integration.userId, { requestBackfill: false });
+      await syncGarminForUser(integration.userId, {
+        requestBackfill: true,
+        backfillDays: INITIAL_BACKFILL_DAYS,
+      });
     } catch (error) {
       logger.error("Scheduled Garmin Connect sync failed", {
         userId: integration.userId,

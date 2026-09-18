@@ -24,6 +24,7 @@ export interface GarminStatus {
   connectedAt: string | null;
   initialSyncStartedAt: string | null;
   backfillRequestedAt: string | null;
+  backfillInProgress: boolean;
   lastSyncStartedAt: string | null;
   lastSyncCompletedAt: string | null;
   lastSyncError: string | null;
@@ -50,6 +51,13 @@ export interface GarminSyncCounts {
   sleepSamples: number;
   summaryTypes: number;
   backfillRequested: boolean;
+  backfillStatus:
+    | "not_requested"
+    | "accepted"
+    | "already_requested"
+    | "rate_limited"
+    | "unavailable"
+    | "missing_permission";
 }
 
 export interface GarminSyncResult {
@@ -60,6 +68,8 @@ export interface GarminSyncResult {
 export interface GarminSyncOptions {
   days?: number;
   requestBackfill?: boolean;
+  forceBackfill?: boolean;
+  backfillDays?: number;
   now?: Date;
 }
 
