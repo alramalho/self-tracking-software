@@ -3,7 +3,10 @@ import { ActivityIndicator, Image, Pressable, View } from "react-native";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
+  Compass,
   Lightbulb,
   LockKeyhole,
   Mic,
@@ -11,6 +14,7 @@ import {
   Square,
   Sparkles,
 } from "lucide-react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useQueryClient } from "@tanstack/react-query";
 import { randomUUID } from "expo-crypto";
 import { router } from "expo-router";
@@ -70,6 +74,18 @@ function metricDetail(metric: VoiceLogPreview["metrics"][number]) {
     .join(" · ");
 }
 
+function normalizedText(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function isCoachContextItem(
+  item: VoiceLogPreview["unresolved"][number],
+) {
+  return /\b(?:next time|future|intention|goal|plan|coach|context|remember)\b/i.test(
+    `${item.text} ${item.reason}`,
+  );
+}
+
 function SelectionGroup({ children }: VoiceLogSelectionGroupProps) {
   const c = useColors();
   return (
@@ -107,6 +123,7 @@ export function VoiceLogDrawer({
     () => new Set(initialDraft?.selectedMetricKeys ?? []),
   );
   const [error, setError] = useState<unknown>();
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
   const [clientRequestId, setClientRequestId] = useState(
     () => initialDraft?.preview.clientRequestId ?? randomUUID(),
   );
@@ -125,6 +142,10 @@ export function VoiceLogDrawer({
     setPreview(initialDraft.preview);
     setPhase("review");
   }, [initialDraft, preview]);
+
+  useEffect(() => {
+    setTranscriptExpanded(false);
+  }, [preview?.clientRequestId, preview?.transcript]);
 
   useEffect(() => {
     if (phase !== "review" || !preview) return;
@@ -216,6 +237,13 @@ export function VoiceLogDrawer({
   const isCommitting = phase === "committing";
   const strategist = user.data?.coachPersonality === "STRATEGIST";
   const coachName = strategist ? "Oli" : "Helly";
+  const transcriptIsLong = !!preview && preview.transcript.length > 180;
+  const noteRepeatsTranscript =
+    !!preview && normalizedText(preview.note.text) === normalizedText(preview.transcript);
+  const coachContextItems =
+    preview?.unresolved.filter(isCoachContextItem) ?? [];
+  const notIncludedItems =
+    preview?.unresolved.filter((item) => !isCoachContextItem(item)) ?? [];
 
   function close() {
     if (busy || phase === "recording") return;
@@ -513,9 +541,75 @@ export function VoiceLogDrawer({
                 borderColor: c.inputBorder,
               }}
             >
-              <Text style={{ color: c.text, lineHeight: 23, fontSize: 16 }}>
-                “{preview.transcript}”
-              </Text>
+              <View style={{ position: "relative" }}>
+                <Text
+                  numberOfLines={
+                    transcriptExpanded || !transcriptIsLong ? undefined : 2
+                  }
+                  style={{ color: c.text, lineHeight: 23, fontSize: 16 }}
+                >
+                  “{preview.transcript}”
+                </Text>
+                {!transcriptExpanded && transcriptIsLong && (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 28,
+                    }}
+                  >
+                    <Svg width="100%" height="100%">
+                      <Defs>
+                        <LinearGradient
+                          id="voice-log-transcript-fade"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <Stop offset="0" stopColor={c.soft} stopOpacity={0} />
+                          <Stop offset="0.6" stopColor={c.soft} stopOpacity={0.8} />
+                          <Stop offset="1" stopColor={c.soft} stopOpacity={1} />
+                        </LinearGradient>
+                      </Defs>
+                      <Rect
+                        width="100%"
+                        height="100%"
+                        fill="url(#voice-log-transcript-fade)"
+                      />
+                    </Svg>
+                  </View>
+                )}
+              </View>
+              {transcriptIsLong && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    transcriptExpanded ? "Show less" : "Show more"
+                  }
+                  onPress={() => setTranscriptExpanded((value) => !value)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    alignSelf: "flex-start",
+                    gap: 4,
+                    paddingTop: 8,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: c.muted, fontSize: 12, fontWeight: "600" }}>
+                    {transcriptExpanded ? "Show less" : "Show more"}
+                  </Text>
+                  {transcriptExpanded ? (
+                    <ChevronUp size={14} color={c.muted} />
+                  ) : (
+                    <ChevronDown size={14} color={c.muted} />
+                  )}
+                </Pressable>
+              )}
             </View>
             <View
               style={{
