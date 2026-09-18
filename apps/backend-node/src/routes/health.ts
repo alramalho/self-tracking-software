@@ -16,7 +16,10 @@ import {
 } from "@/services/health/apple/syncService";
 import type { AppleHealthSyncBatch } from "@/services/health/apple/types";
 import { logger } from "@/utils/logger";
-import { getSleepScores, updateSleepScores } from "@/services/health/apple/sleep/service";
+import {
+  getSleepScores,
+  updateSleepScores,
+} from "@/services/health/apple/sleep/service";
 import { getAppleHealthDailyMetrics } from "@/services/health/apple/dailyMetrics";
 
 const router = Router();
@@ -27,9 +30,10 @@ router.get(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const requestedDays = Number(req.query.days ?? 14);
-      const days = Number.isInteger(requestedDays) && requestedDays > 0
-        ? Math.min(requestedDays, 60)
-        : 14;
+      const days =
+        Number.isInteger(requestedDays) && requestedDays > 0
+          ? Math.min(requestedDays, 60)
+          : 14;
       res.json(await getAppleHealthDailyMetrics(req.user!.id, days));
     } catch (error) {
       logger.error("Failed to read Apple Health daily metrics", {
@@ -41,10 +45,22 @@ router.get(
   },
 );
 
-router.get("/apple/sleep", requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try { res.json(await getSleepScores(req.user!.id)); }
-  catch { res.status(500).json({ error: "Could not load your sleep scores" }); }
-});
+router.get(
+  "/apple/sleep",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const requestedDays = Number(req.query.days ?? 180);
+      const days =
+        Number.isInteger(requestedDays) && requestedDays > 0
+          ? Math.min(requestedDays, 366)
+          : 180;
+      res.json(await getSleepScores(req.user!.id, days));
+    } catch {
+      res.status(500).json({ error: "Could not load your sleep scores" });
+    }
+  },
+);
 
 router.get(
   "/apple/status",

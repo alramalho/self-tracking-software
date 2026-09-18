@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/data/api";
 import { useHealth } from "./HealthProvider";
 import type { WorkoutReconciliationPreview } from "./workout-types";
-import type { SleepScoresResponse } from "./sleep-types";
+import {
+  SLEEP_RANGE_DAYS,
+  type SleepRange,
+  type SleepScoresResponse,
+} from "./sleep-types";
 import type { HealthDailyMetricsResponse } from "./daily-types";
 
 export function useHealthDailyMetrics() {
@@ -55,10 +59,11 @@ export function useHealthWorkouts() {
       ).data,
   });
 }
-export function useSleepScores() {
+export function useSleepScores(range: SleepRange = "7D") {
   const health = useHealth();
+  const days = SLEEP_RANGE_DAYS[range];
   return useQuery({
-    queryKey: ["health", "sleep"],
+    queryKey: ["health", "sleep", range],
     enabled:
       !!health.status?.connected ||
       !!health.status?.importStats.sleepSampleCount ||
@@ -66,8 +71,8 @@ export function useSleepScores() {
       !!health.garmin.status?.importStats.sleepSampleCount,
     queryFn: async () => {
       const results = await Promise.allSettled([
-        api.get<SleepScoresResponse>("/health/apple/sleep"),
-        api.get<SleepScoresResponse>("/health/garmin/sleep"),
+        api.get<SleepScoresResponse>(`/health/apple/sleep?days=${days}`),
+        api.get<SleepScoresResponse>(`/health/garmin/sleep?days=${days}`),
       ]);
       const scoresByDate = new Map<
         string,
@@ -98,5 +103,6 @@ export function useSleepScores() {
         ),
       } satisfies SleepScoresResponse;
     },
+    placeholderData: (previous) => previous,
   });
 }

@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 import type { SleepScore } from "../sleep-types";
 
+export interface SleepGridProps {
+  scores: SleepScore[];
+  days: number;
+  selectedDate?: string;
+  onSelect: (date: string) => void;
+}
+
 export interface NightStripProps {
   scores: SleepScore[];
   selectedDate?: string;

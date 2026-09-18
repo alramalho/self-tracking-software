@@ -53,16 +53,20 @@ export async function updateSleepScores(userId: string): Promise<void> {
 export async function getSleepScoresForProvider(
   userId: string,
   provider = "apple_health",
+  days = 180,
 ): Promise<SleepScoresResponse> {
+  const safeDays = Math.min(Math.max(Math.floor(days), 1), 366);
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - safeDays + 1);
   const rows = await prisma.healthDailyMetric.findMany({
     where: {
       userId,
       provider,
       metric: "sleep_score",
       sourceBundleId: SOURCE,
+      localDate: { gte: cutoff.toISOString().slice(0, 10) },
     },
     orderBy: { localDate: "desc" },
-    take: 60,
   });
   return {
     metric: "sleep_score",
@@ -75,6 +79,7 @@ export async function getSleepScoresForProvider(
 
 export async function getSleepScores(
   userId: string,
+  days = 180,
 ): Promise<SleepScoresResponse> {
-  return getSleepScoresForProvider(userId, "apple_health");
+  return getSleepScoresForProvider(userId, "apple_health", days);
 }

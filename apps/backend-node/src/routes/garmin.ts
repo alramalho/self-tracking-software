@@ -45,7 +45,8 @@ const frontendRedirect = (
   status: "connected" | "cancelled" | "error",
   returnUrl?: string | null,
 ): string => {
-  const frontendUrl = getGarminOAuthConfig()?.frontendUrl || "https://app.tracking.so";
+  const frontendUrl =
+    getGarminOAuthConfig()?.frontendUrl || "https://app.tracking.so";
   const redirect = new URL(
     isNativeReturnUrl(returnUrl ?? undefined) ? returnUrl! : "/",
     isNativeReturnUrl(returnUrl ?? undefined) ? undefined : frontendUrl,
@@ -148,7 +149,14 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      res.json(await getSleepScoresForProvider(req.user!.id, "garmin_connect"));
+      const requestedDays = Number(req.query.days ?? 180);
+      const days =
+        Number.isInteger(requestedDays) && requestedDays > 0
+          ? Math.min(requestedDays, 366)
+          : 180;
+      res.json(
+        await getSleepScoresForProvider(req.user!.id, "garmin_connect", days),
+      );
     } catch (error) {
       logger.error("Failed to read Garmin sleep scores", {
         userId: req.user!.id,

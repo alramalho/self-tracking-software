@@ -16,8 +16,14 @@ import {
 } from "@/components/ui";
 import { dateLabel } from "@/core/dates";
 import { useSleepScores } from "../queries";
+import {
+  SLEEP_RANGE_DAYS,
+  SLEEP_RANGES,
+  type SleepRange,
+} from "../sleep-types";
 import { SleepBreakdown } from "./Breakdown";
 import { NightStrip } from "./NightStrip";
+import { SleepGrid } from "./SleepGrid";
 import type { SleepNavigationRowProps } from "./types";
 
 // A navigation row keeps the card to one obvious next step instead of a stack
@@ -73,7 +79,8 @@ const statusNote = (selected: {
       : null;
 
 export function SleepMetric() {
-  const result = useSleepScores();
+  const [range, setRange] = useState<SleepRange>("7D");
+  const result = useSleepScores(range);
   const c = useColors();
   const [selectedDate, setSelectedDate] = useState<string>();
   const [help, setHelp] = useState(false);
@@ -151,11 +158,64 @@ export function SleepMetric() {
               {selected.awakenings} awakenings
             </Copy>
           </View>
-          <NightStrip
-            scores={scores}
-            selectedDate={selected.date}
-            onSelect={setSelectedDate}
-          />
+          <View
+            accessibilityRole="tablist"
+            style={{
+              flexDirection: "row",
+              gap: 6,
+              padding: 4,
+              borderRadius: 12,
+              backgroundColor: c.soft,
+            }}
+          >
+            {SLEEP_RANGES.map((value) => {
+              const active = value === range;
+              return (
+                <Pressable
+                  key={value}
+                  testID={`sleep-range-${value}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Show sleep for ${value}`}
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setRange(value)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 9,
+                    borderRadius: 9,
+                    borderWidth: active ? 1 : 0,
+                    borderColor: active ? c.border : "transparent",
+                    backgroundColor: active ? c.card : "transparent",
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: active ? c.text : c.muted,
+                      fontSize: 13,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {value}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {range === "7D" ? (
+            <NightStrip
+              scores={scores}
+              selectedDate={selected.date}
+              onSelect={setSelectedDate}
+            />
+          ) : (
+            <SleepGrid
+              scores={scores}
+              days={SLEEP_RANGE_DAYS[range]}
+              selectedDate={selected.date}
+              onSelect={setSelectedDate}
+            />
+          )}
           {!!note && selected.total != null && <Copy muted>{note}</Copy>}
           <SleepBreakdown score={selected} />
           <NavigationRow

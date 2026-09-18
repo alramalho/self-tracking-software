@@ -45,3 +45,13 @@ export interface SleepScoresResponse {
   algorithm: "tracking-sleep-v0";
   scores: SleepScore[];
 }
+
+export type SleepRange = "7D" | "1M" | "6M";
+
+export const SLEEP_RANGES = ["7D", "1M", "6M"] as const satisfies SleepRange[];
+
+export const SLEEP_RANGE_DAYS: Record<SleepRange, number> = {
+  "7D": 7,
+  "1M": 30,
+  "6M": 180,
+};

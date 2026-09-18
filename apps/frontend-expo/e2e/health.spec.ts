@@ -224,6 +224,14 @@ for (const theme of ["DARK", "LIGHT"]) {
       path: `test-results/health-sleep-${theme}.png`,
       fullPage: true,
     });
+    await sleep.getByTestId("sleep-range-1M").click();
+    await expect(sleep.getByTestId("sleep-grid")).toBeVisible();
+    await expect(
+      sleep.getByText(/Empty days mean no sleep data was recorded/),
+    ).toBeVisible();
+    await sleep.getByTestId("sleep-range-6M").click();
+    await expect(sleep.getByTestId("sleep-grid")).toBeVisible();
+    await sleep.getByTestId("sleep-range-7D").click();
     await sleep.getByRole("button", { name: "Sleep on 2026-09-14" }).click();
     await expect(sleep.getByText("Learning your pattern")).toBeVisible();
     await expect(sleep.getByText("out of 100")).toBeHidden();
