@@ -100,6 +100,22 @@ describe("onboarding interview gate", () => {
     value.checks[0].passed = false;
     expect(enforceInterviewResult(state, value).accepted).toBe(false);
   });
+  it("keeps optional context non-blocking and marks it for the improvement choice", () => {
+    const value = result();
+    value.accepted = false;
+    value.checks = [
+      {
+        label: "Why it matters",
+        passed: false,
+        required: false,
+        detail: "You can add the personal reason if you want.",
+      },
+    ];
+    const enforced = enforceInterviewResult(state, value);
+    expect(enforced.accepted).toBe(true);
+    expect(enforced.needsImprovement).toBe(true);
+    expect(enforced.summary).toBe("A regular reading habit.");
+  });
   it("replaces a success-worded summary when a failed check overrides acceptance", () => {
     const value = result();
     value.summary = "Thanks for clarifying: you can run 10 km comfortably.";
@@ -230,9 +246,9 @@ describe("onboarding interview gate", () => {
     expect(response.nextQuestion.title).toBe(
       "What weekly target should we set for your activity plan?",
     );
-    expect(response.nextQuestion.options.every((option) => !/minute/i.test(option))).toBe(
-      true,
-    );
+    expect(
+      response.nextQuestion.options.every((option) => !/minute/i.test(option)),
+    ).toBe(true);
   });
   it("does not preserve a model-supplied session duration in interview facts", async () => {
     generate.mockResolvedValue({

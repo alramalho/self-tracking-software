@@ -145,6 +145,7 @@ export function enforceInterviewResult(
   const blocking = failed.filter((check) => check.required !== false);
   const optional = failed.filter((check) => check.required === false);
   result.needsImprovement = optional.length > 0;
+  if (!blocking.length && optional.length) result.accepted = true;
   if (blocking.length && result.accepted) {
     // A failed check overrides the model's own acceptance. That reply was written as an
     // acceptance, so its summary announces what was understood ("thanks for clarifying") and

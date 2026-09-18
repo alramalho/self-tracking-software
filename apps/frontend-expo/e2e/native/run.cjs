@@ -41,6 +41,7 @@ const sdk =
   process.env.ANDROID_HOME || path.join(os.homedir(), "Library/Android/sdk");
 const adb = path.join(sdk, "platform-tools/adb");
 const maestro = process.env.MAESTRO_BIN || "maestro";
+const metroHost = process.env.E2E_METRO_HOST || "127.0.0.1";
 const apk =
   process.env.E2E_ANDROID_APK ||
   path.join(root, "android/app/build/outputs/apk/debug/app-debug.apk");
@@ -265,7 +266,7 @@ async function run() {
         "simctl",
         "openurl",
         device,
-        "trackingso://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8085",
+        `trackingso://expo-development-client/?url=${encodeURIComponent(`http://${metroHost}:8085`)}`,
       ],
       { env, stdio: "inherit" },
     );
