@@ -115,6 +115,14 @@ const isIgnorableApiError = (error: unknown): boolean =>
   error instanceof GarminApiError &&
   [400, 403, 404, 405, 501].includes(error.status);
 
+// Backfill is an optional accelerator for the initial import. Garmin may
+// reject it when a project lacks a backfill permission or throttle repeated
+// requests with 429, but neither case should prevent the normal pull endpoints
+// below from importing the data that is already available.
+const isIgnorableBackfillError = (error: unknown): boolean =>
+  error instanceof GarminApiError &&
+  [400, 403, 404, 405, 429, 501].includes(error.status);
+
 const garminDeviceId = (garminUserId: string): string =>
   `${GARMIN_DEVICE_PREFIX}${garminUserId}`;
 
@@ -306,6 +314,7 @@ export const finishGarminConnection = async (
         accessTokenHash: hashGarminAccessToken(accessToken.token),
         permissions,
         disconnectedAt: null,
+        backfillRequestedAt: null,
         initialSyncStartedAt: previous?.initialSyncStartedAt ?? now,
         lastSyncError: null,
         lastSyncErrorAt: null,
@@ -584,6 +593,28 @@ export async function syncGarminForUser(
   const activityIds = new Set<string>();
 
   try {
+    const healthIntegration = await prisma.healthIntegration.upsert({
+      where: {
+        userId_provider_deviceId: {
+          userId,
+          provider: GARMIN_HEALTH_PROVIDER,
+          deviceId: garminDeviceId(stored.integration.garminUserId),
+        },
+      },
+      create: {
+        userId,
+        provider: GARMIN_HEALTH_PROVIDER,
+        deviceId: garminDeviceId(stored.integration.garminUserId),
+        requestedDataTypes,
+        initialSyncStartAt: stored.integration.initialSyncStartedAt ?? now,
+        lastSyncStartedAt: now,
+      },
+      update: {
+        requestedDataTypes,
+        disconnectedAt: null,
+      },
+      select: { id: true },
+    });
     await prisma.garminIntegration.update({
       where: { userId },
       data: {
@@ -624,7 +655,7 @@ export async function syncGarminForUser(
           );
           counts.backfillRequested = true;
         } catch (error) {
-          if (!isIgnorableApiError(error)) throw error;
+          if (!isIgnorableBackfillError(error)) throw error;
           logger.warn("Garmin backfill endpoint rejected a summary type", {
             userId,
             summaryType,
@@ -632,12 +663,13 @@ export async function syncGarminForUser(
           });
         }
       }
-      if (counts.backfillRequested) {
-        await prisma.garminIntegration.update({
-          where: { userId },
-          data: { backfillRequestedAt: now },
-        });
-      }
+      // Do not retry the whole backfill batch on every manual sync. A Garmin
+      // 403/429 is expected for some projects, and the regular pull below is
+      // still useful for the data currently available to this user.
+      await prisma.garminIntegration.update({
+        where: { userId },
+        data: { backfillRequestedAt: now },
+      });
     }
 
     for (
@@ -661,7 +693,7 @@ export async function syncGarminForUser(
             },
           );
           const normalized = normalizeGarminSummary(summaryType, payload);
-          await ingestGarminData(userId, stored.integration.id, normalized);
+          await ingestGarminData(userId, healthIntegration.id, normalized);
           counts.dailyMetrics += normalized.dailyMetrics.length;
           counts.workouts += normalized.workouts.length;
           counts.sleepSamples += normalized.sleepSamples.length;
@@ -693,7 +725,7 @@ export async function syncGarminForUser(
         activityId,
       );
       if (!detail) continue;
-      await ingestGarminData(userId, stored.integration.id, detail);
+      await ingestGarminData(userId, healthIntegration.id, detail);
       counts.dailyMetrics += detail.dailyMetrics.length;
       counts.workouts += detail.workouts.length;
       counts.sleepSamples += detail.sleepSamples.length;
