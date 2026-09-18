@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=local/tracking-so-backend:goal-guidance-jev-final-20260918
+ARG BASE_IMAGE=local/tracking-so-backend:ai-sdk7-20260918
 FROM ${BASE_IMAGE}
 
 # Keep the active production image intact while allowing the sleep screen to

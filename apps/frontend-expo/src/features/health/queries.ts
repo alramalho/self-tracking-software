@@ -74,6 +74,9 @@ export function useSleepScores(range: SleepRange = "7D") {
         api.get<SleepScoresResponse>(`/health/apple/sleep?days=${days}`),
         api.get<SleepScoresResponse>(`/health/garmin/sleep?days=${days}`),
       ]);
+      // Keep the date union when someone has changed devices. Apple Health is
+      // the preferred source for an overlapping date because it is the local
+      // device's current record; Garmin-only history remains intact.
       const scoresByDate = new Map<
         string,
         SleepScoresResponse["scores"][number]

@@ -50,12 +50,16 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const requestedDays = Number(req.query.days ?? 180);
-      const days =
-        Number.isInteger(requestedDays) && requestedDays > 0
-          ? Math.min(requestedDays, 366)
-          : 180;
-      res.json(await getSleepScores(req.user!.id, days));
+      const requestedDays =
+        req.query.days == null ? undefined : Number(req.query.days);
+      if (
+        requestedDays != null &&
+        (!Number.isInteger(requestedDays) || requestedDays <= 0)
+      ) {
+        res.status(400).json({ error: "days must be a positive integer" });
+        return;
+      }
+      res.json(await getSleepScores(req.user!.id, requestedDays));
     } catch {
       res.status(500).json({ error: "Could not load your sleep scores" });
     }
