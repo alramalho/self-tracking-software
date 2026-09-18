@@ -111,6 +111,20 @@ const asJson = (
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message.slice(0, 500) : "Unknown sync error";
 
+const errorContext = (error: unknown): Record<string, unknown> => {
+  if (error instanceof GarminApiError) {
+    return {
+      errorName: error.name,
+      status: error.status,
+      ...(error.endpoint ? { endpoint: error.endpoint } : {}),
+    };
+  }
+  return {
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    errorMessage: errorMessage(error),
+  };
+};
+
 const isIgnorableApiError = (error: unknown): boolean =>
   error instanceof GarminApiError &&
   [400, 403, 404, 405, 501].includes(error.status);
@@ -592,6 +606,13 @@ export async function syncGarminForUser(
   };
   const activityIds = new Set<string>();
 
+  logger.info("Garmin Connect sync started", {
+    userId,
+    days,
+    requestBackfill: options.requestBackfill !== false,
+    hasSyncCursor: stored.integration.syncCursorSeconds != null,
+  });
+
   try {
     const healthIntegration = await prisma.healthIntegration.upsert({
       where: {
@@ -757,7 +778,7 @@ export async function syncGarminForUser(
         },
       }),
     ]);
-    return {
+    const result = {
       counts: {
         dailyMetrics: counts.dailyMetrics,
         workouts: counts.workouts,
@@ -767,8 +788,18 @@ export async function syncGarminForUser(
       },
       lastSyncCompletedAt: completedAt.toISOString(),
     };
+    logger.info("Garmin Connect sync completed", {
+      userId,
+      ...result.counts,
+      lastSyncCompletedAt: result.lastSyncCompletedAt,
+    });
+    return result;
   } catch (error) {
     await markGarminSyncFailed(userId, error).catch(() => undefined);
+    logger.error("Garmin Connect sync failed", {
+      userId,
+      ...errorContext(error),
+    });
     throw error;
   } finally {
     syncLocks.delete(userId);
