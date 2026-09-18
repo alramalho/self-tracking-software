@@ -8,6 +8,7 @@ import Animated, {
 import {
   Bell,
   ChevronLeft,
+  ChevronRight,
   CreditCard,
   GraduationCap,
   KeyRound,
@@ -37,6 +38,7 @@ import { ApiKeys } from "@/features/settings/ApiKeys";
 import { ColorPalettes, ThemeModes } from "@/features/settings/Appearance";
 import { SettingsCard } from "@/features/settings/SettingsCard";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
+import { useHealth } from "@/features/health/HealthProvider";
 import {
   AppleLogoIcon,
   GarminContent,
@@ -63,6 +65,7 @@ export default function Settings() {
     auth = useSession(),
     c = useColors(),
     reduced = useReducedMotion();
+  const health = useHealth();
   const [view, setView] = useState<SettingsView>("main");
   const [confirm, setConfirm] = useState<"logout" | null>(null);
   const [error, setError] = useState<unknown>();
@@ -296,6 +299,16 @@ export default function Settings() {
               color="#ef4444"
               title="Apple Health"
               description="Sync workouts and sleep from your Apple Watch."
+              trailing={
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {health.status?.connected && (
+                    <Text style={{ color: "#22c55e", fontSize: 12, fontWeight: "600" }}>
+                      Connected
+                    </Text>
+                  )}
+                  <ChevronRight size={20} color={c.muted} />
+                </View>
+              }
               onPress={() => setView("appleHealth")}
             />
             <SettingsCard
@@ -304,6 +317,16 @@ export default function Settings() {
               color="#0ea5e9"
               title="Garmin Connect"
               description="Sync Garmin workouts, sleep, and recovery data."
+              trailing={
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {health.garmin.status?.connected && (
+                    <Text style={{ color: "#22c55e", fontSize: 12, fontWeight: "600" }}>
+                      Connected
+                    </Text>
+                  )}
+                  <ChevronRight size={20} color={c.muted} />
+                </View>
+              }
               onPress={() => setView("garmin")}
             />
             <SettingsCard

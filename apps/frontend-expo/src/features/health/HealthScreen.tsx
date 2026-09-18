@@ -17,6 +17,7 @@ import { useHealth } from "./HealthProvider";
 import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
 import type { WorkoutReconciliationPreviewItem } from "./workout-types";
+import type { GarminSyncResult, HealthImportStats } from "./types";
 
 export type IntegrationIconProps = {
   size?: number;
@@ -53,6 +54,130 @@ function IntegrationIcon({ provider }: { provider: "apple" | "garmin" }) {
   }
 
   return <GarminLogoIcon size={30} />;
+}
+
+function importedHistoryDays(stats: HealthImportStats | undefined) {
+  if (!stats) return null;
+  if (stats.dataStartDate && stats.dataEndDate) {
+    const start = Date.parse(`${stats.dataStartDate}T00:00:00Z`);
+    const end = Date.parse(`${stats.dataEndDate}T00:00:00Z`);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      return Math.max(0, Math.floor((end - start) / 86400000) + 1);
+    }
+  }
+  return stats.workoutCount || stats.sleepSampleCount || stats.dailyMetricCount
+    ? stats.sleepDayCount || null
+    : 0;
+}
+
+function hasImportedData(stats: HealthImportStats | undefined) {
+  return Boolean(
+    stats &&
+      (stats.workoutCount || stats.sleepSampleCount || stats.dailyMetricCount),
+  );
+}
+
+function ImportedDataOverview({ stats }: { stats: HealthImportStats }) {
+  const c = useColors();
+  const days = importedHistoryDays(stats);
+  return (
+    <Panel style={{ gap: 12 }}>
+      <Heading>Imported data</Heading>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        {[
+          [stats.workoutCount, "Workouts"],
+          [stats.sleepDayCount, "Sleep nights"],
+          [stats.dailyMetricCount, "Health metrics"],
+        ].map(([value, label]) => (
+          <View
+            key={label}
+            style={{
+              flex: 1,
+              gap: 2,
+              padding: 10,
+              borderRadius: 12,
+              backgroundColor: c.soft,
+            }}
+          >
+            <Text style={{ color: c.text, fontSize: 20, fontWeight: "700" }}>
+              {value}
+            </Text>
+            <Text style={{ color: c.muted, fontSize: 12 }}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      {days != null && (
+        <Copy muted>
+          {days === 0
+            ? "No history imported yet."
+            : `${days} ${days === 1 ? "day" : "days"} of history imported`}
+        </Copy>
+      )}
+    </Panel>
+  );
+}
+
+function GarminSyncOutcome({
+  result,
+  stats,
+  backfillInProgress,
+}: {
+  result: GarminSyncResult | null;
+  stats: HealthImportStats | undefined;
+  backfillInProgress: boolean;
+}) {
+  const c = useColors();
+  if (!result) return null;
+
+  const status = result.counts.backfillStatus;
+  const error =
+    status === "unavailable" ||
+    status === "rate_limited" ||
+    status === "missing_permission";
+  const importing =
+    backfillInProgress || status === "accepted" || status === "already_requested";
+  const title = error
+    ? status === "rate_limited"
+      ? "Garmin is temporarily unavailable"
+      : status === "missing_permission"
+        ? "Garmin needs permission"
+        : "Garmin couldn't import older data"
+    : importing
+      ? "Garmin is importing older data"
+      : "Garmin sync complete";
+  const detail = error
+    ? status === "rate_limited"
+      ? "Try syncing again later."
+      : status === "missing_permission"
+        ? "Reconnect Garmin to allow older data to sync."
+        : "Your Garmin account is still connected."
+    : importing
+      ? "Older workouts will appear when Garmin sends them."
+      : "Your latest Garmin data is ready.";
+  const days = importedHistoryDays(stats);
+  const tone = error ? (c.dark ? "#f87171" : "#dc2626") : c.text;
+
+  return (
+    <View
+      accessibilityLabel="Garmin sync status"
+      style={{
+        gap: 4,
+        padding: 12,
+        borderRadius: 12,
+        backgroundColor: error ? (c.dark ? "#3b1717" : "#fee2e2") : c.soft,
+      }}
+    >
+      <Text style={{ color: tone, fontWeight: "700" }}>{title}</Text>
+      <Copy muted>{detail}</Copy>
+      {days != null && (
+        <Copy muted>
+          {days === 0
+            ? "No history imported yet."
+            : `${days} ${days === 1 ? "day" : "days"} of history imported`}
+        </Copy>
+      )}
+    </View>
+  );
 }
 
 function WorkoutRow({
@@ -112,11 +237,10 @@ function WorkoutRow({
 }
 
 export function GarminContent() {
-  const c = useColors();
   const health = useHealth();
   const [disconnectingGarmin, setDisconnectingGarmin] = useState(false);
   const importStats = health.garmin.status?.importStats;
-  const latestSync = health.garmin.lastSyncResult?.counts;
+  const latestSync = health.garmin.lastSyncResult;
 
   return (
     <>
@@ -125,7 +249,7 @@ export function GarminContent() {
           <IntegrationIcon provider="garmin" />
           <Heading>Garmin Connect</Heading>
           {health.garmin.status?.connected && (
-            <Text style={{ color: c.accent, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: "#22c55e", fontSize: 12, fontWeight: "600" }}>
               Connected
             </Text>
           )}
@@ -149,74 +273,13 @@ export function GarminContent() {
             Sync Garmin now
           </Button>
         )}
-        {latestSync && (
-          <View
-            accessibilityLabel="Latest Garmin sync results"
-            style={{
-              gap: 4,
-              padding: 12,
-              borderRadius: 12,
-              backgroundColor: c.soft,
-            }}
-          >
-            <Text style={{ color: c.text, fontWeight: "600" }}>
-              Latest sync
-            </Text>
-            <Copy muted>
-              {`${latestSync.workouts} workouts · ${latestSync.sleepSamples} sleep samples · ${latestSync.dailyMetrics} daily metrics`}
-            </Copy>
-            {latestSync.backfillStatus === "accepted" && (
-              <Copy muted>
-                Garmin accepted the 30-day historical request. Workouts will
-                appear when Garmin delivers the backfill.
-              </Copy>
-            )}
-            {latestSync.backfillStatus === "rate_limited" && (
-              <Copy muted>
-                Garmin is rate-limiting historical backfill. Try again later;
-                the live sync still completed.
-              </Copy>
-            )}
-            {latestSync.backfillStatus === "already_requested" && (
-              <Copy muted>
-                Garmin already has this historical window queued. The next
-                sync will continue the rolling import.
-              </Copy>
-            )}
-            {latestSync.backfillStatus === "unavailable" && (
-              <Copy muted>
-                Garmin rejected this historical request. No older history is
-                being retried in the background.
-              </Copy>
-            )}
-            {latestSync.backfillStatus === "missing_permission" && (
-              <Copy muted>
-                Garmin did not grant historical-data permission, so only new
-                workouts can sync.
-              </Copy>
-            )}
-            {latestSync.workouts === 0 && (
-              <Copy muted>
-                No workouts arrived in this sync window. The total below is
-                the imported history.
-              </Copy>
-            )}
-          </View>
-        )}
-        {importStats && (
-          <Copy muted>
-            {`Imported history: ${importStats.workoutCount} workouts · ${importStats.sleepSampleCount} sleep samples · ${importStats.dailyMetricCount} daily metrics${importStats.dataStartDate && importStats.dataEndDate ? ` · ${importStats.dataStartDate}–${importStats.dataEndDate}` : ""}`}
-          </Copy>
-        )}
-        {health.garmin.status?.backfillInProgress && (
-          <Copy muted>
-            Garmin's one-time 30-day historical import is queued, not running
-            in the background. Each sync checks another supported data type.
-          </Copy>
-        )}
-        {health.garmin.status?.lastSyncCompletedAt && (
-          <Copy muted>{`Last synced ${new Date(health.garmin.status.lastSyncCompletedAt).toLocaleString()}`}</Copy>
-        )}
+        <GarminSyncOutcome
+          result={latestSync}
+          stats={importStats}
+          backfillInProgress={!!health.garmin.status?.backfillInProgress}
+        />
+        {(health.garmin.status?.connected || hasImportedData(importStats)) &&
+          importStats && <ImportedDataOverview stats={importStats} />}
         <Status
           error={health.garmin.error}
           retry={() => void health.garmin.sync()}
@@ -367,6 +430,11 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <IntegrationIcon provider="apple" />
           <Heading>Apple Health</Heading>
+          {health.status?.connected && (
+            <Text style={{ color: "#22c55e", fontSize: 12, fontWeight: "600" }}>
+              Connected
+            </Text>
+          )}
         </View>
         <Copy muted>
           Workouts sync when you open the app and whenever iOS gives tracking.so
@@ -385,10 +453,9 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
             Sync now
           </Button>
         )}
-        {health.status?.lastSyncCompletedAt && (
-          <Copy
-            muted
-          >{`Last synced ${new Date(health.status.lastSyncCompletedAt).toLocaleString()}`}</Copy>
+        {(health.status?.connected || hasImportedData(health.status?.importStats)) &&
+          health.status?.importStats && (
+          <ImportedDataOverview stats={health.status.importStats} />
         )}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Lock size={16} color={c.muted} />

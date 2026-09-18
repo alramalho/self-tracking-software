@@ -1,6 +1,6 @@
 import type { AppleHealthStatus } from "@/native/health/types";
 
-export interface GarminImportStats {
+export interface HealthImportStats {
   workoutCount: number;
   sleepDayCount: number;
   sleepSampleCount: number;
@@ -9,6 +9,8 @@ export interface GarminImportStats {
   dataStartDate: string | null;
   dataEndDate: string | null;
 }
+
+export interface GarminImportStats extends HealthImportStats {}
 
 export interface GarminStatus {
   available: boolean;
