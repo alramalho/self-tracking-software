@@ -185,8 +185,9 @@ export function GarminContent() {
             )}
             {latestSync.backfillStatus === "unavailable" && (
               <Copy muted>
-                Garmin rejected this historical window; the rolling import
-                will continue with the next window on a later sync.
+                Garmin rejected this historical window. The next sync will try
+                the next window; no historical import is running in the
+                background.
               </Copy>
             )}
             {latestSync.backfillStatus === "missing_permission" && (
@@ -210,8 +211,9 @@ export function GarminContent() {
         )}
         {health.garmin.status?.backfillInProgress && (
           <Copy muted>
-            Rolling Garmin history import is in progress. Each sync advances
-            another window until the last 180 days are covered.
+            Historical Garmin import is queued, not running in the background.
+            Each sync tries another window until the last 180 days are
+            covered.
           </Copy>
         )}
         {health.garmin.status?.lastSyncCompletedAt && (

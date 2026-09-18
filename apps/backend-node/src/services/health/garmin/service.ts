@@ -122,6 +122,7 @@ const errorContext = (error: unknown): Record<string, unknown> => {
       errorName: error.name,
       status: error.status,
       ...(error.endpoint ? { endpoint: error.endpoint } : {}),
+      ...(error.responseBody ? { providerMessage: error.responseBody } : {}),
     };
   }
   return {
@@ -801,6 +802,10 @@ export async function syncGarminForUser(
             windowStart,
             windowEnd,
             status: error instanceof GarminApiError ? error.status : undefined,
+            providerMessage:
+              error instanceof GarminApiError
+                ? error.responseBody
+                : undefined,
           });
         }
 

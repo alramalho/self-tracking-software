@@ -32,8 +32,9 @@ export class GarminConfigurationError extends Error {
 export class GarminApiError extends Error {
   readonly status: number;
   readonly endpoint?: string;
+  readonly responseBody?: string;
 
-  constructor(status: number, endpoint?: string) {
+  constructor(status: number, endpoint?: string, responseBody?: string) {
     super(
       `Garmin Connect request failed with status ${status}${
         endpoint ? ` for ${endpoint}` : ""
@@ -42,6 +43,7 @@ export class GarminApiError extends Error {
     this.name = "GarminApiError";
     this.status = status;
     this.endpoint = endpoint;
+    this.responseBody = responseBody?.trim().slice(0, 500) || undefined;
   }
 }
 
@@ -177,7 +179,7 @@ const requestForm = async (
   });
 
   const body = await response.text();
-  if (!response.ok) throw new GarminApiError(response.status, url);
+  if (!response.ok) throw new GarminApiError(response.status, url, body);
   return body;
 };
 
@@ -219,7 +221,9 @@ export async function requestGarminApiText(
     },
   });
   const body = await response.text();
-  if (!response.ok) throw new GarminApiError(response.status, url.pathname);
+  if (!response.ok) {
+    throw new GarminApiError(response.status, url.pathname, body);
+  }
   return body;
 }
 
