@@ -42,6 +42,12 @@ export function healthFixture(
     resolved.clear();
     return { ok: true };
   }
+  if (path === "/health/garmin/status")
+    return {
+      connected: false,
+      lastSyncCompletedAt: null,
+      importStats: { workoutCount: 0, sleepSampleCount: 0, dailyMetricCount: 0 },
+    };
   if (!path.startsWith("/health/apple")) return undefined;
   if (path.endsWith("/status"))
     return {

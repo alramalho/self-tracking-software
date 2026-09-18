@@ -72,7 +72,7 @@ test("voice note survives navigation into plan onboarding and can be dismissed f
 
   await expect(page).toHaveURL(/\/create-plan/);
   await expect(page.getByTestId("onboarding-answer")).toHaveValue(
-    /I want to play every day/,
+    /I want to play guitar more regularly/,
   );
   await page.goto("/");
   await expect(page.getByTestId("pending-voice-note-card")).toBeVisible();

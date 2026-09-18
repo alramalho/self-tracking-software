@@ -1,4 +1,8 @@
 import { interview } from "../services/follow-through/onboarding/interview/service";
+import {
+  goalGuidance,
+  goalGuidanceRequestSchema,
+} from "../services/follow-through/onboarding/interview/guidance";
 import { getInterviewContext } from "../services/follow-through/onboarding/interview/context";
 import { interviewRequestSchema } from "../services/follow-through/onboarding/interview/schema";
 import { FollowThroughInputError } from "../services/follow-through/errors";
@@ -78,12 +82,31 @@ router.post(
 );
 router.post(
   "/onboarding/interview",
-  rateLimit({ windowMs: 60000, max: 20, keyGenerator: (req) => (req as AuthenticatedRequest).user!.id, standardHeaders: true, legacyHeaders: false }),
+  rateLimit({
+    windowMs: 60000,
+    max: 20,
+    keyGenerator: (req) => (req as AuthenticatedRequest).user!.id,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
   handle(async (req, res) => {
     const input = interviewRequestSchema.parse(req.body);
     const context = await getInterviewContext(req.user!.id, input.state);
     return res.json(await interview(input, context));
   }),
+);
+router.post(
+  "/onboarding/goal-guidance",
+  rateLimit({
+    windowMs: 60000,
+    max: 60,
+    keyGenerator: (req) => (req as AuthenticatedRequest).user!.id,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+  handle(async (req, res) =>
+    res.json(await goalGuidance(goalGuidanceRequestSchema.parse(req.body))),
+  ),
 );
 router.put(
   "/onboarding/draft",

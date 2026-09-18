@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Activity, ChevronRight, HeartPulse, Lock } from "lucide-react-native";
+import { SymbolView } from "expo-symbols";
+import { Activity, ChevronRight, Lock } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import {
   Button,
@@ -16,6 +17,43 @@ import { useHealth } from "./HealthProvider";
 import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
 import type { WorkoutReconciliationPreviewItem } from "./workout-types";
+
+export type IntegrationIconProps = {
+  size?: number;
+  color?: string;
+};
+
+export function AppleLogoIcon({ size = 30 }: IntegrationIconProps) {
+  const c = useColors();
+  return (
+    <SymbolView
+      accessibilityLabel="Apple logo"
+      name="apple.logo"
+      size={size}
+      tintColor={c.text}
+      type="monochrome"
+    />
+  );
+}
+
+export function GarminLogoIcon({ size = 30 }: IntegrationIconProps) {
+  return (
+    <Image
+      accessibilityLabel="Garmin logo"
+      source={require("../../../assets/integrations/garmin-mark.png")}
+      resizeMode="contain"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+function IntegrationIcon({ provider }: { provider: "apple" | "garmin" }) {
+  if (provider === "apple") {
+    return <AppleLogoIcon size={30} />;
+  }
+
+  return <GarminLogoIcon size={30} />;
+}
 
 function WorkoutRow({
   item,
@@ -82,7 +120,7 @@ export function GarminContent() {
     <>
       <Panel style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Activity size={22} color={c.text} />
+          <IntegrationIcon provider="garmin" />
           <Heading>Garmin Connect</Heading>
           {health.garmin.status?.connected && (
             <Text style={{ color: c.accent, fontSize: 12, fontWeight: "600" }}>
@@ -260,7 +298,7 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
 
       <Panel style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <HeartPulse size={22} color={c.text} />
+          <IntegrationIcon provider="apple" />
           <Heading>Apple Health</Heading>
         </View>
         <Copy muted>

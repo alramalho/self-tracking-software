@@ -83,7 +83,7 @@ for (const theme of ["DARK", "LIGHT"]) {
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
   await expect(drawer.getByText("What I heard", { exact: true })).toBeVisible();
-  await expect(drawer.getByText("I went for a run and it felt good.", { exact: false }).first()).toBeVisible();
+  await expect(drawer.getByText("Today was a bit of a mess, honestly.", { exact: false }).first()).toBeVisible();
   await expect(drawer.getByText("Not included", { exact: true })).toBeVisible();
   await expect(drawer.getByTestId("voice-log-already-logged")).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Running already logged", exact: true })).toBeDisabled();
@@ -103,6 +103,42 @@ for (const theme of ["DARK", "LIGHT"]) {
   expect(preview.body.uploadedAudio.size).toBeGreaterThan(0);
   expect(commit.body.activities).toHaveLength(0);
   expect(commit.body.metrics).toHaveLength(1);
-  expect(commit.body.note.text).toContain("six days a week");
+  expect(commit.body.note.text).toContain("I want to play guitar more regularly");
   });
 }
+
+test("start over clears the current voice note and keeps recording ready", async ({
+  page,
+  request,
+}) => {
+  await installFakeMicrophone(page);
+  await request.post(`${API}/__reset`);
+  await request.patch(`${API}/users/user`, {
+    headers: { Authorization: "Bearer local-e2e-token" },
+    data: { themeMode: "LIGHT", themeBaseColor: "BLUE" },
+  });
+  await page.goto("/add");
+
+  await page.getByTestId("log-voice-note-card").click();
+  const drawer = page.getByTestId("voice-log-drawer");
+  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+
+  await drawer.getByRole("button", { name: "Start over", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-ready")).toBeVisible();
+  await expect(drawer.getByTestId("voice-log-review")).toHaveCount(0);
+  await expect(
+    drawer.getByRole("button", { name: "Start recording", exact: true }),
+  ).toBeVisible();
+
+  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-recording")).toBeVisible();
+  await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+
+  const state = await (await request.get(`${API}/__state`)).json();
+  expect(
+    state.requests.filter((entry: any) => entry.path === "/voice-logs/preview"),
+  ).toHaveLength(2);
+});

@@ -252,7 +252,13 @@ export function Copy({
     </Text>
   );
 }
-export function Status({ loading, error, retry, empty }: StatusProps) {
+export function Status({
+  loading,
+  error,
+  retry,
+  secondaryAction,
+  empty,
+}: StatusProps) {
   const c = useColors();
   if (loading)
     return (
@@ -271,6 +277,23 @@ export function Status({ loading, error, retry, empty }: StatusProps) {
           <Button secondary onPress={retry}>
             Try again
           </Button>
+        )}
+        {secondaryAction && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={secondaryAction.label}
+            onPress={secondaryAction.onPress}
+            style={({ pressed }) => ({
+              alignItems: "center",
+              minHeight: 44,
+              justifyContent: "center",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: c.muted, fontWeight: "600" }}>
+              {secondaryAction.label}
+            </Text>
+          </Pressable>
         )}
       </Panel>
     );

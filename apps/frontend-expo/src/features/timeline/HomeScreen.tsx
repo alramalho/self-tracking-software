@@ -333,7 +333,7 @@ export default function HomeScreen() {
         />
         <ProfileGlow />
         {checkin && <MetricLogger onClose={() => setCheckin(false)} />}
-        {voiceLogOpen && pendingVoice.draft && (
+        {voiceLogOpen && (
           <VoiceLogDrawer
             initialDraft={pendingVoice.draft}
             onPendingChange={pendingVoice.sync}

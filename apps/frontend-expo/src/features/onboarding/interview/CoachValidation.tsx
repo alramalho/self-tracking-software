@@ -20,6 +20,8 @@ export function CoachValidation(props: CoachValidationProps) {
   const colors = useColors();
   const coach = props.strategist ? "Oli" : "Helly";
   const detail = extractedDetail(props);
+  const needsImprovement =
+    !!props.result?.accepted && !!props.result.needsImprovement;
 
   return (
     <View
@@ -28,7 +30,9 @@ export function CoachValidation(props: CoachValidationProps) {
         props.loading || !props.result
           ? `${coach} is checking your answer`
           : props.result.accepted
-            ? `${coach} found a clear direction`
+            ? needsImprovement
+              ? `${coach} has one useful suggestion`
+              : `${coach} found a clear direction`
             : `${coach} needs one more detail`
       }
       testID="coach-validation"
@@ -68,7 +72,9 @@ export function CoachValidation(props: CoachValidationProps) {
             }}
           >
             {props.result.accepted
-              ? `${coach} found a clear direction`
+              ? needsImprovement
+                ? `${coach} has one useful suggestion`
+                : `${coach} found a clear direction`
               : `${coach} needs one more detail`}
           </Text>
           <WordReveal onComplete={props.onMessageRendered}>

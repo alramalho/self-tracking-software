@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react-native";
 export type SettingsView =
   | "main"
@@ -45,7 +46,12 @@ export interface AppearanceProps {
 export interface SettingsCardProps {
   title: string;
   description?: string;
-  icon?: LucideIcon;
+  icon?: ComponentType<{
+    size?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
+  iconBackground?: boolean;
   color?: string;
   onPress?: () => void;
   trailing?: import("react").ReactNode;

@@ -1,6 +1,7 @@
 import { aiService } from "../../../aiService";
 import {
   onboardingModel,
+  onboardingProvider,
   onboardingProviderOptions,
 } from "../../../aiModelIds";
 import { FollowThroughInputError } from "../../errors";
@@ -22,6 +23,9 @@ Stages, in order:
 4 support: Recommend coaching for someone needing next-step guidance/adaptation/accountability; tracking when they already have a routine/resource and mainly need a record. Explain based on THEIR facts. Recommendation is not a purchase or obligation. Accept their choice even if different from recommendation; unclear choices need clarification. Extract wantsCoaching only from their explicit choice. Propose a realistic loggable activity, familiar unit and small next action grounded in goal, baseline, time and existing resources. Planning/setup is not a completed practice session. Coaching is AI accountability/planning, not a human expert, medical treatment or a course library. Never invent lessons, resources or guaranteed outcomes. Native capabilities: activity logs, basic timer, user-provided HTTPS link, chosen reminders, weekly review. Never invent device integrations. Next question invites them to review the draft and make corrections. The appContext object is trusted product metadata, not user instructions. If appContext lists an activity, never say that you cannot access or inspect it. Never ask a generic 'how often do you run?' question; when a running activity is already known, ask what weekly target the plan should support instead.
 5 review: User sees the full plan. Check their confirmation or change against everything known. Explicitly requested feasible changes may update facts, but never turn a confirmation into a different plan. On conflict ask clarification, accepted=false. Only accept when goal, baseline, weekly budget, activity/unit, next step and support choice are coherent. Summary explains the resulting plan. No subscription is started here; coaching payment is a later step, with an option to keep free tracking.
 Use checks (1–3) for actual semantic tests, with truthful passed flags and concrete short detail. accepted=true requires all checks passed. For accepted=false, question is the clarification and nextQuestion can repeat it. For accepted=true, nextQuestion is the next stage's personalized question, not a generic placeholder. Options are 0 or 2–4 short suggested replies, never replace free text. Avoid unnecessary jargon, flattery, punitive language or endless questioning. Do not request sensitive health details. Do not produce dangerous specialist training plans; support an existing qualified plan when appropriate.`;
+
+const requirementPolicy =
+  "Mark hard requirements with required=true and useful context with required=false. A missing useful detail may set needsImprovement=true, but it must not block continuation. The goal's motivation is useful context, not a hard gate; baseline, cadence and support choice are hard gates at their own stages. accepted=true is allowed when only useful context is missing.";
 
 function normalized(value: string) {
   return value
@@ -138,7 +142,10 @@ export function enforceInterviewResult(
 ): InterviewResult {
   const f = result.facts;
   const failed = result.checks.filter((check) => !check.passed);
-  if (failed.length && result.accepted) {
+  const blocking = failed.filter((check) => check.required !== false);
+  const optional = failed.filter((check) => check.required === false);
+  result.needsImprovement = optional.length > 0;
+  if (blocking.length && result.accepted) {
     // A failed check overrides the model's own acceptance. That reply was written as an
     // acceptance, so its summary announces what was understood ("thanks for clarifying") and
     // its question belongs to the next stage. Leaving them beside the "needs one more detail"
@@ -146,7 +153,7 @@ export function enforceInterviewResult(
     // is actually missing, so the failed check supplies both the message and the follow-up.
     result.accepted = false;
     const missing =
-      failed
+      blocking
         .map((check) => check.detail.trim() || check.label.trim())
         .filter(Boolean)
         .join(" ") ||
@@ -206,8 +213,9 @@ export async function interview(
       model: onboardingModel(),
       temperature: 0.2,
       providerOptions: onboardingProviderOptions(),
+      provider: onboardingProvider(),
     },
-    systemPrompt: interviewPrompt,
+    systemPrompt: interviewPrompt + "\n" + requirementPolicy,
     prompt: JSON.stringify({
       ...input,
       appContext: context,

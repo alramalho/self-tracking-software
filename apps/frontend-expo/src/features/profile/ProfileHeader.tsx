@@ -31,10 +31,6 @@ import type { ProfileDetail, ProfileHeaderProps } from "./types";
 import { useRankings } from "./rankings";
 import { ProgressSheet } from "./ProgressSheet";
 
-function activityCount(person: { _count?: { activityEntries?: number } }) {
-  return person._count?.activityEntries ?? 0;
-}
-
 export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
   const c = useColors();
   const stats = profileStats(user);
@@ -322,14 +318,11 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
       >
         {friends.length ? (
           friends.map((person) => {
-            const totalActivities = activityCount(person);
-            const activityLabel = `${totalActivities} ${totalActivities === 1 ? "activity" : "activities"}`;
-
             return (
               <Pressable
                 key={person.id}
                 accessibilityRole="button"
-                accessibilityLabel={`View ${person.name ?? person.username ?? "friend"}. ${activityLabel}`}
+                accessibilityLabel={`View ${person.name ?? person.username ?? "friend"}`}
                 onPress={() => {
                   setDetail(undefined);
                   router.push(`/profile/${person.username}`);
@@ -380,9 +373,6 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
                     </Text>
                   ) : null}
                 </View>
-                <Text style={{ color: c.muted, fontSize: 12 }}>
-                  {activityLabel}
-                </Text>
               </Pressable>
             );
           })

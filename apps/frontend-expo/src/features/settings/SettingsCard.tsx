@@ -7,6 +7,7 @@ export function SettingsCard({
   title,
   description,
   icon: Icon,
+  iconBackground = true,
   color,
   onPress,
   trailing,
@@ -34,9 +35,13 @@ export function SettingsCard({
       {Icon && (
         <View
           style={{
-            padding: 10,
-            borderRadius: 12,
-            backgroundColor: (color || c.accent) + "22",
+            ...(iconBackground
+              ? {
+                  padding: 10,
+                  borderRadius: 12,
+                  backgroundColor: (color || c.accent) + "22",
+                }
+              : {}),
           }}
         >
           <Icon size={24} color={color || c.accent} />

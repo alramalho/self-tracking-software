@@ -39,6 +39,9 @@ export function startInterview(draft: OnboardingDraft): InterviewState {
       activityTitle: draft.activityTitle,
       measure: draft.measure,
       frequency: draft.frequency,
+      // Production still validates this legacy field. It is only the default timer
+      // setting and is not presented as a duration prescription during onboarding.
+      durationMinutes: draft.durationMinutes,
       commitment: draft.commitment,
       weekdays: draft.weekdays,
       time: draft.time,
@@ -61,6 +64,9 @@ export function applyFacts(
     baseline,
     recommendation,
     recommendationReason,
+    // Older production servers still accept this transport field. It must not
+    // leak into the operational draft as a plan-level fact.
+    durationMinutes: _legacyDurationMinutes,
     ...fields
   } = facts;
   return {

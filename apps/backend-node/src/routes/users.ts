@@ -151,8 +151,6 @@ const basicUserInclude = {
               activityEntries: {
                 where: {
                   deletedAt: null,
-                  activityId: { not: null },
-                  activity: { deletedAt: null },
                 },
               },
             },
@@ -175,8 +173,6 @@ const basicUserInclude = {
               activityEntries: {
                 where: {
                   deletedAt: null,
-                  activityId: { not: null },
-                  activity: { deletedAt: null },
                 },
               },
             },

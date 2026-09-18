@@ -32,3 +32,20 @@ appId: so.tracking.app
 - assertVisible: Heart-rate zones
 - assertVisible: Private Watch data
 - takeScreenshot: workout-vitals-details
+- scrollUntilVisible:
+    element: Create share card
+    direction: DOWN
+    centerElement: true
+- tapOn: Create share card
+- extendedWaitUntil:
+    visible: Preview
+    timeout: 10000
+- tapOn: "6 stats"
+- tapOn: Landscape
+- assertVisible: Distance
+- assertVisible: Time
+- assertVisible: Pace
+- assertVisible: Elevation
+- assertVisible: Avg heart rate
+- assertVisible: Calories
+- takeScreenshot: workout-share-landscape

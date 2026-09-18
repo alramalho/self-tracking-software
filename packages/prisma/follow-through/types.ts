@@ -75,6 +75,8 @@ export interface InterviewCheck {
   label: string;
   passed: boolean;
   detail: string;
+  /** Hard requirements block the gate; useful-to-have checks do not. */
+  required?: boolean;
 }
 export interface InterviewTurn {
   stage: InterviewStage;
@@ -92,6 +94,11 @@ export interface InterviewFacts {
   activityTitle: string;
   measure: string;
   frequency: number;
+  /**
+   * Legacy transport field kept optional while older clients roll forward. The
+   * clarification contract does not use or prescribe it.
+   */
+  durationMinutes?: number;
   commitment: CommitmentMode;
   weekdays: number[];
   time: string | null;
@@ -114,11 +121,24 @@ export interface InterviewState {
 }
 export interface InterviewResult {
   accepted: boolean;
+  /** True when the answer can continue but would benefit from one optional detail. */
+  needsImprovement?: boolean;
   summary: string;
   checks: InterviewCheck[];
   question: InterviewQuestion;
   nextQuestion: InterviewQuestion;
   facts: InterviewFacts;
+}
+export interface GoalGuidanceRequirement {
+  key: string;
+  label: string;
+  phrase: string;
+  required: boolean;
+  passed: boolean;
+  detail: string;
+}
+export interface GoalGuidanceResult {
+  requirements: GoalGuidanceRequirement[];
 }
 export interface OnboardingDraft {
   interview?: InterviewState;

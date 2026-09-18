@@ -31,7 +31,12 @@ export interface StatusProps {
   loading?: boolean;
   error?: unknown;
   retry?: () => void;
+  secondaryAction?: StatusAction;
   empty?: string;
+}
+export interface StatusAction {
+  label: string;
+  onPress: () => void;
 }
 export interface SheetProps {
   visible: boolean;

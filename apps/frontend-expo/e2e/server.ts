@@ -431,7 +431,7 @@ const server = http.createServer(async (req, res) => {
     send({
       clientRequestId: body.client_request_id,
       transcript:
-        "I went for a run and it felt good. I also played guitar for forty minutes. I want to play every day, at least six days a week, for three months.",
+        "Today was a bit of a mess, honestly. I got out for a run this morning, maybe around five kilometres, and it felt better than I expected. Work was stressful and I was pretty scattered, but after dinner I picked up the guitar for a while, which was nice. I want to play guitar more regularly, maybe most days, for the next couple of months, although I’m not sure I’ll actually keep it up. I’m feeling pretty tired now, but at least I did a few things instead of completely wasting the day.",
       activities: [
         {
           activityId: "run",
@@ -473,7 +473,7 @@ const server = http.createServer(async (req, res) => {
       ],
       note: {
         title: "Voice note",
-        text: "I went for a run and it felt good. I also played guitar for forty minutes. I want to play every day, at least six days a week, for three months.",
+        text: "Today was a bit of a mess, honestly. I got out for a run this morning, maybe around five kilometres, and it felt better than I expected. Work was stressful and I was pretty scattered, but after dinner I picked up the guitar for a while, which was nice. I want to play guitar more regularly, maybe most days, for the next couple of months, although I’m not sure I’ll actually keep it up. I’m feeling pretty tired now, but at least I did a few things instead of completely wasting the day.",
         date,
         confidence: 0.93,
       },

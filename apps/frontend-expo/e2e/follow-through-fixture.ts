@@ -34,6 +34,38 @@ export function followThroughFixture(path: string, method: string, body: any, st
   if (path.startsWith("/follow-through/checks/")) { const check = support.checks[decodeURIComponent(path.split("/").at(-1)!)]; if (body.action === "ANSWER") check.answeredAt = new Date().toISOString(); else check.dismissedAt = new Date().toISOString(); return {}; }
   if (path === "/follow-through") return { state: support, canCoach: state.user.planType !== "FREE", serverTime: new Date().toISOString() };
   if (path === "/follow-through/onboarding/draft") { support.draft = body; return body; }
+  if (path === "/follow-through/onboarding/goal-guidance") {
+    const rejected = /asdf|ignore.*instructions|bullshit|be better/i.test(body.answer);
+    const hasMotivation = /because|express|matters|enjoy|love|feel/i.test(body.answer);
+    return {
+      requirements: [
+        {
+          key: "goal",
+          label: "A clear target",
+          phrase: "What do you want to achieve?",
+          required: true,
+          passed: !rejected,
+          detail: rejected ? "Name one concrete outcome." : "Clear enough to continue.",
+        },
+        {
+          key: "starting-point",
+          label: "Where you are now",
+          phrase: "Your current starting point",
+          required: false,
+          passed: false,
+          detail: "We can ask about this next.",
+        },
+        {
+          key: "motivation",
+          label: "Why it matters",
+          phrase: "What makes it worth doing?",
+          required: false,
+          passed: hasMotivation,
+          detail: hasMotivation ? "Useful context included." : "Helpful, but optional.",
+        },
+      ],
+    };
+  }
   if (path === "/follow-through/onboarding/interview") return interviewFixture(body.state, body.answer);
   if (path === "/follow-through/onboarding/next") return body.answers.length ? { ready: true, question: null, nextStep: "Open your saved chord exercise and practise changing between two chords.", explanation: "You said switching chords interrupts your playing. Start with one change you can repeat.", suggestedFormat: "TIMER" } : { ready: false, question: { icon: "🎸", title: "What interrupts your playing most?", purpose: "This chooses the first exercise you will practise.", type: "choice", options: ["Changing chords", "Finding notes by ear", "Keeping a rhythm"] }, nextStep: "", explanation: "", suggestedFormat: "LOG" };
   if (path === "/follow-through/onboarding/offer") return {url:"https://example.invalid/test-checkout",trialDays:14,amount:999,currency:"eur",interval:"month",intervalCount:1};

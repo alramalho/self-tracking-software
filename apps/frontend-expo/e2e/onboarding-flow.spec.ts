@@ -73,12 +73,15 @@ for (const theme of ["DARK", "LIGHT"])
     ).toHaveLength(0);
     expect(state.plans).toHaveLength(2);
   });
-test("coach validation auto-continues only after its rendered message", async ({
+test("coach validation waits for an explicit choice after its rendered message", async ({
   page,
   request,
 }) => {
   await request.post(`${API}/__reset`);
   await page.goto("/onboarding?preview=1");
+  await expect(
+    page.getByRole("button", { name: "Start over", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("textbox", { name: "Your answer" })
     .fill("I want to write guitar songs to express myself");
@@ -86,10 +89,14 @@ test("coach validation auto-continues only after its rendered message", async ({
   await expect(page.getByTestId("coach-validation")).toBeVisible();
   await expect(
     page.getByRole("progressbar", { name: "Automatic continue" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "2", { timeout: 16000 });
+  ).toHaveAttribute("aria-valuenow", "1");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "2");
 });
 test("nonsense, contradiction and network failure keep the answer at its current gate", async ({
   page,
@@ -107,10 +114,7 @@ test("nonsense, contradiction and network failure keep the answer at its current
   await expect(page.getByText("Make this answer more concrete")).toBeVisible();
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute(
-    "aria-valuenow",
-    "1",
-  );
+  ).toHaveAttribute("aria-valuenow", "1");
   await request.post(`${API}/__fail`, {
     data: { path: "/follow-through/onboarding/interview" },
   });
@@ -139,9 +143,30 @@ test("nonsense, contradiction and network failure keep the answer at its current
   ).toBeVisible();
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute(
-    "aria-valuenow",
-    "3",
+  ).toHaveAttribute("aria-valuenow", "3");
+});
+test("start over resets a failed interview to the goal gate", async ({
+  page,
+  request,
+}) => {
+  await request.post(`${API}/__reset`);
+  await page.goto("/onboarding?preview=1");
+  await page
+    .getByRole("textbox", { name: "Your answer" })
+    .fill("A concrete goal");
+  await request.post(`${API}/__fail`, {
+    data: { path: "/follow-through/onboarding/interview" },
+  });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(
+    page.getByText("Simulated network failure. Please try again."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Start over", exact: true }).click();
+  await expect(
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "1");
+  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue(
+    "",
   );
 });
 test("resume retains extracted answer and a delayed upgrade unlocks and continues exactly once", async ({
@@ -226,10 +251,7 @@ test("confirmed extraction survives closing and reopening onboarding", async ({
   await continueAfterValidation(page);
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute(
-    "aria-valuenow",
-    "2",
-  );
+  ).toHaveAttribute("aria-valuenow", "2");
 });
 
 test("a rejected refinement cannot restore an earlier accepted extraction after reload", async ({

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, View } from "react-native";
 import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
   Lightbulb,
+  LockKeyhole,
   Mic,
   RotateCcw,
   Square,
+  Sparkles,
 } from "lucide-react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { randomUUID } from "expo-crypto";
@@ -16,7 +18,7 @@ import { Text } from "@/components/typography/Text";
 import { Button, Copy, Status, useColors } from "@/components/ui";
 import { ReviewRow } from "@/features/health/review/controls";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
-import { useEntries } from "@/data/queries";
+import { useCurrentUser, useEntries } from "@/data/queries";
 import { commitVoiceLog, previewVoiceLog } from "./service";
 import { enrichVoiceLogPreview } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
@@ -90,6 +92,7 @@ export function VoiceLogDrawer({
 }: VoiceLogDrawerProps) {
   const c = useColors();
   const client = useQueryClient();
+  const user = useCurrentUser(true);
   const entries = useEntries();
   const [phase, setPhase] = useState<VoiceLogPhase>(
     initialDraft ? "review" : "ready",
@@ -108,10 +111,17 @@ export function VoiceLogDrawer({
     () => initialDraft?.preview.clientRequestId ?? randomUUID(),
   );
   const recordingKindRef = useRef<VoiceLogRecordingKind>("initial");
+  const discardedDraftClientRequestIdRef = useRef<string | undefined>(undefined);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {
-    if (!initialDraft || preview) return;
+    if (
+      !initialDraft ||
+      preview ||
+      discardedDraftClientRequestIdRef.current ===
+        initialDraft.preview.clientRequestId
+    )
+      return;
     setPreview(initialDraft.preview);
     setPhase("review");
   }, [initialDraft, preview]);
@@ -204,6 +214,8 @@ export function VoiceLogDrawer({
   const busy =
     recorder.isWorking || phase === "processing" || phase === "committing";
   const isCommitting = phase === "committing";
+  const strategist = user.data?.coachPersonality === "STRATEGIST";
+  const coachName = strategist ? "Oli" : "Helly";
 
   function close() {
     if (busy || phase === "recording") return;
@@ -235,9 +247,13 @@ export function VoiceLogDrawer({
     });
   }
 
-  function startOver() {
+  async function startOver() {
     if (busy) return;
-    void clearPendingVoiceLog().then(() => onPendingChange?.(null));
+    const draftClientRequestId =
+      preview?.clientRequestId ?? initialDraft?.preview.clientRequestId;
+    if (draftClientRequestId) {
+      discardedDraftClientRequestIdRef.current = draftClientRequestId;
+    }
     setPreview(undefined);
     setError(undefined);
     setClientRequestId(randomUUID());
@@ -245,6 +261,12 @@ export function VoiceLogDrawer({
     setSelectedActivityIDs(new Set());
     setSelectedMetricIDs(new Set());
     setPhase("ready");
+    try {
+      await clearPendingVoiceLog();
+      onPendingChange?.(null);
+    } catch (nextError) {
+      setError(nextError);
+    }
   }
 
   function createPlan(suggestion: NonNullable<VoiceLogPreview["planSuggestions"]>[number]) {
@@ -362,7 +384,7 @@ export function VoiceLogDrawer({
             Start recording
           </Button>
           <Text style={{ color: c.muted, textAlign: "center", fontSize: 12 }}>
-            Up to 90 seconds · You can start over or make changes later
+            Up to 90 seconds · You can start over and record again anytime
           </Text>
           <Status error={error} />
         </View>
@@ -446,100 +468,164 @@ export function VoiceLogDrawer({
 
       {phase === "review" && preview && (
         <View testID="voice-log-review" style={{ gap: 20 }}>
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-              What I heard
-            </Text>
+          <View testID="voice-log-heard" style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: c.soft,
+                  borderWidth: 1,
+                  borderColor: c.inputBorder,
+                }}
+              >
+                <Image
+                  accessibilityLabel={`${coachName}, your coach`}
+                  source={
+                    strategist
+                      ? require("../../../assets/coaches/oli.png")
+                      : require("../../../assets/coaches/helly.png")
+                  }
+                  style={{ width: 34, height: 34 }}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
+                  What I heard
+                </Text>
+                <Text style={{ color: c.muted, fontSize: 12 }}>
+                  {coachName}’s read on your note
+                </Text>
+              </View>
+            </View>
             <View
               style={{
-                padding: 14,
-                borderRadius: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 15,
+                borderRadius: 18,
+                borderTopLeftRadius: 6,
                 backgroundColor: c.soft,
                 borderWidth: 1,
                 borderColor: c.inputBorder,
               }}
             >
-              <Text style={{ color: c.text, lineHeight: 22 }}>
+              <Text style={{ color: c.text, lineHeight: 23, fontSize: 16 }}>
                 “{preview.transcript}”
               </Text>
             </View>
-            <Copy muted>
-              Choose the suggestions to save. Nothing is committed until you
-              confirm below.
-            </Copy>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+                paddingHorizontal: 2,
+              }}
+            >
+              <CheckCircle2 size={14} color={c.muted} strokeWidth={1.8} />
+              <Text style={{ color: c.muted, fontSize: 12, opacity: 0.82 }}>
+                Review the suggestions below. Nothing is saved until you confirm.
+              </Text>
+            </View>
           </View>
 
-          {!!preview.activities.length && (
-            <View style={{ gap: 8 }}>
-              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-                Activities
-              </Text>
-              <SelectionGroup>
-                {preview.activities.map((activity) => {
-                  const id = voiceLogActivityKey(activity);
-                  const selected = selectedActivityIDs.has(id);
-                  return (
-                    <ReviewRow
-                      key={id}
-                      title={`${activity.emoji} ${activity.title}`}
-                      detail={activityDetail(activity)}
-                      label={`${selected ? "Remove" : "Include"} ${activity.title}`}
-                      selected={selected}
-                      onPress={() => toggleActivity(id)}
-                    />
-                  );
-                })}
-              </SelectionGroup>
+          <View testID="voice-log-extracted" style={{ gap: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Sparkles size={17} color={c.accent} strokeWidth={1.8} />
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
+                  What I extracted
+                </Text>
+                <Text style={{ color: c.muted, fontSize: 12 }}>
+                  Suggestions from what you said
+                </Text>
+              </View>
             </View>
-          )}
+            <View
+              style={{
+                marginLeft: 8,
+                paddingLeft: 12,
+                borderLeftWidth: 1,
+                borderLeftColor: c.inputBorder,
+                gap: 14,
+              }}
+            >
+              {!!preview.activities.length && (
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                    Activities
+                  </Text>
+                  <SelectionGroup>
+                    {preview.activities.map((activity) => {
+                      const id = voiceLogActivityKey(activity);
+                      const selected = selectedActivityIDs.has(id);
+                      return (
+                        <ReviewRow
+                          key={id}
+                          title={`${activity.emoji} ${activity.title}`}
+                          detail={activityDetail(activity)}
+                          label={`${selected ? "Remove" : "Include"} ${activity.title}`}
+                          selected={selected}
+                          onPress={() => toggleActivity(id)}
+                        />
+                      );
+                    })}
+                  </SelectionGroup>
+                </View>
+              )}
 
-          {!!preview.alreadyLogged?.length && (
-            <View style={{ gap: 8 }} testID="voice-log-already-logged">
-              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-                Already logged
-              </Text>
-              <SelectionGroup>
-                {preview.alreadyLogged.map((activity) => (
-                  <ReviewRow
-                    key={`${voiceLogActivityKey(activity)}-existing`}
-                    title={`${activity.emoji} ${activity.title}`}
-                    detail={`${activity.existingQuantity} ${activity.measure} already saved · ${dateLabel(activity.date, activity.time)}`}
-                    label={`${activity.title} already logged`}
-                    selected
-                    disabled
-                    onPress={() => {}}
-                  />
-                ))}
-              </SelectionGroup>
-              <Copy muted>
-                We left these out so the same session is not counted twice.
-              </Copy>
-            </View>
-          )}
+              {!!preview.alreadyLogged?.length && (
+                <View style={{ gap: 8 }} testID="voice-log-already-logged">
+                  <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                    Already logged
+                  </Text>
+                  <SelectionGroup>
+                    {preview.alreadyLogged.map((activity) => (
+                      <ReviewRow
+                        key={`${voiceLogActivityKey(activity)}-existing`}
+                        title={`${activity.emoji} ${activity.title}`}
+                        detail={`${activity.existingQuantity} ${activity.measure} already saved · ${dateLabel(activity.date, activity.time)}`}
+                        label={`${activity.title} already logged`}
+                        selected
+                        disabled
+                        onPress={() => {}}
+                      />
+                    ))}
+                  </SelectionGroup>
+                  <Copy muted>
+                    We left these out so the same session is not counted twice.
+                  </Copy>
+                </View>
+              )}
 
-          {!!preview.metrics.length && (
-            <View style={{ gap: 8 }}>
-              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-                Metrics
-              </Text>
-              <SelectionGroup>
-                {preview.metrics.map((metric) => {
-                  const id = voiceLogMetricKey(metric);
-                  const selected = selectedMetricIDs.has(id);
-                  return (
-                    <ReviewRow
-                      key={id}
-                      title={`${metric.emoji} ${metric.title}`}
-                      detail={metricDetail(metric)}
-                      label={`${selected ? "Remove" : "Include"} ${metric.title}`}
-                      selected={selected}
-                      onPress={() => toggleMetric(id)}
-                    />
-                  );
-                })}
-              </SelectionGroup>
+              {!!preview.metrics.length && (
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                    Metrics
+                  </Text>
+                  <SelectionGroup>
+                    {preview.metrics.map((metric) => {
+                      const id = voiceLogMetricKey(metric);
+                      const selected = selectedMetricIDs.has(id);
+                      return (
+                        <ReviewRow
+                          key={id}
+                          title={`${metric.emoji} ${metric.title}`}
+                          detail={metricDetail(metric)}
+                          label={`${selected ? "Remove" : "Include"} ${metric.title}`}
+                          selected={selected}
+                          onPress={() => toggleMetric(id)}
+                        />
+                      );
+                    })}
+                  </SelectionGroup>
+                </View>
+              )}
             </View>
-          )}
+          </View>
 
           {!!preview.planSuggestions?.length && (
             <View
@@ -608,15 +694,23 @@ export function VoiceLogDrawer({
             </View>
           )}
 
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-              Private note
-            </Text>
+          <View testID="voice-log-private-note" style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <LockKeyhole size={17} color={c.muted} strokeWidth={1.8} />
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
+                  Private note
+                </Text>
+                <Text style={{ color: c.muted, fontSize: 12 }}>
+                  Kept in your coach context
+                </Text>
+              </View>
+            </View>
             <View
               style={{
                 gap: 7,
-                padding: 14,
-                borderRadius: 14,
+                padding: 16,
+                borderRadius: 18,
                 backgroundColor: c.card,
                 borderWidth: 1,
                 borderColor: c.inputBorder,
@@ -629,7 +723,7 @@ export function VoiceLogDrawer({
                 {preview.note.text}
               </Text>
               <Text style={{ color: c.muted, fontSize: 12 }}>
-                Saved privately to your tracking.so context
+                Private to you and your coach
               </Text>
             </View>
           </View>
@@ -670,7 +764,7 @@ export function VoiceLogDrawer({
               accessibilityRole="button"
               accessibilityLabel="Start over"
               disabled={busy}
-              onPress={startOver}
+              onPress={() => void startOver()}
               style={({ pressed }) => ({
                 minHeight: 44,
                 flexDirection: "row",

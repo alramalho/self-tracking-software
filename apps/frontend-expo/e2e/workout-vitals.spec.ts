@@ -89,11 +89,34 @@ test("linked workout shows the available private Watch vitals", async ({ page })
   await expect(page.getByText("6.30 km", { exact: true })).toBeVisible();
   await expect(page.getByText("96 m", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Elevation profile", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("elevation-axis-labels")).toBeVisible();
+  await expect(page.getByTestId("elevation-axis-labels").getByText("96 m", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("elevation-axis-labels").getByText("69 m", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("elevation-axis-labels").getByText("42 m", { exact: true })).toBeVisible();
   await expect(page.getByText("Heart rate", { exact: true })).toBeVisible();
   await expect(page.getByText("Map", { exact: true })).toBeVisible();
   await expect(page.getByTestId("heart-rate-chart")).toBeVisible();
   await expect(page.getByTestId("workout-route-map")).toBeVisible();
   await expect(page.getByText("Heart-rate zones", { exact: true })).toBeVisible();
   await expect(page.getByText("15m", { exact: true })).toBeVisible();
+  await page.getByTestId("share-workout-button").click();
+  await expect(page.getByTestId("workout-share-editor")).toBeVisible();
+  await expect(page.getByTestId("workout-share-preview")).toBeVisible();
+  await expect(page.getByTestId("workout-share-viewport")).toBeVisible();
+  await expect(page.getByTestId("workout-share-watermark")).toBeVisible();
+  await expect(page.getByTestId("workout-share-preview").getByText("Running", { exact: true })).toHaveCount(0);
+  await page.getByTestId("share-map-color-ice").click();
+  await page.getByTestId("share-stats-count-6").click();
+  await page.getByTestId("share-orientation-landscape").click();
+  await expect(page.getByText("Transparent PNG · adjust the route color, stats and format below.", { exact: true })).toBeVisible();
+  for (const label of ["Distance", "Time", "Pace", "Elevation", "Avg heart rate", "Calories"]) {
+    await expect(page.getByTestId("workout-share-preview").getByText(label, { exact: true })).toBeVisible();
+  }
+  const viewportBox = await page.getByTestId("workout-share-viewport").boundingBox();
+  const previewBox = await page.getByTestId("workout-share-preview").boundingBox();
+  expect(viewportBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  expect(previewBox!.width).toBeLessThanOrEqual(viewportBox!.width + 1);
+  expect(previewBox!.height).toBeLessThanOrEqual(viewportBox!.height + 1);
   await page.screenshot({ path: "test-results/workout-vitals.png", fullPage: true });
 });

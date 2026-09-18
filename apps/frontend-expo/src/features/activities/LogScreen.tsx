@@ -73,7 +73,7 @@ export default function LogScreen() {
           opacity: pressed ? 0.72 : 1,
         })}
       >
-        <Mic size={30} color={voiceAccent} strokeWidth={1.8} />
+        <Mic size={32} color={voiceAccent} strokeWidth={1.8} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
             {pendingVoice.draft ? "Review voice note" : "Log voice note"}

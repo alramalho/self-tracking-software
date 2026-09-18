@@ -123,14 +123,108 @@ The new local `TrackingHealth` module, workout matching drawer and estimated Sle
 
 The scoped backend is deployed and verified as `local/tracking-so-backend:interview-health-20260915`. Local production build 29 contains the native Health module, permission purpose, workout review and estimated sleep score. The actual IPA and complete hosted download passed verification below. Build 26 lacks this flow. Real workout/sleep import on the paired devices remains for the user to verify.
 
-## Current status — build 91, September 18, 2026
+## Current status — build 104, September 18, 2026
 
-- **Local production build 91 is complete, verified and hosted**, version 1.0.0. It supersedes build 90 as the newest Safari-install artifact.
-- The Add-page **Log voice note** card and Home **Voice note waiting** card now use a softer selected-theme accent. The mic is a larger standalone line icon with no filled accent badge, a little more surrounding padding, and the card sits above the **Log Activity** header; the border, chevron, lightbulb and review action use a more faded accent alpha so the card stays secondary to the activity tiles.
-- A native iOS 26.5 simulator capture passed in dark amber using the rebuilt current native bundle: `test-results-native-ios/2026-09-18_083700/voice-note-ios/takeScreenshot/native-dark-add-voice-note.png`. The capture confirms the app-native surface, card/header ordering and no filled mic badge; the existing PWA capture is not used as native evidence.
+- **Local production build 104 is complete, verified and hosted**, version 1.0.0. It supersedes build 101 as the newest Safari-install artifact.
+- Workout elevation now uses a true vertical axis: the chart shows maximum, midpoint and minimum altitude labels in metres on the y-axis. The old distance tick labels and `Distance along route` caption were removed; the horizontal distance remains legible from the profile shape and route range summary.
+- The share-card preview now scales the full canvas to the available phone width and sizes its viewport from the selected format, so portrait and landscape previews retain their intended aspect ratio instead of clipping inside a square-ish container. Landscape six-stat cards use a compact two-column grid; the exported PNG remains the full-size canvas with the faded `tracking.so` watermark.
+- IPA: `.release/2026-09-18T112000-share-responsive/tracking.so.ipa`. SHA-256: `b879ae0abb2cb2b824445f31558ce4029063edb70eeb3128146e0049acf9a082`. Phone and embedded Watch companion are both build 104 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T09-27-35-802Z-348c628e/distribution.json`. Links expire **September 25, 2026, 09:27:43 UTC**. The publisher independently verified HTTP 200 for the light and dark installers, manifest and hosted IPA, `itms-services:` install schemes, no horizontal overflow, and a matching local/hosted SHA-256 for build 104. The signed URL is intentionally not recorded here.
+- TypeScript and the focused workout-details/share-card Playwright E2E passed, including explicit viewport-fit assertions. Strict release codesign, iPhone/Watch provisioning CMS, matching phone/Watch bundle metadata and production bundle markers passed. The native iOS Maestro E2E remains blocked because CoreSimulatorService refuses connections on this Mac; no native simulator pass is claimed for this build.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+CI=1 node node_modules/@playwright/test/cli.js test e2e/workout-vitals.spec.ts --reporter=line --trace=off
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T112000-share-responsive/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T09-27-35-802Z-348c628e/distribution.json
+```
+
+## Previous status — build 101, September 18, 2026
+
+- **Local production build 101 is complete, verified and hosted**, version 1.0.0. It includes the onboarding save-error recovery fix: **Try again** resubmits the current clarification, and **Start over** is available as a quiet secondary action that creates a fresh clarification draft.
+- The backend acceptance fix is live in production as `local/tracking-so-backend:interview-clarification-20260918` and healthy. The clarification facts remain separate from session generation; the legacy duration field is accepted only as a rollout-compatibility transport field and is stripped before the clarification facts reach the model.
+- IPA: `.release/2026-09-18T08-46-46-594Z-3bc10ed5/tracking.so.ipa`. SHA-256: `8eebaed40cecc9703d50d0c70fc3aeb71f9a9c41d35dfc4d6a9bd79c67e94d3d`. Phone and embedded Watch companion are both build 101 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T08-51-44-446Z-d70130d9/distribution.json`. The link expires **September 25, 2026, 08:51:50 UTC**. The installer page, manifest and complete hosted IPA returned HTTP 200, and the hosted IPA SHA-256 matches the local artifact. The signed URL is intentionally not recorded here.
+- Frontend and backend TypeScript passed; the focused onboarding Playwright tests passed, including the new Start over failure recovery case; the targeted interview backend suite passed (15 tests). Strict release signing, production environment and iPhone/Watch provisioning verification passed. The optional headless Chrome hosted-page check could not run because Chrome aborted on this Mac before loading; direct Safari installer assets were verified instead.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+python3 .release/check-parity-ipa.py .release/2026-09-18T08-46-46-594Z-3bc10ed5/tracking.so.ipa 101
+AWS_PROFILE=default ./node_modules/.bin/tsx scripts/iphone/cli.ts publish .release/2026-09-18T08-46-46-594Z-3bc10ed5/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T08-51-44-446Z-d70130d9/distribution.json
+```
+
+## Previous status — build 99, September 18, 2026
+
+- **Local production build 99 is complete, verified and hosted**, version 1.0.0. It supersedes build 97 as the newest Safari-install artifact.
+- The running share-card export is now deliberately minimal in both portrait and landscape: the image contains only the route and selected workout stats. The previous `Running` / date / Apple Watch header is removed. A small, faded activity icon plus `tracking.so` watermark sits in the lower-right corner of the transparent canvas.
+- The share-card editor still supports swipeable controls for route color, three or six stats, and portrait or landscape format. The landscape export places the map and stats side by side; the preview remains horizontally swipeable on a phone when the full canvas is wider than the sheet.
+- IPA: `.release/2026-09-18T103000-share-watermark/tracking.so.ipa`. SHA-256: `f07040b9b58067f1e441b493b76b714f5397290880cfb4e73ef9aac03adc7825`. Phone and embedded Watch companion are both build 99 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T08-35-08-315Z-dc4a8ea1/distribution.json`. Links expire **September 25, 2026, 08:35:17 UTC**. The publisher independently verified HTTP 200 for the light and dark installers, manifest and hosted IPA, `itms-services:` install schemes, no horizontal overflow, and a matching local/hosted SHA-256 for build 99. The signed URL is intentionally not recorded here.
+- TypeScript and the focused Playwright workout-details/share-card E2E passed. Strict release codesign, iPhone/Watch provisioning CMS, matching phone/Watch bundle metadata and production bundle markers passed. The native iOS Maestro E2E remains blocked because CoreSimulatorService refuses connections on this Mac; no native simulator pass is claimed for this build.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+CI=1 node node_modules/@playwright/test/cli.js test e2e/workout-vitals.spec.ts --reporter=line
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T103000-share-watermark/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T08-35-08-315Z-dc4a8ea1/distribution.json
+```
+
+## Previous status — build 97, September 18, 2026
+
+- **Local production build 97 is complete, verified and hosted**, version 1.0.0. It supersedes build 96 as the newest Safari-install artifact.
+- Friends now sort by each person's non-deleted activity-entry count, including entries without a linked activity definition. The entry count is no longer displayed in the friends list, and the production backend is running the matching focused overlay `local/tracking-so-backend:friends-entry-count-20260918`.
+- Workout details now label the elevation chart's x-axis with route-distance ticks (start, midpoint and finish) plus an explicit “Distance along route” caption, so the profile's rises and falls are easier to read.
+- Running workout details now end with a **Create share card** action. The editor previews a transparent PNG route silhouette with start/finish markers and supports swipeable controls for route color (Sunset, Lime, Violet or Ice), three or six stats, and portrait or landscape format. Sharing uses the existing native `react-native-view-shot` + `expo-sharing` path; the captured canvas itself remains transparent.
+- IPA: `.release/2026-09-18T08-10-18-989Z-664084d2/tracking.so.ipa`. SHA-256: `52dada2ce996261f37afee28ca1fae6c8e85703f260aeb8ae6635933d2cc7d17`. Phone and embedded Watch companion are both build 97 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T08-10-18-989Z-664084d2/distribution.json`. Links expire **September 25, 2026, 08:16:27 UTC**. The publisher independently verified HTTP 200 for the installer and manifest, a ranged hosted IPA download, and a matching local/hosted SHA-256 for build 97. The signed URL is intentionally not recorded here.
+- Backend/frontend TypeScript, Vite lint, focused native profile tests (4/4), strict release codesign, iPhone/Watch provisioning CMS, matching phone/Watch bundle metadata and production IPA packaging passed. The existing Expo Doctor warnings remain non-blocking.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/cli.ts release
+node .release/verify-hosted.cjs .release/2026-09-18T08-10-18-989Z-664084d2/distribution.json
+```
+
+## Previous status — build 94, September 18, 2026
+
+- **Local production build 94 is complete, verified and hosted**, version 1.0.0. It supersedes build 92 as the newest Safari-install artifact.
+- This release contains the onboarding interview clarification change: weekly cadence is captured independently from session duration, and the clarification layer does not prescribe or generate sessions.
+- IPA: `.release/2026-09-18T07-51-49-320Z-5a5580c1/tracking.so.ipa`. SHA-256: `fc0cbe3677cf11cfe7eca7815659293f960b0cdab02fc2d7d2990489b2272720`. Phone and embedded Watch companion are both build 94 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T07-58-52-776Z-c261c89d/distribution.json`. Links expire **September 25, 2026, 07:59:02 UTC**. The publisher verified HTTP 200 for the installer, manifest and complete hosted IPA; the hosted IPA is build 94 and its SHA-256 matches the local artifact. The signed URL is intentionally not recorded here.
+- The full Playwright light/dark browser check could not run because headless Chrome aborted on this Mac; the publisher's direct hosted-resource checks passed. Physical installation still needs confirmation on the user's iPhone.
+- The build was compiled locally with the existing production environment and signing credentials; no Expo cloud quota, OTA publication, paid subscription or App Store submission was used. The build workflow does not deploy the backend; the matching backend interview change remains in the working tree until separately released.
+
+Exact release commands for this artifact:
+
+```sh
+python3 .release/check-parity-ipa.py .release/2026-09-18T07-51-49-320Z-5a5580c1/tracking.so.ipa 94
+AWS_PROFILE=default ./node_modules/.bin/tsx scripts/iphone/cli.ts publish .release/2026-09-18T07-51-49-320Z-5a5580c1/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T07-58-52-776Z-c261c89d/distribution.json
+```
+
+## Previous status — build 92, September 18, 2026
+
+- **Local production build 92 is complete, verified and hosted**, version 1.0.0. It supersedes build 91 as the newest Safari-install artifact.
+- The Add-page **Log voice note** card and Home **Voice note waiting** card now use the same neutral card surface and border as the activity tiles. Only the larger standalone mic keeps a slight selected-theme tint (60% accent alpha); the card sits above the **Log Activity** header, with a little more horizontal breathing room and no filled mic badge.
+- A native iOS 26.5 simulator capture passed in dark amber using the rebuilt current native bundle: `test-results-native-ios/2026-09-18_084800/voice-note-ios/takeScreenshot/native-dark-add-voice-note.png`. The capture confirms the app-native surface, neutral card treatment, card/header ordering and no filled mic badge; the existing PWA capture is not used as native evidence.
 - The friends list now sorts by total logged activity count, uses circular profile avatars, and keeps the native profile navigation inside the persistent tab layout.
-- IPA: `.release/2026-09-18T07-37-51-001Z-4737d53b/tracking.so.ipa`. SHA-256: `f01346f0064cbc87c7ff168680fb65a6bf721bed5cc7eaed37e378f8d51706fe`. Phone and embedded Watch companion are both build 91 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
-- Installer metadata: `.release/2026-09-18T07-42-25-921Z-64a411d5/distribution.json`. Links expire **September 25, 2026, 07:42:31 UTC**. The publisher verified HTTP 200 for the installer, manifest and complete hosted IPA; the hosted IPA is build 91 and its SHA-256 matches the local artifact. The signed URL is intentionally not recorded here.
+- IPA: `.release/2026-09-18T07-48-43-030Z-0f14c4a0/tracking.so.ipa`. SHA-256: `421cd077db29f6872daa1c03d6eaa20d3a9c122511f92d955aebdaf5c163a765`. Phone and embedded Watch companion are both build 92 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T07-53-28-796Z-53c4a11c/distribution.json`. Links expire **September 25, 2026, 07:53:38 UTC**. The publisher verified HTTP 200 for the installer, manifest and complete hosted IPA; the hosted IPA is build 92 and its SHA-256 matches the local artifact. The signed URL is intentionally not recorded here.
 - The production backend overlay `local/tracking-so-backend:health-workout-graphs-20260918` is live and healthy, based on the active Garmin-backed image. It adds the Apple Health HR-series and route serializers while retaining elevation/zones. No database migration was required; rollback is preserved as `.env.before-health-workout-graphs-20260918` on the server.
 - The build was compiled locally with the existing production environment and signing credentials; no Expo cloud quota, OTA publication, paid subscription or App Store submission was used. Expo Doctor still reports the pre-existing workspace-module gitignore warning and SDK patch-version drift; those did not prevent the signed archive. The same frontend source passed the DARK native iOS Maestro E2E in the preceding build, including the real MapKit route, elevation profile, HR chart, zones and colored icons; build 89 contains the same native markers.
 
@@ -141,8 +235,8 @@ pnpm --filter frontend-expo exec tsc --noEmit
 cd apps/frontend-expo
 CI=1 node node_modules/@playwright/test/cli.js test e2e/voice-log.spec.ts --reporter=line
 pnpm build:iphone:local
-node --import tsx scripts/iphone/cli.ts package .release/2026-09-18T07-37-51-001Z-4737d53b/tracking.so.ipa
-AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T07-37-51-001Z-4737d53b/tracking.so.ipa
+node --import tsx scripts/iphone/cli.ts package .release/2026-09-18T07-48-43-030Z-0f14c4a0/tracking.so.ipa
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T07-48-43-030Z-0f14c4a0/tracking.so.ipa
 ```
 
 ## Previous release — build 83, September 17, 2026

@@ -47,6 +47,7 @@ export const resultSchema = z.object({
         label: z.string().max(70),
         passed: z.boolean(),
         detail: z.string().max(220),
+        required: z.boolean().default(true),
       }),
     )
     .min(1)
@@ -54,6 +55,7 @@ export const resultSchema = z.object({
   question: questionSchema,
   nextQuestion: questionSchema,
   facts: factsSchema,
+  needsImprovement: z.boolean().default(false),
 });
 
 export const interviewStateSchema = z.object({

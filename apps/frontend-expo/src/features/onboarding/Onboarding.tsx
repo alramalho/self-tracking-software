@@ -15,6 +15,7 @@ import type {
   OnboardingDraft,
   InterviewResult,
   InterviewState,
+  GoalGuidanceResult,
   SupportPreferences,
 } from "@tsw/prisma/follow-through";
 import { useColors, Status } from "@/components/ui";
@@ -29,9 +30,9 @@ import { DictationButton } from "@/features/dictation/DictationButton";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
 import { PlanSummary } from "./interview/PlanSummary";
-import { AutoContinueAction } from "./interview/AutoContinueAction";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
+import { GoalGuidance, initialGoalGuidance } from "./interview/GoalGuidance";
 import {
   applyFacts,
   nextStage,
@@ -60,6 +61,9 @@ export default function Onboarding({
   const [candidate, setCandidate] = useState<InterviewResult>();
   const [validation, setValidation] = useState<InterviewResult>();
   const [validationReady, setValidationReady] = useState(false);
+  const [goalGuidance, setGoalGuidance] =
+    useState<GoalGuidanceResult>(initialGoalGuidance);
+  const [goalGuidanceBusy, setGoalGuidanceBusy] = useState(false);
   const [history, setHistory] = useState<InterviewState[]>([]);
   const [paywall, setPaywall] = useState(false),
     [finished, setFinished] = useState(false);
@@ -71,7 +75,8 @@ export default function Onboarding({
   const loaded = useRef(false),
     finishing = useRef(false),
     mounted = useRef(true),
-    checkoutOpen = useRef(false);
+    checkoutOpen = useRef(false),
+    guidanceRequest = useRef(0);
   useEffect(
     () => () => {
       mounted.current = false;
@@ -94,6 +99,60 @@ export default function Onboarding({
     // Old drafts keep their goal, schedule and activity; the coach confirms them in the new interview.
     if (!value.interview && value.goal) setAnswer(value.goal);
   }, [saved.data, preview]);
+  useEffect(() => {
+    if (
+      state.stage !== "goal" ||
+      !!candidate ||
+      !!validation ||
+      paywall ||
+      finished
+    )
+      return;
+    const text = answer.trim();
+    const requestId = ++guidanceRequest.current;
+    if (text.length < 3) {
+      setGoalGuidance(initialGoalGuidance);
+      setGoalGuidanceBusy(false);
+      return;
+    }
+    setGoalGuidanceBusy(true);
+    const timer = setTimeout(() => {
+      void api
+        .post<GoalGuidanceResult>("/follow-through/onboarding/goal-guidance", {
+          answer: text,
+          activityTitle: state.facts.activityTitle || undefined,
+        })
+        .then(({ data }) => {
+          if (guidanceRequest.current === requestId) setGoalGuidance(data);
+        })
+        .catch(() => {
+          // The full coach gate remains authoritative if this quick hint check is unavailable.
+          if (guidanceRequest.current === requestId) {
+            setGoalGuidance({
+              requirements: initialGoalGuidance.requirements.map((item) => ({
+                ...item,
+                passed: true,
+              })),
+            });
+          }
+        })
+        .finally(() => {
+          if (guidanceRequest.current === requestId) setGoalGuidanceBusy(false);
+        });
+    }, 700);
+    return () => {
+      clearTimeout(timer);
+      if (guidanceRequest.current === requestId) setGoalGuidanceBusy(false);
+    };
+  }, [
+    answer,
+    candidate,
+    finished,
+    paywall,
+    state.facts.activityTitle,
+    state.stage,
+    validation,
+  ]);
   const persist = async (value: OnboardingDraft) => {
     if (!preview) await api.put("/follow-through/onboarding/draft", value);
     setDraft(value);
@@ -282,6 +341,66 @@ export default function Onboarding({
     complete.isPending ||
     checkout.isPending;
   const busy = requestBusy || dictationBusy;
+  const statusError =
+    error ||
+    gate.error ||
+    accept.error ||
+    complete.error ||
+    checkout.error ||
+    (!preview && saved.error) ||
+    (paywall && offer.error);
+  const retryStatus = () => {
+    if (error) {
+      setError(undefined);
+      return;
+    }
+    if (gate.error) {
+      gate.mutate(
+        answer.trim() || "I confirm this plan fits my goal and my week.",
+      );
+    } else if (accept.error && candidate?.accepted) {
+      accept.mutate();
+    } else if (complete.error) {
+      complete.mutate(paid && state.facts.wantsCoaching);
+    } else if (checkout.error) {
+      checkout.mutate();
+    } else if (saved.error) {
+      void saved.refetch();
+    } else if (offer.error) {
+      void offer.refetch();
+    }
+  };
+  async function startOver() {
+    Keyboard.dismiss();
+    gate.reset();
+    accept.reset();
+    complete.reset();
+    checkout.reset();
+    setError(undefined);
+    const goal = initialGoal?.trim() ?? "";
+    const nextDraft = {
+      ...newDraft(randomUUID()),
+      ...(goal ? { goal } : {}),
+    };
+    setDraft(nextDraft);
+    setState(startInterview(nextDraft));
+    setAnswer(goal);
+    setCandidate(undefined);
+    setValidation(undefined);
+    setValidationReady(false);
+    setGoalGuidance(initialGoalGuidance);
+    setHistory([]);
+    setPaywall(false);
+    setFinished(false);
+    setAwaitingUpgrade(false);
+    upgradeIntent.current = false;
+    finishing.current = false;
+    try {
+      await persist(nextDraft);
+    } catch (err) {
+      setError(err);
+    }
+  }
   async function back() {
     const validationAnswer = validation
       ? state.turns.at(-1)?.answer
@@ -348,6 +467,18 @@ export default function Onboarding({
     setValidation(undefined);
     setValidationReady(false);
   };
+  const editAnswer = () => {
+    setValidation(undefined);
+    setValidationReady(false);
+    setCandidate(undefined);
+    setAnswer(lastTurn?.answer || "");
+  };
+  const goalGuidanceBlocked =
+    state.stage === "goal" &&
+    !goalGuidanceBusy &&
+    goalGuidance.requirements.some(
+      (requirement) => requirement.required && !requirement.passed,
+    );
   const action = showingValidation ? (
     gate.isPending || !validation || !validationReady ? (
       <Text style={{ color: c.muted, textAlign: "center", fontSize: 13 }}>
@@ -355,23 +486,28 @@ export default function Onboarding({
       </Text>
     ) : (
       <>
-        <AutoContinueAction
-          key={`${state.stage}-${state.turns.length}`}
-          label={validation.accepted ? "Continue" : "Improve my answer"}
-          onContinue={continueValidation}
-        />
-        {validation.accepted && (
-          <EditorButton
-            label="Edit my answer"
-            secondary
-            disabled={accept.isPending}
-            onPress={() => {
-              setValidation(undefined);
-              setValidationReady(false);
-              setCandidate(undefined);
-              setAnswer(lastTurn?.answer || "");
-            }}
-          />
+        {validation.accepted && validation.needsImprovement ? (
+          <>
+            <EditorButton label="Improve my answer" onPress={editAnswer} />
+            <EditorButton
+              label="Continue anyway"
+              secondary
+              disabled={accept.isPending}
+              onPress={continueValidation}
+            />
+          </>
+        ) : validation.accepted ? (
+          <>
+            <EditorButton label="Continue" onPress={continueValidation} />
+            <EditorButton
+              label="Edit my answer"
+              secondary
+              disabled={accept.isPending}
+              onPress={editAnswer}
+            />
+          </>
+        ) : (
+          <EditorButton label="Improve my answer" onPress={editAnswer} />
         )}
       </>
     )
@@ -441,6 +577,8 @@ export default function Onboarding({
       busy={gate.isPending}
       disabled={
         busy ||
+        goalGuidanceBlocked ||
+        goalGuidanceBusy ||
         (state.stage !== "review" && !answer.trim()) ||
         (!preview && saved.isPending)
       }
@@ -451,6 +589,19 @@ export default function Onboarding({
       }
     />
   );
+  const actionWithStartOver = finished ? (
+    action
+  ) : (
+    <>
+      {action}
+      <EditorButton
+        label="Start over"
+        secondary
+        disabled={busy}
+        onPress={() => void startOver()}
+      />
+    </>
+  );
   return (
     <InterviewFrame
       stage={state.stage}
@@ -459,7 +610,7 @@ export default function Onboarding({
       backDisabled={!paywall && !history.length && state.stage === "goal"}
       onBack={() => void back().catch(setError)}
       onClose={goBack}
-      actions={action}
+      actions={actionWithStartOver}
     >
       {showingValidation ? (
         <CoachValidation
@@ -518,6 +669,12 @@ export default function Onboarding({
               <View style={{ gap: 16 }}>
                 {state.stage === "review" && (
                   <PlanSummary facts={state.facts} />
+                )}
+                {state.stage === "goal" && (
+                  <GoalGuidance
+                    result={goalGuidance}
+                    loading={goalGuidanceBusy}
+                  />
                 )}
                 {!candidate && !paywall && (
                   <>
@@ -660,21 +817,8 @@ export default function Onboarding({
       )}
       <Status
         loading={!preview && saved.isPending}
-        error={
-          error ||
-          gate.error ||
-          accept.error ||
-          complete.error ||
-          checkout.error ||
-          (!preview && saved.error) ||
-          (paywall && offer.error)
-        }
-        retry={() => {
-          if (complete.error)
-            complete.mutate(paid && state.facts.wantsCoaching);
-          else if (saved.error) void saved.refetch();
-          else if (offer.error) void offer.refetch();
-        }}
+        error={statusError}
+        retry={retryStatus}
       />
     </InterviewFrame>
   );

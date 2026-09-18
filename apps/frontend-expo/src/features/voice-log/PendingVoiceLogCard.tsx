@@ -32,7 +32,7 @@ export function PendingVoiceLogCard({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <Mic size={29} color={voiceAccent} strokeWidth={1.8} />
+        <Mic size={32} color={voiceAccent} strokeWidth={1.8} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text
             style={{

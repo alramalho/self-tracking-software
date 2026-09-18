@@ -1,4 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Activity, Plan, PlanOutlineType, User } from "@tsw/prisma";
 import { generateObject, generateText } from "../utils/aiSdk";
 import dedent from "dedent";
@@ -658,6 +659,7 @@ export class AIService {
       model: string;
       temperature: number;
       providerOptions?: Record<string, Record<string, unknown>>;
+      provider?: "gateway" | "openrouter";
     };
   }): Promise<T> {
     const {
@@ -673,7 +675,12 @@ export class AIService {
 
       // Use either messages or prompt (messages takes precedence)
       const generateParams: any = {
-        model: gateway(options.model),
+        model:
+          options.provider === "openrouter"
+            ? createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY })(
+                options.model,
+              )
+            : gateway(options.model),
         schema,
         temperature: options.temperature,
       };

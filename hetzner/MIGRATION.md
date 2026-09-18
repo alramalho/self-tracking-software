@@ -27,6 +27,23 @@ Run the `tracking.so` backend and PostgreSQL database on the Hetzner VM. Keep Pi
 - **Web smoke test**: `stage.tracking.so` serves the staging frontend from the VPS. Clerk login and authenticated user, activity, metric, plan, chat, and timeline reads were verified against the VPS database.
 - **Production cutover**: `app.tracking.so` now reaches Hetzner through `https://api.tracking.so`; verified `/health` via Caddy and production login/data loading after adding missing `messages.readAt`.
 
+## Native onboarding clarification hotfix — September 18, 2026
+
+Production now runs `local/tracking-so-backend:interview-clarification-20260918`, built from `local/tracking-so-backend:friends-entry-count-20260918`. It accepts the legacy duration transport field during rollout so existing clients can save clarification answers, then strips that field before the clarification facts reach the model. Clarification facts remain separate from operational session generation. No database migration was required.
+
+Prepared server context: `/root/workspace/tracking.so/deployment/tracking-interview-clarification-20260918/`. The context contains the four scoped source overlays and `source-hashes.json`; verification confirmed all four hashes, healthy container state, public `/health` HTTP 200 and unauthenticated protected routes returning HTTP 401. The pre-activation environment backup is `/root/workspace/tracking.so/deployment/.env.before-interview-clarification-20260918`.
+
+Repeatable build, activation and verification:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+docker build -t local/tracking-so-backend:interview-clarification-20260918 tracking-interview-clarification-20260918
+python3 tracking-interview-clarification-20260918/activate.py
+python3 tracking-interview-clarification-20260918/verify.py
+```
+
+Rollback by restoring `.env.before-interview-clarification-20260918` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`. The activation script refuses a second activation when its rollback backup already exists.
+
 ### Inventory captured (for teardown)
 - **Flightcontrol-managed** (former prod): ECS cluster + service `fc-web-server-dvrpa1-6ba11x8`, ALB with same name, VPC `fc-self-tracking-software-0nb10m`. Must be torn down **via Flightcontrol dashboard**, not AWS console.
 - **CDK-managed remnants**: `TrackingSoftwareInfrastructureStackproductionApiStack070335E4` (WAF only — Fargate code already commented out), parent stack, plus sandbox/dev stacks.

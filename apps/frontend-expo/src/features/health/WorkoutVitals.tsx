@@ -4,6 +4,7 @@ import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop } from "re
 import { Text } from "@/components/typography/Text";
 import { Panel, useColors } from "@/components/ui";
 import { TrackingMap } from "@/native/TrackingMap";
+import { WorkoutShare } from "./share/WorkoutShare";
 import type {
   ElevationProfilePoint,
   HealthWorkoutPreview,
@@ -174,23 +175,27 @@ function ElevationProfile({ points }: { points: ElevationProfilePoint[] }) {
   const c = useColors();
   const elevationColor = "#56d364";
   const width = 320;
-  const height = 150;
+  const height = 164;
   const padding = 12;
+  const baseline = height - 30;
   const elevations = points.map((point) => point.elevationMeters);
   const minimum = Math.min(...elevations);
   const maximum = Math.max(...elevations);
   const elevationRange = Math.max(maximum - minimum, 1);
-  const distanceRange = Math.max(points[points.length - 1].distanceMeters, 1);
+  const startingDistance = points[0].distanceMeters;
+  const distanceRange = Math.max(points[points.length - 1].distanceMeters - startingDistance, 1);
   const coordinates = points.map((point) => ({
-    x: padding + (point.distanceMeters / distanceRange) * (width - padding * 2),
-    y: height - padding - ((point.elevationMeters - minimum) / elevationRange) * (height - padding * 2),
+    x: padding + ((point.distanceMeters - startingDistance) / distanceRange) * (width - padding * 2),
+    y: baseline - ((point.elevationMeters - minimum) / elevationRange) * (baseline - padding),
   }));
   const linePath = coordinates
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
   const first = coordinates[0];
   const last = coordinates[coordinates.length - 1];
-  const areaPath = `${linePath} L ${last.x.toFixed(2)} ${(height - padding).toFixed(2)} L ${first.x.toFixed(2)} ${(height - padding).toFixed(2)} Z`;
+  const areaPath = `${linePath} L ${last.x.toFixed(2)} ${baseline.toFixed(2)} L ${first.x.toFixed(2)} ${baseline.toFixed(2)} Z`;
+  const distanceLabel = (distanceMeters: number) => `${(Math.round(distanceMeters / 100) / 10).toFixed(1)} km`;
+  const midpointElevation = Math.round(minimum + elevationRange / 2);
 
   return (
     <Panel testID="elevation-profile" style={{ gap: 10 }}>
@@ -199,25 +204,34 @@ function ElevationProfile({ points }: { points: ElevationProfilePoint[] }) {
           Elevation profile
         </Text>
         <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
-          Altitude over the route · {Math.round(points[points.length - 1].distanceMeters / 1000 * 10) / 10} km
+          Altitude over the route · {distanceLabel(startingDistance)}–{distanceLabel(points[points.length - 1].distanceMeters)} · {Math.round(minimum)}–{Math.round(maximum)} m
         </Text>
       </View>
-      <View accessibilityLabel="Elevation profile chart">
-        <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-          <Defs>
-            <LinearGradient id="elevation-profile-fill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={elevationColor} stopOpacity="0.42" />
-              <Stop offset="1" stopColor={elevationColor} stopOpacity="0.04" />
-            </LinearGradient>
-          </Defs>
-          <Path d={areaPath} fill="url(#elevation-profile-fill)" />
-          <Path d={linePath} fill="none" stroke={elevationColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
+      <View accessibilityLabel="Elevation profile chart" style={{ flexDirection: "row", gap: 8 }}>
+        <View
+          testID="elevation-axis-labels"
+          accessibilityLabel="Elevation axis"
+          style={{ height, justifyContent: "space-between", paddingBottom: 14, alignItems: "flex-end" }}
+        >
+          <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(maximum)} m</Text>
+          <Text style={{ color: c.muted, fontSize: 11 }}>{midpointElevation} m</Text>
+          <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(minimum)} m</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+            <Defs>
+              <LinearGradient id="elevation-profile-fill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={elevationColor} stopOpacity="0.42" />
+                <Stop offset="1" stopColor={elevationColor} stopOpacity="0.04" />
+              </LinearGradient>
+            </Defs>
+            <Path d={areaPath} fill="url(#elevation-profile-fill)" />
+            <Path d={linePath} fill="none" stroke={elevationColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            <Line x1={padding} x2={width - padding} y1={baseline} y2={baseline} stroke={c.border} strokeWidth={1} />
+          </Svg>
+        </View>
       </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(minimum)} m</Text>
-        <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(maximum)} m</Text>
-      </View>
+      <Text style={{ color: c.muted, fontSize: 11, textAlign: "right" }}>Elevation (m)</Text>
     </Panel>
   );
 }
@@ -343,6 +357,7 @@ export function WorkoutVitals({ workout, resolved }: { workout: HealthWorkoutPre
       <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
         {workout.deviceName ?? workout.sourceName ?? "Apple Health"} · {new Date(workout.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}–{new Date(workout.endAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
       </Text>
+      {running && workout.route && workout.route.length >= 2 && <WorkoutShare workout={workout} />}
     </>
   );
 }

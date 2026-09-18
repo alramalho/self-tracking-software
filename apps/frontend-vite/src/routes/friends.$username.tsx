@@ -76,8 +76,6 @@ function FriendsPage() {
       {friends.length > 0 ? (
         <ul className="space-y-2">
           {friends.map((friend) => {
-            const activityCount = getActivityCount(friend)
-
             return (
               <li key={friend.id} className="border-b border-border/60 pb-2">
                 <Link
@@ -102,9 +100,6 @@ function FriendsPage() {
                       @{friend.username}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {activityCount} {activityCount === 1 ? 'activity' : 'activities'}
-                  </span>
                 </Link>
               </li>
             )

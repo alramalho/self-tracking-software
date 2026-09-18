@@ -9,10 +9,8 @@ import {
   Bell,
   ChevronLeft,
   CreditCard,
-  Activity,
   GraduationCap,
   KeyRound,
-  HeartPulse,
   LogOut,
   Moon,
   Paintbrush,
@@ -39,8 +37,12 @@ import { ApiKeys } from "@/features/settings/ApiKeys";
 import { ColorPalettes, ThemeModes } from "@/features/settings/Appearance";
 import { SettingsCard } from "@/features/settings/SettingsCard";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
-import { HealthContent } from "@/features/health/HealthScreen";
-import { GarminContent } from "@/features/health/HealthScreen";
+import {
+  AppleLogoIcon,
+  GarminContent,
+  GarminLogoIcon,
+  HealthContent,
+} from "@/features/health/HealthScreen";
 import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
 const titles: Record<SettingsView, string> = {
@@ -289,14 +291,16 @@ export default function Settings() {
               tracking.so.
             </Text>
             <SettingsCard
-              icon={HeartPulse}
+              icon={AppleLogoIcon}
+              iconBackground={false}
               color="#ef4444"
               title="Apple Health"
               description="Sync workouts and sleep from your Apple Watch."
               onPress={() => setView("appleHealth")}
             />
             <SettingsCard
-              icon={Activity}
+              icon={GarminLogoIcon}
+              iconBackground={false}
               color="#0ea5e9"
               title="Garmin Connect"
               description="Sync Garmin workouts, sleep, and recovery data."

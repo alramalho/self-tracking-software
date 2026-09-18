@@ -21,7 +21,7 @@ test("server account totals take precedence over a limited profile history", () 
   assert.equal(stats.next?.name, "Gold");
   assert.equal(stats.habitBonus, 50);
 });
-test("friends are ordered by total logged activities", () => {
+test("friends are ordered by non-deleted activity-entry count", () => {
   const user = {
     id: "me",
     connectionsFrom: [
