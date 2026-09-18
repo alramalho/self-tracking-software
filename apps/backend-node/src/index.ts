@@ -1,3 +1,4 @@
+import { circlesRouter } from "./routes/circles";
 import "./instrumentation";
 
 import dotenv from "dotenv";
@@ -35,16 +36,19 @@ import { clerkRouter } from "./routes/clerk";
 import { coachesRouter } from "./routes/coaches";
 import { contextEventsRouter } from "./routes/contextEvents";
 import { healthRouter } from "./routes/health";
+import { garminRouter } from "./routes/garmin";
 import { messagesRouter } from "./routes/messages";
 import { apiKeysRouter } from "./routes/apiKeys";
 import { mcpRouter } from "./routes/mcp";
 import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
 import { onboardingRouter } from "./routes/onboarding";
+import { followThroughRouter } from "./routes/followThrough";
 import { plansRouter } from "./routes/plans";
 import { stripeRouter } from "./routes/stripe";
 import { usersRouter } from "./routes/users";
 import { utilsRouter } from "./routes/utils";
+import { voiceLogsRouter } from "./routes/voiceLogs";
 
 const app: Express = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -96,15 +100,15 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  })
+  }),
 );
 
 // Raw body middleware for Stripe webhooks (must come before JSON parser)
 app.use("/stripe/webhook", express.raw({ type: "application/json" }));
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 // Request context middleware (must come before routes that use AI service)
 app.use(requestContextMiddleware);
@@ -142,6 +146,7 @@ app.get("/400", (_req, _res) => {
 // API routes
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
+app.use("/voice-logs", voiceLogsRouter);
 app.use("/activities", activitiesRouter);
 app.use("/achievements", achievementsRouter);
 app.use("/plans", plansRouter);
@@ -149,6 +154,8 @@ app.use("/messages", messagesRouter);
 app.use("/metrics", metricsRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/onboarding", onboardingRouter);
+app.use("/follow-through", followThroughRouter);
+app.use("/circles", circlesRouter);
 app.use("/admin", adminRouter);
 app.use("/clerk", clerkRouter);
 app.use("/ai", aiRouter);
@@ -156,6 +163,7 @@ app.use("/chats", chatsRouter);
 app.use("/coaches", coachesRouter);
 app.use("/context-events", contextEventsRouter);
 app.use("/health", healthRouter);
+app.use("/health/garmin", garminRouter);
 app.use("/stripe", stripeRouter);
 app.use("/utils", utilsRouter);
 app.use("/api-keys", apiKeysRouter);

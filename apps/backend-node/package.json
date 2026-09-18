@@ -24,7 +24,8 @@
     "upload-curriculum": "tsx scripts/upload_curriculum.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
-    "send-telegram-message": "tsx scripts/send_telegram_message.ts"
+    "send-telegram-message": "tsx scripts/send_telegram_message.ts",
+    "check-telegram": "tsx scripts/check_telegram.ts"
   },
   "keywords": [
     "tracking",

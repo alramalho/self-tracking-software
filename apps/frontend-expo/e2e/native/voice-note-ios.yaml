@@ -1,0 +1,11 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Add
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: native-dark-add-voice-note

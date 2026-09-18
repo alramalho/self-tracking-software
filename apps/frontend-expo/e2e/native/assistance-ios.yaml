@@ -1,0 +1,51 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://plan-support/fitness
+- assertVisible: Schedule · Anytime
+- takeScreenshot: assistance-summary
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Schedule · Anytime
+- assertVisible: When works for you\?
+- takeScreenshot: assistance-schedule
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Choose days
+- tapOn: Wed
+- tapOn: Close
+- assertVisible: Schedule · Anytime
+- tapOn: Schedule · Anytime
+- tapOn: Choose days
+- tapOn: Wed
+- takeScreenshot: assistance-days
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Continue
+- tapOn: Set a time
+- assertVisible: What time\?
+- takeScreenshot: assistance-time
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Save schedule
+- assertVisible: Schedule · Wed · 18:00
+- tapOn: Reminders · Off
+- tapOn: 30 minutes before
+- takeScreenshot: assistance-reminder
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Save reminder
+- assertVisible: Reminders · 30 min before
+- tapOn: Weekly review · Off
+- tapOn: One weekly review
+- tapOn: Sun
+- tapOn: Continue
+- takeScreenshot: assistance-review
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Save weekly review
+- assertVisible: Weekly review · Sun · 18:00

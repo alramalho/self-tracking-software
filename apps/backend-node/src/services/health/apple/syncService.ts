@@ -1,3 +1,5 @@
+import { Prisma } from "@tsw/prisma";
+
 import { prisma } from "@/utils/prisma";
 
 import {
@@ -6,7 +8,46 @@ import {
   type AppleHealthStatus,
   type AppleHealthSyncBatch,
   type AppleHealthSyncCounts,
+  type AppleHealthWorkoutInput,
+  type AppleHealthWorkoutMetadata,
 } from "./types";
+
+function workoutStorage(workout: AppleHealthWorkoutInput) {
+  const {
+    elevationAscendedMeters,
+    elevationDescendedMeters,
+    workoutEffortScore,
+    estimatedWorkoutEffortScore,
+    averageHeartRateBpm,
+    maximumHeartRateBpm,
+    heartRateZones,
+    heartRateSeries,
+    elevationProfile,
+    route,
+    ...fields
+  } = workout;
+  const metadata: AppleHealthWorkoutMetadata = {
+    ...(elevationAscendedMeters == null ? {} : { elevationAscendedMeters }),
+    ...(elevationDescendedMeters == null ? {} : { elevationDescendedMeters }),
+    ...(workoutEffortScore == null ? {} : { workoutEffortScore }),
+    ...(estimatedWorkoutEffortScore == null
+      ? {}
+      : { estimatedWorkoutEffortScore }),
+    ...(averageHeartRateBpm == null ? {} : { averageHeartRateBpm }),
+    ...(maximumHeartRateBpm == null ? {} : { maximumHeartRateBpm }),
+    ...(heartRateZones == null ? {} : { heartRateZones }),
+    ...(heartRateSeries == null ? {} : { heartRateSeries }),
+    ...(elevationProfile == null ? {} : { elevationProfile }),
+    ...(route == null ? {} : { route }),
+  };
+  return {
+    fields,
+    metadata:
+      Object.keys(metadata).length > 0
+        ? (metadata as Prisma.InputJsonObject)
+        : Prisma.JsonNull,
+  };
+}
 
 export async function getAppleHealthStatus(
   userId: string,
@@ -171,6 +212,7 @@ export async function syncAppleHealthBatch(
     }
 
     for (const workout of batch.workouts) {
+      const stored = workoutStorage(workout);
       await transaction.healthWorkout.upsert({
         where: {
           userId_provider_externalId: {
@@ -183,13 +225,15 @@ export async function syncAppleHealthBatch(
           userId,
           integrationId: integration.id,
           provider: APPLE_HEALTH_PROVIDER,
-          ...workout,
+          ...stored.fields,
+          metadata: stored.metadata,
           startAt: new Date(workout.startAt),
           endAt: new Date(workout.endAt),
         },
         update: {
           integrationId: integration.id,
-          ...workout,
+          ...stored.fields,
+          metadata: stored.metadata,
           startAt: new Date(workout.startAt),
           endAt: new Date(workout.endAt),
           deletedAt: null,

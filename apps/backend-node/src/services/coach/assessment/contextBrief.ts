@@ -1,3 +1,4 @@
+import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
 import { Activity, Plan, User } from "@tsw/prisma";
 import { differenceInCalendarDays, subDays } from "date-fns";
 import { prisma } from "../../../utils/prisma";
@@ -30,6 +31,7 @@ export async function buildCoachContextBrief(input: {
       planActivityIds.length > 0
         ? prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: planActivityIds },

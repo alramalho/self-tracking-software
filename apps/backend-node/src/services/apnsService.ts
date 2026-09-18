@@ -1,15 +1,8 @@
 import apn from "@parse/node-apn";
 import fs from "fs";
 import { logger } from "../utils/logger";
-
-export interface ApnsPushPayload {
-  deviceToken: string;
-  title: string;
-  body: string;
-  badge?: number;
-  sound?: string;
-  data?: Record<string, any>;
-}
+import { isInvalidApnsDeviceToken } from "./apns/model";
+import { ApnsDeliveryError, type ApnsPushPayload } from "./apns/types";
 
 export class ApnsService {
   private provider: apn.Provider | null = null;
@@ -101,23 +94,31 @@ export class ApnsService {
 
       if (result.failed.length > 0) {
         const failure = result.failed[0];
+        const reason = failure.response?.reason || "Unknown error";
+        const invalidDeviceToken = isInvalidApnsDeviceToken(
+          reason,
+          failure.status
+        );
         logger.error("APNs send failed:", {
-          device: failure.device,
+          device: `${String(failure.device).substring(0, 10)}...`,
           status: failure.status,
           response: failure.response,
         });
 
         // Handle specific APNs errors
-        if (failure.status === 410) {
-          // Device token is no longer valid
+        if (invalidDeviceToken) {
           logger.warn(
             `Device token invalid/expired: ${deviceToken.substring(0, 10)}...`
           );
-          throw new Error("Device token invalid or expired");
         }
 
-        throw new Error(
-          `Failed to send APNs notification: ${failure.response?.reason || "Unknown error"}`
+        throw new ApnsDeliveryError(
+          invalidDeviceToken
+            ? `Device token invalid: ${reason}`
+            : `Failed to send APNs notification: ${reason}`,
+          reason,
+          failure.status,
+          invalidDeviceToken
         );
       }
 

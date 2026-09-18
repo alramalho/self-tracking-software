@@ -57,7 +57,7 @@ router.post(
         // Update existing coach profile
         coach = await prisma.coach.update({
           where: { id: coach.id },
-          data: { details },
+          data: { details: { ...(coach.details as object), ...details } },
         });
         logger.info(`Updated coach profile for user '${req.user!.username}'`);
       } else {

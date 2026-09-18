@@ -16,8 +16,35 @@ import {
 } from "@/services/health/apple/syncService";
 import type { AppleHealthSyncBatch } from "@/services/health/apple/types";
 import { logger } from "@/utils/logger";
+import { getSleepScores, updateSleepScores } from "@/services/health/apple/sleep/service";
+import { getAppleHealthDailyMetrics } from "@/services/health/apple/dailyMetrics";
 
 const router = Router();
+
+router.get(
+  "/apple/daily-metrics",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const requestedDays = Number(req.query.days ?? 14);
+      const days = Number.isInteger(requestedDays) && requestedDays > 0
+        ? Math.min(requestedDays, 60)
+        : 14;
+      res.json(await getAppleHealthDailyMetrics(req.user!.id, days));
+    } catch (error) {
+      logger.error("Failed to read Apple Health daily metrics", {
+        userId: req.user!.id,
+        error,
+      });
+      res.status(500).json({ error: "Could not load your health metrics" });
+    }
+  },
+);
+
+router.get("/apple/sleep", requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try { res.json(await getSleepScores(req.user!.id)); }
+  catch { res.status(500).json({ error: "Could not load your sleep scores" }); }
+});
 
 router.get(
   "/apple/status",
@@ -47,6 +74,7 @@ router.post(
         req.user!.id,
         parsed.data as AppleHealthSyncBatch,
       );
+      if (parsed.data.isFinalBatch) await updateSleepScores(req.user!.id);
       logger.info("Apple Health sync batch imported", {
         userId: req.user!.id,
         counts,

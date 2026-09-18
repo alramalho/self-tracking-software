@@ -1,4 +1,5 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
+import { listActivitiesByUsage } from "@/services/activities/list";
 import { plansService } from "@/services/plansService";
 import { TZDate } from "@date-fns/tz";
 import { ActivityEntry } from "@tsw/prisma";
@@ -97,6 +98,67 @@ const activityEntrySocialInclude = {
   },
   sharedActivityEntry: sharedActivityInclude,
 };
+
+const healthWorkoutReconciliationInclude = {
+  take: 1,
+  select: {
+    matchReasons: true,
+    healthWorkout: {
+      select: {
+        id: true,
+        activityTypeName: true,
+        startAt: true,
+        endAt: true,
+        durationSeconds: true,
+        distanceMeters: true,
+        activeEnergyKcal: true,
+        metadata: true,
+      },
+    },
+  },
+} as const;
+
+function attachOwnHealthWorkout(entry: any): any {
+  const healthLink = entry.healthWorkoutReconciliations?.[0];
+  const { healthWorkoutReconciliations: _healthWorkoutReconciliations, ...rest } =
+    entry;
+  if (!healthLink?.healthWorkout) return rest;
+
+  const metadata =
+    healthLink.healthWorkout.metadata &&
+    typeof healthLink.healthWorkout.metadata === "object" &&
+    !Array.isArray(healthLink.healthWorkout.metadata)
+      ? healthLink.healthWorkout.metadata
+      : {};
+  const savedReasons =
+    healthLink.matchReasons &&
+    typeof healthLink.matchReasons === "object" &&
+    !Array.isArray(healthLink.matchReasons)
+      ? healthLink.matchReasons
+      : {};
+
+  return {
+    ...rest,
+    healthWorkout: {
+      id: healthLink.healthWorkout.id,
+      displayName: healthLink.healthWorkout.activityTypeName,
+      startAt: healthLink.healthWorkout.startAt,
+      endAt: healthLink.healthWorkout.endAt,
+      durationSeconds: healthLink.healthWorkout.durationSeconds,
+      distanceMeters: healthLink.healthWorkout.distanceMeters,
+      activeEnergyKcal: healthLink.healthWorkout.activeEnergyKcal,
+      averageHeartRateBpm:
+        typeof metadata.averageHeartRateBpm === "number"
+          ? metadata.averageHeartRateBpm
+          : null,
+      maximumHeartRateBpm:
+        typeof metadata.maximumHeartRateBpm === "number"
+          ? metadata.maximumHeartRateBpm
+          : null,
+      healthDataIsPublic: savedReasons.healthDataIsPublic === true,
+    },
+  };
+}
 
 async function getAcceptedConnectionIds(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({
@@ -501,13 +563,7 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const activities = await prisma.activity.findMany({
-        where: {
-          userId: req.user!.id,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      const activities = await listActivitiesByUsage(req.user!.id);
 
       res.json(activities);
     } catch (error) {
@@ -558,11 +614,12 @@ router.get(
             },
           },
           sharedActivityEntry: sharedActivityInclude,
+          healthWorkoutReconciliations: healthWorkoutReconciliationInclude,
         },
         orderBy: { createdAt: "desc" },
       });
 
-      res.json(entries);
+      res.json(entries.map(attachOwnHealthWorkout));
     } catch (error) {
       logger.error("Error fetching activity entries:", error);
       res.status(500).json({ error: "Failed to fetch activity entries" });

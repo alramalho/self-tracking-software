@@ -11,7 +11,7 @@ export type AccountLevel = {
   threshold: number;
   color: string;
   bgColor: string;
-  getIcon: (props?: { size?: number; className?: string }) => JSX.Element;
+  getIcon: (props?: { size?: number; className?: string }) => React.ReactElement;
 };
 
 const createLevel = (

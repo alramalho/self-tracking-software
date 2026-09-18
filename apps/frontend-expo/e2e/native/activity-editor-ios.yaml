@@ -1,0 +1,40 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Add
+- tapOn: Edit Running
+- assertVisible: Edit Activity
+- takeScreenshot: activity-editor
+- tapOn: Activity Color
+- tapOn: Automatic \(based on plan\)
+- takeScreenshot: activity-editor-colors
+- tapOn: Activity Color
+- tapOn: Delete Activity
+- assertVisible: This action cannot be undone.
+- takeScreenshot: activity-editor-delete
+- tapOn: Cancel
+- tapOn:
+    id: editor-Measure
+- eraseText
+- inputText: meters
+- takeScreenshot: activity-editor-keyboard
+- tapOn: Done editing input
+- tapOn: Save Activity
+- assertVisible: Change Activity Measure
+- tapOn: ÷
+- tapOn:
+    id: editor-Conversion factor
+- eraseText
+- inputText: '1000'
+- tapOn: Done editing input
+- assertVisible: 60 kilometers = 60000 meters
+- takeScreenshot: activity-editor-conversion
+- tapOn: Change Measure
+- extendedWaitUntil:
+    notVisible: Change Activity Measure
+    timeout: 10000
+- assertVisible: Log Running

@@ -1,0 +1,100 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- tapOn: Color Palette
+- assertVisible: Random
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: settings-colors
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Back to Settings
+- tapOn: Theme Mode
+- assertVisible: Auto
+- takeScreenshot: settings-theme
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Back to Settings
+- tapOn: Integrations & API Keys
+- takeScreenshot: settings-integrations
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: API keys
+- assertVisible: 1. Create an API key
+- tapOn: Back to Integrations
+- tapOn: Apple Health
+- assertVisible: Workouts and sleep, together
+- tapOn: Back to Integrations
+- tapOn: Back to Settings
+- tapOn: User Settings
+- takeScreenshot: settings-profile
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Full Name
+- tapOn:
+    id: editor-Full Name
+- eraseText
+- inputText: Uncommitted name
+- takeScreenshot: settings-profile-keyboard
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Done editing input
+- tapOn: Cancel
+- tapOn: Back to Settings
+- scrollUntilVisible:
+    element: Preview onboarding
+    direction: DOWN
+- tapOn: Preview onboarding
+- tapOn: Start preview
+- assertVisible: Preview.*1 of 5.*Your goal
+- assertVisible: Dictate answer
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: onboarding-start
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: onboarding-answer
+- inputText: I want to write guitar songs to express myself
+- takeScreenshot: onboarding-keyboard
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: ^Continue$
+- assertVisible: Automatic continue
+- takeScreenshot: onboarding-extraction
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: ^Continue$
+- tapOn: Complete beginner
+- assertVisible: Automatic continue
+- tapOn: ^Continue$
+- tapOn:
+    id: onboarding-answer
+- inputText: Three times a week for 20 minutes
+- tapOn: ^Continue$
+- assertVisible: Automatic continue
+- tapOn: ^Continue$
+- tapOn: Help me shape a plan
+- assertVisible: Automatic continue
+- tapOn: ^Continue$
+- assertVisible: Preview.*5 of 5.*Your plan
+- takeScreenshot: onboarding-plan
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: This feels right
+- assertVisible: Automatic continue
+- tapOn: ^Continue$
+- takeScreenshot: onboarding-paywall
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Preview coaching unlock
+- assertVisible: Your preview is complete

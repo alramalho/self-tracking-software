@@ -1,0 +1,48 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Preview onboarding
+    direction: DOWN
+- tapOn: Preview onboarding
+- tapOn: Start preview
+- assertVisible: Dictate answer
+- tapOn:
+    id: onboarding-answer
+- inputText: I want to write guitar songs for my family.
+- tapOn: Dictate answer
+- tapOn:
+    text: Allow
+    optional: true
+- extendedWaitUntil:
+    visible: Stop dictation.*
+    timeout: 10000
+- takeScreenshot: onboarding-dictation-recording
+- tapOn: Stop dictation.*
+- extendedWaitUntil:
+    visible: .*I will practise three times a week.*
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: onboarding-keyboard-fixed
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: Preview.*1 of 5.*Your goal
+- tapOn: ^Continue$
+- assertVisible: Automatic continue
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: onboarding-keyboard-dismissed
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: ^Continue$
+- assertVisible: Preview.*2 of 5.*Starting point

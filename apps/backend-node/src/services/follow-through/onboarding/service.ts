@@ -106,7 +106,6 @@ export async function finishOnboarding(
       baseline: draft.interview?.facts.baseline || null,
       commitment: draft.commitment,
       timezone: draft.timezone,
-      durationMinutes: draft.durationMinutes,
       resourceName: draft.resourceName,
       resourceUrl: draft.resourceUrl,
       nextStep: draft.nextStep,
@@ -147,6 +146,7 @@ export async function finishOnboarding(
       weekdays: draft.weekdays,
       time: draft.commitment === "TIMED" ? draft.time : null,
       timezone: draft.timezone,
+      // Follow-through timer default; never treat this as the duration of every planned session.
       durationMinutes: draft.durationMinutes,
       format: draft.format,
       resourceName: draft.resourceName || null,

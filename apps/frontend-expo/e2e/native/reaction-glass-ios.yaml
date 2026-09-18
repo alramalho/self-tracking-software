@@ -1,0 +1,28 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- scrollUntilVisible:
+    element:
+      id: reaction-badge-🔥
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: glass-reaction-icons
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: reaction-badge-🔥
+- assertVisible:
+    id: reaction-people
+- assertVisible: "View @sam's profile"
+- takeScreenshot: glass-reaction-viewer
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close reaction people
+- assertNotVisible:
+    id: reaction-people

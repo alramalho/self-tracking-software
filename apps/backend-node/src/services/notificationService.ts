@@ -4,6 +4,7 @@ import { prisma } from "../utils/prisma";
 
 import * as webpush from "web-push";
 import { apnsService } from "./apnsService";
+import { ApnsDeliveryError } from "./apns/types";
 
 export interface CreateNotificationData {
   userId: string;
@@ -303,8 +304,9 @@ export class NotificationService {
 
         // If device token is invalid, clear it from the database
         if (
-          error.message?.includes("invalid") ||
-          error.message?.includes("expired")
+          (error instanceof ApnsDeliveryError && error.invalidDeviceToken) ||
+          error.message?.toLowerCase().includes("invalid") ||
+          error.message?.toLowerCase().includes("expired")
         ) {
           await prisma.user.update({
             where: { id: userId },

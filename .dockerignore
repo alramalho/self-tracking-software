@@ -9,6 +9,7 @@ node_modules
 **/logs
 **/.env
 **/.env.*
+**/*.p8
 apps/frontend-vite/ios
 apps/frontend-vite/android
 .claude

@@ -1,0 +1,77 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Home
+- runScript: timeline-design.js
+- swipe:
+    start: 50%, 30%
+    end: 50%, 75%
+    duration: 600
+- scrollUntilVisible:
+    element: 'Comments (1)'
+    direction: DOWN
+    centerElement: true
+- tapOn: 'Comments (1)'
+- waitForAnimationToEnd
+- assertVisible: Great morning!
+- takeScreenshot: comments-dark
+- tapOn:
+    id: comment-input
+- inputText: Native comment draft
+- takeScreenshot: comments-keyboard-dark
+- tapOn: Close comments
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: comment-input
+- tapOn: 'Comments (1)'
+- waitForAnimationToEnd
+- assertVisible:
+    id: comment-input
+- takeScreenshot: comments-restored-draft
+- tapOn: Post Comment
+- waitForAnimationToEnd
+- assertVisible: Native comment draft
+- takeScreenshot: comments-posted-dark
+- tapOn: Close comments
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: 'Comments (2)'
+    direction: DOWN
+    centerElement: true
+- tapOn: 'Comments (2)'
+- waitForAnimationToEnd
+- takeScreenshot: comments-light
+- tapOn:
+    id: comment-input
+- inputText: Light mode comment
+- takeScreenshot: comments-keyboard-light
+- tapOn: Post Comment
+- waitForAnimationToEnd
+- assertVisible: Light mode comment
+- tapOn: Close comments
+- waitForAnimationToEnd
+- tapOn: 'Comments (3)'
+- waitForAnimationToEnd
+- swipe:
+    start: 50%, 48%
+    end: 50%, 18%
+    duration: 600
+- takeScreenshot: comments-expanded
+- swipe:
+    start: 50%, 14%
+    end: 50%, 95%
+    duration: 700
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: comment-input
+- tapOn: 'Comments (3)'
+- waitForAnimationToEnd
+- tapOn:
+    point: 50%, 25%
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: comment-input

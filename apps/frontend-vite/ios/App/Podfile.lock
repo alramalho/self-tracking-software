@@ -102,13 +102,13 @@ SPEC CHECKSUMS:
   Alamofire: 7193b3b92c74a07f85569e1a6c4f4237291e7496
   AppAuth: 1c1a8afa7e12f2ec3a294d9882dfa5ab7d3cb063
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
-  Capacitor: b4741ca7affb32c1b70debd03df92cbf522d8a80
+  Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
-  CapacitorGeolocation: de4b0ccf90140528184e31676dd5e3a328eb589a
-  CapacitorLocalNotifications: a57a6ff87c1f69a00598f9b97cf52eba8f9ff867
-  CapacitorPushNotifications: 729ade0d2791ec1969feaf931a15e28d929a6d70
-  CapawesomeCapacitorBadge: 48e5431c8b9909568ac5e5bf24163d92e1d9ed18
-  CapgoCapacitorSocialLogin: 9fcda09911ed054559306d63dc49d6179502ab36
+  CapacitorGeolocation: ab54d708e2fcf99a7bafe0219eaa6f7a932f001a
+  CapacitorLocalNotifications: 0811aef56ab2e5f7f9ae72f47d3473ab50c29038
+  CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
+  CapawesomeCapacitorBadge: 7fc1fa00c920b88eabb8451ddc92bdc75da2cffa
+  CapgoCapacitorSocialLogin: 0dba43c10c071cbba2e97a5d52601f172c5f11d2
   FBAEMKit: e34530df538b8eb8aeb53c35867715ba6c63ef0c
   FBSDKCoreKit: d3f479a69127acebb1c6aad91c1a33907bcf6c2f
   FBSDKCoreKit_Basics: 017b6dc2a1862024815a8229e75661e627ac1e29
@@ -120,6 +120,6 @@ SPEC CHECKSUMS:
   IONGeolocationLib: 20f9d0248a0b5264511fb57a37e25dd2badf797a
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: 0c0ea1b366c1bd410cacce20df35fc6a90897b15
+PODFILE CHECKSUM: beb8f8ff27f75990213c51dec9c481e42581495b
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

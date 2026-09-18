@@ -1,3 +1,4 @@
+import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
 import { TZDate } from "@date-fns/tz";
 import {
   Activity,
@@ -1466,6 +1467,7 @@ export class CoachAssessmentService {
       activityIds.length > 0
         ? await prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: activityIds },
@@ -1819,6 +1821,7 @@ export class CoachAssessmentService {
       activityIds.length > 0
         ? await prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: activityIds },
@@ -1903,6 +1906,7 @@ export class CoachAssessmentService {
       activityIds.length > 0
         ? await prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: activityIds },
@@ -1987,6 +1991,7 @@ export class CoachAssessmentService {
       this.buildVisibleWeeklyOverviewContext(user, now),
       prisma.activityEntry.findMany({
         where: {
+          ...healthSafeActivityFilter,
           userId: user.id,
           deletedAt: null,
           activityId: { not: null },
@@ -2031,6 +2036,7 @@ export class CoachAssessmentService {
 
       const entries = await prisma.activityEntry.findMany({
         where: {
+          ...healthSafeActivityFilter,
           userId: user.id,
           deletedAt: null,
           activityId: { in: activityIds },

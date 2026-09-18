@@ -1,0 +1,30 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- assertNotVisible: Up next
+- assertNotVisible: Coach quick check
+- tapOn: Plans
+- tapOn: This week
+- assertNotVisible: Previous week
+- assertNotVisible: Next week
+- assertVisible: Log activity for Exercise regularly
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: flexible-week
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Log activity for Exercise regularly
+- assertVisible:
+    id: logging-calendar
+- assertNotVisible: Move this session
+- takeScreenshot: ordinary-activity-logger
+- tapOn: Close
+- openLink: trackingso://session/session-check
+- assertVisible:
+    id: logging-calendar
+- assertNotVisible: Partly done
+- tapOn: Close

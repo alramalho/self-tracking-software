@@ -8,6 +8,7 @@ import type {
 import { prisma } from "@/utils/prisma";
 
 import type {
+  ConfirmedWorkoutActivityMatch,
   HealthWorkoutPreview,
   NormalizedWorkoutMeasurement,
   ResolvedTargetActivity,
@@ -20,11 +21,17 @@ import type {
   WorkoutReconciliationDecision,
   WorkoutReconciliationPreview,
   WorkoutReconciliationPreviewItem,
+  WorkoutActivitySuggestionInput,
 } from "./types";
+import { workoutEffortInsight, workoutMetadata } from "../effort";
 
 const MATCH_SCORE_THRESHOLD = 65;
 const AMBIGUOUS_SCORE_GAP = 8;
 const DUPLICATE_OVERLAP_RATIO = 0.8;
+const HEALTH_WORKOUT_PROVIDERS = ["apple_health", "garmin_connect"] as const;
+
+const healthEntrySource = (provider: string): string =>
+  provider === "garmin_connect" ? "garmin_connect" : "apple_health";
 
 const KIND_ALIASES: ReadonlyArray<[RegExp, string]> = [
   [/\b(run|running|jog|jogging|5k|10k|marathon|hyrox)\b/, "running"],
@@ -330,18 +337,28 @@ function isSemanticMatch(
   return (
     workoutWords.length > 2 &&
     activityWords.length > 2 &&
-    (workoutWords.includes(activityWords) || activityWords.includes(workoutWords))
+    (workoutWords.includes(activityWords) ||
+      activityWords.includes(workoutWords))
   );
 }
 
 function candidateForEntry(
   workout: HealthWorkout,
   entry: ActivityEntry & { activity: Activity | null },
+  rememberedActivityId?: string,
 ): TrackingWorkoutCandidate | null {
-  if (!entry.activity || !isSemanticMatch(workout, entry.activity)) return null;
+  if (
+    !entry.activity ||
+    entry.activity.deletedAt ||
+    (entry.activity.id !== rememberedActivityId &&
+      !isSemanticMatch(workout, entry.activity))
+  )
+    return null;
 
   const timezone = workout.timezone ?? entry.timezone;
-  if (localDate(entry.datetime, timezone) !== localDate(workout.startAt, timezone)) {
+  if (
+    localDate(entry.datetime, timezone) !== localDate(workout.startAt, timezone)
+  ) {
     return null;
   }
 
@@ -391,13 +408,40 @@ function candidateForEntry(
   };
 }
 
-function suggestedActivityForWorkout(
-  workout: HealthWorkout,
+export function suggestedActivityForWorkout(
+  workout: WorkoutActivitySuggestionInput,
   activities: Activity[],
+  confirmedMatches: ConfirmedWorkoutActivityMatch[] = [],
 ): SuggestedActivity | null {
+  // Reuse explicit choices, including custom names such as "Morning movement".
+  // Only the exact HealthKit workout type learns a preference: yoga must not
+  // inherit a Pilates choice just because both share a broad matching category.
+  const remembered = confirmedMatches
+    .filter((match) => match.activityTypeCode === workout.activityTypeCode)
+    .sort(
+      (left, right) => right.confirmedAt.getTime() - left.confirmedAt.getTime(),
+    )
+    .map((match) =>
+      activities.find((activity) => activity.id === match.activityId),
+    )
+    .find(
+      (activity) =>
+        activity &&
+        !activity.deletedAt &&
+        healthMeasurementForMeasure(workout, activity.measure) !== null,
+    );
+  if (remembered) {
+    return {
+      id: remembered.id,
+      title: remembered.title,
+      emoji: remembered.emoji,
+      measure: remembered.measure,
+    };
+  }
   const compatible = activities
     .filter(
       (activity) =>
+        !activity.deletedAt &&
         isSemanticMatch(workout, activity) &&
         healthMeasurementForMeasure(workout, activity.measure) !== null,
     )
@@ -405,7 +449,8 @@ function suggestedActivityForWorkout(
       const leftExact =
         normalizeWords(left.title) === normalizeWords(workout.activityTypeName);
       const rightExact =
-        normalizeWords(right.title) === normalizeWords(workout.activityTypeName);
+        normalizeWords(right.title) ===
+        normalizeWords(workout.activityTypeName);
       return Number(rightExact) - Number(leftExact);
     })[0];
 
@@ -420,8 +465,11 @@ function suggestedActivityForWorkout(
 }
 
 function healthPreview(workout: HealthWorkout): HealthWorkoutPreview {
+  const effort = workoutEffortInsight(workout.metadata);
+  const metadata = workoutMetadata(workout.metadata);
   return {
     id: workout.id,
+    provider: workout.provider,
     activityTypeName: workout.activityTypeName,
     displayName: displayWorkoutName(workout.activityTypeName),
     startAt: workout.startAt.toISOString(),
@@ -429,6 +477,17 @@ function healthPreview(workout: HealthWorkout): HealthWorkoutPreview {
     durationSeconds: workout.durationSeconds,
     distanceMeters: workout.distanceMeters,
     activeEnergyKcal: workout.activeEnergyKcal,
+    elevationAscendedMeters: metadata.elevationAscendedMeters ?? null,
+    elevationDescendedMeters: metadata.elevationDescendedMeters ?? null,
+    effortScore: effort?.score ?? null,
+    effortSource: effort?.source ?? null,
+    difficulty: effort?.difficulty ?? null,
+    averageHeartRateBpm: metadata.averageHeartRateBpm ?? null,
+    maximumHeartRateBpm: metadata.maximumHeartRateBpm ?? null,
+    heartRateZones: metadata.heartRateZones ?? null,
+    heartRateSeries: metadata.heartRateSeries ?? null,
+    elevationProfile: metadata.elevationProfile ?? null,
+    route: metadata.route ?? null,
     sourceName: workout.sourceName,
     deviceName: workout.deviceName,
     timezone: workout.timezone,
@@ -443,7 +502,11 @@ function overlappingWorkoutIds(workouts: HealthWorkout[]): Map<string, string> {
 
   for (let index = 0; index < sorted.length; index += 1) {
     const left = sorted[index];
-    for (let otherIndex = index + 1; otherIndex < sorted.length; otherIndex += 1) {
+    for (
+      let otherIndex = index + 1;
+      otherIndex < sorted.length;
+      otherIndex += 1
+    ) {
       const right = sorted[otherIndex];
       if (right.startAt.getTime() >= left.endAt.getTime()) break;
       if (
@@ -460,7 +523,10 @@ function overlappingWorkoutIds(workouts: HealthWorkout[]): Map<string, string> {
         left.endAt.getTime() - left.startAt.getTime(),
         right.endAt.getTime() - right.startAt.getTime(),
       );
-      if (shorterDuration > 0 && overlap / shorterDuration >= DUPLICATE_OVERLAP_RATIO) {
+      if (
+        shorterDuration > 0 &&
+        overlap / shorterDuration >= DUPLICATE_OVERLAP_RATIO
+      ) {
         duplicates.set(left.id, right.id);
         duplicates.set(right.id, left.id);
       }
@@ -472,20 +538,36 @@ function overlappingWorkoutIds(workouts: HealthWorkout[]): Map<string, string> {
 
 function classificationForWorkout(
   workout: HealthWorkout & {
-    reconciliation:
-      | {
-          action: string;
-          activityEntryId: string | null;
-          confirmedAt: Date;
-        }
-      | null;
+    reconciliation: {
+      action: string;
+      activityEntryId: string | null;
+      matchReasons: Prisma.JsonValue | null;
+      confirmedAt: Date;
+      activityEntry: {
+        quantity: number;
+        activity: Activity | null;
+      } | null;
+    } | null;
   },
   entries: Array<ActivityEntry & { activity: Activity | null }>,
   activities: Activity[],
   duplicateId: string | undefined,
+  confirmedMatches: ConfirmedWorkoutActivityMatch[] = [],
 ): WorkoutReconciliationPreviewItem {
+  const suggestedActivity = suggestedActivityForWorkout(
+    workout,
+    activities,
+    confirmedMatches,
+  );
+  const rememberedActivityId = confirmedMatches.some(
+    (match) =>
+      match.activityTypeCode === workout.activityTypeCode &&
+      match.activityId === suggestedActivity?.id,
+  )
+    ? suggestedActivity?.id
+    : undefined;
   const candidates = entries
-    .map((entry) => candidateForEntry(workout, entry))
+    .map((entry) => candidateForEntry(workout, entry, rememberedActivityId))
     .filter((candidate): candidate is TrackingWorkoutCandidate =>
       Boolean(candidate),
     )
@@ -500,11 +582,24 @@ function classificationForWorkout(
       confidence: 1,
       mismatches,
       candidates,
-      suggestedActivity: suggestedActivityForWorkout(workout, activities),
+      suggestedActivity,
       recommendedAction: null,
       resolved: {
         action: workout.reconciliation.action as WorkoutReconciliationAction,
         activityEntryId: workout.reconciliation.activityEntryId,
+        healthDataIsPublic:
+          !!workout.reconciliation.matchReasons &&
+          typeof workout.reconciliation.matchReasons === "object" &&
+          !Array.isArray(workout.reconciliation.matchReasons) &&
+          workout.reconciliation.matchReasons.healthDataIsPublic === true,
+        linkedActivity: workout.reconciliation.activityEntry?.activity
+          ? {
+              title: workout.reconciliation.activityEntry.activity.title,
+              emoji: workout.reconciliation.activityEntry.activity.emoji,
+              measure: workout.reconciliation.activityEntry.activity.measure,
+              quantity: workout.reconciliation.activityEntry.quantity,
+            }
+          : null,
         confirmedAt: workout.reconciliation.confirmedAt.toISOString(),
       },
     };
@@ -525,7 +620,7 @@ function classificationForWorkout(
       confidence: 0,
       mismatches,
       candidates,
-      suggestedActivity: suggestedActivityForWorkout(workout, activities),
+      suggestedActivity,
       recommendedAction: duplicateId ? null : "import_new",
       resolved: null,
     };
@@ -578,7 +673,7 @@ function classificationForWorkout(
     confidence: topCandidate.score / 100,
     mismatches,
     candidates,
-    suggestedActivity: suggestedActivityForWorkout(workout, activities),
+    suggestedActivity,
     recommendedAction: requiresReview ? null : "link_keep",
     resolved: null,
   };
@@ -588,13 +683,27 @@ export async function getWorkoutReconciliationPreview(
   userId: string,
 ): Promise<WorkoutReconciliationPreview> {
   const workouts = await prisma.healthWorkout.findMany({
-    where: { userId, provider: "apple_health", deletedAt: null },
+    where: {
+      userId,
+      provider: { in: [...HEALTH_WORKOUT_PROVIDERS] },
+      deletedAt: null,
+    },
     include: {
       reconciliation: {
         select: {
           action: true,
           activityEntryId: true,
+          matchReasons: true,
           confirmedAt: true,
+          activityEntry: {
+            select: {
+              activityId: true,
+              userId: true,
+              deletedAt: true,
+              quantity: true,
+              activity: true,
+            },
+          },
         },
       },
     },
@@ -634,12 +743,36 @@ export async function getWorkoutReconciliationPreview(
     }),
   ]);
   const duplicateIds = overlappingWorkoutIds(workouts);
+  const confirmedMatches: ConfirmedWorkoutActivityMatch[] = workouts.flatMap(
+    (workout) => {
+      const saved = workout.reconciliation;
+      const entry = saved?.activityEntry;
+      if (
+        !saved ||
+        !["link_keep", "link_use_health", "import_new"].includes(
+          saved.action,
+        ) ||
+        !entry?.activityId ||
+        entry.userId !== userId ||
+        entry.deletedAt
+      )
+        return [];
+      return [
+        {
+          activityTypeCode: workout.activityTypeCode,
+          activityId: entry.activityId,
+          confirmedAt: saved.confirmedAt,
+        },
+      ];
+    },
+  );
   const items = workouts.map((workout) =>
     classificationForWorkout(
       workout,
       entries,
       activities,
       duplicateIds.get(workout.id),
+      confirmedMatches,
     ),
   );
 
@@ -700,8 +833,11 @@ async function resolveTargetActivity(
   workout: HealthWorkout,
   requestedActivityId: string | undefined,
   suggestedActivityId: string | undefined,
+  newActivity: WorkoutReconciliationDecision["newActivity"],
 ): Promise<ResolvedTargetActivity> {
-  const activityId = requestedActivityId ?? suggestedActivityId;
+  const activityId = newActivity
+    ? undefined
+    : (requestedActivityId ?? suggestedActivityId);
   if (activityId) {
     const activity = await transaction.activity.findFirst({
       where: { id: activityId, userId, deletedAt: null },
@@ -712,9 +848,16 @@ async function resolveTargetActivity(
     if (healthMeasurementForMeasure(workout, activity.measure)) {
       return { activity, created: false };
     }
+    throw new WorkoutReconciliationError(
+      "This activity's measurement cannot be filled from the workout. Choose another activity.",
+    );
   }
 
-  const defaults = newActivityDefaults(workout);
+  const defaults = { ...newActivityDefaults(workout), ...newActivity };
+  if (!healthMeasurementForMeasure(workout, defaults.measure))
+    throw new WorkoutReconciliationError(
+      "This workout has no compatible measurement.",
+    );
   const existing = await transaction.activity.findFirst({
     where: {
       userId,
@@ -733,12 +876,14 @@ async function resolveTargetActivity(
 
 function matchReasons(
   previewItem: WorkoutReconciliationPreviewItem | undefined,
+  healthDataIsPublic: boolean,
 ): Prisma.InputJsonValue {
   return JSON.parse(
     JSON.stringify({
       category: previewItem?.category ?? "unknown",
       confidence: previewItem?.confidence ?? 0,
       mismatches: previewItem?.mismatches ?? [],
+      healthDataIsPublic,
     }),
   ) as Prisma.InputJsonValue;
 }
@@ -753,6 +898,7 @@ export async function applyWorkoutReconciliations(
   );
 
   return prisma.$transaction(async (transaction) => {
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext('health-reconcile'))`;
     const result: WorkoutReconciliationApplyResult = {
       linked: 0,
       imported: 0,
@@ -765,7 +911,7 @@ export async function applyWorkoutReconciliations(
         where: {
           id: decision.healthWorkoutId,
           userId,
-          provider: "apple_health",
+          provider: { in: [...HEALTH_WORKOUT_PROVIDERS] },
           deletedAt: null,
         },
         include: { reconciliation: true },
@@ -779,6 +925,9 @@ export async function applyWorkoutReconciliations(
       }
 
       const previewItem = previewById.get(workout.id);
+      const workoutDifficulty = workoutEffortInsight(
+        workout.metadata,
+      )?.difficulty;
       let activityEntryId: string | null = null;
       let createdActivity = false;
 
@@ -815,6 +964,13 @@ export async function applyWorkoutReconciliations(
         await transaction.activityEntry.update({
           where: { id: entry.id },
           data: {
+            source:
+              entry.source === healthEntrySource(workout.provider)
+                ? healthEntrySource(workout.provider)
+                : `${healthEntrySource(workout.provider)}_linked`,
+            ...(entry.difficulty == null && workoutDifficulty
+              ? { difficulty: workoutDifficulty }
+              : {}),
             ...(decision.action === "link_use_health" && healthQuantity != null
               ? { quantity: healthQuantity }
               : {}),
@@ -847,6 +1003,7 @@ export async function applyWorkoutReconciliations(
           workout,
           decision.activityId,
           previewItem?.suggestedActivity?.id,
+          decision.newActivity,
         );
         const targetActivity = target.activity;
         createdActivity = target.created;
@@ -864,11 +1021,12 @@ export async function applyWorkoutReconciliations(
             quantity,
             datetime: workout.endAt,
             timezone: workout.timezone,
-            source: "apple_health",
+            source: healthEntrySource(workout.provider),
             startedAt: workout.startAt,
             endedAt: workout.endAt,
             distanceMeters: workout.distanceMeters,
             durationSeconds: Math.round(workout.durationSeconds),
+            difficulty: workoutDifficulty,
           },
         });
         activityEntryId = entry.id;
@@ -883,7 +1041,12 @@ export async function applyWorkoutReconciliations(
           action: decision.action,
           createdActivity,
           matchConfidence: previewItem?.confidence,
-          matchReasons: matchReasons(previewItem),
+          matchReasons: matchReasons(
+            previewItem,
+            decision.action === "ignore"
+              ? false
+              : (decision.shareHealthData ?? false),
+          ),
         },
       });
     }

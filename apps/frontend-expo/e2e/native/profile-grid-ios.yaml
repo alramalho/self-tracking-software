@@ -1,0 +1,31 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Legend
+    direction: DOWN
+- assertVisible: Lifestyle
+- assertNotVisible: Today
+- swipe:
+    start: 50%, 75%
+    end: 50%, 45%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: profile-grid-glimmer
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: profile-grid-glimmer-later
+- tapOn: Legend
+- scrollUntilVisible:
+    element: Today / Selected
+    direction: DOWN
+- assertVisible: Today / Selected
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: profile-grid-legend

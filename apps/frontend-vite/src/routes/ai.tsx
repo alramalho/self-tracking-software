@@ -357,11 +357,11 @@ function AICoachPage() {
                 messages.map((message: any) => {
                   const renderContentWithReplacements = () => {
                     const content = message.content;
-                    const parts: (string | JSX.Element)[] = [];
+                    const parts: (string | React.ReactElement)[] = [];
                     const replacements: Array<{
                       index: number;
                       length: number;
-                      component: JSX.Element;
+                      component: React.ReactElement;
                     }> = [];
 
                     if (message.metricReplacement) {

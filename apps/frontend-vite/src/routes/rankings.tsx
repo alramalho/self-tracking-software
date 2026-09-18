@@ -7,7 +7,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ChevronLeft, Flame, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, type MotionStyle } from "framer-motion";
 
 export const Route = createFileRoute("/rankings")({
   component: RankingsPage,
@@ -186,7 +186,7 @@ function RankingsPage() {
           const level = getLevel(person.totalPoints);
           const isYou = person.username === currentUser?.username;
           const medal = medalColors[person.rank];
-          const rowStyle: React.CSSProperties = medal
+          const rowStyle: MotionStyle = medal
             ? { backgroundColor: medal.bg, boxShadow: `inset 0 0 0 1px ${medal.ring}` }
             : {};
           return (

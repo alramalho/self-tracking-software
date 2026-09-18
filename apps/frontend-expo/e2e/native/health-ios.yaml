@@ -1,0 +1,81 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- assertVisible: Review workouts
+- takeScreenshot: health-home-batch
+- tapOn: Review workouts
+- assertVisible: Match your workout
+- assertVisible: Workout 1 of 2
+- assertVisible: Apple Watch · 151 bpm average
+- assertVisible: Counts once. Your notes and photos stay.
+- waitForAnimationToEnd
+- takeScreenshot: health-workout-drawer
+- tapOn: Change workout amount
+- assertVisible: Which amount\?
+- takeScreenshot: health-workout-amount
+- tapOn: Back to workout
+- tapOn: Change workout match
+- assertVisible: Choose a match
+- assertVisible: 'Apple Watch workout: Running'
+- assertVisible: '.*Same day as Watch.*'
+- assertVisible: '.*New log.*'
+- takeScreenshot: health-workout-choose
+- tapOn: Create activity
+- tapOn:
+    id: field-Activity name
+- inputText: ' test'
+- assertVisible: Running test
+- takeScreenshot: health-workout-create-keyboard
+- tapOn: Done editing input
+- tapOn: Change workout match
+- tapOn: 'Match Running.*'
+- assertVisible: Counts once. Your notes and photos stay.
+- scrollUntilVisible:
+    element: Link workout
+    direction: DOWN
+- tapOn: Link workout
+- extendedWaitUntil:
+    visible: Workout 2 of 2
+    timeout: 10000
+- assertVisible: Strength Training
+- takeScreenshot: health-workout-batch-second
+- tapOn: Link workout
+- extendedWaitUntil:
+    notVisible: Match your workout
+    timeout: 10000
+- openLink: trackingso://metrics
+- tapOn: Health
+- assertVisible: Sleep score
+- assertVisible: out of 100
+- assertVisible: 47/50
+- scrollUntilVisible:
+    element: 'Duration.*'
+    direction: DOWN
+- takeScreenshot: health-sleep-breakdown
+- tapOn: Sleep on 2026-09-14
+- assertVisible: Learning your pattern
+- takeScreenshot: health-sleep-learning
+- openLink: trackingso://health
+- assertVisible: Health & workouts
+- assertVisible: Connect Apple Health
+- takeScreenshot: health-settings
+- tapOn: Connect Apple Health
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: health-permission-sheet
+- assertVisible: Sleep
+- assertVisible: Workouts
+- tapOn: Turn On All
+- tapOn:
+    text: Allow
+    optional: false
+- extendedWaitUntil:
+    visible: Sync now
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: health-connected

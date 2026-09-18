@@ -1,0 +1,92 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- tapOn: Theme Mode
+- scrollUntilVisible:
+    element: Dark
+    direction: DOWN
+- tapOn: Dark
+- tapOn: Close
+- runScript: timeline-design.js
+- tapOn: Home
+- swipe:
+    start: 50%, 30%
+    end: 50%, 75%
+    duration: 600
+- scrollUntilVisible:
+    element: Open Reading photo 1
+    direction: DOWN
+- takeScreenshot: dark-joint-photos
+- tapOn: Open Reading photo 1
+- assertVisible: Close photo
+- waitForAnimationToEnd
+- takeScreenshot: dark-photo-viewer
+- tapOn: Close photo
+- assertNotVisible: Close photo
+- scrollUntilVisible:
+    element: Open Reading photo 3
+    direction: DOWN
+- tapOn: Open Reading photo 3
+- assertVisible: Close photo
+- waitForAnimationToEnd
+- tapOn:
+    point: 5%, 20%
+- assertNotVisible: Close photo
+- scrollUntilVisible:
+    element: JOINT ACTIVITY
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: joint-entry-joint-a
+    direction: DOWN
+- assertVisible:
+    id: joint-entry-joint-b
+- takeScreenshot: dark-joint-summary
+- scrollUntilVisible:
+    element: Profile
+    direction: UP
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- tapOn: Theme Mode
+- scrollUntilVisible:
+    element: Light
+    direction: DOWN
+- tapOn: Light
+- tapOn: Close
+- tapOn: Home
+- scrollUntilVisible:
+    element: Open Reading photo 1
+    direction: UP
+- takeScreenshot: light-joint-photos
+- tapOn: Open Reading photo 1
+- assertVisible: Close photo
+- waitForAnimationToEnd
+- takeScreenshot: light-photo-viewer
+- tapOn: Close photo
+- assertNotVisible: Close photo
+- scrollUntilVisible:
+    element: Open Reading photo 3
+    direction: DOWN
+- tapOn: Open Reading photo 3
+- assertVisible: Close photo
+- waitForAnimationToEnd
+- tapOn:
+    point: 5%, 20%
+- assertNotVisible: Close photo
+- scrollUntilVisible:
+    element:
+      id: joint-entry-joint-a
+    direction: DOWN
+- takeScreenshot: light-joint-summary

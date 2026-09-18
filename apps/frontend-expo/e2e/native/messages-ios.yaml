@@ -1,0 +1,45 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- scrollUntilVisible:
+    element: Messages
+    direction: UP
+- tapOn: Messages
+- assertVisible: Sam
+- tapOn: Message Helly, AI Coach
+- assertVisible: Helly coach settings
+- takeScreenshot: coach-dark
+- tapOn:
+    id: chat-message-input
+- inputText: Native coach test
+- tapOn: Send message
+- extendedWaitUntil:
+    visible: That sounds good. Keep the next run comfortable.
+    timeout: 20000
+- takeScreenshot: coach-keyboard-dark
+- waitForAnimationToEnd
+- tapOn: Back to messages
+- waitForAnimationToEnd
+- tapOn: Sam
+- assertVisible: See you tomorrow
+- tapOn:
+    id: chat-message-input
+- inputText: See you then
+- tapOn: Send message
+- assertVisible: See you then
+- waitForAnimationToEnd
+- tapOn: Back to messages
+- waitForAnimationToEnd
+- tapOn: Message Helly, AI Coach
+- assertVisible: That sounds good. Keep the next run comfortable.
+- takeScreenshot: coach-light
+- waitForAnimationToEnd
+- tapOn: Conversation options
+- waitForAnimationToEnd
+- tapOn: Coach settings
+- assertVisible: Weekly recap
+- takeScreenshot: coach-settings-light

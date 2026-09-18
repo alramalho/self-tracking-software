@@ -1,3 +1,7 @@
+import { getWrappedLeaderboard } from "../services/wrapped/service";
+import { yearBounds } from "../services/wrapped/model";
+import { addPeopleActivity } from "../services/people/activity";
+import { rankPeople } from "../services/people/rank";
 import recommendationsService from "@/services/recommendationsService";
 import { clerkClient } from "@clerk/express";
 import { type Prisma } from "@tsw/prisma";
@@ -82,6 +86,53 @@ function redactActivityEntryPrivateNotes(entry: any, viewerUserId: string): any 
     };
   }
 
+  const healthLink = redacted.healthWorkoutReconciliations?.[0];
+  delete redacted.healthWorkoutReconciliations;
+  if (!healthLink) return redacted;
+
+  const savedReasons =
+    healthLink.matchReasons &&
+    typeof healthLink.matchReasons === "object" &&
+    !Array.isArray(healthLink.matchReasons)
+      ? healthLink.matchReasons
+      : {};
+  const healthDataIsPublic = savedReasons.healthDataIsPublic === true;
+  const canSeeHealthData =
+    redacted.userId === viewerUserId || healthDataIsPublic;
+  if (!canSeeHealthData) {
+    redacted.startedAt = null;
+    redacted.endedAt = null;
+    redacted.distanceMeters = null;
+    redacted.durationSeconds = null;
+    return redacted;
+  }
+
+  const metadata =
+    healthLink.healthWorkout?.metadata &&
+    typeof healthLink.healthWorkout.metadata === "object" &&
+    !Array.isArray(healthLink.healthWorkout.metadata)
+      ? healthLink.healthWorkout.metadata
+      : {};
+  redacted.healthWorkout = healthLink.healthWorkout
+    ? {
+        id: healthLink.healthWorkout.id,
+        displayName: healthLink.healthWorkout.activityTypeName,
+        startAt: healthLink.healthWorkout.startAt,
+        endAt: healthLink.healthWorkout.endAt,
+        durationSeconds: healthLink.healthWorkout.durationSeconds,
+        distanceMeters: healthLink.healthWorkout.distanceMeters,
+        activeEnergyKcal: healthLink.healthWorkout.activeEnergyKcal,
+        averageHeartRateBpm:
+          typeof metadata.averageHeartRateBpm === "number"
+            ? metadata.averageHeartRateBpm
+            : null,
+        maximumHeartRateBpm:
+          typeof metadata.maximumHeartRateBpm === "number"
+            ? metadata.maximumHeartRateBpm
+            : null,
+        healthDataIsPublic,
+      }
+    : null;
   return redacted;
 }
 
@@ -94,6 +145,18 @@ const basicUserInclude = {
           username: true,
           name: true,
           picture: true,
+          lastActiveAt: true,
+          _count: {
+            select: {
+              activityEntries: {
+                where: {
+                  deletedAt: null,
+                  activityId: { not: null },
+                  activity: { deletedAt: null },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -106,6 +169,18 @@ const basicUserInclude = {
           username: true,
           name: true,
           picture: true,
+          lastActiveAt: true,
+          _count: {
+            select: {
+              activityEntries: {
+                where: {
+                  deletedAt: null,
+                  activityId: { not: null },
+                  activity: { deletedAt: null },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -356,7 +431,7 @@ usersRouter.delete(
       }
 
       // Send Telegram notification
-      telegramService.sendMessage(
+      telegramService.sendAlert(
         `😵🗑️ *User Account Deleted*\n\n` +
           `User: ${username} (${userEmail})\n` +
           `User ID: ${userId}\n` +
@@ -561,33 +636,10 @@ usersRouter.get(
         return;
       }
 
-      // Filter connections based on search query
-      let results;
-      if (!username || username.trim() === "") {
-        // No search query - return all connections (up to 10)
-        results = connections.slice(0, 10).map((u) => ({
-          userId: u.id,
-          username: u.username!,
-          name: u.name,
-          picture: u.picture,
-        }));
-      } else {
-        // Search within connections only
-        const searchTerm = username.toLowerCase();
-        results = connections
-          .filter(
-            (u) =>
-              u.username?.toLowerCase().includes(searchTerm) ||
-              u.name?.toLowerCase().includes(searchTerm)
-          )
-          .slice(0, 10)
-          .map((u) => ({
-            userId: u.id,
-            username: u.username!,
-            name: u.name,
-            picture: u.picture,
-          }));
-      }
+      const peopleWithActivity = await addPeopleActivity(connections);
+      const results = rankPeople(peopleWithActivity, username ?? "").map(u => ({
+        userId: u.id, username: u.username!, name: u.name, picture: u.picture,
+      }));
 
       res.json(results);
     } catch (error) {
@@ -599,6 +651,21 @@ usersRouter.get(
     }
   }
 );
+
+// Aggregate only the signed-in user and accepted friends; never profile previews.
+usersRouter.get("/wrapped", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const year = Number(req.query.year);
+  try { yearBounds(year); } catch {
+    res.status(400).json({ error: "Choose a valid year." });
+    return;
+  }
+  try {
+    res.json(await getWrappedLeaderboard(prisma, req.user!.id, year));
+  } catch (error) {
+    logger.error("Failed to load Wrapped totals", error);
+    res.status(500).json({ error: "Could not load Wrapped totals. Please try again." });
+  }
+});
 
 // Get connection count
 usersRouter.get(
@@ -709,6 +776,24 @@ usersRouter.post(
             orderBy: [{ datetime: "desc" }, { id: "desc" }],
             take: 40,
             include: {
+              healthWorkoutReconciliations: {
+                take: 1,
+                select: {
+                  matchReasons: true,
+                  healthWorkout: {
+                    select: {
+                      id: true,
+                      activityTypeName: true,
+                      startAt: true,
+                      endAt: true,
+                      durationSeconds: true,
+                      distanceMeters: true,
+                      activeEnergyKcal: true,
+                      metadata: true,
+                    },
+                  },
+                },
+              },
               activity: true,
               comments: {
                 where: { deletedAt: null },
@@ -754,6 +839,13 @@ usersRouter.post(
                           activityEntry: {
                             include: {
                               activity: true,
+                              healthWorkoutReconciliations: {
+                                take: 1,
+                                select: {
+                                  matchReasons: true,
+                                  healthWorkout: { select: { id: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
+                                },
+                              },
                             },
                           },
                         },
@@ -1024,6 +1116,24 @@ usersRouter.get(
           orderBy: [{ datetime: "desc" }, { id: "desc" }],
           take: limit * 2 + 1,
           include: {
+            healthWorkoutReconciliations: {
+              take: 1,
+              select: {
+                matchReasons: true,
+                healthWorkout: {
+                  select: {
+                    id: true,
+                    activityTypeName: true,
+                    startAt: true,
+                    endAt: true,
+                    durationSeconds: true,
+                    distanceMeters: true,
+                    activeEnergyKcal: true,
+                    metadata: true,
+                  },
+                },
+              },
+            },
             comments: {
               where: { deletedAt: null },
               orderBy: { createdAt: "desc" },
@@ -1066,6 +1176,13 @@ usersRouter.get(
                         activityEntry: {
                           include: {
                             activity: true,
+                            healthWorkoutReconciliations: {
+                              take: 1,
+                              select: {
+                                matchReasons: true,
+                                healthWorkout: { select: { id: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
+                              },
+                            },
                           },
                         },
                       },
@@ -1607,12 +1724,12 @@ Timestamp: ${new Date().toISOString()}</small></p>
           `**UTC Time:** ${new Date().toISOString()}`;
 
         if (imageUrls.length > 0) {
-          await telegramService.sendMessageWithPhotos(
+          await telegramService.sendAlertWithPhotos(
             telegramMessage,
             imageUrls
           );
         } else {
-          await telegramService.sendMessage(telegramMessage);
+          await telegramService.sendAlert(telegramMessage);
         }
 
         // Create Linear ticket for bug reports in production

@@ -22,6 +22,7 @@ export interface WorkoutMismatch {
 }
 export interface HealthWorkoutPreview {
   id: string;
+  provider: string;
   activityTypeName: string;
   displayName: string;
   startAt: string;
@@ -29,6 +30,11 @@ export interface HealthWorkoutPreview {
   durationSeconds: number;
   distanceMeters: number | null;
   activeEnergyKcal: number | null;
+  effortScore?: number | null;
+  effortSource?: "user" | "apple_estimated" | null;
+  difficulty?: "very_easy" | "easy" | "moderate" | "hard" | "very_hard" | null;
+  averageHeartRateBpm?: number | null;
+  maximumHeartRateBpm?: number | null;
   sourceName: string | null;
   deviceName: string | null;
   timezone: string | null;

@@ -1,3 +1,4 @@
+import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
 import {
   Activity,
   Plan,
@@ -96,6 +97,7 @@ export async function summarizePlanAdherenceAsOf(
     activityIds.length > 0
       ? await prisma.activityEntry.findMany({
           where: {
+            ...healthSafeActivityFilter,
             userId: user.id,
             deletedAt: null,
             activityId: { in: activityIds },

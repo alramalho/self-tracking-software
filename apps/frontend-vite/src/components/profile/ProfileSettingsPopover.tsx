@@ -3,6 +3,7 @@ import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 import { IntegrationsSettings } from "@/components/profile/IntegrationsSettings";
 import { ApiKeysSettings } from "@/components/profile/integrations/ApiKeysSettings";
 import { AppleHealthIntegrationCard } from "@/health/apple/AppleHealthIntegrationCard";
+import { GarminIntegrationCard } from "@/health/garmin/GarminIntegrationCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
@@ -71,6 +72,7 @@ export type ActiveView =
   | "themeMode"
   | "integrations"
   | "appleHealth"
+  | "garmin"
   | "apiKeys"
   | "admin";
 
@@ -83,6 +85,7 @@ const viewLevels: Record<ActiveView, number> = {
   themeMode: 1,
   integrations: 1,
   appleHealth: 2,
+  garmin: 2,
   apiKeys: 2,
   admin: 1,
 };
@@ -501,6 +504,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     </Button>
                     <IntegrationsSettings
                       onOpenAppleHealth={() => navigateTo("appleHealth")}
+                      onOpenGarmin={() => navigateTo("garmin")}
                       onOpenApiKeys={() => navigateTo("apiKeys")}
                     />
                   </div>
@@ -516,6 +520,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <ChevronLeft size={18} /> Back to Integrations
                     </Button>
                     <AppleHealthIntegrationCard />
+                  </div>
+                );
+              case "garmin":
+                return (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigateTo("integrations")}
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronLeft size={18} /> Back to Integrations
+                    </Button>
+                    <GarminIntegrationCard />
                   </div>
                 );
               case "apiKeys":

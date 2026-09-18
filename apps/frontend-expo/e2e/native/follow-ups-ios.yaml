@@ -1,0 +1,94 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Add
+- tapOn: Log Running
+- tapOn:
+    id: field-Quantity
+- eraseText: 50
+- inputText: "7"
+- tapOn: Done editing input
+- scrollUntilVisible:
+    element: Log Activity
+    direction: DOWN
+- tapOn: Log Activity
+- tapOn:
+    id: field-Caption
+- inputText: Native calendar activity
+- tapOn: "📸 Add a proof!"
+- scrollUntilVisible:
+    element: Log without photo
+    direction: DOWN
+- tapOn: Log without photo
+- assertVisible: How hard was Running\?
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: follow-up-effort
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Hard
+- scrollUntilVisible:
+    element: Poor sleep
+    direction: DOWN
+- tapOn: Poor sleep
+- tapOn: Add detail
+- scrollUntilVisible:
+    element:
+      id: field-Private reflection
+    direction: DOWN
+- tapOn:
+    id: field-Private reflection
+- inputText: Need more rest
+- assertVisible:
+    id: field-Private reflection
+- takeScreenshot: follow-up-reflection-keyboard
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Done editing input
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: follow-up-reflection
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element: Done
+    direction: DOWN
+- tapOn: Done
+- assertVisible: Log Your Metrics
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: follow-up-metrics
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Energy rating 4
+- tapOn: Mood rating 5
+- tapOn: Productivity rating 3
+- scrollUntilVisible:
+    element:
+      id: field-Anything to add\?
+    direction: DOWN
+- tapOn:
+    id: field-Anything to add\?
+- inputText: Feeling better now
+- assertVisible:
+    id: field-Anything to add\?
+- takeScreenshot: follow-up-note-keyboard
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Done editing input
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: follow-up-note
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element: Done
+    direction: DOWN
+- tapOn: Done
+- assertVisible: Activity logged!
+- tapOn: Done
+- assertVisible: Log Running

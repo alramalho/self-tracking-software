@@ -101,14 +101,14 @@ function ThemedLayout() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const location = useLocation();
   const isDownloadPage = location.pathname.startsWith("/download");
-  const isGetCoachedPage = location.pathname.startsWith("/get-coached");
+  const isOnboardingPage = location.pathname.startsWith("/onboarding");
 
   return (
-    <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} isGetCoachedPage={isGetCoachedPage} />
+    <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} isOnboardingPage={isOnboardingPage} />
   );
 }
 
-function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isGetCoachedPage }: { isSignedIn: boolean, isDesktop: boolean, isDownloadPage: boolean, isGetCoachedPage: boolean }) {
+function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isOnboardingPage }: { isSignedIn: boolean, isDesktop: boolean, isDownloadPage: boolean, isOnboardingPage: boolean }) {
   const { effectiveThemeMode } = useTheme();
 
   return (
@@ -118,7 +118,7 @@ function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isGetCoached
           <main
             className={cn(
               "relative h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-hidden bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
-              (isSignedIn && isDesktop && !isDownloadPage && !isGetCoachedPage) ? "ml-64" : ""
+              (isSignedIn && isDesktop && !isDownloadPage && !isOnboardingPage) ? "ml-64" : ""
             )}
           >
             <GeneralInitializer>

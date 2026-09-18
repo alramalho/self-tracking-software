@@ -25,6 +25,7 @@ AGENTS.md
 .env
 
 apps/backend-node/apple-stuff/*
+hetzner/secrets/*
 
 .mcp.json
 

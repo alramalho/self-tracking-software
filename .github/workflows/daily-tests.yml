@@ -3,19 +3,19 @@ name: Daily Tests
 on:
   # schedule:
   #   - cron: '0 8 * * *'  # Runs at 8am UTC every day
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -40,17 +40,18 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           HELICONE_API_KEY: ${{ secrets.HELICONE_API_KEY }}
         run: |
           pnpm test:ci 2>&1 | tee test_output.txt
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "Tests failed. Sending failure notification..."
-            pnpm send-telegram-message "❌ Backend-Node Tests Failed. Check GH logs for details."
+            pnpm send-telegram-message --alert "❌ tracking.so backend tests failed. Check GitHub Actions for details."
             exit 1
           else
             echo "Tests passed. Sending success notification..."
-            pnpm send-telegram-message "✅ Backend-Node Tests Passed"
+            pnpm send-telegram-message --alert "✅ tracking.so backend tests passed"
           fi
 
       - name: Upload backend-node test results
@@ -66,4 +67,4 @@ jobs:
         run: |
           if [ "${{ steps.backend_node_tests.outcome }}" != "success" ]; then
             exit 1
-          fi 
+          fi

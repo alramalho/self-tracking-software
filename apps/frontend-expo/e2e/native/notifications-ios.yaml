@@ -1,0 +1,15 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://notifications
+- extendedWaitUntil:
+    visible: Notifications
+    timeout: 10000
+- assertVisible: No notifications yet.
+- takeScreenshot: notifications-empty
+- tapOn: Back
+- assertVisible: Home

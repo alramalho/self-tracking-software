@@ -1,14 +1,21 @@
 import OpenAI from "openai";
 import { fileTypeFromBuffer } from "file-type";
 import { logger } from "../utils/logger";
+import { resolveSTTConfig } from "./stt/config";
+import type { TimestampedTranscript } from "./stt/types";
 
 export class STTService {
   private openai: OpenAI;
+  private model: string;
 
   constructor() {
+    const config = resolveSTTConfig();
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
     });
+    this.model = config.model;
+    logger.info(`Speech-to-text configured with ${config.provider}`);
   }
 
   private async detectAudioType(audioBytes: Buffer): Promise<string | null> {
@@ -50,13 +57,13 @@ export class STTService {
 
   async speechToText(
     audioBytes: Buffer,
-    receivedAudioFormat?: string
+    receivedAudioFormat?: string,
   ): Promise<string> {
     try {
       const detectedAudioType = await this.detectAudioType(audioBytes);
 
       logger.info(
-        `Received audio format: ${receivedAudioFormat || "not provided"}`
+        `Received audio format: ${receivedAudioFormat || "not provided"}`,
       );
       logger.info(`Detected audio type: ${detectedAudioType || "unknown"}`);
 
@@ -81,12 +88,11 @@ export class STTService {
 
       const transcription = await this.openai.audio.transcriptions.create({
         file: audioFile,
-        model: process.env.STT_MODEL || "whisper-1",
-        language: "en", // Can be made configurable
+        model: this.model,
       });
 
       logger.info(
-        `Successfully transcribed audio: ${transcription.text.substring(0, 50)}...`
+        `Successfully transcribed ${transcription.text.length} characters`,
       );
       return transcription.text;
     } catch (error) {
@@ -97,15 +103,8 @@ export class STTService {
 
   async speechToTextWithTimestamps(
     audioBytes: Buffer,
-    receivedAudioFormat?: string
-  ): Promise<{
-    text: string;
-    segments?: Array<{
-      start: number;
-      end: number;
-      text: string;
-    }>;
-  }> {
+    receivedAudioFormat?: string,
+  ): Promise<TimestampedTranscript> {
     try {
       const detectedAudioType = await this.detectAudioType(audioBytes);
       const validFormats = ["webm", "ogg", "mp4", "wav", "mp3", "m4a", "flac"];
@@ -125,7 +124,7 @@ export class STTService {
 
       const transcription = await this.openai.audio.transcriptions.create({
         file: audioFile,
-        model: process.env.STT_MODEL || "whisper-1",
+        model: this.model,
         response_format: "verbose_json",
         timestamp_granularities: ["segment"],
       });

@@ -27,6 +27,20 @@ const validBatch = {
       startAt: "2026-07-28T07:00:00.000Z",
       endAt: "2026-07-28T07:30:00.000Z",
       durationSeconds: 1_800,
+      estimatedWorkoutEffortScore: 6,
+      averageHeartRateBpm: 151.4,
+      maximumHeartRateBpm: 177,
+      elevationAscendedMeters: 96,
+      elevationDescendedMeters: 91,
+      heartRateZones: {
+        estimatedMaxHeartRateBpm: 190,
+        source: "age_estimate",
+        zone1Seconds: 120,
+        zone2Seconds: 600,
+        zone3Seconds: 900,
+        zone4Seconds: 600,
+        zone5Seconds: 120,
+      },
       sourceBundleId: "com.apple.health",
     },
   ],
@@ -86,6 +100,38 @@ describe("appleHealthSyncBatchSchema", () => {
         {
           ...validBatch.dailyMetrics[0],
           metric: "arbitrary_metric",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects effort and heart-rate values outside HealthKit bounds", () => {
+    const result = appleHealthSyncBatchSchema.safeParse({
+      ...validBatch,
+      workouts: [
+        {
+          ...validBatch.workouts[0],
+          estimatedWorkoutEffortScore: 11,
+          averageHeartRateBpm: 0,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid workout zone durations", () => {
+    const result = appleHealthSyncBatchSchema.safeParse({
+      ...validBatch,
+      workouts: [
+        {
+          ...validBatch.workouts[0],
+          heartRateZones: {
+            ...validBatch.workouts[0].heartRateZones,
+            zone3Seconds: -1,
+          },
         },
       ],
     });

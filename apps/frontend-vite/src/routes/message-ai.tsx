@@ -1199,11 +1199,11 @@ function MessageAIPage() {
       typeof message.content === "string"
         ? message.content
         : toDisplayErrorMessage(message.content, "");
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | React.ReactElement)[] = [];
     const replacements: Array<{
       index: number;
       length: number;
-      component: JSX.Element;
+      component: React.ReactElement;
     }> = [];
     const citationSources = getCitationSources(content, message.toolCalls);
     const hasOverlap = (index: number, length: number) =>
@@ -1405,7 +1405,7 @@ function MessageAIPage() {
       return <MessageMarkdown>{processedText}</MessageMarkdown>;
     };
 
-    const renderInlineTokens = (tokens: (string | JSX.Element)[], keyPrefix: string) =>
+    const renderInlineTokens = (tokens: (string | React.ReactElement)[], keyPrefix: string) =>
       tokens.map((token, tokenIdx) => {
         if (typeof token === "string") {
           if (!token) return null;
@@ -1420,7 +1420,7 @@ function MessageAIPage() {
       });
 
     const stripLeadingText = (
-      tokens: (string | JSX.Element)[],
+      tokens: (string | React.ReactElement)[],
       lengthToStrip: number
     ) => {
       let remaining = lengthToStrip;
@@ -1435,7 +1435,7 @@ function MessageAIPage() {
     };
 
     const renderMixedParts = () => {
-      const lines: (string | JSX.Element)[][] = [[]];
+      const lines: (string | React.ReactElement)[][] = [[]];
 
       parts.forEach((part) => {
         if (typeof part !== "string") {
@@ -1452,8 +1452,8 @@ function MessageAIPage() {
         });
       });
 
-      const rendered: JSX.Element[] = [];
-      let pendingListItems: (string | JSX.Element)[][] = [];
+      const rendered: React.ReactElement[] = [];
+      let pendingListItems: (string | React.ReactElement)[][] = [];
 
       const flushList = () => {
         if (pendingListItems.length === 0) return;

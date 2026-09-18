@@ -27,7 +27,7 @@ function getUserPlanFromProduct(productId: string): "PLUS" | "FREE" {
   }
 
   logger.error(`Unknown product id: ${productId}`);
-  telegramService.sendMessage(
+  telegramService.sendAlert(
     `🚨 Unknown product id ${productId}\n\n` +
       `UTC Time: ${new Date().toISOString()}\n` +
       `Check logs for full event`
@@ -44,7 +44,7 @@ async function findUserByCustomerId(customerId: string) {
 
   if (!user) {
     logger.error(`User not found for Stripe customer ID: ${customerId}`);
-    telegramService.sendMessage(
+    telegramService.sendAlert(
       `🚨 **User not found for customer ID ${customerId}**\n\n` +
         `UTC Time: ${new Date().toISOString()}`
     );
@@ -84,7 +84,7 @@ async function findUserByCustomerIdWithRetry(
   logger.error(
     `User not found for Stripe customer ID: ${customerId} after ${maxAttempts} attempts`
   );
-  telegramService.sendMessage(
+  telegramService.sendAlert(
     `🚨 **User not found for customer ID ${customerId}** after polling\\n\\n` +
       `Attempts: ${maxAttempts}\\n` +
       `UTC Time: ${new Date().toISOString()}`
@@ -159,7 +159,7 @@ async function handleSubscriptionEvent(
       logger.error("Failed to send Loops event:", loopsError);
     }
 
-    telegramService.sendMessage(
+    telegramService.sendAlert(
       `🎉 *New PLUS subscription*!\n\n` +
         `User: ${updatedUser.email}\n` +
         `Plan: ${planType}\n` +
@@ -192,7 +192,7 @@ async function handleCheckoutSessionCompleted(
 
   if (!user) {
     logger.error(`User not found for client_reference_id: ${clientReferenceId}`);
-    telegramService.sendMessage(
+    telegramService.sendAlert(
       `🚨 **User not found for checkout session**\n\n` +
         `Client Reference ID: ${clientReferenceId}\n` +
         `Customer ID: ${customerId}\n` +
@@ -232,7 +232,7 @@ async function handlePaymentIntent(
   const amount = paymentIntent.amount / 100;
   const currency = paymentIntent.currency.toUpperCase();
 
-  telegramService.sendMessage(
+  telegramService.sendAlert(
     `🎉💰 Payment received!\n\n` +
       `User: ${user.email}\n` +
       `Amount: ${amount} ${currency}\n` +
@@ -315,7 +315,7 @@ router.post(
     } catch (error) {
       logger.error(`Error processing webhook ${event.type}:`, error);
 
-      telegramService.sendMessage(
+      telegramService.sendAlert(
         `🚨 *Webhook processing failed*\n\n` +
           `Event: ${event.type}\n` +
           `UTC Time: ${new Date().toISOString()}\n` +

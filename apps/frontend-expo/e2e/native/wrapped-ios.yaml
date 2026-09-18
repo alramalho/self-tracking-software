@@ -1,0 +1,117 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- tapOn:
+    text: Open
+    optional: true
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- runScript: wrapped.js
+- tapOn: Profile
+- tapOn:
+    id: profile-badge-streaks
+- assertVisible: Badge Details
+- scrollUntilVisible:
+    element: ".*1 week buffer.*"
+    direction: DOWN
+- takeScreenshot: streak-drawer-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close badge details
+- assertNotVisible: Badge Details
+- scrollUntilVisible:
+    element: Your 2025 wrapped
+    direction: DOWN
+- tapOn: Your 2025 wrapped
+- assertVisible: A year of growth
+- takeScreenshot: wrapped-hero-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to world story
+    waitToSettleTimeoutMs: 1000
+- tapOn: Explore Portugal
+- takeScreenshot: wrapped-world-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to journey story
+    waitToSettleTimeoutMs: 1000
+- assertVisible: 2025 Journey
+- takeScreenshot: wrapped-journey-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to plans story
+    waitToSettleTimeoutMs: 1000
+- tapOn: Filter memories for Exercise regularly
+- assertVisible: "2025's plans"
+- tapOn: Open memory wrapped-0
+- assertVisible: Close memory
+- takeScreenshot: wrapped-photo-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close memory
+- assertNotVisible: Close memory
+- tapOn:
+    text: Go to mood story
+    waitToSettleTimeoutMs: 1000
+- assertVisible: Your Mood
+- takeScreenshot: wrapped-mood-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to activities story
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "2025's activities"
+- takeScreenshot: wrapped-activities-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to friends story
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "2025's leaderboard"
+- assertVisible: "470"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: wrapped-complete-ranking-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: Go to streaks story
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "2025's streaks"
+- takeScreenshot: wrapped-streaks-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close wrapped
+- tapOn: Home
+- scrollUntilVisible:
+    element:
+      id: timeline-row
+    direction: DOWN
+- swipe:
+    start: 50%, 80%
+    end: 50%, 50%
+    duration: 400
+- doubleTapOn: Home
+- extendedWaitUntil:
+    visible: Messages
+    timeout: 10000
+- takeScreenshot: home-return-top-${output.theme}
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Your 2025 wrapped
+    direction: DOWN
+- tapOn: Your 2025 wrapped
+- tapOn: Share wrapped story
+- extendedWaitUntil:
+    visible: Copy
+    timeout: 20000
+- takeScreenshot: wrapped-native-share
+- waitForAnimationToEnd:
+    timeout: 3000

@@ -1,0 +1,75 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Dark
+    direction: DOWN
+- tapOn: Dark
+- scrollUntilVisible:
+    element: Back
+    direction: UP
+- tapOn: Back
+- runScript: timeline-design.js
+- tapOn: Home
+- swipe:
+    start: 50%, 30%
+    end: 50%, 75%
+    duration: 600
+- scrollUntilVisible:
+    element: React
+    direction: DOWN
+    centerElement: true
+- tapOn: React
+- assertVisible:
+    id: reaction-picker
+- takeScreenshot: reaction-island-dark
+- tapOn:
+    point: 1%, 50%
+- assertNotVisible:
+    id: reaction-picker
+- tapOn: React
+- tapOn: "🔥"
+- assertNotVisible:
+    id: reaction-picker
+- tapOn: React
+- tapOn: "🔥"
+- assertNotVisible:
+    id: reaction-picker
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Light
+    direction: DOWN
+- tapOn: Light
+- scrollUntilVisible:
+    element: Back
+    direction: UP
+- tapOn: Back
+- tapOn: Home
+- scrollUntilVisible:
+    element: React
+    direction: DOWN
+    centerElement: true
+- tapOn: React
+- assertVisible:
+    id: reaction-picker
+- takeScreenshot: reaction-island-light
+- tapOn: "🔥"
+- assertNotVisible:
+    id: reaction-picker
+- tapOn: React
+- tapOn: "🔥"
+- assertNotVisible:
+    id: reaction-picker

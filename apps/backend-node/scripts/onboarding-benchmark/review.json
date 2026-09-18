@@ -1,0 +1,8 @@
+{
+  "suite": "onboarding-decision-pilot-v2",
+  "status": "pending_user_review",
+  "approvedCasesSha256": null,
+  "approvedPromptSha256": null,
+  "gateway": "vercel-ai-gateway-only",
+  "note": "The user requested review of actual representative cases before comparison. Do not approve until the user approves the cases and capability boundary. Record both hashes after approval."
+}

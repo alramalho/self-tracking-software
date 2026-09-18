@@ -1,0 +1,34 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://health-workout/health-run
+- extendedWaitUntil:
+    visible: Workout details
+    timeout: 20000
+- assertVisible: Your Apple Watch vitals
+- assertVisible: Elevation profile
+- assertVisible: "151 bpm"
+- assertVisible: "5.10 km"
+- takeScreenshot: workout-vitals-overview
+- scrollUntilVisible:
+    element: Heart rate
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: workout-vitals-heart-rate
+- scrollUntilVisible:
+    element: Map
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: workout-vitals-map
+- scrollUntilVisible:
+    element: Heart-rate zones
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: workout-vitals-zones
+- assertVisible: Heart-rate zones
+- assertVisible: Private Watch data
+- takeScreenshot: workout-vitals-details

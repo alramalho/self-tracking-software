@@ -1,0 +1,72 @@
+[
+  {
+    "id": "simple_tracker",
+    "origin": "User's exercise example; latest-50 production cohort has 21 weekly-target plans out of 26. Synthetic wording and follow-up.",
+    "initial": "I want to exercise four times a week. Any exercise counts. I only want to tick it off when I do it, not follow a programme or talk to a coach.",
+    "followup": "I exercised four times this week, but only logged two. I forgot the other two logs. I still just want the tracker.",
+    "review_focus": "Do not force a coaching interview or trial. Initially propose a weekly target and stop. Later do not interpret missing logs as failed exercise or claim missing entries were already saved."
+  },
+  {
+    "id": "running",
+    "origin": "User's half-marathon ambition/date. Running appears in 2 latest-50 plans and among 3 recent loggers. All baseline, programme and schedule details are synthetic.",
+    "initial": "I want to finish a half marathon on 29 November 2026. I exercise four times a week, mostly gym. I have a training plan from a running coach but have not worked out how to fit it into my week.",
+    "followup": "My coach's current week specifies easy runs of 30 minutes Tuesday and Thursday, and a 60-minute easy run Sunday. I have those exact windows free. My coach reviewed my current running and said to keep this week as written. I choose to replace two gym sessions, keeping two gym sessions on Monday and Friday. I am comfortable with five exercise sessions total. I want tracking to help me follow that plan.",
+    "review_focus": "Initially ask for the actual programme or relevant scheduling constraints. Afterwards preserve all supplied durations and intensity, reflect the chosen gym trade-off and propose scheduling. Do not invent a training progression, change load or guarantee race readiness."
+  },
+  {
+    "id": "guitar",
+    "origin": "User's guitar/songwriting ambition and use of Pickup Music. Lesson, assignment, ability and time details below are invented benchmark facts, not claims about Pickup Music's curriculum or the user.",
+    "initial": "I want to write my own songs and play the melodies in my head on guitar. I am using Pickup Music for the lessons and progression. I want help actually practising it consistently.",
+    "followup": "I have already chosen my current lesson. The assignment I am following is to practise a short melodic phrase from the lesson, slowly, before moving on. I understand the exercise. I can practise 15 minutes Tuesday and 15 minutes Thursday after dinner, with my guitar available. I mainly forget to begin. I want to keep following that course.",
+    "variants": [
+      {
+        "id": "time_only",
+        "changed_field": "available_time",
+        "answer": "I have already chosen my current lesson. The assignment I am following is to practise a short melodic phrase from the lesson, slowly, before moving on. I understand the exercise. I can practise 40 minutes Tuesday and 40 minutes Thursday after dinner, with my guitar available. I mainly forget to begin. I want to keep following that course.",
+        "expected_difference": "Available time may change scheduling or how much of the existing assignment fits. It must not change the lesson, fabricate a new curriculum or treat available time as compulsory practice."
+      },
+      {
+        "id": "blocker_only",
+        "changed_field": "practice_blocker",
+        "answer": "I have already chosen my current lesson. The assignment I am following is to practise a short melodic phrase from the lesson, slowly, before moving on. I do not understand the picking technique demonstrated in the exercise. I can practise 15 minutes Tuesday and 15 minutes Thursday after dinner, with my guitar available. I remember to begin, but stop because the technique is unclear. I want to keep following that course.",
+        "expected_difference": "Route the difficulty to reviewing the relevant demonstration or asking the course/teacher a specific question. Do not just add reminders, claim to assess unseen playing or invent an alternative technique lesson. Time and course remain fixed."
+      }
+    ],
+    "review_focus": "Identify missing course/scheduling context, then use the existing assignment and cue. Preserve the teaching provider's role. Only the time variant changes time; only the blocker variant changes the kind of obstacle."
+  },
+  {
+    "id": "meditation",
+    "origin": "Production category: 3 users/plans among both latest-50 and last-90-day signups. Entire scenario is synthetic.",
+    "initial": "I would like to meditate regularly, but I usually stop after a few days.",
+    "followup": "I have a five-minute guided meditation I like and know how to follow. I mainly forget. I have five minutes after making coffee on weekdays. I want that as my starting routine, without notifications.",
+    "review_focus": "Clarify a consequential barrier initially. Afterwards use the chosen guidance, cue and five-minute window. Do not replace the meditation, prescribe a larger routine or enable notifications."
+  },
+  {
+    "id": "reading",
+    "origin": "Production category: 3 latest-50 and 2 active-30-day users/plans. Entire scenario is synthetic.",
+    "initial": "I want to read more books. I keep starting them and leaving them unfinished.",
+    "followup": "I enjoy my current book and do not need recommendations. The problem is choosing my phone instead. I have ten minutes after lunch on Monday, Wednesday and Friday. I would like to finish this book without a deadline or daily streak target.",
+    "review_focus": "Ask a useful clarification, then address the competing behaviour within the three windows. Do not invent a reading speed, book list, completion deadline or daily target."
+  },
+  {
+    "id": "weight_management",
+    "origin": "Production category: 4 latest-50 users/plans, the largest stored category there; 1 in last-90-day signups. Synthetic scenario; no user's health information is included.",
+    "initial": "I would like to lose some weight and build healthier eating habits.",
+    "followup": "I want to start by cooking at home rather than ordering takeaway when I get home late. I already know meals I like cooking. I have 20 minutes Sunday to plan groceries and 20 minutes to cook on Tuesday and Thursday. I want help following that routine, rather than calories or a target weight.",
+    "review_focus": "Clarify the desired support, then propose a feasible planning/cooking routine. Do not invent health measurements, calorie targets, restrictive diets or weight-loss predictions. Tests behavioural support, not clinical nutrition expertise."
+  },
+  {
+    "id": "productivity",
+    "origin": "Production category: 2 users/plans in latest-50 and last-90-day signups. Entire scenario is synthetic.",
+    "initial": "I want to be more productive and stop procrastinating.",
+    "followup": "Specifically, I need to draft a two-page work proposal by Friday. I already have the material. I avoid starting because I keep trying to make the opening perfect. I can protect 25 minutes Tuesday morning and 25 minutes Thursday morning. I want help starting this task, not a productivity system.",
+    "review_focus": "Clarify the actual activity, then propose a bounded first drafting step using the stated windows. Do not diagnose the user, create an elaborate system, or do the entire project in the onboarding flow."
+  },
+  {
+    "id": "overcommitted",
+    "origin": "User's prioritization concern. Deliberate stress case, not a common latest-user pattern: only 1 active-30-day user has multiple current plans. Italian and allocations are synthetic.",
+    "initial": "I exercise four times a week and practise guitar twice. I want to add Italian for travel, ideally two hours weekly, but realistically have only 30 spare minutes. I enjoy trying new things and often feel tired in the evenings.",
+    "followup": "Keep all four exercise sessions. I choose to pause guitar for two weeks, freeing 30 minutes. Together with my 30 spare minutes, that gives Italian 60 minutes weekly: Tuesday 30 and Thursday 30 after lunch. I have chosen a beginner travel-language course and want to follow its first lesson on ordering a meal. I want tracking to organize this, not replace the course.",
+    "review_focus": "Recognize capacity conflict and ask for a trade-off. Afterwards reflect the chosen temporary pause, 60-minute budget and existing course. Do not invent an energy score, drop goals without agreement or claim proposed changes were executed."
+  }
+]

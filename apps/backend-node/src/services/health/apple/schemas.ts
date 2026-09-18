@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 
-import { APPLE_HEALTH_AGGREGATIONS, APPLE_HEALTH_DAILY_METRICS } from "./types";
+import {
+  APPLE_HEALTH_AGGREGATIONS,
+  APPLE_HEALTH_DAILY_METRICS,
+} from "./types";
 
 const nonEmptyBoundedString = z.string().trim().min(1).max(200);
 const optionalBoundedString = nonEmptyBoundedString.optional();
@@ -36,6 +39,48 @@ const dailyMetricSchema = z.object({
   sampleCount: z.number().int().nonnegative().max(10_000_000).optional(),
 });
 
+const heartRateZonesSchema = z.object({
+  estimatedMaxHeartRateBpm: z.number().finite().positive().max(300),
+  source: z.enum(["age_estimate", "default"]),
+  zone1Seconds: z.number().finite().nonnegative(),
+  zone2Seconds: z.number().finite().nonnegative(),
+  zone3Seconds: z.number().finite().nonnegative(),
+  zone4Seconds: z.number().finite().nonnegative(),
+  zone5Seconds: z.number().finite().nonnegative(),
+});
+
+const elevationProfileSchema = z
+  .array(
+    z.object({
+      distanceMeters: z.number().finite().nonnegative(),
+      elevationMeters: z.number().finite(),
+    }),
+  )
+  .min(2)
+  .max(240);
+
+const heartRateSeriesSchema = z
+  .array(
+    z.object({
+      elapsedSeconds: z.number().finite().nonnegative(),
+      bpm: z.number().finite().positive().max(300),
+    }),
+  )
+  .min(2)
+  .max(240);
+
+const routeSchema = z
+  .array(
+    z.object({
+      latitude: z.number().finite().min(-90).max(90),
+      longitude: z.number().finite().min(-180).max(180),
+      distanceMeters: z.number().finite().nonnegative(),
+      elevationMeters: z.number().finite().optional(),
+    }),
+  )
+  .min(2)
+  .max(240);
+
 const workoutSchema = provenanceSchema.extend({
   externalId: nonEmptyBoundedString,
   activityTypeCode: z.number().int().nonnegative(),
@@ -45,6 +90,16 @@ const workoutSchema = provenanceSchema.extend({
   durationSeconds: z.number().finite().nonnegative(),
   activeEnergyKcal: z.number().finite().nonnegative().optional(),
   distanceMeters: z.number().finite().nonnegative().optional(),
+  elevationAscendedMeters: z.number().finite().nonnegative().optional(),
+  elevationDescendedMeters: z.number().finite().nonnegative().optional(),
+  workoutEffortScore: z.number().finite().min(1).max(10).optional(),
+  estimatedWorkoutEffortScore: z.number().finite().min(1).max(10).optional(),
+  averageHeartRateBpm: z.number().finite().positive().max(300).optional(),
+  maximumHeartRateBpm: z.number().finite().positive().max(300).optional(),
+  heartRateZones: heartRateZonesSchema.optional(),
+  heartRateSeries: heartRateSeriesSchema.optional(),
+  elevationProfile: elevationProfileSchema.optional(),
+  route: routeSchema.optional(),
 });
 
 const sleepSampleSchema = provenanceSchema.extend({

@@ -1,11 +1,58 @@
 import { describe, expect, it } from "vitest";
+import type { Activity } from "@tsw/prisma";
 
 import {
   canonicalActivityKind,
   canonicalWorkoutKind,
   compareWorkoutMeasurement,
   healthMeasurementForMeasure,
+  suggestedActivityForWorkout,
 } from "./service";
+
+function activity(id: string, title: string, measure = "minutes"): Activity {
+  return { id, title, measure, userId: "test-user", emoji: "🏃", kind: "other",
+    createdAt: new Date(0), updatedAt: new Date(0), colorHex: null, deletedAt: null };
+}
+
+const RUN = { activityTypeCode: 37, activityTypeName: "running",
+  distanceMeters: 5000, durationSeconds: 1800 };
+
+describe("remembered Apple workout activity choices", () => {
+  it("prefers a confirmed custom name over the generic title match", () => {
+    const activities = [activity("run", "Running"), activity("custom", "Morning movement")];
+    const matches = [{ activityTypeCode: 37, activityId: "custom", confirmedAt: new Date() }];
+    expect(suggestedActivityForWorkout(RUN, activities, matches)?.id).toBe("custom");
+  });
+
+  it("uses the latest valid choice and never changes the supplied history", () => {
+    const activities = [activity("old", "Old routine"), activity("new", "New routine")];
+    const matches = [
+      { activityTypeCode: 37, activityId: "old", confirmedAt: new Date(1) },
+      { activityTypeCode: 37, activityId: "new", confirmedAt: new Date(2) },
+    ];
+    expect(suggestedActivityForWorkout(RUN, activities, matches)?.id).toBe("new");
+    expect(matches[0].activityId).toBe("old");
+  });
+
+  it("does not reuse another workout type's choice", () => {
+    const activities = [activity("run", "Running"), activity("gym", "Gym")];
+    const matches = [{ activityTypeCode: 50, activityId: "gym", confirmedAt: new Date() }];
+    expect(suggestedActivityForWorkout(RUN, activities, matches)?.id).toBe("run");
+  });
+
+  it("falls back when a saved activity is absent, deleted or has incompatible units", () => {
+    const deleted = { ...activity("deleted", "Old routine"), deletedAt: new Date() };
+    const activities = [activity("run", "Running"), deleted, activity("reps", "Strength", "reps")];
+    for (const activityId of ["absent", "deleted", "reps"]) {
+      expect(suggestedActivityForWorkout(RUN, activities,
+        [{ activityTypeCode: 37, activityId, confirmedAt: new Date() }])?.id).toBe("run");
+    }
+  });
+
+  it("leaves a workout without a usable activity for the create-activity flow", () => {
+    expect(suggestedActivityForWorkout(RUN, [], [])).toBeNull();
+  });
+});
 
 const JULY_9_RUN = {
   distanceMeters: 5884.797,

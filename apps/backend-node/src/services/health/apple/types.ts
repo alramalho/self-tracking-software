@@ -42,6 +42,35 @@ export interface AppleHealthDailyMetricInput {
   sampleCount?: number;
 }
 
+export type AppleHealthHeartRateZoneSource = "age_estimate" | "default";
+
+export interface AppleHealthHeartRateZones {
+  estimatedMaxHeartRateBpm: number;
+  source: AppleHealthHeartRateZoneSource;
+  zone1Seconds: number;
+  zone2Seconds: number;
+  zone3Seconds: number;
+  zone4Seconds: number;
+  zone5Seconds: number;
+}
+
+export interface AppleHealthElevationProfilePoint {
+  distanceMeters: number;
+  elevationMeters: number;
+}
+
+export interface AppleHealthHeartRateSeriesPoint {
+  elapsedSeconds: number;
+  bpm: number;
+}
+
+export interface AppleHealthRoutePoint {
+  latitude: number;
+  longitude: number;
+  distanceMeters: number;
+  elevationMeters?: number;
+}
+
 export interface AppleHealthWorkoutInput {
   externalId: string;
   activityTypeCode: number;
@@ -51,12 +80,35 @@ export interface AppleHealthWorkoutInput {
   durationSeconds: number;
   activeEnergyKcal?: number;
   distanceMeters?: number;
+  elevationAscendedMeters?: number;
+  elevationDescendedMeters?: number;
+  workoutEffortScore?: number;
+  estimatedWorkoutEffortScore?: number;
+  averageHeartRateBpm?: number;
+  maximumHeartRateBpm?: number;
+  heartRateZones?: AppleHealthHeartRateZones;
+  heartRateSeries?: AppleHealthHeartRateSeriesPoint[];
+  elevationProfile?: AppleHealthElevationProfilePoint[];
+  route?: AppleHealthRoutePoint[];
   sourceBundleId: string;
   sourceName?: string;
   sourceProductType?: string;
   deviceName?: string;
   deviceModel?: string;
   timezone?: string;
+}
+
+export interface AppleHealthWorkoutMetadata {
+  elevationAscendedMeters?: number;
+  elevationDescendedMeters?: number;
+  workoutEffortScore?: number;
+  estimatedWorkoutEffortScore?: number;
+  averageHeartRateBpm?: number;
+  maximumHeartRateBpm?: number;
+  heartRateZones?: AppleHealthHeartRateZones;
+  heartRateSeries?: AppleHealthHeartRateSeriesPoint[];
+  elevationProfile?: AppleHealthElevationProfilePoint[];
+  route?: AppleHealthRoutePoint[];
 }
 
 export interface AppleHealthSleepSampleInput {

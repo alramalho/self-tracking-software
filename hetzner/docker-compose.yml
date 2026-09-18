@@ -59,6 +59,9 @@ services:
       HOST: "0.0.0.0"
       NODE_ENV: "production"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      APNS_KEY_PATH: /run/secrets/apns-key.p8
+    volumes:
+      - ./secrets/apns-key.p8:/run/secrets/apns-key.p8:ro
     logging: *betterstack-logging
     expose:
       - "3000"

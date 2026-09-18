@@ -1,3 +1,10 @@
+import type {
+  AppleHealthElevationProfilePoint,
+  AppleHealthHeartRateSeriesPoint,
+  AppleHealthHeartRateZones,
+  AppleHealthRoutePoint,
+} from "../types";
+
 export const WORKOUT_RECONCILIATION_ACTIONS = [
   "link_keep",
   "link_use_health",
@@ -31,6 +38,7 @@ export interface WorkoutMismatch {
 
 export interface HealthWorkoutPreview {
   id: string;
+  provider: string;
   activityTypeName: string;
   displayName: string;
   startAt: string;
@@ -38,6 +46,17 @@ export interface HealthWorkoutPreview {
   durationSeconds: number;
   distanceMeters: number | null;
   activeEnergyKcal: number | null;
+  elevationAscendedMeters: number | null;
+  elevationDescendedMeters: number | null;
+  effortScore: number | null;
+  effortSource: "user" | "apple_estimated" | null;
+  difficulty: "very_easy" | "easy" | "moderate" | "hard" | "very_hard" | null;
+  averageHeartRateBpm: number | null;
+  maximumHeartRateBpm: number | null;
+  heartRateZones: AppleHealthHeartRateZones | null;
+  heartRateSeries: AppleHealthHeartRateSeriesPoint[] | null;
+  elevationProfile: AppleHealthElevationProfilePoint[] | null;
+  route: AppleHealthRoutePoint[] | null;
   sourceName: string | null;
   deviceName: string | null;
   timezone: string | null;
@@ -76,9 +95,27 @@ export interface SuggestedActivity {
   measure: string;
 }
 
+export interface ConfirmedWorkoutActivityMatch {
+  activityTypeCode: number;
+  activityId: string;
+  confirmedAt: Date;
+}
+
+export type WorkoutActivitySuggestionInput = Pick<
+  import("@tsw/prisma").HealthWorkout,
+  "activityTypeCode" | "activityTypeName" | "distanceMeters" | "durationSeconds"
+>;
+
 export interface ResolvedWorkoutReconciliation {
   action: WorkoutReconciliationAction;
   activityEntryId: string | null;
+  healthDataIsPublic: boolean;
+  linkedActivity: {
+    title: string;
+    emoji: string;
+    measure: string;
+    quantity: number;
+  } | null;
   confirmedAt: string;
 }
 
@@ -112,6 +149,11 @@ export interface WorkoutReconciliationDecision {
   action: WorkoutReconciliationAction;
   activityEntryId?: string;
   activityId?: string;
+  newActivity?: {
+    title: string;
+    measure: "minutes" | "kilometers" | "sessions";
+  };
+  shareHealthData?: boolean;
 }
 
 export interface WorkoutReconciliationApplyResult {

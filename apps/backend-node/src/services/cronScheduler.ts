@@ -1,6 +1,8 @@
 import * as cron from "node-cron";
 import { logger } from "../utils/logger";
 import { recurringJobService } from "./recurringJobService";
+import { deliverFollowThrough } from "./follow-through/delivery";
+import { syncAllGarminIntegrations } from "./health/garmin/service";
 
 interface CronConfig {
   // Random delay window in minutes (0-15 means up to 15 minutes delay)
@@ -31,6 +33,33 @@ export class CronScheduler {
     }
 
     logger.info("Starting cron scheduler...");
+    this.tasks.push(
+      cron.schedule(
+        "*/2 * * * *",
+        async () => {
+          try {
+            await deliverFollowThrough();
+          } catch (error) {
+            logger.error("Session reminder scheduler failed", error);
+          }
+        },
+        { noOverlap: true },
+      ),
+    );
+
+    this.tasks.push(
+      cron.schedule(
+        "*/15 * * * *",
+        async () => {
+          try {
+            await syncAllGarminIntegrations();
+          } catch (error) {
+            logger.error("Garmin Connect scheduler failed", error);
+          }
+        },
+        { noOverlap: true },
+      ),
+    );
 
     // Hourly job - runs every hour at XX:00, then waits random delay
     const hourlyJobTask = cron.schedule("0 * * * *", () => {
@@ -68,7 +97,7 @@ export class CronScheduler {
     this.tasks.push(dailyJobTask);
 
     logger.info(
-      `Cron scheduler started with ${this.tasks.length} task(s) - random delay window: 0-${this.config.randomDelayMinutes} minutes`
+      `Cron scheduler started with ${this.tasks.length} task(s) - random delay window: 0-${this.config.randomDelayMinutes} minutes`,
     );
   }
 
@@ -90,7 +119,7 @@ export class CronScheduler {
     const delayMs = delayMinutes * 60 * 1000;
 
     logger.info(
-      `${jobName}: Scheduled to run in ${delayMinutes.toFixed(2)} minutes`
+      `${jobName}: Scheduled to run in ${delayMinutes.toFixed(2)} minutes`,
     );
 
     setTimeout(async () => {

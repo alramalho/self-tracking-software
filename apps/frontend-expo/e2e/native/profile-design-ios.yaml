@@ -1,0 +1,59 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- runScript: profile-design.js
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Dark
+    direction: DOWN
+- tapOn: Dark
+- scrollUntilVisible:
+    element: Back
+    direction: UP
+- tapOn: Back
+- waitForAnimationToEnd
+- assertVisible: Gold level
+- assertVisible: 7 streaks
+- takeScreenshot: profile-dark
+- tapOn: 7 streaks
+- assertVisible: Badge Details
+- tapOn: Close badge details
+- waitForAnimationToEnd
+- tapOn: Gold level
+- assertVisible: 600 points
+- assertVisible: All Levels
+- tapOn: Close
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Light
+    direction: DOWN
+- tapOn: Light
+- scrollUntilVisible:
+    element: Back
+    direction: UP
+- tapOn: Back
+- waitForAnimationToEnd
+- assertVisible: Gold level
+- assertVisible: 7 streaks
+- takeScreenshot: profile-light
+- tapOn: 7 streaks
+- assertVisible: Badge Details
+- tapOn: Close badge details
+- waitForAnimationToEnd
+- tapOn: Gold level
+- assertVisible: 600 points
+- assertVisible: All Levels
+- tapOn: Close
+- waitForAnimationToEnd

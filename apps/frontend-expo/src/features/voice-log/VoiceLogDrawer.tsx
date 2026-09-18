@@ -1,0 +1,713 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, View } from "react-native";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  Lightbulb,
+  Mic,
+  RotateCcw,
+  Square,
+} from "lucide-react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { randomUUID } from "expo-crypto";
+import { router } from "expo-router";
+import { Text } from "@/components/typography/Text";
+import { Button, Copy, Status, useColors } from "@/components/ui";
+import { ReviewRow } from "@/features/health/review/controls";
+import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
+import { useEntries } from "@/data/queries";
+import { commitVoiceLog, previewVoiceLog } from "./service";
+import { enrichVoiceLogPreview } from "./model";
+import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
+import { useVoiceLogRecorder } from "./useVoiceLogRecorder";
+import { voiceLogActivityKey, voiceLogMetricKey } from "./types";
+import type {
+  VoiceLogDraft,
+  VoiceLogDrawerProps,
+  VoiceLogPhase,
+  VoiceLogPreview,
+  VoiceLogRecordingKind,
+  VoiceLogSelectionGroupProps,
+} from "./types";
+
+function durationLabel(durationMillis: number) {
+  const seconds = Math.floor(durationMillis / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function dateLabel(date: string, time?: string | null) {
+  const value = new Date(`${date}T${time ?? "12:00"}:00`);
+  const formatted = Number.isNaN(value.getTime())
+    ? date
+    : new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(value);
+  return time ? `${formatted} · ${time}` : formatted;
+}
+
+function activityDetail(activity: VoiceLogPreview["activities"][number]) {
+  return [
+    `${activity.quantity} ${activity.measure} · ${dateLabel(activity.date, activity.time)}`,
+    activity.description,
+    activity.privateNotes ? `Private note: ${activity.privateNotes}` : undefined,
+    activity.difficulty ? `Effort: ${activity.difficulty.replaceAll("_", " ")}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function metricDetail(metric: VoiceLogPreview["metrics"][number]) {
+  return [
+    `Rating ${metric.rating}/5 · ${dateLabel(metric.date)}`,
+    metric.description,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function SelectionGroup({ children }: VoiceLogSelectionGroupProps) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        backgroundColor: c.soft,
+        borderRadius: 16,
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+export function VoiceLogDrawer({
+  onClose,
+  initialDraft,
+  onPendingChange,
+}: VoiceLogDrawerProps) {
+  const c = useColors();
+  const client = useQueryClient();
+  const entries = useEntries();
+  const [phase, setPhase] = useState<VoiceLogPhase>(
+    initialDraft ? "review" : "ready",
+  );
+  const [preview, setPreview] = useState<VoiceLogPreview | undefined>(
+    initialDraft?.preview,
+  );
+  const [selectedActivityIDs, setSelectedActivityIDs] = useState<Set<string>>(
+    () => new Set(initialDraft?.selectedActivityKeys ?? []),
+  );
+  const [selectedMetricIDs, setSelectedMetricIDs] = useState<Set<string>>(
+    () => new Set(initialDraft?.selectedMetricKeys ?? []),
+  );
+  const [error, setError] = useState<unknown>();
+  const [clientRequestId, setClientRequestId] = useState(
+    () => initialDraft?.preview.clientRequestId ?? randomUUID(),
+  );
+  const recordingKindRef = useRef<VoiceLogRecordingKind>("initial");
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  useEffect(() => {
+    if (!initialDraft || preview) return;
+    setPreview(initialDraft.preview);
+    setPhase("review");
+  }, [initialDraft, preview]);
+
+  useEffect(() => {
+    if (phase !== "review" || !preview) return;
+    const draft: VoiceLogDraft = {
+      preview,
+      selectedActivityKeys: [...selectedActivityIDs],
+      selectedMetricKeys: [...selectedMetricIDs],
+      savedAt: new Date().toISOString(),
+    };
+    void writePendingVoiceLog(draft)
+      .then(() => onPendingChange?.(draft))
+      .catch((nextError) => setError(nextError));
+  }, [onPendingChange, phase, preview, selectedActivityIDs, selectedMetricIDs]);
+
+  const processRecording = useCallback(
+    async (uri: string) => {
+      const activeRecordingKind = recordingKindRef.current;
+      const refinementContext =
+        activeRecordingKind === "refinement" && preview
+          ? {
+              originalTranscript: preview.transcript,
+              currentDraft: {
+                ...preview,
+                activities: preview.activities.filter((activity) =>
+                  selectedActivityIDs.has(voiceLogActivityKey(activity)),
+                ),
+                metrics: preview.metrics.filter((metric) =>
+                  selectedMetricIDs.has(voiceLogMetricKey(metric)),
+                ),
+              },
+            }
+          : undefined;
+      setPhase("processing");
+      setError(undefined);
+      try {
+        const result = await previewVoiceLog(uri, {
+          timezone,
+          clientRequestId,
+          refinementContext,
+        });
+        const enriched = enrichVoiceLogPreview(result, entries.data ?? []);
+        setPreview(enriched);
+        setSelectedActivityIDs(
+          new Set(enriched.activities.map(voiceLogActivityKey)),
+        );
+        setSelectedMetricIDs(
+          new Set(enriched.metrics.map(voiceLogMetricKey)),
+        );
+        setPhase("review");
+      } catch (nextError) {
+        setError(nextError);
+        setPhase(activeRecordingKind === "refinement" ? "review" : "ready");
+      }
+    },
+    [
+      clientRequestId,
+      preview,
+      entries.data,
+      selectedActivityIDs,
+      selectedMetricIDs,
+      timezone,
+    ],
+  );
+
+  const handleRecordingError = useCallback(
+    (nextError: unknown) => {
+      setError(nextError);
+      setPhase(
+        recordingKindRef.current === "refinement" && preview
+          ? "review"
+          : "ready",
+      );
+    },
+    [preview],
+  );
+
+  const handleRecordingReady = useCallback(
+    (uri: string) => void processRecording(uri),
+    [processRecording],
+  );
+
+  const recorder = useVoiceLogRecorder({
+    onRecordingReady: handleRecordingReady,
+    onError: handleRecordingError,
+  });
+
+  const busy =
+    recorder.isWorking || phase === "processing" || phase === "committing";
+  const isCommitting = phase === "committing";
+
+  function close() {
+    if (busy || phase === "recording") return;
+    onClose();
+  }
+
+  async function startRecording(kind: VoiceLogRecordingKind = recordingKindRef.current) {
+    setError(undefined);
+    recordingKindRef.current = kind;
+    setPhase("recording");
+    await recorder.start();
+  }
+
+  function toggleActivity(id: string) {
+    setSelectedActivityIDs((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleMetric(id: string) {
+    setSelectedMetricIDs((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function startOver() {
+    if (busy) return;
+    void clearPendingVoiceLog().then(() => onPendingChange?.(null));
+    setPreview(undefined);
+    setError(undefined);
+    setClientRequestId(randomUUID());
+    recordingKindRef.current = "initial";
+    setSelectedActivityIDs(new Set());
+    setSelectedMetricIDs(new Set());
+    setPhase("ready");
+  }
+
+  function createPlan(suggestion: NonNullable<VoiceLogPreview["planSuggestions"]>[number]) {
+    close();
+    router.push({
+      pathname: "/create-plan",
+      params: { voiceGoal: suggestion.text },
+    });
+  }
+
+  function askCoach(suggestion: NonNullable<VoiceLogPreview["planSuggestions"]>[number]) {
+    close();
+    router.push({
+      pathname: "/messages",
+      params: {
+        prompt: `I mentioned this longer-term intention in my voice note: “${suggestion.text}” Please help me decide whether it should become a plan, and ask me the next question before creating anything.`,
+      },
+    });
+  }
+
+  function makeChanges() {
+    if (!preview || busy) return;
+    void startRecording("refinement");
+  }
+
+  async function commit() {
+    if (!preview || busy) return;
+    setPhase("committing");
+    setError(undefined);
+    try {
+      await commitVoiceLog({
+        clientRequestId,
+        transcript: preview.transcript,
+        timezone,
+        activities: preview.activities
+          .filter((activity) =>
+            selectedActivityIDs.has(voiceLogActivityKey(activity)),
+          )
+          .map(({ confidence: _confidence, title: _title, emoji: _emoji, measure: _measure, ...activity }) => activity),
+        metrics: preview.metrics
+          .filter((metric) => selectedMetricIDs.has(voiceLogMetricKey(metric)))
+          .map(({ confidence: _confidence, title: _title, emoji: _emoji, ...metric }) => metric),
+        note: preview.note,
+      });
+      await client.invalidateQueries();
+      await clearPendingVoiceLog();
+      onPendingChange?.(null);
+      setPhase("committed");
+    } catch (nextError) {
+      setError(nextError);
+      setPhase("review");
+    }
+  }
+
+  const title =
+    phase === "review"
+      ? "Review voice note"
+      : phase === "processing"
+        ? "Understanding your note"
+        : phase === "committing"
+          ? "Saving voice note"
+          : phase === "committed"
+            ? "Voice note saved"
+            : phase === "recording"
+              ? "Recording"
+              : "Log voice note";
+
+  return (
+    <LoggingDrawer
+      title={title}
+      titleAlign={phase === "review" ? "left" : "center"}
+      testID="voice-log-drawer"
+      dismissLabel="Dismiss voice note"
+      onClose={close}
+    >
+      {phase === "ready" && (
+        <View testID="voice-log-ready" style={{ gap: 18 }}>
+          <View style={{ alignItems: "center", gap: 10 }}>
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: c.accent + "18",
+              }}
+            >
+              <Mic size={30} color={c.accent} strokeWidth={1.8} />
+            </View>
+            <Copy>
+              Say what you did, how you felt, or what you want to remember.
+              tracking.so will turn it into suggestions for you to review.
+            </Copy>
+          </View>
+          <View
+            style={{
+              gap: 5,
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: c.soft,
+              borderWidth: 1,
+              borderColor: c.inputBorder,
+            }}
+          >
+            <Text style={{ color: c.text, fontSize: 14, fontWeight: "600" }}>
+              Private until you save
+            </Text>
+            <Text style={{ color: c.muted, fontSize: 13, lineHeight: 19 }}>
+              Nothing is logged automatically. You can remove any suggestion
+              before confirming.
+            </Text>
+          </View>
+          <Button onPress={() => void startRecording()}>
+            Start recording
+          </Button>
+          <Text style={{ color: c.muted, textAlign: "center", fontSize: 12 }}>
+            Up to 90 seconds · You can start over or make changes later
+          </Text>
+          <Status error={error} />
+        </View>
+      )}
+
+      {phase === "recording" && (
+        <View testID="voice-log-recording" style={{ alignItems: "center", gap: 16 }}>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#ef44441a",
+            }}
+          >
+            <Mic size={30} color="#ef4444" strokeWidth={1.8} />
+          </View>
+          <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
+            {recorder.isWorking ? "Finishing recording…" : "Listening…"}
+          </Text>
+          <Text
+            accessibilityLabel="Voice note duration"
+            style={{
+              color: c.text,
+              fontSize: 30,
+              fontFamily: "Inter-Bold",
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {durationLabel(recorder.durationMillis)}
+          </Text>
+          <Copy muted>
+            {recorder.isWorking
+              ? "Preparing your note…"
+              : "Tap stop when you’re done. The maximum is 90 seconds."}
+          </Copy>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Stop recording"
+            accessibilityState={{ disabled: recorder.isWorking }}
+            disabled={recorder.isWorking}
+            onPress={() => void recorder.stop()}
+            style={({ pressed }) => ({
+              minHeight: 48,
+              width: "100%",
+              borderRadius: 16,
+              backgroundColor: "#ef4444",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              opacity: recorder.isWorking ? 0.55 : pressed ? 0.75 : 1,
+            })}
+          >
+            {recorder.isWorking ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Square size={15} color="white" fill="white" />
+            )}
+            <Text style={{ color: "white", fontWeight: "600" }}>
+              {recorder.isWorking ? "Finishing…" : "Stop recording"}
+            </Text>
+          </Pressable>
+          <Status error={error} />
+        </View>
+      )}
+
+      {phase === "processing" && (
+        <View testID="voice-log-processing" style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
+          <ActivityIndicator color={c.accent} />
+          <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>
+            Transcribing and finding suggestions…
+          </Text>
+          <Copy muted>
+            We’ll show you exactly what was found before anything is saved.
+          </Copy>
+        </View>
+      )}
+
+      {phase === "review" && preview && (
+        <View testID="voice-log-review" style={{ gap: 20 }}>
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+              What I heard
+            </Text>
+            <View
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                backgroundColor: c.soft,
+                borderWidth: 1,
+                borderColor: c.inputBorder,
+              }}
+            >
+              <Text style={{ color: c.text, lineHeight: 22 }}>
+                “{preview.transcript}”
+              </Text>
+            </View>
+            <Copy muted>
+              Choose the suggestions to save. Nothing is committed until you
+              confirm below.
+            </Copy>
+          </View>
+
+          {!!preview.activities.length && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                Activities
+              </Text>
+              <SelectionGroup>
+                {preview.activities.map((activity) => {
+                  const id = voiceLogActivityKey(activity);
+                  const selected = selectedActivityIDs.has(id);
+                  return (
+                    <ReviewRow
+                      key={id}
+                      title={`${activity.emoji} ${activity.title}`}
+                      detail={activityDetail(activity)}
+                      label={`${selected ? "Remove" : "Include"} ${activity.title}`}
+                      selected={selected}
+                      onPress={() => toggleActivity(id)}
+                    />
+                  );
+                })}
+              </SelectionGroup>
+            </View>
+          )}
+
+          {!!preview.alreadyLogged?.length && (
+            <View style={{ gap: 8 }} testID="voice-log-already-logged">
+              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                Already logged
+              </Text>
+              <SelectionGroup>
+                {preview.alreadyLogged.map((activity) => (
+                  <ReviewRow
+                    key={`${voiceLogActivityKey(activity)}-existing`}
+                    title={`${activity.emoji} ${activity.title}`}
+                    detail={`${activity.existingQuantity} ${activity.measure} already saved · ${dateLabel(activity.date, activity.time)}`}
+                    label={`${activity.title} already logged`}
+                    selected
+                    disabled
+                    onPress={() => {}}
+                  />
+                ))}
+              </SelectionGroup>
+              <Copy muted>
+                We left these out so the same session is not counted twice.
+              </Copy>
+            </View>
+          )}
+
+          {!!preview.metrics.length && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                Metrics
+              </Text>
+              <SelectionGroup>
+                {preview.metrics.map((metric) => {
+                  const id = voiceLogMetricKey(metric);
+                  const selected = selectedMetricIDs.has(id);
+                  return (
+                    <ReviewRow
+                      key={id}
+                      title={`${metric.emoji} ${metric.title}`}
+                      detail={metricDetail(metric)}
+                      label={`${selected ? "Remove" : "Include"} ${metric.title}`}
+                      selected={selected}
+                      onPress={() => toggleMetric(id)}
+                    />
+                  );
+                })}
+              </SelectionGroup>
+            </View>
+          )}
+
+          {!!preview.planSuggestions?.length && (
+            <View
+              testID="voice-log-plan-suggestion"
+              style={{
+                gap: 10,
+                padding: 16,
+                borderRadius: 18,
+                backgroundColor: c.accent + "12",
+                borderWidth: 1,
+                borderColor: c.accent + "55",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Lightbulb size={18} color={c.accent} />
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
+                  This could become a plan
+                </Text>
+              </View>
+              <Copy>
+                You mentioned a longer-term intention. It is not logged as a
+                completed activity.
+              </Copy>
+              {preview.planSuggestions.slice(0, 1).map((suggestion) => (
+                <View key={`${suggestion.activityId}-${suggestion.text}`} style={{ gap: 8 }}>
+                  <Text style={{ color: c.text, lineHeight: 21 }}>
+                    {suggestion.emoji ? `${suggestion.emoji} ` : ""}
+                    {suggestion.activityTitle}
+                  </Text>
+                  <Text style={{ color: c.muted, fontSize: 13, lineHeight: 19 }}>
+                    “{suggestion.text}”
+                  </Text>
+                  {!!(suggestion.frequencyPerWeek || suggestion.durationWeeks) && (
+                    <Text style={{ color: c.muted, fontSize: 12 }}>
+                      {suggestion.frequencyPerWeek
+                        ? `${suggestion.frequencyPerWeek} days/week`
+                        : "Routine"}
+                      {suggestion.durationWeeks
+                        ? ` · ${suggestion.durationWeeks % 4 === 0 ? `${suggestion.durationWeeks / 4} months` : `${suggestion.durationWeeks} weeks`}`
+                        : ""}
+                    </Text>
+                  )}
+                  <Button secondary onPress={() => createPlan(suggestion)}>
+                    Start a plan conversation
+                  </Button>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Ask coach instead"
+                    onPress={() => askCoach(suggestion)}
+                    style={({ pressed }) => ({
+                      minHeight: 42,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Text style={{ color: c.muted, fontSize: 13 }}>
+                      Ask coach instead
+                    </Text>
+                    <ChevronRight size={15} color={c.muted} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+              Private note
+            </Text>
+            <View
+              style={{
+                gap: 7,
+                padding: 14,
+                borderRadius: 14,
+                backgroundColor: c.card,
+                borderWidth: 1,
+                borderColor: c.inputBorder,
+              }}
+            >
+              <Text style={{ color: c.text, fontWeight: "600" }}>
+                {preview.note.title}
+              </Text>
+              <Text style={{ color: c.text, lineHeight: 22 }}>
+                {preview.note.text}
+              </Text>
+              <Text style={{ color: c.muted, fontSize: 12 }}>
+                Saved privately to your tracking.so context
+              </Text>
+            </View>
+          </View>
+
+          {!!preview.unresolved.length && (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <AlertCircle size={16} color={c.muted} />
+                <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+                  Not included
+                </Text>
+              </View>
+              <Copy muted>
+                We left these out because they were not clear enough to log.
+              </Copy>
+              <View style={{ gap: 8 }}>
+                {preview.unresolved.map((item) => (
+                  <View key={`${item.text}-${item.reason}`} style={{ gap: 2 }}>
+                    <Text style={{ color: c.text, fontSize: 14 }}>“{item.text}”</Text>
+                    <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+                      {item.reason}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <Status error={error} />
+          <View style={{ gap: 8 }}>
+            <Button busy={isCommitting} onPress={() => void commit()}>
+              Save voice note
+            </Button>
+            <Button secondary disabled={busy} onPress={makeChanges}>
+              Make changes
+            </Button>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Start over"
+              disabled={busy}
+              onPress={startOver}
+              style={({ pressed }) => ({
+                minHeight: 44,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                opacity: busy ? 0.4 : pressed ? 0.6 : 1,
+              })}
+            >
+              <RotateCcw size={15} color={c.muted} />
+              <Text style={{ color: c.muted, fontSize: 13 }}>Start over</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {phase === "committing" && (
+        <View testID="voice-log-committing" style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
+          <ActivityIndicator color={c.accent} />
+          <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>
+            Saving your voice note…
+          </Text>
+        </View>
+      )}
+
+      {phase === "committed" && (
+        <View testID="voice-log-committed" style={{ alignItems: "center", gap: 14, paddingVertical: 16 }}>
+          <CheckCircle2 size={48} color="#10b981" strokeWidth={1.8} />
+          <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
+            Saved
+          </Text>
+          <Copy muted>
+            Your voice note and selected logs are now in tracking.so.
+          </Copy>
+          <Button onPress={onClose}>Done</Button>
+        </View>
+      )}
+    </LoggingDrawer>
+  );
+}

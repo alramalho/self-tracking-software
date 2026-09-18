@@ -1,0 +1,11 @@
+.git
+.vercel
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+*.log
+apps/frontend-expo
+apps/backend-node
+packages/prisma/node_modules

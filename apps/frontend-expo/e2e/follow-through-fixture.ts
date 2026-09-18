@@ -1,0 +1,65 @@
+import { interviewFixture } from "./interview-fixture";
+import type { FollowThroughState, OnboardingDraft } from "@tsw/prisma/follow-through";
+import { randomUUID } from "node:crypto";
+export const freshSupport = (): FollowThroughState => ({ version: 1, enabled: false, pausedAt: null, supports: {}, sessions: {}, checks: {}, draft: null });
+let support = freshSupport();
+export const resetFollowThrough = () => { support = freshSupport(); };
+export function followThroughFixture(path: string, method: string, body: any, state: any): unknown | undefined {
+  if (path === "/__follow-through") {
+    const plan = state.plans[0], today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Lisbon" });
+    plan.progress = { ...plan.progress, achievement: { streak: 20 }, habitAchievement: { isAchieved: false }, lifestyleAchievement: { isAchieved: true, maxValue: 9 } };
+    support.enabled = true;
+    support.supports[plan.id] = { planId: plan.id, mode: "TIMED", weekdays: [2], time: "18:00", timezone: "Europe/Lisbon", durationMinutes: 20, format: "TIMER", resourceUrl: null, resourceName: null, nextStep: "Put on my shoes and start my planned session.", preferences: { coaching: true, reminder: false, reminderMinutes: 30, dayReminderTime: "09:00", checkIn: true, checkInTime: "10:00", weeklyReview: true, reviewDay: 0, reviewTime: "18:00" }, effectiveDate: today };
+    support.sessions["session-check"] = { id: "session-check", planId: plan.id, activityId: plan.activities[0].id, date: today, time: "18:00", timezone: "Europe/Lisbon", durationMinutes: 20, source: "SPONTANEOUS", outcome: "UNCONFIRMED", entryId: null, startedAt: null, elapsedSeconds: 0, timerRunning: false };
+    const tomorrow = new Date(`${today}T12:00:00Z`); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    support.sessions["session-next"] = { ...support.sessions["session-check"], id: "session-next", date: tomorrow.toISOString().slice(0, 10) };
+    if (body?.profileGrid) {
+      const sunday = new Date(`${today}T12:00:00Z`); sunday.setUTCDate(sunday.getUTCDate() - sunday.getUTCDay());
+      const weeks = Array.from({length:10}, (_,i) => { const date=new Date(sunday);date.setUTCDate(date.getUTCDate()-i*7);return date; });
+      plan.createdAt=weeks[9].toISOString();
+      state.entries=weeks.flatMap((week,i)=>Array.from({length:i ? 3 : 1},(_,day)=>{const datetime=new Date(week);datetime.setUTCDate(datetime.getUTCDate()+day);return {...state.entries[0],id:`profile-grid-${i}-${day}`,activityId:plan.activities[day%plan.activities.length].id,datetime:datetime.toISOString(),quantity:day+3};}));
+      plan.progress.weeks=weeks.map((week,i)=>({startDate:week.toISOString(),isCompleted:i>0,plannedActivities:3,completedActivities:state.entries.filter((entry:any)=>{const d=new Date(entry.datetime);return d>=week&&d.getTime()<week.getTime()+7*86400000;})}));
+    }
+    support.checks.check = { id: "check", planId: plan.id, sessionId: "session-check", kind: "SESSION", message: "Did your running session happen?", dueAt: new Date().toISOString(), sentAt: null, answeredAt: null, dismissedAt: null };
+    if (body?.flexibleWeekly) {
+      state.plans = [plan];
+      plan.activities = [plan.activities[0]];
+      support.supports[plan.id].mode = "WEEKLY";
+      support.supports[plan.id].weekdays = [];
+      support.supports[plan.id].time = null;
+    }
+    return { ok: true };
+  }
+  if (path === "/follow-through/calendar") return Object.values(support.sessions).filter(session => session.outcome !== "SKIPPED").map(session => ({ sessionId: session.id, planId: session.planId, title: state.plans.find((p: any) => p.id === session.planId).goal, startDate: `${session.date}T17:00:00Z`, endDate: `${session.date}T17:20:00Z`, allDay: false, timeZone: session.timezone, url: `trackingso://session/${session.id}` }));
+  if (path.startsWith("/follow-through/checks/")) { const check = support.checks[decodeURIComponent(path.split("/").at(-1)!)]; if (body.action === "ANSWER") check.answeredAt = new Date().toISOString(); else check.dismissedAt = new Date().toISOString(); return {}; }
+  if (path === "/follow-through") return { state: support, canCoach: state.user.planType !== "FREE", serverTime: new Date().toISOString() };
+  if (path === "/follow-through/onboarding/draft") { support.draft = body; return body; }
+  if (path === "/follow-through/onboarding/interview") return interviewFixture(body.state, body.answer);
+  if (path === "/follow-through/onboarding/next") return body.answers.length ? { ready: true, question: null, nextStep: "Open your saved chord exercise and practise changing between two chords.", explanation: "You said switching chords interrupts your playing. Start with one change you can repeat.", suggestedFormat: "TIMER" } : { ready: false, question: { icon: "🎸", title: "What interrupts your playing most?", purpose: "This chooses the first exercise you will practise.", type: "choice", options: ["Changing chords", "Finding notes by ear", "Keeping a rhythm"] }, nextStep: "", explanation: "", suggestedFormat: "LOG" };
+  if (path === "/follow-through/onboarding/offer") return {url:"https://example.invalid/test-checkout",trialDays:14,amount:999,currency:"eur",interval:"month",intervalCount:1};
+  if (path === "/follow-through/onboarding/finish") {
+    const d: OnboardingDraft = body.draft;
+    if (!state.plans.some((p: any) => p.id === d.id)) {
+      const a = state.activities.find((a:any) => a.id === d.activityId) || { id:randomUUID(),userId:state.user.id,title:d.activityTitle,emoji:d.emoji,measure:d.measure };
+      if (!state.activities.some((v:any)=>v.id===a.id)) state.activities.push(a);
+      state.plans.push({id:d.id,userId:state.user.id,goal:d.goal,emoji:d.emoji,activities:[a],sessions:[],outlineType:"TIMES_PER_WEEK",timesPerWeek:d.frequency,createdAt:new Date().toISOString(),visibility:"PRIVATE",progress:{weeks:[]}});
+      support.supports[d.id] = { planId:d.id,mode:d.commitment,weekdays:d.weekdays,time:d.time,timezone:d.timezone,durationMinutes:d.durationMinutes,format:d.format,resourceName:d.resourceName,resourceUrl:d.resourceUrl,nextStep:d.nextStep,preferences:body.preferences,effectiveDate:new Date().toISOString().slice(0,10) };
+    }
+    support.enabled=true; support.draft={...d,createdPlanId:d.id}; state.user.onboardingCompletedAt=new Date().toISOString(); return {planId:d.id};
+  }
+  if (path.startsWith("/follow-through/plans/")) { const id=path.split("/").at(-1)!; support.supports[id]=body; support.enabled=true; return body; }
+  if(path==="/follow-through/sessions" && method==="POST") {
+    const p=state.plans.find((p:any)=>p.id===body.planId), s=support.supports[p.id]; const id=randomUUID();
+    support.sessions[id]={id,planId:p.id,activityId:p.activities[0].id,date:body.date,time:body.time,timezone:s.timezone,durationMinutes:s.durationMinutes,outcome:"UNCONFIRMED",entryId:null,startedAt:null,elapsedSeconds:0,timerRunning:false,source:"SPONTANEOUS"}; return support.sessions[id];
+  }
+  if(path.startsWith("/follow-through/sessions/")) {
+    const [, , ,encoded,operation]=path.split("/"); const id=decodeURIComponent(encoded); const s=support.sessions[id];
+    if(!s) return {error:"Session missing"};
+    if(operation==="timer") {if(body.action==="START"){s.startedAt=new Date().toISOString();s.timerRunning=true;}else{s.elapsedSeconds+=1;s.startedAt=null;s.timerRunning=false;}}
+    else if(operation==="outcome"){s.outcome=body.outcome;s.entryId=body.entryId || null;}
+    else {s.date=body.date;s.time=body.time;}
+    return s;
+  }
+  if(path==="/circles") return {mine:[],discover:[]};
+  return undefined;
+}

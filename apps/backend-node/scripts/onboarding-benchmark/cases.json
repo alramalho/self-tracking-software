@@ -1,0 +1,27 @@
+[
+  {
+    "id": "running",
+    "initial": "Today is 14 September 2026. I want to finish a half marathon on 29 November 2026. I exercise four times a week, mostly gym. I have not told you how much I run. I want a plan, not a motivational conversation.",
+    "followup": "Here is my actual starting point: for the last six weeks I have run twice weekly, about 10 km total, longest recent run 6 km. No current pain or injury. My goal is simply to finish, not a target time. I can replace two gym sessions with running and protect three running windows: Tuesday 40 minutes, Thursday 40 minutes, Sunday 80 minutes. The race date is fixed. I want a suitable starting point, not an assurance I will be ready.",
+    "review_focus": "Do not infer running readiness from exercise frequency. Ask a relevant prerequisite. After supplied baseline, avoid promises or catch-up loading; produce a useful cautious next step or justify a genuinely necessary remaining question."
+  },
+  {
+    "id": "guitar",
+    "initial": "I want to write my own guitar songs and get the melodies in my head onto the guitar without so much struggle. I have not told you my playing ability or available time.",
+    "followup": "I can change open chords and play simple songs. I cannot reliably find even a short melody by ear, and that is the specific skill I want first; finishing songs can wait. I can give this 15 minutes Tuesday and 15 minutes Thursday after dinner, with my guitar available. No additional practice time. I get stuck because I do not know what to practise. I want one concrete first exercise.",
+    "counterfactual": "I can already reproduce short melodies by ear comfortably and play full songs. My difficulty is developing my own phrases into a complete song sketch, which is my first priority. I have 40 minutes on Monday, Wednesday and Friday after dinner, with my guitar available. I want a first exercise that fits this higher starting ability.",
+    "review_focus": "Distinguish ear-to-instrument ability from composing and habit frequency. Use the exact time constraints. Counterfactual should change the exercise and schedule, not merely wording."
+  },
+  {
+    "id": "simple_tracker",
+    "initial": "I just want to track exercise four times a week. Any exercise counts. I do not want a programme, coaching, check-ins, a trial or a conversation. Set up the weekly tracker and let me go.",
+    "followup": "A week later: there are only two logs but I exercised four times and forgot to log two. I still want only the simple tracker, no coach. Do not turn this into a coaching opportunity.",
+    "review_focus": "Stop questioning and create a simple tracker initially. Later respect the no-coaching preference, distinguish logging from behaviour, and avoid upsell or needless assessment."
+  },
+  {
+    "id": "overcommitted",
+    "initial": "I exercise four times per week and practise guitar twice per week. I now want to learn Italian for travel, ideally two hours weekly. I realistically have only 30 extra minutes a week, and evenings often leave me tired. I enjoy starting new interests. Help me decide what fits, without inventing an energy score or automatically dropping my existing plans.",
+    "followup": "Keep all four exercise sessions. I choose to pause guitar for the next two weeks, freeing 30 minutes. Together with the 30 minutes I already have, that gives Italian 60 minutes weekly: Tuesday 30 and Thursday 30 after lunch. I am a complete beginner. My first goal is ordering a meal and understanding a simple reply on a trip in three months. I prefer short audio-and-speaking practice. Suggest the first step and let me confirm the plan changes.",
+    "review_focus": "Recognize capacity conflict and ask for a trade-off instead of adding a plan. Afterwards use the user's chosen pause and exact 60-minute budget; distinguish proposed changes from executed changes."
+  }
+]

@@ -51,6 +51,14 @@ npm run dev
 - `npm run test` - Run tests
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
+- `pnpm check-telegram -- --require-dedicated-alerts` - Verify the bot plus routine and alert destinations without exposing chat IDs
+- `pnpm send-telegram-message --alert "message"` - Send a checked operational alert; exits non-zero if delivery fails
+
+### Telegram routing
+
+`TELEGRAM_CHAT_IDS` receives routine product activity such as signups, coach diagnostics and testimonials. `TELEGRAM_ALERT_CHAT_IDS` receives operational events that should reach the shared **Important App Alerts** group: backend 5xx responses, important bug reports, account deletions, Stripe upgrades/payments/failures and CI results. Multiple IDs are comma-separated. Every alert is labeled with `TELEGRAM_APP_NAME` (`tracking.so` by default), so the group can safely centralize several apps. Alert delivery falls back to the routine list only while the dedicated variable is absent, so older environments remain compatible.
+
+The service retries Telegram Markdown entity failures as plain text and returns a delivery report. Command-line sends fail loudly when no destination accepts the message; do not treat a zero-error process as proof of delivery without using the checked script.
 
 ## Project Structure
 

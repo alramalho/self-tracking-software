@@ -1,0 +1,108 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- takeScreenshot: dark-home
+- runScript: refresh-request.js
+- swipe:
+    start: 50%, 30%
+    end: 50%, 75%
+    duration: 600
+- runScript: refresh-request.js
+- tapOn: Add
+- takeScreenshot: dark-add
+- tapOn: Log Running
+- tapOn:
+    id: field-Quantity
+- eraseText: 1
+- inputText: "7"
+- takeScreenshot: dark-quantity
+- scrollUntilVisible:
+    element: Log Activity
+    direction: DOWN
+- tapOn: Log Activity
+- tapOn:
+    id: field-Caption
+- inputText: Native parity run
+- assertVisible: Native parity run
+- scrollUntilVisible:
+    element: Log without photo
+    direction: DOWN
+- tapOn: Log without photo
+- tapOn: Skip
+- assertVisible: Log Your Metrics
+- tapOn: Skip
+- tapOn: Done
+- tapOn: Home
+- scrollUntilVisible:
+    element: Expand Running 7 kilometers
+    direction: DOWN
+- tapOn: Expand Running 7 kilometers
+- assertVisible: Native parity run
+- tapOn: Plans
+- takeScreenshot: dark-plans
+- scrollUntilVisible:
+    element: Exercise regularly
+    direction: DOWN
+- tapOn: Exercise regularly
+- scrollUntilVisible:
+    element: Today
+    direction: DOWN
+- tapOn: Today
+- scrollUntilVisible:
+    element: .*Running · 7 kilometers.*
+    direction: DOWN
+    centerElement: true
+- assertVisible: .*Running · 7 kilometers.*
+- assertVisible: .*Reading · 20 pages.*
+- takeScreenshot: dark-plan-grid
+- scrollUntilVisible:
+    element: Profile
+    direction: UP
+- tapOn: Profile
+- takeScreenshot: dark-profile
+- scrollUntilVisible:
+    element: Today
+    direction: DOWN
+- tapOn: Today
+- scrollUntilVisible:
+    element: .*Running · 7 kilometers.*
+    direction: DOWN
+    centerElement: true
+- assertVisible: .*Reading · 20 pages.*
+- takeScreenshot: dark-profile-grid
+- scrollUntilVisible:
+    element: History
+    direction: UP
+- tapOn: History
+- scrollUntilVisible:
+    element: Native parity run
+    direction: DOWN
+- assertVisible: Native parity run
+- scrollUntilVisible:
+    element: Metrics
+    direction: UP
+- tapOn: Metrics
+- takeScreenshot: dark-metrics
+- tapOn: Log Check-in
+- tapOn: Energy rating 5
+- tapOn: Mood rating 4
+- tapOn:
+    id: field-Anything to add\?
+- inputText: Native check-in
+- assertVisible: Native check-in
+- tapOn: Log Your Metrics
+- takeScreenshot: dark-checkin
+- scrollUntilVisible:
+    element: Save Check-in
+    direction: DOWN
+- tapOn: Save Check-in
+- assertVisible: Energy Trend
+- scrollUntilVisible:
+    element: Last week
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: dark-trend

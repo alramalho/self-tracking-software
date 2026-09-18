@@ -1,0 +1,79 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- assertVisible: Open Exercise regularly
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: home-twenty-week-streak
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Coach quick check
+- assertVisible: Did your running session happen\?
+- tapOn: Done, partly, or not this time
+- assertVisible: Put on my shoes and start my planned session.
+- scrollUntilVisible:
+    element: Start timer
+    direction: DOWN
+- tapOn: Start timer
+- assertVisible: Pause timer
+- scrollUntilVisible:
+    element: Back
+    direction: UP
+- tapOn: Back
+- tapOn: Up next
+- tapOn: Exercise regularly, 18:00
+- scrollUntilVisible:
+    element: Pause timer
+    direction: DOWN
+- assertVisible: Pause timer
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: running-session-timer
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Finish timer
+- assertVisible: Resume timer
+- assertVisible: Log activity
+- assertNotVisible: Partly done
+- tapOn: More session options
+- scrollUntilVisible:
+    element: Not this time
+    direction: DOWN
+- tapOn: Not this time
+- assertVisible: Your next session is still there. No catching-up debt.
+- scrollUntilVisible:
+    element: Back to this week
+    direction: DOWN
+- tapOn: Back to this week
+- assertVisible: This week
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: week-explicit-outcome
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element: Week options
+    direction: UP
+- tapOn: Week options
+- tapOn: Choose calendar
+- tapOn:
+    text: Allow Full Access
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: calendar-permission-and-selection
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Calendar · Default
+- extendedWaitUntil:
+    visible: Sync now
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: calendar-connected
+- tapOn: Close
+- assertVisible: Week options

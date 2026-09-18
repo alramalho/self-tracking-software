@@ -156,6 +156,14 @@ function proposedChangeLabel(
   return candidate ? "Decide later" : "Do not import yet";
 }
 
+function healthSourceLabel(
+  provider: string,
+  sourceName: string | null,
+): string {
+  if (sourceName) return sourceName;
+  return provider === "garmin_connect" ? "Garmin Connect" : "Apple Health";
+}
+
 export function AppleHealthWorkoutReconciliation({
   enabled,
   openRequestKey,
@@ -300,7 +308,7 @@ export function AppleHealthWorkoutReconciliation({
       <AppleLikePopover
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        title="Review Apple Health workouts"
+        title="Review connected workouts"
         className="max-h-[94dvh] sm:max-w-xl"
       >
         <div className="flex max-h-[calc(94dvh-2rem)] min-h-0 flex-col pt-1">
@@ -310,8 +318,8 @@ export function AppleHealthWorkoutReconciliation({
             </div>
             <h2 className="mt-3 text-2xl font-bold">Review workout sync</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Compare every Health workout with your existing timeline. Only
-              the selected changes are applied.
+              Compare every Health workout with your existing timeline. Only the
+              selected changes are applied.
             </p>
             <div className="mt-3 flex gap-2">
               <Button
@@ -344,9 +352,7 @@ export function AppleHealthWorkoutReconciliation({
               const healthDistance = formatDistance(
                 item.healthWorkout.distanceMeters,
               );
-              const comparison = candidate
-                ? comparisonText(candidate)
-                : null;
+              const comparison = candidate ? comparisonText(candidate) : null;
 
               return (
                 <article
@@ -375,10 +381,16 @@ export function AppleHealthWorkoutReconciliation({
                   <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
                     <div className="rounded-xl bg-red-500/5 p-2.5">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-red-500">
-                        Apple Health
+                        {healthSourceLabel(
+                          item.healthWorkout.provider,
+                          item.healthWorkout.sourceName,
+                        )}
                       </p>
                       <p className="mt-1 text-sm font-medium">
-                        {[healthDistance, formatDuration(item.healthWorkout.durationSeconds)]
+                        {[
+                          healthDistance,
+                          formatDuration(item.healthWorkout.durationSeconds),
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>

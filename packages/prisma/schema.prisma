@@ -51,6 +51,7 @@ model User {
   onboardingDropNotifiedAt        DateTime?
   onboardingProgress              Json?
   onboardingProgressUpdatedAt     DateTime?
+  coachingState                  CoachingState?
   lastSeenTimelineAt              DateTime?
 
   // Daily checkin settings
@@ -115,6 +116,11 @@ model User {
   healthWorkouts               HealthWorkout[]
   healthSleepSamples           HealthSleepSample[]
   healthWorkoutReconciliations HealthWorkoutReconciliation[]
+  garminIntegration             GarminIntegration?
+  garminOAuthRequests           GarminOAuthRequest[]
+
+  circleMemberships PracticeCircleMember[]
+  circlePosts PracticeCirclePost[]
 
   @@map("users")
   @@schema("public")
@@ -227,6 +233,8 @@ model ActivityEntry {
   sharedActivityEntry            SharedActivityEntry?
   sharedActivityInvitesInitiated SharedActivityInvite[]
   healthWorkoutReconciliations   HealthWorkoutReconciliation[]
+
+  circlePosts PracticeCirclePost[]
 
   @@index([userId, deletedAt])
   @@index([userId, datetime, deletedAt])
@@ -381,6 +389,53 @@ model HealthWorkoutReconciliation {
   @@index([userId, action])
   @@index([activityEntryId])
   @@map("health_workout_reconciliations")
+  @@schema("public")
+}
+
+// Server-side Garmin Connect OAuth 1.0 connection. Provider secrets are
+// encrypted at rest; the app never receives them.
+model GarminIntegration {
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
+  garminUserId             String?   @unique
+  accessTokenEncrypted     String
+  accessTokenSecretEncrypted String
+  accessTokenHash          String?   @unique
+  permissions              String[]  @default([])
+  initialSyncStartedAt     DateTime?
+  backfillRequestedAt      DateTime?
+  syncCursorSeconds        Int?
+  lastSyncStartedAt        DateTime?
+  lastSyncCompletedAt      DateTime?
+  lastSyncErrorAt          DateTime?
+  lastSyncError            String?
+  disconnectedAt           DateTime?
+  connectedAt              DateTime  @default(now())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("garmin_integrations")
+  @@schema("public")
+}
+
+// Short-lived request-token binding used to recover the tracking.so user
+// after Garmin redirects back from its authorization page.
+model GarminOAuthRequest {
+  id                    String    @id @default(cuid())
+  userId                String
+  requestTokenHash      String    @unique
+  requestTokenSecretEncrypted String
+  returnUrl             String?
+  expiresAt             DateTime
+  usedAt                DateTime?
+  createdAt             DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("garmin_oauth_requests")
   @@schema("public")
 }
 
@@ -606,6 +661,17 @@ model UserContextEvent {
   @@schema("public")
 }
 
+model CoachingState {
+  userId    String   @id
+  data      Json
+  revision  Int      @default(0)
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coaching_state")
+  @@schema("public")
+}
+
 model Plan {
   id                         String                       @id @default(cuid())
   userId                     String
@@ -672,6 +738,8 @@ model Plan {
   coachConcerns    CoachConcern[]
 
   @@index([userId, deletedAt])
+  circleMemberships PracticeCircleMember[]
+
   @@index([userId, deletedAt, archivedAt])
   @@index([userId, id])
   @@index([userId, deletedAt, sortOrder])
@@ -1251,5 +1319,44 @@ enum CoachPersonality {
   CHAMPION
   STRATEGIST
 
+  @@schema("public")
+}
+
+model PracticeCircle {
+  id String @id @default(cuid())
+  name String
+  topic String
+  inviteCode String @unique
+  discoverable Boolean @default(false)
+  createdAt DateTime @default(now())
+  members PracticeCircleMember[]
+  posts PracticeCirclePost[]
+  @@map("practice_circles")
+  @@schema("public")
+}
+model PracticeCircleMember {
+  circleId String
+  userId String
+  planId String
+  owner Boolean @default(false)
+  joinedAt DateTime @default(now())
+  circle PracticeCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@id([circleId, userId])
+  @@map("practice_circle_members")
+  @@schema("public")
+}
+model PracticeCirclePost {
+  id String @id @default(cuid())
+  circleId String
+  userId String
+  entryId String
+  createdAt DateTime @default(now())
+  circle PracticeCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  @@unique([circleId, entryId])
+  @@map("practice_circle_posts")
   @@schema("public")
 }

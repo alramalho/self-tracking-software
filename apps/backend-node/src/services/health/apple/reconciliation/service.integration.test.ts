@@ -52,6 +52,7 @@ describe("Apple Health workout reconciliation persistence", () => {
         timezone: "Europe/Warsaw",
         description: "Fastest 5K",
         privateNotes: "Felt strong",
+        difficulty: "easy",
       },
     });
     const workout = await prisma.healthWorkout.create({
@@ -67,12 +68,23 @@ describe("Apple Health workout reconciliation persistence", () => {
         sourceBundleId: "com.apple.health",
         sourceName: "Apple Watch",
         timezone: "Europe/Warsaw",
+        metadata: {
+          workoutEffortScore: 8,
+          estimatedWorkoutEffortScore: 4,
+          averageHeartRateBpm: 151.4,
+        },
       },
     });
 
     const preview = await getWorkoutReconciliationPreview(TEST_USER_ID);
     expect(preview.summary.matches).toBe(1);
     expect(preview.items[0].mismatches[0]?.code).toBe("rounded_value");
+    expect(preview.items[0].healthWorkout).toMatchObject({
+      effortScore: 8,
+      effortSource: "user",
+      difficulty: "hard",
+      averageHeartRateBpm: 151.4,
+    });
 
     const result = await applyWorkoutReconciliations(TEST_USER_ID, [
       {
@@ -89,6 +101,7 @@ describe("Apple Health workout reconciliation persistence", () => {
     expect(linkedEntry.quantity).toBe(6);
     expect(linkedEntry.description).toBe("Fastest 5K");
     expect(linkedEntry.privateNotes).toBe("Felt strong");
+    expect(linkedEntry.difficulty).toBe("easy");
     expect(linkedEntry.distanceMeters).toBeCloseTo(5884.797, 3);
     expect(linkedEntry.durationSeconds).toBe(1769);
 
@@ -133,6 +146,11 @@ describe("Apple Health workout reconciliation persistence", () => {
         sourceBundleId: "com.apple.health",
         sourceName: "Apple Watch",
         timezone: "Europe/Warsaw",
+        metadata: {
+          estimatedWorkoutEffortScore: 6,
+          averageHeartRateBpm: 142,
+          maximumHeartRateBpm: 168,
+        },
       },
     });
 
@@ -147,6 +165,7 @@ describe("Apple Health workout reconciliation persistence", () => {
     });
     expect(importedEntry.quantity).toBe(20);
     expect(importedEntry.distanceMeters).toBe(20_120);
+    expect(importedEntry.difficulty).toBe("moderate");
     expect(importedEntry.activity?.title).toBe("Cycling");
     const importedActivityId = importedEntry.activityId;
 

@@ -1,0 +1,132 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- runScript: inline-coach.js
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- tapOn: Theme Mode
+- scrollUntilVisible:
+    element: Dark
+    direction: DOWN
+- tapOn: Dark
+- tapOn: Close
+- tapOn: Home
+- scrollUntilVisible:
+    element: Messages
+    direction: UP
+- tapOn: Messages
+- tapOn: Message Oli, AI Coach
+- waitForAnimationToEnd
+- takeScreenshot: inline-coach-dark
+- tapOn: train 4 times a week
+- waitForAnimationToEnd
+- assertVisible: Activities
+- assertVisible: View full plan
+- tapOn: Close Plan Preview
+- waitForAnimationToEnd
+- tapOn: your runs
+- waitForAnimationToEnd
+- assertVisible: kilometers
+- tapOn: Close Activity
+- waitForAnimationToEnd
+- tapOn: your reading plan
+- waitForAnimationToEnd
+- assertVisible: Upcoming this week
+- takeScreenshot: inline-preview-dark
+- tapOn:
+    text: 'Session:.*'
+- waitForAnimationToEnd
+- assertVisible: Read ten pages slowly and write down one idea.
+- tapOn: Back to plan preview
+- waitForAnimationToEnd
+- tapOn: View full plan
+- waitForAnimationToEnd
+- assertVisible: Manage Plan
+- tapOn: Back
+- waitForAnimationToEnd
+- assertVisible: Oli coach settings
+- tapOn: energetic
+- waitForAnimationToEnd
+- assertVisible: Log 4/5 for Energy?
+- tapOn: Close Metric Suggestion
+- waitForAnimationToEnd
+- tapOn:
+    text: 'Review Running.*'
+- waitForAnimationToEnd
+- assertVisible: An easy run
+- takeScreenshot: action-review
+- tapOn: Close Review Log
+- waitForAnimationToEnd
+- tapOn: Back to messages
+- waitForAnimationToEnd
+- tapOn: Back
+- waitForAnimationToEnd
+- tapOn: Profile
+- scrollUntilVisible:
+    element: Settings
+    direction: UP
+- tapOn: Settings
+- tapOn: Theme Mode
+- scrollUntilVisible:
+    element: Light
+    direction: DOWN
+- tapOn: Light
+- tapOn: Close
+- tapOn: Home
+- scrollUntilVisible:
+    element: Messages
+    direction: UP
+- tapOn: Messages
+- tapOn: Message Oli, AI Coach
+- waitForAnimationToEnd
+- takeScreenshot: inline-coach-light
+- tapOn: train 4 times a week
+- waitForAnimationToEnd
+- assertVisible: Activities
+- assertVisible: View full plan
+- tapOn: Close Plan Preview
+- waitForAnimationToEnd
+- tapOn: your runs
+- waitForAnimationToEnd
+- assertVisible: kilometers
+- tapOn: Close Activity
+- waitForAnimationToEnd
+- tapOn: your reading plan
+- waitForAnimationToEnd
+- assertVisible: Upcoming this week
+- takeScreenshot: inline-preview-light
+- tapOn:
+    text: 'Session:.*'
+- waitForAnimationToEnd
+- assertVisible: Read ten pages slowly and write down one idea.
+- tapOn: Back to plan preview
+- waitForAnimationToEnd
+- tapOn: View full plan
+- waitForAnimationToEnd
+- assertVisible: Manage Plan
+- tapOn: Back
+- waitForAnimationToEnd
+- assertVisible: Oli coach settings
+- tapOn: energetic
+- waitForAnimationToEnd
+- assertVisible: Log 4/5 for Energy?
+- tapOn: Close Metric Suggestion
+- waitForAnimationToEnd
+- tapOn:
+    text: 'Review Running.*'
+- waitForAnimationToEnd
+- assertVisible: An easy run
+- takeScreenshot: action-review
+- tapOn: Close Review Log
+- waitForAnimationToEnd
+- tapOn: Back to messages
+- waitForAnimationToEnd
+- tapOn: Back
+- waitForAnimationToEnd

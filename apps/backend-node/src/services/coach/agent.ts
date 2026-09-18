@@ -1,3 +1,5 @@
+import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
+import { followThroughContext } from "../follow-through/coach-context";
 import { gateway } from "@ai-sdk/gateway";
 import { traced } from "braintrust";
 import {
@@ -1371,6 +1373,7 @@ export class CoachAgentService {
                 await Promise.all([
                   prisma.activityEntry.findMany({
                     where: {
+                      ...healthSafeActivityFilter,
                       userId: user.id,
                       deletedAt: null,
                       datetime: { gte: from, lte: to },
@@ -1574,6 +1577,7 @@ export class CoachAgentService {
     const [entries, currentWeekEntries, previousWeekEntries] = await Promise.all([
       prisma.activityEntry.findMany({
         where: {
+          ...healthSafeActivityFilter,
           userId: user.id,
           deletedAt: null,
           activityId: { not: null },
@@ -1591,6 +1595,7 @@ export class CoachAgentService {
       planActivityIds.length > 0
         ? prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: planActivityIds },
@@ -1608,6 +1613,7 @@ export class CoachAgentService {
       planActivityIds.length > 0
         ? prisma.activityEntry.findMany({
             where: {
+              ...healthSafeActivityFilter,
               userId: user.id,
               deletedAt: null,
               activityId: { in: planActivityIds },
@@ -1867,11 +1873,12 @@ export class CoachAgentService {
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
-    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId] =
+    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId, sessionSupportContext] =
       await Promise.all([
         this.buildRecentActivityContext(user, now, activePlans),
         this.buildActivityRecencyById(user.id, activePlans, now),
         getCurriculumFileCounts(activePlans.map((plan) => plan.id)),
+        followThroughContext(user.id),
       ]);
 
     const agent = this.createAgent({
@@ -1880,7 +1887,7 @@ export class CoachAgentService {
       conversationHistory,
       model: resolvedModel,
       memoriesContext,
-      recentActivityContext,
+      recentActivityContext: recentActivityContext + sessionSupportContext,
       activityRecencyById,
       curriculumFileCountByPlanId,
       onStatus,

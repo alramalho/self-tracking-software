@@ -46,23 +46,16 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
-  const isAiPage = pathname.startsWith("/ai");
   const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/");
-  const isGetCoachedPage = pathname.startsWith("/get-coached");
-  const isWrappedPage = pathname.startsWith("/wrapped");
-  const isManageAICoachPage = pathname.startsWith("/manage-ai-coach");
   const isProfilePage = pathname.startsWith("/profile");
-  const isPlanCreationPage = pathname.startsWith("/create-plan");
   const isHomePage = pathname == "/";
 
+  // Keep the app shell navigation mounted while users move between profiles
+  // and the rest of the signed-in app. Only onboarding and the download page
+  // intentionally use a navigation-free shell.
   const showsBottomNav = isSignedIn
     && !isDownloadPage
-    && !isAiPage
-    && (!isDmsPage || isDesktop)
-    && !isGetCoachedPage
-    && !isWrappedPage
-    && !isManageAICoachPage
-    && !isPlanCreationPage;
+    && !isOnboardingPage;
 
   const friends = useMemo(() => {
     return [

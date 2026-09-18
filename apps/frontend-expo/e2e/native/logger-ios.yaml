@@ -1,0 +1,65 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Add
+- tapOn: Log Running
+- assertVisible: how many kilometers\?
+- assertVisible: Edit time
+- takeScreenshot: logger-calendar
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Set quantity to 45
+- tapOn: Increase quantity
+- tapOn: Decrease quantity
+- tapOn: Edit time
+- assertVisible: Select Time
+- takeScreenshot: logger-time
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element: Done editing time
+    direction: DOWN
+- tapOn: Done editing time
+- tapOn:
+    id: field-Quantity
+- eraseText: 50
+- inputText: "7"
+- takeScreenshot: logger-keyboard
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Done editing input
+- scrollUntilVisible:
+    element: Log Activity
+    direction: DOWN
+- tapOn: Log Activity
+- takeScreenshot: photo-proof-empty
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Add photos \(optional\)
+- assertVisible: Photo Library
+- assertVisible: Take Photo
+- tapOn: Cancel
+- tapOn:
+    id: field-Caption
+- inputText: Native calendar activity
+- tapOn: "📸 Add a proof!"
+- scrollUntilVisible:
+    element: Log without photo
+    direction: DOWN
+- tapOn: Log without photo
+- tapOn: Skip
+- assertVisible: Log Your Metrics
+- tapOn: Skip
+- tapOn: Done
+- tapOn: Log Running
+- tapOn: Close
+- assertNotVisible: how many kilometers\?
+- tapOn: Log Running
+- takeScreenshot: logger-reopened
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close

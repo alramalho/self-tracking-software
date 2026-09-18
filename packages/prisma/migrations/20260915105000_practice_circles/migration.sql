@@ -1,0 +1,20 @@
+CREATE TABLE public.practice_circles (
+  "id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "topic" TEXT NOT NULL,
+  "inviteCode" TEXT NOT NULL UNIQUE, "discoverable" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE public.practice_circle_members (
+  "circleId" TEXT NOT NULL REFERENCES public.practice_circles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "planId" TEXT NOT NULL REFERENCES public.plans(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "owner" BOOLEAN NOT NULL DEFAULT false, "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY ("circleId", "userId")
+);
+CREATE TABLE public.practice_circle_posts (
+  "id" TEXT PRIMARY KEY,
+  "circleId" TEXT NOT NULL REFERENCES public.practice_circles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "entryId" TEXT NOT NULL REFERENCES public.activity_entries(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE ("circleId", "entryId")
+);

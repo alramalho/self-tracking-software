@@ -1,0 +1,54 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "image": "sdk-57"
+      }
+    },
+    "simulator": {
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "image": "sdk-57"
+      }
+    },
+    "device-production": {
+      "extends": "preview",
+      "environment": "production",
+      "autoIncrement": true
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "ios": {
+        "image": "sdk-57"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6754610882",
+        "ascApiKeyPath": ".release/appstore-connect/AuthKey_RRBPAL9WF4.p8",
+        "ascApiKeyId": "RRBPAL9WF4",
+        "ascApiKeyIssuerId": "f2738712-afe4-496a-8317-a78e28ed722c"
+      }
+    }
+  }
+}

@@ -11,5 +11,6 @@ export interface CreatedApiKey extends ApiKeySummary {
 
 export interface IntegrationsSettingsProps {
   onOpenAppleHealth: () => void;
+  onOpenGarmin: () => void;
   onOpenApiKeys: () => void;
 }

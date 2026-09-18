@@ -1,0 +1,41 @@
+# EAS needs only the Expo workspace and the shared plan projection package.
+# Keep the other frontend and backend outside native build uploads.
+/*
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+!/turbo.json
+!/apps
+/apps/*
+!/apps/frontend-expo
+!/packages
+/packages/*
+!/packages/prisma
+**/node_modules
+**/.env*
+!**/.env.example
+**/*.p8
+**/*.pem
+**/*.key
+**/*.p12
+**/*.mobileprovision
+**/credentials.json
+**/credentials
+**/.DS_Store
+**/.expo
+**/.release
+**/dist
+**/web-build
+**/test-results*
+**/playwright-report
+/apps/frontend-expo/ios
+/apps/frontend-expo/android
+/apps/frontend-expo/e2e
+/apps/frontend-expo/tests
+# The app imports only these platform-independent modules, not the Prisma server client.
+/packages/prisma/*
+!/packages/prisma/package.json
+!/packages/prisma/plan-week
+!/packages/prisma/coach-conversation-starters.ts
+
+!/packages/prisma/follow-through

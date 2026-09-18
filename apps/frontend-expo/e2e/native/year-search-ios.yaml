@@ -1,0 +1,44 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Search
+- tapOn:
+    id: people-search-input
+- inputText: Lia
+- extendedWaitUntil:
+    visible: "View @liocas's profile"
+    timeout: 10000
+- takeScreenshot: people-name-search
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "View @liocas's profile"
+- assertVisible: Lia Borges
+- tapOn: Back
+- assertVisible:
+    id: people-search-input
+- tapOn:
+    id: people-search-input
+- eraseText: 50
+- inputText: liocsa
+- extendedWaitUntil:
+    visible: "View @liocas's profile"
+    timeout: 10000
+- tapOn: "View @liocas's profile"
+- assertVisible: Lia Borges
+- tapOn: Back
+- tapOn: Clear search
+- tapOn:
+    id: people-search-input
+- inputText: zzzzzz
+- assertVisible: No matching people
+- assertVisible: Back
+- takeScreenshot: people-empty-search
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Back
+- assertVisible: Home
+- runFlow: wrapped-ios.yaml

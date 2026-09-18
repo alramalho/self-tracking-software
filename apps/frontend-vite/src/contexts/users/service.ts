@@ -14,6 +14,10 @@ type BasicUserApiResponse = Prisma.UserGetPayload<{
             username: true;
             name: true;
             picture: true;
+            lastActiveAt: true;
+            _count: {
+              select: { activityEntries: true };
+            };
           };
         };
       };
@@ -26,6 +30,10 @@ type BasicUserApiResponse = Prisma.UserGetPayload<{
             username: true;
             name: true;
             picture: true;
+            lastActiveAt: true;
+            _count: {
+              select: { activityEntries: true };
+            };
           };
         };
       };
@@ -43,6 +51,10 @@ type FullUserApiResponseBase = Prisma.UserGetPayload<{
             username: true;
             name: true;
             picture: true;
+            lastActiveAt: true;
+            _count: {
+              select: { activityEntries: true };
+            };
           };
         };
       };
@@ -55,6 +67,10 @@ type FullUserApiResponseBase = Prisma.UserGetPayload<{
             username: true;
             name: true;
             picture: true;
+            lastActiveAt: true;
+            _count: {
+              select: { activityEntries: true };
+            };
           };
         };
       };
@@ -226,8 +242,10 @@ function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
     "lastSeenTimelineAt",
     "connectionsFrom.createdAt",
     "connectionsFrom.updatedAt",
+    "connectionsFrom.to.lastActiveAt",
     "connectionsTo.createdAt",
     "connectionsTo.updatedAt",
+    "connectionsTo.from.lastActiveAt",
   ]);
 }
 
@@ -238,8 +256,10 @@ function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
     "lastActiveAt",
     "connectionsFrom.createdAt",
     "connectionsFrom.updatedAt",
+    "connectionsFrom.to.lastActiveAt",
     "connectionsTo.createdAt",
     "connectionsTo.updatedAt",
+    "connectionsTo.from.lastActiveAt",
     "plans.createdAt",
     "plans.updatedAt",
     "plans.deletedAt",

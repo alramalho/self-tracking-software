@@ -1,0 +1,18 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- tapOn: Add
+- tapOn: Log Running
+- assertVisible: how many kilometers\?
+- takeScreenshot: logger-light-status
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Close
+- assertNotVisible: how many kilometers\?
+- takeScreenshot: logger-status-restored
+- waitForAnimationToEnd:
+    timeout: 3000

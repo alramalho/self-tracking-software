@@ -78,6 +78,8 @@ const BottomNav = () => {
   return (
     <>
       <nav
+        aria-label="Primary navigation"
+        data-testid="app-navigation"
         className={cn(
           "box-border z-[50] m-2 rounded-[40px] border border-white/30 dark:border-gray-500/30",
           isDesktop

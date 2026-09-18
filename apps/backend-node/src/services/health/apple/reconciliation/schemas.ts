@@ -10,8 +10,16 @@ export const workoutReconciliationDecisionSchema = z
     action: z.enum(WORKOUT_RECONCILIATION_ACTIONS),
     activityEntryId: boundedId.optional(),
     activityId: boundedId.optional(),
+    shareHealthData: z.boolean().optional(),
+    newActivity: z.object({ title: z.string().trim().min(1).max(100), measure: z.enum(["minutes", "kilometers", "sessions"]) }).optional(),
   })
   .superRefine((decision, context) => {
+    if (decision.action === "ignore" && decision.shareHealthData) {
+      context.addIssue({ code: "custom", path: ["shareHealthData"], message: "Ignored workouts cannot be shared" });
+    }
+    if (decision.newActivity && (decision.action !== "import_new" || decision.activityId)) {
+      context.addIssue({ code: "custom", path: ["newActivity"], message: "Choose an existing activity or create one for a new import" });
+    }
     if (
       (decision.action === "link_keep" ||
         decision.action === "link_use_health") &&
