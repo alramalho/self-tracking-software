@@ -208,20 +208,15 @@ function GarminSupportRequest({
   const [error, setError] = useState<unknown>();
 
   async function openSupportEmail() {
-    const subject = "Please resend my missing Garmin workouts to tracking.so";
+    const subject = "Please resend my missing Garmin workouts";
     const body = [
-      "Hello Garmin Connect Support team,",
+      "Hello Garmin Support,",
       "",
-      "I use Garmin Connect with tracking.so. I have authorized tracking.so to receive my Garmin data and synced my Garmin device in Garmin Connect. Sleep and daily health data are arriving, but workouts visible in my Garmin Connect account are missing from the Activity data delivered to tracking.so.",
+      "Please resend the Garmin workouts missing from my tracking.so account. My Garmin Connect account is already connected to tracking.so and the required permission has already been granted.",
       "",
-      "Please resend the Activity and Activity Detail summaries for the last 180 days, or the maximum historical range available, for my Garmin account through the existing tracking.so integration.",
+      "Please resend the missing workouts from the last 180 days.",
       "",
-      "The connected application is named tracking.so and uses the tracking.so domain. If your records still show the former label “Jarvis Tracking so” or domain “heyjarvis.co”, this is the same integration after a branding update.",
-      "",
-      "The receiving endpoint is already configured:",
-      "https://api.tracking.so/health/garmin/webhook",
-      "",
-      "Please confirm when the replay has been completed. I will then open tracking.so and check the imported Garmin data.",
+      "Please confirm when the resend is complete. I will then open tracking.so and check my imported workouts.",
       "",
       "Thank you.",
     ].join("\n");
@@ -241,23 +236,22 @@ function GarminSupportRequest({
     <Panel style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Mail size={22} color={c.text} />
-        <Heading>Request older Garmin workouts</Heading>
+        <Heading>Recover missing Garmin workouts</Heading>
       </View>
       <Copy muted>
-        Your permission is active. Garmin is sending sleep and daily data, but
-        older workouts have not arrived. We’ll prepare one exact replay request
-        for Garmin.
+        Your Garmin connection is active, but some older workouts are missing.
+        We’ll open a short request asking Garmin to resend them.
       </Copy>
       {!requestSent ? (
         <>
           <Button secondary onPress={() => void openSupportEmail()}>
-            Prepare replay request
+            Ask Garmin to resend
           </Button>
           {draftOpened && (
             <View style={{ gap: 10 }}>
               <Copy muted>
-                Your email app is ready with the exact request. Review it, send
-                it, then mark it sent below.
+                Your email app is ready. Review the short request, send it, then
+                mark it sent below.
               </Copy>
               <Button secondary onPress={() => setRequestSent(true)}>
                 I sent the request
@@ -275,12 +269,11 @@ function GarminSupportRequest({
           }}
         >
           <Text style={{ color: "#22c55e", fontWeight: "700" }}>
-            Replay request sent
+            Request sent
           </Text>
           <Copy muted>
-            After Garmin confirms the replay, return here and tap Check
-            imported data. Garmin’s callback is picked up automatically, and
-            the workout count will update in Import summary.
+            After Garmin confirms the resend, return here and tap Check
+            imported data. The workout count will update automatically.
           </Copy>
           <Button secondary busy={busy} onPress={() => void onSync()}>
             Check imported data
