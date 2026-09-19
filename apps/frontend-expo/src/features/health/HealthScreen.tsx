@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Image, Linking, Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Activity, ChevronRight, Lock } from "lucide-react-native";
+import { Activity, ChevronRight, Lock, Mail } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import {
   Button,
@@ -195,6 +195,99 @@ function GarminSyncOutcome({
   );
 }
 
+function GarminSupportRequest({
+  busy,
+  onSync,
+}: {
+  busy: boolean;
+  onSync: () => Promise<void>;
+}) {
+  const c = useColors();
+  const [draftOpened, setDraftOpened] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [error, setError] = useState<unknown>();
+
+  async function openSupportEmail() {
+    const subject = "Request to resend Garmin Activity history to tracking.so";
+    const body = [
+      "Hello Garmin Connect Developer Support,",
+      "",
+      "I’m testing the tracking.so Garmin Connect integration. Sleep and daily data are arriving, but older workouts visible in Garmin Connect are not arriving through the Activity API.",
+      "",
+      "Could you confirm whether the missing Activity summaries are available for API delivery and, if possible, resend them to the configured Activity endpoint? If historical replay is not supported for this account, please tell me the supported process.",
+      "",
+      "Application: tracking.so",
+      "Developer: HeyJarvis",
+      "Callback endpoint: https://api.tracking.so/health/garmin/webhook",
+      "",
+      "Thank you.",
+    ].join("\n");
+
+    try {
+      setError(undefined);
+      await Linking.openURL(
+        `mailto:connect-support@developer.garmin.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+      );
+      setDraftOpened(true);
+    } catch (failure) {
+      setError(failure);
+    }
+  }
+
+  return (
+    <Panel style={{ gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Mail size={22} color={c.text} />
+        <Heading>Older Garmin workouts are missing</Heading>
+      </View>
+      <Copy muted>
+        Garmin sent your health data, but it did not send the older workouts.
+        Garmin support may be able to replay them.
+      </Copy>
+      {!requestSent ? (
+        <>
+          <Button secondary onPress={() => void openSupportEmail()}>
+            Email Garmin support
+          </Button>
+          {draftOpened && (
+            <View style={{ gap: 10 }}>
+              <Copy muted>
+                Your email app is ready with a draft. Review it, send it, then
+                tap the button below so tracking.so knows to wait for Garmin.
+              </Copy>
+              <Button secondary onPress={() => setRequestSent(true)}>
+                I sent the email
+              </Button>
+            </View>
+          )}
+        </>
+      ) : (
+        <View
+          style={{
+            gap: 10,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: c.soft,
+          }}
+        >
+          <Text style={{ color: "#22c55e", fontWeight: "700" }}>
+            Waiting for Garmin
+          </Text>
+          <Copy muted>
+            When Garmin replies, return here and tap Check for Garmin data.
+            Garmin’s data callback is picked up automatically, and any newly
+            received workouts will appear in Import summary.
+          </Copy>
+          <Button secondary busy={busy} onPress={() => void onSync()}>
+            Check for Garmin data
+          </Button>
+        </View>
+      )}
+      <Status error={error} retry={() => void openSupportEmail()} />
+    </Panel>
+  );
+}
+
 function WorkoutRow({
   item,
   onPress,
@@ -256,6 +349,10 @@ export function GarminContent() {
   const [disconnectingGarmin, setDisconnectingGarmin] = useState(false);
   const importStats = health.garmin.status?.importStats;
   const latestSync = health.garmin.lastSyncResult;
+  const needsGarminSupport =
+    !!health.garmin.status?.connected &&
+    !importStats?.workoutCount &&
+    !!(latestSync || health.garmin.status.lastSyncCompletedAt);
 
   return (
     <>
@@ -294,6 +391,12 @@ export function GarminContent() {
         />
         {(health.garmin.status?.connected || hasImportedData(importStats)) &&
           importStats && <ImportedDataOverview stats={importStats} />}
+        {needsGarminSupport && (
+          <GarminSupportRequest
+            busy={health.garmin.busy}
+            onSync={health.garmin.sync}
+          />
+        )}
         {health.garmin.status?.connected && (
           <Copy muted>
             To import new workouts, sync the watch in Garmin Connect first,
