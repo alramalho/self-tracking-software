@@ -187,16 +187,23 @@ router.get(
 // Garmin sends Health/Activity notifications here. The payload contains an
 // opaque user access token; the service hashes it before looking up the
 // encrypted token belonging to the matching tracking.so user.
-router.post("/webhook", async (req, res: Response): Promise<void> => {
-  try {
-    const result = await ingestGarminWebhook(
-      (req.body ?? {}) as GarminWebhookPayload,
-    );
-    res.status(202).json(result);
-  } catch (error) {
-    logger.error("Failed to process Garmin Connect webhook", { error });
-    res.status(500).json({ error: "Failed to process Garmin webhook" });
-  }
+//
+// Garmin requires an immediate 200 response. Processing the callback URLs
+// before acknowledging the notification can make Garmin retry or drop the
+// delivery, so the ingestion work deliberately continues after the response.
+router.post("/webhook", (req, res: Response): void => {
+  const payload = (req.body ?? {}) as GarminWebhookPayload;
+  res.status(200).json({ accepted: true });
+
+  setImmediate(() => {
+    void ingestGarminWebhook(payload)
+      .then((result) => {
+        logger.info("Garmin Connect webhook processed", result);
+      })
+      .catch((error) => {
+        logger.error("Failed to process Garmin Connect webhook", { error });
+      });
+  });
 });
 
 // Garmin redirects here without a tracking.so auth header. The short-lived
