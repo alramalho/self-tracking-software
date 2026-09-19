@@ -208,17 +208,20 @@ function GarminSupportRequest({
   const [error, setError] = useState<unknown>();
 
   async function openSupportEmail() {
-    const subject = "Request to resend Garmin Activity history to tracking.so";
+    const subject = "Please resend my missing Garmin workouts to tracking.so";
     const body = [
-      "Hello Garmin Connect Developer Support,",
+      "Hello Garmin Connect Support team,",
       "",
-      "I’m testing the tracking.so Garmin Connect integration. Sleep and daily data are arriving, but older workouts visible in Garmin Connect are not arriving through the Activity API.",
+      "I use Garmin Connect with tracking.so. I have authorized tracking.so to receive my Garmin data and synced my Garmin device in Garmin Connect. Sleep and daily health data are arriving, but workouts visible in my Garmin Connect account are missing from the Activity data delivered to tracking.so.",
       "",
-      "Could you confirm whether the missing Activity summaries are available for API delivery and, if possible, resend them to the configured Activity endpoint? If historical replay is not supported for this account, please tell me the supported process.",
+      "Please resend the Activity and Activity Detail summaries for the last 180 days, or the maximum historical range available, for my Garmin account through the existing tracking.so integration.",
       "",
-      "Application: tracking.so",
-      "Developer: HeyJarvis",
-      "Callback endpoint: https://api.tracking.so/health/garmin/webhook",
+      "The connected application is named tracking.so and uses the tracking.so domain. If your records still show the former label “Jarvis Tracking so” or domain “heyjarvis.co”, this is the same integration after a branding update.",
+      "",
+      "The receiving endpoint is already configured:",
+      "https://api.tracking.so/health/garmin/webhook",
+      "",
+      "Please confirm when the replay has been completed. I will then open tracking.so and check the imported Garmin data.",
       "",
       "Thank you.",
     ].join("\n");
@@ -238,25 +241,26 @@ function GarminSupportRequest({
     <Panel style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Mail size={22} color={c.text} />
-        <Heading>Older Garmin workouts are missing</Heading>
+        <Heading>Request older Garmin workouts</Heading>
       </View>
       <Copy muted>
-        Garmin sent your health data, but it did not send the older workouts.
-        Garmin support may be able to replay them.
+        Your permission is active. Garmin is sending sleep and daily data, but
+        older workouts have not arrived. We’ll prepare one exact replay request
+        for Garmin.
       </Copy>
       {!requestSent ? (
         <>
           <Button secondary onPress={() => void openSupportEmail()}>
-            Email Garmin support
+            Prepare replay request
           </Button>
           {draftOpened && (
             <View style={{ gap: 10 }}>
               <Copy muted>
-                Your email app is ready with a draft. Review it, send it, then
-                tap the button below so tracking.so knows to wait for Garmin.
+                Your email app is ready with the exact request. Review it, send
+                it, then mark it sent below.
               </Copy>
               <Button secondary onPress={() => setRequestSent(true)}>
-                I sent the email
+                I sent the request
               </Button>
             </View>
           )}
@@ -271,15 +275,15 @@ function GarminSupportRequest({
           }}
         >
           <Text style={{ color: "#22c55e", fontWeight: "700" }}>
-            Waiting for Garmin
+            Replay request sent
           </Text>
           <Copy muted>
-            When Garmin replies, return here and tap Check for Garmin data.
-            Garmin’s data callback is picked up automatically, and any newly
-            received workouts will appear in Import summary.
+            After Garmin confirms the replay, return here and tap Check
+            imported data. Garmin’s callback is picked up automatically, and
+            the workout count will update in Import summary.
           </Copy>
           <Button secondary busy={busy} onPress={() => void onSync()}>
-            Check for Garmin data
+            Check imported data
           </Button>
         </View>
       )}
