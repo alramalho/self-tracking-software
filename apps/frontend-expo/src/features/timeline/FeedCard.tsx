@@ -15,10 +15,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { ActivitySummary } from "./ActivitySummary";
 import { FeedCaption } from "./FeedCaption";
-import {
-  HealthProviderIcon,
-  healthProviderLabel,
-} from "@/features/health/HealthProviderIcon";
 import { CommentsSheet } from "./comments/CommentsSheet";
 import { ReactionBadges } from "./reactions/ReactionBadges";
 import { ReactionPicker } from "./reactions/ReactionPicker";
@@ -264,7 +260,7 @@ export function FeedCard({
           {entry.healthWorkout && (
             <Pressable
               accessibilityRole={own ? "button" : undefined}
-              accessibilityLabel={`${healthProviderLabel(entry.source) ?? "Health device"} details`}
+              accessibilityLabel="Apple Watch details"
               disabled={!own}
               onPress={() => own && router.push(`/health-workout/${entry.healthWorkout!.id}` as never)}
               style={({ pressed }) => ({
@@ -280,14 +276,9 @@ export function FeedCard({
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <HealthProviderIcon provider={entry.source} size={18} />
-              {!entry.source && (
-                <HeartPulse size={18} color={c.muted} strokeWidth={1.8} />
-              )}
+              <HeartPulse size={18} color={c.muted} strokeWidth={1.8} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>
-                  {healthProviderLabel(entry.source) ?? "Health device"}
-                </Text>
+                <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>Apple Watch</Text>
                 <Text style={{ color: c.muted, fontSize: 12 }} numberOfLines={1}>
                   {[
                     entry.healthWorkout.averageHeartRateBpm == null ? null : `${Math.round(entry.healthWorkout.averageHeartRateBpm)} bpm avg`,
