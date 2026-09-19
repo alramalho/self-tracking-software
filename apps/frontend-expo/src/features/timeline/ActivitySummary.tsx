@@ -16,6 +16,31 @@ import {
   activityEntryMeasurement,
   appleHealthDuration,
 } from "./entry-presentation";
+import { HealthProviderIcon } from "@/features/health/HealthProviderIcon";
+
+function ActivityMark({
+  emoji,
+  source,
+  size,
+}: {
+  emoji?: string | null;
+  source?: string | null;
+  size: number;
+}) {
+  return (
+    <View
+      accessible={false}
+      style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+    >
+      {!!emoji && (
+        <Text style={{ fontSize: size, lineHeight: Math.round(size * 1.1) }}>
+          {emoji}
+        </Text>
+      )}
+      <HealthProviderIcon provider={source} size={Math.round(size * 0.58)} />
+    </View>
+  );
+}
 
 export function ParticipantAvatar({ user, size = 36 }: ParticipantAvatarProps) {
   const c = useColors();
@@ -199,12 +224,16 @@ export function ActivitySummary({
     return (
       <View style={styles.row}>
         {avatars}
-        <Text style={{ fontSize: joint ? 20 : 30 }}>
-          {rows
-            .slice(0, 3)
-            .map((r) => r.activity?.emoji)
-            .join("")}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+          {rows.slice(0, 3).map((row) => (
+            <ActivityMark
+              key={row.id}
+              emoji={row.activity?.emoji}
+              source={row.entry?.source}
+              size={joint ? 20 : 30}
+            />
+          ))}
+        </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text
             numberOfLines={1}
@@ -279,7 +308,11 @@ export function ActivitySummary({
               },
             ]}
           >
-            <Text style={{ fontSize: 16 }}>{row.activity?.emoji}</Text>
+            <ActivityMark
+              emoji={row.activity?.emoji}
+              source={row.entry?.source}
+              size={16}
+            />
             <Text
               style={{
                 flex: 1,
@@ -302,7 +335,11 @@ export function ActivitySummary({
   return (
     <View style={styles.row}>
       {avatars}
-      <Text style={{ fontSize: 48 }}>{item.activity?.emoji}</Text>
+      <ActivityMark
+        emoji={item.activity?.emoji}
+        source={item.entry?.source}
+        size={42}
+      />
       <View style={{ flex: 1, gap: 2 }}>
         <ParticipantName user={item.user} />
         <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>

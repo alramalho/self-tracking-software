@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Linking, Pressable, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SymbolView } from "expo-symbols";
 import { Activity, ChevronRight, Lock, Mail } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import {
@@ -18,35 +17,13 @@ import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
 import type { WorkoutReconciliationPreviewItem } from "./workout-types";
 import type { GarminSyncResult, HealthImportStats } from "./types";
+import {
+  AppleLogoIcon,
+  GarminLogoIcon,
+  HealthProviderIcon,
+} from "./HealthProviderIcon";
 
-export type IntegrationIconProps = {
-  size?: number;
-  color?: string;
-};
-
-export function AppleLogoIcon({ size = 30 }: IntegrationIconProps) {
-  const c = useColors();
-  return (
-    <SymbolView
-      accessibilityLabel="Apple logo"
-      name="apple.logo"
-      size={size}
-      tintColor={c.text}
-      type="monochrome"
-    />
-  );
-}
-
-export function GarminLogoIcon({ size = 30 }: IntegrationIconProps) {
-  return (
-    <Image
-      accessibilityLabel="Garmin logo"
-      source={require("../../../assets/integrations/garmin-mark.png")}
-      resizeMode="contain"
-      style={{ width: size, height: size }}
-    />
-  );
-}
+export { AppleLogoIcon, GarminLogoIcon } from "./HealthProviderIcon";
 
 function IntegrationIcon({ provider }: { provider: "apple" | "garmin" }) {
   if (provider === "apple") {
@@ -321,11 +298,17 @@ function WorkoutRow({
         <Activity size={21} color={c.text} strokeWidth={1.7} />
       </View>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ color: c.text, fontWeight: "600", fontSize: 16 }}>
-          {item.resolved?.linkedActivity
-            ? `${item.resolved.linkedActivity.emoji} ${item.resolved.linkedActivity.title}`
-            : workout.displayName}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          {!!item.resolved?.linkedActivity && (
+            <Text style={{ color: c.text, fontSize: 16, lineHeight: 20 }}>
+              {item.resolved.linkedActivity.emoji}
+            </Text>
+          )}
+          <HealthProviderIcon provider={workout.provider} size={17} />
+          <Text style={{ color: c.text, fontWeight: "600", fontSize: 16 }}>
+            {item.resolved?.linkedActivity?.title ?? workout.displayName}
+          </Text>
+        </View>
         <Text style={{ color: c.muted, fontSize: 13 }}>
           {new Date(workout.startAt).toLocaleDateString([], {
             dateStyle: "medium",
