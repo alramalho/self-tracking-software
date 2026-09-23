@@ -66,4 +66,5 @@ export type ProfileField =
   | "age"
   | "lookingForAp"
   | "description"
+  | "reactionEmojis"
   | "delete";

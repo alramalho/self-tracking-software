@@ -29,6 +29,7 @@ import {
   Paintbrush,
   Pencil,
   ShieldCheck,
+  Smile,
   SquareArrowUp,
   Trash2,
   UserPen,
@@ -49,9 +50,11 @@ import {
   EditProfilePicturePopup,
 } from "./EditFieldPopups";
 import ThemeModeSwitcher from "./ThemeModeSwitcher";
+import ReactionEmojiDrawer from "../ReactionEmojiDrawer";
 import { useNavigate } from "@tanstack/react-router";
 import { useDemoAchievement } from "@/contexts/demo-achievement/useDemoAchievement";
 import { Capacitor } from "@capacitor/core";
+import { normalizeReactionEmojis } from "@tsw/prisma/reactions";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -121,6 +124,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const [showEditAge, setShowEditAge] = useState(false);
   const [showEditFullName, setShowEditFullName] = useState(false);
   const [showEditProfilePicture, setShowEditProfilePicture] = useState(false);
+  const [showReactionEmojiDrawer, setShowReactionEmojiDrawer] = useState(false);
 
   const navigate = useNavigate();
   const { setDemoAchievementType } = useDemoAchievement();
@@ -957,6 +961,21 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         className="w-full flex items-center justify-start px-0 gap-2"
                         onClick={() => {
                           onClose();
+                          setShowReactionEmojiDrawer(true);
+                        }}
+                      >
+                        <Smile size={28} />
+                        <span className="flex-1 text-left">Reaction emojis</span>
+                        <span className="max-w-[11rem] truncate text-base">
+                          {normalizeReactionEmojis(currentUser?.reactionEmojis).join(" ")}
+                        </span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-start px-0 gap-2"
+                        onClick={() => {
+                          onClose();
                           navigate({ to: "/create-coach-profile" });
                         }}
                       >
@@ -1024,6 +1043,11 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
           {renderContent()}
         </div>
       </AppleLikePopover>
+
+      <ReactionEmojiDrawer
+        open={showReactionEmojiDrawer}
+        onOpenChange={setShowReactionEmojiDrawer}
+      />
 
       <ConfirmDialogOrPopover
         isOpen={showLogoutConfirm}

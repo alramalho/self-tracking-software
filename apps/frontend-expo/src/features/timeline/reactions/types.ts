@@ -1,4 +1,12 @@
 import type { Reaction, Person } from "@/core/types";
+export {
+  DEFAULT_REACTION_EMOJIS,
+  MAX_REACTION_EMOJIS,
+  REACTION_EMOJI_CATEGORIES,
+  isReactionEmoji,
+  normalizeReactionEmojiInput,
+  normalizeReactionEmojis,
+} from "@tsw/prisma/reactions";
 
 export interface ReactionPickerProps {
   overlay?: boolean;

@@ -12,6 +12,7 @@
     "./server": "./server.ts",
     "./plan-week": "./plan-week/index.ts",
     "./coach-conversation-starters": "./coach-conversation-starters.ts",
+    "./reactions": "./reactions.ts",
     "./types": "./types/index.ts",
     "./generated/prisma/sql/*": "./generated/prisma/sql/*.js"
   },
@@ -34,6 +35,7 @@
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "dotenv": "^16.3.1",
+    "emoji-regex": "9.2.2",
     "ts-node": "^10.9.1"
   },
   "devDependencies": {

@@ -5,6 +5,10 @@ import { rankPeople } from "../services/people/rank";
 import recommendationsService from "@/services/recommendationsService";
 import { clerkClient } from "@clerk/express";
 import { type Prisma } from "@tsw/prisma";
+import {
+  isReactionEmoji,
+  MAX_REACTION_EMOJIS,
+} from "@tsw/prisma/reactions";
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import Stripe from "stripe";
@@ -327,12 +331,40 @@ usersRouter.patch(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const updates = { ...req.body };
+      if ("reactionEmojis" in updates) {
+        const emojis = updates.reactionEmojis;
+        const normalizedEmojis = Array.isArray(emojis)
+          ? emojis.map((emoji: unknown) =>
+              typeof emoji === "string" ? emoji.trim() : emoji,
+            )
+          : [];
+        const isValid =
+          Array.isArray(emojis) &&
+          emojis.length > 0 &&
+          emojis.length <= MAX_REACTION_EMOJIS &&
+          emojis.every(
+            (emoji: unknown): emoji is string =>
+              typeof emoji === "string" && isReactionEmoji(emoji),
+          ) &&
+          new Set(normalizedEmojis).size === normalizedEmojis.length;
+
+        if (!isValid) {
+          res.status(400).json({
+            error: `Choose between 1 and ${MAX_REACTION_EMOJIS} unique emoji reactions.`,
+          });
+          return;
+        }
+
+        updates.reactionEmojis = normalizedEmojis;
+      }
+
       const shouldNotifyOnboardingCompleted =
         !req.user!.onboardingCompletedAt && req.body?.onboardingCompletedAt;
 
       const updatedUser = await prisma.user.update({
         where: { id: req.user!.id },
-        data: req.body,
+        data: updates,
         include: {
           ...basicUserInclude,
           coaches: {

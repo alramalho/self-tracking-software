@@ -1,18 +1,13 @@
 import React from "react";
-import { ReactionBarSelector } from "@charkour/react-reactions";
-import { Smile } from "lucide-react";
+import { Settings2, Smile } from "lucide-react";
+import { useState } from "react";
+import { useCurrentUser } from "@/contexts/users";
+import {
+  normalizeReactionEmojis,
+} from "@tsw/prisma/reactions";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
-
-const REACTION_EMOJI_MAPPING = {
-  fire: "🔥",
-  rocket: "🚀",
-  love: "♥️",
-  laugh: "😂",
-  oof: "😮‍💨",
-  peach: "🍑",
-  surprise: "😮",
-};
+import ReactionEmojiDrawer from "./ReactionEmojiDrawer";
 
 interface ReactionPickerProps {
   show: boolean;
@@ -30,35 +25,54 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const isOverlay = variant === "overlay";
-
-  const handleSelect = (key: any) => {
-    const emoji =
-      REACTION_EMOJI_MAPPING[key as keyof typeof REACTION_EMOJI_MAPPING];
-    onSelect(emoji);
-  };
+  const { currentUser } = useCurrentUser();
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const reactionEmojis = normalizeReactionEmojis(currentUser?.reactionEmojis);
 
   if (show) {
     return (
-      <ReactionBarSelector
-        iconSize={24}
-        style={{
-          border: `1px solid ${
-            isOverlay ? "rgba(255, 255, 255, 0.2)" : "rgba(128, 128, 128, 0.2)"
-          }`,
-          ...(isOverlay && {
-            backgroundColor: "rgba(255, 255, 255, 0.5)",
-            zIndex: 40,
-          }),
-        }}
-        reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
-          ([key, value]) => ({
-            label: key,
-            node: <div>{value}</div>,
-            key,
-          })
-        )}
-        onSelect={handleSelect}
-      />
+      <>
+        <div
+          className={`inline-grid w-[284px] max-w-[calc(100vw-1rem)] grid-cols-7 items-center rounded-full border p-[2px] shadow-md ${
+            isOverlay
+              ? "border-white/40 bg-white/85 backdrop-blur-sm"
+              : "border-muted-foreground/20 bg-background"
+          }`}
+        >
+          {reactionEmojis.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              aria-label={`React with ${emoji}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect(emoji);
+              }}
+              className="flex h-11 w-full min-w-0 items-center justify-center rounded-full bg-transparent text-2xl transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {emoji}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Customize reaction emojis"
+            title="Customize reaction emojis"
+            onClick={(event) => {
+              event.stopPropagation();
+              setCustomizeOpen(true);
+            }}
+            className={`flex h-11 w-full min-w-0 items-center justify-center rounded-full bg-transparent transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              isOverlay ? "text-slate-950" : "text-foreground"
+            }`}
+          >
+            <Settings2 className="h-5 w-5" strokeWidth={2.75} />
+          </button>
+        </div>
+        <ReactionEmojiDrawer
+          open={customizeOpen}
+          onOpenChange={setCustomizeOpen}
+        />
+      </>
     );
   }
 

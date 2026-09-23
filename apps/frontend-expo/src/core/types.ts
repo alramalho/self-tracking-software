@@ -229,6 +229,7 @@ export interface User extends Person {
   theme?: string;
   themeMode?: string;
   themeBaseColor?: string;
+  reactionEmojis?: string[];
   plans?: Plan[];
   activities?: Activity[];
   activityEntries?: ActivityEntry[];

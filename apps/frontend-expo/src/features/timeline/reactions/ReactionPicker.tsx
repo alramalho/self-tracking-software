@@ -9,14 +9,21 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Smile } from "lucide-react-native";
+import { Settings2, Smile } from "lucide-react-native";
 import { errorMessage } from "@/data/api";
+import { useCurrentUser } from "@/data/queries";
 import { useColors } from "@/components/theme";
+import { ReactionEmojiSheet } from "./ReactionEmojiSheet";
+import {
+  MAX_REACTION_EMOJIS,
+  normalizeReactionEmojis,
+} from "./types";
 import type { ReactionAnchor, ReactionPickerProps } from "./types";
 
-// Same order and emoji as the deployed Vite ReactionBarSelector.
-const reactions = ["🔥", "🚀", "♥️", "😂", "😮‍💨", "🍑", "😮"];
-const pickerWidth = 244;
+const reactionButtonSize = 40;
+const pickerPadding = 2;
+const pickerWidth =
+  (MAX_REACTION_EMOJIS + 1) * reactionButtonSize + pickerPadding * 2;
 const pickerHeight = 48;
 const gap = 8;
 
@@ -27,17 +34,21 @@ export function ReactionPicker({
   selectedEmojis = [],
 }: ReactionPickerProps) {
   const c = useColors();
+  const user = useCurrentUser();
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const trigger = useRef<View>(null);
   const [anchor, setAnchor] = useState<ReactionAnchor>();
   const [error, setError] = useState<unknown>();
+  const [customizing, setCustomizing] = useState(false);
+  const reactions = normalizeReactionEmojis(user.data?.reactionEmojis);
   const close = () => setAnchor(undefined);
   useEffect(() => setAnchor(undefined), [window.width, window.height]);
   const width = Math.min(
     pickerWidth,
     window.width - insets.left - insets.right - 16,
   );
+  const buttonWidth = (width - pickerPadding * 2 - 2) / (MAX_REACTION_EMOJIS + 1);
   const left = anchor
     ? Math.max(
         insets.left + 8,
@@ -112,46 +123,67 @@ export function ReactionPicker({
                   left,
                   top,
                   width,
-                  backgroundColor: overlay ? "rgba(255,255,255,0.5)" : "#fff",
+                  backgroundColor: overlay ? "rgba(255,255,255,0.86)" : "#fff",
                   borderColor: overlay
                     ? "rgba(255,255,255,0.2)"
                     : "rgba(128,128,128,0.2)",
                 },
               ]}
             >
-              {reactions.map((emoji) => (
+              <View style={styles.pickerRow}>
+                {reactions.map((emoji) => (
+                  <Pressable
+                    key={emoji}
+                    accessibilityRole="button"
+                    accessibilityLabel={emoji}
+                    disabled={disabled}
+                    accessibilityState={{
+                      disabled,
+                      selected: selectedEmojis.includes(emoji),
+                    }}
+                    onPress={async () => {
+                      try {
+                        await onSelect(emoji);
+                        close();
+                      } catch (error) {
+                        setError(error);
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.emojiButton,
+                      {
+                        width: buttonWidth,
+                        opacity: disabled ? 0.5 : 1,
+                        borderRadius: 22,
+                        backgroundColor: selectedEmojis.includes(emoji)
+                          ? `${c.accent}40`
+                          : "transparent",
+                        transform: [{ scale: pressed ? 1.2 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={styles.emoji}>{emoji}</Text>
+                  </Pressable>
+                ))}
                 <Pressable
-                  key={emoji}
                   accessibilityRole="button"
-                  accessibilityLabel={emoji}
-                  disabled={disabled}
-                  accessibilityState={{
-                    disabled,
-                    selected: selectedEmojis.includes(emoji),
-                  }}
-                  onPress={async () => {
-                    try {
-                      await onSelect(emoji);
-                      close();
-                    } catch (error) {
-                      setError(error);
-                    }
+                  accessibilityLabel="Customize reaction emojis"
+                  onPress={() => {
+                    close();
+                    setCustomizing(true);
                   }}
                   style={({ pressed }) => [
                     styles.emojiButton,
                     {
-                      opacity: disabled ? 0.5 : 1,
-                      borderRadius: 22,
-                      backgroundColor: selectedEmojis.includes(emoji)
-                        ? `${c.accent}40`
-                        : "transparent",
-                      transform: [{ scale: pressed ? 1.2 : 1 }],
+                      width: buttonWidth,
+                      opacity: pressed ? 0.72 : 1,
+                      backgroundColor: "transparent",
                     },
                   ]}
                 >
-                  <Text style={styles.emoji}>{emoji}</Text>
+                  <Settings2 size={22} color="#111827" strokeWidth={2.75} />
                 </Pressable>
-              ))}
+              </View>
             </View>
             {!!error && (
               <View
@@ -176,6 +208,10 @@ export function ReactionPicker({
           </View>
         </Modal>
       )}
+      <ReactionEmojiSheet
+        visible={customizing}
+        onClose={() => setCustomizing(false)}
+      />
     </>
   );
 }
@@ -191,7 +227,6 @@ const styles = StyleSheet.create({
   },
   picker: {
     position: "absolute",
-    flexDirection: "row",
     alignItems: "center",
     height: pickerHeight,
     padding: 2,
@@ -203,8 +238,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 5,
   },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   emojiButton: {
-    flex: 1,
     height: 44,
     alignItems: "center",
     justifyContent: "center",

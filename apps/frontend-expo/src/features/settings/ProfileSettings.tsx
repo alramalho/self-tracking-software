@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Image, Linking, Platform, Switch, View } from "react-native";
-import { Pencil, Trash2 } from "lucide-react-native";
+import { Pencil, Smile, Trash2 } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Status, useColors } from "@/components/ui";
 import {
@@ -13,6 +13,8 @@ import { api } from "@/data/api";
 import { pickPhotos, appendPhotos } from "@/native/photos";
 import { SettingsCard } from "./SettingsCard";
 import type { ProfileField, ProfileSettingsProps } from "./types";
+import { ReactionEmojiEditor } from "@/features/timeline/reactions/ReactionEmojiEditor";
+import { normalizeReactionEmojis } from "@/features/timeline/reactions/types";
 
 export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
   const user = useCurrentUser(),
@@ -68,11 +70,14 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
                 age: "Select your age",
                 lookingForAp: "Looking for Accountability Partner",
                 description: "Update Your Profile Description",
+                reactionEmojis: "Customize reactions",
                 delete: "Delete Account",
               }[field]
             }
           </Text>
-          {field === "delete" ? (
+          {field === "reactionEmojis" ? (
+            <ReactionEmojiEditor onClose={() => setField(undefined)} />
+          ) : field === "delete" ? (
             <Text style={{ color: c.muted, lineHeight: 22 }}>
               Permanently delete your account and all its data? This cannot be
               undone.
@@ -216,6 +221,14 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
             description={user.data?.profile || "Tell people about yourself"}
             trailing={pencil}
             onPress={() => edit("description", user.data?.profile || "")}
+          />
+          <SettingsCard
+            title="Reaction emojis"
+            description={
+              normalizeReactionEmojis(user.data?.reactionEmojis).join(" ")
+            }
+            icon={Smile}
+            onPress={() => edit("reactionEmojis")}
           />
           {Platform.OS === "ios" && (
             <SettingsCard
