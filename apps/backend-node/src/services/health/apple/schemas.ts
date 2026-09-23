@@ -69,6 +69,14 @@ const heartRateSeriesSchema = z
   .min(2)
   .max(240);
 
+const distanceTimeSeriesSchema = z
+  .array(z.object({
+    elapsedSeconds: z.number().finite().nonnegative(),
+    distanceMeters: z.number().finite().nonnegative(),
+  }))
+  .min(2)
+  .max(240);
+
 const routeSchema = z
   .array(
     z.object({
@@ -98,6 +106,7 @@ const workoutSchema = provenanceSchema.extend({
   maximumHeartRateBpm: z.number().finite().positive().max(300).optional(),
   heartRateZones: heartRateZonesSchema.optional(),
   heartRateSeries: heartRateSeriesSchema.optional(),
+  distanceTimeSeries: distanceTimeSeriesSchema.optional(),
   elevationProfile: elevationProfileSchema.optional(),
   route: routeSchema.optional(),
 });

@@ -42,11 +42,13 @@ import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { MetricLogger } from "../metrics/MetricLogger";
 import { useTimelineSeen } from "./useTimelineSeen";
 import type { TimelineRow } from "./types";
-import { containsEntry, timelineRows } from "./layout";
+import { containsNotificationTarget, timelineRows } from "./layout";
 import { ProfileGlow } from "@/components/ProfileGlow";
 import { PendingVoiceLogCard } from "@/features/voice-log/PendingVoiceLogCard";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
 import { usePendingVoiceLog } from "@/features/voice-log/usePendingVoiceLog";
+import { OfflineStatus } from "@/features/offline/OfflineStatus";
+import { Text } from "@/components/typography/Text";
 export default function HomeScreen() {
   const timeline = useTimeline();
   const plans = usePlans();
@@ -83,21 +85,34 @@ export default function HomeScreen() {
     user.data,
     items,
   );
-  const { activityEntryId } = useLocalSearchParams<{
+  const { activityEntryId, achievementPostId } = useLocalSearchParams<{
     activityEntryId?: string;
+    achievementPostId?: string;
   }>();
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const rows = timelineRows(seenRows, expanded, activityEntryId);
+  const rows = timelineRows(
+    seenRows,
+    expanded,
+    activityEntryId,
+    achievementPostId,
+  );
   const list = useRef<FlatList<TimelineRow>>(null);
   useScrollToTop(list);
   const target = rows.findIndex(
     (row) =>
-      (row.item && containsEntry(row.item, activityEntryId)) ||
-      (row.secondary && containsEntry(row.secondary, activityEntryId)),
+      (row.item &&
+        containsNotificationTarget(row.item, activityEntryId, achievementPostId)) ||
+      (row.secondary &&
+        containsNotificationTarget(
+          row.secondary,
+          activityEntryId,
+          achievementPostId,
+        )),
   );
   const scrolledTo = useRef<string | undefined>(undefined);
+  const targetId = activityEntryId ?? achievementPostId;
   useEffect(() => {
-    if (!activityEntryId || scrolledTo.current === activityEntryId) return;
+    if (!targetId || scrolledTo.current === targetId) return;
     if (target >= 0) {
       const timer = setTimeout(() => {
         list.current?.scrollToIndex({
@@ -105,7 +120,7 @@ export default function HomeScreen() {
           viewPosition: 0.25,
           animated: true,
         });
-        scrolledTo.current = activityEntryId;
+        scrolledTo.current = targetId;
       }, 250);
       return () => clearTimeout(timer);
     }
@@ -116,7 +131,7 @@ export default function HomeScreen() {
     )
       void timeline.fetchNextPage();
   }, [
-    activityEntryId,
+    targetId,
     target,
     timeline.hasNextPage,
     timeline.isFetching,
@@ -169,7 +184,11 @@ export default function HomeScreen() {
                               return next;
                             })
                           }
-                          highlighted={containsEntry(card, activityEntryId)}
+                          highlighted={containsNotificationTarget(
+                            card,
+                            activityEntryId,
+                            achievementPostId,
+                          )}
                         />
                       </Reveal>
                     ),
@@ -229,6 +248,14 @@ export default function HomeScreen() {
           windowSize={7}
           ListHeaderComponent={
             <View style={{ gap: 16, marginBottom: 16 }}>
+              <OfflineStatus />
+              {timeline.isError && !!timeline.data && (
+                <View testID="cached-timeline-notice" style={{ padding: 12, borderRadius: 12, backgroundColor: c.soft }}>
+                  <Text style={{ color: c.muted, fontSize: 13 }}>
+                    Showing previously loaded posts. New posts and older pages need a connection.
+                  </Text>
+                </View>
+              )}
               {pendingVoice.draft && (
                 <PendingVoiceLogCard
                   draft={pendingVoice.draft}
@@ -311,7 +338,12 @@ export default function HomeScreen() {
             </View>
           }
           ListEmptyComponent={
-            <Status
+            timeline.isError && !timeline.data ? (
+              <View testID="uncached-timeline-notice" style={{ padding: 16 }}>
+                <Copy muted>No saved timeline on this phone yet. Connect to load posts.</Copy>
+                <Status error={timeline.error} retry={() => void timeline.refetch()} />
+              </View>
+            ) : <Status
               loading={timeline.isPending}
               error={timeline.error}
               retry={() => void timeline.refetch()}

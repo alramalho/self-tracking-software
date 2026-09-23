@@ -12,6 +12,7 @@ import { Logger } from "./Logger";
 import { ActivityEditor } from "./ActivityEditor";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
 import { usePendingVoiceLog } from "@/features/voice-log/usePendingVoiceLog";
+import { OfflineStatus } from "@/features/offline/OfflineStatus";
 export default function LogScreen() {
   const activities = useActivities();
   const entries = useEntries();
@@ -52,6 +53,7 @@ export default function LogScreen() {
         error={activities.error}
         retry={() => void activities.refetch()}
       />
+      <OfflineStatus />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Log voice note"

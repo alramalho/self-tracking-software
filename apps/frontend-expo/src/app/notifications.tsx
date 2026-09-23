@@ -5,6 +5,8 @@ import { Button, Copy, Panel, Screen, Status } from "@/components/ui";
 import { useAction } from "@/data/queries";
 import { api } from "@/data/api";
 import type { AppNotification } from "@/features/social/types";
+import { notificationRoute } from "@/native/notification-routing";
+import { notificationTarget } from "@/native/notification-target";
 export default function Notifications() {
   const query = useQuery({
     queryKey: ["notifications"],
@@ -27,21 +29,35 @@ export default function Notifications() {
         retry={() => void query.refetch()}
         empty={query.data?.length === 0 ? "No notifications yet." : undefined}
       />
-      {query.data?.map((item) => (
-        <Panel key={item.id}>
-          <Copy>{item.title}</Copy>
-          <Copy muted>{item.message ?? item.body}</Copy>
-          {item.status !== "OPENED" && (
-            <Button
-              secondary
-              busy={read.isPending}
-              onPress={() => read.mutate(item.id)}
-            >
-              Mark as read
-            </Button>
-          )}
-        </Panel>
-      ))}
+      {query.data?.map((item) => {
+        const target = notificationRoute(notificationTarget(item));
+        return (
+          <Panel key={item.id}>
+            <Copy>{item.title}</Copy>
+            <Copy muted>{item.message ?? item.body}</Copy>
+            {target && (
+              <Button
+                onPress={() => {
+                  if (item.status !== "OPENED" && item.status !== "CONCLUDED")
+                    read.mutate(item.id);
+                  router.push(target as never);
+                }}
+              >
+                Open
+              </Button>
+            )}
+            {item.status !== "OPENED" && item.status !== "CONCLUDED" && (
+              <Button
+                secondary
+                busy={read.isPending}
+                onPress={() => read.mutate(item.id)}
+              >
+                Mark as read
+              </Button>
+            )}
+          </Panel>
+        );
+      })}
     </Screen>
   );
 }

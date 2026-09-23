@@ -1,0 +1,57 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: true
+    arguments:
+      EXDevMenuIsOnboardingFinished: "YES"
+      EXDevMenuShowsAtLaunch: "NO"
+      EXDevMenuShowFloatingActionButton: "NO"
+- extendedWaitUntil:
+    visible: Friend's last activities
+    timeout: 120000
+- tapOn: Add
+- tapOn: Log Running
+- tapOn:
+    id: field-Quantity
+- eraseText: 1
+- inputText: "7"
+- tapOn: Done editing input
+- scrollUntilVisible:
+    element: Log Activity
+    direction: DOWN
+- tapOn: Log Activity
+- tapOn: Add photos \(optional\)
+- tapOn: Photo Library
+- tapOn:
+    text: Allow Full Access
+    optional: true
+- tapOn:
+    text: Allow Access to All Photos
+    optional: true
+- extendedWaitUntil:
+    visible: Photos
+    timeout: 30000
+- takeScreenshot: offline-photo-library
+# The runner adds one non-sensitive fixture as the newest photo. On iOS 26.5
+# the first recent thumbnail occupies the left column of the picker sheet.
+- tapOn:
+    point: "18%, 29%"
+- tapOn:
+    id: Add
+- extendedWaitUntil:
+    visible: Selected photo 1
+    timeout: 20000
+- takeScreenshot: offline-photo-selected
+- tapOn:
+    id: field-Caption
+- inputText: Offline photo proof
+- scrollUntilVisible:
+    element: Upload 1 photo
+    direction: DOWN
+- tapOn: Upload 1 photo
+- extendedWaitUntil:
+    visible: Saved for sync
+    timeout: 30000
+- takeScreenshot: offline-photo-staged
+- tapOn: Done
+- assertVisible: Saved on this phone

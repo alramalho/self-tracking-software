@@ -5,10 +5,11 @@ import { Text } from "@/components/typography/Text";
 import { Panel, useColors } from "@/components/ui";
 import { TrackingMap } from "@/native/TrackingMap";
 import { WorkoutShare } from "./share/WorkoutShare";
+import { KilometreSplits } from "./splits/KilometreSplits";
+import { HeartRateChart } from "./heart-rate-chart/HeartRateChart";
 import type {
   ElevationProfilePoint,
   HealthWorkoutPreview,
-  HeartRateSeriesPoint,
   HeartRateZones,
   ResolvedWorkoutReconciliation,
   RoutePoint,
@@ -55,63 +56,6 @@ function zoneDuration(seconds: number) {
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-function HeartRateChart({ points, averageBpm }: { points: HeartRateSeriesPoint[]; averageBpm?: number | null }) {
-  const c = useColors();
-  const width = 320;
-  const height = 158;
-  const padding = 18;
-  const values = points.map((point) => point.bpm);
-  const minimum = Math.min(...values);
-  const maximum = Math.max(...values);
-  const range = Math.max(maximum - minimum, 1);
-  const elapsedRange = Math.max(points[points.length - 1].elapsedSeconds, 1);
-  const coordinates = points.map((point) => ({
-    x: padding + (point.elapsedSeconds / elapsedRange) * (width - padding * 2),
-    y: height - padding - ((point.bpm - minimum) / range) * (height - padding * 2),
-  }));
-  const linePath = coordinates
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-    .join(" ");
-  const average = Math.round(averageBpm ?? values.reduce((total, value) => total + value, 0) / values.length);
-  const timeLabel = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
-  };
-
-  return (
-    <Panel testID="heart-rate-chart" style={{ gap: 8 }}>
-      <Text style={{ color: c.text, fontSize: 17, fontWeight: "700" }}>Heart rate</Text>
-      <View accessibilityLabel="Heart rate chart">
-        <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-          {[0.25, 0.5, 0.75].map((ratio) => (
-            <Line
-              key={ratio}
-              x1={padding}
-              x2={width - padding}
-              y1={padding + ratio * (height - padding * 2)}
-              y2={padding + ratio * (height - padding * 2)}
-              stroke={c.border}
-              strokeWidth={1}
-              opacity={0.55}
-            />
-          ))}
-          <Path d={linePath} fill="none" stroke="#ff553d" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-        <View style={{ position: "absolute", top: 0, right: 0, gap: 58, alignItems: "flex-end" }}>
-          <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(maximum)}</Text>
-          <Text style={{ color: c.muted, fontSize: 11 }}>{Math.round(minimum)}</Text>
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 8, marginTop: -5 }}>
-          <Text style={{ color: c.muted, fontSize: 11 }}>{timeLabel(points[0].elapsedSeconds)}</Text>
-          <Text style={{ color: c.muted, fontSize: 11 }}>{timeLabel(elapsedRange / 2)}</Text>
-          <Text style={{ color: c.muted, fontSize: 11 }}>{timeLabel(elapsedRange)}</Text>
-        </View>
-      </View>
-      <Text style={{ color: "#ff553d", fontSize: 12, fontWeight: "700" }}>{average} BPM AVG</Text>
-    </Panel>
-  );
 }
 
 function RouteMap({ points }: { points: RoutePoint[] }) {
@@ -284,7 +228,7 @@ function HeartRateZones({ zones }: { zones: HeartRateZones }) {
   );
 }
 
-export function WorkoutVitals({ workout, resolved }: { workout: HealthWorkoutPreview; resolved?: ResolvedWorkoutReconciliation | null }) {
+export function WorkoutVitals({ workout, resolved, age }: { workout: HealthWorkoutPreview; resolved?: ResolvedWorkoutReconciliation | null; age?: number | null }) {
   const c = useColors();
   const isPublic = resolved?.healthDataIsPublic ?? false;
   const linked = resolved?.linkedActivity;
@@ -333,11 +277,21 @@ export function WorkoutVitals({ workout, resolved }: { workout: HealthWorkoutPre
       <Panel style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 4 }}>
         {values.map((v) => <Vital key={v.label} {...v} />)}
       </Panel>
+      {running && workout.distanceMeters != null && workout.distanceMeters >= 100 && (
+        <KilometreSplits workout={workout} />
+      )}
       {running && workout.elevationProfile && workout.elevationProfile.length >= 2 && (
         <ElevationProfile points={workout.elevationProfile} />
       )}
-      {running && workout.heartRateSeries && workout.heartRateSeries.length >= 2 && (
-        <HeartRateChart points={workout.heartRateSeries} averageBpm={workout.averageHeartRateBpm} />
+      {(workout.heartRateSeries != null || workout.averageHeartRateBpm != null || workout.maximumHeartRateBpm != null) && (
+        <HeartRateChart
+          points={workout.heartRateSeries}
+          startAt={workout.startAt}
+          endAt={workout.endAt}
+          zones={workout.heartRateZones}
+          age={age}
+          averageBpm={workout.averageHeartRateBpm}
+        />
       )}
       {running && workout.route && workout.route.length >= 2 && (
         <RouteMap points={workout.route} />

@@ -1,0 +1,32 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://health-workout/health-run
+- extendedWaitUntil:
+    visible: Workout details
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-overview
+- scrollUntilVisible:
+    element: Kilometre splits
+    direction: DOWN
+    centerElement: true
+- assertVisible: No reliable timed distance trace is available for this workout.
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-splits-unavailable
+- scrollUntilVisible:
+    element: Heart rate
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-heart-rate
+- scrollUntilVisible:
+    element: Z1
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-zones

@@ -260,6 +260,8 @@ export interface LogActivityInput {
   withUserId?: string;
   latitude?: number;
   longitude?: number;
+  timezone?: string;
+  clientRequestId?: string;
 }
 export interface SharedCandidate {
   activityEntryId: string;

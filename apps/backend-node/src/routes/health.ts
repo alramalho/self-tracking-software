@@ -5,9 +5,13 @@ import { appleHealthSyncBatchSchema } from "@/services/health/apple/schemas";
 import {
   applyWorkoutReconciliations,
   getWorkoutReconciliationPreview,
+  updateWorkoutPrivacy,
   WorkoutReconciliationError,
 } from "@/services/health/apple/reconciliation/service";
-import { workoutReconciliationRequestSchema } from "@/services/health/apple/reconciliation/schemas";
+import {
+  workoutPrivacyUpdateSchema,
+  workoutReconciliationRequestSchema,
+} from "@/services/health/apple/reconciliation/schemas";
 import {
   disconnectAppleHealth,
   getAppleHealthStatus,
@@ -50,16 +54,12 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const requestedDays =
-        req.query.days == null ? undefined : Number(req.query.days);
-      if (
-        requestedDays != null &&
-        (!Number.isInteger(requestedDays) || requestedDays <= 0)
-      ) {
-        res.status(400).json({ error: "days must be a positive integer" });
-        return;
-      }
-      res.json(await getSleepScores(req.user!.id, requestedDays));
+      const requestedDays = Number(req.query.days ?? 180);
+      const days =
+        Number.isInteger(requestedDays) && requestedDays > 0
+          ? Math.min(requestedDays, 366)
+          : 180;
+      res.json(await getSleepScores(req.user!.id, days));
     } catch {
       res.status(500).json({ error: "Could not load your sleep scores" });
     }
@@ -160,6 +160,32 @@ router.post(
       res.status(500).json({
         error: "Failed to reconcile Apple Health workouts",
       });
+    }
+  },
+);
+
+router.patch(
+  "/apple/workouts/privacy",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const parsed = workoutPrivacyUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    try {
+      res.json(await updateWorkoutPrivacy(req.user!.id, parsed.data));
+    } catch (error) {
+      if (error instanceof WorkoutReconciliationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      logger.error("Failed to update workout privacy", {
+        userId: req.user!.id,
+        error,
+      });
+      res.status(500).json({ error: "Failed to update Watch data privacy" });
     }
   },
 );

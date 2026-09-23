@@ -1,0 +1,15 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- extendedWaitUntil:
+    notVisible:
+      id: offline-logs-status
+    timeout: 120000
+- takeScreenshot: offline-synced-home
+- tapOn: Add
+- assertNotVisible:
+    id: offline-logs-status

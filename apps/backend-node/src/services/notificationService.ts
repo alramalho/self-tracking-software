@@ -5,6 +5,7 @@ import { prisma } from "../utils/prisma";
 import * as webpush from "web-push";
 import { apnsService } from "./apnsService";
 import { ApnsDeliveryError } from "./apns/types";
+import { notificationDestination } from "./notificationDestination";
 
 export interface CreateNotificationData {
   userId: string;
@@ -14,6 +15,7 @@ export interface CreateNotificationData {
   relatedId?: string;
   relatedData?: any;
   promptTag?: string;
+  dedupeKey?: string;
 }
 
 export interface PushNotificationPayload {
@@ -69,6 +71,7 @@ export class NotificationService {
         relatedId: data.relatedId,
         relatedData: data.relatedData,
         promptTag: data.promptTag,
+        dedupeKey: data.dedupeKey,
         status: "PENDING",
       },
     });
@@ -104,9 +107,18 @@ export class NotificationService {
     const body = processedNotification.message.toLowerCase();
 
     let isPush = false;
-    if (user.pwaSubscriptionEndpoint && pushNotify) {
+    if (
+      pushNotify &&
+      ((user.isPwaNotificationsEnabled && user.pwaSubscriptionEndpoint) ||
+        (user.isIosNotificationsEnabled && user.iosDeviceToken))
+    ) {
       try {
-        await this.sendPushNotification(user.id, title, body);
+        await this.sendPushNotification(
+          user.id,
+          title,
+          body,
+          notificationDestination(processedNotification)
+        );
         await prisma.notification.update({
           where: { id: notificationId },
           data: { sentAt: new Date() },

@@ -1,0 +1,14 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: true
+    arguments:
+      EXDevMenuIsOnboardingFinished: "YES"
+      EXDevMenuShowsAtLaunch: "NO"
+      EXDevMenuShowFloatingActionButton: "NO"
+- extendedWaitUntil:
+    visible: Saved on this phone
+    timeout: 120000
+- assertVisible: Offline photo proof
+- assertVisible: 1 activity waiting to sync
+- takeScreenshot: offline-photo-after-restart

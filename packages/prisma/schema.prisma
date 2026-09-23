@@ -61,6 +61,9 @@ model User {
   // Emoji reactions shown in the timeline picker
   reactionEmojis String[] @default(["🔥", "🚀", "♥️", "😂", "😮‍💨", "🍑"])
 
+  // Apple Watch / connected-workout privacy
+  healthWorkoutDataIsPublicByDefault Boolean @default(false)
+
   // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
   preferredCoachingHour      Int?             @default(6) // Default to 6-8am
   coachPersonality           CoachPersonality @default(CHAMPION)
@@ -239,6 +242,10 @@ model ActivityEntry {
 
   circlePosts PracticeCirclePost[]
 
+  logRequests ActivityLogRequest[]
+  photoRequests ActivityPhotoRequest[]
+  photoNotificationOutbox ActivityPhotoNotificationOutbox[]
+
   @@index([userId, deletedAt])
   @@index([userId, datetime, deletedAt])
   @@index([userId, deletedAt, datetime, id])
@@ -246,6 +253,53 @@ model ActivityEntry {
   @@index([activityId])
   @@index([createdAt])
   @@map("activity_entries")
+  @@schema("public")
+}
+
+// One durable receipt per client log. An entry can receive several logs at the
+// same datetime, so the key cannot live on ActivityEntry itself.
+model ActivityLogRequest {
+  userId    String
+  requestId String
+  entryId   String
+  createdAt DateTime @default(now())
+  entry     ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, requestId])
+  @@index([entryId])
+  @@map("activity_log_requests")
+  @@schema("public")
+}
+
+model ActivityPhotoRequest {
+  userId    String
+  requestId String
+  entryId   String
+  createdAt DateTime @default(now())
+  entry     ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, requestId])
+  @@index([entryId])
+  @@map("activity_photo_requests")
+  @@schema("public")
+}
+
+// The photo update and its notification work item commit together. The worker
+// can recover notification creation after a process or database failure.
+model ActivityPhotoNotificationOutbox {
+  id            String   @id @default(cuid())
+  entryId       String
+  createdAt     DateTime @default(now())
+  photoAddedAt  DateTime @default(now())
+  claimedAt     DateTime?
+  nextAttemptAt DateTime?
+  attempts      Int      @default(0)
+  processedAt   DateTime?
+  entry         ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([processedAt, nextAttemptAt, createdAt])
+  @@index([entryId, processedAt])
+  @@map("activity_photo_notification_outbox")
   @@schema("public")
 }
 
@@ -999,6 +1053,10 @@ model Feedback {
 model Notification {
   id          String             @id @default(cuid())
   userId      String
+  dedupeKey   String?            @unique
+  deliveryClaimedAt DateTime?
+  deliveryAttempts Int @default(0)
+  nextDeliveryAttemptAt DateTime?
   title       String?
   message     String
   createdAt   DateTime           @default(now())

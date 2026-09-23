@@ -307,6 +307,16 @@ router.get(
       const notifications = await prisma.notification.findMany({
         where: {
           userId: req.user!.id,
+          // Photo records remain private while delivery is pending. A retry
+          // rechecks friendship, entry, photo and plan visibility first.
+          AND: [
+            {
+              NOT: {
+                status: "PENDING",
+                dedupeKey: { startsWith: "ACTIVITY_PHOTO:" },
+              },
+            },
+          ],
           ...(req.user!.proactiveCoachingEnabled === false
             ? {
                 NOT: {

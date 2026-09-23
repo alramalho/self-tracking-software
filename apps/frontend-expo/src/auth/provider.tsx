@@ -1,8 +1,10 @@
 import { useAuthFlow } from "./flow";
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { resourceCache } from "@clerk/expo/resource-cache";
 import Constants from "expo-constants";
 import { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { setTokenProvider } from "@/data/api";
 import type { ChildrenProps } from "@/core/types";
 import type { Session } from "./types";
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: ChildrenProps) {
     <ClerkProvider
       publishableKey={Constants.expoConfig?.extra?.clerkPublishableKey}
       tokenCache={tokenCache}
+      __experimental_resourceCache={Platform.OS === "web" ? undefined : resourceCache}
     >
       <ClerkSession>{children}</ClerkSession>
     </ClerkProvider>

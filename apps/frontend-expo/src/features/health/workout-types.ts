@@ -41,6 +41,11 @@ export interface HeartRateSeriesPoint {
   bpm: number;
 }
 
+export interface DistanceTimePoint {
+  elapsedSeconds: number;
+  distanceMeters: number;
+}
+
 export interface RoutePoint {
   latitude: number;
   longitude: number;
@@ -67,6 +72,7 @@ export interface HealthWorkoutPreview {
   maximumHeartRateBpm?: number | null;
   heartRateZones?: HeartRateZones | null;
   heartRateSeries?: HeartRateSeriesPoint[] | null;
+  distanceTimeSeries?: DistanceTimePoint[] | null;
   elevationProfile?: ElevationProfilePoint[] | null;
   route?: RoutePoint[] | null;
   sourceName: string | null;
@@ -129,6 +135,12 @@ export interface WorkoutReconciliationPreviewItem {
   suggestedActivity: SuggestedActivity | null;
   recommendedAction: WorkoutReconciliationAction | null;
   resolved: ResolvedWorkoutReconciliation | null;
+  shareHealthDataByDefault?: boolean;
+}
+
+export interface WorkoutPrivacyUpdateResult {
+  healthDataIsPublic: boolean;
+  shareHealthDataByDefault: boolean;
 }
 
 export interface WorkoutReconciliationPreviewSummary {

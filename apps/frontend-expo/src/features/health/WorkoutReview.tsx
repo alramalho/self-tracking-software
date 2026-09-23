@@ -65,7 +65,9 @@ export function WorkoutReview({
     defaultWorkoutSelection(item),
   );
   const [useHealth, setUseHealth] = useState(false);
-  const [shareHealthData, setShareHealthData] = useState(false);
+  const [shareHealthData, setShareHealthData] = useState(
+    item.shareHealthDataByDefault ?? false,
+  );
   const [page, setPage] = useState<ReviewPage>(() =>
     workoutNeedsMatchChoice(item) ? "choose" : "workout",
   );
@@ -111,7 +113,7 @@ export function WorkoutReview({
       setQueueIndex(nextIndex);
       setSelection(defaultWorkoutSelection(next));
       setUseHealth(false);
-      setShareHealthData(false);
+      setShareHealthData(next.shareHealthDataByDefault ?? false);
       setPage(workoutNeedsMatchChoice(next) ? "choose" : "workout");
       setTitle(next.healthWorkout.displayName);
       setMeasure("minutes");
@@ -160,7 +162,7 @@ export function WorkoutReview({
             ? "Which amount?"
             : page === "privacy"
               ? "Who can see Watch data?"
-            : "Match your workout"
+              : "Match your workout"
       }
       titleAlign="left"
       testID="health-workout-drawer"
@@ -345,7 +347,11 @@ export function WorkoutReview({
                 }}
               >
                 <ReviewRow
-                  title={shareHealthData ? "Share Watch data" : "Watch data stays private"}
+                  title={
+                    shareHealthData
+                      ? "Share Watch data"
+                      : "Watch data stays private"
+                  }
                   detail={
                     shareHealthData
                       ? "Visible to people who can see this activity"
@@ -543,7 +549,10 @@ export function WorkoutReview({
       )}
       {page === "privacy" && (
         <>
-          <Copy>Your activity log keeps its normal visibility. Choose whether its Apple Watch details travel with it.</Copy>
+          <Copy>
+            Your activity log keeps its normal visibility. Choose whether its
+            Apple Watch details travel with it.
+          </Copy>
           <View style={groupStyle}>
             <ReviewRow
               title="Private"

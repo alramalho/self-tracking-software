@@ -881,3 +881,117 @@ The edit/add activity drawer now follows the PWA layout, stepped color palette a
 ## Workout matching hierarchy — included in build 30
 
 The workout review now has one primary commit action, editable match/amount summary rows, focused choice views and a quiet Skip. The independent PWA/native design comparison supported four concise AGENTS.md rules. TypeScript, eight Health browser cases and native DARK/LIGHT checks passed, including create-input keyboard handling. See [Health validation notes](../../docs/native-health-v0.md#workout-drawer-hierarchy-follow-up--september-15-after-build-29) for evidence and reproduction commands. This source change is included in verified and hosted build 30; build 29 does not contain it. No OTA was published.
+
+## Integrated workout graph fixture validation — September 23, 2026
+
+This section records the independently completed **simulator and fixture** graph checks at integration commit `16593ac8` in the `tracking-feature-validation` worktree. The release status earlier in this file belongs to this worktree's older snapshot; the original `tracking-so` checkout now documents the unrelated verified build 152. These checks produced no IPA or install link. They do not verify a physical-device Apple/Garmin import or constitute a new production release.
+
+The integration contains the app's **tracked** `modules/tracking-health/ios/` Swift sources and podspec. They must be present before prebuild; an Expo module directory containing only `package.json` cannot compile or ingest workout samples. The ignored `tracking-map/ios/` and `tracking-watch/ios/` sources were copied from the original checkout **only when absent**. Never overwrite tracked TrackingHealth sources. The validation worktree reused the original checkout's root `node_modules` through a **read-only** link and copied package-level `node_modules` trees with local `@tsw` workspace links redirected to this worktree. A fresh dependency install in this worktree is an alternative. Do not modify the original checkout's installed packages. From `apps/frontend-expo` in the integration worktree, reproduce the native source setup and fixture simulator binary with:
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+import shutil
+source = Path('/Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/modules')
+for name in ('tracking-map', 'tracking-watch'):
+    original = source / name / 'ios'
+    target = Path('modules') / name / 'ios'
+    if original.exists() and not target.exists():
+        shutil.copytree(original, target)
+PY
+EXPO_NO_DOTENV=1 EXPO_PUBLIC_E2E=true EXPO_PUBLIC_BACKEND_URL=http://127.0.0.1:4319 node node_modules/expo/bin/cli prebuild --platform ios --no-install
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer pod install --project-directory=ios
+EXPO_PUBLIC_E2E=true EXPO_PUBLIC_BACKEND_URL=http://127.0.0.1:4319 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+  -workspace ios/trackingso.xcworkspace -scheme trackingso -configuration Debug \
+  -destination 'platform=iOS Simulator,id=1E390112-CE48-4DD6-B61B-431D00A8EA55' \
+  -derivedDataPath /private/tmp/tracking-feature-validation-simulator \
+  CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=7P4CMS849D build
+```
+
+The fresh app is `/private/tmp/tracking-feature-validation-simulator/Build/Products/Debug-iphonesimulator/trackingso.app`. Pod installation completed with 131 pods in `/private/tmp/tracking-feature-validation-pods.log`; the Xcode build exited successfully with the app at that path (`/private/tmp/tracking-feature-validation-build.log`). The build includes the tracked TrackingHealth source and ExpoFileSystem 57.0.6. It is a fixture development client, never a production release.
+
+Prebuild invoked the repository-local Expo CLI directly because this Mac's pnpm 11 launcher does not match the repository's pnpm 10 `packageManager` setting.
+
+Run browser/model checks separately from native flows because the fixture servers use different ports:
+
+```sh
+node node_modules/typescript/bin/tsc --noEmit
+node --import tsx --test tests/kilometre-splits.test.ts tests/heart-rate-chart.test.ts
+E2E_API_PORT=4321 E2E_WEB_PORT=8087 node node_modules/@playwright/test/cli.js test --config playwright.heart-rate-zones.config.ts
+E2E_API_PORT=44317 E2E_WEB_PORT=48083 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node node_modules/@playwright/test/cli.js test e2e/workout-vitals.spec.ts -g 'distance trace|linked workout privacy'
+```
+
+From `apps/backend-node`, the focused provider check was:
+
+```sh
+node node_modules/vitest/vitest.mjs run src/services/health/apple/schemas.test.ts src/services/health/apple/effort.test.ts src/services/health/garmin/normalization.test.ts
+```
+
+The independent checks passed 13 frontend graph model cases, 24 Apple/Garmin provider cases, 5 heart-rate browser cases and 4 workout-vitals browser cases. Browser logs are `/private/tmp/tracking-feature-validation-hr-browser.log` and `/private/tmp/tracking-feature-validation-splits-browser.log`; inspected split captures are in sibling `tracking-feature-validation-evidence/browser-splits/`. The model cases cover sparse traces, gaps, exact zone boundaries and post-pause heart-rate samples. These results use fixtures and do not prove that every historical provider record contains timed samples.
+
+The native runner starts its own fixture API on 4319 and Metro on 8085, installs the **fresh app above**, and writes screenshots under `test-results-native-ios/`. Run one flow at a time on the iPhone 17 simulator (`1E390112-CE48-4DD6-B61B-431D00A8EA55`, iOS 26.5):
+
+```sh
+for flow in --splits --splits-missing --health-vitals; do
+  for theme in DARK LIGHT; do
+    JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    MAESTRO_BIN=/opt/homebrew/bin/maestro \
+    E2E_IOS_DEVICE=1E390112-CE48-4DD6-B61B-431D00A8EA55 \
+    E2E_IOS_APP=/private/tmp/tracking-feature-validation-simulator/Build/Products/Debug-iphonesimulator/trackingso.app \
+    E2E_THEME="$theme" node e2e/native/run.cjs --ios "$flow"
+  done
+done
+```
+
+The coordinating task ran all six combinations and inspected their screenshots. All passed:
+
+| Flow | DARK log and captures | LIGHT log and captures |
+| --- | --- | --- |
+| Timed splits | `/private/tmp/tracking-feature-validation-native-splits-DARK.log`; `test-results-native-ios/2026-09-23_011417/` | `/private/tmp/tracking-feature-validation-native-splits-LIGHT.log`; `test-results-native-ios/2026-09-23_011438/` |
+| Unavailable splits | `/private/tmp/tracking-feature-validation-native-splits-missing-DARK.log`; `test-results-native-ios/2026-09-23_011459/` | `/private/tmp/tracking-feature-validation-native-splits-missing-LIGHT.log`; `test-results-native-ios/2026-09-23_011519/` |
+| Heart-rate vitals | `/private/tmp/tracking-feature-validation-native-health-vitals-DARK.log`; `test-results-native-ios/2026-09-23_011539/` | `/private/tmp/tracking-feature-validation-native-health-vitals-LIGHT.log`; `test-results-native-ios/2026-09-23_011703/` |
+
+An earlier DARK attempt failed on an overly narrow Maestro text selector (`/private/tmp/tracking-feature-validation-native-hr-DARK.log`); the corrected combined-label matcher is in commit `42b0a462` and both final theme runs passed. These fixtures verify graph rendering, gaps and unavailable states; historical provider data may still lack timed samples.
+
+## Offline activity logging validation — source ready, native acceptance pending
+
+The native app persists the loaded timeline and activity picker per signed-in account. It stores each log and any selected photos locally before posting; the backend migration adds separate idempotency receipts for activity and photo requests. Deploy the migration before distributing a build with this queue. Clerk's experimental resource cache is enabled for native signed-in offline bootstrap. The fixture session does not prove a real Clerk session can cold start offline; verify that separately with a signed-in test account and the network disabled before app relaunch.
+
+From the repository root, run the focused checks:
+
+```sh
+pnpm --filter @tsw/prisma db:generate
+pnpm --filter frontend-expo typecheck
+pnpm --filter backend-node exec tsc --noEmit
+cd apps/frontend-expo
+node --import tsx --test tests/offline-queue.test.ts
+```
+
+The route concurrency test requires a disposable PostgreSQL cluster. Its script refuses any database other than `tracking_offline_test` on the exact Unix socket below. S3 is mocked in process; it sends no production media or notifications. From the repository root:
+
+```sh
+mkdir -p /private/tmp/tracking-offline-pg-sock
+initdb -D /private/tmp/tracking-offline-pg-data --no-instructions --auth=trust
+pg_ctl -D /private/tmp/tracking-offline-pg-data -o "-c listen_addresses= -c unix_socket_directories=/private/tmp/tracking-offline-pg-sock -p 55432" -l /private/tmp/tracking-offline-pg.log start
+createdb -h /private/tmp/tracking-offline-pg-sock -p 55432 tracking_offline_test
+DATABASE_URL='postgresql://alramalho@localhost:55432/tracking_offline_test?host=/private/tmp/tracking-offline-pg-sock' DIRECT_URL='postgresql://alramalho@localhost:55432/tracking_offline_test?host=/private/tmp/tracking-offline-pg-sock' pnpm --filter @tsw/prisma exec prisma db push --schema schema.prisma --accept-data-loss
+psql -h /private/tmp/tracking-offline-pg-sock -p 55432 -d tracking_offline_test -v ON_ERROR_STOP=1 -c 'DROP TABLE public.activity_photo_requests, public.activity_log_requests'
+psql -h /private/tmp/tracking-offline-pg-sock -p 55432 -d tracking_offline_test -v ON_ERROR_STOP=1 -f packages/prisma/migrations/20260923090000_activity_log_requests/migration.sql
+cd apps/backend-node
+DATABASE_URL='postgresql://alramalho@localhost:55432/tracking_offline_test?host=/private/tmp/tracking-offline-pg-sock' DIRECT_URL='postgresql://alramalho@localhost:55432/tracking_offline_test?host=/private/tmp/tracking-offline-pg-sock' NODE_ENV=test AI_GATEWAY_API_KEY=local-fixture-only node --import tsx --test scripts/offline-idempotency.test.ts
+pg_ctl -D /private/tmp/tracking-offline-pg-data stop -m immediate
+```
+
+Replace `alramalho` in the disposable database URLs with the current macOS username on another Mac. Reinitialize or remove the temporary data directory before repeating the setup. The test checks concurrent duplicate log requests, the same request ID under two accounts, concurrent distinct photo uploads, and photo replay without another S3 write.
+
+Because offline photo staging adds `expo-file-system`, make a fresh fixture simulator app before the native flow. From `apps/frontend-expo`, with a booted iOS simulator and Xcode 26.4 or later:
+
+```sh
+EXPO_PUBLIC_E2E=true EXPO_PUBLIC_BACKEND_URL=http://127.0.0.1:4319 pnpm exec expo prebuild --platform ios --no-install
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer pod install --project-directory=ios
+EXPO_PUBLIC_E2E=true EXPO_PUBLIC_BACKEND_URL=http://127.0.0.1:4319 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -workspace ios/trackingso.xcworkspace -scheme trackingso -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /private/tmp/tracking-offline-simulator CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=7P4CMS849D build
+E2E_IOS_DEVICE=47C54325-6609-4987-AA27-ACBFA499A1D5 E2E_IOS_APP=/private/tmp/tracking-offline-simulator/Build/Products/Debug-iphonesimulator/trackingso.app MAESTRO_BIN=/opt/homebrew/bin/maestro E2E_THEME=DARK node e2e/native/run.cjs --ios --offline
+```
+
+Repeat the last command in `LIGHT`. The fixture runner alone owns ports 4319/8085 and its simulator. It caches Home and Add online, disconnects the fixture API, logs and restarts offline, then restores the API while losing the first successful response. It requires one final server entry and the same request ID on replay. This simulator bundle is fixture-only. No offline IPA or Safari Install link has been verified; the original checkout documents the separately verified build 152.

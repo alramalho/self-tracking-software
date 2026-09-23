@@ -2,6 +2,7 @@ import type {
   AppleHealthElevationProfilePoint,
   AppleHealthHeartRateZones,
   AppleHealthHeartRateSeriesPoint,
+  AppleHealthDistanceTimePoint,
   AppleHealthRoutePoint,
   AppleHealthWorkoutMetadata,
 } from "./types";
@@ -107,6 +108,19 @@ function heartRateSeries(
   return points.length >= 2 ? points : undefined;
 }
 
+function distanceTimeSeries(value: unknown): AppleHealthDistanceTimePoint[] | undefined {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 240) return undefined;
+  const points = value.map((point) => {
+    if (!point || typeof point !== "object" || Array.isArray(point)) return null;
+    const candidate = point as Record<string, unknown>;
+    const elapsedSeconds = finiteNumber(candidate.elapsedSeconds);
+    const distanceMeters = finiteNumber(candidate.distanceMeters);
+    return elapsedSeconds == null || elapsedSeconds < 0 || distanceMeters == null || distanceMeters < 0
+      ? null : { elapsedSeconds, distanceMeters };
+  }).filter((point): point is AppleHealthDistanceTimePoint => point !== null);
+  return points.length >= 2 ? points : undefined;
+}
+
 function route(value: unknown): AppleHealthRoutePoint[] | undefined {
   if (!Array.isArray(value) || value.length < 2 || value.length > 240) {
     return undefined;
@@ -146,6 +160,7 @@ export function workoutMetadata(value: unknown): AppleHealthWorkoutMetadata {
   const elevationDescendedMeters = finiteNumber(metadata.elevationDescendedMeters);
   const parsedHeartRateZones = heartRateZones(metadata.heartRateZones);
   const parsedHeartRateSeries = heartRateSeries(metadata.heartRateSeries);
+  const parsedDistanceTimeSeries = distanceTimeSeries(metadata.distanceTimeSeries);
   const parsedElevationProfile = elevationProfile(metadata.elevationProfile);
   const parsedRoute = route(metadata.route);
   return {
@@ -163,6 +178,9 @@ export function workoutMetadata(value: unknown): AppleHealthWorkoutMetadata {
     ...(parsedHeartRateSeries == null
       ? {}
       : { heartRateSeries: parsedHeartRateSeries }),
+    ...(parsedDistanceTimeSeries == null
+      ? {}
+      : { distanceTimeSeries: parsedDistanceTimeSeries }),
     ...(parsedElevationProfile == null
       ? {}
       : { elevationProfile: parsedElevationProfile }),

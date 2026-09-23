@@ -27,6 +27,11 @@ const validBatch = {
       startAt: "2026-07-28T07:00:00.000Z",
       endAt: "2026-07-28T07:30:00.000Z",
       durationSeconds: 1_800,
+      distanceMeters: 5_100,
+      distanceTimeSeries: [
+        { elapsedSeconds: 0, distanceMeters: 0 },
+        { elapsedSeconds: 1_800, distanceMeters: 5_100 },
+      ],
       estimatedWorkoutEffortScore: 6,
       averageHeartRateBpm: 151.4,
       maximumHeartRateBpm: 177,
@@ -90,6 +95,20 @@ describe("appleHealthSyncBatchSchema", () => {
       ],
     });
 
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid distance and time samples", () => {
+    const result = appleHealthSyncBatchSchema.safeParse({
+      ...validBatch,
+      workouts: [{
+        ...validBatch.workouts[0],
+        distanceTimeSeries: [
+          { elapsedSeconds: 0, distanceMeters: 0 },
+          { elapsedSeconds: -1, distanceMeters: 5_100 },
+        ],
+      }],
+    });
     expect(result.success).toBe(false);
   });
 

@@ -120,3 +120,34 @@ test("linked workout shows the available private Watch vitals", async ({ page })
   expect(previewBox!.height).toBeLessThanOrEqual(viewportBox!.height + 1);
   await page.screenshot({ path: "test-results/workout-vitals.png", fullPage: true });
 });
+
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
+
+for (const theme of ["DARK", "LIGHT"]) {
+  test(`running workout without a reliable distance trace keeps average pace in ${theme}`, async ({ page, request }) => {
+    await request.post(`${API}/__reset`);
+    await request.post(`${API}/__health-batch`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+    });
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme },
+    });
+    await page.route("**/health/apple/workouts/reconciliation-preview", async (route) => {
+      const response = await route.fetch();
+      const preview = await response.json();
+      for (const item of preview.items ?? []) {
+        item.healthWorkout.distanceTimeSeries = [
+          { elapsedSeconds: 0, distanceMeters: 0 },
+          { elapsedSeconds: 1800, distanceMeters: 5100 },
+        ];
+      }
+      await route.fulfill({ response, json: preview });
+    });
+    await page.goto("/health-workout/health-run");
+    await expect(page.getByText("Average pace")).toBeVisible();
+    await expect(page.getByText("No reliable timed distance trace is available for this workout.")).toBeVisible();
+    await page.getByTestId("kilometre-splits").screenshot({ path: `test-results/workout-splits-unavailable-${theme.toLowerCase()}.png` });
+  });
+
+}

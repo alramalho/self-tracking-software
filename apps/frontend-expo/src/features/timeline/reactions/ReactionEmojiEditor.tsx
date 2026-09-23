@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, TextInput, View } from "react-native";
 import { Plus, Smile, Trash2 } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Status, useColors } from "@/components/ui";
@@ -24,7 +24,6 @@ export function ReactionEmojiEditor({ onClose }: ReactionEmojiEditorProps) {
   const savedEmojis = normalizeReactionEmojis(user.data?.reactionEmojis);
   const [emojis, setEmojis] = useState(savedEmojis);
   const [newEmoji, setNewEmoji] = useState("");
-  const emojiInput = useRef<TextInput>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<Error>();
   const save = useAction(async (nextEmojis: string[]) => {
@@ -100,16 +99,9 @@ export function ReactionEmojiEditor({ onClose }: ReactionEmojiEditorProps) {
       </View>
       <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
         <TextInput
-          ref={emojiInput}
           accessibilityLabel="Add a reaction emoji"
           value={newEmoji}
-          onChangeText={(value) => {
-            const emoji = normalizeReactionEmojiInput(value);
-            if (value !== emoji && Platform.OS !== "web") {
-              emojiInput.current?.setNativeProps({ text: emoji });
-            }
-            setNewEmoji(emoji);
-          }}
+          onChangeText={(value) => setNewEmoji(normalizeReactionEmojiInput(value))}
           onSubmitEditing={addEmoji}
           placeholder="Choose one emoji"
           placeholderTextColor={c.muted}

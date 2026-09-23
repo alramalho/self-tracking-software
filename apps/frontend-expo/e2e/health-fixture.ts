@@ -1,8 +1,12 @@
 import type { WorkoutReconciliationDecision } from "../src/features/health/workout-types";
+import { loadComparisonWorkout } from "./workout-comparison/fixture";
+import type { ComparisonWorkout } from "./workout-comparison/types";
 
 let active = false;
 let batch = false;
 let learning = false;
+let splitsMissing = false;
+let comparison: ComparisonWorkout | null = null;
 const resolved = new Set<string>();
 
 // Scored nights are dated the same way as the seeded check-ins so the insights
@@ -28,6 +32,8 @@ export function resetHealthFixture() {
   active = false;
   batch = false;
   learning = false;
+  splitsMissing = false;
+  comparison = null;
   resolved.clear();
 }
 export function healthFixture(
@@ -35,10 +41,24 @@ export function healthFixture(
   method: string,
   body: { decisions?: WorkoutReconciliationDecision[]; learning?: boolean },
 ) {
-  if (path === "/__health" || path === "/__health-batch") {
+  if (path === "/__health-workout-comparison") {
+    try {
+      comparison = loadComparisonWorkout(process.env.E2E_WORKOUT_FILE ?? "");
+    } catch {
+      return { ok: false, error: "Comparison workout file is unavailable or invalid" };
+    }
     active = true;
-    batch = path === "/__health-batch";
+    batch = false;
+    learning = false;
+    resolved.clear();
+    return { ok: true, profileAge: comparison.profileAge };
+  }
+  if (path === "/__health" || path === "/__health-batch" || path === "/__health-splits-missing") {
+    comparison = null;
+    active = true;
+    batch = path !== "/__health";
     learning = path === "/__health" && body.learning === true;
+    splitsMissing = path === "/__health-splits-missing";
     resolved.clear();
     return { ok: true };
   }
@@ -100,6 +120,20 @@ export function healthFixture(
     };
   if (path.endsWith("/reconciliation-preview"))
     {
+      if (comparison) {
+        return {
+          summary: { pending: active && !resolved.has("health-run") ? 1 : 0 },
+          items: active && !resolved.has("health-run") ? [{
+            healthWorkout: comparison.preview,
+            category: "new",
+            recommendedAction: null,
+            resolved: null,
+            mismatches: [],
+            suggestedActivity: null,
+            candidates: [],
+          }] : [],
+        };
+      }
       const workouts = [
               {
                 healthWorkout: {
@@ -124,12 +158,24 @@ export function healthFixture(
                     zone4Seconds: 600,
                     zone5Seconds: 120,
                   },
-                  heartRateSeries: [
-                    { elapsedSeconds: 0, bpm: 132 },
-                    { elapsedSeconds: 600, bpm: 168 },
-                    { elapsedSeconds: 1200, bpm: 155 },
-                    { elapsedSeconds: 1800, bpm: 181 },
+                  heartRateSeries: Array.from({ length: 31 }, (_, minute) => ({
+                    elapsedSeconds: minute * 60,
+                    bpm: Math.round(108 + minute * 2.4 + 14 * Math.sin(minute / 2)),
+                  })).filter((sample) => sample.elapsedSeconds < 600 || sample.elapsedSeconds > 900),
+                  distanceTimeSeries: splitsMissing ? [
+                    { elapsedSeconds: 0, distanceMeters: 0 },
+                    { elapsedSeconds: 1800, distanceMeters: 5100 },
+                  ] : [
+                    { elapsedSeconds: 0, distanceMeters: 0 },
+                    { elapsedSeconds: 300, distanceMeters: 1000 },
+                    { elapsedSeconds: 620, distanceMeters: 2000 },
+                    { elapsedSeconds: 740, distanceMeters: 2000 }, // stopped for two minutes
+                    { elapsedSeconds: 1010, distanceMeters: 3000 },
+                    { elapsedSeconds: 1320, distanceMeters: 4000 },
+                    { elapsedSeconds: 1740, distanceMeters: 5000 },
+                    { elapsedSeconds: 1800, distanceMeters: 5100 },
                   ],
+
                   elevationAscendedMeters: 96,
                   elevationDescendedMeters: 91,
                   elevationProfile: [

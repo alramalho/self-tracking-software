@@ -1,0 +1,40 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: true
+    arguments:
+      EXDevMenuIsOnboardingFinished: "YES"
+      EXDevMenuShowsAtLaunch: "NO"
+      EXDevMenuShowFloatingActionButton: "NO"
+- extendedWaitUntil:
+    visible: Friend's last activities
+    timeout: 120000
+- tapOn: Expand Running 5 kilometers
+- assertVisible: Morning run
+- takeScreenshot: offline-cached-home
+- tapOn: Add
+- assertVisible: Log Running
+- tapOn: Log Running
+- tapOn:
+    id: field-Quantity
+- eraseText: 1
+- inputText: "7"
+- tapOn: Done editing input
+- scrollUntilVisible:
+    element: Log Activity
+    direction: DOWN
+- tapOn: Log Activity
+- tapOn:
+    id: field-Caption
+- inputText: Offline native run
+- tapOn: "📸 Add a proof!"
+- scrollUntilVisible:
+    element: Log without photo
+    direction: DOWN
+- tapOn: Log without photo
+- extendedWaitUntil:
+    visible: Saved for sync
+    timeout: 30000
+- takeScreenshot: offline-log-saved
+- tapOn: Done
+- assertVisible: Saved on this phone

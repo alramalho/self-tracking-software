@@ -21,6 +21,7 @@ struct VoiceLogView: View {
     @State private var preview: VoiceLogPreview?
     @State private var selectedActivityIDs = Set<String>()
     @State private var selectedMetricIDs = Set<String>()
+    @State private var selectedPlanID: String?
     @State private var errorMessage: String?
     @State private var clientRequestId = UUID().uuidString.lowercased()
     @State private var recordingKind: RecordingKind = .initial
@@ -151,6 +152,10 @@ struct VoiceLogView: View {
                     )
                 }
 
+                if let planMatch = preview.planMatches.first {
+                    planContextSection(planMatch)
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Note", systemImage: "note.text")
                         .font(.subheadline.weight(.semibold))
@@ -246,6 +251,80 @@ struct VoiceLogView: View {
         .buttonStyle(.plain)
     }
 
+    private func planContextSection(_ planMatch: VoiceLogPlanMatch) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Coach context", systemImage: "scope")
+                .font(.subheadline.weight(.semibold))
+
+            Text("Where should this cue live?")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            planContextOption(
+                isSelected: selectedPlanID == planMatch.planId,
+                title: "Save to \(planMatch.planGoal)",
+                detail: "Strong match for \(planMatch.activityTitle)",
+                icon: planMatch.planEmoji ?? "🧭",
+                action: { selectedPlanID = planMatch.planId }
+            )
+
+            planContextOption(
+                isSelected: selectedPlanID == nil,
+                title: "Personal note",
+                detail: "Keep it in your general coach context",
+                systemImage: "lock.fill",
+                action: { selectedPlanID = nil }
+            )
+
+            Text("\u{201C}\(planMatch.contextText)\u{201D}")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(3)
+
+            Text("Nothing changes in the plan until you save this note.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(8)
+        .background(Color.accentColor.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func planContextOption(
+        isSelected: Bool,
+        title: String,
+        detail: String,
+        icon: String? = nil,
+        systemImage: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
+                if let icon {
+                    Text(icon)
+                        .font(.caption)
+                } else if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(2)
+                    Text(detail)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private func startRecording() {
         errorMessage = nil
         recorder.onMaximumDurationReached = { url in
@@ -273,6 +352,7 @@ struct VoiceLogView: View {
     private func startOver() {
         preview = nil
         errorMessage = nil
+        selectedPlanID = nil
         clientRequestId = UUID().uuidString.lowercased()
         recordingKind = .initial
         phase = .ready
@@ -303,6 +383,7 @@ struct VoiceLogView: View {
             preview = result
             selectedActivityIDs = Set(result.activities.map(\.id))
             selectedMetricIDs = Set(result.metrics.map(\.id))
+            selectedPlanID = result.planMatches.first?.planId
             phase = .review
         } catch {
             phase = isRefinement ? .review : .ready
@@ -318,7 +399,8 @@ struct VoiceLogView: View {
             activities: preview.activities.filter { selectedActivityIDs.contains($0.id) },
             metrics: preview.metrics.filter { selectedMetricIDs.contains($0.id) },
             note: preview.note,
-            unresolved: preview.unresolved
+            unresolved: preview.unresolved,
+            planMatches: []
         )
         return VoiceLogRefinementContext(
             originalTranscript: preview.transcript,
@@ -353,13 +435,17 @@ struct VoiceLogView: View {
                     description: $0.description
                 )
             }
+        let selectedPlanMatch = preview.planMatches.first { $0.planId == selectedPlanID }
         let payload = VoiceLogCommitRequest(
             clientRequestId: clientRequestId,
             transcript: preview.transcript,
             timezone: timezone,
             activities: activities,
             metrics: metrics,
-            note: preview.note
+            note: preview.note,
+            planContextPlanId: selectedPlanMatch?.planId,
+            planContextActivityId: selectedPlanMatch?.activityId,
+            planContextText: selectedPlanMatch?.contextText
         )
 
         Task {

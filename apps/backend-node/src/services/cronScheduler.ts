@@ -3,6 +3,8 @@ import { logger } from "../utils/logger";
 import { recurringJobService } from "./recurringJobService";
 import { deliverFollowThrough } from "./follow-through/delivery";
 import { syncAllGarminIntegrations } from "./health/garmin/service";
+import { retryPendingPhotoNotifications } from "./activity-photo/delivery";
+import { retryPhotoNotificationOutbox } from "./activity-photo/outbox";
 
 interface CronConfig {
   // Random delay window in minutes (0-15 means up to 15 minutes delay)
@@ -55,6 +57,21 @@ export class CronScheduler {
             await syncAllGarminIntegrations();
           } catch (error) {
             logger.error("Garmin Connect scheduler failed", error);
+          }
+        },
+        { noOverlap: true },
+      ),
+    );
+
+    this.tasks.push(
+      cron.schedule(
+        "*/2 * * * *",
+        async () => {
+          try {
+            await retryPhotoNotificationOutbox();
+            await retryPendingPhotoNotifications();
+          } catch (error) {
+            logger.error("Photo notification retry scheduler failed", error);
           }
         },
         { noOverlap: true },

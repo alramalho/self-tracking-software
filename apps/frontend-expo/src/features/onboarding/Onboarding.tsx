@@ -34,7 +34,9 @@ import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
 import { GoalGuidance, initialGoalGuidance } from "./interview/GoalGuidance";
 import {
+  acceptGoal,
   applyFacts,
+  normalizeInterviewState,
   nextStage,
   recordTurn,
   startInterview,
@@ -89,15 +91,20 @@ export default function Onboarding({
     const value = saved.data.state.draft;
     if (!value || value.createdPlanId) return;
     setDraft(value);
-    const interview = value.interview || startInterview(value);
+    const interview = normalizeInterviewState(
+      value.interview || startInterview(value),
+    );
     setState(interview);
-    setCandidate(interview.pending);
-    setValidation(interview.pending);
+    // A draft from the old flow could be paused on the now-removed coach
+    // validation screen. Let Jev re-check it on the goal screen instead.
+    setCandidate(undefined);
+    setValidation(undefined);
     setPaywall(value.step === "interview-finish");
     setAwaitingUpgrade(!!value.awaitingUpgrade);
     upgradeIntent.current = !!value.awaitingUpgrade;
     // Old drafts keep their goal, schedule and activity; the coach confirms them in the new interview.
-    if (!value.interview && value.goal) setAnswer(value.goal);
+    if ((!value.interview || interview.stage === "goal") && value.goal)
+      setAnswer(value.goal);
   }, [saved.data, preview]);
   useEffect(() => {
     if (
@@ -126,12 +133,13 @@ export default function Onboarding({
           if (guidanceRequest.current === requestId) setGoalGuidance(data);
         })
         .catch(() => {
-          // The full coach gate remains authoritative if this quick hint check is unavailable.
+          // Jev is the goal gate now; do not silently treat an unavailable
+          // evaluator as approval.
           if (guidanceRequest.current === requestId) {
             setGoalGuidance({
               requirements: initialGoalGuidance.requirements.map((item) => ({
                 ...item,
-                passed: true,
+                passed: !item.required,
               })),
             });
           }
@@ -161,6 +169,28 @@ export default function Onboarding({
     mutationFn: async (text: string) => {
       Keyboard.dismiss();
       setError(undefined);
+      if (state.stage === "goal") {
+        const next = acceptGoal(state, text);
+        const nextDraft = {
+          ...draft,
+          goal: text.trim(),
+          interview: next,
+          step: "interview",
+          answers: next.turns.map((turn) => ({
+            question: turn.question,
+            answer: turn.answer,
+            use: turn.feedback.slice(0, 400),
+          })),
+        };
+        await persist(nextDraft);
+        setHistory((h) => [...h, state]);
+        setState(next);
+        setCandidate(undefined);
+        setValidation(undefined);
+        setValidationReady(false);
+        setAnswer("");
+        return;
+      }
       const result = (
         await api.post<InterviewResult>(
           "/follow-through/onboarding/interview",
@@ -422,7 +452,10 @@ export default function Onboarding({
       await persist({ ...draft, interview: previous });
       setState(previous);
       setCandidate(previous.pending);
-      setAnswer(validationAnswer || "");
+      setAnswer(
+        validationAnswer ||
+          (previous.stage === "goal" ? draft.goal || previous.facts.goal : ""),
+      );
       setHistory((h) => h.slice(0, -1));
     } else if (state.stage !== "goal") {
       const stage = stages[Math.max(0, stages.indexOf(state.stage) - 1)];
@@ -456,7 +489,8 @@ export default function Onboarding({
     review: Sparkles,
   }[state.stage];
   const lastTurn = state.turns.at(-1);
-  const showingValidation = gate.isPending || !!validation;
+  const showingValidation =
+    (gate.isPending && state.stage !== "goal") || !!validation;
   const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${paywall}-${finished}`;
   const continueValidation = () => {
     if (!validation) return;

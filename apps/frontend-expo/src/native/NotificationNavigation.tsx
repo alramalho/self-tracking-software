@@ -17,8 +17,7 @@ export function NotificationNavigation() {
         return;
       const path = notificationRoute(
         response.notification.request.content.data?.url,
-      );
-      if (!path) return;
+      ) ?? "/notifications";
       seen.current = response.notification.request.identifier;
       router.push(path as never);
       void Notifications.clearLastNotificationResponseAsync();

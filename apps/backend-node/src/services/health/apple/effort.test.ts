@@ -73,4 +73,15 @@ describe("Apple workout effort", () => {
       },
     });
   });
+
+  it("keeps only finite time-distance points in persisted workout metadata", () => {
+    expect(workoutMetadata({ distanceTimeSeries: [
+      { elapsedSeconds: 0, distanceMeters: 0 },
+      { elapsedSeconds: 300, distanceMeters: 1000 },
+      { elapsedSeconds: "invalid", distanceMeters: 2000 },
+    ] }).distanceTimeSeries).toEqual([
+      { elapsedSeconds: 0, distanceMeters: 0 },
+      { elapsedSeconds: 300, distanceMeters: 1000 },
+    ]);
+  });
 });

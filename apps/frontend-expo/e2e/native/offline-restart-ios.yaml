@@ -1,0 +1,21 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: true
+    arguments:
+      EXDevMenuIsOnboardingFinished: "YES"
+      EXDevMenuShowsAtLaunch: "NO"
+      EXDevMenuShowFloatingActionButton: "NO"
+- extendedWaitUntil:
+    visible: Saved on this phone
+    timeout: 120000
+- assertVisible: Offline native run
+- takeScreenshot: offline-restarted-pending
+- tapOn: Home
+- tapOn: Expand Running 5 kilometers
+- assertVisible: Morning run
+- extendedWaitUntil:
+    visible:
+      id: cached-timeline-notice
+    timeout: 30000
+- takeScreenshot: offline-restarted-cached-timeline

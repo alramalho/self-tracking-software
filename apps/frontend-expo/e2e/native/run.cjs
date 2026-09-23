@@ -7,8 +7,13 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "../..");
 const ios = process.argv.includes("--ios");
 const activityEditorFlow = process.argv.includes("--activity-editor");
+const offlineFlow = process.argv.includes("--offline");
 const healthFlow = process.argv.includes("--health");
 const healthVitalsFlow = process.argv.includes("--health-vitals");
+const splitsFlow = process.argv.includes("--splits");
+const splitsMissingFlow = process.argv.includes("--splits-missing");
+const workoutComparisonFlow = process.argv.includes("--workout-comparison");
+const comparisonBefore = process.env.E2E_COMPARISON_BEFORE === "true";
 const assistanceFlow = process.argv.includes("--assistance");
 const flexibleFlow = process.argv.includes("--flexible");
 const profileGridFlow = process.argv.includes("--profile-grid");
@@ -30,6 +35,7 @@ const planLinksFlow = process.argv.includes("--plan-links");
 const commentsFlow = process.argv.includes("--comments");
 const messagesFlow = process.argv.includes("--messages");
 const notificationsFlow = process.argv.includes("--notifications");
+const photoNotificationsFlow = process.argv.includes("--photo-notifications");
 const reactionPeopleFlow = process.argv.includes("--reaction-people");
 const reactionDesign = process.argv.includes("--reactions");
 const timelineDesign = process.argv.includes("--timeline-design");
@@ -104,6 +110,9 @@ async function waitFor(url, child, headers = {}) {
 }
 
 async function run() {
+  if (workoutComparisonFlow &&
+    (!process.env.E2E_WORKOUT_FILE || !path.isAbsolute(process.env.E2E_WORKOUT_FILE) || !existsSync(process.env.E2E_WORKOUT_FILE)))
+    throw new Error("Set E2E_WORKOUT_FILE to an existing absolute local JSON path outside the repository.");
   if (ios && (!iosApp || !existsSync(path.join(iosApp, "Info.plist"))))
     throw new Error("Set E2E_IOS_APP to the extracted simulator .app bundle.");
   if (!ios && !existsSync(apk))
@@ -172,10 +181,24 @@ async function run() {
     waitFor("http://127.0.0.1:4319/__state", api),
     waitFor("http://127.0.0.1:8085/status", metro),
   ]);
-  if (healthFlow || healthVitalsFlow) {
-    const seeded = await fetch("http://127.0.0.1:4319/__health-batch", { method: "POST", headers: { Authorization: "Bearer local-e2e-token" } });
+  if (offlineFlow || photoNotificationsFlow) {
+    const seeded = await fetch("http://127.0.0.1:4319/users/user", {
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer local-e2e-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ themeMode: process.env.E2E_THEME ?? "DARK" }),
+    });
+    assert.equal(seeded.status, 200, "Fixture theme must be seeded before the app caches the user.");
+  }
+  if (healthFlow || healthVitalsFlow || workoutComparisonFlow || splitsFlow || splitsMissingFlow) {
+    const fixture = workoutComparisonFlow ? "__health-workout-comparison" : splitsMissingFlow ? "__health-splits-missing" : "__health-batch";
+    const seeded = await fetch(`http://127.0.0.1:4319/${fixture}`, { method: "POST", headers: { Authorization: "Bearer local-e2e-token" } });
     assert.equal(seeded.status, 200);
-    await fetch("http://127.0.0.1:4319/users/user", { method: "PATCH", headers: { Authorization: "Bearer local-e2e-token", "Content-Type": "application/json" }, body: JSON.stringify({ themeMode: process.env.E2E_THEME ?? "DARK" }) });
+    const fixtureState = await seeded.json();
+    assert.equal(fixtureState.ok, true, "Comparison fixture could not be loaded");
+    await fetch("http://127.0.0.1:4319/users/user", { method: "PATCH", headers: { Authorization: "Bearer local-e2e-token", "Content-Type": "application/json" }, body: JSON.stringify({ themeMode: process.env.E2E_THEME ?? "DARK", ...(workoutComparisonFlow && fixtureState.profileAge != null ? { age: fixtureState.profileAge } : {}) }) });
   }
   if (flexibleFlow) {
     const response = await fetch("http://127.0.0.1:4319/__follow-through", {method:"POST",headers:{Authorization:"Bearer local-e2e-token","Content-Type":"application/json"},body:JSON.stringify({flexibleWeekly:true})});
@@ -216,6 +239,9 @@ async function run() {
   }
   if (yearSearchFlow) {
     assert.equal((await fetch("http://127.0.0.1:4319/__people-search", {method:"POST"})).status, 200);
+  }
+  if (photoNotificationsFlow) {
+    assert.equal((await fetch("http://127.0.0.1:4319/__photo-notifications", {method:"POST"})).status, 200);
   }
   await waitFor("http://127.0.0.1:8085/", metro, {
     "expo-platform": ios ? "ios" : "android",
@@ -288,6 +314,40 @@ async function run() {
       { stdio: "inherit" },
     );
   }
+  if (offlineFlow) {
+    if (!ios) throw new Error("Offline fixture flow currently requires iOS.");
+    const runPhase = (file) => new Promise((resolve, reject) => {
+      const test = spawn(maestro, ["--device", device, "test", "--test-output-dir", output,
+        `e2e/native/${file}`], { cwd: root, env, stdio: "inherit" });
+      testProcess = test;
+      test.on("error", reject);
+      test.on("exit", (code) => code === 0 ? resolve() :
+        reject(new Error(`Offline native E2E ${file} failed (${code}). See ${output}`)));
+    });
+    const control = async (body) => {
+      const response = await fetch("http://127.0.0.1:4319/__offline", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 200);
+    };
+    await runPhase("offline-cache-ios.yaml");
+    await control({ enabled: true });
+    await runPhase("offline-log-ios.yaml");
+    await runPhase("offline-restart-ios.yaml");
+    await control({ enabled: false, loseNextLogResponse: true });
+    await runPhase("offline-sync-ios.yaml");
+    const state = await (await fetch("http://127.0.0.1:4319/__state")).json();
+    const logged = state.entries.filter((entry) => entry.description === "Offline native run");
+    assert.equal(logged.length, 1, "A lost response must not duplicate the entry.");
+    assert.equal(logged[0].quantity, 7);
+    const attempts = state.requests.filter((request) => request.path === "/activities/log-activity" &&
+      request.body.description === "Offline native run");
+    assert.ok(attempts.length >= 2, "The queue must retry the uncertain response.");
+    assert.equal(new Set(attempts.map((request) => request.body.clientRequestId)).size, 1);
+    assert.ok(attempts[0].body.clientRequestId);
+    console.log(`Native cached history, offline log, restart and idempotent reconnect passed. Screenshots: ${output}`);
+    return;
+  }
   await new Promise((resolve, reject) => {
     const test = spawn(
       maestro,
@@ -301,8 +361,14 @@ async function run() {
           ? "e2e/native/onboarding-keyboard-ios.yaml"
           : activityEditorFlow && ios
           ? "e2e/native/activity-editor-ios.yaml"
+          : workoutComparisonFlow && ios
+          ? `e2e/native/workout-comparison-${comparisonBefore ? "before" : "after"}-ios.yaml`
           : healthVitalsFlow && ios
           ? "e2e/native/health-vitals-ios.yaml"
+          : splitsFlow && ios
+          ? "e2e/native/kilometre-splits-ios.yaml"
+          : splitsMissingFlow && ios
+          ? "e2e/native/kilometre-splits-missing-ios.yaml"
           : healthFlow && ios
           ? "e2e/native/health-ios.yaml"
           : assistanceFlow && ios
@@ -347,6 +413,8 @@ async function run() {
               ? "e2e/native/messages-ios.yaml"
               : notificationsFlow && ios
                 ? "e2e/native/notifications-ios.yaml"
+              : photoNotificationsFlow && ios
+                ? "e2e/native/photo-notifications-ios.yaml"
               : reactionDesign && ios
                 ? "e2e/native/reactions-ios.yaml"
                 : timelineDesign && ios
@@ -399,9 +467,24 @@ async function run() {
     console.log(`Native Apple Watch workout-vitals details passed in ${state.user.themeMode}. Screenshots: ${output}`);
     return;
   }
+  if (splitsFlow || splitsMissingFlow) {
+    console.log(`Native kilometre splits ${splitsMissingFlow ? "unavailable trace" : "timed trace"} fixture passed in ${state.user.themeMode}. Screenshots: ${output}`);
+    return;
+  }
+  if (workoutComparisonFlow) {
+    console.log(`Native local workout comparison ${comparisonBefore ? "before" : "after"} captures passed in ${state.user.themeMode}. Screenshots: ${output}`);
+    return;
+  }
   if (notificationsFlow) {
     assert.ok(state.requests.some((r) => r.method === "GET" && r.path === "/notifications"), "Notifications screen must load the inbox");
     console.log(`Native notifications inbox and deep-link route passed in ${state.user.themeMode}. Real APNs registration requires a physical device.`);
+    return;
+  }
+  if (photoNotificationsFlow) {
+    assert.ok(state.requests.some((r) => r.method === "GET" && r.path === "/notifications"));
+    assert.ok(state.requests.some((r) => r.method === "POST" && r.path === "/notifications/mark-notification-opened"));
+    assert.equal(state.notifications[0].status, "OPENED");
+    console.log(`Native photo notification inbox and read action passed in ${state.user.themeMode}. Real APNs requires a physical device.`);
     return;
   }
   if (assistanceFlow) {

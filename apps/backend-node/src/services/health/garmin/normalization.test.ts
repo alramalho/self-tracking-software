@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeGarminSummary } from "./normalization";
+import { normalizeActivityDetail, normalizeGarminSummary } from "./normalization";
 
 describe("Garmin summary normalization", () => {
   it("normalizes daily metrics from a grouped payload", () => {
@@ -107,7 +107,7 @@ describe("Garmin summary normalization", () => {
       ],
       samples: [
         [start, 140, 38.72, -9.14, 0, 20],
-        [start + 300, 156, 38.721, -9.141, 1_000, 25],
+        [(start + 300) * 1000, 156, 38.721, -9.141, 1_000, 25],
       ],
     });
 
@@ -125,10 +125,42 @@ describe("Garmin summary normalization", () => {
           { elapsedSeconds: 0, bpm: 140 },
           { elapsedSeconds: 300, bpm: 156 },
         ],
+        distanceTimeSeries: [
+          { elapsedSeconds: 0, distanceMeters: 0 },
+          { elapsedSeconds: 300, distanceMeters: 1000 },
+        ],
         route: expect.arrayContaining([
           expect.objectContaining({ latitude: 38.72, longitude: -9.14 }),
         ]),
       }),
     });
+  });
+
+  it("does not infer elapsed splits from pause-excluding timer samples", () => {
+    const detail = normalizeActivityDetail({
+      activityId: "timer-only",
+      summary: { activityId: "timer-only", startTimeInSeconds: 1_758_070_800 },
+      samples: [
+        { timerDurationInSeconds: 300, totalDistanceInMeters: 1000 },
+        { timerDurationInSeconds: 600, totalDistanceInMeters: 2000 },
+      ],
+    });
+    expect(detail?.distanceTimeSeries).toBeUndefined();
+  });
+
+  it("normalizes millisecond timestamps before pairing Garmin time and distance", () => {
+    const start = 1_758_070_800;
+    const detail = normalizeActivityDetail({
+      activityId: "millisecond-clock",
+      summary: { activityId: "millisecond-clock", startTimeInSeconds: start * 1000 },
+      samples: [
+        { directTimestamp: start * 1000, totalDistanceInMeters: 0 },
+        { directTimestamp: (start + 300) * 1000, totalDistanceInMeters: 1000 },
+      ],
+    });
+    expect(detail?.distanceTimeSeries).toEqual([
+      { elapsedSeconds: 0, distanceMeters: 0 },
+      { elapsedSeconds: 300, distanceMeters: 1000 },
+    ]);
   });
 });

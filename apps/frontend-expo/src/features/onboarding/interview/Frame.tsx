@@ -69,9 +69,9 @@ export function InterviewFrame({
         <View
           accessibilityRole="progressbar"
           accessibilityLabel="Onboarding progress"
-          accessibilityValue={{ min: 0, max: 5, now: index + 1 }}
+          accessibilityValue={{ min: 0, max: stages.length, now: index + 1 }}
           aria-valuemin={0}
-          aria-valuemax={5}
+          aria-valuemax={stages.length}
           aria-valuenow={index + 1}
           style={{ flexDirection: "row", gap: 5 }}
         >

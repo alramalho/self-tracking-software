@@ -1,6 +1,7 @@
 import type {
   AppleHealthElevationProfilePoint,
   AppleHealthHeartRateSeriesPoint,
+  AppleHealthDistanceTimePoint,
   AppleHealthHeartRateZones,
   AppleHealthRoutePoint,
 } from "../types";
@@ -55,6 +56,7 @@ export interface HealthWorkoutPreview {
   maximumHeartRateBpm: number | null;
   heartRateZones: AppleHealthHeartRateZones | null;
   heartRateSeries: AppleHealthHeartRateSeriesPoint[] | null;
+  distanceTimeSeries: AppleHealthDistanceTimePoint[] | null;
   elevationProfile: AppleHealthElevationProfilePoint[] | null;
   route: AppleHealthRoutePoint[] | null;
   sourceName: string | null;
@@ -128,6 +130,7 @@ export interface WorkoutReconciliationPreviewItem {
   suggestedActivity: SuggestedActivity | null;
   recommendedAction: WorkoutReconciliationAction | null;
   resolved: ResolvedWorkoutReconciliation | null;
+  shareHealthDataByDefault: boolean;
 }
 
 export interface WorkoutReconciliationPreviewSummary {
@@ -154,6 +157,17 @@ export interface WorkoutReconciliationDecision {
     measure: "minutes" | "kilometers" | "sessions";
   };
   shareHealthData?: boolean;
+}
+
+export interface WorkoutPrivacyUpdate {
+  healthWorkoutId: string;
+  shareHealthData: boolean;
+  makeDefault: boolean;
+}
+
+export interface WorkoutPrivacyUpdateResult {
+  healthDataIsPublic: boolean;
+  shareHealthDataByDefault: boolean;
 }
 
 export interface WorkoutReconciliationApplyResult {

@@ -17,6 +17,10 @@ const port = Number(process.env.E2E_API_PORT || 4317);
 const now = () => new Date().toISOString();
 let state: ReturnType<typeof seed>;
 let failNext: string | undefined;
+let offlineMode = false;
+let loseNextLogResponse = false;
+const logReceipts = new Map<string, string>();
+const photoReceipts = new Map<string, string>();
 let peopleSearchOn = false;
 let wrappedFriendEntries: { datetime: string }[] = [];
 const requests: { method: string; path: string; body: unknown }[] = [];
@@ -184,6 +188,7 @@ function seed() {
     metricEntries,
     user,
     achievements: [] as any[],
+    notifications: [] as any[],
     ...seedChats(),
     externalProfile,
   };
@@ -245,6 +250,23 @@ const server = http.createServer(async (req, res) => {
     wrappedFriendEntries = [];
     requests.length = 0;
     failNext = undefined;
+    offlineMode = false;
+    loseNextLogResponse = false;
+    logReceipts.clear();
+    photoReceipts.clear();
+    send({ ok: true });
+    return;
+  }
+  if (path === "/__photo-notifications" && req.method === "POST") {
+    state.notifications = [{
+      id: "photo-entry-friend-user",
+      title: "hey Alex 👋",
+      message: "@sam added a photo to 🏃 Running 📸",
+      type: "INFO",
+      status: "PROCESSED",
+      relatedId: "friend-entry",
+      relatedData: { activityEntryId: "friend-entry", category: "ACTIVITY_PHOTO" },
+    }];
     send({ ok: true });
     return;
   }
@@ -270,6 +292,12 @@ const server = http.createServer(async (req, res) => {
   if (path === "/__fail") {
     failNext = body.path;
     send({ ok: true });
+    return;
+  }
+  if (path === "/__offline") {
+    offlineMode = body.enabled === true;
+    loseNextLogResponse = body.loseNextLogResponse === true;
+    send({ offlineMode, loseNextLogResponse });
     return;
   }
   if (path === "/__people-search") {
@@ -413,6 +441,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   requests.push({ method: req.method!, path, body });
+  if (offlineMode) { req.socket.destroy(); return; }
   if (failNext === path) {
     failNext = undefined;
     send({ error: "Simulated network failure. Please try again." }, 503);
@@ -557,6 +586,12 @@ const server = http.createServer(async (req, res) => {
       send({ error: "Invalid activity contract" }, 400);
       return;
     }
+    const receiptId = typeof body.clientRequestId === "string" ? body.clientRequestId : "";
+    const prior = receiptId ? logReceipts.get(receiptId) : undefined;
+    if (prior) {
+      send({ entry: state.entries.find((item) => item.id === prior), sharedActivityCandidates: [] });
+      return;
+    }
     const entry = {
       id: `entry-${Date.now()}`,
       activityId: body.activityId,
@@ -570,6 +605,8 @@ const server = http.createServer(async (req, res) => {
       reactions: [],
     };
     state.entries.push(entry);
+    if (receiptId) logReceipts.set(receiptId, entry.id);
+    if (loseNextLogResponse) { loseNextLogResponse = false; req.socket.destroy(); return; }
     send({ entry, sharedActivityCandidates: [] });
     return;
   }
@@ -581,6 +618,17 @@ const server = http.createServer(async (req, res) => {
     const entry: any = state.entries.find((e) => e.id === id);
     if (!entry) {
       send({ error: "Not found" }, 404);
+      return;
+    }
+    if (suffix === "/photo" && req.method === "PUT") {
+      const requestId = typeof body.clientRequestId === "string" ? body.clientRequestId : "";
+      if (!requestId || photoReceipts.get(requestId) !== id) {
+        if (requestId) photoReceipts.set(requestId, id);
+        entry.imageUrls = [...new Set([...(entry.imageUrls ?? []),
+          ...(body.uploadedPhotos ?? []).map((_: unknown, index: number) =>
+            `http://127.0.0.1:${port}/__background.png?photo=${requestId}-${index}`)])];
+      }
+      send(entry);
       return;
     }
     if (suffix === "/reflection-reasons" && req.method === "POST") {
@@ -770,7 +818,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (path === "/notifications") {
-    send([]);
+    send(state.notifications);
+    return;
+  }
+  if (path === "/notifications/mark-notification-opened" && req.method === "POST") {
+    const notification = state.notifications.find((item) => item.id === url.searchParams.get("notification_id"));
+    if (notification) notification.status = "OPENED";
+    send(notification || { error: "Not found" }, notification ? 200 : 404);
     return;
   }
   if (path === "/coaches") { send([]); return; }

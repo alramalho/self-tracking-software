@@ -1,0 +1,18 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Friend's last activities
+    timeout: 120000
+- tapOn: Expand Running 5 kilometers
+- assertVisible: Morning run
+- takeScreenshot: offline-online-cached-home
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Add
+- assertVisible: Log Running
+- takeScreenshot: offline-online-cached-activities
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: Home

@@ -76,6 +76,18 @@ struct VoiceLogUnresolved: Codable, Identifiable {
     var id: String { "\(text)-\(reason)" }
 }
 
+struct VoiceLogPlanMatch: Codable, Identifiable {
+    let planId: String
+    let planGoal: String
+    let planEmoji: String?
+    let activityId: String
+    let activityTitle: String
+    let contextText: String
+    let confidence: Double
+
+    var id: String { planId }
+}
+
 struct VoiceLogPreview: Codable {
     let clientRequestId: String
     let transcript: String
@@ -83,6 +95,46 @@ struct VoiceLogPreview: Codable {
     let metrics: [VoiceLogMetric]
     let note: VoiceLogNote
     let unresolved: [VoiceLogUnresolved]
+    let planMatches: [VoiceLogPlanMatch]
+
+    private enum CodingKeys: String, CodingKey {
+        case clientRequestId
+        case transcript
+        case activities
+        case metrics
+        case note
+        case unresolved
+        case planMatches
+    }
+
+    init(
+        clientRequestId: String,
+        transcript: String,
+        activities: [VoiceLogActivity],
+        metrics: [VoiceLogMetric],
+        note: VoiceLogNote,
+        unresolved: [VoiceLogUnresolved],
+        planMatches: [VoiceLogPlanMatch] = []
+    ) {
+        self.clientRequestId = clientRequestId
+        self.transcript = transcript
+        self.activities = activities
+        self.metrics = metrics
+        self.note = note
+        self.unresolved = unresolved
+        self.planMatches = planMatches
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        clientRequestId = try container.decode(String.self, forKey: .clientRequestId)
+        transcript = try container.decode(String.self, forKey: .transcript)
+        activities = try container.decode([VoiceLogActivity].self, forKey: .activities)
+        metrics = try container.decode([VoiceLogMetric].self, forKey: .metrics)
+        note = try container.decode(VoiceLogNote.self, forKey: .note)
+        unresolved = try container.decode([VoiceLogUnresolved].self, forKey: .unresolved)
+        planMatches = try container.decodeIfPresent([VoiceLogPlanMatch].self, forKey: .planMatches) ?? []
+    }
 }
 
 struct VoiceLogRefinementContext: Encodable {
@@ -114,6 +166,9 @@ struct VoiceLogCommitRequest: Encodable {
     let activities: [VoiceLogCommitActivity]
     let metrics: [VoiceLogCommitMetric]
     let note: VoiceLogNote
+    let planContextPlanId: String?
+    let planContextActivityId: String?
+    let planContextText: String?
 }
 
 struct VoiceLogCommitResponse: Codable {

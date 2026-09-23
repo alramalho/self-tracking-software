@@ -22,6 +22,7 @@ function workoutStorage(workout: AppleHealthWorkoutInput) {
     maximumHeartRateBpm,
     heartRateZones,
     heartRateSeries,
+    distanceTimeSeries,
     elevationProfile,
     route,
     ...fields
@@ -37,6 +38,7 @@ function workoutStorage(workout: AppleHealthWorkoutInput) {
     ...(maximumHeartRateBpm == null ? {} : { maximumHeartRateBpm }),
     ...(heartRateZones == null ? {} : { heartRateZones }),
     ...(heartRateSeries == null ? {} : { heartRateSeries }),
+    ...(distanceTimeSeries == null ? {} : { distanceTimeSeries }),
     ...(elevationProfile == null ? {} : { elevationProfile }),
     ...(route == null ? {} : { route }),
   };

@@ -12,13 +12,19 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { ChildrenProps } from "@/core/types";
+import { OfflineLogsProvider } from "@/features/offline/provider";
 export function DataProvider({ children }: ChildrenProps) {
   const session = useSession();
+  const userId = session.isSignedIn ? session.userId : null;
+  return <AccountDataProvider key={userId ?? "signed-out"} userId={userId}>{children}</AccountDataProvider>;
+}
+
+function AccountDataProvider({ children, userId }: ChildrenProps & { userId: string | null }) {
   const [client] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30000, gcTime: 24 * 60 * 60 * 1000, retry: 1 },
+          queries: { staleTime: 30000, gcTime: Infinity, retry: 1 },
           mutations: { retry: false },
         },
       }),
@@ -26,7 +32,7 @@ export function DataProvider({ children }: ChildrenProps) {
   const [persister] = useState(() =>
     createAsyncStoragePersister({
       storage: AsyncStorage,
-      key: `trackingso:queries:${session.userId ?? "signed-out"}`,
+      key: `trackingso:queries:${userId ?? "signed-out"}`,
     }),
   );
   useEffect(() => {
@@ -36,14 +42,7 @@ export function DataProvider({ children }: ChildrenProps) {
     );
     return () => sub.remove();
   }, []);
-  useEffect(
-    () => () => {
-      client.clear();
-      void persister.removeClient();
-    },
-    [client, persister],
-  );
-  if (!session.isSignedIn)
+  if (!userId)
     return (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
@@ -52,7 +51,7 @@ export function DataProvider({ children }: ChildrenProps) {
       client={client}
       persistOptions={{
         persister,
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: Infinity,
         buster: "expo-v1",
         dehydrateOptions: {
           shouldDehydrateQuery: (query) =>
@@ -64,12 +63,13 @@ export function DataProvider({ children }: ChildrenProps) {
               "plans",
               "metrics",
               "metric-entries",
+              "timeline",
             ].includes(String(query.queryKey[0])),
         },
       }}
     >
       <EntitlementRefresh />
-      {children}
+      <OfflineLogsProvider userId={userId}>{children}</OfflineLogsProvider>
     </PersistQueryClientProvider>
   );
 }

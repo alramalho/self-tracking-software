@@ -1,0 +1,26 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://health-workout/health-run
+- extendedWaitUntil:
+    visible: Workout details
+    timeout: 20000
+- assertVisible: 5.10 km
+- assertVisible: Average pace
+- scrollUntilVisible:
+    element: Kilometre splits
+    direction: DOWN
+    centerElement: true
+- assertVisible: 5:00 /km
+- assertVisible: 6:30 /km
+- takeScreenshot: kilometre-splits-top
+- scrollUntilVisible:
+    element: 0.10 km
+    direction: DOWN
+    centerElement: true
+- assertVisible: 10:00 /km
+- takeScreenshot: kilometre-splits-partial

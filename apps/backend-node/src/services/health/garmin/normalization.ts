@@ -797,9 +797,10 @@ export function normalizeActivityDetail(
     stringFor(summary, ["activityId", "ActivityId"]);
   if (!activityId) return null;
   const startSeconds = numberFor(summary, ["startTimeInSeconds"]);
-  const start = startSeconds == null ? null : startSeconds;
+  const start = startSeconds == null ? null : secondsFromTimestamp(startSeconds) ?? null;
   const rows = activityDetailSamples(raw);
   const heartRates: Array<{ elapsedSeconds: number; bpm: number }> = [];
+  const distances: Array<{ elapsedSeconds: number; distanceMeters: number }> = [];
   const elevation: Array<{ distanceMeters: number; elevationMeters: number }> =
     [];
   const route: Array<{
@@ -813,10 +814,14 @@ export function normalizeActivityDetail(
     const timestamp = secondsFromTimestamp(
       numberFor(row, ["directTimestamp", "timestamp", "startTimeInSeconds"]),
     );
-    const elapsed =
-      timestamp != null && start != null
-        ? timestamp - start
-        : numberFor(row, ["elapsedTimeInSeconds", "timerDurationInSeconds"]);
+    const elapsed = timestamp != null && start != null
+      ? timestamp - start
+      : numberFor(row, ["elapsedTimeInSeconds", "timerDurationInSeconds"]);
+    // Only absolute timestamps retain stopped time reliably. Keep the older
+    // fallback for heart rate while omitting uncertain split clocks.
+    const splitElapsed = timestamp != null && start != null
+      ? timestamp - start
+      : undefined;
     const heartRate = numberFor(row, [
       "directHeartRate",
       "heartRate",
@@ -836,6 +841,9 @@ export function normalizeActivityDetail(
       "distanceInMeters",
       "distance",
     ]);
+    if (splitElapsed != null && splitElapsed >= 0 && distance != null && distance >= 0) {
+      distances.push({ elapsedSeconds: splitElapsed, distanceMeters: distance });
+    }
     const altitude = numberFor(row, [
       "elevationInMeters",
       "elevation",
@@ -872,6 +880,9 @@ export function normalizeActivityDetail(
     maximumHeartRateBpm: numberFor(summary, ["maxHeartRateInBeatsPerMinute"]),
     ...(heartRates.length >= 2
       ? { heartRateSeries: downsample(heartRates) }
+      : {}),
+    ...(distances.length >= 2
+      ? { distanceTimeSeries: downsample(distances) }
       : {}),
     ...(elevation.length >= 2
       ? { elevationProfile: downsample(elevation) }
@@ -962,6 +973,9 @@ function normalizeActivity(
         numberFor(summary, ["maxHeartRateInBeatsPerMinute"]),
       ...(detail?.heartRateSeries
         ? { heartRateSeries: detail.heartRateSeries }
+        : {}),
+      ...(detail?.distanceTimeSeries
+        ? { distanceTimeSeries: detail.distanceTimeSeries }
         : {}),
       ...(detail?.elevationProfile
         ? { elevationProfile: detail.elevationProfile }

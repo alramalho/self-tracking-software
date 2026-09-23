@@ -21,6 +21,8 @@ import type {
   WorkoutReconciliationDecision,
   WorkoutReconciliationPreview,
   WorkoutReconciliationPreviewItem,
+  WorkoutPrivacyUpdate,
+  WorkoutPrivacyUpdateResult,
   WorkoutActivitySuggestionInput,
 } from "./types";
 import { workoutEffortInsight, workoutMetadata } from "../effort";
@@ -486,6 +488,7 @@ function healthPreview(workout: HealthWorkout): HealthWorkoutPreview {
     maximumHeartRateBpm: metadata.maximumHeartRateBpm ?? null,
     heartRateZones: metadata.heartRateZones ?? null,
     heartRateSeries: metadata.heartRateSeries ?? null,
+    distanceTimeSeries: metadata.distanceTimeSeries ?? null,
     elevationProfile: metadata.elevationProfile ?? null,
     route: metadata.route ?? null,
     sourceName: workout.sourceName,
@@ -553,6 +556,7 @@ function classificationForWorkout(
   activities: Activity[],
   duplicateId: string | undefined,
   confirmedMatches: ConfirmedWorkoutActivityMatch[] = [],
+  shareHealthDataByDefault = false,
 ): WorkoutReconciliationPreviewItem {
   const suggestedActivity = suggestedActivityForWorkout(
     workout,
@@ -602,6 +606,7 @@ function classificationForWorkout(
           : null,
         confirmedAt: workout.reconciliation.confirmedAt.toISOString(),
       },
+      shareHealthDataByDefault,
     };
   }
 
@@ -623,6 +628,7 @@ function classificationForWorkout(
       suggestedActivity,
       recommendedAction: duplicateId ? null : "import_new",
       resolved: null,
+      shareHealthDataByDefault,
     };
   }
 
@@ -676,6 +682,7 @@ function classificationForWorkout(
     suggestedActivity,
     recommendedAction: requiresReview ? null : "link_keep",
     resolved: null,
+    shareHealthDataByDefault,
   };
 }
 
@@ -727,7 +734,11 @@ export async function getWorkoutReconciliationPreview(
   const latestWorkout = workouts[0].endAt.getTime();
   const candidateWindowStart = new Date(earliestWorkout - 24 * 60 * 60 * 1000);
   const candidateWindowEnd = new Date(latestWorkout + 24 * 60 * 60 * 1000);
-  const [activities, entries] = await Promise.all([
+  const [user, activities, entries] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { healthWorkoutDataIsPublicByDefault: true },
+    }),
     prisma.activity.findMany({
       where: { userId, deletedAt: null },
       orderBy: { createdAt: "asc" },
@@ -773,6 +784,7 @@ export async function getWorkoutReconciliationPreview(
       activities,
       duplicateIds.get(workout.id),
       confirmedMatches,
+      user?.healthWorkoutDataIsPublicByDefault ?? false,
     ),
   );
 
@@ -899,6 +911,12 @@ export async function applyWorkoutReconciliations(
 
   return prisma.$transaction(async (transaction) => {
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext('health-reconcile'))`;
+    const user = await transaction.user.findUnique({
+      where: { id: userId },
+      select: { healthWorkoutDataIsPublicByDefault: true },
+    });
+    const shareHealthDataByDefault =
+      user?.healthWorkoutDataIsPublicByDefault ?? false;
     const result: WorkoutReconciliationApplyResult = {
       linked: 0,
       imported: 0,
@@ -1045,12 +1063,89 @@ export async function applyWorkoutReconciliations(
             previewItem,
             decision.action === "ignore"
               ? false
-              : (decision.shareHealthData ?? false),
+              : (decision.shareHealthData ?? shareHealthDataByDefault),
           ),
         },
       });
     }
 
     return result;
+  });
+}
+
+function privacyMatchReasons(
+  matchReasons: Prisma.JsonValue | null,
+  healthDataIsPublic: boolean,
+): Prisma.InputJsonValue {
+  const existing =
+    matchReasons &&
+    typeof matchReasons === "object" &&
+    !Array.isArray(matchReasons)
+      ? matchReasons
+      : {};
+  return JSON.parse(
+    JSON.stringify({ ...existing, healthDataIsPublic }),
+  ) as Prisma.InputJsonValue;
+}
+
+export async function updateWorkoutPrivacy(
+  userId: string,
+  update: WorkoutPrivacyUpdate,
+): Promise<WorkoutPrivacyUpdateResult> {
+  return prisma.$transaction(async (transaction) => {
+    const reconciliation =
+      await transaction.healthWorkoutReconciliation.findFirst({
+        where: {
+          userId,
+          healthWorkoutId: update.healthWorkoutId,
+          healthWorkout: { userId, deletedAt: null },
+        },
+        select: {
+          id: true,
+          action: true,
+          activityEntryId: true,
+          matchReasons: true,
+        },
+      });
+
+    if (
+      !reconciliation ||
+      !reconciliation.activityEntryId ||
+      reconciliation.action === "ignore"
+    ) {
+      throw new WorkoutReconciliationError(
+        "Only a linked workout can change Watch data privacy",
+      );
+    }
+
+    await transaction.healthWorkoutReconciliation.update({
+      where: { id: reconciliation.id },
+      data: {
+        matchReasons: privacyMatchReasons(
+          reconciliation.matchReasons,
+          update.shareHealthData,
+        ),
+      },
+    });
+
+    if (update.makeDefault) {
+      await transaction.user.update({
+        where: { id: userId },
+        data: {
+          healthWorkoutDataIsPublicByDefault: update.shareHealthData,
+        },
+      });
+    }
+
+    const user = await transaction.user.findUnique({
+      where: { id: userId },
+      select: { healthWorkoutDataIsPublicByDefault: true },
+    });
+
+    return {
+      healthDataIsPublic: update.shareHealthData,
+      shareHealthDataByDefault:
+        user?.healthWorkoutDataIsPublicByDefault ?? false,
+    };
   });
 }

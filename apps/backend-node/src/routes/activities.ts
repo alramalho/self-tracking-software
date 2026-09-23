@@ -10,6 +10,9 @@ import { classifyActivityKind } from "../services/activityCategorizationService"
 import { generateActivityReflectionReasons } from "../services/activityReflectionReasonService";
 import { updateActivityWithMeasureConversion } from "../services/activityUpdateService";
 import { notificationService } from "../services/notificationService";
+import { notifyConnectionsAboutActivityPhotos } from "../services/activity-photo/notifications";
+import type { PhotoActivity } from "../services/activity-photo/types";
+import { processPhotoNotificationOutbox } from "../services/activity-photo/outbox";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
 import { logger } from "../utils/logger";
@@ -465,11 +468,12 @@ const getUploadedActivityEntryPhotos = (req: AuthenticatedRequest) => {
 const uploadActivityEntryPhotos = async (
   photos: Express.Multer.File[],
   userId: string,
-  activityEntryId: string
+  activityEntryId: string,
+  requestId?: string
 ) => {
   return Promise.all(
-    photos.map(async (photo) => {
-      const photoId = uuidv4();
+    photos.map(async (photo, index) => {
+      const photoId = requestId ? `${requestId}-${index}` : uuidv4();
       const fileExtension = photo.originalname
         ? photo.originalname.split(".").pop()
         : "jpg";
@@ -485,75 +489,41 @@ const uploadActivityEntryPhotos = async (
   );
 };
 
-const notifyConnectionsAboutActivityPhotos = async ({
+// A saved request receipt can precede the photo notification hook. A retry
+// must recover that hook without repeating the activity or photo write.
+const recoverPhotoNotificationForReceipt = async ({
   user,
-  activity,
   entry,
-  quantity,
-  uploadedImageCount,
+  activity,
 }: {
   user: NonNullable<AuthenticatedRequest["user"]>;
-  activity: { title: string; emoji: string; measure: string };
   entry: ActivityEntry;
-  quantity: string | number;
-  uploadedImageCount: number;
+  activity?: PhotoActivity | null;
 }) => {
-  const startedAt = Date.now();
-  try {
-    const userWithConnections = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        connectionsFrom: {
-          where: { status: "ACCEPTED" },
-          include: { to: true },
-        },
-        connectionsTo: {
-          where: { status: "ACCEPTED" },
-          include: { from: true },
-        },
-      },
-    });
-
-    if (!userWithConnections) return;
-
-    const connectedUsersById = new Map(
-      [
-        ...userWithConnections.connectionsFrom.map((conn) => conn.to),
-        ...userWithConnections.connectionsTo.map((conn) => conn.from),
-      ].map((connectedUser) => [connectedUser.id, connectedUser])
-    );
-    const connectedUsers = Array.from(connectedUsersById.values());
-
-    if (connectedUsers.length === 0) return;
-
-    const message = `${user.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with ${uploadedImageCount === 1 ? "a photo" : `${uploadedImageCount} photos`} 📸!`;
-
+  const work = await prisma.activityPhotoNotificationOutbox.findMany({
+    where: { entryId: entry.id },
+    select: { id: true, processedAt: true },
+  });
+  if (work.length > 0) {
     await Promise.all(
-      connectedUsers.map((connectedUser) =>
-        notificationService.createAndProcessNotification({
-          userId: connectedUser.id,
-          message,
-          type: "INFO",
-          relatedId: entry.id,
-          relatedData: {
-            activityEntryId: entry.id,
-            userPicture: user.picture,
-            userName: user.name,
-            userUsername: user.username,
-          },
-        })
-      )
+      work
+        .filter((item) => !item.processedAt)
+        .map((item) => processPhotoNotificationOutbox(item.id)),
     );
-
-    logger.info(
-      `Photo activity notifications processed for ${connectedUsers.length} connection(s) in ${Date.now() - startedAt}ms`,
-      { activityEntryId: entry.id }
-    );
-  } catch (error) {
-    logger.error(
-      `Error processing photo activity notifications for entry ${entry.id}:`,
-      error
-    );
+    return;
+  }
+  // Receipts saved before the outbox migration still recover on replay.
+  const photoActivity =
+    activity === undefined && entry.activityId
+      ? await prisma.activity.findUnique({ where: { id: entry.activityId } })
+      : activity;
+  if (photoActivity) {
+    await notifyConnectionsAboutActivityPhotos({
+      user,
+      activity: photoActivity,
+      entry,
+      photoAddedAt: entry.imageCreatedAt ?? undefined,
+    });
   }
 };
 
@@ -651,7 +621,25 @@ router.post(
         latitude: rawLat,
         longitude: rawLng,
         withUserId,
+        clientRequestId,
       } = req.body;
+      const requestId = typeof clientRequestId === "string" ? clientRequestId.trim() : "";
+      if (requestId && !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(requestId)) {
+        return res.status(400).json({ error: "Invalid client request ID" });
+      }
+      if (requestId) {
+        const receipt = await prisma.activityLogRequest.findUnique({
+          where: { userId_requestId: { userId: req.user!.id, requestId } },
+          include: { entry: true },
+        });
+        if (receipt) {
+          await recoverPhotoNotificationForReceipt({
+            user: req.user!,
+            entry: receipt.entry,
+          });
+          return res.json({ entry: receipt.entry, sharedActivityCandidates: [] });
+        }
+      }
       const latitude = rawLat ? parseFloat(rawLat) : undefined;
       const longitude = rawLng ? parseFloat(rawLng) : undefined;
       const timezone =
@@ -660,6 +648,7 @@ router.post(
           : clientTimezone;
       const photos = getUploadedActivityEntryPhotos(req);
       let uploadedImageCount = 0;
+      let photoNotificationWorkId: string | null = null;
 
       // Check if activity exists and belongs to user
       const activity = await prisma.activity.findFirst({
@@ -747,38 +736,74 @@ router.post(
 
       let entry: ActivityEntry;
       const normalizedPrivateNotes = normalizeOptionalText(privateNotes);
-      if (existingEntry) {
-        // Update existing entry by adding quantity
-        entry = await prisma.activityEntry.update({
-          where: { id: existingEntry.id },
-          data: {
-            quantity: existingEntry.quantity + parseInt(quantity),
-            description: description || existingEntry.description,
-            privateNotes:
-              normalizedPrivateNotes !== undefined
-                ? normalizedPrivateNotes
-                : existingEntry.privateNotes,
-            // The user's real log time replaces the agent's synthetic noon.
-            ...(mergedAgentEntry
-              ? { datetime: iso_date_string, source: "app" }
-              : {}),
-          },
+      // The receipt and quantity change commit together. If the response is
+      // lost, replaying the same request ID cannot add quantity a second time.
+      try {
+        entry = await prisma.$transaction(async (tx) => {
+          const saved = existingEntry
+            ? await tx.activityEntry.update({
+                where: { id: existingEntry.id },
+                data: {
+                  quantity: { increment: parseInt(quantity) },
+                  description: description || existingEntry.description,
+                  privateNotes:
+                    normalizedPrivateNotes !== undefined
+                      ? normalizedPrivateNotes
+                      : existingEntry.privateNotes,
+                  ...(mergedAgentEntry
+                    ? { datetime: iso_date_string, source: "app" }
+                    : {}),
+                },
+              })
+            : await tx.activityEntry.create({
+                data: {
+                  activityId,
+                  userId: req.user!.id,
+                  quantity: parseInt(quantity),
+                  datetime: iso_date_string,
+                  description,
+                  privateNotes: normalizedPrivateNotes,
+                  timezone,
+                  latitude: latitude ?? undefined,
+                  longitude: longitude ?? undefined,
+                },
+              });
+          if (requestId)
+            await tx.activityLogRequest.create({
+              data: { userId: req.user!.id, requestId, entryId: saved.id },
+            });
+          // Persist the optional invite with the log itself. A response can be
+          // lost before the later notification work, but the invitation remains.
+          if (requestId && normalizedWithUserId)
+            await tx.sharedActivityInvite.upsert({
+              where: { inviterActivityEntryId_inviteeUserId: {
+                inviterActivityEntryId: saved.id,
+                inviteeUserId: normalizedWithUserId,
+              } },
+              update: {},
+              create: {
+                inviterActivityEntryId: saved.id,
+                inviterUserId: req.user!.id,
+                inviteeUserId: normalizedWithUserId,
+              },
+            });
+          return saved;
         });
-      } else {
-        // Create new entry
-        entry = await prisma.activityEntry.create({
-          data: {
-            activityId: activityId,
-            userId: req.user!.id,
-            quantity: parseInt(quantity),
-            datetime: iso_date_string,
-            description,
-            privateNotes: normalizedPrivateNotes,
-            timezone,
-            latitude: latitude ?? undefined,
-            longitude: longitude ?? undefined,
-          },
-        });
+      } catch (error) {
+        if (requestId) {
+          const receipt = await prisma.activityLogRequest.findUnique({
+            where: { userId_requestId: { userId: req.user!.id, requestId } },
+            include: { entry: true },
+          });
+          if (receipt) {
+            await recoverPhotoNotificationForReceipt({
+              user: req.user!,
+              entry: receipt.entry,
+            });
+            return res.json({ entry: receipt.entry, sharedActivityCandidates: [] });
+          }
+        }
+        throw error;
       }
 
       // Handle photo upload if provided
@@ -791,14 +816,25 @@ router.post(
           );
 
           // Update entry with image information
-          entry = await prisma.activityEntry.update({
-            where: { id: entry.id },
-            data: buildActivityEntryImageUpdate(
-              entry,
-              uploadedImages,
-              isPublic === "true" || isPublic === true
-            ),
+          const photoUpdate = await prisma.$transaction(async (tx) => {
+            const saved = await tx.activityEntry.update({
+              where: { id: entry.id },
+              data: buildActivityEntryImageUpdate(
+                entry,
+                uploadedImages,
+                isPublic === "true" || isPublic === true
+              ),
+            });
+            const work = await tx.activityPhotoNotificationOutbox.create({
+              data: {
+                entryId: entry.id,
+                photoAddedAt: saved.imageCreatedAt ?? new Date(),
+              },
+            });
+            return { saved, workId: work.id };
           });
+          entry = photoUpdate.saved;
+          photoNotificationWorkId = photoUpdate.workId;
 
           logger.info(
             `${uploadedImages.length} photo(s) uploaded successfully to S3 for activity entry ${entry.id}`
@@ -908,13 +944,9 @@ router.post(
         sharedActivityInvite,
       });
 
-      if (uploadedImageCount > 0) {
-        void notifyConnectionsAboutActivityPhotos({
-          user: req.user!,
-          activity,
-          entry,
-          quantity,
-          uploadedImageCount,
+      if (uploadedImageCount > 0 && photoNotificationWorkId) {
+        void processPhotoNotificationOutbox(photoNotificationWorkId).catch((error) => {
+          logger.error(`Error processing photo notification work for entry ${entry.id}:`, error);
         });
       }
     } catch (error) {
@@ -1144,6 +1176,10 @@ router.put(
     try {
       const { activityEntryId } = req.params;
       const photos = getUploadedActivityEntryPhotos(req);
+      const requestId = typeof req.body.clientRequestId === "string"
+        ? req.body.clientRequestId.trim() : "";
+      if (requestId && !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(requestId))
+        return res.status(400).json({ error: "Invalid client request ID" });
 
       if (photos.length === 0) {
         return res.status(400).json({ error: "No photos provided" });
@@ -1156,10 +1192,27 @@ router.put(
           userId: req.user!.id,
           deletedAt: null,
         },
+        include: { activity: true },
       });
 
       if (!existingEntry) {
         return res.status(404).json({ error: "Activity entry not found" });
+      }
+
+      if (requestId) {
+        const receipt = await prisma.activityPhotoRequest.findUnique({
+          where: { userId_requestId: { userId: req.user!.id, requestId } },
+        });
+        if (receipt) {
+          if (receipt.entryId !== activityEntryId)
+            return res.status(409).json({ error: "Photo request belongs to another activity" });
+          await recoverPhotoNotificationForReceipt({
+            user: req.user!,
+            entry: existingEntry,
+            activity: existingEntry.activity,
+          });
+          return res.json(existingEntry);
+        }
       }
 
       // Check if entry is within last 7 days
@@ -1176,20 +1229,64 @@ router.put(
       const uploadedImages = await uploadActivityEntryPhotos(
         photos,
         req.user!.id,
-        existingEntry.id
+        existingEntry.id,
+        requestId || undefined
       );
 
-      // Append new images while preserving existing ones
-      const updatedEntry = await prisma.activityEntry.update({
-        where: { id: activityEntryId },
-        data: buildActivityEntryImageUpdate(existingEntry, uploadedImages),
-      });
+      let updatedEntry: ActivityEntry;
+      let photoNotificationWorkId: string | null = null;
+      try {
+        const photoUpdate = await prisma.$transaction(async (tx) => {
+          // Serialize distinct uploads for one entry so neither can overwrite
+          // the other's image array after reading an earlier version.
+          await tx.$queryRaw`SELECT id FROM public.activity_entries WHERE id = ${activityEntryId} FOR UPDATE`;
+          const current = await tx.activityEntry.findUniqueOrThrow({ where: { id: activityEntryId } });
+          const saved = await tx.activityEntry.update({
+            where: { id: activityEntryId },
+            data: buildActivityEntryImageUpdate(current, uploadedImages),
+          });
+          if (requestId)
+            await tx.activityPhotoRequest.create({
+              data: { userId: req.user!.id, requestId, entryId: activityEntryId },
+            });
+          const work = await tx.activityPhotoNotificationOutbox.create({
+            data: {
+              entryId: activityEntryId,
+              photoAddedAt: saved.imageCreatedAt ?? new Date(),
+            },
+          });
+          return { saved, workId: work.id };
+        });
+        updatedEntry = photoUpdate.saved;
+        photoNotificationWorkId = photoUpdate.workId;
+      } catch (error) {
+        if (requestId) {
+          const receipt = await prisma.activityPhotoRequest.findUnique({
+            where: { userId_requestId: { userId: req.user!.id, requestId } },
+          });
+          if (receipt?.entryId === activityEntryId) {
+            const saved = await prisma.activityEntry.findUniqueOrThrow({ where: { id: activityEntryId } });
+            await recoverPhotoNotificationForReceipt({
+              user: req.user!,
+              entry: saved,
+              activity: existingEntry.activity,
+            });
+            return res.json(saved);
+          }
+        }
+        throw error;
+      }
 
       logger.info(
         `${uploadedImages.length} photo(s) added successfully for activity entry ${activityEntryId}`
       );
 
       res.json(updatedEntry);
+      if (photoNotificationWorkId) {
+        void processPhotoNotificationOutbox(photoNotificationWorkId).catch((error) => {
+          logger.error(`Error processing photo notification work for entry ${updatedEntry.id}:`, error);
+        });
+      }
     } catch (error) {
       logger.error("Error updating activity entry photo:", error);
       res.status(500).json({ error: "Failed to update photo" });

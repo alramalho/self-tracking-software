@@ -10,14 +10,19 @@ appId: so.tracking.app
     visible: Workout details
     timeout: 20000
 - assertVisible: Your Apple Watch vitals
-- assertVisible: Elevation profile
 - assertVisible: "151 bpm"
 - assertVisible: "5.10 km"
 - takeScreenshot: workout-vitals-overview
 - scrollUntilVisible:
+    element: Elevation profile
+    direction: DOWN
+    centerElement: true
+- assertVisible: Elevation profile
+- scrollUntilVisible:
     element: Heart rate
     direction: DOWN
     centerElement: true
+- assertVisible: "Estimated zones from workout age.*190 bpm max"
 - takeScreenshot: workout-vitals-heart-rate
 - scrollUntilVisible:
     element: Map

@@ -1,0 +1,25 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://health-workout/health-run
+- extendedWaitUntil:
+    visible: Workout details
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-overview
+- scrollUntilVisible:
+    element: Heart rate
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-heart-rate
+- scrollUntilVisible:
+    element: Heart-rate zones
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- takeScreenshot: workout-comparison-zones

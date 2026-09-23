@@ -50,6 +50,7 @@ export interface AppleHealthWorkout {
   maximumHeartRateBpm?: number;
   heartRateZones?: AppleHealthHeartRateZones;
   heartRateSeries?: AppleHealthHeartRateSeriesPoint[];
+  distanceTimeSeries?: AppleHealthDistanceTimePoint[];
   elevationProfile?: AppleHealthElevationProfilePoint[];
   route?: AppleHealthRoutePoint[];
   sourceBundleId: string;
@@ -85,6 +86,11 @@ export interface AppleHealthHeartRateZones {
 export interface AppleHealthHeartRateSeriesPoint {
   elapsedSeconds: number;
   bpm: number;
+}
+
+export interface AppleHealthDistanceTimePoint {
+  elapsedSeconds: number;
+  distanceMeters: number;
 }
 
 export interface AppleHealthSleepSample {

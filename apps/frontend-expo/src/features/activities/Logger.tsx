@@ -18,12 +18,13 @@ import {
 import { api } from "@/data/api";
 import { pickPhotos } from "@/native/photos";
 import type { LogActivityResult, Photo } from "@/core/types";
-import { logActivity } from "./service";
+import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
 import { MetricLogger } from "../metrics/MetricLogger";
 import type { FriendResult, LoggerProps, LogStep } from "./types";
 export function Logger({ activity, initialDate, initialQuantity, onLogged, onClose }: LoggerProps) {
   const client = useQueryClient();
+  const offline = useOfflineLogs();
   const user = useCurrentUser();
   const plans = usePlans();
   const metrics = useMetrics();
@@ -39,14 +40,16 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<unknown>();
   const [result, setResult] = useState<LogActivityResult>();
+  const [queuedError, setQueuedError] = useState<string>();
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
   }>();
   const save = useMutation({
     mutationFn: () =>
-      logActivity({
+      offline.save({
         activityId: activity.id,
+        activityTitle: activity.title,
         quantity: Number(quantity),
         datetime: parseLocalDate(date),
         description,
@@ -57,7 +60,13 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
         ...location,
       }),
     onMutate: () => setUploadProgress(undefined),
-    onSuccess: (data) => {
+    onSuccess: (outcome) => {
+      if (outcome.queued || !outcome.result) {
+        setQueuedError(outcome.error);
+        setStep("queued");
+        return;
+      }
+      const data = outcome.result;
       setResult(data);
       onLogged?.(data.entry);
       void client.invalidateQueries();
@@ -167,6 +176,8 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           ? `Log ${activity.title}`
           : step === "photos"
             ? "📸 Add a proof!"
+            : step === "queued"
+              ? queuedError ? "Saved with a sync issue" : "Saved for sync"
             : step === "shared"
               ? "Did you do this together?"
               : step === "difficulty"
@@ -249,6 +260,14 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           <Copy>
             {activity.emoji} {quantity} {activity.measure} logged.
           </Copy>
+          <Button onPress={onClose}>Done</Button>
+        </>
+      )}
+      {step === "queued" && (
+        <>
+          <Copy>{queuedError
+            ? `Your activity is saved on this phone. ${queuedError} Retry from Home or Log.`
+            : "Your activity is saved on this phone. It will sync when the connection returns. You can check its progress on Home or Log."}</Copy>
           <Button onPress={onClose}>Done</Button>
         </>
       )}

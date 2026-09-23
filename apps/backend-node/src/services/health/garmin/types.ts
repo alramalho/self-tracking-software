@@ -139,6 +139,7 @@ export interface GarminActivityDetail {
   averageHeartRateBpm?: number;
   maximumHeartRateBpm?: number;
   heartRateSeries?: Array<{ elapsedSeconds: number; bpm: number }>;
+  distanceTimeSeries?: Array<{ elapsedSeconds: number; distanceMeters: number }>;
   elevationProfile?: Array<{ distanceMeters: number; elevationMeters: number }>;
   route?: Array<{
     latitude: number;

@@ -122,6 +122,11 @@ export function VoiceLogDrawer({
   const [selectedMetricIDs, setSelectedMetricIDs] = useState<Set<string>>(
     () => new Set(initialDraft?.selectedMetricKeys ?? []),
   );
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    initialDraft?.selectedPlanId !== undefined
+      ? initialDraft.selectedPlanId
+      : initialDraft?.preview.planMatches?.[0]?.planId ?? null,
+  );
   const [error, setError] = useState<unknown>();
   const [transcriptExpanded, setTranscriptExpanded] = useState(false);
   const [clientRequestId, setClientRequestId] = useState(
@@ -153,12 +158,20 @@ export function VoiceLogDrawer({
       preview,
       selectedActivityKeys: [...selectedActivityIDs],
       selectedMetricKeys: [...selectedMetricIDs],
+      selectedPlanId,
       savedAt: new Date().toISOString(),
     };
     void writePendingVoiceLog(draft)
       .then(() => onPendingChange?.(draft))
       .catch((nextError) => setError(nextError));
-  }, [onPendingChange, phase, preview, selectedActivityIDs, selectedMetricIDs]);
+  }, [
+    onPendingChange,
+    phase,
+    preview,
+    selectedActivityIDs,
+    selectedMetricIDs,
+    selectedPlanId,
+  ]);
 
   const processRecording = useCallback(
     async (uri: string) => {
@@ -194,6 +207,7 @@ export function VoiceLogDrawer({
         setSelectedMetricIDs(
           new Set(enriched.metrics.map(voiceLogMetricKey)),
         );
+        setSelectedPlanId(enriched.planMatches?.[0]?.planId ?? null);
         setPhase("review");
       } catch (nextError) {
         setError(nextError);
@@ -242,6 +256,10 @@ export function VoiceLogDrawer({
     !!preview && normalizedText(preview.note.text) === normalizedText(preview.transcript);
   const coachContextItems =
     preview?.unresolved.filter(isCoachContextItem) ?? [];
+  const planMatch = preview?.planMatches?.[0];
+  const personalCoachContextItems = coachContextItems.filter(
+    (item) => !planMatch || normalizedText(item.text) !== normalizedText(planMatch.contextText),
+  );
   const notIncludedItems =
     preview?.unresolved.filter((item) => !isCoachContextItem(item)) ?? [];
 
@@ -288,6 +306,7 @@ export function VoiceLogDrawer({
     recordingKindRef.current = "initial";
     setSelectedActivityIDs(new Set());
     setSelectedMetricIDs(new Set());
+    setSelectedPlanId(null);
     setPhase("ready");
     try {
       await clearPendingVoiceLog();
@@ -325,6 +344,9 @@ export function VoiceLogDrawer({
     setPhase("committing");
     setError(undefined);
     try {
+      const selectedPlanMatch = preview.planMatches?.find(
+        (match) => match.planId === selectedPlanId,
+      );
       await commitVoiceLog({
         clientRequestId,
         transcript: preview.transcript,
@@ -338,6 +360,9 @@ export function VoiceLogDrawer({
           .filter((metric) => selectedMetricIDs.has(voiceLogMetricKey(metric)))
           .map(({ confidence: _confidence, title: _title, emoji: _emoji, ...metric }) => metric),
         note: preview.note,
+        planContextPlanId: selectedPlanMatch?.planId ?? null,
+        planContextActivityId: selectedPlanMatch?.activityId ?? null,
+        planContextText: selectedPlanMatch?.contextText ?? null,
       });
       await client.invalidateQueries();
       await clearPendingVoiceLog();
@@ -828,16 +853,63 @@ export function VoiceLogDrawer({
             </View>
           </View>
 
-          {!!coachContextItems.length && (
+          {!!planMatch && (
+            <View testID="voice-log-plan-context" style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Compass size={16} color={c.accent} />
+                <Text style={{ color: c.text, fontSize: 13, fontWeight: "700" }}>
+                  Coach context
+                </Text>
+              </View>
+              <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+                This sounds like useful direction for one of your structured plans.
+              </Text>
+              <View
+                style={{
+                  gap: 4,
+                  borderRadius: 16,
+                  backgroundColor: c.accent + "0d",
+                  borderWidth: 1,
+                  borderColor: c.accent + "38",
+                  overflow: "hidden",
+                }}
+              >
+                <ReviewRow
+                  emoji={planMatch.planEmoji || "🧭"}
+                  title={planMatch.planGoal}
+                  detail={`Strong match for ${planMatch.activityTitle}. Save this cue with the plan.`}
+                  label={`Save coach context to ${planMatch.planGoal}`}
+                  selected={selectedPlanId === planMatch.planId}
+                  onPress={() => setSelectedPlanId(planMatch.planId)}
+                />
+                <ReviewRow
+                  icon={LockKeyhole}
+                  title="Keep as a personal note"
+                  detail="Keep it in your general coach context instead."
+                  label="Keep coach context as a personal note"
+                  selected={selectedPlanId === null}
+                  onPress={() => setSelectedPlanId(null)}
+                />
+              </View>
+              <Text style={{ color: c.text, fontSize: 14, lineHeight: 20 }}>
+                “{planMatch.contextText}”
+              </Text>
+              <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+                Nothing changes in the plan until you save this note.
+              </Text>
+            </View>
+          )}
+
+          {!!personalCoachContextItems.length && (
             <View testID="voice-log-coach-context" style={{ gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Compass size={16} color={c.accent} />
                 <Text style={{ color: c.text, fontSize: 13, fontWeight: "700" }}>
-                  Plan direction
+                  Coach context
                 </Text>
               </View>
               <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
-                Useful context for what your coach should keep in mind next.
+                Useful direction for what your coach should keep in mind next.
               </Text>
               <View
                 style={{
@@ -849,13 +921,13 @@ export function VoiceLogDrawer({
                   borderColor: c.accent + "38",
                 }}
               >
-                {coachContextItems.map((item) => (
+                {personalCoachContextItems.map((item) => (
                   <View key={`${item.text}-${item.reason}`} style={{ gap: 3 }}>
                     <Text style={{ color: c.text, fontSize: 14, lineHeight: 20 }}>
                       “{item.text}”
                     </Text>
                     <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
-                      Kept with your private note · not logged as a completed activity
+                      Saved as personal coach context · not logged as a completed activity
                     </Text>
                   </View>
                 ))}

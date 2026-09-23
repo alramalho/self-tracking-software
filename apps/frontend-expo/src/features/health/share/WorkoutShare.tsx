@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
-import { Activity, Check, Palette, RectangleHorizontal, RectangleVertical, Rows3, Share2 } from "lucide-react-native";
+import { Image, Pressable, ScrollView, View } from "react-native";
+import { Check, Palette, RectangleHorizontal, RectangleVertical, Rows3, Share2 } from "lucide-react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { Button, Panel, Sheet, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
@@ -13,8 +13,9 @@ import type {
   WorkoutShareOptions,
   WorkoutShareProps,
   WorkoutShareStatsCount,
+  ShareWatermarkProps,
 } from "./types";
-import type { HealthWorkoutPreview, RoutePoint } from "../workout-types";
+import type { RoutePoint } from "../workout-types";
 
 function routePath(points: RoutePoint[], width: number, height: number, padding: number) {
   return shareRoutePoints(points, width, height, padding)
@@ -22,16 +23,48 @@ function routePath(points: RoutePoint[], width: number, height: number, padding:
     .join(" ");
 }
 
-export function WorkoutShareCard({ workout, options, captureRef }: WorkoutShareCardProps) {
+function ShareWatermark({ mapOverlay = false, scale }: ShareWatermarkProps) {
+  return (
+    <View
+      testID="workout-share-watermark"
+      style={{
+        position: "absolute",
+        ...(mapOverlay ? { right: 8 * scale, bottom: 8 * scale } : { right: 20 * scale, bottom: 14 * scale }),
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5 * scale,
+        opacity: 0.6,
+        zIndex: 2,
+        elevation: 2,
+      }}
+    >
+      <Image
+        testID="workout-share-brand-mark"
+        accessibilityLabel="Tracking logo"
+        source={require("../../../../assets/icon.png")}
+        resizeMode="contain"
+        style={{ width: 15 * scale, height: 15 * scale, borderRadius: 4 * scale }}
+      />
+      <Text allowFontScaling={false} style={{ color: "#fff", fontSize: 10 * scale, fontWeight: "600", letterSpacing: 1.1 * scale, textShadowOffset: { width: 0, height: scale }, textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2 * scale }}>
+        tracking.so
+      </Text>
+    </View>
+  );
+}
+
+export function WorkoutShareCard({ workout, options, captureRef, width }: WorkoutShareCardProps) {
   const stats = workoutShareStats(workout).slice(0, options.statsCount);
-  const size = shareCanvasSize(options.statsCount, options.orientation);
+  const canvas = shareCanvasSize(options.statsCount, options.orientation);
+  const scale = width / canvas.width;
+  const size = { width, height: canvas.height * scale };
   const landscape = options.orientation === "landscape";
-  // Keep the route full-width in landscape. A narrow route column leaves too
-  // little room for stat labels, which makes words wrap and pushes the last
-  // row out of the captured canvas.
-  const routeWidth = size.width - 48;
-  const routeHeight = landscape ? 154 : 168;
-  const routePadding = 22;
+  const padding = (landscape ? 16 : 24) * scale;
+  const gap = (landscape ? 10 : 16) * scale;
+  const availableWidth = size.width - padding * 2 - gap;
+  const routeWidth = landscape ? Math.floor(availableWidth * 0.56) : size.width - padding * 2;
+  const landscapeContentHeight = (options.statsCount === 6 ? 160 : 124) * scale;
+  const routeHeight = landscape ? landscapeContentHeight : 168 * scale;
+  const routePadding = (landscape ? 24 : 22) * scale;
   const points = workout.route ?? [];
   const coordinates = shareRoutePoints(points, routeWidth, routeHeight, routePadding);
   const color = paletteColor(options.palette);
@@ -47,58 +80,95 @@ export function WorkoutShareCard({ workout, options, captureRef }: WorkoutShareC
       style={{
         width: size.width,
         height: size.height,
-        padding: 24,
+        padding,
         backgroundColor: "transparent",
-        gap: landscape ? 14 : 16,
         flexDirection: "column",
         justifyContent: "center",
+        position: "relative",
       }}
     >
-      <Svg width={routeWidth} height={routeHeight} viewBox={`0 0 ${routeWidth} ${routeHeight}`}>
-        <Path d={line} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d={line} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
-        {start && <Circle cx={start.x} cy={start.y} r={7} fill="#fff" stroke={color} strokeWidth={4} />}
-        {finish && <Circle cx={finish.x} cy={finish.y} r={7} fill={color} stroke="#fff" strokeWidth={3} />}
-      </Svg>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: landscape ? 12 : 14, rowGap: landscape ? 10 : 14 }}>
-        {stats.map((stat) => (
-          <View key={stat.label} style={{ width: "30%", gap: 2 }}>
-            <Text
-              style={{
-                color: "rgba(255,255,255,0.82)",
-                fontSize: landscape ? 9 : 10,
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: landscape ? 0.55 : 0.7,
-                textShadowColor: "rgba(0,0,0,0.72)",
-                textShadowRadius: 4,
-              }}
-            >
-              {stat.label}
-            </Text>
-            <Text style={{ color: "#fff", fontSize: landscape ? 17 : 19, fontWeight: "700", textShadowColor: "rgba(0,0,0,0.72)", textShadowRadius: 5 }}>
-              {stat.value}
-            </Text>
-          </View>
-        ))}
-      </View>
       <View
-        testID="workout-share-watermark"
         style={{
-          position: "absolute",
-          right: 20,
-          bottom: 14,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 5,
-          opacity: 0.48,
+          ...(landscape
+            ? {
+                position: "absolute",
+                left: padding,
+                right: padding,
+                top: (size.height - landscapeContentHeight) / 2,
+                height: landscapeContentHeight,
+              }
+            : { flex: 1, width: "100%" }),
+          flexDirection: landscape ? "row" : "column",
+          justifyContent: "center",
+          alignItems: landscape ? "center" : "stretch",
+          gap,
         }}
       >
-        <Activity size={13} color="#fff" strokeWidth={2.2} />
-        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600", letterSpacing: 1.1, textShadowColor: "rgba(0,0,0,0.72)", textShadowRadius: 4 }}>
-          tracking.so
-        </Text>
+        <View
+          testID="workout-share-route"
+          style={{
+            position: "relative",
+            width: routeWidth,
+            height: routeHeight,
+          }}
+        >
+          <Svg width={routeWidth} height={routeHeight} viewBox={`0 0 ${routeWidth} ${routeHeight}`}>
+            <Path d={line} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={8 * scale} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d={line} fill="none" stroke={color} strokeWidth={4 * scale} strokeLinecap="round" strokeLinejoin="round" />
+            {start && <Circle testID="workout-share-route-start" cx={start.x} cy={start.y} r={7 * scale} fill="#fff" stroke={color} strokeWidth={4 * scale} />}
+            {finish && <Circle testID="workout-share-route-finish" cx={finish.x} cy={finish.y} r={7 * scale} fill={color} stroke="#fff" strokeWidth={3 * scale} />}
+          </Svg>
+          {landscape && <ShareWatermark mapOverlay scale={scale} />}
+        </View>
+        <View
+          style={{
+            flex: landscape ? 1 : undefined,
+            justifyContent: landscape ? "center" : undefined,
+            alignSelf: landscape ? "stretch" : undefined,
+          }}
+        >
+          <View
+            testID="workout-share-stats"
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: landscape ? "space-between" : undefined,
+              columnGap: (landscape ? 8 : 14) * scale,
+              rowGap: (landscape ? 8 : 14) * scale,
+            }}
+          >
+            {stats.map((stat) => (
+              <View
+                key={stat.label}
+                style={{
+                  width: landscape ? (options.statsCount === 6 ? "47%" : "100%") : "30%",
+                  gap: 2 * scale,
+                }}
+              >
+                <Text
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  style={{
+                    color: "rgba(255,255,255,0.82)",
+                    fontSize: (landscape ? 8 : 9) * scale,
+                    fontWeight: "600",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.55 * scale,
+                    textShadowOffset: { width: 0, height: scale }, textShadowColor: "rgba(0,0,0,0.9)",
+                    textShadowRadius: 2 * scale,
+                  }}
+                >
+                  {stat.label}
+                </Text>
+                <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit style={{ color: "#fff", fontSize: (landscape ? 15 : 19) * scale, fontWeight: "700", textShadowOffset: { width: 0, height: scale }, textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2 * scale }}>
+                  {stat.value}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
+      {!landscape && <ShareWatermark scale={scale} />}
     </View>
   );
 }
@@ -162,11 +232,12 @@ export function WorkoutShare({ workout }: WorkoutShareProps) {
   const [options, setOptions] = useState<WorkoutShareOptions>({ statsCount: 3, palette: "sunset", orientation: "portrait" });
   const view = useRef<View>(null);
   const c = useColors();
-  const { width: windowWidth } = useWindowDimensions();
+  const [viewportWidth, setViewportWidth] = useState(0);
   const stats = useMemo(() => workoutShareStats(workout), [workout]);
   const title = `My ${workout.displayName.toLowerCase()}`;
   const previewSize = shareCanvasSize(options.statsCount, options.orientation);
-  const previewScale = Math.min(1, Math.max(0.1, (windowWidth - 72) / previewSize.width));
+  const previewWidth = Math.min(previewSize.width, viewportWidth);
+  const previewHeight = previewSize.height * previewWidth / previewSize.width;
 
   const open = () => {
     setError(undefined);
@@ -206,9 +277,10 @@ export function WorkoutShare({ workout }: WorkoutShareProps) {
           </View>
           <View
             testID="workout-share-viewport"
+            onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
             style={{
               width: "100%",
-              height: previewSize.height * previewScale + 20,
+              height: previewHeight + 20,
               paddingVertical: 10,
               borderRadius: 18,
               backgroundColor: c.dark ? "#292929" : "#e3e3e3",
@@ -216,15 +288,9 @@ export function WorkoutShare({ workout }: WorkoutShareProps) {
               alignItems: "center",
             }}
           >
-            <View
-              style={{
-                width: previewSize.width,
-                height: previewSize.height,
-                transform: [{ scale: previewScale }],
-              }}
-            >
-              <WorkoutShareCard workout={workout} options={options} captureRef={view} />
-            </View>
+            {previewWidth > 0 && (
+              <WorkoutShareCard workout={workout} options={options} captureRef={view} width={previewWidth} />
+            )}
           </View>
         </Panel>
 
@@ -271,7 +337,7 @@ export function WorkoutShare({ workout }: WorkoutShareProps) {
         </ControlRow>
 
         {error && <Text accessibilityRole="alert" style={{ color: c.dark ? "#f87171" : "#dc2626", lineHeight: 18 }}>{error}</Text>}
-        <Button testID="share-export-button" busy={sharing} onPress={() => void share()}>Share image</Button>
+        <Button testID="share-export-button" disabled={previewWidth <= 0} busy={sharing} onPress={() => void share()}>Share image</Button>
       </Sheet>
     </>
   );

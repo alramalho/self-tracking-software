@@ -5,15 +5,11 @@ import type {
   InterviewState,
   InterviewResult,
 } from "@tsw/prisma/follow-through";
-export const stages: InterviewStage[] = [
-  "goal",
-  "baseline",
-  "rhythm",
-  "support",
-  "review",
-];
+export const stages: InterviewStage[] = ["goal", "rhythm", "support", "review"];
 export const stageLabels = {
   goal: "Your goal",
+  // Kept for drafts created by the previous five-step flow. New onboarding
+  // never enters this stage.
   baseline: "Starting point",
   rhythm: "Your week",
   support: "Your support",
@@ -53,6 +49,53 @@ export function startInterview(draft: OnboardingDraft): InterviewState {
       recommendationReason: "",
       wantsCoaching: draft.wantsCoaching,
     },
+  };
+}
+
+export function acceptGoal(
+  state: InterviewState,
+  answer: string,
+): InterviewState {
+  return {
+    ...state,
+    stage: "rhythm",
+    question: {
+      title: "How many times per week should this plan support?",
+      purpose:
+        "Set the weekly cadence. The plan can vary the structure and duration of each session later.",
+      options: ["2 sessions a week", "3 sessions a week", "4 sessions a week"],
+    },
+    turns: [
+      ...state.turns,
+      {
+        stage: "goal",
+        question: state.question.title,
+        answer,
+        feedback: "Jev confirmed that the goal is clear enough to continue.",
+        accepted: true,
+      },
+    ],
+    facts: { ...state.facts, goal: answer.trim() },
+    confirmed: Array.from(
+      new Set<InterviewStage>([...state.confirmed, "goal"]),
+    ),
+    pending: undefined,
+  };
+}
+
+export function normalizeInterviewState(state: InterviewState): InterviewState {
+  if (state.stage !== "baseline") return state;
+  return {
+    ...state,
+    stage: "rhythm",
+    question: {
+      title: "How many times per week should this plan support?",
+      purpose:
+        "Set the weekly cadence. The plan can vary the structure and duration of each session later.",
+      options: ["2 sessions a week", "3 sessions a week", "4 sessions a week"],
+    },
+    confirmed: state.confirmed.filter((value) => value !== "baseline"),
+    pending: undefined,
   };
 }
 export function applyFacts(
