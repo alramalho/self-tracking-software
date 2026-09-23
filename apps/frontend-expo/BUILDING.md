@@ -44,14 +44,13 @@ Scripts live in `scripts/iphone/`. All generated artifacts, environment config, 
 
 The upload creates a unique directory containing the IPA, `manifest.plist` and `index.html`. S3 supplies trusted HTTPS. All three URLs are presigned; default expiry is seven days (`IPHONE_LINK_TTL`, 60–604800 seconds). Temporary AWS credentials can expire earlier. Object expiry is separate: uploaded objects remain until removed or covered by an existing storage lifecycle rule. This uses normal storage/transfer billing, not Expo build credits. No bucket policies or lifecycle rules are modified by the script.
 
-## TestFlight distribution — builds 70 and 78, September 17, 2026
+## TestFlight distribution — build 160, September 23, 2026
 
 TestFlight uses a separate App Store distribution profile and does not use the Safari-install/ad hoc workflow above. The App Store Connect app is `6754610882`, the iPhone bundle is `so.tracking.app`, and the Watch companion is `so.tracking.app.watchkitapp`.
 
-- **Build 70 is uploaded and processed by Apple** with `processingState: VALID` and `internalState: IN_BETA_TESTING`. It is ready for the existing `internal testers` group; internal groups receive processed builds automatically and cannot be assigned through the external beta-group relationship endpoint.
-- Apple’s local validator passed the exact IPA before upload. Delivery UUID: `21a6501e-b1fb-47c8-85b5-fb0132348943`. The build uses the production API/live Clerk configuration, includes the iPhone and Watch targets, and has `usesNonExemptEncryption: false`.
-- **Build 78 is the latest verified local production IPA**. Apple’s local validator passed it, Apple processed it as `VALID`, and it was uploaded with delivery UUID `7bb2df28-82d8-4ad0-988a-69f301f01629`.
-- The external TestFlight group `Friends & Family` has build 78 attached, feedback enabled, and its public link enabled with a 100-tester limit. The approved English beta description, feedback email, review contact and dedicated Clerk demo account are configured. Build 78 was submitted to Apple’s beta review and is currently `WAITING_FOR_REVIEW` (submission ID `7bb2df28-82d8-4ad0-988a-69f301f01629`).
+- **Build 160 (version 1.0.0) is the current TestFlight release.** It was built locally from deployed commit `f74c2815` with the iPhone and Watch targets, production API and live Clerk configuration, bundled JavaScript, and fixture mode disabled. The exact store-signed IPA is `.release/testflight-2026-09-23T01-24-37-221Z/tracking.so.ipa`; its SHA-256 is `55b8e2e410bfadc3ab6f3a619273e39c6f67d7979b727f1563ad9a803891099e`. The local verification record is alongside it at `verification.json`. Apple’s archive validator returned `VERIFY SUCCEEDED`, the upload delivery ID is `888378a9-992b-41f1-af6d-053944050bb7`, and App Store Connect reports `processingState: VALID`, `usesNonExemptEncryption: false`, and both internal and external states `IN_BETA_TESTING`.
+- Apple approved build 160 for external beta review. The `Friends & Family` group has build 160 attached, feedback enabled, and its public link **disabled**. Its sole tester is `alexandre.ramalho.1998@gmail.com`; Apple accepted an invitation request on September 23. The tester record remains `INVITED` until the recipient accepts it. The internal group also contains only that email and receives processed builds automatically. Physical installation has not been verified.
+- Earlier TestFlight builds 70 and 78 remain in App Store Connect. Build 78’s beta review is `APPROVED`.
 - The App Store Connect API key is stored locally at `.release/appstore-connect/AuthKey_RRBPAL9WF4.p8` with mode `600`. `.release/` is ignored by `apps/frontend-expo/.gitignore`; never commit the key or copy its contents into tracked files. `eas.json` stores only the App Store app ID, key ID and issuer ID.
 - The direct Apple uploader is `scripts/iphone/testflight.ts`. It reads `.release/production.env.json` for local builds, removes inherited `SDKROOT` when necessary, uses `/Applications/Xcode.app`, and never starts an Expo cloud build.
 
@@ -59,11 +58,11 @@ From this directory, repeat the workflow with:
 
 ```sh
 pnpm build:testflight
-pnpm validate:testflight -- .release/testflight-YYYY-MM-DDTHH-MM-SS-sssZ/tracking.so.ipa
-pnpm submit:testflight -- .release/testflight-YYYY-MM-DDTHH-MM-SS-sssZ/tracking.so.ipa
+pnpm validate:testflight .release/testflight-YYYY-MM-DDTHH-MM-SS-sssZ/tracking.so.ipa
+pnpm submit:testflight .release/testflight-YYYY-MM-DDTHH-MM-SS-sssZ/tracking.so.ipa
 ```
 
-The build command creates a new remote build number and writes a store-signed IPA under `.release/`. Validate the exact output before submitting it. `submit:testflight` uploads directly with Apple’s Xcode 26.6 `altool` and waits for `VALID`. TestFlight links and tester invitations are managed in [App Store Connect TestFlight](https://appstoreconnect.apple.com/teams/f2738712-afe4-496a-8317-a78e28ed722c/apps/6754610882/testflight). External testers require the prepared external group, either tester addresses or an explicitly enabled public link, Test Information and Apple beta review. The current group is configured but not yet submitted for review.
+The build command creates a new remote build number and writes a store-signed IPA under `.release/`. Validate the exact output before submitting it. `submit:testflight` uploads directly with Apple’s Xcode 26.6 `altool` and waits for `VALID`. Pass the IPA path directly to the package scripts; adding a literal `--` forwards it as a path and fails validation. TestFlight group access, review status and invitations are managed in [App Store Connect TestFlight](https://appstoreconnect.apple.com/teams/f2738712-afe4-496a-8317-a78e28ed722c/apps/6754610882/testflight).
 
 ## Verification and delivery
 
