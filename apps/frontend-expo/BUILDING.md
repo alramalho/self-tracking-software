@@ -123,7 +123,199 @@ The new local `TrackingHealth` module, workout matching drawer and estimated Sle
 
 The scoped backend is deployed and verified as `local/tracking-so-backend:interview-health-20260915`. Local production build 29 contains the native Health module, permission purpose, workout review and estimated sleep score. The actual IPA and complete hosted download passed verification below. Build 26 lacks this flow. Real workout/sleep import on the paired devices remains for the user to verify.
 
-## Current status — build 104, September 18, 2026
+## Current status — build 159 verified and hosted, September 23, 2026
+
+Feature source commit `4320328d2ad47bcdffdc1a276a6627f5119f92bf` is on `origin/main`. This local production build adds offline activity logging and cached timeline browsing, heart-rate zone shading, timed kilometre splits, and delayed-photo notifications. It preserves runtime fixes already shipped in build 156, including notification navigation, workout privacy and image exports. Original uncommitted work remains in the original checkout.
+
+The publisher successfully GET-verified the exact IPA, manifest and HTTPS installer. The private installer record is `.release/2026-09-23T01-04-43-051Z-e1c492ae/distribution.json`; its link expires September 30, 2026 at 01:05:30 UTC. Signed URLs remain in ignored files. No cloud quota, OTA or store submission was used.
+
+The IPA is `tracking-main-delivery/apps/frontend-expo/.release/2026-09-23T00-59-37-935Z-882a783c/tracking.so.ipa` relative to the workspace wrapper. SHA-256: `eef11415ea06bfbbc80d3c5a9a0fcc8f96fba77a198961d502cafbd4b4ceb45a`. The adjacent `verified.json` records build 159 for both iPhone and Watch and provisioning expiry September 10, 2027. Verification checked production API/live Clerk, fixture authentication disabled, bundled JavaScript, strict release signatures, app identity and registered phone/Watch provisioning. Installation on the user's devices is not claimed. Builds 157/158 were unsuccessful or stopped and were not published.
+
+The exact local build command, from `tracking-main-delivery/apps/frontend-expo`, was:
+
+```sh
+PATH=/private/tmp/tracking-pnpm-bin:$PATH \
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+AWS_PROFILE=default \
+IPHONE_ENV_FILE=/Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/.release/production.env.json \
+IPHONE_WATCH_DEVICE_FILE=/Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/.release/watch-device.json \
+EAS_LOCAL_BUILD_SKIP_CLEANUP=1 \
+EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-four-feature-final-build \
+node --import tsx scripts/iphone/cli.ts build
+```
+
+The temporary pnpm launcher supplies the repository's pnpm 10 version. Build log: `/private/tmp/tracking-four-feature-final-build.log`. To re-verify and publish this exact IPA, use the same existing environment and Watch metadata files:
+
+```sh
+AWS_PROFILE=default \
+IPHONE_ENV_FILE=/Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/.release/production.env.json \
+IPHONE_WATCH_DEVICE_FILE=/Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/.release/watch-device.json \
+node --import tsx scripts/iphone/cli.ts publish \
+  /Users/alramalho/workspace/tracking.so/tracking-main-delivery/apps/frontend-expo/.release/2026-09-23T00-59-37-935Z-882a783c/tracking.so.ipa
+```
+
+Independent acceptance included six native graph flows across LIGHT/DARK, cached timeline/log/restart/reconnect in both themes, and a native Photos picker flow proving the staged photo survives restart and uploads once after a lost response. Latest-workout native before/after screenshots were inspected. Backend verification used an isolated PostgreSQL database: 48 photo route/delivery/unit cases plus offline receipt concurrency checks. No production test records or pushes were created. Real Clerk offline cold-start and physical provider import/APNs delivery remain device confirmation. Historical workouts without timed distance samples correctly show splits unavailable.
+
+Photo notification eligibility uses activity completion (`endedAt`, otherwise entry `datetime`), within 12 hours and on the same local day as the photo upload. Durable upload timestamps preserve eligibility during delayed retries. The backend image `local/tracking-so-backend:four-features-4320328d` and four additive migrations are live; public `/health` and deployed source hashes passed. See the backend runbook for activation and rollback.
+
+## Previous status — build 156 verified and hosted, September 23, 2026
+
+- **Fresh local production build 156 is complete, verified and hosted**, version 1.0.0. It adds native notification destinations: activity reactions/comments and achievement notices open highlighted timeline cards; chat, plan and profile notices open their corresponding screens; daily summaries and older pushes without a URL open Notifications. The in-app notification list has an Open action. The backend push URL and iOS-only eligibility changes are deployed as `local/tracking-so-backend:notification-navigation-b156`, a three-file overlay on `reactions-60f9f92e-workout-privacy`. The backend container and public `/health` endpoint passed after activation. No schema migration was needed.
+- IPA and verification report: `.release/2026-09-23T00-31-32-556Z-1df5d7fe/tracking.so.ipa` and `verified.json`. IPA SHA-256: `64a350e3623144800fafb6ef6c4314268b3bbefb69fff09324577d61f7dffcb2`; phone and Watch build numbers are both 156. Their embedded profiles provision the registered devices and expire September 10, 2027. Apple's read-only credential check confirmed the existing certificate and both profiles remain active. The Hermes bundle contains the notification target code, and the verified app configuration uses production services.
+- The ignored release directory also preserves `source.tar.gz`, the exact isolated EAS source archive (SHA-256 `0b7373ecce52d3dfcdf07449997e253ac0063016a458aaf8d027b9c99ada0563`). It was made from build 152's preserved EAS source with only the notification app files updated; this avoided unrelated in-progress checkout edits. `distribution.json` holds the expiring signed link, which is not written into tracked docs. Light/dark Safari-size installer checks, the manifest, and the complete 26,294,630-byte hosted IPA all returned HTTP 200; the downloaded SHA-256 matched the local IPA. The link expires September 30, 2026, at 00:32:17 UTC.
+- The first isolated local attempt failed before compilation because EAS treated the app folder as the workspace root. Setting `EAS_PROJECT_ROOT` to the isolated monorepo root fixed dependency installation. The successful build archived and signed the IPA, but the wrapper stopped before publication because that isolated directory lacked `.release/watch-device.json`. After copying the existing device record, `build:iphone:publish` verified and hosted **that same IPA** without rebuilding. No Expo cloud build quota, OTA publication or App Store submission was used.
+
+Exact build, verification and hosting commands used (the isolated source and exact outputs are preserved in the ignored release directory):
+
+```sh
+cd /private/tmp/tracking-notification-release-source/project
+pnpm install --frozen-lockfile --prefer-offline
+pnpm --filter frontend-expo typecheck
+pnpm --filter frontend-expo build:iphone:check
+AWS_PROFILE=default EAS_NO_VCS=1 EAS_PROJECT_ROOT=/private/tmp/tracking-notification-release-source/project EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-notification-build2 pnpm --filter frontend-expo build:iphone
+cp -p /Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo/.release/watch-device.json apps/frontend-expo/.release/watch-device.json
+AWS_PROFILE=default pnpm --filter frontend-expo build:iphone:publish /private/tmp/tracking-notification-release-source/project/apps/frontend-expo/.release/2026-09-23T00-26-25-749Z-635190d1/tracking.so.ipa
+cd /Users/alramalho/workspace/tracking.so/tracking-so/apps/frontend-expo
+node .release/verify-hosted.cjs .release/2026-09-23T00-31-32-556Z-1df5d7fe/distribution.json
+node .release/startup-signing-repair/verify.cjs
+```
+
+The backend rollback environment is `/root/workspace/tracking.so/deployment/.env.before-notification-navigation-b156` on the production host. Its deployment context is `tracking-notification-backend-overlay/`, which contains only the two existing notification services and the new destination helper. Restore that environment file and recreate only `backend` to return to `reactions-60f9f92e-workout-privacy` if necessary.
+
+## Previous status — build 152 verified and hosted, September 23, 2026
+
+- **Fresh local production build 152 is complete, verified and hosted**, version 1.0.0, with the matching Watch companion. EAS now selects an existing active distribution certificate and active phone/Watch profiles. Read-only Apple checks and inspection of the IPA's actual profiles confirm the certificate match and registered devices. No certificate was created or revoked by the startup-validation task.
+- Build 152 includes the workout-share PNG fix: the measured card is captured without a scaled parent, and portrait/landscape layouts keep the route, all selected stats and the tracking.so watermark inside the canvas. Fixture-backed iOS exports passed for light/dark themes, 3/6 stats and portrait/landscape; the actual shared PNGs were checked for dimensions, margins, readable stats and visible branding. The browser layout checks cover both themes, both formats and narrow/wide widths. The EAS source allowlist includes `packages/prisma/reactions.ts`, which the current app bundle imports.
+- IPA: `.release/2026-09-22T23-50-07-869Z-d4ea4d40/tracking.so.ipa`; SHA-256 `e529cb0901c1a66594a250e1a146f74b683913cedff7491f63183bed60e271bb`. Both app build numbers are 152; profiles expire September 10, 2027 at 15:25:21 UTC. The signed IPA passes strict signature, production API/live Clerk, fixture-disabled, bundled-JavaScript, entitlements and phone/Watch device-provisioning checks.
+- Installer metadata is `distribution.json` beside the IPA. Links expire **September 29, 2026, 23:55:29 UTC**. Light/dark mobile browser checks passed with a valid `itms-services:` Install button and no overflow. The manifest and complete 26,293,481-byte hosted IPA returned HTTP 200; the downloaded SHA-256 matches the verified local IPA. Evidence: `browser-check.json` and `installer-light.png` / `installer-dark.png` beside the IPA.
+- The refreshed production Release simulator app starts into onboarding and remains running. Evidence: `/private/tmp/tracking-startup-release-final.png`; build log `/private/tmp/tracking-startup-simulator-final.log`. Physical iPhone startup remains for the user to validate. TypeScript and all eight release/reaction tests passed.
+- Build 153 failed before compilation because a shared local provisioning-profile file disappeared during concurrent EAS work; it produced no IPA. Build 152 was already compiling locally, completed successfully, and was independently verified for this request. **Serialize local device builds** to avoid profile cleanup collisions. Neither Expo cloud quota nor OTA/store distribution was used.
+
+Successful build/hosting command used for build 152 (from this directory; the working-directory name is historical, not the actual build number):
+
+```sh
+PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-share-build150 node --import tsx scripts/iphone/cli.ts release
+node .release/startup-signing-repair/verify.cjs
+node .release/verify-hosted.cjs .release/2026-09-22T23-50-07-869Z-d4ea4d40/distribution.json
+```
+
+The ignored `startup-signing-repair/verify.cjs` is a read-only EAS/Apple check. Reports there also record the independent IPA validation and active-certificate comparison. Signing verification needs macOS trust-service access; a sandbox-only `CSSMERR_TP_NOT_TRUSTED` must be rerun with that access, never bypassed. Signed URLs remain only in ignored release metadata.
+
+If Xcode chooses a revoked identity despite EAS importing the active one, check `security list-keychains -d user` for stale temporary `eas-build-*` keychains. For this release, removing those stale keychains from the user search list with `security list-keychains -d user -s "$HOME/Library/Keychains/login.keychain-db"` left the existing valid identity available; the temporary keychain created by the next EAS run supplied its own signing identity. Do not delete the active certificate or weaken signature verification.
+
+## Investigation — signing blocker resolved, September 23, 2026
+
+- The user reports immediate exit at startup. Fresh local production build **147 failed at signing and produced no IPA or install link**. Xcode rejects the distribution certificate used by both phone and Watch as invalid/revoked. Apple's read-only certificate inventory no longer contains that certificate; the same certificate is embedded in build 145's provisioning profile. The profile's future expiration date does not make a revoked certificate valid.
+- The user subsequently approved reuse of a valid existing certificate and matching profiles, without revocation. The EAS setup was found updated during verification and passed the read-only checks above. Preserve both registered devices in the Watch profile in any future repair.
+- A fresh **Release simulator build** compiled with the production API/live Clerk configuration, fixture mode disabled, and bundled JavaScript (9,918,722 bytes). It launched successfully into onboarding and remained running. This does not validate physical-device signing or establish that every account-specific startup path works. Evidence: `/private/tmp/tracking-startup-release-20260923.png`; compiler log: `/private/tmp/tracking-startup-simulator-20260923.log`.
+- Frontend TypeScript, all five release workflow tests, and `git diff --check` passed. No cloud build, OTA update, backend deployment or store submission was performed.
+
+Exact checks and failed device-build command (from this directory):
+
+```sh
+node node_modules/typescript/bin/tsc --noEmit
+node --import tsx --test tests/iphone-release.test.ts
+PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/cli.ts check
+PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default node --import tsx scripts/iphone/cli.ts build > /private/tmp/tracking-startup-build-20260923.log 2>&1
+```
+
+The local pnpm shim selects the already installed pnpm executable. The default launcher currently fails its registry-backed version switch in the restricted environment. After approved signing repair, rerun the local build, publish its explicit new IPA path with `AWS_PROFILE=default node --import tsx scripts/iphone/cli.ts publish /absolute/path/to/new.ipa`, and verify the hosted bytes before sharing a link.
+
+Exact production simulator compilation and startup commands:
+
+```sh
+node --import tsx -e 'const {spawnSync}=require("node:child_process");const {buildEnvironment}=require("./scripts/iphone/configuration.ts");const result=spawnSync("xcodebuild",["-quiet","-workspace","ios/trackingso.xcworkspace","-scheme","trackingso","-configuration","Release","-destination","platform=iOS Simulator,id=1E390112-CE48-4DD6-B61B-431D00A8EA55","-derivedDataPath","/private/tmp/tracking-startup-release-simulator","CODE_SIGN_IDENTITY=-","DEVELOPMENT_TEAM=7P4CMS849D","build"],{env:buildEnvironment(),stdio:"inherit"});process.exit(result.status??1)' > /private/tmp/tracking-startup-simulator-20260923.log 2>&1
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun simctl install 1E390112-CE48-4DD6-B61B-431D00A8EA55 /private/tmp/tracking-startup-release-simulator/Build/Products/Release-iphonesimulator/trackingso.app
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun simctl launch --terminate-running-process 1E390112-CE48-4DD6-B61B-431D00A8EA55 so.tracking.app
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun simctl io 1E390112-CE48-4DD6-B61B-431D00A8EA55 screenshot /private/tmp/tracking-startup-release-20260923.png
+```
+
+## Previous status — build 145, September 20, 2026
+
+**September 23 correction:** this artifact used a certificate that is now revoked. Its previously successful local signature/hosting checks do not establish current iPhone installability or launchability. Do not return its link as a startup fix.
+
+- **Local production build 145 is complete, verified and hosted**, version 1.0.0. It keeps the Tracking T icon/background watermark on portrait cards, anchors the landscape mark as a fixed bottom-right overlay inside the route/map area, and adds a small landscape route inset so both endpoint dots remain inside the exported canvas for 3- and 6-stat layouts.
+- IPA: `.release/2026-09-20T11-25-47-050Z-fd136fc9/tracking.so.ipa`. SHA-256: `95c9d0cc7d2fa958c314bec38f1b403e94aaa4a4fc2bf7ebdb48f1bbd7d702c3`. Phone and embedded Watch companion are both build 145 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 20, 2027.
+- Installer metadata: `.release/2026-09-20T11-25-47-050Z-fd136fc9/distribution.json`. Links expire **September 27, 2026, 11:29:57 UTC**. The capture requests the selected canvas width and height explicitly; the hosted installer page, manifest and IPA returned successfully.
+- TypeScript, focused mobile-web share-card tests (light/dark) with canvas aspect-ratio, fixed map-overlay bounds and endpoint-marker-in-canvas assertions for both landscape stats counts, native release signing and `git diff --check` passed. No Expo cloud build quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release command for this artifact:
+
+```sh
+cd apps/frontend-expo
+PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default node --import tsx scripts/iphone/cli.ts release
+```
+
+The signed install URL is intentionally not recorded in tracked documentation.
+
+## Previous status — build 119, September 18, 2026
+
+- **Local production build 119 is complete, verified and hosted**, version 1.0.0. It includes the Garmin rolling-history sync status, imported-history totals and explicit backfill outcomes in the Health UI.
+- IPA: `.release/2026-09-18T14-01-06-360Z-b12856f6/tracking.so.ipa`. SHA-256: `f6a95ef6fd91b367b7b17412454877323a79d45d39b8424ded42544b5a255ea0`. Phone and embedded Watch companion are both build 119 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T14-01-06-360Z-b12856f6/distribution.json`. Links expire **September 25, 2026, 14:05:41 UTC**. The release workflow verified the signed IPA, manifest and installer upload before returning the install link.
+- The backend is deployed separately as `local/tracking-so-backend:garmin-rolling-20260918`, with migration `20260918150000_add_garmin_backfill_queue` applied. The live Lia probe refreshed all five Garmin permissions, advanced the rolling cursor through four summary types, and still observed zero imported workouts because Garmin rejected each historical backfill window with HTTP 400; no synthetic workout records were inserted.
+
+Exact release command for this artifact:
+
+```sh
+AWS_PROFILE=default pnpm --filter frontend-expo build:iphone
+```
+
+The signed install URL is intentionally not recorded in tracked documentation.
+
+## Previous status — build 115, September 18, 2026
+
+- **Local production build 115 is complete, verified and hosted**, version 1.0.0. It includes the final native-validated share-card landscape layout: the route/map is on the left and six stats are on the right in a 3 rows × 2 columns disposition. The landscape content group is explicitly centered vertically with balanced breathing room; portrait remains route-above/stats-below.
+- Native Maestro Apple Watch vitals flow passed on iOS 26.5 simulator, including the share-card editor, six stats, Landscape selection, all six stat labels, watermark and final screenshot at `test-results-native-ios/2026-09-18_132922/health-vitals-ios/takeScreenshot/workout-share-landscape.png`. Frontend TypeScript and `git diff --check` passed.
+- IPA: `.release/2026-09-18T12-30-57-551Z-79109607/tracking.so.ipa`. SHA-256: `4cf3988ba6754f9e29983407f935b361cd5cd1ae7f041100a3c6a5b5bb003c25`. Phone and embedded Watch companion are both build 115 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T12-30-57-551Z-79109607-publish/distribution.json`. Links expire **September 25, 2026, 12:35:34 UTC**. Hosted verification returned HTTP 200 for light/dark installer pages, manifest and IPA, confirmed `itms-services:` links, no horizontal overflow, and matched the hosted IPA SHA-256 to the local artifact. The signed URL is intentionally not recorded here.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T12-30-57-551Z-79109607/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T12-30-57-551Z-79109607-publish/distribution.json
+```
+
+## Previous status — build 111, September 18, 2026
+
+- **Local production build 111 is complete, verified and hosted**, version 1.0.0. It includes the native-validated share-card landscape reflow: the route/map is placed beside the stats, with six stats arranged as 3 rows × 2 columns; portrait remains route-above/stats-below. The landscape route is inset so the full path stays inside the exported card.
+- Native Maestro Apple Watch vitals flow passed on iOS 26.5 simulator, including the share-card editor, six stats, Landscape selection, all six stat labels, watermark and final screenshot at `test-results-native-ios/2026-09-18_115441/health-vitals-ios/takeScreenshot/workout-share-landscape.png`. Frontend TypeScript and `git diff --check` passed.
+- IPA: `.release/2026-09-18T10-56-17-282Z-cdd0b6ed/tracking.so.ipa`. SHA-256: `db3aa0c9b0af628f923a78ced19ba2e72b74c4296418a07e6481954603a473c1`. Phone and embedded Watch companion are both build 111 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T10-56-17-282Z-cdd0b6ed-publish/distribution.json`. Links expire **September 25, 2026, 11:01:45 UTC**. Hosted verification returned HTTP 200 for light/dark installer pages, manifest and IPA, confirmed `itms-services:` links, no horizontal overflow, and matched the hosted IPA SHA-256 to the local artifact. The signed URL is intentionally not recorded here.
+- The build was compiled locally with the existing production environment and signing credentials. No Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T10-56-17-282Z-cdd0b6ed/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T10-56-17-282Z-cdd0b6ed-publish/distribution.json
+```
+
+## Previous status — build 106, September 18, 2026
+
+- **Local production build 106 is complete, verified and hosted**, version 1.0.0. It supersedes build 104 as the newest Safari-install artifact.
+- The onboarding interview now uses DeepSeek V4.1 Flash for coach validation, keeps plan design separate from session generation, and presents compact goal guidance cards with debounced first-pass checks. Only hard requirements block continuation; useful context offers an explicit “Continue anyway” choice and no automatic button timers.
+- The build includes the persistent Start over action beneath the create-plan controls and the save-error retry flow. The backend validator route is live in `local/tracking-so-backend:goal-guidance-jev-final-20260918`; its first-pass checks use Jev’s typed evaluator, while conversational coach feedback uses DeepSeek V4.1 Flash.
+- IPA: `.release/2026-09-18T09-35-23-274Z-c4abac05/tracking.so.ipa`. SHA-256: `a9591d53dd7182a5203a430fc52938ae8c417176702e70b5078ca66b8d374303`. Phone and embedded Watch companion are both build 106 (`so.tracking.app` and `so.tracking.app.watchkitapp`); both profiles expire September 10, 2027.
+- Installer metadata: `.release/2026-09-18T11-01-07-087Z-840e6deb/distribution.json`. Links expire **September 25, 2026, 11:01:14 UTC**. The publisher independently verified HTTP 200 for the installer, manifest and hosted IPA; the hosted IPA is 26,233,114 bytes and its SHA-256 matches the local artifact. The signed URL is intentionally not recorded here.
+- TypeScript, backend interview tests (16), focused onboarding browser cases and strict local release/parity checks passed. The build was compiled locally with the existing production environment and signing credentials; no Expo cloud quota, OTA publication, paid subscription or App Store submission was used.
+
+Exact release commands for this artifact:
+
+```sh
+pnpm --filter frontend-expo exec tsc --noEmit
+cd apps/frontend-expo
+AWS_PROFILE=default pnpm build:iphone:publish .release/2026-09-18T09-35-23-274Z-c4abac05/tracking.so.ipa
+node .release/verify-hosted.cjs .release/2026-09-18T11-01-07-087Z-840e6deb/distribution.json
+```
+
+## Previous status — build 104, September 18, 2026
 
 - **Local production build 104 is complete, verified and hosted**, version 1.0.0. It supersedes build 101 as the newest Safari-install artifact.
 - Workout elevation now uses a true vertical axis: the chart shows maximum, midpoint and minimum altitude labels in metres on the y-axis. The old distance tick labels and `Distance along route` caption were removed; the horizontal distance remains legible from the profile shape and route range summary.
@@ -882,6 +1074,35 @@ The edit/add activity drawer now follows the PWA layout, stepped color palette a
 
 The workout review now has one primary commit action, editable match/amount summary rows, focused choice views and a quiet Skip. The independent PWA/native design comparison supported four concise AGENTS.md rules. TypeScript, eight Health browser cases and native DARK/LIGHT checks passed, including create-input keyboard handling. See [Health validation notes](../../docs/native-health-v0.md#workout-drawer-hierarchy-follow-up--september-15-after-build-29) for evidence and reproduction commands. This source change is included in verified and hosted build 30; build 29 does not contain it. No OTA was published.
 
+## Workout PNG export regression checks
+
+The share card lays out at the measured preview width without a transformed ancestor. Its route, stat cells and watermark share the same scale; landscape content stays centered inside the canvas. iOS exports the complete layer tree at native bounds using `useRenderInContext`. Keep `textShadowOffset` explicit: React Native's iOS text renderer ignores the shadow color/radius without an offset, making white text disappear when a transparent PNG is displayed on white.
+
+From this frontend directory:
+
+```sh
+node node_modules/typescript/bin/tsc --noEmit
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node node_modules/@playwright/test/cli.js test e2e/workout-vitals.spec.ts
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+E2E_IOS_DEVICE=1E390112-CE48-4DD6-B61B-431D00A8EA55 \
+MAESTRO_BIN=/opt/homebrew/bin/maestro \
+E2E_IOS_APP=/private/tmp/tracking-share-responsive-simulator/Build/Products/Debug-iphonesimulator/trackingso.app \
+E2E_THEME=LIGHT node e2e/native/run.cjs --ios --workout-share
+```
+
+Repeat the native command with `E2E_THEME=DARK`. Use an available booted iOS 26.5 simulator and a simulator build containing the current native dependencies. The browser suite checks both edges of every stat, route endpoint and watermark against the canvas and preview, in both formats, with 3/6 stats, at 320/390px phone widths. Run browser and native fixture servers sequentially to avoid conflicting Metro environments.
+
+The focused native flow opens all four formats and invokes the real iOS share sheet. The runner preserves the **actual shared temporary PNGs** before `releaseCapture` removes them, under `test-results-native-ios/workout-exports-THEME-TIMESTAMP/`. It checks native resolution, selected aspect ratio, transparent margins, route pixels, and OCR of every fixture statistic and the watermark on dark, plus pixel contrast in those text regions on white. These are fixture-only tests. Simulator Photos saving is not relied on as evidence; `1.png`–`4.png` are the actual export bytes, and `*.white.png` / `*.dark.png` are QA composites only.
+
+Standalone verification of a captured export:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift -module-cache-path /private/tmp/tracking-share-swift-cache e2e/native/verify-workout-share.swift /absolute/path/to/4.png landscape 6
+```
+
+The native OCR check needs access to macOS Vision services. Run it with the same host permissions as native simulator tests. Read the latest Current status above before distributing; test outputs are not an IPA.
+
 ## Integrated workout graph fixture validation — September 23, 2026
 
 This section records the independently completed **simulator and fixture** graph checks at integration commit `16593ac8` in the `tracking-feature-validation` worktree. The release status earlier in this file belongs to this worktree's older snapshot; the original `tracking-so` checkout now documents the unrelated verified build 152. These checks produced no IPA or install link. They do not verify a physical-device Apple/Garmin import or constitute a new production release.
@@ -954,7 +1175,7 @@ The coordinating task ran all six combinations and inspected their screenshots. 
 
 An earlier DARK attempt failed on an overly narrow Maestro text selector (`/private/tmp/tracking-feature-validation-native-hr-DARK.log`); the corrected combined-label matcher is in commit `42b0a462` and both final theme runs passed. These fixtures verify graph rendering, gaps and unavailable states; historical provider data may still lack timed samples.
 
-## Offline activity logging validation — source ready, native acceptance pending
+## Offline activity logging validation — native checks completed
 
 The native app persists the loaded timeline and activity picker per signed-in account. It stores each log and any selected photos locally before posting; the backend migration adds separate idempotency receipts for activity and photo requests. Deploy the migration before distributing a build with this queue. Clerk's experimental resource cache is enabled for native signed-in offline bootstrap. The fixture session does not prove a real Clerk session can cold start offline; verify that separately with a signed-in test account and the network disabled before app relaunch.
 
@@ -994,4 +1215,4 @@ EXPO_PUBLIC_E2E=true EXPO_PUBLIC_BACKEND_URL=http://127.0.0.1:4319 DEVELOPER_DIR
 E2E_IOS_DEVICE=47C54325-6609-4987-AA27-ACBFA499A1D5 E2E_IOS_APP=/private/tmp/tracking-offline-simulator/Build/Products/Debug-iphonesimulator/trackingso.app MAESTRO_BIN=/opt/homebrew/bin/maestro E2E_THEME=DARK node e2e/native/run.cjs --ios --offline
 ```
 
-Repeat the last command in `LIGHT`. The fixture runner alone owns ports 4319/8085 and its simulator. It caches Home and Add online, disconnects the fixture API, logs and restarts offline, then restores the API while losing the first successful response. It requires one final server entry and the same request ID on replay. This simulator bundle is fixture-only. No offline IPA or Safari Install link has been verified; the original checkout documents the separately verified build 152.
+Repeat the last command in `LIGHT`. The fixture runner alone owns ports 4319/8085 and its simulator. It caches Home and Add online, disconnects the fixture API, logs and restarts offline, then restores the API while losing the first successful response. It requires one final server entry and the same request ID on replay. This simulator bundle is fixture-only. The completed DARK/LIGHT offline flows and DARK native photo staging/restart/replay flow are recorded in the current release section. Actual Clerk offline cold-start remains a physical-device confirmation; the user requested delivery without expanding validation further.

@@ -218,3 +218,42 @@ curl --fail --silent https://api.tracking.so/health
 ```
 
 Rollback by restoring `.env.before-health-vitals-20260916d` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`.
+
+
+## Offline logging, workout graphs and photo notifications — September 23, 2026
+
+Feature commit `4320328d2ad47bcdffdc1a276a6627f5119f92bf` is on main. Production runs `local/tracking-so-backend:four-features-4320328d` (image `ecb7eee4d8fe`), built with [four-features-overlay.Dockerfile](./four-features-overlay.Dockerfile) on the previously active `local/tracking-so-backend:notification-navigation-b156`. This preserves other deployed backend work, including AI SDK 7, notification destinations and workout privacy. The legacy GitHub Actions deployment points to an obsolete directory; this release was manually activated in `/root/workspace/tracking.so/deployment`, and its commit uses `[skip ci]` to prevent a conflicting legacy deployment.
+
+The prepared server context is `tracking-four-features-4320328d/` within that directory. It contains the exact Dockerfile/source and SHA-256 manifest. A private pre-migration database dump and deployment environment backup are in its `backup/` directory; do not commit or print those files. The build regenerated the Prisma client. Exactly these pending migrations were applied successfully to `tracking_cutover`:
+
+- `20260923010000_add_notification_dedupe_key`
+- `20260923090000_activity_log_requests`
+- `20260923091000_activity_photo_notification_outbox`
+- `20260923092000_photo_outbox_per_upload`
+
+Deployment commands on the server, after preparing the source context:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+docker build -t local/tracking-so-backend:four-features-4320328d tracking-four-features-4320328d
+umask 077
+mkdir -p tracking-four-features-4320328d/backup
+docker exec platform-postgres pg_dump -U postgres -d tracking_cutover -Fc > tracking-four-features-4320328d/backup/database-before.dump
+cp .env tracking-four-features-4320328d/backup/deployment.env
+BACKEND_IMAGE=local/tracking-so-backend:four-features-4320328d docker compose run --rm --no-deps -T backend pnpm --dir /app/packages/prisma exec prisma migrate deploy
+sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=local/tracking-so-backend:four-features-4320328d|' .env
+BACKEND_IMAGE=local/tracking-so-backend:four-features-4320328d docker compose up -d --no-deps --force-recreate backend
+docker inspect tsw-backend --format '{{.Config.Image}} {{.State.Health.Status}}'
+curl -fsS https://api.tracking.so/health
+```
+
+The new container became healthy and public `/health` returned `{"status":"ok"}`. Running activity route, durable photo outbox and schema SHA-256 values matched the committed source. No production test entries, media or pushes were created. Isolated PostgreSQL route/delivery checks and native simulator evidence are recorded in the frontend build document. The native release is verified/hosted build 159.
+
+Rollback keeps the additive schema and restores the previous application image:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=local/tracking-so-backend:notification-navigation-b156|' .env
+BACKEND_IMAGE=local/tracking-so-backend:notification-navigation-b156 docker compose up -d --no-deps --force-recreate backend
+curl -fsS https://api.tracking.so/health
+```
