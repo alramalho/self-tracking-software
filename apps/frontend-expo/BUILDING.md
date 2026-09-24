@@ -44,6 +44,13 @@ Scripts live in `scripts/iphone/`. All generated artifacts, environment config, 
 
 The upload creates a unique directory containing the IPA, `manifest.plist` and `index.html`. S3 supplies trusted HTTPS. All three URLs are presigned; default expiry is seven days (`IPHONE_LINK_TTL`, 60–604800 seconds). Temporary AWS credentials can expire earlier. Object expiry is separate: uploaded objects remain until removed or covered by an existing storage lifecycle rule. This uses normal storage/transfer billing, not Expo build credits. No bucket policies or lifecycle rules are modified by the script.
 
+## Current TestFlight release — build 164, September 24, 2026
+
+- Build 164 was compiled locally from build 162's exact source (`.release/testflight-heart-rate-b162/source.tar.gz`, which added the thicker colored heart-rate chart on top of build 156's source) with only the coach-role and Garmin webhook-only app changes three-way merged in, so testers keep everything 162 had. Onboarding asks for a starting point and motivation again; the plan page groups Coach/Coaching like Schedule/Reminders; proposed sessions show as date cards; the Garmin screen drops "Sync now" and the Garmin-support email flow.
+- App Store IPA: `.release/testflight-coach-garmin-b164/tracking.so.ipa` (SHA-256 `057e9ae4487f3582147f3ea11bdfe1749270d9dbe8372bf94da926aee4159d32`), with `source.tar.gz` beside it. iPhone and Watch are 1.0.0 build 164; strict signature, production API/live Clerk and fixture exclusion verified, and the new strings are present in the Hermes bundle.
+- Apple's validator passed; upload delivery `d264f955-592d-42d7-99e6-4147a8f93ae5` processed as `VALID`. Internal state `IN_BETA_TESTING` for the `internal testers` group (access to all builds, auto-notify). Not submitted to Friends & Family.
+- Requires backend `coach-garmin-20260924` (hetzner/MIGRATION.md), live since September 24. Build 163 (coach-only) was built and validated but never uploaded. Builds 161/162 are recorded in the original checkout's uncommitted notes.
+
 ## TestFlight distribution — build 160, September 23, 2026
 
 TestFlight uses a separate App Store distribution profile and does not use the Safari-install/ad hoc workflow above. The App Store Connect app is `6754610882`, the iPhone bundle is `so.tracking.app`, and the Watch companion is `so.tracking.app.watchkitapp`.
