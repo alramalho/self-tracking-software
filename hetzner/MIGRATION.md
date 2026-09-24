@@ -257,3 +257,25 @@ sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=local/tracking-so-backend:notification
 BACKEND_IMAGE=local/tracking-so-backend:notification-navigation-b156 docker compose up -d --no-deps --force-recreate backend
 curl -fsS https://api.tracking.so/health
 ```
+
+## Coach roles + Garmin webhook-only — prepared September 24, 2026 (not yet active)
+
+Image `local/tracking-so-backend:coach-garmin-20260924` is **built on the server** from [coach-garmin-overlay.Dockerfile](./coach-garmin-overlay.Dockerfile), layered on the active `four-features-4320328d`. Context: `/root/workspace/tracking.so/deployment/tracking-coach-garmin-20260924/` (38 files, `source-hashes.txt` verified). Each file was three-way merged onto the source copied from the running container, so live-only changes are preserved. The typecheck inside the image reports the same 30 pre-existing errors as the active image, none in the changed files.
+
+It adds the coach plan monitoring (hourly job, `SCHEDULED_COACH_MODEL` defaulting to DeepSeek v4.1 Flash at low reasoning) and makes Garmin webhook-only: the 15-minute pull job is removed, the webhook accepts 100 MB and skips the rate limiter, OAuth2 PKCE sits behind `GARMIN_OAUTH_VERSION=2`, and a webhook foreign-key bug that dropped every pushed workout is fixed. One additive migration: `20260924190000_garmin_oauth2`.
+
+Activation (automatic approval review blocked this step; run manually):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+D=tracking-coach-garmin-20260924; I=local/tracking-so-backend:coach-garmin-20260924
+umask 077; mkdir -p $D/backup
+docker exec platform-postgres pg_dump -U postgres -d tracking_cutover -Fc > $D/backup/database-before.dump
+cp .env $D/backup/deployment.env
+BACKEND_IMAGE=$I docker compose run --rm --no-deps -T backend pnpm --dir /app/packages/prisma exec prisma migrate deploy
+sed -i "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE=$I|" .env
+docker compose up -d backend
+curl -fsS https://api.tracking.so/health
+```
+
+Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.

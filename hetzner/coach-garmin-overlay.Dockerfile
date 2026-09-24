@@ -1,0 +1,41 @@
+FROM local/tracking-so-backend:four-features-4320328d
+COPY apps/backend-node/src/index.ts /app/apps/backend-node/src/index.ts
+COPY apps/backend-node/src/routes/ai.ts /app/apps/backend-node/src/routes/ai.ts
+COPY apps/backend-node/src/routes/chats.ts /app/apps/backend-node/src/routes/chats.ts
+COPY apps/backend-node/src/routes/followThrough.ts /app/apps/backend-node/src/routes/followThrough.ts
+COPY apps/backend-node/src/routes/garmin.ts /app/apps/backend-node/src/routes/garmin.ts
+COPY apps/backend-node/src/routes/plans.ts /app/apps/backend-node/src/routes/plans.ts
+COPY apps/backend-node/src/services/coach/agent.ts /app/apps/backend-node/src/services/coach/agent.ts
+COPY apps/backend-node/src/services/coach/monitoring /app/apps/backend-node/src/services/coach/monitoring
+COPY apps/backend-node/src/services/coach/tools/draftMessages/tool.ts /app/apps/backend-node/src/services/coach/tools/draftMessages/tool.ts
+COPY apps/backend-node/src/services/coach/types.ts /app/apps/backend-node/src/services/coach/types.ts
+COPY apps/backend-node/src/services/coachAgentModelConfig.ts /app/apps/backend-node/src/services/coachAgentModelConfig.ts
+COPY apps/backend-node/src/services/coachConversationHistoryService.ts /app/apps/backend-node/src/services/coachConversationHistoryService.ts
+COPY apps/backend-node/src/services/cronScheduler.ts /app/apps/backend-node/src/services/cronScheduler.ts
+COPY apps/backend-node/src/services/follow-through/coach-context.ts /app/apps/backend-node/src/services/follow-through/coach-context.ts
+COPY apps/backend-node/src/services/follow-through/delivery.ts /app/apps/backend-node/src/services/follow-through/delivery.ts
+COPY apps/backend-node/src/services/follow-through/model.ts /app/apps/backend-node/src/services/follow-through/model.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/finish.ts /app/apps/backend-node/src/services/follow-through/onboarding/finish.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/interview/guidance.ts /app/apps/backend-node/src/services/follow-through/onboarding/interview/guidance.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/interview/prompts.ts /app/apps/backend-node/src/services/follow-through/onboarding/interview/prompts.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/interview/schema.ts /app/apps/backend-node/src/services/follow-through/onboarding/interview/schema.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/interview/service.ts /app/apps/backend-node/src/services/follow-through/onboarding/interview/service.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/next-step.ts /app/apps/backend-node/src/services/follow-through/onboarding/next-step.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/review.ts /app/apps/backend-node/src/services/follow-through/onboarding/review.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/schema.ts /app/apps/backend-node/src/services/follow-through/onboarding/schema.ts
+COPY apps/backend-node/src/services/follow-through/onboarding/service.ts /app/apps/backend-node/src/services/follow-through/onboarding/service.ts
+COPY apps/backend-node/src/services/follow-through/schema.ts /app/apps/backend-node/src/services/follow-through/schema.ts
+COPY apps/backend-node/src/services/follow-through/service.ts /app/apps/backend-node/src/services/follow-through/service.ts
+COPY apps/backend-node/src/services/health/apple/ai-boundary.ts /app/apps/backend-node/src/services/health/apple/ai-boundary.ts
+COPY apps/backend-node/src/services/health/garmin/oauth.ts /app/apps/backend-node/src/services/health/garmin/oauth.ts
+COPY apps/backend-node/src/services/health/garmin/oauth2.ts /app/apps/backend-node/src/services/health/garmin/oauth2.ts
+COPY apps/backend-node/src/services/health/garmin/service.ts /app/apps/backend-node/src/services/health/garmin/service.ts
+COPY apps/backend-node/src/services/health/garmin/types.ts /app/apps/backend-node/src/services/health/garmin/types.ts
+COPY apps/backend-node/src/services/planProposalPatchService.ts /app/apps/backend-node/src/services/planProposalPatchService.ts
+COPY packages/prisma/follow-through/coaching.ts /app/packages/prisma/follow-through/coaching.ts
+COPY packages/prisma/follow-through/index.ts /app/packages/prisma/follow-through/index.ts
+COPY packages/prisma/follow-through/types.ts /app/packages/prisma/follow-through/types.ts
+COPY packages/prisma/migrations/20260924190000_garmin_oauth2 /app/packages/prisma/migrations/20260924190000_garmin_oauth2
+COPY packages/prisma/schema.prisma /app/packages/prisma/schema.prisma
+RUN pnpm --dir /app/packages/prisma exec prisma generate
+LABEL tracking.feature="coach-garmin-20260924"
