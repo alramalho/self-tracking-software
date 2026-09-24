@@ -1,4 +1,5 @@
 import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
+import { permittedCoachHistory, readPermittedCoachContext } from "./monitoring/context";
 import { followThroughContext } from "../follow-through/coach-context";
 import { gateway } from "@ai-sdk/gateway";
 import { traced } from "braintrust";
@@ -23,11 +24,13 @@ import dedent from "dedent";
 import { TelegramService } from "../telegramService";
 import { getCoachPersonalityConfig } from "../coachPersonalityService";
 import { getCurriculumFileCounts } from "../planCurriculumService";
+import { PlanProposalPatchSchema } from "../planProposalPatchService";
 import { webSearchService } from "../webSearchService";
 import { browserAgentService } from "../browserAgentService";
 import {
   buildCoachAgentProviderOptions,
   resolveCoachAgentTemperature,
+  resolveCoachAgentReasoning,
   resolveCoachAgentModelConfig,
   resolveCoachAgentVisionModelConfig,
 } from "../coachAgentModelConfig";
@@ -349,7 +352,6 @@ export class CoachAgentService {
       input.error instanceof Error
         ? input.error
         : new Error(String(input.error));
-    const stack = error.stack || `${error.name}: ${error.message}`;
     const report = [
       "🔴 COACH INTERNAL ERROR",
       "",
@@ -359,11 +361,10 @@ export class CoachAgentService {
       input.reportContext?.chatId ? `Chat: ${input.reportContext.chatId}` : null,
       `Model: ${input.model}`,
       "",
-      "Message that triggered it:",
-      truncateForReport(input.message, 700),
+      `Trigger length: ${input.message.length} characters`,
       "",
       "Actual error:",
-      truncateForReport(stack, 2500),
+      error.name,
     ]
       .filter((line): line is string => line !== null)
       .join("\n");
@@ -491,7 +492,7 @@ export class CoachAgentService {
     const shouldStopAfterStep: StopCondition<any, any> = ({ steps }) => {
       const latestStep = steps[steps.length - 1];
       const draftResults = (latestStep?.toolResults || []).filter(
-        (toolResult: any) => toolResult.toolName === "draftMessages"
+        (toolResult: any) => toolResult.toolName === "draftMessages" || toolResult.toolName === "skip"
       );
 
       return (
@@ -504,6 +505,9 @@ export class CoachAgentService {
     const temperature = resolveCoachAgentTemperature(modelConfig.model);
     const agent = new ToolLoopAgent({
       model: gateway(modelConfig.model),
+      reasoning: resolveCoachAgentReasoning(),
+      // The app includes trusted scheduler events and proposal history as system turns.
+      allowSystemInMessages: true,
       ...(temperature === undefined ? {} : { temperature }),
       providerOptions: buildCoachAgentProviderOptions(user, modelConfig),
       stopWhen: shouldStopAfterStep,
@@ -524,6 +528,7 @@ export class CoachAgentService {
         ${linkedEntityContext ? `LINKED ENTITY MENTION IDS (use this DSL whenever mentioning saved plans or activities):\n${linkedEntityContext}` : ""}
 
         ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : "RECENT ACTIVITY FACTS:\nNo recent activity entries are available in this context."}
+        ${context.allowSkip ? "This is a proactive check. Use skip instead of draftMessages when there is no useful new information or decision. Never send a message merely to say nothing changed." : ""}
 
         ${memoriesContext ? `LONG-TERM MEMORY (key facts about this user):\n${memoriesContext}` : ""}
 
@@ -563,7 +568,7 @@ export class CoachAgentService {
         - When the user reports that a completed activity was hard, failed, confusing, or frustrating, treat it as planning evidence: capture the concrete reason in privateNotes when logging is proposed, set difficulty when clear, and say how future sessions should adapt from that evidence.
         - If the user asks you to remember a preference or scoring rule and that same preference already appears in plan notes or long-term memory, acknowledge that it is already preserved. Do not attach a plan/note modification just to restate it.
         - When the user shares a durable life/work/health context event that is likely useful for future coaching or metric interpretation, use proposeUserContextEvent. Do not use it for transient moods, ordinary complaints, or simple preferences. The event is not saved until the user accepts it, so present it as optional.
-        - For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions).
+        ${context.allowPlanCreation === false ? "- This reply is scoped to an existing plan. Do not create a plan here; discuss or propose changes to that plan only. For an unrelated new goal, ask the person to switch to All plans in Messages." : "- For a genuinely new goal use proposePlanCreation; for an existing plan use proposePlanModification. Explicitly choose TIMES_PER_WEEK (frequency) or SPECIFIC (dated sessions)."}
         - If the user asks to edit an activity title, emoji, color, kind, or tracking measure/unit, use proposeActivityEdit. If the measure changes, include the conversion factor/operator, or ask one clarifying question if it is not clear. For an exact activity title rename with no other requested change, propose only the title edit: do not search, do not edit plans/sessions, and do not ask a follow-up.
         - If the user asks to add an end date, change the roadmap, fix sessions, split timing, improve specificity, change frequency, continue a curriculum, or otherwise adjust supported fields for a goal that already appears in active plan context, use proposePlanModification with that planId. Do not create a duplicate/replacement plan.
         - If the requested edit is not represented by the available proposal patch fields, do not simulate it with archive/recreate or another nearby proposal. Say that this particular change is not available from chat and ask for a supported next step.
@@ -628,6 +633,11 @@ export class CoachAgentService {
       `,
       },
       tools: {
+        ...(context.allowSkip ? { skip: tool({
+          description: "Stay quiet when a proactive check adds no useful information or action.",
+          inputSchema: z.object({ reason: z.string().max(300) }),
+          execute: async () => ({ success: true }),
+        }) } : {}),
         draftMessages: createDraftMessagesTool({ recentAssistantMessages }),
 
         webSearch: tool({
@@ -837,9 +847,9 @@ export class CoachAgentService {
                 "Short human-readable description of the proposal (e.g. 'Pause chess for next week')"
               ),
             patch: z.object({
-              archive: z.boolean().optional().describe("Set true to propose archiving this plan."),
+              archive: z.literal(true).optional().describe("Set true to propose archiving this plan. Omit otherwise."),
               plan: z.object({
-                goal: z.string().optional().describe("Clearer measurable plan goal"),
+                goal: z.string().min(1).optional().describe("Clearer measurable plan goal"),
                 goalReason: z.string().optional().nullable().describe("The user's personal motivation or desired emotional outcome for this plan, if explicitly known (e.g. confidence, attractiveness, identity, challenge, health, family). Do not put generic plan benefits, logistics, schedule, employment status, or constraints here."),
                 notes: z.string().optional().nullable().describe("Canonical user-provided roadmap/source material and coaching baseline for this plan. Preserve the actual structure of curricula, syllabi, ordered project sequences, source URLs, constraints, and explicit preferences future coaching should follow. Markdown is allowed and preferred for medium/long notes: use short headings and bullets when they make the roadmap clearer. Be factual and complete enough to continue later; do not compress source material into a vague summary. Set null only when the user explicitly wants to clear plan notes."),
                 finishingDate: z.string().optional().nullable().describe("Plan end date in YYYY-MM-DD format. Use null only when the user explicitly wants no end date."),
@@ -881,6 +891,14 @@ export class CoachAgentService {
               return {
                 success: false,
                 error: "This tool cannot be called with an empty patch",
+              };
+            }
+
+            const acceptedPatch = PlanProposalPatchSchema.safeParse(patch);
+            if (!acceptedPatch.success) {
+              return {
+                success: false,
+                error: `Invalid plan patch: ${acceptedPatch.error.issues.map((issue) => issue.message).join(", ")}`,
               };
             }
 
@@ -1014,7 +1032,7 @@ export class CoachAgentService {
             }
 
             logger.info(
-              `Plan modification proposed for ${planId}: "${description}"`
+              `Plan modification proposed for ${planId}`
             );
 
             return {
@@ -1024,13 +1042,13 @@ export class CoachAgentService {
                 planGoal: plan.goal,
                 planEmoji: plan.emoji,
                 description,
-                patch,
+                patch: acceptedPatch.data,
               },
             };
           },
         }),
 
-        proposePlanCreation: tool({
+        ...(context.allowPlanCreation === false ? {} : { proposePlanCreation: tool({
           description: dedent`
             Propose creating a new tracked plan. The user can accept or reject the proposal with one click.
             Use this only after the user clearly asks for a new tracked plan or agrees to turn the conversation into one.
@@ -1163,7 +1181,7 @@ export class CoachAgentService {
               },
             };
           },
-        }),
+        }) }),
 
         proposeActivityLog: tool({
           description: dedent`
@@ -1833,7 +1851,8 @@ export class CoachAgentService {
   ): Promise<CoachAgentResponse> {
     const { user, messageRole = "user", imageAttachments, conversationHistory, plans } = params;
 
-    return traced(
+    let response: CoachAgentResponse | undefined;
+    await traced(
       async (span) => {
         span.log({
           metadata: {
@@ -1847,7 +1866,9 @@ export class CoachAgentService {
           tags: ["coach"],
         });
 
-        return this.generateResponseInternal(params);
+        response = await this.generateResponseInternal(params);
+        // Content may contain user-approved health details. Trace counts, never the response.
+        return { messageCount: response.draftMessages.length, skipped: response.skipped, telemetry: response.telemetry };
       },
       {
         name: "coach",
@@ -1861,12 +1882,13 @@ export class CoachAgentService {
         },
       }
     );
+    return response!;
   }
 
   private async generateResponseInternal(
     params: CoachGenerateResponseParams
   ): Promise<CoachAgentResponse> {
-    const { user, message, messageRole = "user", imageAttachments, conversationHistory, plans, model, memoriesContext, onStatus, reportContext } = params;
+    const { user, message, messageRole = "user", imageAttachments, plans, model, memoriesContext, onStatus, reportContext } = params;
     const hasImageAttachments = (imageAttachments?.length || 0) > 0;
     const modelConfig = hasImageAttachments
       ? resolveCoachAgentVisionModelConfig(model)
@@ -1875,21 +1897,25 @@ export class CoachAgentService {
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
-    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId, sessionSupportContext] =
+    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId, sessionSupportContext, permittedContext] =
       await Promise.all([
         this.buildRecentActivityContext(user, now, activePlans),
         this.buildActivityRecencyById(user.id, activePlans, now),
         getCurriculumFileCounts(activePlans.map((plan) => plan.id)),
         followThroughContext(user.id),
+        readPermittedCoachContext(user.id, activePlans.map(p => p.id)),
       ]);
+    const conversationHistory = permittedCoachHistory(params.conversationHistory, permittedContext.healthDataAccess);
 
     const agent = this.createAgent({
+      allowSkip: params.allowSkip,
+      allowPlanCreation: params.allowPlanCreation,
       user,
       plans: activePlans,
       conversationHistory,
       model: resolvedModel,
       memoriesContext,
-      recentActivityContext: recentActivityContext + sessionSupportContext,
+      recentActivityContext: recentActivityContext + sessionSupportContext + permittedContext.text,
       activityRecencyById,
       curriculumFileCountByPlanId,
       onStatus,
@@ -1926,10 +1952,16 @@ export class CoachAgentService {
             },
       ];
 
+      // Gemini requires conversational content even when the scheduler is the
+      // only initiator. Keep the trusted event in its system turn.
+      if (resolvedModel.startsWith("google/") && !modelMessages.some(turn => turn.role !== "system")) {
+        modelMessages.push({ role: "user", content: "Process the scheduled coaching event above." });
+      }
+
       let result: any = null;
       let allToolCalls: ReturnType<typeof collectToolCallsFromSteps> = [];
       let successfulDraftCall: ReturnType<typeof getSuccessfulDraftCall> | undefined;
-      let rawDrafts: Array<{ content: string }> = [];
+      let rawDrafts: Array<{ content: string; requiresReply?: boolean }> = [];
       let repairFailure: CoachRepairFailure | null = null;
       const recentAssistantMessagesForRepeatCheck = conversationHistory
         .filter((msg) => msg.role === "assistant")
@@ -1961,6 +1993,8 @@ export class CoachAgentService {
         await onStatus?.("drafting");
 
         allToolCalls = collectToolCallsFromSteps(result.steps);
+        if (params.allowSkip && allToolCalls.some(tc => tc.tool === "skip" && (tc.result as any)?.success))
+          return { draftMessages: [], skipped: true };
         const draftToolCalls = getDraftToolCalls(allToolCalls);
         successfulDraftCall = getSuccessfulDraftCall(allToolCalls);
         const toolsUsed = allToolCalls.map((toolCall) => toolCall.tool);
@@ -2002,12 +2036,12 @@ export class CoachAgentService {
               userId: user.id,
               model: resolvedModel,
               toolsUsed,
-              rawTextPreview: result.text?.slice(0, 500),
+              rawTextLength: result.text?.length,
             });
           }
         }
 
-        const attemptRawDrafts: Array<{ content: string }> = failure
+        const attemptRawDrafts: Array<{ content: string; requiresReply?: boolean }> = failure
           ? []
           : successfulDraftCall
             ? (successfulDraftCall.args as any).messages
@@ -2095,7 +2129,7 @@ export class CoachAgentService {
             reason: failure.reason,
             source: failure.source,
             usedDraftTool: failure.usedDraftTool,
-            rejectedText: failure.rejectedText?.slice(0, 500),
+            rejectedTextLength: failure.rejectedText?.length,
           });
           repairFailure = failure;
           continue;
@@ -2107,7 +2141,7 @@ export class CoachAgentService {
           reason: failure.reason,
           source: failure.source,
           usedDraftTool: failure.usedDraftTool,
-          rejectedText: failure.rejectedText?.slice(0, 500),
+          rejectedTextLength: failure.rejectedText?.length,
         });
 
         if (failure.reason === "internal_state_leak") {
@@ -2253,6 +2287,7 @@ export class CoachAgentService {
 
         return {
           content: draft.content,
+          requiresReply: draft.requiresReply,
           planReplacements: planReplacements.length > 0 ? planReplacements : undefined,
           // Plan proposals on the LAST message
           planProposals: isLast && planProposals.length > 0 ? planProposals : undefined,
@@ -2272,6 +2307,7 @@ export class CoachAgentService {
 
       return {
         draftMessages,
+        healthDataAccess: permittedContext.healthDataAccess,
         telemetry: {
           model: resolvedModel,
           stepCount: result.steps.length,
@@ -2285,7 +2321,7 @@ export class CoachAgentService {
         model: resolvedModel,
         source: reportContext?.source,
         chatId: reportContext?.chatId,
-        error: serializeErrorForLog(error),
+        errorType: error instanceof Error ? error.name : "UnknownError",
       });
       this.sendCoachAgentErrorReport({
         user,

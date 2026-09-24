@@ -39,6 +39,8 @@ export async function deliverFollowThrough() {
         let hasRecentCheck = hasRecentCoachClaim(state, now);
         const pending: ClaimedOutreach[] = [];
         for (const candidate of candidates) {
+          // Explicit reminders keep their session destination; new coaching uses Messages.
+          if (candidate.checkId && state.supports[candidate.planId]?.coaching) continue;
           if (candidate.checkId && hasRecentCheck) continue;
           const notificationId = `ft-${createHash("sha256").update(`${account.userId}:${candidate.id}`).digest("hex").slice(0, 40)}`;
           if (

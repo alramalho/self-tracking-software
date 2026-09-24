@@ -8,6 +8,8 @@ export const useFollowThrough = (enabled = true) =>
     queryFn: async () =>
       (await api.get<FollowThroughSnapshot>("/follow-through")).data,
     staleTime: 15000,
+    refetchInterval: query => query.state.data?.state.monitoring?.setupPlanIds?.some(id =>
+      query.state.data?.state.supports[id]?.coaching?.role === "training") ? 5000 : false,
   });
 export const sessionPath = (id: string) =>
   `/follow-through/sessions/${encodeURIComponent(id)}`;

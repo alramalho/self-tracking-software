@@ -249,7 +249,7 @@ export function MessageCard({
             onOpen={() => setReview(`plan-${index}`)}
             onClose={() => setReview(undefined)}
             description={p.description}
-            quickActions={quickActions("proposal", index)}
+            onViewAccepted={() => router.push(`/plan/${p.planId}`)}
             summary={<ProposalDetails proposal={p} compact />}
           >
             <Copy>

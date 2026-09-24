@@ -1,4 +1,6 @@
 import { useReducedMotion } from "react-native-reanimated";
+import { messagePlanIds } from "./plan-context";
+import { PlanCoachingRow } from "@/features/plans/coaching/PlanCoachingRow";
 import { IconButton } from "./IconButton";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,6 +14,8 @@ import {
   RefreshControl,
   TextInput,
   View,
+  ScrollView,
+  AppState,
   type ViewToken,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,9 +44,6 @@ import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import {
   useCurrentUser,
   usePlans,
-  useActivities,
-  useEntries,
-  useMetrics,
 } from "@/data/queries";
 import { CoachSettings } from "./CoachSettings";
 import { MessageCard } from "./MessageCard";
@@ -67,7 +68,9 @@ export function Conversation({ id }: ConversationProps) {
   const focused = useIsFocused();
   const client = useQueryClient();
   const user = useCurrentUser();
-  const params = useLocalSearchParams<{ type?: string; prompt?: string }>();
+  const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string }>();
+  const [selectedPlan, setSelectedPlan] = useState(params.planId ?? "");
+  const focusedMessage = useRef<string | undefined>(undefined);
   const chats = useQuery({ queryKey: ["chats"], queryFn: getChats });
   const chat = chats.data?.find((chat) => chat.id === id);
   const coach = chat?.type === "COACH" || params.type === "COACH";
@@ -100,9 +103,6 @@ export function Conversation({ id }: ConversationProps) {
       ).data.attentionItems,
   });
   const plans = usePlans();
-  const activities = useActivities();
-  const entries = useEntries();
-  const metrics = useMetrics();
   const [text, setText] = useState(params.prompt ?? "");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [editing, setEditing] = useState<Message | null>(null);
@@ -113,6 +113,7 @@ export function Conversation({ id }: ConversationProps) {
   const [settings, setSettings] = useState(false);
   const [menu, setMenu] = useState(false);
   const [context, setContext] = useState(false);
+  const [contextPlan, setContextPlan] = useState<string>();
   const [clear, setClear] = useState(false);
   const [attachmentError, setAttachmentError] = useState<unknown>();
   const [picking, setPicking] = useState(false);
@@ -144,6 +145,7 @@ export function Conversation({ id }: ConversationProps) {
         await sendMessage(
           {
             chatId: source?.chatId || id,
+            planId: selectedPlan || undefined,
             message: content,
             imageAttachments: attachments,
             coachStarterId: starter,
@@ -222,14 +224,32 @@ export function Conversation({ id }: ConversationProps) {
     messages.push(pending);
   // Keep the composer outside the list and preserve the position while reading history.
   const visibleMessages = messages.filter(
-    (m) => m.role !== "SYSTEM" || !!m.coachAttentionItems?.length,
+    (m) => (m.role !== "SYSTEM" || !!m.coachAttentionItems?.length) &&
+      (!coach || !selectedPlan || messagePlanIds(m).includes(selectedPlan) || m.id === "pending-message" || (selectedPlan === params.planId && m.id === params.messageId)),
   );
-  const viewer = useRef({ id, userId: user.data?.id, coach });
-  viewer.current = { id, userId: user.data?.id, coach };
+  const focusRequestedMessage = () => {
+    if (!params.messageId || focusedMessage.current === params.messageId) return false;
+    const index = visibleMessages.findIndex(m => m.id === params.messageId);
+    if (index < 0) return false;
+    nearBottom.current = false;
+    list.current?.scrollToIndex({ index, animated: false, viewPosition: 0.2 });
+    return true;
+  };
+  useEffect(() => { setSelectedPlan(params.planId ?? ""); focusedMessage.current = undefined; }, [params.planId, params.messageId]);
+  useEffect(() => {
+    if (!coach || !focused) return;
+    const ping = () => { if (AppState.currentState === "active") void api.post("/follow-through/coaching/presence").catch(() => {}); };
+    ping(); const interval = setInterval(ping, 60000);
+    const listener = AppState.addEventListener("change", ping);
+    return () => { clearInterval(interval); listener.remove(); };
+  }, [coach, focused]);
+  const viewer = useRef({ id, userId: user.data?.id, coach, messageId: params.messageId });
+  viewer.current = { id, userId: user.data?.id, coach, messageId: params.messageId };
   const markVisible = useRef(
     ({ viewableItems }: { viewableItems: ViewToken<Message>[] }) => {
       const groups = new Map<string, string[]>();
       for (const { item } of viewableItems) {
+        if (item.id === viewer.current.messageId) focusedMessage.current = item.id;
         const own = viewer.current.coach
           ? item.role === "USER"
           : item.senderId === viewer.current.userId;
@@ -387,12 +407,20 @@ export function Conversation({ id }: ConversationProps) {
             void query.refetch();
           }}
         />
+        {coach && !!plans.data?.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
+          {[{ id: "", goal: "All plans" }, ...plans.data.filter(p => !p.deletedAt && !p.archivedAt)].map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Messages: ${p.goal}`} accessibilityState={{ selected: selectedPlan === p.id }}
+            onPress={() => { setSelectedPlan(p.id); focusedMessage.current = params.messageId; nearBottom.current = true; }}
+            style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: selectedPlan === p.id ? c.text : c.soft }}>
+            <Text style={{ color: selectedPlan === p.id ? c.bg : c.text, fontSize: 14 }}>{p.goal}</Text>
+          </Pressable>)}
+        </ScrollView>}
         <View style={{ flex: 1 }}>
           <FlatList
             ref={list}
             testID="conversation-messages"
             style={{ flex: 1 }}
             onLayout={() => {
+              if (focusRequestedMessage()) return;
               if (nearBottom.current)
                 requestAnimationFrame(() =>
                   list.current?.scrollToEnd({ animated: false }),
@@ -400,6 +428,7 @@ export function Conversation({ id }: ConversationProps) {
             }}
             data={visibleMessages}
             onContentSizeChange={() => {
+              if (focusRequestedMessage()) return;
               if (nearBottom.current)
                 list.current?.scrollToEnd({ animated: false });
             }}
@@ -413,6 +442,10 @@ export function Conversation({ id }: ConversationProps) {
             }}
             scrollEventThrottle={100}
             keyExtractor={(m) => m.id}
+            onScrollToIndexFailed={({ index, averageItemLength }) => {
+              list.current?.scrollToOffset({ offset: averageItemLength * index, animated: false });
+              requestAnimationFrame(() => list.current?.scrollToIndex({ index, animated: false, viewPosition: 0.2 }));
+            }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             contentContainerStyle={{
@@ -721,28 +754,16 @@ export function Conversation({ id }: ConversationProps) {
         <Sheet
           visible={context}
           title={`What ${identity.name} can see`}
-          onClose={() => setContext(false)}
+          onClose={() => { setContext(false); setContextPlan(undefined); }}
         >
-          <Copy muted>
-            Your coach uses your plans, activities, progress, metrics, and what
-            you share in conversation.
-          </Copy>
-          <Copy>
-            {plans.data?.length ?? 0} plans · {activities.data?.length ?? 0}{" "}
-            activities · {entries.data?.length ?? 0} logs ·{" "}
-            {metrics.data?.length ?? 0} metrics
-          </Copy>
+          {!contextPlan && <Copy muted>
+            Your coach uses your plans, app logs, ratings, and conversation.
+            Watch workouts and sleep require permission for each plan.
+          </Copy>}
           {plans.data
-            ?.filter((p) => !p.deletedAt && !p.archivedAt)
+            ?.filter((p) => !p.deletedAt && !p.archivedAt && (!contextPlan || p.id === contextPlan))
             .map((plan) => (
-              <Button
-                key={plan.id}
-                secondary
-                onPress={() => {
-                  setContext(false);
-                  router.push(`/plan/${plan.id}`);
-                }}
-              >{`${plan.emoji ?? ""} ${plan.goal}`}</Button>
+              <PlanCoachingRow key={plan.id} plan={plan} showPlanTitle inlineEditor onEditingChange={editing => setContextPlan(editing ? plan.id : undefined)} />
             ))}
         </Sheet>
       </KeyboardAvoidingView>

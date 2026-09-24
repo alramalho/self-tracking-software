@@ -1,0 +1,1411 @@
+{
+  "reasoning": "low",
+  "when": "2026-09-24T14:53:35.664Z",
+  "coach": [
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "hm-setup-some-base",
+      "look": "Easy + one quality session, each explained; modest volume from 2×5 km",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 579,
+        "outputTokens": 296,
+        "costUsd": 0.000471
+      },
+      "reply": [
+        {
+          "content": "Here’s a modest first week built around your usual Monday, Wednesday, and Saturday mornings. Keep every run easy and conversational; the Saturday run is only slightly longer than your recent norm.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-28",
+                      "quantity": 5,
+                      "descriptiveGuide": "Run 5 km at an easy, conversational pace. Keep the effort relaxed rather than chasing speed, and stop or shorten the run if anything feels painful."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-30",
+                      "quantity": 5,
+                      "descriptiveGuide": "Run 5 km easy. Focus on smooth, comfortable running; a short walk break is fine if needed, but keep the overall effort gentle."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-10-03",
+                      "quantity": 7,
+                      "descriptiveGuide": "Run 7 km at an easy, steady pace. This matches your longest recent run, so prioritize finishing comfortably and avoid increasing the pace near the end."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5.8
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "hm-setup-some-base",
+      "look": "Easy + one quality session, each explained; modest volume from 2×5 km",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 579,
+        "outputTokens": 383,
+        "costUsd": 0.0002494
+      },
+      "reply": [
+        {
+          "content": "Let’s ease into three weekly runs by keeping each one comfortable and the total only slightly above your current routine.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-28",
+                      "quantity": 4,
+                      "descriptiveGuide": "Run 4 km at an easy, conversational pace. Keep it relaxed and stop if you feel pain."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-30",
+                      "quantity": 3,
+                      "descriptiveGuide": "Run 3 km at an easy, conversational pace. Treat this as a short, comfortable run between sessions."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-10-03",
+                      "quantity": 5,
+                      "descriptiveGuide": "Run 5 km at an easy, conversational pace. Keep the effort steady and comfortable throughout."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5.8
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "gain-80kg-setup",
+      "look": "Strength week AND asks to track body weight (alsoTrack), says how often",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 567,
+        "outputTokens": 435,
+        "costUsd": 0.0002742
+      },
+      "reply": [
+        {
+          "content": "Let’s start with three manageable gym sessions this week. Log your body weight once a week so we can track progress toward 80 kg; the gym sessions alone don’t capture that.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-28",
+                      "quantity": 45,
+                      "descriptiveGuide": "Complete a 45-minute, comfortable full-body session using familiar machines. Use controlled reps and leave a few reps in reserve; stop if you feel pain."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-30",
+                      "quantity": 45,
+                      "descriptiveGuide": "Complete another 45-minute full-body machine session. Choose familiar exercises and loads you can move with good form, without pushing to exhaustion."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-10-02",
+                      "quantity": 45,
+                      "descriptiveGuide": "Do a 45-minute full-body machine session at an easy-to-moderate effort. Focus on controlled movement and stop if anything hurts."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "gain-80kg-setup",
+      "look": "Strength week AND asks to track body weight (alsoTrack), says how often",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 567,
+        "outputTokens": 437,
+        "costUsd": 0.0006378
+      },
+      "reply": [
+        {
+          "content": "Start with three manageable 45-minute gym sessions on your usual Monday/Wednesday/Friday pattern. Log your body weight once weekly under similar conditions so we can judge progress toward 80 kg; the gym activity alone cannot capture that.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-28",
+                      "quantity": 45,
+                      "descriptiveGuide": "Spend 5 minutes warming up, then complete a full-body machine-based session using comfortable loads: 2 sets each for legs, chest, back, shoulders, and core, with controlled repetitions and about 1–2 minutes of rest. Finish with easy mobility; stop short of failure."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-30",
+                      "quantity": 45,
+                      "descriptiveGuide": "Warm up for 5 minutes, then repeat a full-body session with slightly different machines or angles than Monday. Use a weight that leaves 2–3 good repetitions in reserve, take steady rests, and finish with 5 minutes of easy mobility."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-10-02",
+                      "quantity": 45,
+                      "descriptiveGuide": "Begin with 5 minutes of easy warm-up, then perform 2 controlled sets each for a leg movement, push, pull, and core exercise. Keep the effort moderate and technique crisp rather than adding heavy weight; finish with a brief cooldown."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 7.3
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "lose-weight-setup",
+      "look": "Walking-based first week, asks to track weight; no diet promises",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 560,
+        "outputTokens": 409,
+        "costUsd": 0.0002605
+      },
+      "reply": [
+        {
+          "content": "Let’s start with four easy walks this week. Since walking doesn’t capture weight change, log your weight once a week under similar conditions to track progress toward your goal.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-28",
+                      "quantity": 20,
+                      "descriptiveGuide": "Walk at a comfortable, conversational pace for 20 minutes. Keep it easy and stop if knee pain worsens."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-30",
+                      "quantity": 20,
+                      "descriptiveGuide": "Take a relaxed 20-minute walk at a pace that feels comfortable for your knees."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-02",
+                      "quantity": 20,
+                      "descriptiveGuide": "Walk for 20 minutes at an easy pace; you should be able to talk comfortably."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-04",
+                      "quantity": 20,
+                      "descriptiveGuide": "Finish the week with a comfortable 20-minute walk. Keep the pace gentle and stop if your knees hurt more."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "lose-weight-setup",
+      "look": "Walking-based first week, asks to track weight; no diet promises",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 560,
+        "outputTokens": 416,
+        "costUsd": 0.0006112
+      },
+      "reply": [
+        {
+          "content": "Let’s start with four easy evening walks this week, staying at or just below your comfortable 30-minute baseline. Please log your body weight once weekly, since walking minutes alone won’t show progress toward losing 8 kg.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-28",
+                      "quantity": 25,
+                      "descriptiveGuide": "Walk at an easy, comfortable pace for 25 minutes. You should be able to speak in full sentences; stop or shorten the walk if knee discomfort increases."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-30",
+                      "quantity": 25,
+                      "descriptiveGuide": "Take a relaxed 25-minute walk in the evening. Keep the pace gentle and choose a route that feels comfortable for your knees."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-02",
+                      "quantity": 30,
+                      "descriptiveGuide": "Walk for 30 minutes at a comfortable steady pace. Keep effort easy rather than trying to walk fast, and stop if you develop significant knee pain."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-04",
+                      "quantity": 25,
+                      "descriptiveGuide": "Finish the week with an easy 25-minute walk. Prioritize consistency and comfortable movement over distance or speed."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 6.5
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "hm-setup-some-base",
+      "look": "Easy + one quality session, each explained; modest volume from 2×5 km",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 469,
+        "outputTokens": 1718,
+        "costUsd": 0.0022023
+      },
+      "reply": [
+        {
+          "content": "Good starting point. I’ll keep week 1 at your current easy volume and add one third easy run using your Mon/Wed/Sat mornings. Keep every run conversational — you should be able to speak in full sentences.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-28",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy run: 5 km at a comfortable, conversational pace. Keep it relaxed and finish feeling like you could do more."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-09-30",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy run: 5 km at the same relaxed effort as Monday. No pushing; just steady, easy running."
+                    },
+                    {
+                      "activityId": "hm-activity",
+                      "date": "2026-10-03",
+                      "quantity": 7,
+                      "descriptiveGuide": "Long easy run: 7 km at an easy, conversational pace. This matches your recent longest run, so keep it controlled and walk if needed."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 22.1
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "run-assumed-missed",
+      "look": "Treats the unanswered Thursday run as missed; doesn't stack it onto next week",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 912,
+        "outputTokens": 534,
+        "costUsd": 0.0003582
+      },
+      "reply": [
+        {
+          "content": "Nice work completing the 8 km; noted it felt medium, with your legs fine. I’ll treat Thursday’s unconfirmed session as not done, not something to make up on top of next week. How does a steady week with one light faster session sound?",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Keep the usual three-run rhythm; no extra make-up load for the missed session.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-09-29",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy 5 km."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-01",
+                      "quantity": 6,
+                      "descriptiveGuide": "Steady 6 km with 4×1 min comfortably faster, 2 min easy between; keep the effort controlled."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-04",
+                      "quantity": 8,
+                      "descriptiveGuide": "Long easy 8 km; keep it comfortable."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 8.5
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "run-assumed-missed",
+      "look": "Treats the unanswered Thursday run as missed; doesn't stack it onto next week",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 912,
+        "outputTokens": 447,
+        "costUsd": 0.0007188
+      },
+      "reply": [
+        {
+          "content": "You completed the 5 km easy run and 8 km long run this week, with your legs feeling fine. The planned 6 km faster session wasn’t completed, so let’s keep next week steady rather than increase the load.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Keep the 3-session weekly structure while repeating a manageable quality session and maintaining the long run.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-09-29",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy 5 km."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-01",
+                      "quantity": 6,
+                      "descriptiveGuide": "5×1 min comfortably faster, with 2 min easy between efforts; stop if the faster running feels difficult."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-04",
+                      "quantity": 8,
+                      "descriptiveGuide": "Long easy 8 km; keep the effort conversational."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5.6
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "meditation-lapse",
+      "look": "Short, a bit blunt, uses THEIR reason (kids/anger); mentions archive option",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 327,
+        "outputTokens": 61,
+        "costUsd": 0.0000632
+      },
+      "reply": [
+        {
+          "content": "Your meditation plan has been sitting unused. You started it to stop snapping at your kids when you’re stressed. If it no longer fits, I’ll archive it—you can accept the archive below, or log a session to keep it going.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Meditate 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 1.7
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "meditation-lapse",
+      "look": "Short, a bit blunt, uses THEIR reason (kids/anger); mentions archive option",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 327,
+        "outputTokens": 55,
+        "costUsd": 0.0001314
+      },
+      "reply": [
+        {
+          "content": "Your meditation plan has been sitting unused. You started it to stop snapping at your kids when stressed. If it no longer fits, accept the archive below; otherwise, log a meditation session to keep it going.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Meditate 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 2.5
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "mixed-run-meditation",
+      "look": "Covers both plans; meditation 1 log = recorded fact, not failure; no forced change",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 1095,
+        "outputTokens": 226,
+        "costUsd": 0.00012422
+      },
+      "reply": [
+        {
+          "content": "Nice consistency on the runs this week. Since the final 2 km of your long run felt tough, let’s keep the coming week steady rather than increase the load. Meditation has one logged session; that doesn’t tell us whether you reached your four-session target, so no change needed there.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Keep running volume steady for one week after a tough long run.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "hm2-activity",
+                      "date": "2026-09-28",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy 5 km."
+                    },
+                    {
+                      "activityId": "hm2-activity",
+                      "date": "2026-09-30",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy 5 km."
+                    },
+                    {
+                      "activityId": "hm2-activity",
+                      "date": "2026-10-03",
+                      "quantity": 9,
+                      "descriptiveGuide": "Long easy 9 km; keep the effort comfortable throughout."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 3.8
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "mixed-run-meditation",
+      "look": "Covers both plans; meditation 1 log = recorded fact, not failure; no forced change",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 1095,
+        "outputTokens": 181,
+        "costUsd": 0.00023964
+      },
+      "reply": [
+        {
+          "content": "Your running week is on track: 5 km, 5 km, and 9 km completed, with the long run becoming tough only in the final 2 km. Keep the current 3-runs-per-week structure and easy effort for now—no increase this week. You also logged one 10-minute meditation; I’ll leave the 4-times-per-week meditation target unchanged, since unlogged sessions are unknown rather than missed.",
+          "requiresReply": false
+        }
+      ],
+      "quiet": false,
+      "seconds": 4.2
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "strength-knee-difficulty",
+      "look": "Responds to the hard note first, lighter/alternative legs, no diagnosis, suggests checking pain",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 879,
+        "outputTokens": 350,
+        "costUsd": 0.0002629
+      },
+      "reply": [
+        {
+          "content": "That knee twinge is worth taking seriously—good call stopping the set. For the next session, I’d keep it to pain-free upper-body work and skip squats and other knee-loading movements. Is the knee still bothering you, or does it hurt with any movement besides walking?",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Temporarily avoid knee-loading work in the next session after the twinge; resume squatting only when it feels comfortable.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "id": "str-s1",
+                      "activityId": "str-activity",
+                      "date": "2026-09-29",
+                      "quantity": 35,
+                      "descriptiveGuide": "35 minutes of pain-free upper-body work, such as press and rows. Skip squats and other knee-loading movements; stop if knee symptoms occur."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 5.7
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "strength-knee-difficulty",
+      "look": "Responds to the hard note first, lighter/alternative legs, no diagnosis, suggests checking pain",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 879,
+        "outputTokens": 299,
+        "costUsd": 0.0005346
+      },
+      "reply": [
+        {
+          "content": "That session was too difficult, and the knee twinge is the priority. Let’s make the next workout a lighter recovery-focused session rather than progressing to 65 kg: stop any movement that causes knee pain, and get medical advice if the pain returns or worsens.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Temporarily reduce the next strength session after a very hard session with knee discomfort.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "id": "str-s1",
+                      "activityId": "str-activity",
+                      "date": "2026-09-29",
+                      "quantity": 35,
+                      "descriptiveGuide": "Squat 3×5 at 55 kg only if pain-free, press 3×8 light, and stop if knee discomfort appears."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 4.5
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "lapse-two-habits",
+      "look": "One message covering both habits, each with its own reason; archive offered",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 427,
+        "outputTokens": 70,
+        "costUsd": 0.0000777
+      },
+      "reply": [
+        {
+          "content": "Your journaling and reading plans have been sitting unused. You started journaling to understand your moods and reading to spend less time on your phone before bed. If these plans no longer fit, I’ll archive them—accept the archive below, or log a session to keep them going.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Journal 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            },
+            {
+              "description": "Archive “Read 20 minutes a day”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 1.8
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "lapse-two-habits",
+      "look": "One message covering both habits, each with its own reason; archive offered",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 427,
+        "outputTokens": 68,
+        "costUsd": 0.000167
+      },
+      "reply": [
+        {
+          "content": "Your journaling and reading plans have been sitting unused for weeks. You started journaling to understand your moods and reading to spend less time on your phone before bed. If these plans no longer fit, accept the archive below; otherwise, log a session to keep them going.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Journal 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            },
+            {
+              "description": "Archive “Read 20 minutes a day”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 1.9
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "swim-setup-flexible",
+      "look": "Two pool sessions on flexible days, no 'which days?' question, modest distances",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 564,
+        "outputTokens": 261,
+        "costUsd": 0.0001869
+      },
+      "reply": [
+        {
+          "content": "Let’s start with two easy swims, with plenty of rest as needed.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-09-28",
+                      "quantity": 300,
+                      "descriptiveGuide": "Swim 300 meters total at a comfortable pace. Take breaks at the wall whenever needed; the distance does not need to be continuous."
+                    },
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-10-01",
+                      "quantity": 300,
+                      "descriptiveGuide": "Swim 300 meters total at a comfortable pace. Take breaks at the wall whenever needed; the distance does not need to be continuous."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 4.5
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "swim-setup-flexible",
+      "look": "Two pool sessions on flexible days, no 'which days?' question, modest distances",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 564,
+        "outputTokens": 441,
+        "costUsd": 0.000642
+      },
+      "reply": [
+        {
+          "content": "Let’s start with two easy pool sessions, building consistency without pushing past your current ~400 m with breaks. After each swim, log your longest uninterrupted distance so we can track the “without stopping” part of the goal.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Longest uninterrupted swim",
+                    "measure": "meters",
+                    "emoji": "🏊"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-09-29",
+                      "quantity": 300,
+                      "descriptiveGuide": "Swim 300 m total at an easy pace. Use short lengths with relaxed breaks at the wall; focus on smooth technique and finishing comfortably."
+                    },
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-10-02",
+                      "quantity": 350,
+                      "descriptiveGuide": "Swim 350 m total at an easy, controlled pace. Take breaks whenever needed, aiming for slightly longer continuous efforts than Tuesday without straining your back."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 8.1
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "cut-setup-no-days",
+      "look": "Asks to track weight; home sessions on flexible days; no crash-diet talk",
+      "usage": {
+        "model": "openai/gpt-6-luna",
+        "inputTokens": 567,
+        "outputTokens": 531,
+        "costUsd": 0.0003222
+      },
+      "reply": [
+        {
+          "content": "Let’s start with three manageable home sessions. Log your weight once a week under similar conditions so we can track progress toward 75 kg; the workout sessions don’t capture that.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-28",
+                      "quantity": 20,
+                      "descriptiveGuide": "Do 20 minutes at an easy, controlled pace: warm up for 3 minutes, then alternate dumbbell squats, rows, and floor presses with rest as needed; finish with a gentle cooldown."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-30",
+                      "quantity": 20,
+                      "descriptiveGuide": "Complete 20 minutes: warm up for 3 minutes, then do comfortable sets of dumbbell deadlifts, overhead presses, and reverse lunges, taking breaks as needed; cool down gently."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-10-02",
+                      "quantity": 20,
+                      "descriptiveGuide": "Do 20 minutes of steady movement: warm up for 3 minutes, then alternate light dumbbell exercises you know with easy bodyweight moves, keeping the effort comfortable; finish with a cooldown."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 6.3
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "case": "cut-setup-no-days",
+      "look": "Asks to track weight; home sessions on flexible days; no crash-diet talk",
+      "usage": {
+        "model": "openai/gpt-5.6-luna",
+        "inputTokens": 567,
+        "outputTokens": 436,
+        "costUsd": 0.0006366
+      },
+      "reply": [
+        {
+          "content": "Here’s a modest first week: three 20-minute home workouts, spaced out to support your weekly football and build consistency. Log your body weight once weekly under similar conditions so we can judge progress toward 75 kg; the workouts themselves don’t capture weight change.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-28",
+                      "quantity": 20,
+                      "descriptiveGuide": "20 minutes at an easy-to-moderate effort: warm up for 3 minutes, then complete 2–3 rounds of goblet squats, dumbbell rows, Romanian deadlifts, and incline push-ups, using the 8 kg dumbbells where comfortable. Rest as needed and finish with easy movement for the remaining time."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-30",
+                      "quantity": 20,
+                      "descriptiveGuide": "20 minutes of low-impact conditioning: warm up for 3 minutes, then alternate 40 seconds of brisk marching or step-ups with 20 seconds of easy movement for 10 rounds. Add 2 short sets of light dumbbell presses if you feel fresh, and keep the effort controlled."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-10-02",
+                      "quantity": 20,
+                      "descriptiveGuide": "20 minutes of full-body strength: warm up for 3 minutes, then complete 2–3 relaxed rounds of reverse lunges, dumbbell floor presses, supported one-arm rows, and dead bugs. Use good form, stop with a few repetitions in reserve, and cool down briefly."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 6.3
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "gain-80kg-setup",
+      "look": "Strength week AND asks to track body weight (alsoTrack), says how often",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 459,
+        "outputTokens": 2984,
+        "costUsd": 0.0037185
+      },
+      "reply": [
+        {
+          "content": "Here’s a modest first week for review: 3 gym sessions on Mon/Wed/Fri, 45–50 min, machine-based full-body work at RPE 6–7. Also log body weight once weekly under the same conditions, since gym minutes alone won’t show whether the 72→80 kg gain is mostly muscle; waist monthly can add context.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "⚖️"
+                  },
+                  {
+                    "title": "Waist",
+                    "measure": "cm",
+                    "emoji": "📏"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-28",
+                      "quantity": 45,
+                      "descriptiveGuide": "45 min full-body A: leg press, chest press, lat pulldown, seated row, shoulder press, hamstring curl, calf raise, plank. 2 sets x 10–12 reps, RPE 6–7, rest 60–90 sec. Keep loads moderate and focus on controlled form."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-09-30",
+                      "quantity": 45,
+                      "descriptiveGuide": "45 min full-body B: goblet or Smith squat, incline chest press, pull-down, seated row, lateral raise, leg curl, triceps pressdown, biceps curl. 2 sets x 10–12 reps, RPE 6–7, rest 60–90 sec."
+                    },
+                    {
+                      "activityId": "gain-activity",
+                      "date": "2026-10-02",
+                      "quantity": 50,
+                      "descriptiveGuide": "50 min full-body C: leg press, push-up or machine chest press, one-arm row, lat pulldown, back extension or hip hinge, shoulder press, dead bug or cable crunch. 2 sets x 10–12 reps, RPE 6–7, rest 60–90 sec."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 32.4
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "lose-weight-setup",
+      "look": "Walking-based first week, asks to track weight; no diet promises",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 454,
+        "outputTokens": 1035,
+        "costUsd": 0.0013782
+      },
+      "reply": [
+        {
+          "content": "Here's your first week: four easy evening walks, deliberately kept short while your knees and routine adjust — nothing here should feel hard. Since walking minutes alone won't tell us whether the 8 kg goal is moving, please also log your body weight once a week (same time of day, morning is easiest, before eating), and I'll add it to the plan as a tracked measurement. We'll build the walks up from here rather than starting big.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "kg",
+                    "emoji": "weight_1"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-28",
+                      "quantity": 20,
+                      "descriptiveGuide": "20 minutes of easy walking in the evening — a pace where you can still hold a conversation. Flat route, comfortable shoes. Stop early if either knee complains; the goal is finishing feeling like you could have done more."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-09-30",
+                      "quantity": 25,
+                      "descriptiveGuide": "25 minutes of easy evening walking, same relaxed pace as Monday. If the first walk left you sore, stay at 20 minutes instead and note that down."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-02",
+                      "quantity": 25,
+                      "descriptiveGuide": "25 minutes of easy evening walking. Try a slightly different route to keep it interesting, but keep the pace conversational and the effort light."
+                    },
+                    {
+                      "activityId": "lose-activity",
+                      "date": "2026-10-03",
+                      "quantity": 30,
+                      "descriptiveGuide": "30 minutes of easy evening walking — the longest of the week, at the same gentle pace. This is your baseline distance from the notes, so it should feel familiar rather than pushing."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 11.7
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "run-assumed-missed",
+      "look": "Treats the unanswered Thursday run as missed; doesn't stack it onto next week",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 694,
+        "outputTokens": 2085,
+        "costUsd": 0.0027102
+      },
+      "reply": [
+        {
+          "content": "Nice work getting the 8 km long run done today at medium effort with legs feeling fine — that's a solid step up from your 7 km baseline. The Sept 24 session with the 5×1 min pickups was never logged after I checked in, so I'm treating it as not done rather than piling that load on top of this week. For the coming week I'd keep it to the same three runs and just fold the short pickups back in, with no extra volume added to compensate: easy 5 km, 6 km including 5×1 min faster with 2 min easy between, then a 9 km long easy run. Want me to slot those in?",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Set next week's three runs, re-including the missed short-pickups session without adding volume.",
+              "patch": {
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-09-29",
+                      "quantity": 5,
+                      "descriptiveGuide": "Easy 5 km."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-01",
+                      "quantity": 6,
+                      "descriptiveGuide": "6 km with 5×1 min faster, 2 min easy between."
+                    },
+                    {
+                      "activityId": "run-activity",
+                      "date": "2026-10-04",
+                      "quantity": 9,
+                      "descriptiveGuide": "Long easy 9 km."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 17.5
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "meditation-lapse",
+      "look": "Short, a bit blunt, uses THEIR reason (kids/anger); mentions archive option",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 343,
+        "outputTokens": 821,
+        "costUsd": 0.0010881
+      },
+      "reply": [
+        {
+          "content": "Your Meditate 3 times a week plan has been sitting unused for weeks, and you haven't answered me. You started it to stop snapping at your kids when you're stressed. If it no longer fits, I'll archive it—accept the archive below—or log a session to keep it going.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Meditate 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 6.5
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "mixed-run-meditation",
+      "look": "Covers both plans; meditation 1 log = recorded fact, not failure; no forced change",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 887,
+        "outputTokens": 1113,
+        "costUsd": 0.0016017
+      },
+      "reply": [
+        {
+          "content": "Half-marathon plan: all three runs are in — 5 km, 5 km with strides, and the 9 km long run. Worth flagging that the last 2 km felt tough: that's normal at this stage, so the move is to keep the coming week at the same easy effort rather than adding distance to compensate. Meditation: I see one 10-minute session logged; the other days are simply unknown, so no judgment there — just keep the same 4×/week rhythm going.",
+          "requiresReply": false
+        }
+      ],
+      "quiet": false,
+      "seconds": 19.1
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "strength-knee-difficulty",
+      "look": "Responds to the hard note first, lighter/alternative legs, no diagnosis, suggests checking pain",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 663,
+        "outputTokens": 769,
+        "costUsd": 0.0011217
+      },
+      "reply": [
+        {
+          "content": "That knee twinge on the 4th set is the thing to act on — good call stopping. Your next session (Tue 29 Sep) was set to jump to 65 kg, which is exactly the kind of load you shouldn't stack on a knee that just objected. I'd suggest swapping it for a lighter, knee-friendly session (squat 3×5 at 50–55 kg, stopping at any twinge, plus leg press and rows), and holding the 65 kg until the knee is completely symptom-free through the day. If the twinge returns or persists past a few days, get it looked at by a physio or doctor before loading it again. One question: does the knee feel normal right now on stairs or an unweighted bodyweight squat?",
+          "requiresReply": true
+        }
+      ],
+      "quiet": false,
+      "seconds": 5.6
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "lapse-two-habits",
+      "look": "One message covering both habits, each with its own reason; archive offered",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 452,
+        "outputTokens": 306,
+        "costUsd": 0.0005028
+      },
+      "reply": [
+        {
+          "content": "Both plans — journaling 3x a week and reading 20 minutes a day — have been sitting unused for weeks, with nothing logged. You started journaling to understand your moods, and reading to get off your phone before bed. If either no longer fits, accept the archive below and I'll close it out; if you want to keep it going, log a session. Either way is fine — just pick one.",
+          "requiresReply": true,
+          "proposals": [
+            {
+              "description": "Archive “Journal 3 times a week”",
+              "patch": {
+                "archive": true
+              }
+            },
+            {
+              "description": "Archive “Read 20 minutes a day”",
+              "patch": {
+                "archive": true
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 3.8
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "swim-setup-flexible",
+      "look": "Two pool sessions on flexible days, no 'which days?' question, modest distances",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 455,
+        "outputTokens": 1027,
+        "costUsd": 0.0013689
+      },
+      "reply": [
+        {
+          "content": "Here's a modest first week for your swim plan — two sessions, spaced out (Tuesday and Saturday), each built around short repeats with rest at the wall so you're never far from your 400 m comfort zone. The goal this week is consistent, relaxed length-building, not distance. Pool is open daily, so shift these days if something comes up. Log total meters per session as shown.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-09-29",
+                      "quantity": 600,
+                      "descriptiveGuide": "Warm-up: 100 m easy, any stroke, no clock. Main set: 4 × 100 m with 30–45 s rest at the wall — swim each 100 at a pace you could hold for a few more lengths, not a sprint. Cool-down: 100 m very easy. Total 600 m. If a 100 feels like a struggle, shorten the next repeat to 75 m rather than pushing through with poor form."
+                    },
+                    {
+                      "activityId": "swim-activity",
+                      "date": "2026-10-03",
+                      "quantity": 650,
+                      "descriptiveGuide": "Warm-up: 100 m easy. Main set: 3 × 150 m with 45 s rest at the wall — same easy, sustainable pace as Tuesday, breathing every 2–3 strokes. Cool-down: 100 m very easy. Total 650 m. Notice whether the rest breaks are getting shorter than you need, or whether you're finishing each 150 with something left."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 8.6
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "case": "cut-setup-no-days",
+      "look": "Asks to track weight; home sessions on flexible days; no crash-diet talk",
+      "usage": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "inputTokens": 458,
+        "outputTokens": 3380,
+        "costUsd": 0.0041934
+      },
+      "reply": [
+        {
+          "content": "Here’s a modest first week for review: three home workouts spread across the week. Keep your usual football; if it lands on a workout day, shift that session. Because the plan tracks workout minutes, also log your body weight once weekly under the same morning conditions so we can judge progress toward 75 kg.",
+          "requiresReply": false,
+          "proposals": [
+            {
+              "description": "Review your first week",
+              "patch": {
+                "track": [
+                  {
+                    "title": "Body weight",
+                    "measure": "body weight",
+                    "emoji": "⚖️"
+                  }
+                ],
+                "plan": {
+                  "outlineType": "SPECIFIC"
+                },
+                "sessions": {
+                  "upsert": [
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-28",
+                      "quantity": 20,
+                      "descriptiveGuide": "20 min: 4 min warm-up (march in place, arm circles, hip hinges); 2 rounds of goblet squat 8, floor press 8, bent-over row 8, Romanian deadlift 8, overhead press 6 with the 8 kg dumbbells — 60 sec rest between rounds; 3 min easy stretch. Keep effort around RPE 6/10."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-09-30",
+                      "quantity": 25,
+                      "descriptiveGuide": "25 min: 5 min warm-up; 3 rounds of reverse lunge 6/side, push-up or floor press 8, one-arm row 8/side, deadlift 8, plank 20 sec — 60 sec rest between rounds; 5 min cool-down. Keep effort around RPE 6–7/10."
+                    },
+                    {
+                      "activityId": "cut-activity",
+                      "date": "2026-10-03",
+                      "quantity": 25,
+                      "descriptiveGuide": "25 min: 5 min warm-up; 3 rounds of squat to press 8, row 10, glute bridge 12, dead bug 8/side, farmer carry 30 sec — 45 sec rest between rounds; 5 min walk/stretch. Keep effort around RPE 6–7/10."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "quiet": false,
+      "seconds": 18.9
+    }
+  ],
+  "realism": [
+    {
+      "expect": false,
+      "goal": "Run a marathon",
+      "baseline": "I don't run at all",
+      "frequency": 3,
+      "weeks": 3,
+      "realistic": false,
+      "correct": true,
+      "seconds": 0.353
+    },
+    {
+      "expect": false,
+      "goal": "Lose 20 kg",
+      "baseline": "95 kg, sedentary",
+      "frequency": 4,
+      "weeks": 4,
+      "realistic": false,
+      "correct": true,
+      "seconds": 0.381
+    },
+    {
+      "expect": false,
+      "goal": "Get to 80 kg of muscle",
+      "baseline": "70 kg, 180 cm, beginner",
+      "frequency": 3,
+      "weeks": 8,
+      "realistic": false,
+      "correct": true,
+      "seconds": 0.316
+    },
+    {
+      "expect": true,
+      "goal": "Run a half marathon",
+      "baseline": "I run 2×5 km a week",
+      "frequency": 3,
+      "weeks": 24,
+      "realistic": true,
+      "correct": true,
+      "seconds": 0.345
+    },
+    {
+      "expect": true,
+      "goal": "Reach 80 kg, mostly muscle",
+      "baseline": "72 kg, gym twice a week",
+      "frequency": 3,
+      "weeks": 30,
+      "realistic": true,
+      "correct": true,
+      "seconds": 0.373
+    },
+    {
+      "expect": true,
+      "goal": "Meditate 10 minutes 4 times a week",
+      "baseline": "Beginner",
+      "frequency": 4,
+      "weeks": 8,
+      "realistic": true,
+      "correct": true,
+      "seconds": 0.605
+    }
+  ]
+}

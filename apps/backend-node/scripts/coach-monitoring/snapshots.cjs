@@ -1,0 +1,52 @@
+// Manual review inputs, never fed to an automated judge or added to coach prompts.
+const running = {
+  key: "running", goal: "Run my first half marathon under two hours", reason: "Finish alongside my friends",
+  activity: "Running", measure: "kilometers", emoji: "🏃", frequency: 3, targetDays: 178,
+  baseline: "I am 28. I started running one month ago and do two easy 3 km runs per week, about 23 minutes each, with walk breaks on hills. No current pain or known exercise restrictions. Tuesday, Thursday and Sunday work for me; I can spare 45 minutes on weekdays and 75 on Sunday. I have never raced a 10 km. The sub-two-hour time is an aspiration, not a must.",
+};
+const muscle = {
+  key: "muscle", goal: "Build muscle and work toward 80 kg body weight", reason: "Feel stronger and fill out my clothes",
+  activity: "Strength training", measure: "minutes", emoji: "🏋️", frequency: 3, targetDays: 180,
+  baseline: "I am a 28-year-old man, 178 cm, 76 kg. I mean total body weight, mostly wanting muscle gain; I know not all weight gain will be muscle. For eight weeks I have done two full-body gym sessions weekly: goblet squat 2 sets of 10 at 16 kg, dumbbell bench press 2 sets of 10 at 10 kg each, cable row 2 sets of 10 at 25 kg, Romanian deadlift 2 sets of 10 at 20 kg total. I finish with about 3 reps in reserve, no pain. I have a normal gym and 45 minutes on Monday, Wednesday and Friday. I eat regular meals but do not track calories. No exercise restrictions. I would like to progress to three sessions if sensible; I am flexible about reaching 80 kg within six months.",
+};
+const meditation = {
+  key: "meditation", goal: "Meditate three times per week", reason: "Pause before reacting when angry",
+  activity: "Meditation", measure: "minutes", emoji: "🧘", frequency: 3, targetDays: null, role: "consistency",
+  baseline: "Returning after a long break. Five minutes feels manageable. I prefer flexible days and do not want a scheduled meditation calendar.",
+};
+module.exports = [
+  { id: "running-missing-baseline", title: "Running: the starting point is missing", trigger: "setup", plans: [{ ...running, baseline: "Only the goal, target date and three sessions per week are known. Current running, availability and limitations were not supplied." }] },
+  { id: "running-first-week", title: "Running: enough context for a first week", trigger: "setup", plans: [running] },
+  { id: "running-hard-week", title: "Running: hard sessions, poor sleep and an unconfirmed run", trigger: "review", plans: [{ ...running, scheduled: true, access: true, notes: "The agreed recent week had three easy 3 km sessions, walk breaks allowed, on Tuesday, Thursday and Sunday. No upcoming week has been approved.",
+    sessions: [4, 0, 2].map(day => ({ weekday: day, quantity: 3, guide: "Easy 3 km, talk in full sentences, walk hills as needed." })),
+    entries: [{ weekday: 4, quantity: 3, difficulty: "hard", note: "Had to walk every hill. No pain, but much harder than usual." }, { weekday: 2, quantity: 3, difficulty: "very_hard", note: "Legs felt heavy. Took walk breaks. Please make next week more manageable; the same three days are available. No pain. Sunday has not been confirmed." }],
+    workouts: [{ weekday: 4, distance: 3000, seconds: 1450, heartRate: 145, effort: 7 }, { weekday: 2, distance: 3000, seconds: 1600, heartRate: 168, effort: 8 }],
+    sleep: [7.5, 7.1, 5, 5.2, 4.8, 6, 5.5],
+  }] },
+  { id: "muscle-ambiguous", title: "Muscle: an ambiguous goal and missing baseline", trigger: "setup", age: null, plans: [{ ...muscle, goal: "Get to 80 kg of muscle in eight weeks", targetDays: 56, baseline: "Current weight, training experience, equipment, and the intended meaning of 80 kg of muscle were not supplied." }] },
+  { id: "muscle-first-week", title: "Muscle: a clear starting point and available equipment", trigger: "setup", plans: [muscle] },
+  { id: "muscle-good-week", title: "Muscle: completing the work with room to progress", trigger: "review", plans: [{ ...muscle, scheduled: true, notes: "The user has now completed four weeks at three 45-minute full-body sessions. Last approved week: squat, dumbbell press, cable row and Romanian deadlift, each 2 sets of 10–12. Add repetitions within range before changing weight. Rest days between sessions. Two consecutive sessions at the top of the range have now been recorded.",
+    sessions: [5, 1, 3].map(day => ({ weekday: day, quantity: 45, guide: "Full body: goblet squat 16 kg, dumbbell press 10 kg each, cable row 25 kg, Romanian deadlift 20 kg total. Each 2 sets of 10–12; leave 2–3 reps in reserve." })),
+    entries: [5, 1, 3].map(day => ({ weekday: day, quantity: 45, difficulty: "easy", note: "Completed all four exercises for 2 sets of 12 at the agreed loads with 3 reps in reserve. No pain, normal soreness gone by next session, sleeping normally. Average morning weight is 76.2 kg this week, 76.0 kg four weeks ago. Calories are not tracked. I still have only 45 minutes and three days." })),
+  }] },
+  { id: "mixed-week", title: "Two plans: running is going well, meditation has no logs", trigger: "review", plans: [{ ...running, scheduled: true, access: true, notes: "The person has completed three easy 3 km runs each week for two weeks. Current approved sessions are easy with walk breaks if needed. No next-week change has been accepted.",
+    sessions: [4, 0, 2].map(day => ({ weekday: day, quantity: 3, guide: "Easy 3 km, talk comfortably, walk if needed." })),
+    entries: [4, 0, 2].map(day => ({ weekday: day, quantity: 3, difficulty: "easy", note: "Comfortable, conversational pace. No pain or unusual fatigue. Happy to keep the same days." })),
+    workouts: [4, 0, 2].map(day => ({ weekday: day, distance: 3000, seconds: 1400, heartRate: 144, effort: 4 })),
+    sleep: [7.5, 7.2, 7.8, 7.1, 7.5, 7.4, 7.8],
+  }, meditation] },
+  { id: "running-terse", title: "Running: a short, uncertain starting point", trigger: "setup", age: null, plans: [{ ...running,
+    targetDays: null, reason: "mates are doing it",
+    baseline: "idk really. did couch to 5k ages ago, now mostly run for the bus lol. maybe 2 or 3 times? work changes every week. not booked a race yet",
+  }] },
+  { id: "muscle-chaotic", title: "Muscle: conflicting numbers, goals and equipment", trigger: "setup", age: null, plans: [{ ...muscle,
+    goal: "get big like 80kg but lose this belly before the wedding", targetDays: 56,
+    reason: "want to feel good in the suit",
+    baseline: "im 74 i think, scales at mums said 79 lol. gym used to be 3x but been once this month. got dumbbells no idea what weight. actually travelling next 2 weeks so only bands. wedding in 8 weeks. dont want to count food. can do every day if its like 15 mins, clicked 3 cos dunno",
+  }] },
+  { id: "disrupted-week", title: "Two plans: a messy update changes next week's availability", trigger: "review", plans: [{ ...running,
+    scheduled: true, notes: "Previously agreed: three easy 3 km runs on Tuesday, Thursday and Sunday. No future sessions have been approved.",
+    sessions: [4, 0, 2].map(day => ({ weekday: day, quantity: 3, guide: "Easy 3 km with walk breaks." })),
+    entries: [{ weekday: 2, quantity: 3, difficulty: "hard", note: "ok so sunday DID happen forgot to log it, maybe 5k?? watch said 3.2 including walk so not sure. todays one felt rough no pain just night shifts. flying monday next week, scratch thurs cant. only saturday 20 mins actually. can we do that just next week and keep the old days after? meditation did one on plane didnt log either, leave that flexible pls" }],
+  }, meditation] },
+];

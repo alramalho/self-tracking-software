@@ -17,6 +17,7 @@ export function ProposalReview({
   open,
   onOpen,
   onClose,
+  onViewAccepted,
 }: ProposalReviewProps) {
   const c = useColors();
   return (
@@ -31,14 +32,14 @@ export function ProposalReview({
           flexDirection: "row",
           alignItems: "flex-start",
           gap: 8,
-          opacity: status ? 0.6 : 1,
+          opacity: status && !onViewAccepted ? 0.6 : 1,
         }}
       >
         <View style={{ flex: 1 }}>
           <PreviewTouch
             accessibilityRole="button"
-            accessibilityLabel={`Review ${label}`}
-            onPress={onOpen}
+            accessibilityLabel={status === "accepted" && onViewAccepted ? `View updated plan: ${label}` : `Review ${label}`}
+            onPress={status === "accepted" && onViewAccepted ? onViewAccepted : onOpen}
             style={{ width: "100%", gap: 6 }}
           >
             <View
@@ -71,6 +72,7 @@ export function ProposalReview({
               </Text>
             )}
             {!status && summary}
+            {status === "accepted" && onViewAccepted && <Text style={{ color: c.muted, fontSize: 12 }}>View updated plan</Text>}
           </PreviewTouch>
         </View>
         {!status && quickActions}

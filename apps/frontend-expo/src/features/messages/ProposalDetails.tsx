@@ -1,4 +1,6 @@
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { format, parseISO } from "date-fns";
 import { Copy, useColors } from "@/components/ui";
 import { useActivities, usePlans } from "@/data/queries";
 import type {
@@ -6,7 +8,91 @@ import type {
   Message,
   ProposalOperation,
   ProposalPatch,
+  SessionCardProps,
 } from "./types";
+
+const onDay = (date: string | Date) =>
+  typeof date === "string" ? parseISO(date.slice(0, 10)) : date;
+const shortUnits: Record<string, string> = {
+  kilometers: "km",
+  kilometres: "km",
+  meters: "m",
+  metres: "m",
+  minutes: "min",
+  seconds: "s",
+  miles: "mi",
+};
+/** "3 kilometers" → "3 km"; unknown units stay as they are. */
+const amount = (quantity: number, measure = "") =>
+  `${quantity} ${shortUnits[measure.toLowerCase()] ?? measure}`.trim();
+
+/** One proposed session, in the style of the plan calendar: date, amount, then the how-to. */
+function SessionCard({ op, activity, removed }: SessionCardProps) {
+  const c = useColors();
+  const [open, setOpen] = useState(false);
+  const day = op.date ? onDay(op.date) : undefined;
+  const guide = op.descriptiveGuide?.trim();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${activity?.title ?? "Session"}${day ? ` on ${format(day, "EEEE, MMM d")}` : ""}`}
+      disabled={!guide}
+      onPress={() => setOpen((value) => !value)}
+      style={{
+        flexDirection: "row",
+        gap: 14,
+        padding: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: c.border,
+        backgroundColor: c.card,
+        opacity: removed ? 0.55 : 1,
+      }}
+    >
+      <View style={{ width: 40, alignItems: "center" }}>
+        <Text style={{ color: c.muted, fontSize: 11, fontWeight: "700" }}>
+          {day ? format(day, "EEE").toUpperCase() : "—"}
+        </Text>
+        <Text style={{ color: c.text, fontSize: 22, fontWeight: "700" }}>
+          {day ? format(day, "d") : ""}
+        </Text>
+        <Text style={{ color: c.muted, fontSize: 10, fontWeight: "600" }}>
+          {day ? format(day, "MMM").toUpperCase() : ""}
+        </Text>
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text
+          style={{
+            color: c.text,
+            fontSize: 16,
+            fontWeight: "600",
+            textDecorationLine: removed ? "line-through" : "none",
+          }}
+        >
+          {activity?.emoji ?? "📋"}{" "}
+          {op.quantity != null
+            ? amount(op.quantity, activity?.measure)
+            : (activity?.title ?? "Session")}
+          {op.type === "update_session" ? "  · changed" : ""}
+          {removed ? "  · removed" : ""}
+        </Text>
+        {!!guide && (
+          <Text
+            numberOfLines={open ? undefined : 2}
+            style={{ color: c.muted, fontSize: 14, lineHeight: 20 }}
+          >
+            {guide}
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+/** Switching to dated sessions is how a first week is stored, not a choice to review. */
+const isOutlineOnly = (plan: Partial<ProposalOperation>) =>
+  Object.keys(plan).every((key) => key === "outlineType");
+const sessionTypes = ["add_session", "update_session", "delete_session"];
 
 export function ProposalDetails({
   proposal,
@@ -20,7 +106,13 @@ export function ProposalDetails({
   const operations: ProposalOperation[] = patch
     ? [
         ...(patch.archive ? [{ type: "archive" }] : []),
-        ...(patch.plan ? [{ type: "update_plan", ...patch.plan }] : []),
+        ...(patch.plan && !isOutlineOnly(patch.plan)
+          ? [{ type: "update_plan", ...patch.plan }]
+          : []),
+        ...(patch.track ?? []).map((t) => ({
+          type: "track",
+          description: `${t.emoji} ${t.title} · ${t.measure}`,
+        })),
         ...(patch.sessions?.upsert ?? []).map((session) => ({
           ...plan?.sessions?.find((s) => s.id === session.id),
           ...session,
@@ -44,6 +136,7 @@ export function ProposalDetails({
   const labels: Record<string, string> = {
     archive: "Archive plan",
     update_plan: "Update plan setup",
+    track: "Start tracking",
     add: "Add session",
     remove: "Remove session",
     add_session: "Add session",
@@ -60,12 +153,9 @@ export function ProposalDetails({
           const activity = activities.data?.find((a) => a.id === op.activityId);
           return (
             <Text key={index} style={{ fontSize: 12, color: c.text }}>
-              {labels[op.type] ?? "Update session"}
-              {activity ? ` · ${activity.emoji} ${activity.title}` : ""}
-              {op.quantity != null
-                ? ` · ${op.quantity} ${activity?.measure ?? ""}`
-                : ""}
-              {op.date ? ` · ${new Date(op.date).toLocaleDateString()}` : ""}
+              {sessionTypes.includes(op.type)
+                ? `${activity?.emoji ?? "📋"} ${op.quantity != null ? amount(op.quantity, activity?.measure) : (activity?.title ?? "Session")}${op.date ? ` · ${format(onDay(op.date), "EEE d MMM")}` : ""}${op.type === "delete_session" ? " · removed" : op.type === "update_session" ? " · changed" : ""}`
+                : `${labels[op.type] ?? "Update"}${op.description ? ` · ${op.description}` : ""}`}
             </Text>
           );
         })}
@@ -76,9 +166,29 @@ export function ProposalDetails({
         )}
       </View>
     );
+  const sessions = operations
+    .filter((op) => sessionTypes.includes(op.type))
+    .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
+  const others = operations.filter((op) => !sessionTypes.includes(op.type));
   return (
     <View style={{ gap: 12 }}>
-      {operations.map((op, index) => {
+      {sessions.length > 0 && (
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
+            {sessions.length} {sessions.length === 1 ? "session" : "sessions"}
+            {sessions.some((op) => op.descriptiveGuide) ? " · tap for details" : ""}
+          </Text>
+          {sessions.map((op, index) => (
+            <SessionCard
+              key={op.id ?? index}
+              op={op}
+              activity={activities.data?.find((a) => a.id === op.activityId)}
+              removed={op.type === "delete_session"}
+            />
+          ))}
+        </View>
+      )}
+      {others.map((op, index) => {
         const activity = activities.data?.find((a) => a.id === op.activityId);
         return (
           <View key={index} style={{ gap: 4 }}>
@@ -130,6 +240,7 @@ export function hasProposalChanges(
     proposal.operations?.length ||
     patch?.archive ||
     patch?.plan ||
+    patch?.track?.length ||
     patch?.sessions?.upsert?.length ||
     patch?.sessions?.deleteIds?.length ||
     patch?.milestones?.upsert?.length ||

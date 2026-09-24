@@ -1,7 +1,10 @@
+import type { CoachHealthAccess } from "./coach/types";
+
 type ConversationHistoryMessage = {
   role: "system" | "user" | "assistant";
   content: string;
   imageAttachments?: ImageAttachment[];
+  healthDataAccess?: CoachHealthAccess[];
 };
 
 type MessageForHistory = {
@@ -35,20 +38,21 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
           "- type: plan_creation",
           `goal: ${formatMetadataValue(proposal?.goal) || "untitled"}`,
           `status: ${formatStatus(proposal?.status)}`,
-        ].join("; ")
+        ].join("; "),
       );
     });
   }
 
   if (Array.isArray(data?.planProposals)) {
     data.planProposals.forEach((proposal: any) => {
-      const label = proposal?.description || proposal?.planGoal || "plan modification";
+      const label =
+        proposal?.description || proposal?.planGoal || "plan modification";
       lines.push(
         [
           "- type: plan_modification",
           `label: ${formatMetadataValue(label)}`,
           `status: ${formatStatus(proposal?.status)}`,
-        ].join("; ")
+        ].join("; "),
       );
     });
   }
@@ -66,7 +70,7 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
           "- type: activity_edit",
           `activity: ${formatMetadataValue(proposal?.activityName) || "activity"}${measureText}`,
           `status: ${formatStatus(proposal?.status)}`,
-        ].join("; ")
+        ].join("; "),
       );
     });
   }
@@ -83,7 +87,7 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
           `measure: ${formatMetadataValue(measure)}`,
           `date: ${formatMetadataValue(proposal?.date) || "unknown"}`,
           `status: ${formatStatus(proposal?.status)}`,
-        ].join("; ")
+        ].join("; "),
       );
     });
   }
@@ -92,7 +96,7 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
 }
 
 export function toCoachConversationHistory(
-  messages: MessageForHistory[]
+  messages: MessageForHistory[],
 ): ConversationHistoryMessage[] {
   return messages.flatMap((message) => {
     const role =
@@ -112,6 +116,9 @@ export function toCoachConversationHistory(
     const visibleMessage = {
       role,
       content: message.content,
+      ...(Array.isArray(data?.healthDataAccess)
+        ? { healthDataAccess: data.healthDataAccess }
+        : {}),
       ...(imageAttachments?.length ? { imageAttachments } : {}),
     };
 
@@ -123,6 +130,9 @@ export function toCoachConversationHistory(
       visibleMessage,
       {
         role: "system",
+        ...(Array.isArray(data?.healthDataAccess)
+          ? { healthDataAccess: data.healthDataAccess }
+          : {}),
         content: [
           "PRIOR APP STATE FOR THE IMMEDIATELY PRECEDING ASSISTANT MESSAGE.",
           "This is not transcript text and was not visible to the user.",

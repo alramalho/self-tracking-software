@@ -20,12 +20,14 @@ import type {
   ButtonProps,
   IconButtonProps,
   FieldProps,
+  GroupedRowsProps,
   PanelProps,
   ScreenProps,
   SheetProps,
   StatusProps,
 } from "./types";
 import { useColors } from "./theme";
+import { ChevronRight } from "lucide-react-native";
 import { VoiceTextArea } from "@/features/dictation/VoiceTextArea";
 export { useColors } from "./theme";
 export function Screen({
@@ -112,6 +114,56 @@ export function Panel({ children, style, testID }: PanelProps) {
       ]}
     >
       {children}
+    </View>
+  );
+}
+/** Settings-style card: emoji, **Title** · value, chevron. Used by Schedule/Reminders and Coaching. */
+export function GroupedRows({ rows, testID }: GroupedRowsProps) {
+  const c = useColors();
+  return (
+    <View
+      testID={testID}
+      style={{ borderRadius: 20, overflow: "hidden", backgroundColor: c.card }}
+    >
+      {rows.map((row, index) => (
+        <Pressable
+          key={row.id}
+          accessibilityRole="button"
+          accessibilityLabel={`${row.title} · ${row.value}`}
+          disabled={row.disabled}
+          onPress={row.onPress}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            minHeight: 64,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            borderTopWidth: index ? 1 : 0,
+            borderColor: c.border,
+          }}
+        >
+          <Text style={{ fontSize: 25 }}>{row.icon}</Text>
+          {/* One flowing line, so a long value wraps like a sentence instead of dropping below. */}
+          <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: "600" }}>
+            {row.title}
+            <Text
+              style={{
+                color: row.attention ? c.accent : c.muted,
+                fontWeight: row.attention ? "600" : "400",
+              }}
+            >
+              {" "}· {row.value}
+            </Text>
+          </Text>
+          {row.attention && (
+            <View
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent }}
+            />
+          )}
+          <ChevronRight size={18} color={c.muted} />
+        </Pressable>
+      ))}
     </View>
   );
 }

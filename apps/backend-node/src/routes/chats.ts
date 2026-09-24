@@ -1,4 +1,8 @@
 import { Response, Router } from "express";
+import { recordCoachRequests, resolveCoachConversation } from "../services/coach/monitoring/requests";
+import { planProposalBasis } from "../services/coach/monitoring/proposal-basis";
+import { hasPermittedHealthContext } from "../services/coach/monitoring/context";
+import type { CoachConversationMessage } from "../services/coach/types";
 import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
@@ -34,11 +38,7 @@ type ImageAttachment = {
   mediaType: string;
   filename?: string;
 };
-type ConversationHistory = Array<{
-  role: "system" | "user" | "assistant";
-  content: string;
-  imageAttachments?: ImageAttachment[];
-}>;
+type ConversationHistory = CoachConversationMessage[];
 
 const MAX_COACH_IMAGE_ATTACHMENTS = 4;
 const MAX_COACH_IMAGE_DATA_URL_LENGTH = 1_600_000;
@@ -50,6 +50,14 @@ class RouteError extends Error {
   ) {
     super(message);
   }
+}
+
+async function ownedMessagePlan(userId: string, value: unknown) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || value.length > 200) throw new RouteError(400, "Invalid plan");
+  const plan = await prisma.plan.findFirst({ where: { id: value, userId, deletedAt: null } });
+  if (!plan) throw new RouteError(404, "Plan not found");
+  return plan.id;
 }
 
 // Plans past their finishingDate stay included so attention items can drive
@@ -173,6 +181,7 @@ function serializeUserMessage(
   return {
     id: userMessage.id,
     chatId: userMessage.chatId,
+    planId: userMessage.planId,
     role: userMessage.role,
     content: userMessage.content,
     imageAttachments: metadata?.imageAttachments || null,
@@ -248,6 +257,8 @@ async function runCoachV2MessagePipeline(params: {
     logLabel,
   } = params;
   let conversationHistory = params.conversationHistory;
+  if (messageRole === "user") await resolveCoachConversation(user.id,
+    typeof serializedUserMessage.planId === "string" ? serializedUserMessage.planId : undefined);
 
   if (!conversationHistory) {
     const currentMessageId =
@@ -288,15 +299,21 @@ async function runCoachV2MessagePipeline(params: {
   const memoryQuery =
     message.trim() ||
     (imageAttachments?.length ? "User attached an image for the coach to inspect." : "");
-  const memoriesContext = await supermemoryService.getProfile(user.id, memoryQuery);
+  const scopedPlans = typeof serializedUserMessage.planId === "string" ? plans.filter(p => p.id === serializedUserMessage.planId) : plans;
+  const planScopedReply = typeof serializedUserMessage.planId === "string";
+  // Imported health context belongs to the approved plan, never unscoped long-term memory.
+  const hasHealthContext = conversationHistory.some(m => m.healthDataAccess?.length) ||
+    await hasPermittedHealthContext(user.id, scopedPlans.map(p => p.id));
+  const memoriesContext = hasHealthContext ? null : await supermemoryService.getProfile(user.id, memoryQuery);
 
   const v2Response = await coachAgentService.generateResponse({
     user,
-    message,
+    allowPlanCreation: !planScopedReply,
+    message: typeof serializedUserMessage.planId === "string" ? `The user is discussing plan ${serializedUserMessage.planId}. Keep the response focused on it.\n${message}` : message,
     messageRole,
     imageAttachments,
     conversationHistory,
-    plans: plans as Array<typeof plans[0] & {
+    plans: scopedPlans as Array<typeof plans[0] & {
       sessions: Array<{ id: string; planId: string; activityId: string; date: Date; quantity: number; descriptiveGuide: string; isCoachSuggested: boolean; createdAt: Date; imageUrls: string[] }>;
       milestones: Array<{ id: string; planId: string; date: Date; description: string; progress: number | null; criteria: unknown; createdAt: Date }>;
     }>,
@@ -308,6 +325,11 @@ async function runCoachV2MessagePipeline(params: {
     },
   });
 
+  if (planScopedReply && v2Response.draftMessages.some(draft =>
+    draft.planCreationProposals?.length ||
+    draft.planProposals?.some(proposal => proposal.planId !== serializedUserMessage.planId)))
+    throw new Error("Plan-scoped coach reply proposed an unrelated plan");
+
   const savedMessages: Awaited<ReturnType<typeof prisma.message.create>>[] = [];
   const hasNewPlanCreationProposal = v2Response.draftMessages.some(
     (draft) => (draft.planCreationProposals?.length || 0) > 0
@@ -318,7 +340,11 @@ async function runCoachV2MessagePipeline(params: {
         chatId,
         role: "COACH",
         content: draft.content,
+        planId: typeof serializedUserMessage.planId === "string" ? serializedUserMessage.planId : null,
         metadata: {
+          healthDataAccess: v2Response.healthDataAccess ? JSON.parse(JSON.stringify(v2Response.healthDataAccess)) : [],
+          planBasis: Object.fromEntries(plans.filter(p => draft.planProposals?.some(proposal => proposal.planId === p.id)).map(p => [p.id, planProposalBasis(p)])),
+          requiresReply: draft.requiresReply || false,
           planReplacements: draft.planReplacements || [],
           planProposals: JSON.parse(JSON.stringify(draft.planProposals || [])),
           planCreationProposals: JSON.parse(JSON.stringify(draft.planCreationProposals || [])),
@@ -334,6 +360,7 @@ async function runCoachV2MessagePipeline(params: {
     });
     savedMessages.push(coachMsg);
   }
+  await recordCoachRequests(user.id, savedMessages);
 
   if (hasNewPlanCreationProposal) {
     await cancelPendingPlanCreationProposals(
@@ -349,7 +376,7 @@ async function runCoachV2MessagePipeline(params: {
 
   const fullCoachText = v2Response.draftMessages.map((d) => d.content).join("\n");
   const lastSavedMessage = savedMessages[savedMessages.length - 1];
-  if (lastSavedMessage) {
+  if (lastSavedMessage && !hasHealthContext && !v2Response.healthDataAccess?.length) {
     supermemoryService.addMemory(
       user.id,
       `${messageRole === "system" ? "system" : "user"}: ${memoryQuery}\nassistant: ${fullCoachText}`,
@@ -358,12 +385,16 @@ async function runCoachV2MessagePipeline(params: {
   }
 
   logger.info(
-    `${logLabel} - User: ${user.username}, Message: "${message.substring(0, 50)}...", Drafts: ${savedMessages.length}`
+    `${logLabel} - User: ${user.id}, Drafts: ${savedMessages.length}`
   );
 
   if (!chat.title) {
     (async () => {
       try {
+        if (hasHealthContext || v2Response.healthDataAccess?.length) {
+          await prisma.chat.update({ where: { id: chatId }, data: { title: "Coach conversation" } });
+          return;
+        }
         const titlePrompt = `${messageRole === "system" ? "System" : "User"}: ${message}\nCoach: ${fullCoachText}`;
         const titleSystemPrompt =
           "You are a chat title generator. Create a very brief title (3-5 words max) that summarizes the topic of this conversation. " +
@@ -956,6 +987,8 @@ router.get(
               return {
                 id: msg.id,
                 chatId: msg.chatId,
+                planId: msg.planId,
+                planIds: (msg.metadata as any)?.planIds || [],
                 role: msg.role,
                 content: msg.content,
                 status: msg.status,
@@ -976,6 +1009,7 @@ router.get(
                 retryable: metadata.retryable ?? isCoachGenerationError,
                 retryCount: metadata.retryCount || 0,
                 source: metadata.source || null,
+                requiresReply: metadata.requiresReply || false,
                 createdAt: msg.createdAt,
                 feedback: msg.feedback,
               };
@@ -985,6 +1019,8 @@ router.get(
             return {
               id: msg.id,
               chatId: msg.chatId,
+                planId: msg.planId,
+                planIds: (msg.metadata as any)?.planIds || [],
               role: msg.role,
               content: msg.content,
               status: msg.status,
@@ -1006,6 +1042,8 @@ router.get(
           return {
             id: msg.id,
             chatId: msg.chatId,
+                planId: msg.planId,
+                planIds: (msg.metadata as any)?.planIds || [],
             role: msg.role,
             content: msg.content,
             status: msg.status,
@@ -1029,6 +1067,8 @@ router.get(
         return {
           id: msg.id,
           chatId: msg.chatId,
+                planId: msg.planId,
+                planIds: (msg.metadata as any)?.planIds || [],
           role: msg.role,
           content: msg.content,
           status: msg.status,
@@ -1156,6 +1196,7 @@ router.post(
           chatId,
           role: "USER",
           content: messageText,
+          planId: await ownedMessagePlan(user.id, req.body.planId),
           senderId: user.id,
           ...(imageAttachments.length && {
             metadata: {
@@ -1291,6 +1332,7 @@ router.post(
           chatId: chatId,
           role: "USER",
           content: messageText,
+          planId: await ownedMessagePlan(user.id, req.body.planId),
           senderId: user.id,
           ...(imageAttachments.length && {
             metadata: {

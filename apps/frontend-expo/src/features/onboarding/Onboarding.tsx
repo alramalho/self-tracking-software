@@ -3,6 +3,7 @@ import { AppState, Keyboard, Pressable, TextInput, View } from "react-native";
 import {
   CalendarDays,
   Goal,
+  Heart,
   Route,
   Sparkles,
   HeartHandshake,
@@ -29,20 +30,36 @@ import { useFollowThrough } from "@/features/follow-through/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
+import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
 import { PlanSummary } from "./interview/PlanSummary";
+import { onboardingPreferences } from "./preferences";
+import { CoachingTour } from "./CoachingTour";
+import { PlanConclusion } from "./PlanConclusion";
+import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
-import { GoalGuidance, initialGoalGuidance } from "./interview/GoalGuidance";
+import { GoalGuidance, guidanceForStage, guidanceStep, initialGoalGuidance } from "./interview/GoalGuidance";
 import {
+  acceptContext,
   acceptGoal,
   applyFacts,
   normalizeInterviewState,
   nextStage,
   recordTurn,
+  reopenInterviewStage,
   startInterview,
   stages,
+  weeklyFrequencyQuestion,
+  weeklyFrequencyQuestionTitle,
 } from "./interview/model";
 import type { CoachingOffer, OnboardingProps } from "./types";
+
+function frequencyFromAnswer(answer: string | undefined, fallback: number) {
+  const count = Number.parseInt(answer || "", 10);
+  return Number.isInteger(count) && count >= 1 && count <= 7
+    ? count
+    : fallback;
+}
 
 export default function Onboarding({
   preview = false,
@@ -60,15 +77,17 @@ export default function Onboarding({
     startInterview(draft),
   );
   const [answer, setAnswer] = useState(initialGoal?.trim() ?? "");
+  const [weeklyFrequency, setWeeklyFrequency] = useState(draft.frequency);
   const [candidate, setCandidate] = useState<InterviewResult>();
   const [validation, setValidation] = useState<InterviewResult>();
   const [validationReady, setValidationReady] = useState(false);
   const [goalGuidance, setGoalGuidance] =
-    useState<GoalGuidanceResult>(initialGoalGuidance);
+    useState<GoalGuidanceResult>(() => initialGoalGuidance("goal"));
   const [goalGuidanceBusy, setGoalGuidanceBusy] = useState(false);
   const [history, setHistory] = useState<InterviewState[]>([]);
   const [paywall, setPaywall] = useState(false),
     [finished, setFinished] = useState(false);
+  const [tourStep, setTourStep] = useState<number | null>(null);
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false),
     [checking, setChecking] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -95,11 +114,21 @@ export default function Onboarding({
       value.interview || startInterview(value),
     );
     setState(interview);
+    setWeeklyFrequency(
+      frequencyFromAnswer(
+        interview.turns.at(-1)?.stage === "rhythm"
+          ? interview.turns.at(-1)?.answer
+          : undefined,
+        interview.pending?.facts.frequency ?? interview.facts.frequency,
+      ),
+    );
     // A draft from the old flow could be paused on the now-removed coach
     // validation screen. Let Jev re-check it on the goal screen instead.
     setCandidate(undefined);
     setValidation(undefined);
     setPaywall(value.step === "interview-finish");
+    const savedTour = /^coaching-tour-([0-2])$/.exec(value.step);
+    setTourStep(savedTour ? Number(savedTour[1]) : null);
     setAwaitingUpgrade(!!value.awaitingUpgrade);
     upgradeIntent.current = !!value.awaitingUpgrade;
     // Old drafts keep their goal, schedule and activity; the coach confirms them in the new interview.
@@ -108,7 +137,7 @@ export default function Onboarding({
   }, [saved.data, preview]);
   useEffect(() => {
     if (
-      state.stage !== "goal" ||
+      !["goal", "baseline", "motivation"].includes(state.stage) ||
       !!candidate ||
       !!validation ||
       paywall ||
@@ -118,7 +147,7 @@ export default function Onboarding({
     const text = answer.trim();
     const requestId = ++guidanceRequest.current;
     if (text.length < 3) {
-      setGoalGuidance(initialGoalGuidance);
+      setGoalGuidance(initialGoalGuidance(state.stage));
       setGoalGuidanceBusy(false);
       return;
     }
@@ -126,20 +155,22 @@ export default function Onboarding({
     const timer = setTimeout(() => {
       void api
         .post<GoalGuidanceResult>("/follow-through/onboarding/goal-guidance", {
+          step: guidanceStep(state.stage),
           answer: text,
+          goal: state.facts.goal || undefined,
           activityTitle: state.facts.activityTitle || undefined,
         })
         .then(({ data }) => {
-          if (guidanceRequest.current === requestId) setGoalGuidance(data);
+          if (guidanceRequest.current === requestId) setGoalGuidance(guidanceForStage(data, state.stage));
         })
         .catch(() => {
           // Jev is the goal gate now; do not silently treat an unavailable
           // evaluator as approval.
           if (guidanceRequest.current === requestId) {
             setGoalGuidance({
-              requirements: initialGoalGuidance.requirements.map((item) => ({
+              requirements: initialGoalGuidance(state.stage).requirements.map((item) => ({
                 ...item,
-                passed: !item.required,
+                detail: "Couldn’t check this answer. Try again, or skip this optional step.",
               })),
             });
           }
@@ -158,6 +189,7 @@ export default function Onboarding({
     finished,
     paywall,
     state.facts.activityTitle,
+    state.facts.goal,
     state.stage,
     validation,
   ]);
@@ -165,6 +197,50 @@ export default function Onboarding({
     if (!preview) await api.put("/follow-through/onboarding/draft", value);
     setDraft(value);
   };
+  async function commitAccepted(
+    source: InterviewState,
+    baseDraft: OnboardingDraft,
+    result: InterviewResult,
+    selectedAnswer?: string,
+  ) {
+    const answered = selectedAnswer === undefined
+      ? source
+      : recordTurn(source, selectedAnswer, result);
+    const next = { ...nextStage(answered, result), pending: undefined };
+    const done = source.stage === "review";
+    const selectedCoaching = source.stage === "support" && result.facts.wantsCoaching;
+    const nextDraft: OnboardingDraft = {
+      ...applyFacts(baseDraft, result.facts),
+      interview: next,
+      answers: answered.turns.map((turn) => ({
+        question: turn.question,
+        answer: turn.answer,
+        use: turn.feedback.slice(0, 400),
+      })),
+      step: done ? "interview-finish" : selectedCoaching ? "coaching-tour-0" : "interview",
+    };
+    if (source.stage === "support") {
+      nextDraft.coaching = selectedCoaching
+        ? { ...initialCoaching(), role: result.facts.coachingRole ?? "consistency" }
+        : initialCoaching();
+      nextDraft.preferences = {
+        ...onboardingPreferences(baseDraft),
+        coaching: selectedCoaching,
+        weeklyReview: selectedCoaching,
+        // Training plans get a "did it happen?" check after each planned session.
+        checkIn: selectedCoaching && result.facts.coachingRole === "training",
+      };
+    }
+    await persist(nextDraft);
+    setHistory((h) => [...h, ...(selectedAnswer === undefined ? [] : [source]), answered]);
+    setState(next);
+    setCandidate(undefined);
+    setValidation(undefined);
+    setValidationReady(false);
+    setAnswer("");
+    setPaywall(done);
+    if (source.stage === "support") setTourStep(selectedCoaching ? 0 : null);
+  }
   const gate = useMutation({
     mutationFn: async (text: string) => {
       Keyboard.dismiss();
@@ -191,6 +267,23 @@ export default function Onboarding({
         setAnswer("");
         return;
       }
+      if (state.stage === "baseline" || state.stage === "motivation") {
+        const next = acceptContext(state, text);
+        await persist({
+          ...draft,
+          interview: next,
+          step: "interview",
+          answers: next.turns.map((turn) => ({
+            question: turn.question,
+            answer: turn.answer,
+            use: turn.feedback.slice(0, 400),
+          })),
+        });
+        setHistory((h) => [...h, state]);
+        setState(next);
+        setAnswer("");
+        return;
+      }
       const result = (
         await api.post<InterviewResult>(
           "/follow-through/onboarding/interview",
@@ -202,6 +295,10 @@ export default function Onboarding({
           { timeout: 90000 },
         )
       ).data;
+      if (state.stage === "support" && result.accepted) {
+        await commitAccepted(state, draft, result, text);
+        return;
+      }
       const next = recordTurn(state, text, result);
       if (result.accepted) next.pending = result;
       await persist({
@@ -225,22 +322,15 @@ export default function Onboarding({
   const accept = useMutation({
     mutationFn: async () => {
       if (!candidate?.accepted) return;
-      const next = { ...nextStage(state, candidate), pending: undefined };
-      const done = state.stage === "review";
-      await persist({
-        ...applyFacts(draft, candidate.facts),
-        interview: next,
-        step: done ? "interview-finish" : "interview",
-      });
-      setHistory((h) => [...h, state]);
-      setState(next);
-      setCandidate(undefined);
-      setValidation(undefined);
-      setValidationReady(false);
-      setAnswer("");
-      setPaywall(done);
+      await commitAccepted(state, draft, candidate);
     },
   });
+  async function advanceTour() {
+    if (tourStep === null) return;
+    const next = tourStep + 1;
+    await persist({ ...draft, step: next < 3 ? `coaching-tour-${next}` : "interview" });
+    setTourStep(next < 3 ? next : null);
+  }
   const complete = useMutation({
     mutationFn: async (coaching: boolean) => {
       if (preview) {
@@ -265,7 +355,12 @@ export default function Onboarding({
           await api.post<{ planId: string }>(
             "/follow-through/onboarding/finish",
             {
-              draft: { ...draft, awaitingUpgrade: false },
+              draft: {
+                ...draft,
+                awaitingUpgrade: false,
+                coaching: coaching ? draft.coaching : initialCoaching(),
+                wantsCoaching: coaching,
+              },
               preferences: {
                 ...preferences,
                 coaching,
@@ -379,15 +474,20 @@ export default function Onboarding({
     checkout.error ||
     (!preview && saved.error) ||
     (paywall && offer.error);
+  const askingWeeklyFrequency =
+    state.stage === "rhythm" &&
+    state.question.title === weeklyFrequencyQuestionTitle;
+  const submittedAnswer = () =>
+    askingWeeklyFrequency
+      ? `${weeklyFrequency} sessions a week`
+      : answer.trim() || "I confirm this plan fits my goal and my week.";
   const retryStatus = () => {
     if (error) {
       setError(undefined);
       return;
     }
     if (gate.error) {
-      gate.mutate(
-        answer.trim() || "I confirm this plan fits my goal and my week.",
-      );
+      gate.mutate(submittedAnswer());
     } else if (accept.error && candidate?.accepted) {
       accept.mutate();
     } else if (complete.error) {
@@ -415,12 +515,14 @@ export default function Onboarding({
     setDraft(nextDraft);
     setState(startInterview(nextDraft));
     setAnswer(goal);
+    setWeeklyFrequency(nextDraft.frequency);
     setCandidate(undefined);
     setValidation(undefined);
     setValidationReady(false);
-    setGoalGuidance(initialGoalGuidance);
+    setGoalGuidance(initialGoalGuidance("goal"));
     setHistory([]);
     setPaywall(false);
+    setTourStep(null);
     setFinished(false);
     setAwaitingUpgrade(false);
     upgradeIntent.current = false;
@@ -432,6 +534,14 @@ export default function Onboarding({
     }
   }
   async function back() {
+    if (tourStep !== null) {
+      if (tourStep > 0) {
+        await persist({ ...draft, step: `coaching-tour-${tourStep - 1}` });
+        setTourStep(tourStep - 1);
+        return;
+      }
+      setTourStep(null);
+    }
     const validationAnswer = validation
       ? state.turns.at(-1)?.answer
       : undefined;
@@ -441,57 +551,109 @@ export default function Onboarding({
     gate.reset();
     accept.reset();
     if (paywall) {
-      await persist({ ...draft, step: "interview", awaitingUpgrade: false });
+      const reviewStartIndex = history.findLastIndex(
+        (entry) => entry.stage === "review" && !entry.turns.some((turn) => turn.stage === "review"),
+      );
+      const reviewStart = history[reviewStartIndex];
+      await persist({
+        ...draft,
+        interview: reviewStart ?? state,
+        step: "interview",
+        awaitingUpgrade: false,
+      });
+      if (reviewStart) {
+        setState(reviewStart);
+        setHistory((h) => h.slice(0, reviewStartIndex));
+      }
       upgradeIntent.current = false;
       setAwaitingUpgrade(false);
       setPaywall(false);
       return;
     }
-    const previous = history.at(-1);
+    if (!validation && tourStep === null && state.stage === "review" && state.facts.wantsCoaching) {
+      await persist({ ...draft, step: "coaching-tour-2" });
+      setTourStep(2);
+      return;
+    }
+    // A completed question produces both pre-answer and accepted snapshots.
+    // Reopen the earliest snapshot for that stage so a correction does not
+    // carry the previous answer into the next coach request.
+    const previousIndex = validation
+      ? history.length - 1
+      : history.findLastIndex((entry) => entry.stage !== state.stage);
+    const previous = history[previousIndex];
     if (previous) {
-      await persist({ ...draft, interview: previous });
-      setState(previous);
-      setCandidate(previous.pending);
-      setAnswer(
+      let stageStartIndex = previousIndex;
+      while (
+        stageStartIndex > 0 &&
+        history[stageStartIndex - 1].stage === previous.stage
+      )
+        stageStartIndex--;
+      const editable = reopenInterviewStage(
+        history[stageStartIndex],
+        previous.stage,
+      );
+      const priorAnswer =
         validationAnswer ||
+        [...state.turns]
+          .reverse()
+          .find((turn) => turn.stage === previous.stage)?.answer ||
+        [...previous.turns]
+          .reverse()
+          .find((turn) => turn.stage === previous.stage)?.answer;
+      await persist({ ...draft, interview: editable });
+      setState(editable);
+      setCandidate(undefined);
+      if (previous.stage === "rhythm")
+        setWeeklyFrequency(
+          frequencyFromAnswer(
+            priorAnswer,
+            previous.pending?.facts.frequency ?? previous.facts.frequency,
+          ),
+        );
+      setAnswer(
+        priorAnswer ||
           (previous.stage === "goal" ? draft.goal || previous.facts.goal : ""),
       );
-      setHistory((h) => h.slice(0, -1));
+      setHistory((h) => h.slice(0, stageStartIndex));
     } else if (state.stage !== "goal") {
       const stage = stages[Math.max(0, stages.indexOf(state.stage) - 1)];
       const prior = [...state.turns]
         .reverse()
         .find((turn) => turn.stage === stage);
-      const next = {
-        ...state,
-        stage,
-        pending: undefined,
-        question: {
-          title: prior?.question || "What would you like to change?",
-          purpose: "Your later answers will be checked against this change.",
-          options: [],
-        },
-        confirmed: state.confirmed.filter(
-          (value) => stages.indexOf(value) < stages.indexOf(stage),
-        ),
-      };
+      const question =
+        stage === "rhythm" &&
+        prior?.question === weeklyFrequencyQuestionTitle
+          ? weeklyFrequencyQuestion
+          : {
+              title: prior?.question || "What would you like to change?",
+              purpose:
+                "Your later answers will be checked against this change.",
+              options: [],
+            };
+      const next = reopenInterviewStage(state, stage, question);
       await persist({ ...draft, interview: next });
       setState(next);
       setCandidate(undefined);
       setAnswer(prior?.answer || "");
+      if (stage === "rhythm")
+        setWeeklyFrequency(
+          frequencyFromAnswer(prior?.answer, state.facts.frequency),
+        );
     }
   }
   const Icon = {
     goal: Goal,
     baseline: Route,
+    motivation: Heart,
     rhythm: CalendarDays,
     support: HeartHandshake,
     review: Sparkles,
   }[state.stage];
   const lastTurn = state.turns.at(-1);
   const showingValidation =
-    (gate.isPending && state.stage !== "goal") || !!validation;
-  const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${paywall}-${finished}`;
+    (gate.isPending && state.stage !== "goal" && state.stage !== "support") || !!validation;
+  const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${tourStep}-${paywall}-${finished}`;
   const continueValidation = () => {
     if (!validation) return;
     if (validation.accepted) {
@@ -507,12 +669,9 @@ export default function Onboarding({
     setCandidate(undefined);
     setAnswer(lastTurn?.answer || "");
   };
-  const goalGuidanceBlocked =
-    state.stage === "goal" &&
-    !goalGuidanceBusy &&
-    goalGuidance.requirements.some(
-      (requirement) => requirement.required && !requirement.passed,
-    );
+  const checkingContext = ["goal", "baseline", "motivation"].includes(state.stage);
+  const goalGuidanceBlocked = checkingContext &&
+    (!goalGuidance.requirements[0]?.passed || goalGuidance.requirements[0]?.key !== guidanceStep(state.stage));
   const action = showingValidation ? (
     gate.isPending || !validation || !validationReady ? (
       <Text style={{ color: c.muted, textAlign: "center", fontSize: 13 }}>
@@ -547,6 +706,12 @@ export default function Onboarding({
     )
   ) : finished ? (
     <EditorButton label="Back to Settings" onPress={goBack} />
+  ) : tourStep !== null ? (
+    <EditorButton
+      label={tourStep === 2 ? "Review my plan" : "Continue"}
+      busy={busy}
+      onPress={() => void advanceTour().catch(setError)}
+    />
   ) : paywall ? (
     <>
       {state.facts.wantsCoaching &&
@@ -599,7 +764,12 @@ export default function Onboarding({
         }}
       />
     </>
+  ) : state.stage === "support" ? (
+    <Text style={{ color: c.muted, textAlign: "center", fontSize: 13 }}>
+      Choose how you want to use this plan.
+    </Text>
   ) : (
+    <>
     <EditorButton
       label={
         gate.isPending
@@ -613,17 +783,24 @@ export default function Onboarding({
         busy ||
         goalGuidanceBlocked ||
         goalGuidanceBusy ||
-        (state.stage !== "review" && !answer.trim()) ||
+        (state.stage !== "review" &&
+          !askingWeeklyFrequency &&
+          !answer.trim()) ||
         (!preview && saved.isPending)
       }
-      onPress={() =>
-        gate.mutate(
-          answer.trim() || "I confirm this plan fits my goal and my week.",
-        )
-      }
+      onPress={() => gate.mutate(submittedAnswer())}
     />
+    {(state.stage === "baseline" || state.stage === "motivation") && (
+      <EditorButton
+        label="Skip for now"
+        secondary
+        disabled={busy}
+        onPress={() => gate.mutate("")}
+      />
+    )}
+    </>
   );
-  const actionWithStartOver = finished ? (
+  const actionWithStartOver = finished || tourStep !== null || paywall || state.stage !== "goal" ? (
     action
   ) : (
     <>
@@ -639,6 +816,7 @@ export default function Onboarding({
   return (
     <InterviewFrame
       stage={state.stage}
+      progress={tourStep !== null ? { current: tourStep + 1, total: 3, label: "Your coach" } : paywall ? { current: 1, total: 1, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" } : undefined}
       preview={preview}
       busy={busy}
       backDisabled={!paywall && !history.length && state.stage === "goal"}
@@ -654,19 +832,28 @@ export default function Onboarding({
           strategist={user.data?.coachPersonality === "STRATEGIST"}
           onMessageRendered={() => setValidationReady(true)}
         />
+      ) : tourStep !== null ? (
+        <CoachingTour
+          step={tourStep}
+          facts={state.facts}
+          coaching={draft.coaching ?? { ...initialCoaching(), role: state.facts.coachingRole ?? "consistency" }}
+          preferences={onboardingPreferences(draft)}
+          onCoaching={(coaching) => setDraft((current) => ({ ...current, coaching }))}
+          onPreferences={(preferences) => setDraft((current) => ({ ...current, preferences }))}
+        />
       ) : (
         <>
           <Reveal key={`heading-${stepKey}`}>
-            <View style={{ alignItems: "center", gap: 24 }}>
-              <View style={{ height: 100, justifyContent: "center" }}>
+            <View style={{ alignItems: "center", gap: paywall ? 14 : 24 }}>
+              {!paywall && <View style={{ height: 100, justifyContent: "center" }}>
                 <Icon size={80} strokeWidth={1.4} color={c.accent} />
-              </View>
+              </View>}
               <Text
                 accessibilityRole="header"
                 style={{
                   color: c.text,
-                  fontSize: 28,
-                  lineHeight: 35,
+                  fontSize: paywall ? 26 : 28,
+                  lineHeight: paywall ? 32 : 35,
                   fontWeight: "700",
                   textAlign: "center",
                   letterSpacing: -0.5,
@@ -676,15 +863,15 @@ export default function Onboarding({
                   ? "Your preview is complete"
                   : paywall
                     ? state.facts.wantsCoaching
-                      ? "A plan. And support to follow through."
-                      : "Your plan, your pace."
+                      ? paid ? "Your plan is ready." : "Your plan is ready. Your coach is next."
+                      : "Your plan is ready."
                     : state.question.title}
               </Text>
               <Text
                 style={{
                   color: c.muted,
-                  fontSize: 16,
-                  lineHeight: 24,
+                  fontSize: paywall ? 15 : 16,
+                  lineHeight: paywall ? 22 : 24,
                   textAlign: "center",
                 }}
               >
@@ -692,8 +879,10 @@ export default function Onboarding({
                   ? "You used the same interview and AI checks as a new member. This preview hasn’t created a plan or started a subscription."
                   : paywall
                     ? state.facts.wantsCoaching
-                      ? "Keep the plan we built together. Choose coaching for guidance, or begin with free tracking."
-                      : "Track your sessions and see your progress. You can add coaching later."
+                      ? paid
+                        ? "Set up the first week with your coach, or keep this plan as free tracking."
+                        : "Start your trial to set up the first week with your coach. Or keep this plan and track it for free."
+                      : "Start tracking your sessions for free. You can add coaching later."
                     : state.question.purpose}
               </Text>
             </View>
@@ -701,98 +890,131 @@ export default function Onboarding({
           {!finished && (
             <Reveal key={`content-${stepKey}`} delay={100}>
               <View style={{ gap: 16 }}>
-                {state.stage === "review" && (
-                  <PlanSummary facts={state.facts} />
-                )}
-                {state.stage === "goal" && (
-                  <GoalGuidance
-                    result={goalGuidance}
-                    loading={goalGuidanceBusy}
-                  />
-                )}
+                {paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />}
+                {state.stage === "review" && !paywall && <PlanSummary facts={state.facts} />}
                 {!candidate && !paywall && (
                   <>
                     {lastTurn && !lastTurn.accepted && (
                       <CoachSuggestion message={lastTurn.feedback} />
                     )}
-                    {state.question.options.map((option) => (
-                      <Pressable
-                        key={option}
-                        accessibilityRole="button"
-                        accessibilityLabel={option}
+                    {askingWeeklyFrequency ? (
+                      <WeeklyFrequencyPicker
+                        value={weeklyFrequency}
+                        onChange={setWeeklyFrequency}
                         disabled={busy}
-                        onPress={() => {
-                          setAnswer(option);
-                          gate.mutate(option);
-                        }}
-                        style={({ pressed }) => ({
-                          minHeight: 54,
-                          padding: 16,
-                          borderRadius: 14,
-                          borderWidth: 1,
-                          borderColor: c.inputBorder,
-                          backgroundColor: c.card,
-                          opacity: pressed || busy ? 0.6 : 1,
-                        })}
-                      >
-                        <Text
-                          style={{
-                            color: c.text,
-                            fontSize: 15,
-                            lineHeight: 21,
-                          }}
-                        >
-                          {option}
-                        </Text>
-                      </Pressable>
-                    ))}
-                    <View style={{ position: "relative" }}>
-                      <TextInput
-                        accessibilityLabel="Your answer"
-                        testID="onboarding-answer"
-                        value={answer}
-                        onChangeText={setAnswer}
-                        editable={!busy}
-                        multiline
-                        placeholder={
-                          state.stage === "goal"
-                            ? "I’d love to…"
-                            : state.stage === "review"
-                              ? "Anything you’d like to change?"
-                              : "In your own words…"
-                        }
-                        placeholderTextColor={c.muted}
-                        style={{
-                          minHeight: state.stage === "review" ? 90 : 132,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: c.inputBorder,
-                          backgroundColor: c.card,
-                          padding: 18,
-                          paddingRight: 68,
-                          paddingBottom: 58,
-                          fontSize: 17,
-                          lineHeight: 25,
-                          color: c.text,
-                          textAlignVertical: "top",
-                        }}
                       />
-                      <View
-                        style={{ position: "absolute", right: 12, bottom: 12 }}
-                      >
-                        <DictationButton
-                          disabled={requestBusy}
-                          onBusyChange={setDictationBusy}
-                          onError={setError}
-                          onTranscript={(transcript) =>
-                            setAnswer(
-                              (current) =>
-                                `${current.trimEnd()}${current.trim() ? " " : ""}${transcript}`,
-                            )
-                          }
-                        />
+                    ) : state.stage === "support" ? (
+                      <View style={{ gap: 14 }}>
+                        {state.question.options.map((option) => (
+                          <Pressable
+                            key={option}
+                            accessibilityRole="button"
+                            accessibilityLabel={option}
+                            disabled={busy}
+                            onPress={() => gate.mutate(option)}
+                            style={({ pressed }) => ({
+                              minHeight: 72,
+                              padding: 18,
+                              borderRadius: 16,
+                              backgroundColor: c.card,
+                              opacity: pressed || busy ? 0.6 : 1,
+                              gap: 5,
+                            })}
+                          >
+                            <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>{option}</Text>
+                            <Text style={{ color: c.muted, fontSize: 14, lineHeight: 20 }}>
+                              {option.toLowerCase().includes("coach")
+                                ? "Get guidance, check-ins and changes to review. Try it free before deciding."
+                                : "Keep your plan and progress, without a subscription."}
+                            </Text>
+                          </Pressable>
+                        ))}
                       </View>
-                    </View>
+                    ) : (
+                      <>
+                        {state.question.options.map((option) => (
+                          <Pressable
+                            key={option}
+                            accessibilityRole="button"
+                            accessibilityLabel={option}
+                            disabled={busy}
+                            onPress={() => {
+                              setAnswer(option);
+                              gate.mutate(option);
+                            }}
+                            style={({ pressed }) => ({
+                              minHeight: 54,
+                              padding: 16,
+                              borderRadius: 14,
+                              borderWidth: 1,
+                              borderColor: c.inputBorder,
+                              backgroundColor: c.card,
+                              opacity: pressed || busy ? 0.6 : 1,
+                            })}
+                          >
+                            <Text
+                              style={{
+                                color: c.text,
+                                fontSize: 15,
+                                lineHeight: 21,
+                              }}
+                            >
+                              {option}
+                            </Text>
+                          </Pressable>
+                        ))}
+                        <View style={{ position: "relative" }}>
+                          <TextInput
+                            accessibilityLabel="Your answer"
+                            testID="onboarding-answer"
+                            value={answer}
+                            onChangeText={setAnswer}
+                            editable={!busy}
+                            multiline
+                            placeholder={
+                              state.stage === "goal"
+                                ? "I’d love to…"
+                                : state.stage === "review"
+                                  ? "Anything you’d like to change?"
+                                  : "In your own words…"
+                            }
+                            placeholderTextColor={c.muted}
+                            style={{
+                              minHeight: state.stage === "review" ? 90 : 132,
+                              borderRadius: 16,
+                              borderWidth: 1,
+                              borderColor: c.inputBorder,
+                              backgroundColor: c.card,
+                              padding: 18,
+                              paddingRight: 68,
+                              paddingBottom: 58,
+                              fontSize: 17,
+                              lineHeight: 25,
+                              color: c.text,
+                              textAlignVertical: "top",
+                            }}
+                          />
+                          <View
+                            style={{ position: "absolute", right: 12, bottom: 12 }}
+                          >
+                            <DictationButton
+                              disabled={requestBusy}
+                              onBusyChange={setDictationBusy}
+                              onError={setError}
+                              onTranscript={(transcript) =>
+                                setAnswer(
+                                  (current) =>
+                                    `${current.trimEnd()}${current.trim() ? " " : ""}${transcript}`,
+                                )
+                              }
+                            />
+                          </View>
+                        </View>
+                        {checkingContext && answer.trim().length >= 3 && (
+                          <GoalGuidance result={goalGuidance} loading={goalGuidanceBusy} />
+                        )}
+                      </>
+                    )}
                   </>
                 )}
                 {paywall &&
@@ -801,7 +1023,7 @@ export default function Onboarding({
                   offer.data && (
                     <View
                       style={{
-                        padding: 20,
+                        padding: 16,
                         borderRadius: 16,
                         backgroundColor: c.card,
                         gap: 8,
@@ -839,9 +1061,9 @@ export default function Onboarding({
                   <Text
                     style={{ color: c.muted, fontSize: 13, lineHeight: 20 }}
                   >
-                    Preview only. Neither choice charges you or creates a plan.
-                    A real member continues into their plan after access is
-                    confirmed.
+                    {state.facts.wantsCoaching
+                      ? "Preview only. No plan or subscription starts here."
+                      : "Preview only. No plan is created here."}
                   </Text>
                 )}
               </View>

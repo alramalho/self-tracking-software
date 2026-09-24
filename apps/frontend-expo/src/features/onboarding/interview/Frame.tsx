@@ -13,6 +13,7 @@ import { stageLabels, stages } from "./model";
 import type { InterviewFrameProps } from "./types";
 export function InterviewFrame({
   stage,
+  progress,
   preview,
   busy,
   onBack,
@@ -57,7 +58,9 @@ export function InterviewFrame({
           />
           <Text style={{ color: c.muted, fontSize: 13, fontWeight: "500" }}>
             {preview ? "Preview · " : ""}
-            {index + 1} of {stages.length} · {stageLabels[stage]}
+            {progress
+              ? `${progress.current} of ${progress.total} · ${progress.label}`
+              : `${index + 1} of ${stages.length} · ${stageLabels[stage]}`}
           </Text>
           <IconButton
             label="Close onboarding"
@@ -69,20 +72,20 @@ export function InterviewFrame({
         <View
           accessibilityRole="progressbar"
           accessibilityLabel="Onboarding progress"
-          accessibilityValue={{ min: 0, max: stages.length, now: index + 1 }}
+          accessibilityValue={{ min: 0, max: progress?.total ?? stages.length, now: progress?.current ?? index + 1 }}
           aria-valuemin={0}
-          aria-valuemax={stages.length}
-          aria-valuenow={index + 1}
+          aria-valuemax={progress?.total ?? stages.length}
+          aria-valuenow={progress?.current ?? index + 1}
           style={{ flexDirection: "row", gap: 5 }}
         >
-          {stages.map((key, i) => (
+          {Array.from({ length: progress?.total ?? stages.length }, (_, i) => (
             <View
-              key={key}
+              key={i}
               style={{
                 height: 4,
                 flex: 1,
                 borderRadius: 3,
-                backgroundColor: i <= index ? c.accent : c.soft,
+                backgroundColor: i < (progress?.current ?? index + 1) ? c.accent : c.soft,
               }}
             />
           ))}
@@ -102,7 +105,7 @@ export function InterviewFrame({
             contentContainerStyle={{
               flexGrow: 1,
               paddingHorizontal: 28,
-              paddingTop: 32,
+              paddingTop: progress?.label === "Your coach" ? 12 : 32,
               paddingBottom: 32,
             }}
           >

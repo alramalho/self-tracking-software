@@ -31,6 +31,7 @@ export interface PreviewButtonProps {
   children?: ReactNode;
 }
 export interface ProposalReviewProps {
+  onViewAccepted?: () => void;
   label: string;
   title: string;
   emoji?: string | null;

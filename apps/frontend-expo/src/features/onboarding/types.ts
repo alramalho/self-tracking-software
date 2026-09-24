@@ -24,3 +24,16 @@ export interface OnboardingProps {
   preview?: boolean;
   initialGoal?: string;
 }
+export interface CoachingTourProps {
+  step: number;
+  facts: import("@tsw/prisma/follow-through").InterviewFacts;
+  coaching: import("@tsw/prisma/follow-through").PlanCoaching;
+  preferences: import("@tsw/prisma/follow-through").SupportPreferences;
+  onCoaching: (coaching: import("@tsw/prisma/follow-through").PlanCoaching) => void;
+  onPreferences: (preferences: import("@tsw/prisma/follow-through").SupportPreferences) => void;
+}
+export interface PlanConclusionProps {
+  facts: import("@tsw/prisma/follow-through").InterviewFacts;
+  coaching?: import("@tsw/prisma/follow-through").PlanCoaching;
+  preferences?: import("@tsw/prisma/follow-through").SupportPreferences;
+}

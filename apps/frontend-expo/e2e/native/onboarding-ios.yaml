@@ -55,7 +55,7 @@ appId: so.tracking.app
     direction: DOWN
 - tapOn: Preview onboarding
 - tapOn: Start preview
-- assertVisible: Preview.*1 of 5.*Your goal
+- assertVisible: Preview.*1 of 6.*Your goal
 - assertVisible: Dictate answer
 - waitForAnimationToEnd:
     timeout: 3000
@@ -69,24 +69,36 @@ appId: so.tracking.app
 - waitForAnimationToEnd:
     timeout: 3000
 - tapOn: ^Continue$
-- assertVisible: Automatic continue
-- takeScreenshot: onboarding-extraction
-- waitForAnimationToEnd:
-    timeout: 3000
-- tapOn: ^Continue$
-- tapOn: Complete beginner
-- assertVisible: Automatic continue
-- tapOn: ^Continue$
+- assertVisible: Preview.*2 of 6.*Starting point
+- takeScreenshot: onboarding-starting-point
+- tapOn: Skip for now
+- assertVisible: Preview.*3 of 6.*Why it matters
+- takeScreenshot: onboarding-why
+- tapOn: Skip for now
+- assertVisible: Preview.*4 of 6.*Your week
+- assertVisible:
+    id: onboarding-weekly-frequency-value
 - tapOn:
-    id: onboarding-answer
-- inputText: Three times a week for 20 minutes
+    id: onboarding-frequency-increase
+- assertVisible: 4 sessions per week
+- tapOn:
+    id: onboarding-frequency-decrease
+- assertVisible: 3 sessions per week
+- takeScreenshot: onboarding-week
 - tapOn: ^Continue$
 - assertVisible: Automatic continue
 - tapOn: ^Continue$
-- tapOn: Help me shape a plan
-- assertVisible: Automatic continue
+- tapOn: Yes, coach this plan
+- assertVisible:
+    id: coach-tour-role
 - tapOn: ^Continue$
-- assertVisible: Preview.*5 of 5.*Your plan
+- assertVisible:
+    id: coach-tour-contact
+- tapOn: ^Continue$
+- assertVisible:
+    id: coach-tour-data
+- tapOn: Review my plan
+- assertVisible: Preview.*6 of 6.*Your plan
 - takeScreenshot: onboarding-plan
 - waitForAnimationToEnd:
     timeout: 3000

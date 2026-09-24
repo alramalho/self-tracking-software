@@ -1,6 +1,7 @@
 import type { GatewayProviderOptions } from "@ai-sdk/gateway";
+import type { CallSettings } from "ai";
 import type { User } from "@tsw/prisma";
-import { GPT_56_LUNA_MODEL } from "./aiModelIds";
+import { DEEPSEEK_V4_1_FLASH_MODEL, GPT_56_LUNA_MODEL } from "./aiModelIds";
 
 /** Gateway routing (order / only) paired with a model id — see Vercel AI Gateway provider options. */
 export type CoachAgentGatewayRouting = Pick<
@@ -16,6 +17,9 @@ export type CoachAgentModelConfig = {
 export const KIMI_K3_MODEL = "moonshotai/kimi-k3";
 export const DEFAULT_COACH_AGENT_MODEL = GPT_56_LUNA_MODEL;
 export const DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL = GPT_56_LUNA_MODEL;
+// Plan monitoring (first weeks, weekly reviews, lapse messages) runs in the background, so
+// latency matters less than session detail. Compared on 24 Sep 2026: docs/reviews/coaching.
+export const DEFAULT_SCHEDULED_COACH_MODEL = DEEPSEEK_V4_1_FLASH_MODEL;
 export const DEFAULT_COACH_AGENT_VISION_MODEL = "openai/gpt-4.1";
 
 const DEFAULT_COACH_AGENT_FALLBACK_MODELS = [
@@ -34,6 +38,15 @@ export function resolveCoachAgentTemperature(
 ): number | undefined {
   // Kimi K3 fixes temperature at 1.0 and rejects requests that override it.
   return model === KIMI_K3_MODEL ? undefined : 0.5;
+}
+
+export function resolveCoachAgentReasoning(): CallSettings["reasoning"] {
+  const configured = process.env.COACH_AGENT_REASONING?.trim();
+  if (!configured) return undefined;
+  const supported = ["provider-default", "none", "minimal", "low", "medium", "high", "xhigh"] as const;
+  const reasoning = supported.find((value) => value === configured);
+  if (!reasoning) throw new Error("Unsupported COACH_AGENT_REASONING setting");
+  return reasoning;
 }
 
 function getCoachAgentFallbackModels(): string[] {
@@ -64,6 +77,12 @@ export function resolveAutonomousCoachAgentModel(): string {
   return (
     process.env.AUTONOMOUS_COACH_AGENT_MODEL?.trim() ||
     DEFAULT_AUTONOMOUS_COACH_AGENT_MODEL
+  );
+}
+
+export function resolveScheduledCoachModel(): string {
+  return (
+    process.env.SCHEDULED_COACH_MODEL?.trim() || DEFAULT_SCHEDULED_COACH_MODEL
   );
 }
 

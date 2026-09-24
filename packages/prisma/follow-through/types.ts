@@ -1,3 +1,4 @@
+export type * from "./coaching";
 export type CommitmentMode = "WEEKLY" | "DAYS" | "TIMED";
 export type SessionFormat = "LOG" | "TIMER" | "RESOURCE";
 export interface SupportPreferences {
@@ -12,6 +13,7 @@ export interface SupportPreferences {
   reviewTime: string;
 }
 export interface PlanSupport {
+  coaching?: import("./coaching").PlanCoaching;
   planId: string;
   mode: CommitmentMode;
   weekdays: number[];
@@ -36,6 +38,8 @@ export interface PracticeSession {
   timezone: string;
   durationMinutes: number;
   outcome: SessionOutcome;
+  /** SKIPPED because the coach asked and got no reply, not because the person said so. */
+  assumedMissed?: boolean;
   entryId: string | null;
   startedAt: string | null;
   elapsedSeconds: number;
@@ -63,6 +67,7 @@ export interface OnboardingAnswer {
 export type InterviewStage =
   | "goal"
   | "baseline"
+  | "motivation"
   | "rhythm"
   | "support"
   | "review";
@@ -107,6 +112,7 @@ export interface InterviewFacts {
   resourceUrl: string;
   nextStep: string;
   recommendation: "coaching" | "tracking";
+  coachingRole?: "consistency" | "training";
   recommendationReason: string;
   wantsCoaching: boolean;
 }
@@ -141,6 +147,7 @@ export interface GoalGuidanceResult {
   requirements: GoalGuidanceRequirement[];
 }
 export interface OnboardingDraft {
+  coaching?: import("./coaching").PlanCoaching;
   interview?: InterviewState;
   awaitingUpgrade?: boolean;
   id: string;
@@ -168,6 +175,7 @@ export interface OnboardingDraft {
   preferences?: SupportPreferences;
 }
 export interface FollowThroughState {
+  monitoring?: import("./coaching").CoachMonitoringState;
   version: 1;
   enabled: boolean;
   pausedAt: string | null;

@@ -22,6 +22,7 @@ export function createDraftMessagesTool(params: {
     `,
     inputSchema: z.object({
       messages: z.array(z.object({
+        requiresReply: z.boolean().describe("True only if this message asks the user a question that needs an answer. Informational reviews do not require replies."),
         content: z.string().trim().min(1).describe("A short chat message (1-2 sentences). Saved plan/activity mentions must use {{plan:<planId>|<label>}} or {{activity:<activityId>|<label>}}."),
       })).min(1).max(3),
     }),

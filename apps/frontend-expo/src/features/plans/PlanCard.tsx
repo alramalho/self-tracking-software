@@ -1,6 +1,7 @@
+import { PlanCoachingRow } from "./coaching/PlanCoachingRow";
+import { usePlanCoachRequest } from "./coaching/PlanCoachRequest";
 import { SupportEditor } from "../follow-through/SupportEditor";
 import { AchievementGlow } from "./AchievementGlow";
-import { CoachOverview } from "./CoachOverview";
 import { PlanProgressStrip } from "./PlanProgressStrip";
 import { Reveal } from "@/components/reveal/Reveal";
 import { useState } from "react";
@@ -65,6 +66,7 @@ export function PlanCard({
   const [manageView, setManageView] = useState<ManageView>("actions");
   const [reason, setReason] = useState("");
   const [showFuture, setShowFuture] = useState(false);
+  const coachRequest = usePlanCoachRequest(plan, own);
   const scheduledEntries: ActivityEntry[] = (plan.sessions ?? []).map(
     (session) => ({
       id: session.id,
@@ -332,7 +334,10 @@ export function PlanCard({
           {own && (
             <>
               <SupportEditor plan={plan} />
-              <CoachOverview plans={[plan]} entries={entries} />
+              <PlanCoachingRow
+                plan={plan}
+                leadingRows={coachRequest ? [coachRequest] : []}
+              />
             </>
           )}
           {plan.planGroup && (

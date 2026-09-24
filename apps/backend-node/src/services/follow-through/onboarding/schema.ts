@@ -1,11 +1,16 @@
 import { interviewStateSchema } from "./interview/schema";
+import { planCoachingSchema } from "../../coach/monitoring/schema";
 import { z } from "zod/v4";
 import { dateKey, time, timezone, preferencesSchema } from "../schema";
 export const draftSchema = z.object({
+  coaching: planCoachingSchema.optional(),
   interview: interviewStateSchema.optional(),
   awaitingUpgrade: z.boolean().optional(),
   id: z.string().uuid(),
-  goal: z.string().trim().max(300),
+  // Goals may come from dictation and can include context. Keep the same
+  // bounded input size as interview answers rather than truncating a natural
+  // spoken response at the old 300-character limit.
+  goal: z.string().trim().max(1500),
   emoji: z.string().max(24),
   activityId: z.string().nullable(),
   activityTitle: z.string().trim().max(100),

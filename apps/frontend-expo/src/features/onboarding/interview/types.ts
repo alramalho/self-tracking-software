@@ -6,6 +6,7 @@ import type {
 } from "@tsw/prisma/follow-through";
 export interface InterviewFrameProps {
   stage: InterviewStage;
+  progress?: { current: number; total: number; label: string };
   preview: boolean;
   busy: boolean;
   onBack: () => void;
@@ -38,4 +39,10 @@ export interface AutoContinueActionProps {
 
 export interface CoachSuggestionProps {
   message: string;
+}
+
+export interface WeeklyFrequencyPickerProps {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
 }

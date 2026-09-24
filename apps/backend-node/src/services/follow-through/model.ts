@@ -168,6 +168,7 @@ export function updateSilence(
   const lastAnswer = Math.max(0, ...answered);
   const unanswered = Object.values(state.checks).filter(
     (c) =>
+      !state.supports[c.planId]?.coaching &&
       !(c.kind === "SESSION" && flexiblePlanIds.includes(c.planId)) &&
       c.sentAt &&
       !c.answeredAt &&
@@ -230,6 +231,7 @@ export function outreach(
       canCoach &&
       support.preferences.coaching &&
       support.preferences.checkIn &&
+      !support.coaching &&
       !state.pausedAt &&
       eligible(times.check)
     ) {
@@ -266,6 +268,7 @@ export function outreach(
       state.pausedAt ||
       !support.preferences.coaching ||
       !support.preferences.weeklyReview ||
+      support.coaching ||
       !plan
     )
       continue;
@@ -332,8 +335,11 @@ export function reconcileEntries(
       .map((s) => s.entryId)
       .filter(Boolean),
   );
+  // A late log still wins over a session the coach only assumed was missed.
+  const open = (s: PracticeSession) =>
+    s.outcome === "UNCONFIRMED" || !!s.assumedMissed;
   for (const session of Object.values(state.sessions)) {
-    if (session.outcome !== "UNCONFIRMED" || session.timerRunning) continue;
+    if (!open(session) || session.timerRunning) continue;
     const candidates = entries.filter(
       (e) =>
         !e.deletedAt &&
@@ -343,16 +349,19 @@ export function reconcileEntries(
     );
     const peers = Object.values(state.sessions).filter(
       (s) =>
-        s.outcome === "UNCONFIRMED" &&
+        open(s) &&
         s.activityId === session.activityId &&
         s.date === session.date,
     );
     if (candidates.length !== 1 || peers.length !== 1) continue;
     session.entryId = candidates[0].id;
     session.outcome = "DONE";
+    delete session.assumedMissed;
     used.add(candidates[0].id);
     for (const check of Object.values(state.checks))
       if (check.sessionId === session.id) check.answeredAt = now.toISOString();
+    for (const request of state.monitoring?.requests ?? [])
+      if (request.sessionId === session.id && !request.resolvedAt && !request.closedAt) request.resolvedAt = now.toISOString();
   }
 }
 
@@ -393,6 +402,8 @@ export function weeklyMessage(
   return `${progress} ${target && days >= target ? "Keep this rhythm?" : "Keep the plan, choose a slot, or make it easier to start?"}`;
 }
 export function hasRecentCoachClaim(state: FollowThroughState, now: Date) {
+  if (state.monitoring?.lease && Date.parse(state.monitoring.lease.until) > now.getTime()) return true;
+  if (state.monitoring?.lastOutreachAt && now.getTime() - Date.parse(state.monitoring.lastOutreachAt) < 24 * 3600000) return true;
   return Object.values(state.checks).some((check) => {
     const last = check.sentAt || check.claimedAt;
     return !!last && now.getTime() - Date.parse(last) < 24 * 3600000;

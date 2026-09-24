@@ -16,7 +16,14 @@ export type CoachConversationMessage = {
   role: "system" | "user" | "assistant";
   content: string;
   imageAttachments?: ImageAttachment[];
+  healthDataAccess?: CoachHealthAccess[];
 };
+
+export interface CoachHealthAccess {
+  planId: string;
+  workouts: boolean;
+  sleep: boolean;
+}
 
 export type CoachStatus = "thinking" | "searching" | "browsing" | "drafting";
 
@@ -27,6 +34,8 @@ export type ActiveCoachPlan = Plan & {
 };
 
 export interface CoachAgentContext {
+  allowSkip?: boolean;
+  allowPlanCreation?: boolean;
   user: User;
   plans: ActiveCoachPlan[];
   conversationHistory: CoachConversationMessage[];
@@ -57,6 +66,8 @@ export type CoachAgentErrorReportContext = {
 };
 
 export type CoachGenerateResponseParams = {
+  allowSkip?: boolean;
+  allowPlanCreation?: boolean;
   user: User;
   message: string;
   messageRole?: "user" | "system";
@@ -70,6 +81,7 @@ export type CoachGenerateResponseParams = {
 };
 
 export type CoachDraftMessage = {
+  requiresReply?: boolean;
   content: string;
   error?: boolean;
   planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
@@ -163,6 +175,7 @@ export type CoachDraftMessage = {
 
 export type CoachAgentResponse = {
   draftMessages: CoachDraftMessage[];
+  healthDataAccess?: CoachHealthAccess[];
   skipped?: boolean;
   skipReason?: string;
   telemetry?: CoachAgentTelemetry;

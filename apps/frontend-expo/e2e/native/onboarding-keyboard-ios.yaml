@@ -36,13 +36,10 @@ appId: so.tracking.app
 - takeScreenshot: onboarding-keyboard-fixed
 - waitForAnimationToEnd:
     timeout: 3000
-- assertVisible: Preview.*1 of 5.*Your goal
+- assertVisible: Preview.*1 of 6.*Your goal
 - tapOn: ^Continue$
-- assertVisible: Automatic continue
-- waitForAnimationToEnd:
-    timeout: 3000
-- takeScreenshot: onboarding-keyboard-dismissed
-- waitForAnimationToEnd:
-    timeout: 3000
-- tapOn: ^Continue$
-- assertVisible: Preview.*2 of 5.*Starting point
+- assertVisible: Preview.*2 of 6.*Starting point
+- tapOn: Skip for now
+- assertVisible: Preview.*3 of 6.*Why it matters
+- tapOn: Skip for now
+- assertVisible: Preview.*4 of 6.*Your week

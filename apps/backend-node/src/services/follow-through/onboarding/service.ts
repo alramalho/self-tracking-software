@@ -10,6 +10,10 @@ import { changeState, ownedPlans } from "../store";
 import { canCoach } from "../service";
 import { localDate, materialize, instant } from "../model";
 import { nextSchema } from "./schema";
+import { monitoringState } from "../../coach/monitoring/model";
+import { finalOnboardingChoice } from "./finish";
+import { onboardingReviewEvents } from "./review";
+import { logger } from "../../../utils/logger";
 export async function nextQuestion(draft: OnboardingDraft) {
   const result = await aiService.generateStructuredResponse({
     schema: nextSchema,
@@ -32,18 +36,26 @@ export async function nextQuestion(draft: OnboardingDraft) {
   return result;
 }
 export async function saveDraft(userId: string, draft: OnboardingDraft) {
-  return changeState(userId, async (state) => {
+  const saved = await changeState(userId, async (state) => {
     if (state.draft?.id === draft.id && state.draft.createdPlanId)
-      return state.draft;
+      return { draft: state.draft, events: [] };
+    const events = onboardingReviewEvents(userId, draft, state.draft);
     state.draft = { ...draft, createdPlanId: null };
-    return state.draft;
+    return { draft: state.draft, events };
   });
+  // Emit after the transaction commits, so database retries do not duplicate it.
+  for (const event of saved.events) logger.info("Onboarding answer saved", event);
+  return saved.draft;
 }
 export async function finishOnboarding(
   user: User,
-  draft: OnboardingDraft,
-  preferences: SupportPreferences,
+  draftInput: OnboardingDraft,
+  preferencesInput: SupportPreferences,
 ) {
+  const { draft, preferences } = finalOnboardingChoice(
+    draftInput,
+    preferencesInput,
+  );
   if (!draft.goal || !draft.activityTitle || !draft.measure || !draft.emoji)
     throw new FollowThroughInputError(
       "Give your plan an activity, unit and icon",
@@ -141,6 +153,17 @@ export async function finishOnboarding(
       },
     });
     state.supports[draft.id] = {
+      coaching: preferences.coaching
+        ? (draft.coaching ?? {
+            role: draft.interview?.facts.coachingRole ?? "consistency",
+            followUps: false,
+            dataAccess: { workouts: false, sleep: false },
+          })
+        : {
+            role: "tracking",
+            followUps: false,
+            dataAccess: { workouts: false, sleep: false },
+          },
       planId: draft.id,
       mode: draft.commitment,
       weekdays: draft.weekdays,
@@ -156,6 +179,13 @@ export async function finishOnboarding(
       effectiveDate: localDate(new Date(), draft.timezone),
     };
     state.draft = { ...draft, preferences, createdPlanId: draft.id };
+    if (state.supports[draft.id].coaching?.role === "training") {
+      state.monitoring ??= monitoringState();
+      state.monitoring.setupPlanIds = [
+        ...(state.monitoring.setupPlanIds ?? []),
+        draft.id,
+      ];
+    }
     state.enabled = true;
     await tx.user.update({
       where: { id: user.id },
