@@ -48,7 +48,14 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 164, September 24, 2026
+## Current TestFlight release — build 165, September 25, 2026
+
+- Same source as build 164 plus the root `.easignore`, so the TrackingWatch, TrackingHealth and TrackingMap native modules are linked again (Podfile.lock lists all three; ExpoModulesProvider registers them; the main binary grew from 21,822,944 to 22,012,624 bytes). Phone and Watch are 1.0.0 build 165; strict signature and production configuration verified.
+- IPA: `.release/testflight-coach-garmin-b165/tracking.so.ipa` (SHA-256 `c1f40c62d5d7fbbfa98f9e550bc0345166f4b9adbab4654afbb53b43279082ae`), `source.tar.gz` beside it (includes the module Swift sources).
+- Apple validation passed; upload delivery `944f7c46-93ea-4aaa-9e0e-2548ef7c05cf` processed as `VALID`; `IN_BETA_TESTING` for `internal testers`. Not submitted to Friends & Family.
+- Build 164 crashed 0.55 s after launch (`Cannot find native module 'TrackingWatch'`) and was expired in TestFlight on September 25.
+
+## Withdrawn — build 164, September 24, 2026
 
 - Build 164 was compiled locally from build 162's exact source (`.release/testflight-heart-rate-b162/source.tar.gz`, which added the thicker colored heart-rate chart on top of build 156's source) with only the coach-role and Garmin webhook-only app changes three-way merged in, so testers keep everything 162 had. Onboarding asks for a starting point and motivation again; the plan page groups Coach/Coaching like Schedule/Reminders; proposed sessions show as date cards; the Garmin screen drops "Sync now" and the Garmin-support email flow.
 - App Store IPA: `.release/testflight-coach-garmin-b164/tracking.so.ipa` (SHA-256 `057e9ae4487f3582147f3ea11bdfe1749270d9dbe8372bf94da926aee4159d32`), with `source.tar.gz` beside it. iPhone and Watch are 1.0.0 build 164; strict signature, production API/live Clerk and fixture exclusion verified, and the new strings are present in the Hermes bundle.
