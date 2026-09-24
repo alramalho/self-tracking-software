@@ -44,6 +44,10 @@ Scripts live in `scripts/iphone/`. All generated artifacts, environment config, 
 
 The upload creates a unique directory containing the IPA, `manifest.plist` and `index.html`. S3 supplies trusted HTTPS. All three URLs are presigned; default expiry is seven days (`IPHONE_LINK_TTL`, 60–604800 seconds). Temporary AWS credentials can expire earlier. Object expiry is separate: uploaded objects remain until removed or covered by an existing storage lifecycle rule. This uses normal storage/transfer billing, not Expo build credits. No bucket policies or lifecycle rules are modified by the script.
 
+## Packaging rule: always build with the root `.easignore`
+
+EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
+
 ## Current TestFlight release — build 164, September 24, 2026
 
 - Build 164 was compiled locally from build 162's exact source (`.release/testflight-heart-rate-b162/source.tar.gz`, which added the thicker colored heart-rate chart on top of build 156's source) with only the coach-role and Garmin webhook-only app changes three-way merged in, so testers keep everything 162 had. Onboarding asks for a starting point and motivation again; the plan page groups Coach/Coaching like Schedule/Reminders; proposed sessions show as date cards; the Garmin screen drops "Sync now" and the Garmin-support email flow.

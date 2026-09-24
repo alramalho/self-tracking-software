@@ -5,8 +5,9 @@ credentials/
 .expo/
 dist/
 web-build/
-ios/
-android/
+# Only the generated native projects; modules/*/ios holds our own Swift sources.
+/ios/
+/android/
 .env*
 !.env.example
 playwright-report/
