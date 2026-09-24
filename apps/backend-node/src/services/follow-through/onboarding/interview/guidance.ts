@@ -1,53 +1,84 @@
-import { aiService } from "../../../aiService";
-import {
-  onboardingProvider,
-  onboardingValidationModel,
-  onboardingValidationProviderOptions,
-} from "../../../aiModelIds";
+import { experimental_evaluate as evaluate } from "ai";
 import type { GoalGuidanceResult } from "@tsw/prisma/follow-through";
 import { z } from "zod/v4";
-
-const guidanceSchema = z.object({
-  requirements: z
-    .array(
-      z.object({
-        key: z.string().min(1).max(32),
-        label: z.string().min(1).max(48),
-        phrase: z.string().min(1).max(80),
-        required: z.boolean(),
-        passed: z.boolean(),
-        detail: z.string().max(160),
-      }),
-    )
-    .min(2)
-    .max(4),
-});
-
-export const goalGuidancePrompt =
-  "You are a fast first-pass goal validator for tracking.so. The user is still composing the answer on the first onboarding screen. Return 2–4 tiny guidance cards that tell them what useful information to include.\n\n" +
-  "The first card must always be a concrete, actionable goal and must be required. Mark motivation or personal meaning as helpful, not required: a user can continue without explaining why. A current starting point is important when it materially affects a safe or realistic plan, but do not ask for session durations, dated sessions, or a full training plan here. The next onboarding screen can ask for deeper baseline details. Do not reject sincere, informal, short, or beginner answers. Only mark a requirement passed when the answer actually contains it. Keep each card label and phrase short enough for one compact card; phrase should be one short sentence fragment. Detail should be a kind, concrete hint, not a paragraph.";
 
 export const goalGuidanceRequestSchema = z.object({
   answer: z.string().trim().min(1).max(1500),
   activityTitle: z.string().max(100).optional(),
 });
 
+const JEV_MODEL = "typesafe-ai/jev";
+const PASS_THRESHOLD = 0.65;
+
+function passed(probability: number) {
+  return probability >= PASS_THRESHOLD;
+}
+
 export async function goalGuidance(
   input: z.infer<typeof goalGuidanceRequestSchema>,
 ): Promise<GoalGuidanceResult> {
-  const result = await aiService.generateStructuredResponse({
-    schema: guidanceSchema,
-    options: {
-      model: onboardingValidationModel(),
-      temperature: 0.1,
-      providerOptions: onboardingValidationProviderOptions(),
-      provider: onboardingProvider(),
-    },
-    systemPrompt: goalGuidancePrompt,
-    prompt: JSON.stringify({
+  const result = await evaluate({
+    model: JEV_MODEL,
+    state: JSON.stringify({
       answer: input.answer,
       activityTitle: input.activityTitle || null,
     }),
+    questions: {
+      goal: {
+        type: "boolean",
+        instructions:
+          "Does the answer state a concrete, actionable outcome the user wants to achieve? Accept sincere beginner or informal goals; reject empty, keyboard-noise, purely emotional, or non-actionable answers.",
+      },
+      baseline: {
+        type: "boolean",
+        instructions:
+          "Does the answer include any useful current starting point, such as current ability, experience, routine, or constraints? This is helpful context, not a requirement for continuing this screen.",
+      },
+      motivation: {
+        type: "boolean",
+        instructions:
+          "Does the answer explain why this goal matters personally, such as a reason, value, event, enjoyment, or motivation? This is optional context, not a requirement.",
+      },
+    },
+    maxRetries: 1,
   });
-  return guidanceSchema.parse(result);
+
+  const goalPassed = passed(result.answers.goal.probability);
+  const baselinePassed = passed(result.answers.baseline.probability);
+  const motivationPassed = passed(result.answers.motivation.probability);
+
+  return {
+    requirements: [
+      {
+        key: "goal",
+        label: "A clear target",
+        phrase: "Say what you want to achieve.",
+        required: true,
+        passed: goalPassed,
+        detail: goalPassed
+          ? "Your goal is clear."
+          : "Add the outcome you want to achieve.",
+      },
+      {
+        key: "baseline",
+        label: "Where you are now",
+        phrase: "Mention your current starting point.",
+        required: false,
+        passed: baselinePassed,
+        detail: baselinePassed
+          ? "Useful starting-point context included."
+          : "Helpful context for the next step.",
+      },
+      {
+        key: "motivation",
+        label: "Why it matters",
+        phrase: "Share what makes this worth doing.",
+        required: false,
+        passed: motivationPassed,
+        detail: motivationPassed
+          ? "Personal meaning included."
+          : "Optional context for a more personal plan.",
+      },
+    ],
+  };
 }

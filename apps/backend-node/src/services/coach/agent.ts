@@ -2,8 +2,10 @@ import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
 import { followThroughContext } from "../follow-through/coach-context";
 import { gateway } from "@ai-sdk/gateway";
 import { traced } from "braintrust";
+import type { StopCondition } from "ai";
 import {
   ToolLoopAgent,
+  type ToolLoopAgentInstance,
   tool,
   type LanguageModelUsage,
   type ModelMessage,
@@ -285,10 +287,10 @@ function isActivityMetadataChangeIntent(text: string): boolean {
   const normalized = text.toLowerCase();
   return (
     /\b(change|update|switch|set|edit|replace)\b.{0,80}\b(activity|tracking unit|measure|unit)\b/.test(
-      normalized
+      normalized,
     ) ||
     /\b(activity|tracking unit|measure|unit)\b.{0,80}\b(change|update|switch|set|edit|replace|from\s+\w+\s+to\s+\w+)\b/.test(
-      normalized
+      normalized,
     )
   );
 }
@@ -378,7 +380,7 @@ export class CoachAgentService {
   /**
    * Create the coach agent with tools bound to the current context
    */
-  createAgent(context: CoachAgentContext) {
+  createAgent(context: CoachAgentContext): ToolLoopAgentInstance {
     const {
       user,
       plans: allPlans,
@@ -486,7 +488,7 @@ export class CoachAgentService {
       .slice(-8)
       .map((message) => message.content);
 
-    const shouldStopAfterStep = ({ steps }: { steps: any[] }) => {
+    const shouldStopAfterStep: StopCondition<any, any> = ({ steps }) => {
       const latestStep = steps[steps.length - 1];
       const draftResults = (latestStep?.toolResults || []).filter(
         (toolResult: any) => toolResult.toolName === "draftMessages"
@@ -1947,7 +1949,7 @@ export class CoachAgentService {
 
         result = await agent.generate({
           messages: attemptMessages,
-          onStepFinish: async ({ usage, toolCalls }) => {
+          onStepEnd: async ({ usage, toolCalls }) => {
             logger.info("Agent step completed", {
               inputTokens: usage?.inputTokens,
               outputTokens: usage?.outputTokens,

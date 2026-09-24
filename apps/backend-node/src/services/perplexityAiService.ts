@@ -171,7 +171,7 @@ class PerplexityAiService {
     try {
       const synthesis = await generateText({
         model: gateway(DEFAULT_AI_GATEWAY_MODEL),
-        system: dedent`
+        instructions: dedent`
           You are a coach synthesizing research findings into actionable guidelines.
           Extract the most relevant and practical information for the user's specific situation.
 
@@ -248,7 +248,7 @@ class PerplexityAiService {
             ),
           reasoning: z.string().describe("Brief explanation of the estimate"),
         }),
-        system: dedent`
+        instructions: dedent`
           You estimate how long it takes to achieve fitness/habit goals.
 
           Consider:

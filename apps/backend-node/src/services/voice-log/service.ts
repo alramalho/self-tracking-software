@@ -259,7 +259,7 @@ export async function previewVoiceLog(input: {
     providerOptions: {
       openai: { reasoningEffort },
     },
-    system: input.refinement ? VOICE_LOG_REFINEMENT_PROMPT : VOICE_LOG_PROMPT,
+    instructions: input.refinement ? VOICE_LOG_REFINEMENT_PROMPT : VOICE_LOG_PROMPT,
     prompt: input.refinement
       ? refinementPrompt(
           input.refinement,

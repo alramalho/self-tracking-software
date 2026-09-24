@@ -10,8 +10,14 @@ export const generateImage = wrappedAI.generateImage;
 export const generateObject = wrappedAI.generateObject;
 export const generateText = wrappedAI.generateText;
 export const Output = wrappedAI.Output;
-export const tool = wrappedAI.tool;
-export const ToolLoopAgent = wrappedAI.ToolLoopAgent;
+// Braintrust's SDK wrapper currently types these two exports against its
+// pre-v7 tool signatures. Keep tracing for generation calls, but use the
+// native SDK 7 definitions for tools and agents so zod/v4 schemas infer
+// correctly.
+export const tool = ai.tool as any;
+export const ToolLoopAgent = ai.ToolLoopAgent;
+
+export type ToolLoopAgentInstance = ai.ToolLoopAgent<never, any, any, never>;
 
 export type {
   LanguageModelUsage,

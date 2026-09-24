@@ -2,18 +2,18 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
-  '@clerk/shared': set this to true or false
-  '@google/genai': set this to true or false
-  '@prisma/client': set this to true or false
-  '@prisma/engines': set this to true or false
-  '@swc/core': set this to true or false
-  '@tailwindcss/oxide': set this to true or false
-  bcrypt: set this to true or false
-  braintrust: set this to true or false
-  browser-tabs-lock: set this to true or false
-  bufferutil: set this to true or false
-  core-js: set this to true or false
-  esbuild: set this to true or false
-  prisma: set this to true or false
-  protobufjs: set this to true or false
-  utf-8-validate: set this to true or false
+  '@clerk/shared': true
+  '@google/genai': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@swc/core': true
+  '@tailwindcss/oxide': true
+  bcrypt: true
+  braintrust: true
+  browser-tabs-lock: true
+  bufferutil: true
+  core-js: true
+  esbuild: true
+  prisma: true
+  protobufjs: true
+  utf-8-validate: true

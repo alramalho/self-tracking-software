@@ -10,7 +10,7 @@ export async function changeState<T>(
     tx: Prisma.TransactionClient,
   ) => Promise<T>,
 ) {
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     try {
       return await prisma.$transaction(
         async (tx) => {
@@ -45,11 +45,18 @@ export async function changeState<T>(
       );
     } catch (error) {
       if (
-        attempt < 3 &&
+        attempt < 5 &&
         error instanceof Prisma.PrismaClientKnownRequestError &&
         (error.code === "P2034" || error.code === "P2002")
-      )
+      ) {
+        // A first onboarding save can race with the initial state row creation,
+        // and several mobile retries can arrive together after a slow response.
+        // Back off between retries so they do not immediately collide again.
+        await new Promise((resolve) =>
+          setTimeout(resolve, 75 * 2 ** attempt + Math.random() * 75),
+        );
         continue;
+      }
       throw error;
     }
   }
