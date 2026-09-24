@@ -258,13 +258,15 @@ BACKEND_IMAGE=local/tracking-so-backend:notification-navigation-b156 docker comp
 curl -fsS https://api.tracking.so/health
 ```
 
-## Coach roles + Garmin webhook-only — prepared September 24, 2026 (not yet active)
+## Coach roles + Garmin webhook-only — active since September 24, 2026 18:47 UTC
 
 Image `local/tracking-so-backend:coach-garmin-20260924` is **built on the server** from [coach-garmin-overlay.Dockerfile](./coach-garmin-overlay.Dockerfile), layered on the active `four-features-4320328d`. Context: `/root/workspace/tracking.so/deployment/tracking-coach-garmin-20260924/` (38 files, `source-hashes.txt` verified). Each file was three-way merged onto the source copied from the running container, so live-only changes are preserved. The typecheck inside the image reports the same 30 pre-existing errors as the active image, none in the changed files.
 
 It adds the coach plan monitoring (hourly job, `SCHEDULED_COACH_MODEL` defaulting to DeepSeek v4.1 Flash at low reasoning) and makes Garmin webhook-only: the 15-minute pull job is removed, the webhook accepts 100 MB and skips the rate limiter, OAuth2 PKCE sits behind `GARMIN_OAUTH_VERSION=2`, and a webhook foreign-key bug that dropped every pushed workout is fixed. One additive migration: `20260924190000_garmin_oauth2`.
 
-Activation (automatic approval review blocked this step; run manually):
+Activated with explicit owner approval. A pre-migration dump (3.9 MB) and the previous `.env` are in `$D/backup/`. `prisma migrate deploy` applied `20260924190000_garmin_oauth2`; the container reported healthy, `/health` returned ok, protected routes returned 401, and the Garmin webhook answered 200. The scheduler starts 5 tasks (the Garmin pull job is gone). In Garmin API tools, "User Permissions Change" was enabled to the same webhook; all other enabled summary types already pushed to `https://api.tracking.so/health/garmin/webhook`.
+
+Commands used:
 
 ```sh
 cd /root/workspace/tracking.so/deployment
