@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Linking, Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Activity, ChevronRight, Lock, Mail } from "lucide-react-native";
+import { Activity, ChevronRight, Lock } from "lucide-react-native";
+import { formatDistanceToNow } from "date-fns";
 import { Text } from "@/components/typography/Text";
 import {
   Button,
@@ -17,7 +18,7 @@ import { useHealth } from "./HealthProvider";
 import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
 import type { WorkoutReconciliationPreviewItem } from "./workout-types";
-import type { GarminSyncResult, HealthImportStats } from "./types";
+import type { GarminStatus, HealthImportStats } from "./types";
 
 export type IntegrationIconProps = {
   size?: number;
@@ -129,159 +130,22 @@ function ImportedDataOverview({ stats }: { stats: HealthImportStats }) {
   );
 }
 
-function GarminSyncOutcome({
-  result,
-  backfillInProgress,
-}: {
-  result: GarminSyncResult | null;
-  backfillInProgress: boolean;
-}) {
-  const c = useColors();
-  if (!result) return null;
-
-  const status = result.counts.backfillStatus;
-  const error =
-    status === "unavailable" ||
-    status === "rate_limited" ||
-    status === "missing_permission";
-  const importing =
-    backfillInProgress || status === "accepted" || status === "already_requested";
-  const received =
-    result.counts.workouts > 0 ||
-    result.counts.sleepSamples > 0 ||
-    result.counts.dailyMetrics > 0;
-  const title = error
-    ? status === "rate_limited"
-      ? "Garmin is temporarily unavailable"
-      : status === "missing_permission"
-        ? "Garmin needs permission"
-        : "Garmin couldn't import older data"
-    : result.counts.workouts > 0
-      ? "Garmin sync complete"
-      : importing
-        ? "Garmin is waiting for older data"
-        : "No new Garmin workouts yet";
-  const detail = error
-    ? status === "rate_limited"
-      ? "Try syncing again later."
-      : status === "missing_permission"
-        ? "Reconnect Garmin and allow data sharing again."
-        : "Garmin did not return this data. Try again later."
-    : result.counts.workouts > 0
-      ? "Your workouts are ready."
-      : importing
-        ? "Sync your watch in Garmin Connect. Older workouts appear only when Garmin sends them."
-        : received
-          ? "Sleep and health data were imported, but no workouts arrived this time."
-          : "Sync your watch in Garmin Connect, then try again.";
-  const tone = error ? (c.dark ? "#f87171" : "#dc2626") : c.text;
-
+/** Garmin sends data to us after the watch syncs; there is nothing to press. */
+function GarminDataStatus({ status }: { status: GarminStatus }) {
+  const last = status.lastSyncCompletedAt ? new Date(status.lastSyncCompletedAt) : null;
+  const line = status.backfillInProgress
+    ? "Importing your last 30 days. Garmin sends it over the next few hours."
+    : last
+      ? `Last data received ${formatDistanceToNow(last, { addSuffix: true })}.`
+      : "Waiting for your first Garmin sync. Open Garmin Connect on your phone so your watch syncs.";
   return (
-    <View
-      accessibilityLabel="Garmin sync status"
-      style={{
-        gap: 4,
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: error ? (c.dark ? "#3b1717" : "#fee2e2") : c.soft,
-      }}
-    >
-      <Text style={{ color: tone, fontWeight: "700" }}>{title}</Text>
-      <Copy muted>{detail}</Copy>
+    <View style={{ gap: 4 }}>
+      <Copy>{line}</Copy>
       <Copy muted>
-        This sync: {result.counts.workouts} workouts · {result.counts.sleepSamples} sleep records · {result.counts.dailyMetrics} health values
+        New workouts, sleep and health data arrive automatically a few minutes after your
+        watch syncs with Garmin Connect.
       </Copy>
     </View>
-  );
-}
-
-function GarminSupportRequest({
-  busy,
-  onSync,
-}: {
-  busy: boolean;
-  onSync: () => Promise<void>;
-}) {
-  const c = useColors();
-  const [draftOpened, setDraftOpened] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
-  const [error, setError] = useState<unknown>();
-
-  async function openSupportEmail() {
-    const subject = "Please resend my missing Garmin workouts";
-    const body = [
-      "Hello Garmin Support,",
-      "",
-      "Please resend the Garmin workouts missing from my tracking.so account. My Garmin Connect account is already connected to tracking.so and the required permission has already been granted.",
-      "",
-      "Please resend the missing workouts from the last 180 days.",
-      "",
-      "Please confirm when the resend is complete. I will then open tracking.so and check my imported workouts.",
-      "",
-      "Thank you.",
-    ].join("\n");
-
-    try {
-      setError(undefined);
-      await Linking.openURL(
-        `mailto:connect-support@developer.garmin.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-      );
-      setDraftOpened(true);
-    } catch (failure) {
-      setError(failure);
-    }
-  }
-
-  return (
-    <Panel style={{ gap: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Mail size={22} color={c.text} />
-        <Heading>Recover missing Garmin workouts</Heading>
-      </View>
-      <Copy muted>
-        Your Garmin connection is active, but some older workouts are missing.
-        We’ll open a short request asking Garmin to resend them.
-      </Copy>
-      {!requestSent ? (
-        <>
-          <Button secondary onPress={() => void openSupportEmail()}>
-            Ask Garmin to resend
-          </Button>
-          {draftOpened && (
-            <View style={{ gap: 10 }}>
-              <Copy muted>
-                Your email app is ready. Review the short request, send it, then
-                mark it sent below.
-              </Copy>
-              <Button secondary onPress={() => setRequestSent(true)}>
-                I sent the request
-              </Button>
-            </View>
-          )}
-        </>
-      ) : (
-        <View
-          style={{
-            gap: 10,
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: c.soft,
-          }}
-        >
-          <Text style={{ color: "#22c55e", fontWeight: "700" }}>
-            Request sent
-          </Text>
-          <Copy muted>
-            After Garmin confirms the resend, return here and tap Check
-            imported data. The workout count will update automatically.
-          </Copy>
-          <Button secondary busy={busy} onPress={() => void onSync()}>
-            Check imported data
-          </Button>
-        </View>
-      )}
-      <Status error={error} retry={() => void openSupportEmail()} />
-    </Panel>
   );
 }
 
@@ -345,11 +209,6 @@ export function GarminContent() {
   const health = useHealth();
   const [disconnectingGarmin, setDisconnectingGarmin] = useState(false);
   const importStats = health.garmin.status?.importStats;
-  const latestSync = health.garmin.lastSyncResult;
-  const needsGarminSupport =
-    !!health.garmin.status?.connected &&
-    !importStats?.workoutCount &&
-    !!(latestSync || health.garmin.status.lastSyncCompletedAt);
 
   return (
     <>
@@ -375,35 +234,12 @@ export function GarminContent() {
             Connect Garmin Connect
           </Button>
         ) : (
-          <Button
-            busy={health.garmin.busy}
-            onPress={() => void health.garmin.sync()}
-          >
-            Sync Garmin now
-          </Button>
+          <GarminDataStatus status={health.garmin.status} />
         )}
-        <GarminSyncOutcome
-          result={latestSync}
-          backfillInProgress={!!health.garmin.status?.backfillInProgress}
-        />
         {(health.garmin.status?.connected || hasImportedData(importStats)) &&
           importStats && <ImportedDataOverview stats={importStats} />}
-        {needsGarminSupport && (
-          <GarminSupportRequest
-            busy={health.garmin.busy}
-            onSync={health.garmin.sync}
-          />
-        )}
-        {health.garmin.status?.connected && (
-          <Copy muted>
-            To import new workouts, sync the watch in Garmin Connect first,
-            then tap Sync Garmin now. The Garmin app cannot force a historical
-            replay of older workouts.
-          </Copy>
-        )}
         <Status
           error={health.garmin.error}
-          retry={() => void health.garmin.sync()}
         />
       </Panel>
 

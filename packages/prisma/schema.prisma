@@ -455,9 +455,13 @@ model GarminIntegration {
   id                       String    @id @default(cuid())
   userId                   String    @unique
   garminUserId             String?   @unique
+  // 1 = OAuth 1.0a (evaluation key, retired by Garmin on 2026-12-31), 2 = OAuth2 PKCE
+  oauthVersion             Int       @default(1)
   accessTokenEncrypted     String
-  accessTokenSecretEncrypted String
+  accessTokenSecretEncrypted String?
   accessTokenHash          String?   @unique
+  refreshTokenEncrypted    String?
+  accessTokenExpiresAt     DateTime?
   permissions              String[]  @default([])
   initialSyncStartedAt     DateTime?
   backfillRequestedAt      DateTime?

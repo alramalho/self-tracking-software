@@ -8,7 +8,6 @@ import {
   ListChecks,
   Loader2,
   Moon,
-  RefreshCw,
   ShieldCheck,
   Trash2,
   Unplug,
@@ -20,7 +19,6 @@ import {
   disconnectGarmin,
   getGarminAuthorizationUrl,
   getGarminStatus,
-  syncGarmin,
 } from "./service";
 import { AppleHealthWorkoutReconciliation } from "../apple/reconciliation/AppleHealthWorkoutReconciliation";
 
@@ -49,7 +47,7 @@ export function GarminIntegrationCard() {
   const api = useApiWithAuth();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [reconciliationOpenRequest, setReconciliationOpenRequest] = useState(0);
+  const [reconciliationOpenRequest] = useState(0);
 
   const statusQuery = useQuery({
     queryKey: ["garmin-status"],
@@ -59,26 +57,6 @@ export function GarminIntegrationCard() {
   const connectMutation = useMutation({
     mutationFn: () => getGarminAuthorizationUrl(api),
     onSuccess: (authorizationUrl) => window.location.assign(authorizationUrl),
-    onError: (error) => toast.error(errorMessage(error)),
-  });
-
-  const syncMutation = useMutation({
-    mutationFn: () => syncGarmin(api, 7),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["garmin-status"] });
-      queryClient.invalidateQueries({
-        queryKey: ["apple-health-workout-reconciliation"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-      setReconciliationOpenRequest((request) => request + 1);
-      toast.success(
-        result
-          ? `Garmin synced: ${result.counts.workouts} workouts and ${result.counts.dailyMetrics} daily values`
-          : "Garmin sync is already running",
-      );
-    },
     onError: (error) => toast.error(errorMessage(error)),
   });
 
@@ -107,7 +85,6 @@ export function GarminIntegrationCard() {
   const isWorking =
     statusQuery.isLoading ||
     connectMutation.isPending ||
-    syncMutation.isPending ||
     disconnectMutation.isPending;
   const importStats = status?.importStats;
   const hasImportedData = Boolean(
@@ -194,7 +171,7 @@ export function GarminIntegrationCard() {
 
       {status?.lastSyncError && (
         <p className="rounded-lg bg-red-500/10 p-2 text-xs text-red-600">
-          Last sync failed. Try again or reconnect Garmin Connect.
+          Garmin data could not be saved. Reconnect Garmin Connect if this keeps happening.
         </p>
       )}
 
@@ -222,27 +199,17 @@ export function GarminIntegrationCard() {
 
       {status?.lastSyncCompletedAt && (
         <p className="text-center text-xs text-muted-foreground">
-          Last synced{" "}
+          Last data received{" "}
           {format(new Date(status.lastSyncCompletedAt), "MMM d, yyyy 'at' p")}
         </p>
       )}
 
       <div className="space-y-2">
         {status?.connected ? (
-          <Button
-            type="button"
-            size="lg"
-            className="h-12 w-full rounded-xl text-base font-semibold"
-            disabled={isWorking}
-            onClick={() => syncMutation.mutate()}
-          >
-            {syncMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-1">Sync now</span>
-          </Button>
+          <p className="rounded-xl bg-muted/60 p-3 text-center text-sm text-muted-foreground">
+            New workouts, sleep and health data arrive automatically a few
+            minutes after your watch syncs with Garmin Connect.
+          </p>
         ) : (
           <Button
             type="button"

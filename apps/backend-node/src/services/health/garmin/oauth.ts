@@ -18,6 +18,9 @@ export const GARMIN_AUTHORIZE_URL = "https://connect.garmin.com/oauthConfirm";
 export const GARMIN_ACCESS_TOKEN_URL =
   "https://connectapi.garmin.com/oauth-service/oauth/access_token";
 export const GARMIN_API_BASE_URL = "https://apis.garmin.com/wellness-api/rest";
+// User endpoints (id, permissions, registration) per the Start Guide 1.2.1.
+export const GARMIN_PARTNER_BASE_URL =
+  "https://apis.garmin.com/partner-gateway/rest";
 
 const DEFAULT_REDIRECT_URI = "https://api.tracking.so/health/garmin/callback";
 const DEFAULT_FRONTEND_URL = "https://app.tracking.so";
@@ -78,6 +81,7 @@ export const getGarminOAuthConfig = (): GarminOAuthConfig | null => {
   if (!consumerKey || !consumerSecret || !tokenEncryptionKey) return null;
 
   return {
+    oauthVersion: getConfigValue("GARMIN_OAUTH_VERSION") === "2" ? 2 : 1,
     consumerKey,
     consumerSecret,
     tokenEncryptionKey,
@@ -211,13 +215,16 @@ export async function requestGarminApiText(
     method,
     headers: {
       Accept: "application/json, text/plain, application/octet-stream",
-      Authorization: createOAuth1AuthorizationHeader(
-        method,
-        url.toString(),
-        config,
-        { oauth_token: accessToken.token },
-        accessToken.secret,
-      ),
+      Authorization:
+        accessToken.version === 2
+          ? `Bearer ${accessToken.token}`
+          : createOAuth1AuthorizationHeader(
+              method,
+              url.toString(),
+              config,
+              { oauth_token: accessToken.token },
+              accessToken.secret,
+            ),
     },
   });
   const body = await response.text();
@@ -284,7 +291,7 @@ export async function exchangeGarminToken(
     requestToken.secret,
   );
   const token = parseTokenResponse(body);
-  return { token: token.oauthToken, secret: token.oauthTokenSecret };
+  return { version: 1, token: token.oauthToken, secret: token.oauthTokenSecret };
 }
 
 export async function getGarminUserId(
@@ -295,7 +302,7 @@ export async function getGarminUserId(
     "GET",
     config,
     accessToken,
-    "/user/id",
+    userEndpoint(accessToken, "/user/id"),
   );
 
   try {
@@ -326,7 +333,7 @@ export async function getGarminPermissions(
   const payload = await getGarminJson<unknown>(
     config,
     accessToken,
-    "/user/permissions",
+    userEndpoint(accessToken, "/user/permissions"),
   );
   if (Array.isArray(payload)) {
     return payload.filter(
@@ -360,11 +367,22 @@ export async function requestGarminBackfill(
   );
 }
 
+/** Required when the person disconnects in our app: Garmin then stops all notifications for them. */
 export async function deleteGarminUser(
   config: GarminOAuthConfig,
   accessToken: GarminAccessToken,
 ): Promise<void> {
-  await requestGarminApiText("DELETE", config, accessToken, "/user/id");
+  await requestGarminApiText(
+    "DELETE",
+    config,
+    accessToken,
+    userEndpoint(accessToken, "/user/registration"),
+  );
+}
+
+// OAuth1 tokens were issued against the wellness API; OAuth2 uses the partner gateway.
+function userEndpoint(accessToken: GarminAccessToken, path: string): string {
+  return accessToken.version === 2 ? `${GARMIN_PARTNER_BASE_URL}${path}` : path;
 }
 
 export const hashGarminRequestToken = (token: string): string =>

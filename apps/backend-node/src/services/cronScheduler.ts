@@ -3,7 +3,6 @@ import { logger } from "../utils/logger";
 import { recurringJobService } from "./recurringJobService";
 import { deliverFollowThrough } from "./follow-through/delivery";
 import { deliverPlanMonitoring } from "./coach/monitoring/service";
-import { syncAllGarminIntegrations } from "./health/garmin/service";
 import { retryPendingPhotoNotifications } from "./activity-photo/delivery";
 import { retryPhotoNotificationOutbox } from "./activity-photo/outbox";
 
@@ -53,19 +52,7 @@ export class CronScheduler {
       ),
     );
 
-    this.tasks.push(
-      cron.schedule(
-        "*/15 * * * *",
-        async () => {
-          try {
-            await syncAllGarminIntegrations();
-          } catch (error) {
-            logger.error("Garmin Connect scheduler failed", error);
-          }
-        },
-        { noOverlap: true },
-      ),
-    );
+    // Garmin data arrives by webhook only; scheduled pulls are not permitted by Garmin.
 
     this.tasks.push(
       cron.schedule(

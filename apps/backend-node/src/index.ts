@@ -66,6 +66,8 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
+  // Garmin must always get a 200: a throttled notification counts as failed delivery.
+  skip: (req) => req.path === "/health/garmin/webhook",
 });
 
 // Security middleware
@@ -105,6 +107,9 @@ app.use(
 
 // Raw body middleware for Stripe webhooks (must come before JSON parser)
 app.use("/stripe/webhook", express.raw({ type: "application/json" }));
+
+// Garmin requires accepting notifications of at least 10MB (Activity Details: 100MB).
+app.use("/health/garmin/webhook", express.json({ limit: "100mb" }));
 
 // Body parsing middleware
 app.use(express.json({ limit: "25mb" }));

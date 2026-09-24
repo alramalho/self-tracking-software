@@ -13,7 +13,7 @@ import {
   getGarminStatus,
   ingestGarminWebhook,
   startGarminConnection,
-  syncGarminForUser,
+  refreshGarminConnection,
 } from "@/services/health/garmin/service";
 import type { GarminWebhookPayload } from "@/services/health/garmin/types";
 import { getGarminOAuthConfig } from "@/services/health/garmin/oauth";
@@ -96,36 +96,32 @@ router.get(
   },
 );
 
+// Garmin sends data to our webhook after the watch syncs; we never pull it ourselves.
+// Older app builds still call this after "Sync Garmin now", so it only refreshes what the
+// person shares with us and reports nothing newly imported.
 router.post(
   "/sync",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const requestedDays = Number(req.body?.days ?? 14);
-      const days =
-        Number.isInteger(requestedDays) && requestedDays > 0
-          ? Math.min(requestedDays, 7)
-          : 14;
-      const requestedBackfillDays = Number(req.body?.backfillDays ?? 30);
-      const backfillDays =
-        Number.isInteger(requestedBackfillDays) && requestedBackfillDays > 0
-          ? Math.min(requestedBackfillDays, 30)
-          : 30;
-      const result = await syncGarminForUser(req.user!.id, {
-        days,
-        requestBackfill: true,
-        forceBackfill: req.body?.forceBackfill === true,
-        backfillDays,
+      await refreshGarminConnection(req.user!.id);
+      const status = await getGarminStatus(req.user!.id);
+      res.json({
+        result: {
+          counts: {
+            dailyMetrics: 0,
+            workouts: 0,
+            sleepSamples: 0,
+            summaryTypes: 0,
+            backfillRequested: false,
+            backfillStatus: "not_requested",
+          },
+          lastSyncCompletedAt: status.lastSyncCompletedAt,
+        },
       });
-      res.json({ result });
     } catch (error) {
-      logger.error("Failed to sync Garmin Connect", {
-        userId: req.user!.id,
-        error,
-      });
-      res.status(error instanceof GarminApiError ? 502 : 500).json({
-        error: "Failed to sync Garmin Connect data",
-      });
+      logger.error("Failed to refresh Garmin Connect", { userId: req.user!.id, error });
+      res.status(500).json({ error: "Failed to refresh Garmin Connect" });
     }
   },
 );
@@ -206,24 +202,30 @@ router.post("/webhook", (req, res: Response): void => {
   });
 });
 
-// Garmin redirects here without a tracking.so auth header. The short-lived
-// request token is the binding back to the user who started the flow.
+// Garmin redirects here without a tracking.so auth header. The short-lived request
+// (OAuth1 request token, or OAuth2 PKCE state) is the binding back to the user.
 router.get("/callback", async (req, res: Response): Promise<void> => {
-  const requestToken = queryValue(req.query.oauth_token);
+  const oauth1Token = queryValue(req.query.oauth_token);
   const verifier = queryValue(req.query.oauth_verifier);
-  const deniedToken = queryValue(req.query.denied);
-  const callbackToken = requestToken ?? deniedToken;
-  const returnUrl = callbackToken
-    ? await getGarminOAuthReturnUrl(callbackToken)
-    : null;
+  const state = queryValue(req.query.state);
+  const code = queryValue(req.query.code);
+  const denied = queryValue(req.query.denied) ?? queryValue(req.query.error);
+  const key = oauth1Token ?? state ?? queryValue(req.query.denied);
+  const returnUrl = key ? await getGarminOAuthReturnUrl(key) : null;
 
-  if (deniedToken || !requestToken || !verifier) {
+  const callback =
+    state && code
+      ? { state, code }
+      : oauth1Token && verifier
+        ? { requestToken: oauth1Token, verifier }
+        : null;
+  if (denied || !callback) {
     res.redirect(frontendRedirect("cancelled", returnUrl));
     return;
   }
 
   try {
-    await finishGarminConnection(requestToken, verifier);
+    await finishGarminConnection(callback);
     res.redirect(frontendRedirect("connected", returnUrl));
   } catch (error) {
     if (

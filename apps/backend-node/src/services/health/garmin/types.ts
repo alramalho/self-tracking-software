@@ -1,4 +1,7 @@
 export interface GarminOAuthConfig {
+  /** Which flow new connections use. Existing connections keep the version they were made with. */
+  oauthVersion: 1 | 2;
+  /** OAuth1 consumer key, or the OAuth2 client ID (Garmin uses the same value). */
   consumerKey: string;
   consumerSecret: string;
   redirectUri: string;
@@ -12,9 +15,15 @@ export interface GarminRequestToken {
   secret: string;
 }
 
-export interface GarminAccessToken {
-  token: string;
-  secret: string;
+/** OAuth1 signs each request with token + secret; OAuth2 sends a bearer token. */
+export type GarminAccessToken =
+  | { version: 1; token: string; secret: string }
+  | { version: 2; token: string };
+
+export interface GarminOAuth2Tokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: Date;
 }
 
 export interface GarminStatus {
@@ -63,14 +72,6 @@ export interface GarminSyncCounts {
 export interface GarminSyncResult {
   counts: GarminSyncCounts;
   lastSyncCompletedAt: string | null;
-}
-
-export interface GarminSyncOptions {
-  days?: number;
-  requestBackfill?: boolean;
-  forceBackfill?: boolean;
-  backfillDays?: number;
-  now?: Date;
 }
 
 export interface GarminDailyMetricInput {
