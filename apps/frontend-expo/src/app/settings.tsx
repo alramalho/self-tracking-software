@@ -359,10 +359,6 @@ export default function Settings() {
             >
               Start preview
             </Button>
-            <Copy muted>
-              To test signup and checkout too, sign out and use a separate test
-              account.
-            </Copy>
           </>
         )}
         <Status
