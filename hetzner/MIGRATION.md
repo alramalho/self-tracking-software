@@ -282,6 +282,18 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## PATCH /users/user field guard — active since September 25, 2026
+
+Production runs `local/tracking-so-backend:user-update-guard-20260925`, built from [user-update-guard-overlay.Dockerfile](./user-update-guard-overlay.Dockerfile) on `streak-20260925` (2 files, hashes in `tracking-user-update-guard-20260925/source-hashes.txt`). No migration. Same 30 pre-existing typecheck errors, none in the changed files. Healthy after the switch; `/health` ok and an unauthenticated `PATCH /users/user` returns 401.
+
+Security fix: the route copied the whole request body into `prisma.user.update`, so any signed-in client could set `planType`, email, Stripe IDs or nested relation writes. `userSelfUpdate` now drops protected, array and object fields (except `reactionEmojis` and `onboardingProgress`).
+
+Rollback: restore `tracking-user-update-guard-20260925/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`.
+
+## Streaks without a grace week — active since September 25, 2026
+
+Image `local/tracking-so-backend:streak-20260925` from [streak-overlay.Dockerfile](./streak-overlay.Dockerfile) on `plan-nudges-20260925` (3 files; the live copies matched git, so the merge was clean). No migration. Same 30 pre-existing typecheck errors. Every missed week now costs one week of streak (no one-week buffer), `achievement.missedLastWeek` records what last week cost, and cached progress from an earlier week is recomputed. Rollback: `tracking-streak-20260925/backup/deployment.env`.
+
 ## Plan state + silent coach nudges — active since September 25, 2026 01:02 UTC
 
 Production runs `local/tracking-so-backend:plan-nudges-20260925`, built from [plan-nudges-overlay.Dockerfile](./plan-nudges-overlay.Dockerfile) on `coach-garmin-20260924` with 12 files (hashes in `tracking-plan-nudges-20260925/source-hashes.txt`). No migration. The typecheck inside the image shows the same 30 pre-existing errors as the previous image; `@tsw/prisma/follow-through/pace` resolves and the coach model loads inside the image. After the switch the container was healthy, `/health` returned ok, and the new `POST /follow-through/nudges/:messageId` returned 401 without auth.
