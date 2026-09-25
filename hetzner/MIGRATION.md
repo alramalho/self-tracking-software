@@ -281,3 +281,11 @@ curl -fsS https://api.tracking.so/health
 ```
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
+
+## Plan state + silent coach nudges — active since September 25, 2026 01:02 UTC
+
+Production runs `local/tracking-so-backend:plan-nudges-20260925`, built from [plan-nudges-overlay.Dockerfile](./plan-nudges-overlay.Dockerfile) on `coach-garmin-20260924` with 12 files (hashes in `tracking-plan-nudges-20260925/source-hashes.txt`). No migration. The typecheck inside the image shows the same 30 pre-existing errors as the previous image; `@tsw/prisma/follow-through/pace` resolves and the coach model loads inside the image. After the switch the container was healthy, `/health` returned ok, and the new `POST /follow-through/nudges/:messageId` returned 401 without auth.
+
+It adds the shared `planPace` rule, a silent `nudge` decision for slipping coached plans (message only, no notification or push, once a week per plan), `answerNudge` (remind tomorrow / archive), and one-off reminder pushes delivered by the hourly coach job.
+
+Rollback: restore `tracking-plan-nudges-20260925/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`.
