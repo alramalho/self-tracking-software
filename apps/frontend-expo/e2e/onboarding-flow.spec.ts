@@ -8,25 +8,27 @@ async function chooseWeeklyFrequency(page: Page) {
     0,
   );
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-validation")).toBeVisible();
+  // An accepted rhythm moves straight on and coaching is answered for them.
+  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
+  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Continue", exact: true }),
-  ).toBeVisible();
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "5");
 }
 async function answerGoal(page: Page, value: string) {
   await page.getByRole("textbox", { name: "Your answer" }).fill(value);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Where are you starting?" })).toBeVisible();
+  const progress = page.getByRole("progressbar", { name: "Onboarding progress" });
+  // The baseline question is phrased for the goal ("How much do you run now?").
+  await expect(progress).toHaveAttribute("aria-valuenow", "2");
   await page.getByRole("button", { name: "Skip for now" }).click();
   await expect(page.getByRole("heading", { name: "Why does this matter to you?" })).toBeVisible();
+  await expect(progress).toHaveAttribute("aria-valuenow", "3");
   await page.getByRole("button", { name: "Skip for now" }).click();
   await expect(page.getByTestId("coach-validation")).toHaveCount(0);
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
   ).toHaveAttribute("aria-valuenow", "4");
-}
-async function continueAfterValidation(page: Page) {
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
 }
 async function reviewCoachTour(page: Page) {
   await expect(page.getByTestId("coach-tour-role")).toBeVisible();
@@ -36,22 +38,20 @@ async function reviewCoachTour(page: Page) {
   await expect(page.getByTestId("coach-tour-data")).toBeVisible();
   await page.getByRole("button", { name: "Review my plan" }).click();
 }
-async function toPaywall(page: Page, coaching = true) {
+async function toPaywall(page: Page) {
   await answerGoal(page, "I want to write guitar songs to express myself");
   await chooseWeeklyFrequency(page);
-  await continueAfterValidation(page);
-  await page
-    .getByRole("button", {
-      name: coaching ? "Yes, coach this plan" : "No, just track it",
-      exact: true,
-    })
-    .click();
-  if (coaching) await reviewCoachTour(page);
+  await reviewCoachTour(page);
   await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
     "Guitar practice",
   );
+  await expect(
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "8");
   await page.getByRole("button", { name: "This feels right" }).click();
-  await continueAfterValidation(page);
+  await expect(
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "9");
 }
 for (const theme of ["DARK", "LIGHT"])
   test(`coach interview preview shares four gates without account writes in ${theme}`, async ({
@@ -76,7 +76,9 @@ for (const theme of ["DARK", "LIGHT"])
     await page.screenshot({
       path: `test-results/interview-paywall-${theme}.png`,
     });
-    await page.getByRole("button", { name: "Preview coaching unlock" }).click();
+    await expect(page.getByTestId("coaching-paywall")).toBeVisible();
+    await expect(page.getByRole("radio", { name: /^Quarterly/ })).toBeVisible();
+    await page.getByRole("button", { name: "Start my 7 free days" }).click();
     await expect(page.getByText("Your preview is complete")).toBeVisible();
     const state = await (await request.get(`${API}/__state`)).json();
     expect(
@@ -124,7 +126,8 @@ test("weekly picker keeps its count within 1–7 and shows flexible days in the 
   await decrease.click();
   await expect(value).toHaveText("5");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-validation")).toBeVisible();
+  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
+  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
   const state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.requests.find(
@@ -132,27 +135,17 @@ test("weekly picker keeps its count within 1–7 and shows flexible days in the 
         r.path.endsWith("/interview") && r.body.state.stage === "rhythm",
     )?.body.answer,
   ).toBe("5 sessions a week");
-  await continueAfterValidation(page);
-  await page.getByRole("button", { name: "Yes, coach this plan" }).click();
   await reviewCoachTour(page);
   await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
     "5 sessions a week · flexible days",
   );
-  for (let i = 0; i < 4; i++) {
+  for (const step of ["coach-tour-data", "coach-tour-contact", "coach-tour-role"]) {
     await page.getByRole("button", { name: "Previous question" }).click();
-    if (
-      await page
-        .getByRole("button", { name: "Yes, coach this plan" })
-        .isVisible()
-    )
-      break;
+    await expect(page.getByTestId(step)).toBeVisible();
   }
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
   ).toHaveAttribute("aria-valuenow", "5");
-  await expect(
-    page.getByRole("button", { name: "Yes, coach this plan" }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Previous question" }).click();
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
@@ -161,7 +154,8 @@ test("weekly picker keeps its count within 1–7 and shows flexible days in the 
   await decrease.click();
   await expect(value).toHaveText("4");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-validation")).toBeVisible();
+  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
+  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
   const revisedState = await (await request.get(`${API}/__state`)).json();
   const revisedRhythm = revisedState.requests
     .filter(
@@ -176,8 +170,6 @@ test("weekly picker keeps its count within 1–7 and shows flexible days in the 
     ),
   ).toHaveLength(0);
   expect(revisedRhythm?.body.state.confirmed).not.toContain("rhythm");
-  await continueAfterValidation(page);
-  await page.getByRole("button", { name: "Yes, coach this plan" }).click();
   await reviewCoachTour(page);
   await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
     "4 sessions a week · flexible days",
@@ -236,11 +228,10 @@ test("each goal screen checks only its own answer and saves the context supplied
 });
 test("coach role cards and review-time picker carry the chosen settings to the conclusion", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
-  await page.goto("/onboarding?preview=1");
+  // A paid member skips the coaching paywall and sees the plan conclusion.
+  await page.goto("/onboarding");
   await answerGoal(page, "I want to write my own guitar songs");
   await chooseWeeklyFrequency(page);
-  await continueAfterValidation(page);
-  await page.getByRole("button", { name: "Yes, coach this plan" }).click();
   await page.getByRole("radio", { name: "Plan and adjust training" }).click();
   await expect(page.getByRole("radio", { name: "Plan and adjust training" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
@@ -250,8 +241,13 @@ test("coach role cards and review-time picker carry the chosen settings to the c
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Review my plan" }).click();
   await page.getByRole("button", { name: "This feels right" }).click();
-  await continueAfterValidation(page);
   await expect(page.getByText("Weekly review · Sunday 19:00")).toBeVisible();
+  await expect(page.getByTestId("coaching-paywall")).toHaveCount(0);
+  await page.getByRole("button", { name: "Start with my coach" }).click();
+  await expect(page).toHaveURL(/plans\?selectedPlan=/);
+  const state = await (await request.get(`${API}/__state`)).json();
+  const finish = state.requests.filter((r: any) => r.path.endsWith("/finish")).at(-1);
+  expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: true, reviewTime: "19:00" });
 });
 test("Jev blocks nonsense and later interview errors can be retried", async ({
   page,
@@ -279,7 +275,7 @@ test("Jev blocks nonsense and later interview errors can be retried", async ({
     page.getByTestId("onboarding-weekly-frequency-value"),
   ).toHaveText("3");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await continueAfterValidation(page);
+  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
   await expect(
     page.getByRole("progressbar", { name: "Onboarding progress" }),
   ).toHaveAttribute("aria-valuenow", "5");
@@ -333,7 +329,7 @@ test("resume retains extracted answer and a delayed upgrade unlocks and continue
   });
   await page.goto("/onboarding");
   await toPaywall(page);
-  await page.getByRole("button", { name: "Start coaching trial" }).click();
+  await page.getByRole("button", { name: "Start my 7 free days" }).click();
   await expect(
     page.getByRole("button", { name: "Check subscription again" }),
   ).toBeVisible();
@@ -373,15 +369,11 @@ test("declining the trial creates free tracking without checkout", async ({
   await request.post(`${API}/__fail`, {
     data: { path: "/follow-through/onboarding/finish" },
   });
-  await page
-    .getByRole("button", { name: "Continue with free tracking" })
-    .click();
+  await page.getByRole("button", { name: "Just track it for free" }).click();
   await expect(
     page.getByText("Simulated network failure. Please try again."),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Continue with free tracking" })
-    .click();
+  await page.getByRole("button", { name: "Just track it for free" }).click();
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans).toHaveLength(3);
@@ -389,7 +381,7 @@ test("declining the trial creates free tracking without checkout", async ({
   expect(finish.body.preferences.coaching).toBe(false);
   expect(finish.body.draft.wantsCoaching).toBe(false);
 });
-test("choosing tracking skips the coach tour and creates a free plan without a trial", async ({
+test("choosing free tracking on the paywall creates a free plan without a trial", async ({
   page,
   request,
 }) => {
@@ -399,32 +391,33 @@ test("choosing tracking skips the coach tour and creates a free plan without a t
     data: { planType: "FREE" },
   });
   await page.goto("/onboarding");
-  await answerGoal(page, "I want to write guitar songs to express myself");
-  await chooseWeeklyFrequency(page);
-  await continueAfterValidation(page);
-  await page.getByRole("button", { name: "No, just track it" }).click();
-  await expect(page.getByTestId("coach-tour-role")).toHaveCount(0);
-  await expect(page.getByTestId("coach-tour-contact")).toHaveCount(0);
-  await expect(page.getByTestId("coach-tour-data")).toHaveCount(0);
+  await toPaywall(page);
+  const paywall = page.getByTestId("coaching-paywall");
+  await expect(paywall).toBeVisible();
+  // Quarterly (7 free days) is preselected; weekly has no trial.
+  await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /^Monthly/ })).toBeVisible();
+  await page.getByRole("radio", { name: /^Weekly/ }).click();
+  await expect(page.getByRole("button", { name: "Start coaching", exact: true })).toBeVisible();
+  await page.getByRole("radio", { name: /^Quarterly/ }).click();
+  await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
+  for (const link of ["Terms", "Restore", "Privacy"])
+    await expect(page.getByRole("link", { name: link, exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with free tracking" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start with my coach" })).toHaveCount(0);
+  // Back from the paywall returns to the plan review.
+  await page.getByRole("button", { name: "Previous question" }).click();
   await expect(page.getByTestId("onboarding-plan-summary")).toBeVisible();
-  await page.waitForTimeout(650);
-  await page.screenshot({ path: "test-results/interview-free-review.png" });
+  await expect(
+    page.getByRole("progressbar", { name: "Onboarding progress" }),
+  ).toHaveAttribute("aria-valuenow", "8");
   await page.getByRole("button", { name: "This feels right" }).click();
-  await continueAfterValidation(page);
-  await expect(
-    page.getByRole("button", { name: "Start coaching trial" }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Create my plan" }),
-  ).toBeVisible();
+  await expect(paywall).toBeVisible();
   await page.waitForTimeout(650);
-  await page.screenshot({ path: "test-results/interview-free-conclusion.png" });
-  await page.getByRole("button", { name: "Create my plan" }).click();
+  await page.screenshot({ path: "test-results/interview-free-paywall.png" });
+  await page.getByRole("button", { name: "Just track it for free" }).click();
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
-  expect(
-    state.requests.filter((r: any) => r.path.endsWith("/offer")),
-  ).toHaveLength(0);
   const finishes = state.requests.filter((r: any) =>
     r.path.endsWith("/finish"),
   );
