@@ -25,9 +25,9 @@ const sent = [
   "Workouts and sleep, only for plans where you allow it",
 ];
 const receivers = [
-  "OpenAI, DeepSeek, Google and Anthropic, through Vercel AI Gateway",
+  "OpenAI, DeepSeek, Google, Anthropic and Moonshot, through Vercel AI Gateway",
   "Speech to text: OpenAI or OpenRouter",
-  "Web search: Perplexity",
+  "Web search and browsing for the coach: Perplexity and Browserbase",
   "Coach memory: Supermemory",
 ];
 
@@ -120,9 +120,11 @@ function AiConsentSheet({
   const c = useColors();
   const list = (items: string[]) =>
     items.map((item) => (
-      <Text key={item} style={{ color: c.text, lineHeight: 22 }}>
-        {`•  ${item}`}
-      </Text>
+      // Bullet in its own column so wrapped lines stay indented.
+      <View key={item} style={{ flexDirection: "row", gap: 8 }}>
+        <Text style={{ color: c.text, lineHeight: 22 }}>•</Text>
+        <Text style={{ color: c.text, lineHeight: 22, flex: 1 }}>{item}</Text>
+      </View>
     ));
   const heading = (title: string) => (
     <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
