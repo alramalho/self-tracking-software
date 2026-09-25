@@ -102,6 +102,7 @@ const commentUserIds = async (as: string, entryId: string) =>
 describe("reporting and blocking", () => {
   beforeAll(async () => {
     process.env.ADMIN_EMAIL = "moderator@test.local";
+    process.env.REPORT_BCC_EMAILS = "backup@test.local, second@test.local";
     process.env.ADMIN_API_KEY = "moderation-test-admin-key";
     for (const id of ids) {
       fixture.users[id] = await prisma.user.create({
@@ -180,7 +181,10 @@ describe("reporting and blocking", () => {
       snapshot: { text: "nice run" },
     });
     expect(fixture.sendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: ["moderator@test.local"] }),
+      expect.objectContaining({
+        to: ["moderator@test.local"],
+        bcc: ["backup@test.local", "second@test.local"],
+      }),
     );
     expect(fixture.sendAlert).toHaveBeenCalled();
 

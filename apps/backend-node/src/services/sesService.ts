@@ -7,6 +7,7 @@ export interface EmailData {
   htmlBody: string;
   textBody?: string;
   from?: string;
+  bcc?: string[];
 }
 
 export interface BulkEmailData {
@@ -45,6 +46,7 @@ export class SESService {
         Source: data.from || this.defaultFromEmail,
         Destination: {
           ToAddresses: recipients,
+          ...(data.bcc?.length && { BccAddresses: data.bcc }),
         },
         Message: {
           Subject: {

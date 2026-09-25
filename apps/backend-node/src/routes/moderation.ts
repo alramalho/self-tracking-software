@@ -121,17 +121,20 @@ router.post(
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-      const adminEmail = process.env.ADMIN_EMAIL;
-      if (adminEmail) {
-        await sesService
-          .sendEmail({
-            to: [adminEmail],
-            subject: `🚩 ${input.kind} reported for ${input.reason}`,
-            textBody: summary,
-            htmlBody: `<pre style="white-space: pre-wrap">${escaped}</pre>`,
-          })
-          .catch((error) => logger.error("Failed to email content report:", error));
-      }
+      // REPORT_BCC_EMAILS (comma-separated) gets a copy so no report is missed.
+      const bcc = (process.env.REPORT_BCC_EMAILS ?? "")
+        .split(",")
+        .map((email) => email.trim())
+        .filter(Boolean);
+      await sesService
+        .sendEmail({
+          to: [process.env.ADMIN_EMAIL || "alex@tracking.so"],
+          bcc,
+          subject: `🚩 ${input.kind} reported for ${input.reason}`,
+          textBody: summary,
+          htmlBody: `<pre style="white-space: pre-wrap">${escaped}</pre>`,
+        })
+        .catch((error) => logger.error("Failed to email content report:", error));
       // Code spans keep usernames/ids from breaking Telegram Markdown.
       await telegramService
         .sendAlert(
