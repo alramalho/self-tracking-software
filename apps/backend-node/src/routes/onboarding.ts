@@ -3,6 +3,7 @@ import { Response, Router } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import { classifyActivityKind } from "../services/activityCategorizationService";
 import { aiService } from "../services/aiService";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
@@ -121,6 +122,7 @@ router.post(
 router.post(
   "/suggest-goal-reasons",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
     try {
       markOnboardingActivity(req);
@@ -139,6 +141,7 @@ router.post(
 router.post(
   "/check-plan-goal",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -203,6 +206,7 @@ router.post(
 router.post(
   "/generate-plan-activities",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -275,6 +279,7 @@ router.post(
 router.post(
   "/generate-plans",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -692,6 +697,7 @@ async function uploadPlanGenerationTrace(args: {
 router.post(
   "/validate-plan-frequency",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response

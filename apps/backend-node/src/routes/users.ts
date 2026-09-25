@@ -397,6 +397,33 @@ usersRouter.patch(
   }
 );
 
+// AI data sharing consent (App Store 5.1.2). The app asks before any AI feature;
+// see utils/aiConsent.ts for how the server enforces it.
+usersRouter.put(
+  "/ai-consent",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (typeof req.body?.granted !== "boolean") {
+      res.status(400).json({ error: "granted must be true or false" });
+      return;
+    }
+    try {
+      const now = new Date();
+      const user = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: req.body.granted
+          ? { aiConsentGrantedAt: now }
+          : { aiConsentDeclinedAt: now },
+        select: { aiConsentGrantedAt: true, aiConsentDeclinedAt: true },
+      });
+      res.json(user);
+    } catch (error) {
+      logger.error("Failed to save AI consent:", error);
+      res.status(500).json({ error: "Failed to save your choice" });
+    }
+  }
+);
+
 // Delete user account (Apple Store compliant - effective deletion).
 // Order matters: billing, then sign-in, then data. If billing or sign-in fails, nothing has been
 // deleted yet and the person can simply retry. Once the sign-in is gone, no session can recreate

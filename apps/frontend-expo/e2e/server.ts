@@ -142,6 +142,9 @@ function seed() {
     themeMode: "LIGHT",
     themeBaseColor: "BLUE",
     onboardingCompletedAt: old.toISOString(),
+    // AI features allowed, so flows and screenshots skip the consent sheet.
+    aiConsentGrantedAt: old.toISOString(),
+    aiConsentDeclinedAt: null as string | null,
   };
   const externalProfile = {
     id: "friend-user",
@@ -528,6 +531,16 @@ const server = http.createServer(async (req, res) => {
   if (path === "/users/user") {
     if (req.method === "PATCH") Object.assign(state.user, body);
     send(state.user);
+    return;
+  }
+  if (path === "/users/ai-consent") {
+    const now = new Date().toISOString();
+    if (body.granted) state.user.aiConsentGrantedAt = now;
+    else state.user.aiConsentDeclinedAt = now;
+    send({
+      aiConsentGrantedAt: state.user.aiConsentGrantedAt,
+      aiConsentDeclinedAt: state.user.aiConsentDeclinedAt,
+    });
     return;
   }
   if (path === "/users/update-timeline-seen") {

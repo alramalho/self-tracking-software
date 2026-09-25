@@ -1,6 +1,7 @@
 import { gateway } from "@ai-sdk/gateway";
 import { generateObject } from "../utils/aiSdk";
 import { z } from "zod/v4";
+import { hasAiConsent } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { PLAN_CATEGORY_KEYS } from "../constants/planCategories";
@@ -41,10 +42,19 @@ export async function runCategorizationJob(): Promise<{
   let categorized = 0;
   let errors = 0;
 
-  const plans = await prisma.plan.findMany({
-    where: { goalChanged: true, deletedAt: null },
-    select: { id: true, goal: true },
-  });
+  // Goals from many people go into one AI call, so only include people who allowed AI.
+  const plans = (
+    await prisma.plan.findMany({
+      where: { goalChanged: true, deletedAt: null },
+      select: {
+        id: true,
+        goal: true,
+        user: { select: { aiConsentGrantedAt: true, aiConsentDeclinedAt: true } },
+      },
+    })
+  )
+    .filter((plan) => hasAiConsent(plan.user))
+    .map(({ id, goal }) => ({ id, goal }));
 
   logger.info(`Plan categorization: ${plans.length} plans to categorize`);
 

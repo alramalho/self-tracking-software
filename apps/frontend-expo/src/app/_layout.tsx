@@ -3,6 +3,7 @@ import { NotificationRegistration } from "@/native/notifications/NotificationReg
 import { WatchSync } from "@/native/watch/WatchSync";
 import { HealthProvider } from "@/features/health/HealthProvider";
 import { OnboardingGate } from "@/features/onboarding/OnboardingGate";
+import { AiConsentGate } from "@/features/ai-consent/AiConsent";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
@@ -29,6 +30,7 @@ function Routes() {
         <NotificationRegistration />
         <WatchSync />
         <OnboardingGate />
+        <AiConsentGate />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={session.isSignedIn}>
             <Stack.Screen name="(tabs)" />

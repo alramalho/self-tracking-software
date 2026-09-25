@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Prisma, type User } from "@tsw/prisma";
 import type { FollowThroughState } from "@tsw/prisma/follow-through";
 import { prisma } from "../../../utils/prisma";
+import { hasAiConsent } from "../../../utils/aiConsent";
 import { logger } from "../../../utils/logger";
 import { healthSafeActivityFilter } from "../../health/apple/ai-boundary";
 import { changeState } from "../../follow-through/store";
@@ -333,6 +334,7 @@ export async function monitorUser(user: User, now = new Date()) {
 }
 /** Finish setup in the background; the durable queue is retried by the hourly scheduler. */
 export function startPlanMonitoring(user: User) {
+  if (!hasAiConsent(user)) return; // coach check-ins use AI
   void monitorUser(user).catch((error) =>
     logger.error("Plan setup failed", { userId: user.id, error }),
   );
@@ -425,7 +427,8 @@ export async function deliverPlanMonitoring() {
     if (!Object.values(state.supports).some((s) => s.coaching)) continue;
     try {
       await sendDueReminders(account.user);
-      await monitorUser(account.user);
+      // AI consent: reminders are plain pushes, coach check-ins use AI.
+      if (hasAiConsent(account.user)) await monitorUser(account.user);
     } catch (error) {
       logger.error("Plan monitoring failed", { userId: account.userId, error });
     }

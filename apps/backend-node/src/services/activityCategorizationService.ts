@@ -7,6 +7,7 @@ import {
   DEFAULT_ACTIVITY_KIND,
   type ActivityKind,
 } from "../constants/activityCategories";
+import { currentUserAllowsAi } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -52,6 +53,10 @@ export async function classifyActivityKind(
   const fallback = heuristicKind(input);
 
   if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL) {
+    return fallback;
+  }
+  // AI consent: without it, keep the keyword guess.
+  if (!currentUserAllowsAi()) {
     return fallback;
   }
 

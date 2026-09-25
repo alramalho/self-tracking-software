@@ -2,6 +2,7 @@ import { Pressable, View } from "react-native";
 import { Activity, CalendarClock, Check, Dumbbell, ListChecks, MessageCircle, Moon, Repeat } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Copy, useColors } from "@/components/ui";
+import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import {
   DaysInput,
   TimeInput,
@@ -92,6 +93,7 @@ export function CoachingFields({
   timezone,
 }: CoachingFieldsProps) {
   const c = useColors();
+  const aiConsent = useAiConsent();
   return (
     <View style={{ gap: 10 }}>
       <SectionLabel>Coaching style</SectionLabel>
@@ -104,7 +106,9 @@ export function CoachingFields({
           detail={detail}
           selected={value.role === role}
           disabled={role !== "tracking" && !canCoach}
-          onPress={() => {
+          onPress={async () => {
+            // Coaching is done by AI, so ask before turning it on.
+            if (role !== "tracking" && !(await aiConsent.ask())) return;
             onChange({ ...value, role });
             onPreferences({
               ...preferences,
@@ -203,6 +207,7 @@ export function CoachingFields({
           </Copy>
         </>
       )}
+      {aiConsent.sheet}
     </View>
   );
 }

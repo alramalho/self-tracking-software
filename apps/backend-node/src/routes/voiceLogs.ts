@@ -3,6 +3,7 @@ import { Response, Router } from "express";
 import { z } from "zod/v4";
 
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import { commitVoiceLog, previewVoiceLog } from "../services/voice-log/service";
 import { logger } from "../utils/logger";
 import {
@@ -22,6 +23,7 @@ const requestIdSchema = z.string().uuid();
 router.post(
   "/preview",
   requireAuth,
+  requireAiConsent,
   upload.single("audio_file"),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {

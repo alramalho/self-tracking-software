@@ -7,6 +7,7 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import { aiService } from "../services/aiService";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
 import { getNextPlanSortOrder, plansService } from "../services/plansService";
@@ -1096,6 +1097,7 @@ router.get(
 router.post(
   "/generate-sessions",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response

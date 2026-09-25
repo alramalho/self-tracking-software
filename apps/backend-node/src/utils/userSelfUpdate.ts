@@ -16,6 +16,9 @@ const PROTECTED_FIELDS = new Set([
   "lastActiveAt",
   "unactivatedEmailSentAt",
   "onboardingDropNotifiedAt",
+  // AI consent changes only through PUT /users/ai-consent.
+  "aiConsentGrantedAt",
+  "aiConsentDeclinedAt",
 ]);
 
 // The only fields whose values are legitimately arrays or objects.

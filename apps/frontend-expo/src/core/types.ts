@@ -233,6 +233,9 @@ export interface User extends Person {
   iosDeviceTokenUpdatedAt?: DateValue | null;
   planType?: string;
   onboardingCompletedAt?: DateValue | null;
+  // AI data sharing consent: allowed when granted is newer than declined.
+  aiConsentGrantedAt?: DateValue | null;
+  aiConsentDeclinedAt?: DateValue | null;
   theme?: string;
   themeMode?: string;
   themeBaseColor?: string;
