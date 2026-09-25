@@ -31,6 +31,7 @@ import {
   TimezoneUpdateSchema,
 } from "../types/user";
 import { logger } from "../utils/logger";
+import { userSelfUpdate } from "../utils/userSelfUpdate";
 import { prisma } from "../utils/prisma";
 
 export const usersRouter: Router = Router();
@@ -331,7 +332,7 @@ usersRouter.patch(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const updates = { ...req.body };
+      const updates = userSelfUpdate(req.body);
       if ("reactionEmojis" in updates) {
         const emojis = updates.reactionEmojis;
         const normalizedEmojis = Array.isArray(emojis)
