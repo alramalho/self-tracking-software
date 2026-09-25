@@ -6,6 +6,7 @@ import type {
   MonitoringMessageMetadata,
 } from "./types";
 import { dueForSession } from "../../follow-through/model";
+import { planPace } from "@tsw/prisma/follow-through/pace";
 
 const DAY = 86400000;
 export const monitoringState = (): CoachMonitoringState => ({
@@ -161,6 +162,38 @@ export function decideMonitoring(
   if (state.outreachPaused) return null;
   // Allow an in-flight/user-initiated conversation to finish before a proactive review.
   if (recentConversation) return null;
+
+  // A coached plan that is slipping gets a silent nudge: the homepage card turns yellow and the
+  // message is ready in Messages, with no push. Ignored nudges escalate through the normal
+  // reminder (after 3 days) and lapse/pause rules below. At most one nudge per plan a week.
+  const slipping = plans.find(
+    (p) =>
+      supports[p.id].coaching?.role !== "tracking" &&
+      supports[p.id].coaching?.followUps &&
+      !awaitingReply &&
+      // Already further along: owed the "why you started / archive?" message instead.
+      !state.lapsePlanIds?.includes(p.id) &&
+      !state.requests.some(
+        (r) =>
+          r.kind === "nudge" &&
+          r.planIds.includes(p.id) &&
+          now.getTime() - Date.parse(r.createdAt) < 7 * DAY,
+      ) &&
+      planPace({
+        timesPerWeek: p.timesPerWeek,
+        startedAt: p.createdAt,
+        now,
+        logDates: input.entries
+          .filter((e) => p.activityIds.includes(e.activityId ?? ""))
+          .map((e) => e.datetime),
+      }) === "slipping",
+  );
+  if (slipping)
+    return {
+      id: `nudge:${slipping.id}:${formatInTimeZone(now, supports[slipping.id].timezone, "yyyy-MM-dd")}`,
+      kind: "nudge",
+      planIds: [slipping.id],
+    };
   if (
     state.lastOutreachAt &&
     now.getTime() - Date.parse(state.lastOutreachAt) < DAY

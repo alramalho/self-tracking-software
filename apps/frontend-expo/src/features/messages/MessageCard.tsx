@@ -237,6 +237,34 @@ export function MessageCard({
           Retry coach response
         </Button>
       )}
+      {m.nudge &&
+        (m.nudge.outcome ? (
+          <Copy muted>
+            {m.nudge.outcome === "remind" && m.nudge.remindAt
+              ? `Reminder set for ${format(new Date(m.nudge.remindAt), "EEEE 'at' HH:mm")}.`
+              : "Plan archived."}
+          </Copy>
+        ) : (
+          <View style={{ gap: 8 }}>
+            <Button
+              busy={action.isPending}
+              onPress={() =>
+                action.mutate({ path: `/follow-through/nudges/${m.id}`, body: { action: "remind" } })
+              }
+            >
+              Remind me tomorrow
+            </Button>
+            <Button
+              secondary
+              disabled={action.isPending}
+              onPress={() =>
+                action.mutate({ path: `/follow-through/nudges/${m.id}`, body: { action: "archive" } })
+              }
+            >
+              Let it go (archive plan)
+            </Button>
+          </View>
+        ))}
       {m.planProposals?.map((p, index) =>
         hasProposalChanges(p) ? (
           <ProposalReview

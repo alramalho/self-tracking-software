@@ -1,4 +1,9 @@
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import type { CoachNudge } from "@tsw/prisma/follow-through";
 import { changeState } from "../../follow-through/store";
+import { FollowThroughInputError } from "../../follow-through/errors";
+import { executePlanProposalPatch } from "../../planProposalPatchService";
+import { prisma } from "../../../utils/prisma";
 import type { Message } from "@tsw/prisma";
 import { monitoringState } from "./model";
 import type { MonitoringMessageMetadata } from "./types";
@@ -120,4 +125,51 @@ export async function resolveCoachConversation(
       });
     }
   });
+}
+
+/**
+ * The two buttons on a silent nudge. "remind" books one push for tomorrow at the plan's reminder
+ * time (and lifts any pause on the plan); "archive" archives it. Either way the nudge is answered.
+ */
+export async function answerNudge(
+  userId: string,
+  messageId: string,
+  action: "remind" | "archive",
+): Promise<CoachNudge> {
+  const message = await prisma.message.findFirst({ where: { id: messageId, chat: { userId } } });
+  const nudge = (message?.metadata as { nudge?: CoachNudge } | null)?.nudge;
+  if (!message || !nudge) throw new FollowThroughInputError("This suggestion is no longer available.");
+  if (nudge.outcome) return nudge;
+
+  if (action === "archive")
+    await executePlanProposalPatch({ planId: nudge.planId, userId, patch: { archive: true } });
+
+  let answered: CoachNudge = { ...nudge, outcome: action };
+  await changeState(userId, async (state, tx) => {
+    const monitoring = (state.monitoring ??= monitoringState());
+    if (action === "remind") {
+      const support = state.supports[nudge.planId];
+      const timezone = support?.timezone || "UTC";
+      const tomorrow = formatInTimeZone(new Date(Date.now() + 86400000), timezone, "yyyy-MM-dd");
+      const remindAt = fromZonedTime(
+        `${tomorrow}T${support?.preferences.dayReminderTime ?? "09:00"}:00`,
+        timezone,
+      ).toISOString();
+      monitoring.reminders = [
+        ...(monitoring.reminders ?? []).filter((r) => r.planId !== nudge.planId || r.sentAt),
+        { planId: nudge.planId, dueAt: remindAt },
+      ];
+      monitoring.pausedPlanIds = monitoring.pausedPlanIds.filter((id) => id !== nudge.planId);
+      monitoring.lapsePlanIds = monitoring.lapsePlanIds?.filter((id) => id !== nudge.planId);
+      answered = { ...answered, remindAt };
+    }
+    for (const request of monitoring.requests)
+      if (request.messageId === messageId && !request.resolvedAt && !request.closedAt)
+        request.resolvedAt = new Date().toISOString();
+    await tx.message.update({
+      where: { id: messageId },
+      data: { metadata: { ...(message.metadata as object), nudge: { ...answered } } },
+    });
+  });
+  return answered;
 }

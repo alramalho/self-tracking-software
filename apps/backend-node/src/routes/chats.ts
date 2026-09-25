@@ -995,6 +995,7 @@ router.get(
                 planReplacements,
                 metricReplacement,
                 planProposals: metadata.planProposals || [],
+                nudge: metadata.nudge ?? null,
                 planCreationProposals: metadata.planCreationProposals || [],
                 activityLogProposals: metadata.activityLogProposals || [],
                 activityEditProposals: metadata.activityEditProposals || [],

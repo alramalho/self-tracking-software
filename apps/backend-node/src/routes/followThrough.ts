@@ -36,6 +36,7 @@ import { changeState } from "../services/follow-through/store";
 import { logger } from "../utils/logger";
 import { startPlanMonitoring } from "../services/coach/monitoring/service";
 import { monitoringState } from "../services/coach/monitoring/model";
+import { answerNudge } from "../services/coach/monitoring/requests";
 
 const router = Router();
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
@@ -61,6 +62,12 @@ const handle =
     }
   };
 router.use(requireAuth);
+// The two buttons on the coach's silent "you've gone quiet" message.
+router.post("/nudges/:messageId", handle(async (req, res) => {
+  const { action } = z.object({ action: z.enum(["remind", "archive"]) }).parse(req.body);
+  res.json(await answerNudge(req.user!.id, String(req.params.messageId), action));
+}));
+
 router.post("/coaching/presence", handle(async (req, res) => {
   await changeState(req.user!.id, async state => {
     state.monitoring ??= monitoringState();

@@ -12,6 +12,8 @@ export interface MonitoringPlan {
   archivedAt: Date | null;
   deletedAt: Date | null;
   finishingDate: Date | null;
+  createdAt: Date;
+  timesPerWeek: number | null;
   activityIds: string[];
 }
 export interface MonitoringEntry {
@@ -48,7 +50,7 @@ export interface MonitoringInput {
 }
 export interface MonitoringDecision {
   id: string;
-  kind: "setup" | "review" | "difficulty" | "session" | "lapse" | "reminder";
+  kind: "setup" | "review" | "difficulty" | "session" | "lapse" | "nudge" | "reminder";
   planIds: string[];
   dueKey?: string;
   entryId?: string;

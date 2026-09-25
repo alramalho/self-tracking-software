@@ -10,7 +10,7 @@ import {
 } from "../../../coachAgentModelConfig";
 import { permittedCoachHistory, readPermittedCoachContext } from "../context";
 import { scheduledCoachSnapshot } from "./context";
-import { followUpMessage, lapseMessage, setupMessage } from "./proposals";
+import { followUpMessage, lapseMessage, nudgeMessage, setupMessage } from "./proposals";
 import {
   followUpOutputSchema,
   lapseOutputSchema,
@@ -28,6 +28,8 @@ Missing logs depend on the plan's role. For "consistency" plans, a missing log i
 If a difficult session was reported, respond to that before increasing load. A temporary change to one week uses dated sessions; leave timesPerWeek null unless the person explicitly wants a new ongoing target. Session quantity is in the activity's tracking unit and its guide must agree with it; revise or remove an existing dated session instead of adding a duplicate. Do not increase a stable habit target merely to say something. Avoid repeating recent messages. Propose archive only after clear user intent. Use only IDs in the input. For no change, return empty arrays.`;
 
 const lapseInstructions = `The person set up these habit plans but has not logged them or answered the coach for weeks. Write one short, direct message (at most 4 sentences). Say plainly that the plan has been sitting unused. Remind them why they started, using their own goalReason when present, without lecturing. Then say that if it no longer fits, you'll archive it: they can accept the archive below, or log a session to keep it going. Be honest, a little blunt, never cruel, and do not guess at reasons for the silence.`;
+
+const nudgeInstructions = `The person has not logged this plan for a while (compare today with recentEntries and the plan's timesPerWeek). Write one short message, at most 3 sentences, shown when they tap the plan. Say plainly how long it has been. Remind them why they started, using their own goalReason when present. End by asking whether they want to get back to it tomorrow or let it go; the app shows those two buttons. Warm but direct, no guilt-tripping, no guesses about why.`;
 
 type Usage = NonNullable<MonitoringGenerated["usage"]>;
 
@@ -79,6 +81,10 @@ export async function generateFromSnapshot(
     case "lapse": {
       const output = await generate(input, lapseOutputSchema, "coachLapse", lapseInstructions, snapshot, usage);
       return { draftMessages: [lapseMessage(input.plans, output)], usage };
+    }
+    case "nudge": {
+      const output = await generate(input, lapseOutputSchema, "coachNudge", nudgeInstructions, snapshot, usage);
+      return { draftMessages: [nudgeMessage(input.plans[0], output)], usage };
     }
     default:
       throw new Error(`No generator for ${input.decision.kind}`);

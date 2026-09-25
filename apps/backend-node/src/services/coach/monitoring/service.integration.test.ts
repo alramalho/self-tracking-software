@@ -8,10 +8,10 @@ import type { User } from "@tsw/prisma";
 import { prisma } from "../../../utils/prisma";
 import { initialState } from "../../follow-through/model";
 import { changeState } from "../../follow-through/store";
-import { monitorUser } from "./service";
+import { monitorUser, sendDueReminders } from "./service";
 import { monitoringState } from "./model";
 import { permittedCoachContext, permittedCoachHistory } from "./context";
-import { recordCoachRequests, resolveCoachConversation } from "./requests";
+import { answerNudge, recordCoachRequests, resolveCoachConversation } from "./requests";
 import { toCoachConversationHistory } from "../../coachConversationHistoryService";
 import { executePlanProposalPatch } from "../../planProposalPatchService";
 import { StaleCoachProposalError, planProposalBasis } from "./proposal-basis";
@@ -379,6 +379,7 @@ describe("The coach across reused running, meditation and fitness plans", () => 
     });
     await changeState(user.id, async (state) => {
       state.supports[running].preferences.weeklyReview = false;
+      state.supports[running].coaching!.role = "tracking";
     });
     await monitorUser(user, sunday);
     const [question] = await messages();
@@ -428,6 +429,7 @@ describe("The coach across reused running, meditation and fitness plans", () => 
   it("logging the habit again before the archive offer cancels it", async () => {
     await changeState(user.id, async (state) => {
       state.supports[running].preferences.weeklyReview = false;
+      state.supports[running].coaching!.role = "tracking";
       state.monitoring = { ...monitoringState(), lapsePlanIds: [meditation] };
     });
     const activity = await prisma.activity.create({
@@ -457,7 +459,8 @@ describe("The coach across reused running, meditation and fitness plans", () => 
     });
     await resolveCoachConversation(user.id);
     expect((await saved()).monitoring?.requests[0].resolvedAt).toBeTruthy();
-    expect(await monitorUser(user, later(3))).toBe("quiet");
+    await monitorUser(user, later(3));
+    expect(await notifications()).toHaveLength(1);
   });
 
   it("drops a review prepared against old information when the person pauses a plan or logs during generation; the next run can handle a newly requested training design", async () => {
@@ -659,6 +662,71 @@ describe("Measurements the coach asks for", () => {
   });
 });
 
+describe("Silent nudges for a slipping plan", () => {
+  // Meditation is the plan under test; running is tracking-only and has no reviews.
+  async function slippingMeditation() {
+    await changeState(user.id, async (state) => {
+      state.supports[running].coaching!.role = "tracking";
+      state.supports[meditation].preferences.weeklyReview = false;
+    });
+    external.generate.mockImplementation(async ({ decision }) => ({
+      draftMessages: [
+        {
+          content: "No meditation logged for five days. You wanted to respond more calmly when angry. Get back to it tomorrow, or let it go?",
+          requiresReply: true,
+          nudge: { planId: decision.planIds[0] },
+        },
+      ],
+    }));
+    // Created today with no logs: 3x/week allows a 4-day gap, so it slips after that.
+    expect(await monitorUser(user, later(3))).toBe("delivered");
+    const [nudge] = await messages();
+    return nudge;
+  }
+
+  it("prepares the message without any notification or push", async () => {
+    const nudge = await slippingMeditation();
+    expect(external.generate.mock.calls[0][0].decision).toMatchObject({ kind: "nudge", planIds: [meditation] });
+    expect((nudge.metadata as { nudge?: { planId: string } }).nudge?.planId).toBe(meditation);
+    expect(await notifications()).toHaveLength(0);
+    expect(external.push).not.toHaveBeenCalled();
+    // No second nudge for the same plan within the week.
+    expect(await monitorUser(user, new Date(later(3).getTime() + 2 * 3600000))).toBe("quiet");
+  });
+
+  it("'Remind me tomorrow' books exactly one push at the plan's reminder time, skipped if already logged", async () => {
+    const nudge = await slippingMeditation();
+    const answered = await answerNudge(user.id, nudge.id, "remind");
+    expect(answered.outcome).toBe("remind");
+    expect(answered.remindAt).toMatch(/T09:00:00\.000Z$/);
+    expect((await saved()).monitoring?.requests.find((r) => r.kind === "nudge")?.resolvedAt).toBeTruthy();
+    // Answering again changes nothing.
+    expect((await answerNudge(user.id, nudge.id, "archive")).outcome).toBe("remind");
+
+    external.push.mockResolvedValue({ platform: "ios" });
+    const due = new Date(Date.parse(answered.remindAt!) + 7 * 60000);
+    await sendDueReminders(user, due);
+    await sendDueReminders(user, due);
+    expect(external.push).toHaveBeenCalledTimes(1);
+    expect(external.push.mock.calls[0][3]).toBe(`/plan/${meditation}`);
+  });
+
+  it("'Let it go' archives the plan", async () => {
+    const nudge = await slippingMeditation();
+    await answerNudge(user.id, nudge.id, "archive");
+    expect(
+      (await prisma.plan.findUniqueOrThrow({ where: { id: meditation } })).archivedAt,
+    ).not.toBeNull();
+  });
+
+  it("an ignored nudge escalates to one reminder push after three days", async () => {
+    await slippingMeditation();
+    expect(await monitorUser(user, later(6))).toBe("delivered");
+    expect(await notifications()).toHaveLength(1);
+    expect(external.generate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("Contact limits and failed deliveries", () => {
   it("discards a review if a permitted watch workout arrives while the coach is preparing it", async () => {
     await changeState(user.id, async (state) => {
@@ -735,6 +803,7 @@ describe("Contact limits and failed deliveries", () => {
       for (const s of Object.values(state.supports)) {
         s.timezone = "Europe/Lisbon";
         s.preferences.reviewTime = "18:30";
+        s.coaching!.followUps = false;
       }
     });
     expect(await monitorUser(user, new Date("2026-10-18T17:07:00Z"))).toBe(

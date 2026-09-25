@@ -164,3 +164,8 @@ export function lapseMessage(
     ),
   };
 }
+
+/** The coach writes the words; the two choices (remind tomorrow / let it go) are app buttons. */
+export function nudgeMessage(plan: ActiveCoachPlan, output: LapseOutput): CoachDraftMessage {
+  return { content: output.message, requiresReply: true, nudge: { planId: plan.id } };
+}

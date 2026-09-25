@@ -91,6 +91,8 @@ export interface Message {
     score: number;
     matchReasons: string[];
   }> | null;
+  /** A silent "you've gone quiet" message from the coach, with two app actions. */
+  nudge?: import("@tsw/prisma/follow-through").CoachNudge | null;
   planProposals?: Array<{
     planId: string;
     planGoal: string;

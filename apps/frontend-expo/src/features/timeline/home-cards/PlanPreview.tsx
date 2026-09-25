@@ -1,10 +1,14 @@
-import { Pressable, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, View } from "react-native";
 import { Text } from "@/components/typography/Text";
-import { Flame, Sprout, Rocket } from "lucide-react-native";
+import { Flame, Sprout, Rocket, TriangleAlert } from "lucide-react-native";
+import { planPace } from "@tsw/prisma/follow-through/pace";
+import { useFollowThrough } from "@/features/follow-through/api";
 import { router } from "expo-router";
 import { isSameWeek, startOfDay, format } from "date-fns";
 import { useColors } from "@/components/ui";
 import { dayKey } from "@/core/dates";
+import type { Plan, ActivityEntry } from "@/core/types";
 import type { PlanPreviewProps, StepsProps } from "./types";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
 
@@ -41,8 +45,66 @@ function Steps({ value, max, color, iconColor = color, icon: Icon, label }: Step
     </View>
   );
 }
+const GREEN = "#22c55e";
+const AMBER = "#f59e0b";
+
+/**
+ * How a coached plan is going (same rule the coach uses), and the coach's waiting nudge if any.
+ * Tracking-only plans have no state: the coach stays out of them.
+ */
+function useCoachState(plan: Plan, entries: ActivityEntry[]) {
+  const state = useFollowThrough().data?.state;
+  const role = state?.supports[plan.id]?.coaching?.role;
+  if (!role || role === "tracking") return { pace: null, nudge: undefined };
+  const nudge = state?.monitoring?.requests.find(
+    (r) => r.kind === "nudge" && r.planIds.includes(plan.id) && !r.resolvedAt && !r.closedAt,
+  );
+  const pace = planPace({
+    timesPerWeek: plan.timesPerWeek,
+    startedAt: new Date(plan.createdAt),
+    now: new Date(),
+    logDates: entries
+      .filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId))
+      .map((e) => new Date(e.datetime)),
+  });
+  return { pace: nudge ? "slipping" : pace, nudge };
+}
+
+/** A ring drawn over the card's border: steady green when on track, gently pulsing amber when slipping. */
+function StateRing({ color, pulse }: { color: string; pulse: boolean }) {
+  const opacity = useRef(new Animated.Value(pulse ? 0.35 : 0.8)).current;
+  useEffect(() => {
+    if (!pulse) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 1100, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.35, duration: 1100, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, opacity]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: -1,
+        left: -1,
+        right: -1,
+        bottom: -1,
+        borderRadius: 24,
+        borderWidth: 2,
+        borderColor: color,
+        opacity,
+      }}
+    />
+  );
+}
+
 export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   const c = useColors();
+  const coach = useCoachState(plan, entries);
   const now = new Date();
   const week = plan.progress?.weeks?.find((week) =>
     isSameWeek(new Date(week.startDate), now),
@@ -69,13 +131,28 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open ${plan.goal}`}
+      accessibilityLabel={
+        coach.pace === "slipping"
+          ? `${plan.goal}, needs attention. ${coach.nudge ? "Open your coach's message" : "Open plan"}`
+          : `Open ${plan.goal}`
+      }
       accessibilityValue={{ text: `${achievement.stage}, ${achievement.streak} weeks` }}
       onPress={() =>
-        router.push({
-          pathname: "/(tabs)/plans",
-          params: { selectedPlan: plan.id },
-        })
+        // A waiting nudge opens straight into the coach's already-written message.
+        coach.nudge?.chatId && coach.nudge.messageId
+          ? router.push({
+              pathname: "/chat/[id]",
+              params: {
+                id: coach.nudge.chatId,
+                planId: plan.id,
+                messageId: coach.nudge.messageId,
+                type: "COACH",
+              },
+            })
+          : router.push({
+              pathname: "/(tabs)/plans",
+              params: { selectedPlan: plan.id },
+            })
       }
       style={{
         aspectRatio: 1,
@@ -87,6 +164,13 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
         borderColor: ended ? "#f59e0b66" : c.border,
       }}
     >
+      {coach.pace === "on_track" && <StateRing color={GREEN} pulse={false} />}
+      {coach.pace === "slipping" && <StateRing color={AMBER} pulse />}
+      {coach.pace === "slipping" && (
+        <View style={{ position: "absolute", top: 14, right: 14 }}>
+          <TriangleAlert size={16} color={AMBER} />
+        </View>
+      )}
       <View style={{ gap: 4 }}>
         <Text style={{ fontSize: 24 }}>
           {plan.activities[0]?.emoji ?? plan.emoji}

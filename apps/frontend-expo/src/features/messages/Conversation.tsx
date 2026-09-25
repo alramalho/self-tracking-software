@@ -70,6 +70,7 @@ export function Conversation({ id }: ConversationProps) {
   const user = useCurrentUser();
   const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string }>();
   const [selectedPlan, setSelectedPlan] = useState(params.planId ?? "");
+  const pillStrip = useRef<ScrollView>(null);
   const focusedMessage = useRef<string | undefined>(undefined);
   const chats = useQuery({ queryKey: ["chats"], queryFn: getChats });
   const chat = chats.data?.find((chat) => chat.id === id);
@@ -407,11 +408,16 @@ export function Conversation({ id }: ConversationProps) {
             void query.refetch();
           }}
         />
-        {coach && !!plans.data?.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
-          {[{ id: "", goal: "All plans" }, ...plans.data.filter(p => !p.deletedAt && !p.archivedAt)].map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Messages: ${p.goal}`} accessibilityState={{ selected: selectedPlan === p.id }}
+        {coach && !!plans.data?.length && <ScrollView ref={pillStrip} horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
+          {[{ id: "", goal: "All plans", emoji: undefined as string | undefined | null }, ...plans.data.filter(p => !p.deletedAt && !p.archivedAt).map(p => ({ ...p, emoji: p.activities?.[0]?.emoji ?? p.emoji }))].map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Messages: ${p.goal}`} accessibilityState={{ selected: selectedPlan === p.id }}
+            onLayout={e => {
+              // Opening from a plan (e.g. a nudge) brings that plan's pill into view.
+              if (p.id && p.id === selectedPlan) pillStrip.current?.scrollTo({ x: Math.max(0, e.nativeEvent.layout.x - 16), animated: false });
+            }}
             onPress={() => { setSelectedPlan(p.id); focusedMessage.current = params.messageId; nearBottom.current = true; }}
             style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: selectedPlan === p.id ? c.text : c.soft }}>
-            <Text style={{ color: selectedPlan === p.id ? c.bg : c.text, fontSize: 14 }}>{p.goal}</Text>
+            {/* Same emoji as the plan's homepage card, so each pill is easy to tell apart. */}
+            <Text style={{ color: selectedPlan === p.id ? c.bg : c.text, fontSize: 14, lineHeight: 20 }}>{p.emoji ? `${p.emoji} ${p.goal}` : p.goal}</Text>
           </Pressable>)}
         </ScrollView>}
         <View style={{ flex: 1 }}>

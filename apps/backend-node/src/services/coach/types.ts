@@ -83,6 +83,8 @@ export type CoachGenerateResponseParams = {
 export type CoachDraftMessage = {
   requiresReply?: boolean;
   content: string;
+  /** A silent "you've gone quiet" message: the app shows Remind me tomorrow / Let it go. */
+  nudge?: import("@tsw/prisma/follow-through").CoachNudge;
   error?: boolean;
   planReplacements?: Array<{ textToReplace: string; planGoal: string }>;
   planProposals?: Array<{

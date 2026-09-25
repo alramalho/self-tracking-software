@@ -290,6 +290,8 @@ export async function monitorUser(user: User, now = new Date()) {
             (!r.closedAt && !r.resolvedAt && r.requiresReply) ||
             Date.parse(r.createdAt) > now.getTime() - 90 * 86400000,
         );
+        // A nudge is silent: no notification, no push, and it doesn't use up today's contact.
+        if (decision.kind === "nudge") return { id: "", url: "", body: "", push: false };
         m.lastOutreachAt = now.toISOString();
         if (decision.kind === "difficulty" || decision.kind === "session")
           m.lastExtraAt = now.toISOString();
@@ -367,6 +369,49 @@ async function saveNotification(
     push: !viewingUntil || Date.parse(viewingUntil) <= now.getTime(),
   };
 }
+/** "Get back on it tomorrow": one push at the plan's reminder time, unless it was already logged. */
+export async function sendDueReminders(user: User, now = new Date()) {
+  const due = await changeState(user.id, async (state, tx) => {
+    const reminders = state.monitoring?.reminders ?? [];
+    const ready = reminders.filter((r) => !r.sentAt && Date.parse(r.dueAt) <= now.getTime());
+    if (!ready.length) return [];
+    for (const reminder of ready) reminder.sentAt = now.toISOString();
+    state.monitoring!.reminders = reminders.filter(
+      (r) => !r.sentAt || now.getTime() - Date.parse(r.sentAt) < 30 * 86400000,
+    );
+    const plans = await tx.plan.findMany({
+      where: {
+        id: { in: ready.map((r) => r.planId) },
+        userId: user.id,
+        archivedAt: null,
+        deletedAt: null,
+      },
+      select: { id: true, goal: true, emoji: true, activities: { select: { id: true } } },
+    });
+    const loggedToday = await tx.activityEntry.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: null,
+        datetime: { gte: new Date(now.getTime() - 12 * 3600000) },
+        activityId: { in: plans.flatMap((p) => p.activities.map((a) => a.id)) },
+      },
+      select: { activityId: true },
+    });
+    return plans.filter(
+      (p) => !loggedToday.some((e) => p.activities.some((a) => a.id === e.activityId)),
+    );
+  });
+  for (const plan of due)
+    await notificationService
+      .sendPushNotification(
+        user.id,
+        `${plan.emoji ?? ""} ${plan.goal}`.trim(),
+        "Today's the day you said you'd get back to it.",
+        `/plan/${plan.id}`,
+      )
+      .catch((error) => logger.warn("Coach reminder push failed", { userId: user.id, error }));
+}
+
 export async function deliverPlanMonitoring() {
   const accounts = await prisma.coachingState.findMany({
     where: {
@@ -379,6 +424,7 @@ export async function deliverPlanMonitoring() {
     const state = account.data as unknown as FollowThroughState;
     if (!Object.values(state.supports).some((s) => s.coaching)) continue;
     try {
+      await sendDueReminders(account.user);
       await monitorUser(account.user);
     } catch (error) {
       logger.error("Plan monitoring failed", { userId: account.userId, error });

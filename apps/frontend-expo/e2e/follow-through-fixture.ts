@@ -45,6 +45,65 @@ export function followThroughFixture(
     }
     return { ok: true };
   }
+  // Homepage coach states: one plan on track (green), one slipping with a prepared nudge (amber),
+  // one in its normal rhythm (no ring).
+  if (path === "/__plan-nudges") {
+    followThroughFixture("/__follow-through", "POST", {}, state);
+    const day = 86400000, ago = (n: number) => new Date(Date.now() - n * day).toISOString();
+    const activity = (id: string, title: string, emoji: string, measure: string) =>
+      ({ id, title, emoji, measure, colorHex: "#3b82f6", userId: "test-user" });
+    const run = activity("run", "Running", "🏃", "kilometers"),
+      guitar = activity("guitar", "Guitar", "🎸", "minutes"),
+      read = activity("read", "Reading", "📚", "pages");
+    state.activities = [run, guitar, read];
+    const plan = (id: string, goal: string, emoji: string, a: any, order: number) => ({
+      ...state.plans[0], id, goal, emoji, activities: [a], sessions: [], milestones: [],
+      outlineType: "TIMES_PER_WEEK", timesPerWeek: 3, createdAt: ago(30), sortOrder: order,
+      pauseHistory: [], isPaused: false, progress: { weeks: [] },
+    });
+    state.plans = [
+      plan("half", "Run my first half marathon", "🏃", run, 0),
+      plan("guitar", "Practice guitar", "🎸", guitar, 1),
+      plan("reading", "Read before bed", "📚", read, 2),
+    ];
+    const entry = (id: string, activityId: string, daysAgo: number, quantity: number) =>
+      ({ id, activityId, userId: "test-user", datetime: ago(daysAgo), createdAt: ago(daysAgo), quantity, comments: [], reactions: [] });
+    state.entries = [
+      entry("r1", "run", 1, 5), entry("r2", "run", 3, 6), entry("r3", "run", 5, 5),
+      entry("g1", "guitar", 6, 20),
+      entry("b1", "read", 2, 15),
+    ];
+    const base = Object.values(support.supports)[0] as any;
+    const coached = (planId: string, role: string) => ({
+      ...base, planId, mode: "WEEKLY", weekdays: [], time: null,
+      coaching: { role, followUps: true, dataAccess: { workouts: false, sleep: false } },
+    });
+    support.supports = {
+      half: coached("half", "training"),
+      guitar: coached("guitar", "consistency"),
+      reading: coached("reading", "consistency"),
+    };
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [{
+      id: "nudge:guitar", planIds: ["guitar"], kind: "nudge", messageId: "coach-nudge-guitar",
+      chatId: "coach-main", createdAt: ago(0.1), requiresReply: true,
+    }] };
+    state.messages = [{
+      id: "coach-nudge-guitar", chatId: "coach-main", planId: "guitar", planIds: ["guitar"],
+      role: "COACH", status: "SENT", requiresReply: true, createdAt: ago(0.1),
+      content: "No guitar logged for six days. You started because you wanted to finally play songs with friends. Get back to it tomorrow, or let it go?",
+      nudge: { planId: "guitar" },
+    }];
+    return { ok: true };
+  }
+  const nudgeAnswer = path.match(/^\/follow-through\/nudges\/([^/]+)$/);
+  if (nudgeAnswer && method === "POST") {
+    const message = state.messages.find((m: any) => m.id === nudgeAnswer[1]);
+    const tomorrow = new Date(Date.now() + 86400000);
+    tomorrow.setHours(9, 0, 0, 0);
+    message.nudge = { ...message.nudge, outcome: body.action, ...(body.action === "remind" ? { remindAt: tomorrow.toISOString() } : {}) };
+    for (const r of support.monitoring?.requests ?? []) if (r.messageId === message.id) r.resolvedAt = new Date().toISOString();
+    return message.nudge;
+  }
   if (path === "/follow-through/coaching/presence") return { ok: true };
   if (path === "/follow-through/coaching/resume") {
     if (support.monitoring) support.monitoring.pausedPlanIds = support.monitoring.pausedPlanIds.filter(id => id !== body.planId);

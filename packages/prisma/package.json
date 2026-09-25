@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     "./follow-through": "./follow-through/types.ts",
+    "./follow-through/pace": "./follow-through/pace.ts",
     ".": {
       "browser": "./client.ts",
       "default": "./index.ts"
