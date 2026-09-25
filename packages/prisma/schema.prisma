@@ -128,6 +128,12 @@ model User {
   circleMemberships PracticeCircleMember[]
   circlePosts PracticeCirclePost[]
 
+  // Moderation (App Store Guideline 1.2)
+  reportsFiled    ContentReport[] @relation("ContentReportsFiled")
+  reportsReceived ContentReport[] @relation("ContentReportsReceived")
+  blocksMade      UserBlock[]     @relation("BlocksMade")
+  blocksReceived  UserBlock[]     @relation("BlocksReceived")
+
   @@map("users")
   @@schema("public")
 }
@@ -1001,6 +1007,7 @@ model Message {
   status    MessageStatus @default(SENT)
   readAt    DateTime?
   createdAt DateTime      @default(now())
+  deletedAt DateTime? // set when a moderator removes a reported message
 
   // Relations
   chat     Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
@@ -1426,5 +1433,74 @@ model PracticeCirclePost {
   entry ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   @@unique([circleId, entryId])
   @@map("practice_circle_posts")
+  @@schema("public")
+}
+
+// Someone flagged a person or a piece of their content for the moderator.
+model ContentReport {
+  id           String              @id @default(cuid())
+  reporterId   String
+  targetUserId String
+  kind         ContentReportKind
+  targetId     String // id of the reported message/comment/entry/post/circle (the user id for USER)
+  reason       ContentReportReason
+  note         String?
+  snapshot     Json? // what the reporter saw, kept after the content is removed
+  status       ContentReportStatus @default(OPEN)
+  createdAt    DateTime            @default(now())
+  resolvedAt   DateTime?
+
+  reporter   User @relation("ContentReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser User @relation("ContentReportsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([targetUserId])
+  @@map("content_reports")
+  @@schema("public")
+}
+
+// Blocking hides both people from each other, whether or not they were connected.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("user_blocks")
+  @@schema("public")
+}
+
+enum ContentReportKind {
+  USER
+  MESSAGE
+  COMMENT
+  ACTIVITY_ENTRY
+  ACHIEVEMENT_POST
+  CIRCLE
+
+  @@schema("public")
+}
+
+enum ContentReportReason {
+  SPAM
+  HARASSMENT
+  HATE
+  SEXUAL
+  SELF_HARM
+  OTHER
+
+  @@schema("public")
+}
+
+enum ContentReportStatus {
+  OPEN
+  ACTIONED
+  DISMISSED
+
   @@schema("public")
 }

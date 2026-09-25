@@ -15,6 +15,7 @@ import type { PhotoActivity } from "../services/activity-photo/types";
 import { processPhotoNotificationOutbox } from "../services/activity-photo/outbox";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
+import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import {
@@ -24,6 +25,15 @@ import {
 import { timezoneFromCoords } from "../utils/timezone";
 
 const router = Router();
+
+// A blocked pair can't react to or comment on each other's activities.
+async function blockedFromEntry(userId: string, activityEntryId: string) {
+  const entry = await prisma.activityEntry.findUnique({
+    where: { id: activityEntryId },
+    select: { userId: true },
+  });
+  return !!entry && (await isBlockedPair(userId, entry.userId));
+}
 const upload = multer({ storage: multer.memoryStorage() });
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -549,6 +559,7 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const hidden = await blockedUserIds(req.user!.id);
       const entries = await prisma.activityEntry.findMany({
         where: {
           userId: req.user!.id,
@@ -560,7 +571,7 @@ router.get(
         },
         include: {
           comments: {
-            where: { deletedAt: null },
+            where: { deletedAt: null, userId: { notIn: hidden } },
             include: {
               user: {
                 select: {
@@ -573,6 +584,7 @@ router.get(
             orderBy: { createdAt: "asc" },
           },
           reactions: {
+            where: { userId: { notIn: hidden } },
             include: {
               user: {
                 select: {
@@ -1394,6 +1406,9 @@ router.post(
       if (!Array.isArray(reactions) || !reactions.length) {
         return res.status(400).json({ error: "No reactions provided" });
       }
+      if (await blockedFromEntry(req.user!.id, activityEntryId)) {
+        return res.status(403).json({ error: "You can't react to this" });
+      }
 
       // Process each reaction operation
       const addedEmojis: string[] = [];
@@ -1454,6 +1469,7 @@ router.post(
               relatedId: activityEntryId,
               relatedData: {
                 activityEntryId: activityEntryId,
+                reactorId: req.user!.id,
                 reactorPicture: req.user!.picture,
                 reactorName: req.user!.name,
                 reactorUsername: req.user!.username,
@@ -1503,6 +1519,9 @@ router.post(
       if (!emojiList.length) {
         return res.status(400).json({ error: "No emojis provided" });
       }
+      if (await blockedFromEntry(req.user!.id, activityEntryId)) {
+        return res.status(403).json({ error: "You can't react to this" });
+      }
 
       if (operation === "add") {
         for (const e of emojiList) {
@@ -1543,6 +1562,7 @@ router.post(
               relatedId: activityEntryId,
               relatedData: {
                 activityEntryId: activityEntryId,
+                reactorId: req.user!.id,
                 reactorPicture: req.user!.picture,
                 reactorName: req.user!.name,
                 reactorUsername: req.user!.username,
@@ -1958,6 +1978,7 @@ router.get(
         where: {
           activityEntryId,
           deletedAt: null,
+          userId: { notIn: await blockedUserIds(req.user!.id) },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
@@ -1984,6 +2005,10 @@ router.post(
     try {
       const { activityEntryId } = req.params;
       const { text } = req.body;
+      if (await blockedFromEntry(req.user!.id, activityEntryId)) {
+        return res.status(403).json({ error: "You can't comment on this" });
+      }
+      const hidden = await blockedUserIds(req.user!.id);
 
       const comment = await prisma.comment.create({
         data: {
@@ -2031,10 +2056,11 @@ router.post(
           ...new Set(mentions.map((m) => m[1].toLowerCase())),
         ];
 
-        // Look up mentioned users
+        // Look up mentioned users (never notify someone in a block with the commenter)
         const mentionedUsers = await prisma.user.findMany({
           where: {
             username: { in: uniqueUsernames },
+            id: { notIn: hidden },
             deletedAt: null,
           },
           select: {
@@ -2078,6 +2104,8 @@ router.post(
       const allComments = await prisma.comment.findMany({
         where: {
           activityEntryId,
+          deletedAt: null,
+          userId: { notIn: hidden },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
@@ -2128,6 +2156,8 @@ router.delete(
       const allComments = await prisma.comment.findMany({
         where: {
           activityEntryId,
+          deletedAt: null,
+          userId: { notIn: await blockedUserIds(req.user!.id) },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },

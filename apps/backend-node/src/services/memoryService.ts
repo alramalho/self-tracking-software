@@ -37,6 +37,7 @@ export class MemoryService {
         status: MessageStatus.SENT,
         senderId: null,
         readAt: null,
+        deletedAt: null,
       };
     }
   }

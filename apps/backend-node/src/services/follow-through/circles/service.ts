@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@tsw/prisma";
+import { blockedUserIds } from "../../../utils/blocks";
 import { prisma } from "../../../utils/prisma";
 const person = { id: true, name: true, username: true, picture: true } as const;
 const summary = {
@@ -110,13 +111,19 @@ async function requireMember(
 }
 export async function circleDetail(userId: string, id: string) {
   await requireMember(userId, id);
+  // Blocked people stay in the circle but disappear from each other's view.
+  const hidden = await blockedUserIds(userId);
   return prisma.practiceCircle.findUniqueOrThrow({
     where: { id },
     select: {
       ...summary,
       inviteCode: true,
       members: {
-        where: { user: { deletedAt: null }, plan: { deletedAt: null } },
+        where: {
+          userId: { notIn: hidden },
+          user: { deletedAt: null },
+          plan: { deletedAt: null },
+        },
         select: {
           user: { select: person },
           plan: { select: { id: true, goal: true, emoji: true } },
@@ -125,6 +132,7 @@ export async function circleDetail(userId: string, id: string) {
       },
       posts: {
         where: {
+          userId: { notIn: hidden },
           entry: { deletedAt: null },
           user: {
             deletedAt: null,

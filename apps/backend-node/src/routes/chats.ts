@@ -19,6 +19,7 @@ import {
   AUTONOMOUS_COACH_PROMPT_TAG,
   concludeResolvedAutonomousCoachNotifications,
 } from "../services/autonomousCoachNotificationService";
+import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { supermemoryService } from "../services/supermemoryService";
@@ -560,6 +561,7 @@ router.get(
     try {
       const user = req.user!;
       const coachPersonality = getCoachPersonalityConfig(user.coachPersonality);
+      const hidden = await blockedUserIds(user.id);
 
       // Fetch all chats where user is involved
       const chats = await prisma.chat.findMany({
@@ -567,12 +569,13 @@ router.get(
           OR: [
             // Coach chats
             { userId: user.id, type: "COACH" },
-            // Direct chats where user is a participant
+            // Direct chats where user is a participant (never with someone blocked)
             {
               type: "DIRECT",
-              participants: {
-                some: { userId: user.id },
-              },
+              AND: [
+                { participants: { some: { userId: user.id } } },
+                { participants: { none: { userId: { in: hidden } } } },
+              ],
             },
             // Group chats where user is a participant
             {
@@ -602,6 +605,7 @@ router.get(
             },
           },
           messages: {
+            where: { deletedAt: null },
             orderBy: { createdAt: "desc" },
             take: 1,
             select: {
@@ -660,7 +664,8 @@ router.get(
               where: {
                 chatId: chat.id,
                 status: "SENT",
-                senderId: { not: user.id },
+                senderId: { notIn: [user.id, ...hidden] },
+                deletedAt: null,
               },
             });
           }
@@ -873,13 +878,19 @@ router.get(
         },
       });
 
-      if (!chat) {
+      // Blocked people can't see each other's direct chat or group messages.
+      const hidden = await blockedUserIds(user.id);
+      if (
+        !chat ||
+        (chat.type === "DIRECT" &&
+          chat.participants.some((p) => hidden.includes(p.userId)))
+      ) {
         return res.status(404).json({ error: "Chat not found" });
       }
 
       // Fetch all messages for this chat. The AI coach can use long-term memory
       // across coach chats, so the frontend can request the same visible timeline.
-      const messages = await prisma.message.findMany({
+      const allMessages = await prisma.message.findMany({
         where:
           chat.type === "COACH" && includeCoachHistory
             ? {
@@ -887,9 +898,11 @@ router.get(
                   userId: user.id,
                   type: "COACH",
                 },
+                deletedAt: null,
               }
             : {
                 chatId: chatId,
+                deletedAt: null,
               },
         include: {
           feedback: true,
@@ -904,6 +917,9 @@ router.get(
         },
         orderBy: { createdAt: "asc" },
       });
+      const messages = allMessages.filter(
+        (msg) => !msg.senderId || !hidden.includes(msg.senderId)
+      );
 
       // For coach chats, we need to parse and structure messages (same logic as ai.ts)
       if (chat.type === "COACH") {
@@ -1316,6 +1332,14 @@ router.post(
 
       if (!chat) {
         return res.status(404).json({ error: "Chat not found" });
+      }
+      const otherParticipant = chat.participants.find((p) => p.userId !== user.id);
+      if (
+        chat.type === "DIRECT" &&
+        otherParticipant &&
+        (await isBlockedPair(user.id, otherParticipant.userId))
+      ) {
+        return res.status(403).json({ error: "You can't message this person" });
       }
 
       const persistedCoachStarter =
@@ -1951,7 +1975,7 @@ router.post(
         },
       });
 
-      if (!otherUser) {
+      if (!otherUser || (await isBlockedPair(user.id, otherUser.id))) {
         return res.status(404).json({ error: "User not found" });
       }
 
