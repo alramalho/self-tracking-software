@@ -13,6 +13,7 @@ const PROTECTED_FIELDS = new Set([
   "referredById",
   "createdAt",
   "deletedAt",
+  "suspendedAt",
   "lastActiveAt",
   "unactivatedEmailSentAt",
   "onboardingDropNotifiedAt",

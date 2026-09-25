@@ -114,6 +114,7 @@ router.post(
         `Report id: ${report.id}`,
         "Open reports: GET https://api.tracking.so/admin/reports",
         `Remove content: POST https://api.tracking.so/admin/reports/${report.id}/resolve {"action":"remove"}`,
+        `Remove and suspend the poster: POST https://api.tracking.so/admin/reports/${report.id}/resolve {"action":"suspend"}`,
         `Dismiss: POST https://api.tracking.so/admin/reports/${report.id}/resolve {"action":"dismiss"}`,
         "(Authorization: Bearer ADMIN_API_KEY). Please act within 24 hours.",
       ].join("\n");

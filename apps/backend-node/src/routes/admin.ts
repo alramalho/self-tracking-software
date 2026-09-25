@@ -1,7 +1,7 @@
 import { TelegramService } from "@/services/telegramService";
 import { User } from "@tsw/prisma";
 import { Plan as CompletePlan } from "@tsw/prisma/types";
-import { clerkMiddleware, getAuth } from "@clerk/express";
+import { clerkClient, clerkMiddleware, getAuth } from "@clerk/express";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
@@ -880,23 +880,70 @@ router.get(
   }
 );
 
-// Resolve a report: "dismiss" keeps the content, "remove" hides it from everyone.
-// There is no account suspension yet, so a USER report is only marked ACTIONED.
+// Suspend or restore an account. Suspension bans the Clerk user (ends their sessions and
+// blocks sign-in), rejects API calls, and hides their content from everyone. Reversible.
+async function setSuspended(userId: string, suspended: boolean): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return false;
+  if (user.clerkId) {
+    if (suspended) await clerkClient.users.banUser(user.clerkId);
+    else await clerkClient.users.unbanUser(user.clerkId);
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { suspendedAt: suspended ? new Date() : null },
+  });
+  return true;
+}
+
+router.post(
+  "/users/:id/suspend",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      if (!(await setSuspended(req.params.id, true)))
+        return res.status(404).json({ error: "User not found" });
+      res.json({ suspended: true });
+    } catch (error) {
+      logger.error("Error suspending user:", error);
+      res.status(500).json({ error: "Failed to suspend user" });
+    }
+  }
+);
+
+router.post(
+  "/users/:id/unsuspend",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      if (!(await setSuspended(req.params.id, false)))
+        return res.status(404).json({ error: "User not found" });
+      res.json({ suspended: false });
+    } catch (error) {
+      logger.error("Error restoring user:", error);
+      res.status(500).json({ error: "Failed to restore user" });
+    }
+  }
+);
+
+// Resolve a report: "dismiss" keeps the content, "remove" hides it from everyone,
+// "suspend" removes it and suspends the person who posted it.
 router.post(
   "/reports/:id/resolve",
   adminAuth,
   async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       const { action } = req.body as { action?: string };
-      if (action !== "dismiss" && action !== "remove") {
-        return res.status(400).json({ error: 'action must be "dismiss" or "remove"' });
+      if (action !== "dismiss" && action !== "remove" && action !== "suspend") {
+        return res.status(400).json({ error: 'action must be "dismiss", "remove" or "suspend"' });
       }
       const report = await prisma.contentReport.findUnique({ where: { id: req.params.id } });
       if (!report) return res.status(404).json({ error: "Report not found" });
 
       const now = new Date();
       const id = report.targetId;
-      if (action === "remove") {
+      if (action === "suspend") await setSuspended(report.targetUserId, true);
+      if (action === "remove" || action === "suspend") {
         if (report.kind === "MESSAGE")
           await prisma.message.updateMany({ where: { id }, data: { deletedAt: now } });
         if (report.kind === "COMMENT")
@@ -921,7 +968,7 @@ router.post(
             { kind: report.kind, targetId: report.targetId, status: "OPEN" },
           ],
         },
-        data: { status: action === "remove" ? "ACTIONED" : "DISMISSED", resolvedAt: now },
+        data: { status: action === "dismiss" ? "DISMISSED" : "ACTIONED", resolvedAt: now },
       });
       res.json({ resolved: resolved.count });
     } catch (error) {

@@ -295,4 +295,28 @@ describe("reporting and blocking", () => {
     await call(alice, "POST", `/admin/reports/${messageReport.body.id}/resolve`, { action: "remove" }, auth);
     expect((await call(alice, "GET", `/chats/${chatId}/messages`)).body.messages).toEqual([]);
   });
+  it("suspends and restores a reported person", async () => {
+    const auth = { authorization: "Bearer moderation-test-admin-key" };
+    expect(await commentUserIds(carol, carolEntry)).toContain(bob);
+    const report = await call(carol, "POST", "/moderation/reports", {
+      kind: "USER",
+      targetId: bob,
+      reason: "HARASSMENT",
+    });
+    const resolved = await call(
+      carol,
+      "POST",
+      `/admin/reports/${report.body.id}/resolve`,
+      { action: "suspend" },
+      auth,
+    );
+    expect(resolved.status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: bob } })).suspendedAt).not.toBeNull();
+    // Hidden from people who never blocked them, too.
+    expect(await commentUserIds(carol, carolEntry)).not.toContain(bob);
+
+    expect((await call(carol, "POST", `/admin/users/${bob}/unsuspend`, {}, auth)).status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: bob } })).suspendedAt).toBeNull();
+    expect(await commentUserIds(carol, carolEntry)).toContain(bob);
+  });
 });

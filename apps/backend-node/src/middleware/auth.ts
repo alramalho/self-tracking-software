@@ -75,6 +75,15 @@ async function verifyAuth(
       return;
     }
 
+    // Suspended by a moderator (see POST /admin/users/:id/suspend).
+    if (user.suspendedAt) {
+      res.status(403).json({
+        success: false,
+        error: { message: "This account has been suspended.", code: "ACCOUNT_SUSPENDED" },
+      });
+      return;
+    }
+
     // Attach user to request
     (req as AuthenticatedRequest).user = user;
 
