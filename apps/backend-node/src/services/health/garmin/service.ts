@@ -145,6 +145,22 @@ async function refreshGarminPermissions(
   }
 }
 
+/**
+ * Garmin still runs on an evaluation key, so only listed testers see it
+ * (GARMIN_TESTER_EMAILS, comma-separated). Set GARMIN_OPEN_TO_ALL=true once
+ * Garmin approves the production key.
+ */
+export async function garminAvailableFor(userId: string): Promise<boolean> {
+  if (!getGarminOAuthConfig()) return false;
+  if (process.env.GARMIN_OPEN_TO_ALL === "true") return true;
+  const testers = (process.env.GARMIN_TESTER_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  return !!user && testers.includes(user.email.toLowerCase());
+}
+
 export const getGarminStatus = async (
   userId: string,
 ): Promise<GarminStatus> => {
@@ -216,7 +232,7 @@ export const getGarminStatus = async (
   };
 
   return {
-    available: Boolean(getGarminOAuthConfig()),
+    available: await garminAvailableFor(userId),
     connected: Boolean(integration),
     permissions: integration?.permissions ?? [],
     connectedAt: integration?.connectedAt.toISOString() ?? null,

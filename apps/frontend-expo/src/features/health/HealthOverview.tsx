@@ -173,7 +173,7 @@ export function HealthOverview() {
                 hasImportedData ||
                 health.garmin.status?.connected
                   ? "No vital readings have arrived yet. Try syncing your connected health source again."
-                  : "Connect Apple Health or Garmin Connect to see your resting heart rate, HRV and respiratory trends here."}
+                  : `Connect Apple Health${health.garmin.status?.available ? " or Garmin Connect" : ""} to see your resting heart rate, HRV and respiratory trends here.`}
               </Copy>
               <Pressable
                 accessibilityRole="button"

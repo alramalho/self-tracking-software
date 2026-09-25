@@ -8,6 +8,7 @@ import {
 import {
   disconnectGarmin,
   finishGarminConnection,
+  garminAvailableFor,
   getGarminDailyMetrics,
   getGarminOAuthReturnUrl,
   getGarminStatus,
@@ -73,6 +74,10 @@ router.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      if (!(await garminAvailableFor(req.user!.id))) {
+        res.status(403).json({ error: "Garmin Connect isn't available yet." });
+        return;
+      }
       const returnUrl = queryValue(req.query.returnUrl);
       res.json(
         await startGarminConnection(

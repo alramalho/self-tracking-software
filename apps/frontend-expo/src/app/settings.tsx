@@ -311,6 +311,8 @@ export default function Settings() {
               }
               onPress={() => setView("appleHealth")}
             />
+            {/* Hidden until Garmin approves the production key (testers only), unless already connected. */}
+            {(health.garmin.status?.available || health.garmin.status?.connected) && (
             <SettingsCard
               icon={GarminLogoIcon}
               iconBackground={false}
@@ -329,6 +331,7 @@ export default function Settings() {
               }
               onPress={() => setView("garmin")}
             />
+            )}
             <SettingsCard
               icon={KeyRound}
               title="API keys"
