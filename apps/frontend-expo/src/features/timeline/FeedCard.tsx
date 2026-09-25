@@ -11,6 +11,7 @@ import {
   Rocket,
   HeartPulse,
   ChevronRight,
+  MoreHorizontal,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { ActivitySummary } from "./ActivitySummary";
@@ -40,6 +41,13 @@ import { EntryEditor } from "../activities/EntryEditor";
 import { AchievementEditor } from "./AchievementEditor";
 import { achievementTitle } from "./achievement";
 import { feedPhotos } from "./layout";
+import {
+  ReportSheet,
+  personLabel,
+  showActions,
+  useBlockUser,
+} from "@/features/safety/Safety";
+import type { ReportTarget } from "@/features/safety/types";
 export function FeedCard({
   item,
   compactInitially = false,
@@ -56,6 +64,8 @@ export function FeedCard({
   const [editing, setEditing] = useState<ActivityEntry>();
   const [editingPost, setEditingPost] = useState(false);
   const [chooseEdit, setChooseEdit] = useState(false);
+  const [report, setReport] = useState<ReportTarget>();
+  const blockUser = useBlockUser();
   const entry = item.entry;
   const post = item.achievement;
   const user = item.user ?? post?.user;
@@ -368,6 +378,30 @@ export function FeedCard({
             onPress={() => setEditingPost(true)}
           />
         )}
+        {!own && user && (
+          <IconButton
+            label="More options"
+            icon={MoreHorizontal}
+            onPress={() =>
+              showActions(personLabel(user), [
+                {
+                  label: "Report post",
+                  onPress: () =>
+                    setReport(
+                      entry
+                        ? { kind: "ACTIVITY_ENTRY", id: entry.id, label: "this post" }
+                        : { kind: "ACHIEVEMENT_POST", id: post!.id, label: "this post" },
+                    ),
+                },
+                {
+                  label: `Block ${personLabel(user)}`,
+                  destructive: true,
+                  onPress: () => blockUser(user),
+                },
+              ])
+            }
+          />
+        )}
       </View>
       <Sheet
         visible={chooseEdit}
@@ -411,6 +445,7 @@ export function FeedCard({
       {editingPost && post && (
         <AchievementEditor post={post} onClose={() => setEditingPost(false)} />
       )}
+      <ReportSheet target={report} onClose={() => setReport(undefined)} />
       <CommentsSheet
         visible={comments}
         base={base}

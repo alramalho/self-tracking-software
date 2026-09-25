@@ -271,6 +271,8 @@ export interface MessageProps {
   coach: boolean;
   onEdit: (message: Message) => void;
   onPrompt: (text: string) => void;
+  // Someone else's message in a direct/group chat: long-press, or tap then the flag.
+  onReport?: () => void;
 }
 export interface MarkdownProps {
   children: string;

@@ -36,6 +36,8 @@ import { api, errorMessage } from "@/data/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
 import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import type { Comment } from "@/core/types";
+import { ReportSheet } from "@/features/safety/Safety";
+import type { ReportTarget } from "@/features/safety/types";
 import type {
   CommentAvatarProps,
   CommentsSheetProps,
@@ -247,6 +249,7 @@ export function CommentsSheet({
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<string>();
   const [deleteId, setDeleteId] = useState<string>();
+  const [report, setReport] = useState<ReportTarget>();
   const scrollToNewComment = useRef(false);
   const comment = useAction(async (submitted: string) =>
     api.post(`${base}/comments`, { text: submitted }),
@@ -530,6 +533,28 @@ export function CommentsSheet({
                                   </Text>
                                 </TouchTarget>
                               )}
+                              {(item.userId ?? item.user.id) !==
+                                me.data?.id && (
+                                <TouchTarget
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Report comment"
+                                  hitSlop={8}
+                                  onPress={() =>
+                                    setReport({
+                                      kind: "COMMENT",
+                                      id: item.id,
+                                      label: "this comment",
+                                    })
+                                  }
+                                  style={{ paddingVertical: 5 }}
+                                >
+                                  <Text
+                                    style={{ color: c.muted, fontSize: 12 }}
+                                  >
+                                    Report
+                                  </Text>
+                                </TouchTarget>
+                              )}
                               {deleteId === item.id && (
                                 <TouchTarget
                                   accessibilityRole="button"
@@ -553,6 +578,10 @@ export function CommentsSheet({
                   />
                 </View>
               </BottomSheet>
+              <ReportSheet
+                target={report}
+                onClose={() => setReport(undefined)}
+              />
             </GestureHandlerRootView>
           </SafeAreaProvider>
         )}

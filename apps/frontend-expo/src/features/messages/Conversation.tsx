@@ -55,6 +55,13 @@ import {
   sendMessage,
 } from "./service";
 import { coachIdentity } from "./coach";
+import {
+  ReportSheet,
+  personLabel,
+  showActions,
+  useBlockUser,
+} from "@/features/safety/Safety";
+import type { ReportTarget } from "@/features/safety/types";
 import type {
   ConversationProps,
   ImageAttachment,
@@ -116,6 +123,8 @@ export function Conversation({ id }: ConversationProps) {
   const [context, setContext] = useState(false);
   const [contextPlan, setContextPlan] = useState<string>();
   const [clear, setClear] = useState(false);
+  const [report, setReport] = useState<ReportTarget>();
+  const blockUser = useBlockUser();
   const [attachmentError, setAttachmentError] = useState<unknown>();
   const [picking, setPicking] = useState(false);
   const list = useRef<FlatList<Message>>(null);
@@ -196,6 +205,12 @@ export function Conversation({ id }: ConversationProps) {
       await client.invalidateQueries();
     },
   });
+  // The other person in a direct chat, for Report / Block.
+  const other =
+    chat?.type === "DIRECT"
+      ? chat.participants?.find((p) => p.userId !== user.data?.id)
+      : undefined;
+  const otherPerson = other && { ...other, id: other.userId };
   const activeStatus = progress ?? response.data?.status;
   const remoteBusy =
     response.data &&
@@ -399,6 +414,32 @@ export function Conversation({ id }: ConversationProps) {
               </IconButton>
             </>
           )}
+          {otherPerson && (
+            <IconButton
+              label="Conversation options"
+              onPress={() =>
+                showActions(personLabel(otherPerson), [
+                  {
+                    label: `Report ${personLabel(otherPerson)}`,
+                    onPress: () =>
+                      setReport({
+                        kind: "USER",
+                        id: otherPerson.id,
+                        label: personLabel(otherPerson),
+                      }),
+                  },
+                  {
+                    label: `Block ${personLabel(otherPerson)}`,
+                    destructive: true,
+                    onPress: () =>
+                      blockUser(otherPerson, () => router.dismissTo("/messages")),
+                  },
+                ])
+              }
+            >
+              <EllipsisVertical size={18} color={c.text} />
+            </IconButton>
+          )}
         </View>
         <Status
           loading={chats.isPending || query.isPending}
@@ -505,6 +546,16 @@ export function Conversation({ id }: ConversationProps) {
                     setImages([]);
                   }}
                   onPrompt={setText}
+                  onReport={
+                    !coach && item.senderId && item.senderId !== user.data?.id
+                      ? () =>
+                          setReport({
+                            kind: "MESSAGE",
+                            id: item.id,
+                            label: "this message",
+                          })
+                      : undefined
+                  }
                 />
               </View>
             )}
@@ -702,6 +753,7 @@ export function Conversation({ id }: ConversationProps) {
           </View>
         </View>
         <CoachSettings visible={settings} onClose={() => setSettings(false)} />
+        <ReportSheet target={report} onClose={() => setReport(undefined)} />
         <Sheet
           visible={menu}
           title="Conversation"

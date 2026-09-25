@@ -10,7 +10,8 @@ export type SettingsView =
   | "experience"
   | "apiKeys"
   | "appleHealth"
-  | "garmin";
+  | "garmin"
+  | "blocked";
 export interface SettingsRowProps {
   icon: LucideIcon;
   title: string;
