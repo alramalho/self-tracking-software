@@ -48,7 +48,13 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 167, September 25, 2026
+## Current TestFlight release — build 168, September 25, 2026
+
+- Build 167's source plus the warning sheet: tapping a homepage plan card with a warning opens the app's native bottom sheet (gone quiet: open the coach's message or log; week at risk: log the activity) with "Open plan" as the second option.
+- IPA: `.release/testflight-warning-sheet-b168/tracking.so.ipa` (SHA-256 `093675e2d755607d097eb2e4c8213a73bcdec9995647dd3ca1e6a2653a95a2a0`), `source.tar.gz` beside it. Build 168; TrackingWatch/Health/Map registered; strict signature verified.
+- Apple validation passed; delivery `eda6c82b-5862-4c29-a632-2ad0aba50ad5` processed as `VALID`; `IN_BETA_TESTING` for internal testers. Build 167 remains submitted to Friends & Family for beta review.
+
+## Previous TestFlight release — build 167, September 25, 2026
 
 - Build 166's source plus: at-risk weeks on homepage plan cards (dashed amber leftover dots and a warning icon, no ring), the Coaching sheet as icon cards with grouped contact/data options, and a leaner plan page (Plan notes and the dashed Log Activity card removed). App-only; no backend change.
 - IPA: `.release/testflight-at-risk-b167/tracking.so.ipa` (SHA-256 `4291b95912fe6eff43d634b8b19ff37eea89160baf3d38cc29efc98558194705`), `source.tar.gz` beside it. Phone and Watch 1.0.0 build 167; TrackingWatch/Health/Map registered; strict signature and production configuration verified.
