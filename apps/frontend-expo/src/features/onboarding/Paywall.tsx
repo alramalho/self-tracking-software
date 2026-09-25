@@ -67,10 +67,13 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
       {/* 1. Social proof: real members. */}
       <View style={{ alignItems: "center", gap: 10 }}>
         <View style={{ flexDirection: "row" }}>
-          {[...MEMBERS, coach.avatar].map((uri, i) => (
+          {[
+            ...MEMBERS.map((uri) => ({ uri })),
+            coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png"),
+          ].map((source, i) => (
             <Image
-              key={uri}
-              source={{ uri }}
+              key={i}
+              source={source}
               style={{
                 width: 44,
                 height: 44,

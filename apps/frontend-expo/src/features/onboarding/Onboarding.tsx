@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   OnboardingDraft,
   InterviewResult,
+  InterviewStage,
   InterviewState,
   GoalGuidanceResult,
   SupportPreferences,
@@ -49,6 +50,7 @@ import {
   nextStage,
   recordTurn,
   reopenInterviewStage,
+  stageLabels,
   startInterview,
   stages,
   weeklyFrequencyQuestion,
@@ -217,7 +219,7 @@ export default function Onboarding({
     baseDraft: OnboardingDraft,
     result: InterviewResult,
     selectedAnswer?: string,
-  ) {
+  ): Promise<{ state: InterviewState; draft: OnboardingDraft }> {
     const answered = selectedAnswer === undefined
       ? source
       : recordTurn(source, selectedAnswer, result);
@@ -255,6 +257,20 @@ export default function Onboarding({
     setAnswer("");
     setPaywall(done);
     if (source.stage === "support") setTourStep(selectedCoaching ? 0 : null);
+    return { state: next, draft: nextDraft };
+  }
+  // Everyone sees what the coach does; the paywall is where they choose coaching or free tracking.
+  async function chooseCoaching(committed: { state: InterviewState; draft: OnboardingDraft }) {
+    const answer = "Yes, coach this plan";
+    const result = (
+      await api.post<InterviewResult>(
+        "/follow-through/onboarding/interview",
+        { state: { ...committed.state, pending: undefined }, answer, timezone: committed.draft.timezone },
+        { timeout: 90000 },
+      )
+    ).data;
+    // If the coach can't accept it, the coaching question shows as before.
+    if (result.accepted) await commitAccepted(committed.state, committed.draft, result, answer);
   }
   const gate = useMutation({
     mutationFn: async (text: string) => {
@@ -314,6 +330,12 @@ export default function Onboarding({
         await commitAccepted(state, draft, result, text);
         return;
       }
+      // A clean answer moves straight on; the coach's check only shows when something needs work.
+      if (result.accepted && !result.needsImprovement) {
+        const committed = await commitAccepted(state, draft, result, text);
+        if (state.stage === "rhythm") await chooseCoaching(committed);
+        return;
+      }
       const next = recordTurn(state, text, result);
       if (result.accepted) next.pending = result;
       await persist({
@@ -337,7 +359,8 @@ export default function Onboarding({
   const accept = useMutation({
     mutationFn: async () => {
       if (!candidate?.accepted) return;
-      await commitAccepted(state, draft, candidate);
+      const committed = await commitAccepted(state, draft, candidate);
+      if (state.stage === "rhythm") await chooseCoaching(committed);
     },
   });
   async function advanceTour() {
@@ -601,7 +624,7 @@ export default function Onboarding({
     // carry the previous answer into the next coach request.
     const previousIndex = validation
       ? history.length - 1
-      : history.findLastIndex((entry) => entry.stage !== state.stage);
+      : history.findLastIndex((entry) => entry.stage !== state.stage && entry.stage !== "support");
     const previous = history[previousIndex];
     if (previous) {
       let stageStartIndex = previousIndex;
@@ -672,8 +695,17 @@ export default function Onboarding({
     review: Sparkles,
   }[state.stage];
   const lastTurn = state.turns.at(-1);
+  // One bar from the first question to the paywall: 4 questions, 3 coach steps, the plan, the paywall.
+  const questions: InterviewStage[] = ["goal", "baseline", "motivation", "rhythm"];
+  const journeyProgress = paywall
+    ? { current: 9, total: 9, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
+    : tourStep !== null || state.stage === "support"
+      ? { current: 5 + (tourStep ?? 0), total: 9, label: "Your coach" }
+      : state.stage === "review"
+        ? { current: 8, total: 9, label: stageLabels.review }
+        : { current: questions.indexOf(state.stage) + 1, total: 9, label: stageLabels[state.stage] };
   const showingValidation =
-    (gate.isPending && state.stage !== "goal" && state.stage !== "support") || !!validation;
+    (gate.isPending && state.stage !== "goal") || !!validation;
   const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${tourStep}-${paywall}-${finished}`;
   const continueValidation = () => {
     if (!validation) return;
@@ -920,7 +952,7 @@ export default function Onboarding({
   return (
     <InterviewFrame
       stage={state.stage}
-      progress={tourStep !== null ? { current: tourStep + 1, total: 3, label: "Your coach" } : paywall ? { current: 1, total: 1, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" } : undefined}
+      progress={journeyProgress}
       preview={preview}
       busy={busy}
       backDisabled={!paywall && !history.length && state.stage === "goal"}

@@ -1,7 +1,9 @@
-import { View } from "react-native";
-import { Activity, MessageCircle, Moon, Sparkles } from "lucide-react-native";
+import { Image, View } from "react-native";
+import { Activity, Moon } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
+import { useCurrentUser } from "@/data/queries";
+import { coachIdentity } from "@/features/messages/coach";
 import { CoachingChoice } from "@/features/plans/coaching/CoachingFields";
 import { DaysInput, TimeInput } from "@/features/follow-through/assistance/Inputs";
 import type { CoachingTourProps } from "./types";
@@ -33,12 +35,17 @@ function Example({ label, children }: { label: string; children: string }) {
 
 export function CoachingTour({ step, facts, coaching, preferences, onCoaching, onPreferences }: CoachingTourProps) {
   const c = useColors();
-  const Icon = [Sparkles, MessageCircle, Activity][step];
+  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
   return (
     <View testID={["coach-tour-role", "coach-tour-contact", "coach-tour-data"][step]} style={{ gap: 20 }}>
       <View style={{ alignItems: "center", gap: 12 }}>
-        <View style={{ height: 68, justifyContent: "center" }}>
-          <Icon size={58} strokeWidth={1.4} color={c.accent} />
+        {/* The coach introduces itself on every step. */}
+        <View style={{ alignItems: "center", gap: 4 }}>
+          <Image
+            source={coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png")}
+            style={{ width: 64, height: 64 }}
+          />
+          <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>{coach.name} · your coach</Text>
         </View>
         <Text accessibilityRole="header" style={{ color: c.text, fontSize: 27, lineHeight: 33, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>
           {titles[step]}
