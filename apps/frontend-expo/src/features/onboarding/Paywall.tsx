@@ -129,6 +129,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
               key={plan.id}
               accessibilityRole="radio"
               accessibilityState={{ checked: active }}
+              aria-checked={active}
               accessibilityLabel={`${LABELS[plan.id]}, ${money(plan)} per ${period(plan)}`}
               onPress={() => onSelect(plan.id)}
               style={{
