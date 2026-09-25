@@ -48,7 +48,13 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 166, September 25, 2026
+## Current TestFlight release — build 167, September 25, 2026
+
+- Build 166's source plus: at-risk weeks on homepage plan cards (dashed amber leftover dots and a warning icon, no ring), the Coaching sheet as icon cards with grouped contact/data options, and a leaner plan page (Plan notes and the dashed Log Activity card removed). App-only; no backend change.
+- IPA: `.release/testflight-at-risk-b167/tracking.so.ipa` (SHA-256 `4291b95912fe6eff43d634b8b19ff37eea89160baf3d38cc29efc98558194705`), `source.tar.gz` beside it. Phone and Watch 1.0.0 build 167; TrackingWatch/Health/Map registered; strict signature and production configuration verified.
+- Apple validation passed; delivery `45c6e71e-e4d2-45a4-bc29-af7b695b3837` processed as `VALID`; internal testers only.
+
+## Previous TestFlight release — build 166, September 25, 2026
 
 - Build 165's source plus the homepage plan state (green ring on track, pulsing amber ring + warning icon when slipping), the coach's silent nudge with "Remind me tomorrow" / "Let it go", and plan emoji in the Messages filter pills. Requires backend `plan-nudges-20260925` (live).
 - IPA: `.release/testflight-plan-nudges-b166/tracking.so.ipa` (SHA-256 `9c64a1a2437ce0ba8ec2acd5b130f2ecd5c52b769db9a1bdb7a6da62f1b9106f`), `source.tar.gz` beside it. Phone and Watch 1.0.0 build 166; TrackingWatch/Health/Map modules registered; strict signature and production configuration verified; new strings present in the bundle.
