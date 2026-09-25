@@ -12,13 +12,24 @@ export interface NextResponse {
   explanation: string;
   suggestedFormat: "LOG" | "TIMER" | "RESOURCE";
 }
-export interface CoachingOffer {
+export interface CoachingPlan {
+  id: "weekly" | "monthly" | "quarterly";
   url: string;
   trialDays: number;
   amount: number;
   currency: string;
   interval: string;
   intervalCount: number;
+}
+/** The first plan's fields stay at the top level for older app builds. */
+export interface CoachingOffer extends Omit<CoachingPlan, "id"> {
+  plans?: CoachingPlan[];
+}
+export interface PaywallProps {
+  facts: import("@tsw/prisma/follow-through").InterviewFacts;
+  plans: CoachingPlan[];
+  selected: CoachingPlan["id"];
+  onSelect: (id: CoachingPlan["id"]) => void;
 }
 export interface OnboardingProps {
   preview?: boolean;

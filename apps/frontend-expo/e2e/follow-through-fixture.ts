@@ -330,15 +330,12 @@ export function followThroughFixture(
           explanation: "",
           suggestedFormat: "LOG",
         };
-  if (path === "/follow-through/onboarding/offer")
-    return {
-      url: "https://example.invalid/test-checkout",
-      trialDays: 14,
-      amount: 999,
-      currency: "eur",
-      interval: "month",
-      intervalCount: 1,
-    };
+  if (path === "/follow-through/onboarding/offer") {
+    const plan = (id: string, amount: number, interval: string, intervalCount: number, trialDays: number) =>
+      ({ id, url: `https://example.invalid/checkout-${id}`, trialDays, amount, currency: "eur", interval, intervalCount });
+    const plans = [plan("quarterly", 1999, "month", 3, 7), plan("monthly", 999, "month", 1, 7), plan("weekly", 399, "week", 1, 0)];
+    return { ...plans[0], plans };
+  }
   if (path === "/follow-through/onboarding/finish") {
     const d: OnboardingDraft = body.draft;
     if (!state.plans.some((p: any) => p.id === d.id)) {

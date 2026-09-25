@@ -36,6 +36,7 @@ import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
 import { CoachingTour } from "./CoachingTour";
 import { PlanConclusion } from "./PlanConclusion";
+import { Paywall, paywallCta } from "./Paywall";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
@@ -53,7 +54,7 @@ import {
   weeklyFrequencyQuestion,
   weeklyFrequencyQuestionTitle,
 } from "./interview/model";
-import type { CoachingOffer, OnboardingProps } from "./types";
+import type { CoachingOffer, CoachingPlan, OnboardingProps } from "./types";
 
 function frequencyFromAnswer(answer: string | undefined, fallback: number) {
   const count = Number.parseInt(answer || "", 10);
@@ -92,6 +93,8 @@ export default function Onboarding({
   const [tourStep, setTourStep] = useState<number | null>(null);
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false),
     [checking, setChecking] = useState(false);
+  // Quarterly is the best value, so it starts selected.
+  const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
   const [error, setError] = useState<unknown>();
   const [dictationBusy, setDictationBusy] = useState(false);
   const upgradeIntent = useRef(false);
@@ -401,6 +404,12 @@ export default function Onboarding({
     queryFn: async () =>
       (await api.get<CoachingOffer>("/follow-through/onboarding/offer")).data,
   });
+  const plans: CoachingPlan[] =
+    offer.data?.plans ?? (offer.data ? [{ ...offer.data, id: "monthly" }] : []);
+  const selectedPlan = plans.find((plan) => plan.id === planId) ?? plans[0];
+  // The full coaching paywall, while the choice is still open.
+  const coachPaywall =
+    paywall && state.facts.wantsCoaching && !paid && !awaitingUpgrade && !finished && plans.length > 0;
   // A return from checkout is not payment confirmation. The account entitlement is authoritative.
   const checkUpgrade = useRef(async () => {});
   checkUpgrade.current = async () => {
@@ -452,7 +461,7 @@ export default function Onboarding({
         setFinished(true);
         return;
       }
-      if (!offer.data) return;
+      if (!selectedPlan) return;
       // Recheck before charging so an existing/newly confirmed subscription cannot start twice.
       const account = await user.refetch();
       if (account.error) throw account.error;
@@ -465,7 +474,7 @@ export default function Onboarding({
       setAwaitingUpgrade(true);
       checkoutOpen.current = true;
       try {
-        await WebBrowser.openBrowserAsync(offer.data.url);
+        await WebBrowser.openBrowserAsync(selectedPlan.url);
       } finally {
         checkoutOpen.current = false;
         void checkUpgrade.current();
@@ -748,33 +757,58 @@ export default function Onboarding({
           </>
         ) : (
           <EditorButton
-            label={
-              preview
-                ? "Preview coaching unlock"
-                : offer.data?.trialDays
-                  ? "Start coaching trial"
-                  : "Choose coaching"
-            }
+            label={paywallCta(selectedPlan)}
             busy={checkout.isPending}
-            disabled={!offer.data}
+            disabled={!selectedPlan}
             onPress={() => checkout.mutate()}
           />
         ))}
-      <EditorButton
-        label={
-          state.facts.wantsCoaching
-            ? "Continue with free tracking"
-            : "Create my plan"
-        }
-        secondary={state.facts.wantsCoaching}
-        busy={complete.isPending}
-        disabled={checkout.isPending}
-        onPress={() => {
-          upgradeIntent.current = false;
-          setAwaitingUpgrade(false);
-          complete.mutate(false);
-        }}
-      />
+      {coachPaywall ? (
+        // Free stays available, but quietly: the paywall is about the coach.
+        <Pressable
+          accessibilityRole="button"
+          disabled={complete.isPending || checkout.isPending}
+          onPress={() => {
+            upgradeIntent.current = false;
+            setAwaitingUpgrade(false);
+            complete.mutate(false);
+          }}
+          style={{ alignItems: "center", paddingVertical: 6 }}
+        >
+          <Text style={{ color: c.muted, fontSize: 14, textDecorationLine: "underline" }}>
+            Just track it for free
+          </Text>
+        </Pressable>
+      ) : (
+        <EditorButton
+          label={
+            state.facts.wantsCoaching
+              ? "Continue with free tracking"
+              : "Create my plan"
+          }
+          secondary={state.facts.wantsCoaching}
+          busy={complete.isPending}
+          disabled={checkout.isPending}
+          onPress={() => {
+            upgradeIntent.current = false;
+            setAwaitingUpgrade(false);
+            complete.mutate(false);
+          }}
+        />
+      )}
+      {coachPaywall && (
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 24 }}>
+          {[
+            ["Terms", () => void WebBrowser.openBrowserAsync("https://tracking.so/terms")],
+            ["Restore", () => void checkUpgrade.current()],
+            ["Privacy", () => void WebBrowser.openBrowserAsync("https://tracking.so/privacy")],
+          ].map(([label, onPress]) => (
+            <Pressable key={label as string} accessibilityRole="link" onPress={onPress as () => void}>
+              <Text style={{ color: c.muted, fontSize: 12 }}>{label as string}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </>
   ) : state.stage === "support" ? (
     <Text style={{ color: c.muted, textAlign: "center", fontSize: 13 }}>
@@ -913,7 +947,7 @@ export default function Onboarding({
         />
       ) : (
         <>
-          <Reveal key={`heading-${stepKey}`}>
+          {!coachPaywall && <Reveal key={`heading-${stepKey}`}>
             <View style={{ alignItems: "center", gap: paywall ? 14 : 24 }}>
               {!paywall && <View style={{ height: 100, justifyContent: "center" }}>
                 <Icon size={80} strokeWidth={1.4} color={c.accent} />
@@ -956,11 +990,15 @@ export default function Onboarding({
                     : state.question.purpose}
               </Text>
             </View>
-          </Reveal>
+          </Reveal>}
           {!finished && (
             <Reveal key={`content-${stepKey}`} delay={100}>
               <View style={{ gap: 16 }}>
-                {paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />}
+                {coachPaywall ? (
+                  <Paywall facts={state.facts} plans={plans} selected={selectedPlan!.id} onSelect={setPlanId} />
+                ) : (
+                  paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />
+                )}
                 {state.stage === "review" && !paywall && <PlanSummary facts={state.facts} />}
                 {!candidate && !paywall && (
                   <>
@@ -1090,6 +1128,7 @@ export default function Onboarding({
                 {paywall &&
                   state.facts.wantsCoaching &&
                   !paid &&
+                  !coachPaywall &&
                   offer.data && (
                     <View
                       style={{
