@@ -396,84 +396,106 @@ usersRouter.patch(
   }
 );
 
-// Delete user account (Apple Store compliant - effective deletion)
+// Delete user account (Apple Store compliant - effective deletion).
+// Order matters: billing, then sign-in, then data. If billing or sign-in fails, nothing has been
+// deleted yet and the person can simply retry. Once the sign-in is gone, no session can recreate
+// the account (auth middleware only creates users for live Clerk accounts).
 usersRouter.delete(
   "/user",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    try {
-      const userId = req.user!.id;
-      const clerkId = req.user!.clerkId;
-      const stripeSubscriptionId = req.user!.stripeSubscriptionId;
-      const userEmail = req.user!.email;
-      const username = req.user!.username || "unknown";
+    const userId = req.user!.id;
+    const clerkId = req.user!.clerkId;
+    const stripeSubscriptionId = req.user!.stripeSubscriptionId;
+    const userEmail = req.user!.email;
+    const username = req.user!.username || "unknown";
 
-      // Cancel Stripe subscription if exists
-      let stripeCancellationStatus = "No active subscription";
-      if (stripeSubscriptionId) {
-        try {
+    // 1. Billing: never delete an account that could keep being charged.
+    if (stripeSubscriptionId) {
+      try {
+        const subscription = await stripe.subscriptions
+          .retrieve(stripeSubscriptionId)
+          .catch((error) => {
+            if (error?.code === "resource_missing") return null;
+            throw error;
+          });
+        if (subscription && !["canceled", "incomplete_expired"].includes(subscription.status)) {
           await stripe.subscriptions.cancel(stripeSubscriptionId);
-          stripeCancellationStatus = "✅ Successfully cancelled";
-          logger.info(
-            `Canceled Stripe subscription ${stripeSubscriptionId} for user ${userId}`
-          );
-        } catch (stripeError) {
-          stripeCancellationStatus = `❌ Failed: ${stripeError instanceof Error ? stripeError.message : "Unknown error"}`;
-          logger.error("Failed to cancel Stripe subscription:", stripeError);
-          // Continue with deletion even if Stripe cancellation fails
-          // User can contact support if they're still being charged
+        }
+      } catch (stripeError) {
+        logger.error("Failed to cancel Stripe subscription:", stripeError);
+        res.status(502).json({
+          error:
+            "We couldn't cancel your subscription, so nothing was deleted. Please try again in a moment.",
+        });
+        return;
+      }
+    }
+
+    // 2. Sign-in: delete the Clerk user (this also ends every session).
+    if (clerkId) {
+      try {
+        await clerkClient.users.deleteUser(clerkId);
+      } catch (authError: any) {
+        const alreadyGone = authError?.status === 404;
+        if (!alreadyGone) {
+          logger.error("Failed to delete Clerk user:", authError);
+          res.status(502).json({
+            error:
+              "We couldn't remove your sign-in, so nothing was deleted. Please try again in a moment.",
+          });
+          return;
         }
       }
+    }
 
-      // Clean up many-to-many relationships that don't cascade automatically
-      // Remove user from plan groups
+    // 3. Data: hard delete; related records cascade.
+    try {
       await prisma.user.update({
         where: { id: userId },
-        data: {
-          planGroupMemberships: {
-            set: [], // Disconnect from all plan groups
-          },
-        },
+        data: { planGroupMemberships: { set: [] } },
       });
-
-      // Handle self-referencing referral relationships
-      // Remove this user as referrer for any referred users
       await prisma.user.updateMany({
         where: { referredById: userId },
         data: { referredById: null },
       });
-
-      // Hard delete the user (CASCADE will delete all related records)
-      await prisma.user.delete({
-        where: { id: userId },
-      });
-
-      // Delete the Clerk user (permanent deletion for Apple Store compliance)
-      if (clerkId) {
-        try {
-          await clerkClient.users.deleteUser(clerkId);
-          logger.info(`Deleted Clerk user: ${clerkId}`);
-        } catch (authError) {
-          logger.error("Failed to delete Clerk user:", authError);
-          // Continue even if auth deletion fails - user data is already deleted from DB
-        }
-      }
-
-      // Send Telegram notification
-      telegramService.sendAlert(
-        `😵🗑️ *User Account Deleted*\n\n` +
-          `User: ${username} (${userEmail})\n` +
-          `User ID: ${userId}\n` +
-          `Stripe Subscription: ${stripeCancellationStatus}\n` +
-          `UTC Time: ${new Date().toISOString()}`
-      );
-
-      logger.info(`User account permanently deleted: ${userId}`);
-      res.json({ message: "Account deleted successfully" });
+      await prisma.user.delete({ where: { id: userId } });
     } catch (error) {
-      logger.error("Failed to delete user account:", error);
-      res.status(500).json({ error: "Failed to delete account" });
+      // The sign-in is already gone, so the person can't retry: the owner finishes it by hand.
+      logger.error(`Failed to delete data for user ${userId}:`, error);
+      telegramService.sendAlert(
+        `🚨 *Account deletion needs finishing*\n\nUser ID: ${userId} (${userEmail})\n` +
+          `Sign-in was deleted but the database delete failed: ${error instanceof Error ? error.message : error}`
+      );
+      res.status(500).json({
+        error:
+          "Your sign-in was removed but we couldn't finish deleting your data. We've been alerted and will complete it within 24 hours.",
+      });
+      return;
     }
+
+    // 4. Uploaded photos and images. The account is gone either way, so a failure here is ours to fix.
+    let mediaStatus = "✅ removed";
+    try {
+      const count =
+        (await s3Service.deletePrefix(`users/${userId}/`)) +
+        (await s3Service.deletePrefix(`profile-images/${userId}-`));
+      mediaStatus = `✅ ${count} files removed`;
+    } catch (error) {
+      mediaStatus = `❌ ${error instanceof Error ? error.message : "failed"}`;
+      logger.error(`Failed to delete media for user ${userId}:`, error);
+    }
+
+    telegramService.sendAlert(
+      `😵🗑️ *User Account Deleted*\n\n` +
+        `User: ${username} (${userEmail})\n` +
+        `User ID: ${userId}\n` +
+        `Stripe: ${stripeSubscriptionId ? "cancelled" : "no subscription"}\n` +
+        `Media: ${mediaStatus}\n` +
+        `UTC Time: ${new Date().toISOString()}`
+    );
+    logger.info(`User account permanently deleted: ${userId}`);
+    res.json({ message: "Account deleted successfully" });
   }
 );
 

@@ -1,6 +1,8 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -63,6 +65,27 @@ export class S3Service {
       logger.error("Failed to delete file from S3:", error);
       throw new Error(`S3 delete failed: ${error}`);
     }
+  }
+
+  /** Deletes every object whose key starts with `prefix`. Returns how many were deleted. */
+  async deletePrefix(prefix: string): Promise<number> {
+    const Prefix = prefix.startsWith("/") ? prefix.substring(1) : prefix;
+    let deleted = 0;
+    let ContinuationToken: string | undefined;
+    do {
+      const page = await this.s3Client.send(
+        new ListObjectsV2Command({ Bucket: this.bucketName, Prefix, ContinuationToken })
+      );
+      const keys = (page.Contents ?? []).map((object) => ({ Key: object.Key! }));
+      if (keys.length) {
+        await this.s3Client.send(
+          new DeleteObjectsCommand({ Bucket: this.bucketName, Delete: { Objects: keys } })
+        );
+        deleted += keys.length;
+      }
+      ContinuationToken = page.NextContinuationToken;
+    } while (ContinuationToken);
+    return deleted;
   }
 
   async generatePresignedUrl(
