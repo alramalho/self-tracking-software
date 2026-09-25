@@ -30,6 +30,13 @@ import { friendsOf, profileStats } from "./model";
 import type { ProfileDetail, ProfileHeaderProps } from "./types";
 import { useRankings } from "./rankings";
 import { ProgressSheet } from "./ProgressSheet";
+import {
+  ReportSheet,
+  personLabel,
+  showActions,
+  useBlockUser,
+} from "@/features/safety/Safety";
+import type { ReportTarget } from "@/features/safety/types";
 
 export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
   const c = useColors();
@@ -43,6 +50,8 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
   )?.rank;
   const friends = friendsOf(user);
   const [detail, setDetail] = useState<ProfileDetail>();
+  const [report, setReport] = useState<ReportTarget>();
+  const blockUser = useBlockUser();
   const color = c.dark ? stats.level.dark : stats.level.light;
   // PWA level icons use their Tailwind icon color, independently of the label/ring.
   const iconColors: Record<string, [string, string]> = {
@@ -106,6 +115,38 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
             accessibilityLabel="Settings"
             onPress={() => router.push("/settings")}
             style={{
+              width: 50,
+              height: 44,
+              paddingLeft: 8,
+              paddingRight: 16,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <EllipsisVertical size={26} color={c.text} strokeWidth={2} />
+          </Pressable>
+        )}
+        {!own && (
+          <Pressable
+            testID="profile-safety"
+            accessibilityRole="button"
+            accessibilityLabel="More options"
+            onPress={() =>
+              showActions(personLabel(user), [
+                {
+                  label: `Report ${personLabel(user)}`,
+                  onPress: () =>
+                    setReport({ kind: "USER", id: user.id, label: personLabel(user) }),
+                },
+                {
+                  label: `Block ${personLabel(user)}`,
+                  destructive: true,
+                  onPress: () => blockUser(user, goBack),
+                },
+              ])
+            }
+            style={{
+              marginLeft: "auto",
               width: 50,
               height: 44,
               paddingLeft: 8,
@@ -304,6 +345,7 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
         </View>
       )}
       <Status error={connection.error ?? chat.error} />
+      <ReportSheet target={report} onClose={() => setReport(undefined)} />
       {detail === "points" && (
         <ProgressSheet
           user={user}

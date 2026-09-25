@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { memoryService } from "../services/memoryService";
 import { notificationService } from "../services/notificationService";
+import { blockedUserIds } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { MessageRole } from "@tsw/prisma";
@@ -330,7 +331,15 @@ router.get(
           createdAt: "desc",
         },
       });
-      return res.json(await withCoachActionCounts(notifications));
+      // Hide reactions, comments, messages and requests from someone in a block with this user.
+      const hidden = await blockedUserIds(req.user!.id);
+      const visible = notifications.filter((notification) => {
+        const data = (notification.relatedData ?? {}) as Record<string, unknown>;
+        const actorIds = [data.commenterId, data.reactorId, data.senderId];
+        if (notification.type === "FRIEND_REQUEST") actorIds.push(data.id);
+        return !actorIds.some((id) => typeof id === "string" && hidden.includes(id));
+      });
+      return res.json(await withCoachActionCounts(visible));
     } catch (error) {
       logger.error("Error loading notifications:", error);
       res.status(500).json({ error: "Failed to load notifications" });

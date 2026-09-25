@@ -30,6 +30,7 @@ import {
   TimelineSeenUpdateSchema,
   TimezoneUpdateSchema,
 } from "../types/user";
+import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { userSelfUpdate } from "../utils/userSelfUpdate";
 import { prisma } from "../utils/prisma";
@@ -679,7 +680,10 @@ usersRouter.get(
       const { username } = req.params;
 
       // Get user's accepted connections
-      const connections = await userService.getUserConnections(req.user!.id);
+      const hidden = await blockedUserIds(req.user!.id);
+      const connections = (
+        await userService.getUserConnections(req.user!.id)
+      ).filter((connection) => !hidden.includes(connection.id));
 
       // If no connections, return empty array
       if (connections.length === 0) {
@@ -793,6 +797,8 @@ usersRouter.post(
         return;
       }
 
+      const hidden = await blockedUserIds(req.user!.id);
+      const visibleComments = { deletedAt: null, userId: { notIn: hidden } };
       const user = await prisma.user.findFirst({
         where: {
           deletedAt: null,
@@ -847,7 +853,7 @@ usersRouter.post(
               },
               activity: true,
               comments: {
-                where: { deletedAt: null },
+                where: visibleComments,
                 orderBy: { createdAt: "desc" },
                 take: 2,
                 include: {
@@ -858,10 +864,11 @@ usersRouter.post(
               },
               _count: {
                 select: {
-                  comments: true,
+                  comments: { where: visibleComments },
                 },
               },
               reactions: {
+                where: { userId: { notIn: hidden } },
                 include: {
                   user: {
                     select: {
@@ -916,7 +923,8 @@ usersRouter.post(
           },
         },
       });
-      if (!user) {
+      // Blocked either way: behave as if the profile does not exist.
+      if (!user || hidden.includes(user.id)) {
         res.status(404).json({ error: "User not found" });
         return;
       }
@@ -1061,6 +1069,8 @@ usersRouter.get(
         return;
       }
 
+      const hidden = await blockedUserIds(user.id);
+      const visibleComments = { deletedAt: null, userId: { notIn: hidden } };
       const connections = [
         ...user.connectionsFrom
           .filter((conn) => conn.status === "ACCEPTED")
@@ -1068,7 +1078,7 @@ usersRouter.get(
         ...user.connectionsTo
           .filter((conn) => conn.status === "ACCEPTED")
           .map((conn) => conn.from),
-      ];
+      ].filter((connection) => !hidden.includes(connection.id));
 
       if (!connections.length) {
         res.json({
@@ -1186,7 +1196,7 @@ usersRouter.get(
               },
             },
             comments: {
-              where: { deletedAt: null },
+              where: visibleComments,
               orderBy: { createdAt: "desc" },
               take: 2,
               include: {
@@ -1196,6 +1206,7 @@ usersRouter.get(
               },
             },
             reactions: {
+              where: { userId: { notIn: hidden } },
               include: {
                 user: {
                   select: {
@@ -1207,7 +1218,7 @@ usersRouter.get(
             },
             _count: {
               select: {
-                comments: true,
+                comments: { where: visibleComments },
               },
             },
             sharedActivityEntry: {
@@ -1215,6 +1226,7 @@ usersRouter.get(
                 sharedActivity: {
                   include: {
                     entries: {
+                      where: { userId: { notIn: hidden } },
                       include: {
                         user: {
                           select: {
@@ -1277,7 +1289,7 @@ usersRouter.get(
               orderBy: { sortOrder: "asc" },
             },
             comments: {
-              where: { deletedAt: null },
+              where: visibleComments,
               orderBy: { createdAt: "desc" },
               take: 2,
               include: {
@@ -1287,6 +1299,7 @@ usersRouter.get(
               },
             },
             reactions: {
+              where: { userId: { notIn: hidden } },
               include: {
                 user: {
                   select: {
@@ -1298,7 +1311,7 @@ usersRouter.get(
             },
             _count: {
               select: {
-                comments: true,
+                comments: { where: visibleComments },
               },
             },
           },
@@ -1485,7 +1498,7 @@ usersRouter.get(
         user = await userService.getUserById(username_or_id);
       }
 
-      if (!user) {
+      if (!user || (await isBlockedPair(req.user!.id, user.id))) {
         res.status(404).json({
           success: false,
           error: { message: "User not found" },
@@ -1545,6 +1558,9 @@ usersRouter.post(
     try {
       const { recipientId } = req.params;
       const body = FriendRequestSchema.parse(req.body);
+      if (await isBlockedPair(req.user!.id, recipientId)) {
+        throw new Error("You can't connect with this person");
+      }
 
       const connectionRequest = await userService.sendConnectionRequest(
         req.user!.id,

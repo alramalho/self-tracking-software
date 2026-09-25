@@ -4,12 +4,22 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
+import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// A blocked pair can't react to or comment on each other's achievements.
+async function blockedFromPost(userId: string, achievementPostId: string) {
+  const post = await prisma.achievementPost.findUnique({
+    where: { id: achievementPostId },
+    select: { userId: true },
+  });
+  return !!post && (await isBlockedPair(userId, post.userId));
+}
 
 // Create achievement post
 router.post(
@@ -204,6 +214,10 @@ router.get(
   ): Promise<Response | void> => {
     try {
       const { userId } = req.params;
+      if (await isBlockedPair(req.user!.id, userId)) {
+        return res.status(200).json({ success: true, achievementPosts: [] });
+      }
+      const hidden = await blockedUserIds(req.user!.id);
 
       const achievementPosts = await prisma.achievementPost.findMany({
         where: {
@@ -224,6 +238,7 @@ router.get(
             },
           },
           reactions: {
+            where: { userId: { notIn: hidden } },
             include: {
               user: {
                 select: {
@@ -238,6 +253,7 @@ router.get(
           comments: {
             where: {
               deletedAt: null,
+              userId: { notIn: hidden },
             },
             include: {
               user: {
@@ -444,6 +460,9 @@ router.post(
       if (!Array.isArray(reactions) || !reactions.length) {
         return res.status(400).json({ error: "No reactions provided" });
       }
+      if (await blockedFromPost(req.user!.id, achievementPostId)) {
+        return res.status(403).json({ error: "You can't react to this" });
+      }
 
       for (const { emoji, operation } of reactions) {
         if (!emoji || !operation) {
@@ -517,6 +536,7 @@ router.get(
         where: {
           achievementPostId,
           deletedAt: null,
+          userId: { notIn: await blockedUserIds(req.user!.id) },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
@@ -543,6 +563,10 @@ router.post(
     try {
       const { achievementPostId } = req.params;
       const { text } = req.body;
+      if (await blockedFromPost(req.user!.id, achievementPostId)) {
+        return res.status(403).json({ error: "You can't comment on this" });
+      }
+      const hidden = await blockedUserIds(req.user!.id);
 
       const comment = await prisma.comment.create({
         data: {
@@ -592,6 +616,7 @@ router.post(
         const mentionedUsers = await prisma.user.findMany({
           where: {
             username: { in: uniqueUsernames },
+            id: { notIn: hidden },
             deletedAt: null,
           },
           select: {
@@ -634,6 +659,8 @@ router.post(
       const allComments = await prisma.comment.findMany({
         where: {
           achievementPostId,
+          deletedAt: null,
+          userId: { notIn: hidden },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
@@ -684,6 +711,8 @@ router.delete(
       const remainingComments = await prisma.comment.findMany({
         where: {
           achievementPostId,
+          deletedAt: null,
+          userId: { notIn: await blockedUserIds(req.user!.id) },
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },

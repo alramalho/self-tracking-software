@@ -3,6 +3,7 @@ import { semanticSearch } from "@tsw/prisma/generated/prisma/sql/semanticSearch"
 import { semanticSearchWithUsers } from "@tsw/prisma/generated/prisma/sql/semanticSearchWithUsers";
 import { Plan as CompletePlan } from "@tsw/prisma/types";
 import { logger } from "../utils/logger";
+import { blockedUserIds } from "../utils/blocks";
 import { prisma } from "../utils/prisma";
 import { plansService } from "./plansService";
 import { userService } from "./userService";
@@ -494,7 +495,7 @@ export class RecommendationsService {
       // Get recommended users
       const recommendedUsers = await prisma.user.findMany({
         where: {
-          id: { in: recommendedUserIds },
+          id: { in: recommendedUserIds, notIn: await blockedUserIds(userId) },
           AND: [
             { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
             { email: { not: { endsWith: "@test.com" } } },

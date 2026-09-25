@@ -10,15 +10,19 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  FileText,
   GraduationCap,
   KeyRound,
+  LifeBuoy,
   LogOut,
   Moon,
   Paintbrush,
   Play,
+  ShieldCheck,
   Smartphone,
   Sun,
   UserPen,
+  UserX,
 } from "lucide-react-native";
 import { router, useIsFocused } from "expo-router";
 import { goBack } from "@/core/navigation";
@@ -47,6 +51,7 @@ import {
 } from "@/features/health/HealthScreen";
 import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
+import { BlockedPeople, SUPPORT_EMAIL } from "@/features/safety/Safety";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
   profile: "User Settings",
@@ -58,6 +63,7 @@ const titles: Record<SettingsView, string> = {
   apiKeys: "Bring your own teacher",
   appleHealth: "Apple Health",
   garmin: "Garmin Connect",
+  blocked: "Blocked people",
 };
 export default function Settings() {
   const focused = useIsFocused();
@@ -240,6 +246,26 @@ export default function Settings() {
               onPress={() => setView("experience")}
             />
             <SettingsRow
+              icon={UserX}
+              title="Blocked people"
+              onPress={() => setView("blocked")}
+            />
+            <SettingsRow
+              icon={LifeBuoy}
+              title="Get help"
+              onPress={() => open(`mailto:${SUPPORT_EMAIL}`)}
+            />
+            <SettingsRow
+              icon={ShieldCheck}
+              title="Privacy policy"
+              onPress={() => open("https://tracking.so/privacy")}
+            />
+            <SettingsRow
+              icon={FileText}
+              title="Terms of use"
+              onPress={() => open("https://tracking.so/terms")}
+            />
+            <SettingsRow
               icon={LogOut}
               title="Logout"
               onPress={() => setConfirm("logout")}
@@ -344,6 +370,7 @@ export default function Settings() {
         {view === "appleHealth" && <HealthContent showGarmin={false} />}
         {view === "garmin" && <GarminContent />}
         {view === "coach" && <CoachProfile />}
+        {view === "blocked" && <BlockedPeople />}
         {view === "experience" && (
           <>
             <Copy>

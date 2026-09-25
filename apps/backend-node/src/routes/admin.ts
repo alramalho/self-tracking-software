@@ -856,5 +856,80 @@ router.post(
   }
 );
 
+// Content reports filed from the app (see routes/moderation.ts). Defaults to open ones.
+router.get(
+  "/reports",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const status = req.query.status === "all" ? undefined : (req.query.status as any) || "OPEN";
+      const reports = await prisma.contentReport.findMany({
+        where: status ? { status } : {},
+        orderBy: { createdAt: "asc" },
+        take: 100,
+        include: {
+          reporter: { select: { id: true, username: true } },
+          targetUser: { select: { id: true, username: true } },
+        },
+      });
+      res.json({ reports });
+    } catch (error) {
+      logger.error("Error fetching content reports:", error);
+      res.status(500).json({ error: "Failed to fetch reports" });
+    }
+  }
+);
+
+// Resolve a report: "dismiss" keeps the content, "remove" hides it from everyone.
+// There is no account suspension yet, so a USER report is only marked ACTIONED.
+router.post(
+  "/reports/:id/resolve",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { action } = req.body as { action?: string };
+      if (action !== "dismiss" && action !== "remove") {
+        return res.status(400).json({ error: 'action must be "dismiss" or "remove"' });
+      }
+      const report = await prisma.contentReport.findUnique({ where: { id: req.params.id } });
+      if (!report) return res.status(404).json({ error: "Report not found" });
+
+      const now = new Date();
+      const id = report.targetId;
+      if (action === "remove") {
+        if (report.kind === "MESSAGE")
+          await prisma.message.updateMany({ where: { id }, data: { deletedAt: now } });
+        if (report.kind === "COMMENT")
+          await prisma.comment.updateMany({ where: { id }, data: { deletedAt: now } });
+        if (report.kind === "ACHIEVEMENT_POST")
+          await prisma.achievementPost.updateMany({ where: { id }, data: { deletedAt: now } });
+        // Keep the log itself (it drives the owner's plan progress); drop what others could see.
+        if (report.kind === "ACTIVITY_ENTRY")
+          await prisma.activityEntry.updateMany({
+            where: { id },
+            data: { description: null, imageUrl: null, imageS3Path: null, imageUrls: [], imageS3Paths: [] },
+          });
+        if (report.kind === "CIRCLE")
+          await prisma.practiceCircle.updateMany({ where: { id }, data: { discoverable: false } });
+      }
+
+      // Other open reports about the same thing are settled by the same decision.
+      const resolved = await prisma.contentReport.updateMany({
+        where: {
+          OR: [
+            { id: report.id },
+            { kind: report.kind, targetId: report.targetId, status: "OPEN" },
+          ],
+        },
+        data: { status: action === "remove" ? "ACTIONED" : "DISMISSED", resolvedAt: now },
+      });
+      res.json({ resolved: resolved.count });
+    } catch (error) {
+      logger.error("Error resolving content report:", error);
+      res.status(500).json({ error: "Failed to resolve report" });
+    }
+  }
+);
+
 export const adminRouter: Router = router;
 export default adminRouter;

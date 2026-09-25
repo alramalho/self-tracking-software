@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Image, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil, ThumbsUp, ThumbsDown } from "lucide-react-native";
+import { Flag, Pencil, ThumbsUp, ThumbsDown } from "lucide-react-native";
 import {
   Button,
   Copy,
@@ -38,6 +38,7 @@ export function MessageCard({
   coach,
   onEdit,
   onPrompt,
+  onReport,
 }: MessageProps) {
   const c = useColors();
   const client = useQueryClient();
@@ -127,6 +128,7 @@ export function MessageCard({
       <Pressable
         accessible={false}
         onPress={() => setActions((v) => !v)}
+        onLongPress={onReport}
         style={{
           paddingHorizontal: 16,
           paddingVertical: 12,
@@ -195,6 +197,11 @@ export function MessageCard({
           })}
         </Text>
       </Pressable>
+      {actions && onReport && (
+        <IconButton label="Report message" onPress={onReport}>
+          <Flag color={c.muted} size={18} />
+        </IconButton>
+      )}
       {actions && coach && (
         <View style={s.row}>
           {own ? (
