@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## AI consent (inactive) + Braintrust removed — active since September 25, 2026
+
+Image `local/tracking-so-backend:ai-consent-20260925` from [ai-consent-overlay.Dockerfile](./ai-consent-overlay.Dockerfile) on `app-store-safety-20260925` (25 files; all live copies matched git `942f6078` except `apps/backend-node/package.json`, whose live `zod ^4.0.0` pin was kept by the three-way merge). Same 30 pre-existing typecheck errors. Healthy; `/health` ok; `PUT /users/ai-consent` returns 401 without auth; no Braintrust process runs (the `start` script no longer imports `braintrust/hook.mjs`, and `wrapAISDK`, `initLogger` and `traced()` are gone).
+
+- Migration `20260925180000_user_ai_consent` (additive: `users.aiConsentGrantedAt`, `users.aiConsentDeclinedAt`). Dump: `tracking-ai-consent-20260925/backup/database-before.dump`.
+- Consent is **not enforced**: `AI_CONSENT_ENFORCED` is unset, so every existing build keeps working. Set `AI_CONSENT_ENFORCED=true` when the App Store build that asks for consent is released; AI routes then return 403 `AI_CONSENT_REQUIRED` and background AI jobs skip people who haven't allowed it.
+- `BRAINTRUST_API_KEY` in `.env` is now unused.
+
+Rollback: restore `tracking-ai-consent-20260925/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`.
+
 ## App Store safety: reports, blocks, suspension, deletion, Garmin gate — active since September 25, 2026
 
 Image `local/tracking-so-backend:app-store-safety-20260925` from [app-store-safety-overlay.Dockerfile](./app-store-safety-overlay.Dockerfile) on `user-update-guard-20260925` (21 files; every live copy matched git `12bf935c`, so the three-way merges were clean; `prisma generate` runs in the image). Same 30 pre-existing typecheck errors, none in the changed files. Healthy after the switch; `/health` ok; `/moderation/*` and `/admin/reports` return 401 without auth.
