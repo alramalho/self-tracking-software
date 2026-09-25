@@ -99,6 +99,11 @@ const app: ExpoConfig = {
       "expo-location",
       {
         locationWhenInUsePermission: "Record your activity location and route.",
+        // The app never asks for Always location or motion; `false` keeps the
+        // plugin's generic descriptions out of Info.plist (App Review flags them).
+        locationAlwaysAndWhenInUsePermission: false,
+        locationAlwaysPermission: false,
+        motionUsagePermission: false,
       },
     ],
     [
