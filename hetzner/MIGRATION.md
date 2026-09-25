@@ -282,6 +282,17 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## App Store safety: reports, blocks, suspension, deletion, Garmin gate — active since September 25, 2026
+
+Image `local/tracking-so-backend:app-store-safety-20260925` from [app-store-safety-overlay.Dockerfile](./app-store-safety-overlay.Dockerfile) on `user-update-guard-20260925` (21 files; every live copy matched git `12bf935c`, so the three-way merges were clean; `prisma generate` runs in the image). Same 30 pre-existing typecheck errors, none in the changed files. Healthy after the switch; `/health` ok; `/moderation/*` and `/admin/reports` return 401 without auth.
+
+- Migrations applied with `prisma migrate deploy`: `20260925120000_content_reports_and_user_blocks`, `20260925130000_user_suspension` (both additive). Pre-migration dump: `tracking-app-store-safety-20260925/backup/database-before.dump` (3.9 MB).
+- New `.env` keys: `REPORT_BCC_EMAILS` (copy of every report email) and `GARMIN_TESTER_EMAILS` (who sees Garmin while the key is in evaluation; set `GARMIN_OPEN_TO_ALL=true` after approval). Report emails go to `ADMIN_EMAIL`.
+- Moderation: `GET /admin/reports`, `POST /admin/reports/:id/resolve {"action":"dismiss"|"remove"|"suspend"}`, `POST /admin/users/:id/suspend|unsuspend` (Bearer `ADMIN_API_KEY`).
+- Account deletion: billing, then Clerk, then data, then S3 media; failures before the data step delete nothing.
+
+Rollback: restore `tracking-app-store-safety-20260925/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migrations are additive and can stay.
+
 ## PATCH /users/user field guard — active since September 25, 2026
 
 Production runs `local/tracking-so-backend:user-update-guard-20260925`, built from [user-update-guard-overlay.Dockerfile](./user-update-guard-overlay.Dockerfile) on `streak-20260925` (2 files, hashes in `tracking-user-update-guard-20260925/source-hashes.txt`). No migration. Same 30 pre-existing typecheck errors, none in the changed files. Healthy after the switch; `/health` ok and an unauthenticated `PATCH /users/user` returns 401.
