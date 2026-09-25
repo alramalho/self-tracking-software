@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { fileTypeFromBuffer } from "file-type";
+import { assertAiConsent } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 import { resolveSTTConfig } from "./stt/config";
 import type { TimestampedTranscript } from "./stt/types";
@@ -59,6 +60,7 @@ export class STTService {
     audioBytes: Buffer,
     receivedAudioFormat?: string,
   ): Promise<string> {
+    assertAiConsent();
     try {
       const detectedAudioType = await this.detectAudioType(audioBytes);
 
@@ -105,6 +107,7 @@ export class STTService {
     audioBytes: Buffer,
     receivedAudioFormat?: string,
   ): Promise<TimestampedTranscript> {
+    assertAiConsent();
     try {
       const detectedAudioType = await this.detectAudioType(audioBytes);
       const validFormats = ["webm", "ogg", "mp4", "wav", "mp3", "m4a", "flac"];

@@ -1,4 +1,4 @@
-import { experimental_evaluate as evaluate } from "ai";
+import { evaluate } from "../../../../utils/aiSdk";
 import type { GoalGuidanceResult } from "@tsw/prisma/follow-through";
 import { z } from "zod/v4";
 

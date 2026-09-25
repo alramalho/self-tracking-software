@@ -5,6 +5,7 @@ import multer from "multer";
 import { subDays } from "date-fns";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import { aiService } from "../services/aiService";
 import {
   CoachAssessmentRetryError,
@@ -293,6 +294,7 @@ router.post(
 router.post(
   "/coach/run-assessment",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -321,6 +323,7 @@ router.post(
 router.post(
   "/coach/messages/:messageId/retry",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -934,6 +937,7 @@ router.post(
 router.post(
   "/coach/chat",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -1157,6 +1161,7 @@ router.post(
 router.post(
   "/transcribe",
   requireAuth,
+  requireAiConsent,
   upload.single("audio_file"),
   async (
     req: AuthenticatedRequest,
@@ -1264,6 +1269,7 @@ router.post(
 router.post(
   "/rewrite-testimonial",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -1324,6 +1330,7 @@ Make it more polished and compelling while keeping the user's authentic voice an
 router.post(
   "/messages/:messageId/accept-metric",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -1530,6 +1537,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-proposal",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -1740,6 +1748,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-plan-creation-proposal",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2072,6 +2081,7 @@ router.post(
 router.post(
   "/messages/:messageId/propose-plan-creation-changes",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2351,6 +2361,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-activity-log-proposal",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2584,6 +2595,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-activity-edit-proposal",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2759,6 +2771,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-user-context-event-proposal",
   requireAuth,
+  requireAiConsent,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2961,6 +2974,7 @@ router.post(
 router.post(
   "/classify-coaching-need",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -2986,6 +3000,7 @@ router.post(
 router.post(
   "/recommend-activities",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -3022,6 +3037,7 @@ router.post(
 router.post(
   "/coach/trigger-notification",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response,

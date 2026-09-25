@@ -5,6 +5,7 @@ import { hasPermittedHealthContext } from "../services/coach/monitoring/context"
 import type { CoachConversationMessage } from "../services/coach/types";
 import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { AI_CONSENT_REQUIRED, hasAiConsent, requireAiConsent } from "../utils/aiConsent";
 import { aiService } from "../services/aiService";
 import {
   COACH_GENERATION_ERROR_MESSAGE,
@@ -723,6 +724,7 @@ router.get(
 router.post(
   "/coach/attention/start",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1145,6 +1147,7 @@ router.get(
 router.post(
   "/:chatId/messages/stream",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1332,6 +1335,10 @@ router.post(
 
       if (!chat) {
         return res.status(404).json({ error: "Chat not found" });
+      }
+      // Coach replies are AI; messages between people are not.
+      if (chat.type === "COACH" && !hasAiConsent(user)) {
+        return res.status(403).json(AI_CONSENT_REQUIRED);
       }
       const otherParticipant = chat.participants.find((p) => p.userId !== user.id);
       if (
@@ -1677,6 +1684,7 @@ router.post(
 router.post(
   "/:chatId/messages/:messageId/rewrite/stream",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1791,6 +1799,7 @@ router.post(
 router.post(
   "/:chatId/messages/:messageId/rewrite",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response

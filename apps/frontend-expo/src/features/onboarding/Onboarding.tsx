@@ -28,6 +28,7 @@ import { api } from "@/data/api";
 import { goBack } from "@/core/navigation";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
+import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
@@ -69,6 +70,7 @@ export default function Onboarding({
     client = useQueryClient(),
     user = useCurrentUser(),
     saved = useFollowThrough(!preview);
+  const aiConsent = useAiConsent();
   const [draft, setDraft] = useState(() => ({
     ...newDraft(randomUUID()),
     ...(initialGoal?.trim() ? { goal: initialGoal.trim() } : {}),
@@ -104,6 +106,14 @@ export default function Onboarding({
     },
     [],
   );
+  // The interview is run by AI, so ask about AI before it starts.
+  const askedAi = useRef(false);
+  const askAi = aiConsent.ask;
+  useEffect(() => {
+    if (!user.data || aiConsent.allowed || askedAi.current) return;
+    askedAi.current = true;
+    void askAi();
+  }, [user.data, aiConsent.allowed, askAi]);
   useEffect(() => {
     if (preview || loaded.current || !saved.data) return;
     loaded.current = true;
@@ -137,6 +147,7 @@ export default function Onboarding({
   }, [saved.data, preview]);
   useEffect(() => {
     if (
+      !aiConsent.allowed ||
       !["goal", "baseline", "motivation"].includes(state.stage) ||
       !!candidate ||
       !!validation ||
@@ -184,6 +195,7 @@ export default function Onboarding({
       if (guidanceRequest.current === requestId) setGoalGuidanceBusy(false);
     };
   }, [
+    aiConsent.allowed,
     answer,
     candidate,
     finished,
@@ -813,6 +825,64 @@ export default function Onboarding({
       />
     </>
   );
+  // Without AI consent: explain (under the consent sheet), and offer the manual plan editor.
+  if (user.data && !aiConsent.allowed)
+    return (
+      <InterviewFrame
+        stage="goal"
+        progress={{ current: 1, total: 1, label: "Before we start" }}
+        preview={preview}
+        busy={false}
+        backDisabled
+        onBack={() => {}}
+        onClose={goBack}
+        actions={
+          <>
+            <EditorButton
+              label="Allow AI features"
+              onPress={() => void aiConsent.ask()}
+            />
+            <EditorButton
+              label="Create a plan by hand"
+              secondary
+              onPress={() => router.replace("/create-plan-advanced" as never)}
+            />
+          </>
+        }
+      >
+        <View style={{ alignItems: "center", gap: 24 }}>
+          <View style={{ height: 100, justifyContent: "center" }}>
+            <Sparkles size={80} strokeWidth={1.4} color={c.accent} />
+          </View>
+          <Text
+            accessibilityRole="header"
+            style={{
+              color: c.text,
+              fontSize: 28,
+              lineHeight: 35,
+              fontWeight: "700",
+              textAlign: "center",
+              letterSpacing: -0.5,
+            }}
+          >
+            This setup uses AI
+          </Text>
+          <Text
+            style={{
+              color: c.muted,
+              fontSize: 16,
+              lineHeight: 24,
+              textAlign: "center",
+            }}
+          >
+            Your coach asks a few questions and drafts your plan with AI. Allow
+            AI features to continue, or create a plan yourself and track it by
+            hand.
+          </Text>
+        </View>
+        {aiConsent.sheet}
+      </InterviewFrame>
+    );
   return (
     <InterviewFrame
       stage={state.stage}

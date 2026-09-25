@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/data/api";
+import { useCurrentUser } from "@/data/queries";
+import { aiAllowed } from "@/features/ai-consent/AiConsent";
 import { Copy, Field, Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import {
@@ -31,9 +33,11 @@ export function DifficultyStep({
   const [reasons, setReasons] = useState<string[]>([]);
   const [detail, setDetail] = useState(!!initialNotes);
   const [notes, setNotes] = useState(initialNotes);
+  const user = useCurrentUser();
   const suggestions = useQuery({
     queryKey: ["reflection-reasons", entryId, selected],
-    enabled: !!selected,
+    // Suggested reasons are written by AI; without AI consent, just skip them.
+    enabled: !!selected && aiAllowed(user.data),
     retry: false,
     queryFn: async ({ signal }) =>
       (

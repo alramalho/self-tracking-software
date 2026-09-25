@@ -9,7 +9,6 @@ allowBuilds:
   '@swc/core': true
   '@tailwindcss/oxide': true
   bcrypt: true
-  braintrust: true
   browser-tabs-lock: true
   bufferutil: true
   core-js: true

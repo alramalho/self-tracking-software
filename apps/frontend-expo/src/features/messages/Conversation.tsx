@@ -40,6 +40,7 @@ import { Button, Copy, Sheet, Status, s, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { api } from "@/data/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
+import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import {
   useCurrentUser,
@@ -75,6 +76,7 @@ export function Conversation({ id }: ConversationProps) {
   const focused = useIsFocused();
   const client = useQueryClient();
   const user = useCurrentUser();
+  const aiConsent = useAiConsent();
   const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string }>();
   const [selectedPlan, setSelectedPlan] = useState(params.planId ?? "");
   const pillStrip = useRef<ScrollView>(null);
@@ -737,7 +739,11 @@ export function Conversation({ id }: ConversationProps) {
               disabled={
                 busy || picking || (!text.trim() && !images.length) || !chat
               }
-              onPress={() => mutation.mutate()}
+              onPress={async () => {
+                // Coach replies come from AI providers; messages to people don't.
+                if (coach && !(await aiConsent.ask())) return;
+                mutation.mutate();
+              }}
               style={{
                 width: 44,
                 height: 44,
@@ -754,6 +760,7 @@ export function Conversation({ id }: ConversationProps) {
         </View>
         <CoachSettings visible={settings} onClose={() => setSettings(false)} />
         <ReportSheet target={report} onClose={() => setReport(undefined)} />
+        {aiConsent.sheet}
         <Sheet
           visible={menu}
           title="Conversation"

@@ -20,6 +20,7 @@ import {
   Play,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Sun,
   UserPen,
   UserX,
@@ -52,6 +53,7 @@ import {
 import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
 import { BlockedPeople, SUPPORT_EMAIL } from "@/features/safety/Safety";
+import { useAiConsent } from "@/features/ai-consent/AiConsent";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
   profile: "User Settings",
@@ -84,6 +86,10 @@ export default function Settings() {
     enabled
       ? enableIosNotifications(auth.userId ?? undefined)
       : disableIosNotifications(auth.userId ?? undefined),
+  );
+  const aiConsent = useAiConsent();
+  const aiOff = useAction(async () =>
+    api.put("/users/ai-consent", { granted: false }),
   );
   const open = (url: string) => void Linking.openURL(url).catch(setError);
   if (!focused) return null;
@@ -255,6 +261,36 @@ export default function Settings() {
               title="Get help"
               onPress={() => open(`mailto:${SUPPORT_EMAIL}`)}
             />
+            <View
+              style={{
+                backgroundColor: c.soft + "88",
+                padding: 12,
+                borderRadius: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.text, fontSize: 16 }}>AI features</Text>
+                <Text style={{ color: c.muted, fontSize: 13, marginTop: 3 }}>
+                  Coach, plan setup, voice logs and dictation send your data
+                  to AI providers.
+                </Text>
+              </View>
+              <Sparkles size={22} color={c.muted} />
+              <Switch
+                accessibilityLabel="AI features"
+                disabled={aiOff.isPending}
+                value={aiConsent.allowed}
+                onValueChange={(on) =>
+                  on ? void aiConsent.ask() : aiOff.mutate(undefined)
+                }
+                trackColor={{ true: c.accent }}
+              />
+            </View>
+            <Status error={aiOff.error} />
+            {aiConsent.sheet}
             <SettingsRow
               icon={ShieldCheck}
               title="Privacy policy"

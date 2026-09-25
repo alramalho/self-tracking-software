@@ -19,6 +19,7 @@ import { preferencesSchema } from "../services/follow-through/schema";
 import { Router, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import {
   snapshot,
   configure,
@@ -93,6 +94,7 @@ router.get(
 );
 router.post(
   "/onboarding/next",
+  requireAiConsent,
   rateLimit({
     windowMs: 60000,
     max: 10,
@@ -106,6 +108,7 @@ router.post(
 );
 router.post(
   "/onboarding/interview",
+  requireAiConsent,
   rateLimit({
     windowMs: 60000,
     max: 20,
@@ -121,6 +124,7 @@ router.post(
 );
 router.post(
   "/onboarding/goal-guidance",
+  requireAiConsent,
   rateLimit({
     windowMs: 60000,
     max: 60,

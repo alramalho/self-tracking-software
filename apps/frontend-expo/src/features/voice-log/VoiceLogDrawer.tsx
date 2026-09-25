@@ -23,6 +23,7 @@ import { Button, Copy, Status, useColors } from "@/components/ui";
 import { ReviewRow } from "@/features/health/review/controls";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { useCurrentUser, useEntries } from "@/data/queries";
+import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { commitVoiceLog, previewVoiceLog } from "./service";
 import { enrichVoiceLogPreview } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
@@ -110,6 +111,7 @@ export function VoiceLogDrawer({
   const client = useQueryClient();
   const user = useCurrentUser(true);
   const entries = useEntries();
+  const aiConsent = useAiConsent();
   const [phase, setPhase] = useState<VoiceLogPhase>(
     initialDraft ? "review" : "ready",
   );
@@ -269,6 +271,8 @@ export function VoiceLogDrawer({
   }
 
   async function startRecording(kind: VoiceLogRecordingKind = recordingKindRef.current) {
+    // Voice notes are transcribed and read by AI providers, so ask first.
+    if (!(await aiConsent.ask())) return;
     setError(undefined);
     recordingKindRef.current = kind;
     setPhase("recording");
@@ -1009,6 +1013,7 @@ export function VoiceLogDrawer({
           <Button onPress={onClose}>Done</Button>
         </View>
       )}
+      {aiConsent.sheet}
     </LoggingDrawer>
   );
 }

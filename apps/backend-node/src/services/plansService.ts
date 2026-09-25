@@ -24,6 +24,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { hasAiConsent } from "../utils/aiConsent";
 import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
 import { withErrorHandling } from "../utils/errorHandling";
 import { logger } from "../utils/logger";
@@ -442,7 +443,8 @@ export class PlansService {
             newTimesPerWeek,
           };
         }
-        if (plan.outlineType === PlanOutlineType.SPECIFIC) {
+        // AI consent: without it, skip the AI-written session downgrade.
+        if (plan.outlineType === PlanOutlineType.SPECIFIC && hasAiConsent(user)) {
           const suggestedSessions = await aiService.generatePlanSessions({
             goal: plan.goal,
             activities: planWithActivities.activities,
@@ -499,17 +501,19 @@ export class PlansService {
         });
       }
 
-      const coachNotes = await aiService.generateCoachNotes(
-        {
-          goal: plan.goal,
-          outlineType: plan.outlineType,
-          timesPerWeek: plan.timesPerWeek || undefined,
-        },
-        newState,
-        planWithActivities.activities,
-        changes
-      );
-      updatePlanData.coachNotes = coachNotes;
+      // AI consent: coach notes are AI-written, so skip them without it.
+      if (hasAiConsent(user)) {
+        updatePlanData.coachNotes = await aiService.generateCoachNotes(
+          {
+            goal: plan.goal,
+            outlineType: plan.outlineType,
+            timesPerWeek: plan.timesPerWeek || undefined,
+          },
+          newState,
+          planWithActivities.activities,
+          changes
+        );
+      }
 
       await prisma.plan.update({
         where: { id: plan.id },
@@ -1339,6 +1343,16 @@ export class PlansService {
     planIds: string[]
   ): Promise<Map<string, number[] | null>> {
     const results = new Map<string, number[] | null>();
+
+    // AI consent: only embed plans whose owner allowed AI features.
+    const owners = await prisma.plan.findMany({
+      where: { id: { in: planIds } },
+      select: {
+        id: true,
+        user: { select: { aiConsentGrantedAt: true, aiConsentDeclinedAt: true } },
+      },
+    });
+    planIds = owners.filter((plan) => hasAiConsent(plan.user)).map((plan) => plan.id);
 
     if (planIds.length === 0) {
       return results;

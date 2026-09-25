@@ -26,6 +26,7 @@ import {
 import { plansService } from "../services/plansService";
 import { hashApiKey } from "./apiKeys";
 import { logger } from "../utils/logger";
+import { setRequestContext } from "../utils/requestContext";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
@@ -69,6 +70,8 @@ async function requireApiKey(
     .catch(() => undefined);
 
   req.user = apiKey.user;
+  // Lets AI side effects (e.g. auto-categorising) respect this person's AI consent.
+  setRequestContext({ user: apiKey.user });
   next();
 }
 

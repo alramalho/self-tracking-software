@@ -27,6 +27,7 @@ import {
   getCoachWeekBounds,
   getPreviousCoachWeekBounds,
 } from "../../../utils/date";
+import { hasAiConsent } from "../../../utils/aiConsent";
 import { logger } from "../../../utils/logger";
 import { prisma } from "../../../utils/prisma";
 import {
@@ -297,7 +298,7 @@ export class CoachAssessmentService {
       };
     }
 
-    const users = await prisma.user.findMany({
+    const users = (await prisma.user.findMany({
       where: {
         deletedAt: null,
         planType: { not: "FREE" },
@@ -317,7 +318,7 @@ export class CoachAssessmentService {
           include: { activities: true, sessions: true, milestones: true },
         },
       },
-    });
+    })).filter((user) => hasAiConsent(user)); // only people who allowed AI
 
     const results: UserAssessmentResult[] = [];
 

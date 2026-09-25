@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { assertAiConsent } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 
 export class EmbeddingService {
@@ -18,6 +19,7 @@ export class EmbeddingService {
    * Generate embedding for a single text
    */
   async generateEmbedding(text: string): Promise<number[]> {
+    assertAiConsent();
     try {
       const response = await this.openai.embeddings.create({
         model: "text-embedding-3-small",
@@ -37,6 +39,7 @@ export class EmbeddingService {
     texts: string[],
     model: string = "text-embedding-3-small"
   ): Promise<number[][]> {
+    assertAiConsent();
     try {
       const response = await this.openai.embeddings.create({
         model: model,

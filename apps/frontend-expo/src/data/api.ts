@@ -9,6 +9,21 @@ export function setTokenProvider(provider: typeof tokenProvider) {
   tokenProvider = provider;
 }
 export const getAuthToken = () => tokenProvider();
+// The server answers 403 AI_CONSENT_REQUIRED when AI features are off; the
+// AI consent gate (features/ai-consent) registers the handler that asks again.
+let aiConsentRequired = () => {};
+export function setAiConsentRequiredHandler(handler: () => void) {
+  aiConsentRequired = handler;
+}
+api.interceptors.response.use(undefined, (error) => {
+  if (
+    axios.isAxiosError(error) &&
+    error.response?.status === 403 &&
+    error.response.data?.code === "AI_CONSENT_REQUIRED"
+  )
+    aiConsentRequired();
+  return Promise.reject(error);
+});
 api.interceptors.request.use(async (config) => {
   // Axios otherwise defaults native FormData POSTs to urlencoded. React Native
   // supplies the multipart boundary when given the correct media type.

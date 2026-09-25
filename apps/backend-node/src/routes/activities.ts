@@ -1,4 +1,5 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
+import { requireAiConsent } from "../utils/aiConsent";
 import { listActivitiesByUsage } from "@/services/activities/list";
 import { plansService } from "@/services/plansService";
 import { TZDate } from "@date-fns/tz";
@@ -1123,6 +1124,7 @@ router.put(
 router.post(
   "/activity-entries/:activityEntryId/reflection-reasons",
   requireAuth,
+  requireAiConsent,
   async (
     req: AuthenticatedRequest,
     res: Response

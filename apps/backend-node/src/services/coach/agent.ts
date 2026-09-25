@@ -2,7 +2,6 @@ import { healthSafeActivityFilter } from "@/services/health/apple/ai-boundary";
 import { permittedCoachHistory, readPermittedCoachContext } from "./monitoring/context";
 import { followThroughContext } from "../follow-through/coach-context";
 import { gateway } from "@ai-sdk/gateway";
-import { traced } from "braintrust";
 import type { StopCondition } from "ai";
 import {
   ToolLoopAgent,
@@ -1849,40 +1848,7 @@ export class CoachAgentService {
   async generateResponse(
     params: CoachGenerateResponseParams
   ): Promise<CoachAgentResponse> {
-    const { user, messageRole = "user", imageAttachments, conversationHistory, plans } = params;
-
-    let response: CoachAgentResponse | undefined;
-    await traced(
-      async (span) => {
-        span.log({
-          metadata: {
-            userId: user.id,
-            username: user.username || null,
-            messageRole,
-            imageAttachmentCount: imageAttachments?.length || 0,
-            conversationHistoryCount: conversationHistory.length,
-            planCount: plans.length,
-          },
-          tags: ["coach"],
-        });
-
-        response = await this.generateResponseInternal(params);
-        // Content may contain user-approved health details. Trace counts, never the response.
-        return { messageCount: response.draftMessages.length, skipped: response.skipped, telemetry: response.telemetry };
-      },
-      {
-        name: "coach",
-        type: "function",
-        event: {
-          metadata: {
-            userId: user.id,
-            username: user.username || null,
-          },
-          tags: ["coach"],
-        },
-      }
-    );
-    return response!;
+    return this.generateResponseInternal(params);
   }
 
   private async generateResponseInternal(
