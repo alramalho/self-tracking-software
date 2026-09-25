@@ -23,3 +23,14 @@ export interface UpcomingSessionsProps {
   plans: Plan[];
   entries: ActivityEntry[];
 }
+export interface WarningSheetProps {
+  visible: boolean;
+  plan: Plan;
+  entries: ActivityEntry[];
+  slipping: boolean;
+  nudge?: { chatId?: string; messageId?: string };
+  needed: number;
+  daysLeft: number;
+  onOpenPlan: () => void;
+  onClose: () => void;
+}

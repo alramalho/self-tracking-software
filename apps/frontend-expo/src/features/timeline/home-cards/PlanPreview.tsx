@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, View } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { Flame, Sprout, Rocket, TriangleAlert } from "lucide-react-native";
@@ -6,10 +6,11 @@ import { planPace, weekAtRisk } from "@tsw/prisma/follow-through/pace";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { router } from "expo-router";
 import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format } from "date-fns";
-import { useColors } from "@/components/ui";
+import { Copy, useColors } from "@/components/ui";
+import { PreviewButton, PreviewSheet } from "@/features/messages/entities/PreviewSheet";
 import { dayKey } from "@/core/dates";
 import type { Plan, ActivityEntry } from "@/core/types";
-import type { PlanPreviewProps, StepsProps } from "./types";
+import type { PlanPreviewProps, StepsProps, WarningSheetProps } from "./types";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
 
 function Steps({ value, max, color, iconColor = color, icon: Icon, label, atRisk }: StepsProps) {
@@ -104,6 +105,7 @@ function StateRing({ color, pulse }: { color: string; pulse: boolean }) {
 export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   const c = useColors();
   const coach = useCoachState(plan, entries);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const now = new Date();
   const week = plan.progress?.weeks?.find((week) =>
     isSameWeek(new Date(week.startDate), now),
@@ -130,6 +132,9 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
       // Same week boundaries as `count` (date-fns isSameWeek), today included.
       daysLeft: differenceInCalendarDays(endOfWeek(now), now) + 1,
     });
+  const warning = coach.pace === "slipping" || weekIsAtRisk;
+  const openPlan = () =>
+    router.push({ pathname: "/(tabs)/plans", params: { selectedPlan: plan.id } });
   const progress = plan.progress;
   const achievement = streakProgress(progress);
   const next = plan.sessions
@@ -138,33 +143,18 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   const ended =
     !!plan.finishingDate && new Date(plan.finishingDate) < startOfDay(now);
   return (
+    <>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={
         coach.pace === "slipping"
-          ? `${plan.goal}, needs attention. ${coach.nudge ? "Open your coach's message" : "Open plan"}`
+          ? `${plan.goal}, gone quiet. Show what to do`
           : weekIsAtRisk
-            ? `Open ${plan.goal}. This week's target is at risk`
+            ? `${plan.goal}, this week is at risk. Show what to do`
             : `Open ${plan.goal}`
       }
       accessibilityValue={{ text: `${achievement.stage}, ${achievement.streak} weeks` }}
-      onPress={() =>
-        // A waiting nudge opens straight into the coach's already-written message.
-        coach.nudge?.chatId && coach.nudge.messageId
-          ? router.push({
-              pathname: "/chat/[id]",
-              params: {
-                id: coach.nudge.chatId,
-                planId: plan.id,
-                messageId: coach.nudge.messageId,
-                type: "COACH",
-              },
-            })
-          : router.push({
-              pathname: "/(tabs)/plans",
-              params: { selectedPlan: plan.id },
-            })
-      }
+      onPress={() => (warning ? setSheetOpen(true) : openPlan())}
       style={{
         aspectRatio: 1,
         borderRadius: 24,
@@ -248,5 +238,75 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
         </View>
       )}
     </Pressable>
+    {warning && (
+      <WarningSheet
+        visible={sheetOpen}
+        plan={plan}
+        entries={entries}
+        slipping={coach.pace === "slipping"}
+        nudge={coach.nudge}
+        needed={weekTarget - count}
+        daysLeft={differenceInCalendarDays(endOfWeek(now), now) + 1}
+        onOpenPlan={() => {
+          setSheetOpen(false);
+          openPlan();
+        }}
+        onClose={() => setSheetOpen(false)}
+      />
+    )}
+    </>
+  );
+}
+
+/** Explains a warning card and offers the one action that fixes it, plus the plan itself. */
+function WarningSheet({
+  visible,
+  plan,
+  entries,
+  slipping,
+  nudge,
+  needed,
+  daysLeft,
+  onOpenPlan,
+  onClose,
+}: WarningSheetProps) {
+  const activity = plan.activities[0];
+  const logs = entries
+    .filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId))
+    .map((e) => new Date(e.datetime));
+  const last = logs.reduce((latest, d) => (d > latest ? d : latest), new Date(plan.createdAt));
+  const quietDays = differenceInCalendarDays(new Date(), last);
+  const logIt = () => {
+    onClose();
+    router.push({ pathname: "/(tabs)/add", params: activity ? { activityId: activity.id } : {} });
+  };
+  const openMessage = () => {
+    onClose();
+    router.push({
+      pathname: "/chat/[id]",
+      params: { id: nudge!.chatId!, planId: plan.id, messageId: nudge!.messageId!, type: "COACH" },
+    });
+  };
+  const hasMessage = !!(nudge?.chatId && nudge.messageId);
+  const c = useColors();
+  const title = `${activity?.emoji ?? plan.emoji ?? ""} ${plan.goal} ${slipping ? "has gone quiet" : "is at risk this week"}`.trim();
+  return (
+    // The app's native bottom sheet: sized to content, drag down or tap outside to close.
+    <PreviewSheet visible={visible} title={title} onClose={onClose}>
+      <View style={{ gap: 6, paddingRight: 36 }}>
+        <Text style={{ color: c.text, fontSize: 20, fontWeight: "700" }}>{title}</Text>
+        <Copy muted>
+          {slipping
+            ? `Nothing logged for ${quietDays} ${quietDays === 1 ? "day" : "days"}.${hasMessage ? " Your coach has a message ready." : ""}`
+            : `${needed} ${needed === 1 ? "session" : "sessions"} left and ${daysLeft} ${daysLeft === 1 ? "day" : "days"} to go.`}
+        </Copy>
+      </View>
+      {slipping && hasMessage ? (
+        <PreviewButton label="Open coach message" onPress={openMessage} />
+      ) : (
+        <PreviewButton label={`Log ${activity?.title.toLowerCase() ?? "a session"}`} onPress={logIt} />
+      )}
+      <PreviewButton secondary label="Open plan" onPress={onOpenPlan} />
+    </PreviewSheet>
   );
 }
