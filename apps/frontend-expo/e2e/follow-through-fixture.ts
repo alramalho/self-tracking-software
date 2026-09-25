@@ -54,8 +54,9 @@ export function followThroughFixture(
       ({ id, title, emoji, measure, colorHex: "#3b82f6", userId: "test-user" });
     const run = activity("run", "Running", "🏃", "kilometers"),
       guitar = activity("guitar", "Guitar", "🎸", "minutes"),
-      read = activity("read", "Reading", "📚", "pages");
-    state.activities = [run, guitar, read];
+      read = activity("read", "Reading", "📚", "pages"),
+      stretch = activity("stretch", "Stretching", "🧘", "minutes");
+    state.activities = [run, guitar, read, stretch];
     const plan = (id: string, goal: string, emoji: string, a: any, order: number) => ({
       ...state.plans[0], id, goal, emoji, activities: [a], sessions: [], milestones: [],
       outlineType: "TIMES_PER_WEEK", timesPerWeek: 3, createdAt: ago(30), sortOrder: order,
@@ -65,13 +66,30 @@ export function followThroughFixture(
       plan("half", "Run my first half marathon", "🏃", run, 0),
       plan("guitar", "Practice guitar", "🎸", guitar, 1),
       plan("reading", "Read before bed", "📚", read, 2),
+      { ...plan("stretch", "Stretch every morning", "🧘", stretch, 3), timesPerWeek: 1 },
     ];
+    // Missed last week (no grace week): reading is also at risk now, stretch already made up for it.
+    const lastSunday = new Date(Date.now() - 7 * day);
+    lastSunday.setDate(lastSunday.getDate() - lastSunday.getDay());
+    const missedWeek = (planId: string, streak: number, before: number, done: string[], target: number) => {
+      const p = state.plans.find((x: any) => x.id === planId);
+      p.progress = {
+        achievement: { streak, missedLastWeek: { streakBefore: before, streakAfter: before - 1, inARow: 1 } },
+        habitAchievement: { isAchieved: false, maxValue: 4 },
+        lifestyleAchievement: { isAchieved: false, maxValue: 9 },
+        weeks: [{ startDate: lastSunday.toISOString(), isCompleted: false, plannedActivities: target,
+          completedActivities: done.map((d) => ({ datetime: d })) }],
+      };
+    };
+    missedWeek("reading", 1, 2, [ago(9)], 3);
+    missedWeek("stretch", 3, 3, [], 1);
     const entry = (id: string, activityId: string, daysAgo: number, quantity: number) =>
       ({ id, activityId, userId: "test-user", datetime: ago(daysAgo), createdAt: ago(daysAgo), quantity, comments: [], reactions: [] });
     state.entries = [
       entry("r1", "run", 1, 5), entry("r2", "run", 3, 6), entry("r3", "run", 5, 5),
       entry("g1", "guitar", 6, 20),
       entry("b1", "read", 2, 15),
+      entry("s1", "stretch", 1, 10),
     ];
     const base = Object.values(support.supports)[0] as any;
     const coached = (planId: string, role: string) => ({
@@ -82,6 +100,7 @@ export function followThroughFixture(
       half: coached("half", "training"),
       guitar: coached("guitar", "consistency"),
       reading: coached("reading", "consistency"),
+      stretch: { ...coached("stretch", "tracking"), coaching: undefined },
     };
     support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [{
       id: "nudge:guitar", planIds: ["guitar"], kind: "nudge", messageId: "coach-nudge-guitar",

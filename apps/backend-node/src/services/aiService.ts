@@ -1024,6 +1024,10 @@ export class AIService {
     if (achievement && achievement.streak > 0) {
       context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
     }
+    const missed = achievement?.missedLastWeek;
+    if (missed) {
+      context += `\n- Missed last week (${missed.inARow} in a row): streak went ${missed.streakBefore} → ${missed.streakAfter}`;
+    }
 
     return context;
   }

@@ -9,7 +9,11 @@ import {
   Prisma,
   User,
 } from "@tsw/prisma";
-import { PlanProgressData, PlanProgressState } from "@tsw/prisma/types";
+import {
+  PlanAchievement,
+  PlanProgressData,
+  PlanProgressState,
+} from "@tsw/prisma/types";
 import {
   addWeeks,
   endOfWeek,
@@ -53,6 +57,14 @@ export async function getNextPlanSortOrder(
 function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   return isBefore(date, threeDaysAgo);
+}
+
+// Same week boundary as the streak (Sunday, UTC midnight).
+function computedBeforeThisWeek(date: Date): boolean {
+  return isBefore(
+    date,
+    toMidnightUTCDate(startOfWeek(new Date(), { weekStartsOn: 0 }))
+  );
 }
 
 function getLocalDateKey(date: Date, timezone: string): string {
@@ -523,12 +535,7 @@ export class PlansService {
   async calculatePlanAchievement(
     planId: string,
     initialDate?: Date
-  ): Promise<{
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
-  }> {
+  ): Promise<PlanAchievement> {
     // Get plan with activities and sessions
     const plan = await prisma.plan.findUnique({
       where: { id: planId },
@@ -552,6 +559,7 @@ export class PlansService {
         completedWeeks: 0,
         incompleteWeeks: 0,
         totalWeeks: 0,
+        missedLastWeek: null,
       };
     }
 
@@ -563,10 +571,13 @@ export class PlansService {
       })
     );
 
+    const lastWeekStart = toMidnightUTCDate(addWeeks(currentWeekStart, -1));
+
     let streak = 0;
     let completedWeeks = 0;
     let incompleteWeeks = 0;
     let totalWeeks = 0;
+    let missedLastWeek: PlanAchievement["missedLastWeek"] = null;
 
     // Iterate through weeks up to current week
     for (const week of weeks) {
@@ -593,9 +604,23 @@ export class PlansService {
           incompleteWeeks = 0;
         }
       } else if (!isCurrentWeek) {
+        // A scheduled plan with nothing scheduled that week had nothing to miss.
+        if (
+          Array.isArray(week.plannedActivities) &&
+          week.plannedActivities.length === 0
+        ) {
+          continue;
+        }
+        // No grace week: every missed week costs one week of streak.
+        const streakBefore = streak;
+        streak = Math.max(0, streak - 1);
         incompleteWeeks += 1;
-        if (incompleteWeeks > 1) {
-          streak = Math.max(0, streak - 1);
+        if (isSameDay(weekStart, lastWeekStart)) {
+          missedLastWeek = {
+            streakBefore,
+            streakAfter: streak,
+            inARow: incompleteWeeks,
+          };
         }
       }
     }
@@ -605,15 +630,11 @@ export class PlansService {
       completedWeeks,
       incompleteWeeks,
       totalWeeks,
+      missedLastWeek,
     };
   }
 
-  private calculateHabitAchievement(achievement: {
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
-  }): {
+  private calculateHabitAchievement(achievement: PlanAchievement): {
     progressValue: number;
     maxValue: number;
     isAchieved: boolean;
@@ -633,12 +654,7 @@ export class PlansService {
     };
   }
 
-  private calculateLifestyleAchievement(achievement: {
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
-  }): {
+  private calculateLifestyleAchievement(achievement: PlanAchievement): {
     progressValue: number;
     maxValue: number;
     isAchieved: boolean;
@@ -688,15 +704,21 @@ export class PlansService {
       plans.map(async (plan) => {
         const hasExpiredCache =
           !!plan.progressCalculatedAt && is3DaysOld(plan.progressCalculatedAt);
+        // A new week can cost streak; never serve last week's numbers.
+        const fromEarlierWeek =
+          !!plan.progressCalculatedAt &&
+          computedBeforeThisWeek(plan.progressCalculatedAt);
         const shouldRecompute =
           !plan.progressCalculatedAt ||
           forceRecompute ||
-          hasExpiredCache;
+          hasExpiredCache ||
+          fromEarlierWeek;
 
         if (shouldRecompute) {
           if (
             options.staleWhileRevalidate &&
             !forceRecompute &&
+            !fromEarlierWeek &&
             hasExpiredCache &&
             plan.progressState
           ) {
@@ -731,8 +753,11 @@ export class PlansService {
     plan: Plan & { activities: Activity[] },
     user: User
   ): Promise<PlanProgressData> {
-    // If progress has never been calculated, compute it now
-    if (!plan.progressCalculatedAt) {
+    // If progress has never been calculated, or was calculated last week, compute it now
+    if (
+      !plan.progressCalculatedAt ||
+      computedBeforeThisWeek(plan.progressCalculatedAt)
+    ) {
       logger.info(
         `Progress never calculated for plan ${plan.id}, computing now`
       );

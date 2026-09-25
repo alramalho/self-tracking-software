@@ -145,6 +145,7 @@ export function PlanProgressStrip({ plan }: PlanProgressStripProps) {
   );
   if (!week || !plan.progress?.achievement) return null;
   const progress = streakProgress(plan.progress);
+  const missed = plan.progress.achievement.missedLastWeek;
   const habitAchieved = progress.stage === "Lifestyle";
   const max =
     typeof week.plannedActivities === "number"
@@ -172,6 +173,15 @@ export function PlanProgressStrip({ plan }: PlanProgressStripProps) {
         color={habitAchieved ? "#fbbf24" : "#a3e635"}
         icon={habitAchieved ? Rocket : Sprout}
       />
+      {missed && (
+        <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "600" }}>
+          💔 Missed last week
+          {missed.streakBefore > missed.streakAfter
+            ? ` · streak ${missed.streakBefore} → ${missed.streakAfter}`
+            : ""}
+          {missed.inARow > 1 ? ` · ${missed.inARow} weeks in a row` : ""}
+        </Text>
+      )}
     </View>
   );
 }

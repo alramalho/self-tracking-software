@@ -17,12 +17,22 @@ export type PlanMilestone = Omit<PrismaPlanMilestone, "criteria"> & {
   criteria: MilestoneCriteria;
 };
 
+export type PlanAchievement = {
+  streak: number;
+  completedWeeks: number;
+  /** Missed weeks in a row since the last completed one. */
+  incompleteWeeks: number;
+  totalWeeks: number;
+  /** Set when last week was missed: what it cost, shown all this week. */
+  missedLastWeek?: {
+    streakBefore: number;
+    streakAfter: number;
+    inARow: number;
+  } | null;
+};
+
 export type PlanProgressState = {
-  achievement: {
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
+  achievement: PlanAchievement & {
     achievedLastStreakAt?: Date | null;
     celebratedStreakAt?: Date | null;
   };

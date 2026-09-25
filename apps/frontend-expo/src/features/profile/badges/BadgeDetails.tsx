@@ -234,8 +234,7 @@ export function BadgeDetails({ user, kind, onClose }: BadgeDetailsProps) {
             color: "#ef4444",
             rules: [
               "Each completed week adds +1 to your streak",
-              "Each incomplete week subtracts -1 from your streak",
-              "You have a 1 week buffer before it starts subtracting",
+              "Each missed week subtracts -1 from your streak, starting with the first",
               "Streak score cannot go below 0",
             ],
           },

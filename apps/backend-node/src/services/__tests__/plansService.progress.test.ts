@@ -204,4 +204,48 @@ describe("PlansService progress", () => {
     expect(progress.currentWeekStats.daysCompletedThisWeek).toBe(0);
     expect(progress.currentWeekStats.numActiveDaysLeftInTheWeek).toBe(2);
   });
+
+  it("charges a missed week against the streak straight away, with no grace week", async () => {
+    const user = await prisma.user.create({
+      data: {
+        id: testUserId,
+        email: `${testUserId}@test.com`,
+        username: testUserId,
+        name: "Plan Progress User",
+        timezone: "UTC",
+      },
+    });
+    const reading = await prisma.activity.create({
+      data: { userId: testUserId, title: "reading", measure: "pages", emoji: "📚" },
+    });
+    const plan = await prisma.plan.create({
+      data: {
+        userId: testUserId,
+        goal: "Read before bed",
+        emoji: "📚",
+        outlineType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 2,
+        activities: { connect: { id: reading.id } },
+      },
+      include: { activities: true },
+    });
+    // Two complete weeks (May 10, May 17), then last week (May 24) with nothing.
+    await prisma.activityEntry.createMany({
+      data: ["2026-05-11", "2026-05-13", "2026-05-18", "2026-05-20"].map((day) => ({
+        userId: testUserId,
+        activityId: reading.id,
+        quantity: 10,
+        datetime: new Date(`${day}T20:00:00.000Z`),
+      })),
+    });
+
+    const progress = await plansService.computePlanProgress(plan, user);
+
+    expect(progress.achievement.streak).toBe(1);
+    expect(progress.achievement.missedLastWeek).toEqual({
+      streakBefore: 2,
+      streakAfter: 1,
+      inARow: 1,
+    });
+  });
 });

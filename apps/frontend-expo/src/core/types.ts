@@ -149,6 +149,8 @@ export interface Plan {
       streak: number;
       completedWeeks?: number;
       totalWeeks?: number;
+      /** Set all week when last week was missed: what it cost. */
+      missedLastWeek?: MissedWeek | null;
     };
     currentStreak?: number;
   };
@@ -159,6 +161,11 @@ export interface Plan {
       leftAt?: DateValue | null;
     }[];
   } | null;
+}
+export interface MissedWeek {
+  streakBefore: number;
+  streakAfter: number;
+  inARow: number;
 }
 export interface Metric {
   id: string;
