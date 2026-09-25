@@ -54,9 +54,11 @@ export function PlanCoachingRow({
   });
   const editor = draft && (
     <>
-      <Copy>{plan.goal}</Copy>
-      <Copy muted>Times use {draft.timezone.replaceAll("_", " ")}</Copy>
+      <Copy>
+        {plan.activities?.[0]?.emoji ?? plan.emoji} {plan.goal}
+      </Copy>
       <CoachingFields
+        timezone={draft.timezone}
         value={draft.coaching!}
         preferences={draft.preferences}
         canCoach={!!query.data?.canCoach}

@@ -16,6 +16,8 @@ export interface StepsProps {
   iconColor?: string;
   icon: LucideIcon;
   label: string;
+  /** The leftover dots turn dashed amber: the week only fits if nearly every remaining day is used. */
+  atRisk?: boolean;
 }
 export interface UpcomingSessionsProps {
   plans: Plan[];

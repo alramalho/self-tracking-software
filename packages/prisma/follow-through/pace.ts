@@ -26,3 +26,15 @@ export function planPace(input: {
   ).length;
   return lastWeek >= target ? "on_track" : "normal";
 }
+
+/**
+ * "You're cutting it close this week": the weekly target still fits, but only if nearly every
+ * remaining day is used. Out-of-reach and finished weeks are not at risk. Compared with the
+ * slack the target normally leaves, so a 7x/week plan is not "at risk" all week.
+ */
+export function weekAtRisk(input: { target: number; doneDays: number; daysLeft: number }): boolean {
+  const needed = input.target - input.doneDays;
+  if (needed <= 0 || needed > input.daysLeft) return false;
+  const spareDays = input.daysLeft - needed;
+  return spareDays <= 1 && spareDays < 7 - input.target;
+}

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 const API = "http://127.0.0.1:4317";
 for (const theme of ["DARK", "LIGHT"])
-  test(`plan islands, notes editing and metrics fidelity in ${theme}`, async ({
+  test(`plan islands and metrics fidelity in ${theme}`, async ({
     page,
     request,
   }) => {
@@ -10,61 +10,10 @@ for (const theme of ["DARK", "LIGHT"])
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/plans?selectedPlan=fitness");
-    await page.getByRole("button", { name: "Plan notes", exact: true }).click();
-    const notes = page.getByTestId("plan-notes-island");
-    await notes.scrollIntoViewIfNeeded();
-    await expect(page.getByTestId("reveal-plan-notes-fitness")).toHaveCSS(
-      "opacity",
-      "1",
-    );
-    await expect(notes.getByText("Training roadmap")).toBeVisible();
     await expect(page.getByTestId("plan-card")).toHaveCSS(
       "background-color",
       "rgba(0, 0, 0, 0)",
     );
-    await expect(notes).toHaveCSS("border-radius", "16px");
-    await expect(notes).toHaveCSS(
-      "border-top-color",
-      theme === "DARK" ? "rgb(26, 26, 26)" : "rgb(228, 228, 231)",
-    );
-    await expect(notes.getByText("consistency", { exact: true })).toHaveCSS(
-      "font-family",
-      "Inter-SemiBold",
-    );
-    await expect(
-      notes.getByRole("link", { name: "Training guide" }),
-    ).toBeVisible();
-    await page.screenshot({
-      path: `test-results/plan-notes-polish-${theme}.png`,
-    });
-    await notes
-      .getByRole("button", { name: "Edit plan notes", exact: true })
-      .click();
-    await notes
-      .getByRole("textbox", { name: "Plan notes", exact: true })
-      .fill("## Updated roadmap\n**Preview works**");
-    await expect(notes.getByText("PREVIEW", { exact: true })).toBeVisible();
-    await notes.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(notes.getByText("Training roadmap")).toBeVisible();
-    await notes
-      .getByRole("button", { name: "Edit plan notes", exact: true })
-      .click();
-    await notes
-      .getByRole("textbox", { name: "Plan notes", exact: true })
-      .fill("## Saved roadmap\nKeep **showing up**");
-    await request.post(`${API}/__fail`, {
-      data: { path: "/plans/upsert" },
-    });
-    await notes.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(notes.getByRole("alert")).toBeVisible();
-    await expect(
-      notes.getByRole("textbox", { name: "Plan notes", exact: true }),
-    ).toHaveValue("## Saved roadmap\nKeep **showing up**");
-    await notes.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(notes.getByRole("textbox")).toHaveCount(0);
-    await expect(
-      notes.getByText("Saved roadmap", { exact: true }),
-    ).toBeVisible();
     const grid = page.getByTestId("reveal-plan-grid-fitness-true");
     await grid.scrollIntoViewIfNeeded();
     await expect(grid).toHaveCSS("opacity", "1");

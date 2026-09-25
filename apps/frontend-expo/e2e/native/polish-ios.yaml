@@ -22,24 +22,6 @@ appId: so.tracking.app
     text: Exercise regularly
     waitToSettleTimeoutMs: 500
 - scrollUntilVisible:
-    element: Training roadmap
-    direction: DOWN
-- assertVisible: Training roadmap
-- takeScreenshot: plan-notes-polish-${output.theme}
-- waitForAnimationToEnd:
-    timeout: 3000
-- tapOn:
-    text: Edit plan notes
-    waitToSettleTimeoutMs: 500
-- assertVisible: PREVIEW
-- scrollUntilVisible:
-    element: Cancel
-    direction: DOWN
-- tapOn:
-    text: Cancel
-    waitToSettleTimeoutMs: 500
-- assertVisible: Training roadmap
-- scrollUntilVisible:
     element: Current week
     direction: DOWN
 - takeScreenshot: plan-islands-polish-${output.theme}

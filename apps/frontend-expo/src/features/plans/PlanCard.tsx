@@ -14,7 +14,6 @@ import {
   Pause,
   Pencil,
   Play,
-  PlusSquare,
   Sprout,
   Trash2,
 } from "lucide-react-native";
@@ -36,7 +35,6 @@ import { useAction } from "@/data/queries";
 import { api } from "@/data/api";
 import type { Activity, ActivityEntry, Plan, PlanSession } from "@/core/types";
 import { Heatmap } from "./Heatmap";
-import { PlanNotes } from "./PlanNotes";
 import { MilestoneOverview } from "./MilestoneOverview";
 import { CurrentWeek } from "./WeekProgress";
 import { WeekCalendar } from "./WeekCalendar";
@@ -306,30 +304,6 @@ export function PlanCard({
                 />
               </Panel>
             )}
-          </Reveal>
-          {own && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Log Activity from plan"
-              onPress={() => router.push("/(tabs)/add")}
-              style={{
-                height: 100,
-                borderWidth: 2,
-                borderStyle: "dashed",
-                borderColor: c.border,
-                borderRadius: 12,
-                backgroundColor: c.soft,
-                gap: 8,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <PlusSquare size={32} color={c.muted} />
-              <Copy muted>Log Activity</Copy>
-            </Pressable>
-          )}
-          <Reveal id={`plan-notes-${plan.id}`}>
-            <PlanNotes plan={plan} own={own} />
           </Reveal>
           {own && (
             <>

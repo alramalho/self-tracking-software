@@ -2,22 +2,22 @@ import { useEffect, useRef } from "react";
 import { Animated, Pressable, View } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { Flame, Sprout, Rocket, TriangleAlert } from "lucide-react-native";
-import { planPace } from "@tsw/prisma/follow-through/pace";
+import { planPace, weekAtRisk } from "@tsw/prisma/follow-through/pace";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { router } from "expo-router";
-import { isSameWeek, startOfDay, format } from "date-fns";
+import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format } from "date-fns";
 import { useColors } from "@/components/ui";
 import { dayKey } from "@/core/dates";
 import type { Plan, ActivityEntry } from "@/core/types";
 import type { PlanPreviewProps, StepsProps } from "./types";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
 
-function Steps({ value, max, color, iconColor = color, icon: Icon, label }: StepsProps) {
+function Steps({ value, max, color, iconColor = color, icon: Icon, label, atRisk }: StepsProps) {
   const c = useColors();
   const circles = progressCircles(value, max);
   return (
     <View
-      accessibilityLabel={`${label}: ${value} of ${max}`}
+      accessibilityLabel={`${label}: ${value} of ${max}${atRisk ? ", cutting it close" : ""}`}
       style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
     >
       <View
@@ -31,12 +31,11 @@ function Steps({ value, max, color, iconColor = color, icon: Icon, label }: Step
         {Array.from({ length: circles.count }, (_, i) => (
           <View
             key={i}
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              backgroundColor: i < value ? color : c.soft,
-            }}
+            style={
+              i >= value && atRisk
+                ? { width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, borderStyle: "dashed", borderColor: AMBER }
+                : { width: 14, height: 14, borderRadius: 7, backgroundColor: i < value ? color : c.soft }
+            }
           />
         ))}
       </View>
@@ -121,6 +120,16 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
       )
       .map((entry) => dayKey(entry.datetime)),
   ).size;
+  const weekTarget =
+    typeof week?.plannedActivities === "number" ? week.plannedActivities : plan.timesPerWeek;
+  const weekIsAtRisk =
+    plan.outlineType === "TIMES_PER_WEEK" &&
+    weekAtRisk({
+      target: weekTarget,
+      doneDays: count,
+      // Same week boundaries as `count` (date-fns isSameWeek), today included.
+      daysLeft: differenceInCalendarDays(endOfWeek(now), now) + 1,
+    });
   const progress = plan.progress;
   const achievement = streakProgress(progress);
   const next = plan.sessions
@@ -134,7 +143,9 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
       accessibilityLabel={
         coach.pace === "slipping"
           ? `${plan.goal}, needs attention. ${coach.nudge ? "Open your coach's message" : "Open plan"}`
-          : `Open ${plan.goal}`
+          : weekIsAtRisk
+            ? `Open ${plan.goal}. This week's target is at risk`
+            : `Open ${plan.goal}`
       }
       accessibilityValue={{ text: `${achievement.stage}, ${achievement.streak} weeks` }}
       onPress={() =>
@@ -166,7 +177,8 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
     >
       {coach.pace === "on_track" && <StateRing color={GREEN} pulse={false} />}
       {coach.pace === "slipping" && <StateRing color={AMBER} pulse />}
-      {coach.pace === "slipping" && (
+      {/* Slipping gets the ring too; an at-risk week gets only the icon, next to its dashed dots. */}
+      {(coach.pace === "slipping" || weekIsAtRisk) && (
         <View style={{ position: "absolute", top: 14, right: 14 }}>
           <TriangleAlert size={16} color={AMBER} />
         </View>
@@ -190,11 +202,8 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
           <Steps
             label="This week"
             value={count}
-            max={
-              typeof week?.plannedActivities === "number"
-                ? week.plannedActivities
-                : plan.timesPerWeek
-            }
+            max={weekTarget}
+            atRisk={weekIsAtRisk}
             color="#22c55e"
             iconColor="#ff9500"
             icon={Flame}

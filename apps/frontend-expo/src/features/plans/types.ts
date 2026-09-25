@@ -89,10 +89,6 @@ export interface WeekCalendarProps {
   weekCount?: 1 | 2;
   selectionDisplay?: WeekCalendarSelectionDisplay;
 }
-export interface PlanNotesProps {
-  plan: import("@/core/types").Plan;
-  own: boolean;
-}
 export interface WeekProgressProps {
   plan: Plan;
   entries: import("@/core/types").ActivityEntry[];
@@ -103,9 +99,6 @@ export interface PlanBackgroundProps {
   value: string | null;
   onChange: (value: string | null) => void;
   onBusyChange: (busy: boolean) => void;
-}
-export interface PlanNotesTextProps {
-  notes: string;
 }
 
 export interface PlanProgressStripProps {

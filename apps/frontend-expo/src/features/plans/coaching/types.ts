@@ -12,6 +12,8 @@ export interface CoachingFieldsProps {
   onChange: (value: PlanCoaching) => void;
   onPreferences: (value: SupportPreferences) => void;
   canCoach: boolean;
+  /** Shown under the review time. */
+  timezone?: string;
 }
 export interface PlanCoachingProps {
   plan: Plan;
