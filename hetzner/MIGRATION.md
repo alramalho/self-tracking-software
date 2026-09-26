@@ -282,6 +282,17 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Coaching plans: quarterly, monthly, weekly — active since September 26, 2026
+
+Image `local/tracking-so-backend:coaching-plans-20260926` from [coaching-plans-overlay.Dockerfile](./coaching-plans-overlay.Dockerfile) on `ai-consent-20260925` (1 file, `billing.ts`; live matched git). `/follow-through/onboarding/offer` returns `plans` read live from Stripe, with the first plan also at the top level for older builds.
+
+- New `.env` key `COACHING_PAYMENT_LINKS=quarterly=plink_1UJsJ3G1Uxsr0eW4iXBX3uQl,monthly=plink_1UJsJ4G1Uxsr0eW4THI2QsOT,weekly=plink_1UJsJ5G1Uxsr0eW43FShK0IQ`.
+- Stripe (live, product `prod_Rrxwn49xYONdj6` "tracking.software Plus", so the existing webhook grants PLUS): new prices €3.99/week `price_1UJsIiG1Uxsr0eW4QHOsbZL1` and €19.99/3 months `price_1UJsIkG1Uxsr0eW4libEoH1e`; monthly reuses €9.99 `price_1SeCvRG1Uxsr0eW4kSBmOWYz`. Links copy the old link's settings (automatic tax, billing address auto); 7-day trial on quarterly and monthly, none on weekly.
+- The old €9.99 / 14-day link `plink_1SeCxKG1Uxsr0eW48xMnLmee` is deactivated (reactivate in Stripe if needed; existing subscriptions are unaffected).
+- Verified inside the running container: the offer returns quarterly 1999 (7 days), monthly 999 (7 days), weekly 399.
+
+Rollback: restore `tracking-coaching-plans-20260926/backup/deployment.env` to `.env` and `docker compose up -d backend`, and reactivate the old link.
+
 ## AI consent (inactive) + Braintrust removed — active since September 25, 2026
 
 Image `local/tracking-so-backend:ai-consent-20260925` from [ai-consent-overlay.Dockerfile](./ai-consent-overlay.Dockerfile) on `app-store-safety-20260925` (25 files; all live copies matched git `942f6078` except `apps/backend-node/package.json`, whose live `zod ^4.0.0` pin was kept by the three-way merge). Same 30 pre-existing typecheck errors. Healthy; `/health` ok; `PUT /users/ai-consent` returns 401 without auth; no Braintrust process runs (the `start` script no longer imports `braintrust/hook.mjs`, and `wrapAISDK`, `initLogger` and `traced()` are gone).
