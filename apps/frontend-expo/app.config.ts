@@ -38,7 +38,8 @@ const app: ExpoConfig = {
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: "so.tracking.app",
-    supportsTablet: true,
+    // iPhone only for the App Store launch (no iPad layout review or iPad screenshots).
+    supportsTablet: false,
     usesAppleSignIn: true,
     // Preserve capabilities on the bundle identifier shared with Capacitor.
     entitlements: {
