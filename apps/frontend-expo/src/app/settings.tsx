@@ -213,12 +213,15 @@ export default function Settings() {
                 />
               </View>
             )}
-            {user.data?.planType && user.data.planType !== "FREE" && (
+            {/* Bought in the iOS app: Apple manages it. Bought on the website: Stripe does, but the
+                iOS app never links to web billing (App Review 3.1.1), so web subscribers manage it there. */}
+            {user.data?.planType &&
+              user.data.planType !== "FREE" &&
+              (Platform.OS !== "ios" || hasAppleSubscription(user.data)) && (
               <SettingsRow
                 icon={CreditCard}
                 title="Manage my subscription"
                 onPress={() =>
-                  // Bought in the iOS app: Apple manages it. Bought on the website: Stripe does.
                   open(
                     hasAppleSubscription(user.data)
                       ? APPLE_SUBSCRIPTIONS_URL
