@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 const API = "http://127.0.0.1:4317";
 const headers = { Authorization: "Bearer local-e2e-token" };
+async function trackForFree(page: Page) {
+  await page.getByRole("button", { name: "Just track it for free" }).click();
+  await page.getByRole("button", { name: "Track for free", exact: true }).click();
+}
 async function chooseWeeklyFrequency(page: Page) {
   const value = page.getByTestId("onboarding-weekly-frequency-value");
   await expect(value).toHaveText("3");
@@ -369,11 +373,11 @@ test("declining the trial creates free tracking without checkout", async ({
   await request.post(`${API}/__fail`, {
     data: { path: "/follow-through/onboarding/finish" },
   });
-  await page.getByRole("button", { name: "Just track it for free" }).click();
+  await trackForFree(page);
   await expect(
     page.getByText("Simulated network failure. Please try again."),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Just track it for free" }).click();
+  await trackForFree(page);
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans).toHaveLength(3);
@@ -415,7 +419,11 @@ test("choosing free tracking on the paywall creates a free plan without a trial"
   await expect(paywall).toBeVisible();
   await page.waitForTimeout(650);
   await page.screenshot({ path: "test-results/interview-free-paywall.png" });
+  // The free choice explains what stays free and offers the trial once more.
   await page.getByRole("button", { name: "Just track it for free" }).click();
+  await expect(page.getByText("Reminders at the times you choose")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Try \w+ free for 7 days$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Track for free", exact: true }).click();
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
   const finishes = state.requests.filter((r: any) =>

@@ -1,10 +1,11 @@
 import { Image, Pressable, View } from "react-native";
-import { CalendarCheck, Check, Compass, TrendingUp } from "lucide-react-native";
+import { CalendarCheck, Check, Compass, Minus, TrendingUp } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
-import type { CoachingPlan, PaywallProps } from "./types";
+import { PreviewButton, PreviewSheet } from "@/features/messages/entities/PreviewSheet";
+import type { CoachingPlan, FreeTrackingSheetProps, PaywallProps } from "./types";
 
 // Real members who agreed to appear on tracking.so (same testimonials as the website).
 const MEMBERS = [
@@ -204,5 +205,58 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
         })}
       </View>
     </View>
+  );
+}
+
+// Checked against the app: reminders, streaks, friends and Apple Health work without a subscription.
+const FREE_KEEPS = [
+  "Your plan, streaks and progress",
+  "Reminders at the times you choose",
+  "Friends, the feed and reactions",
+  "Apple Health workouts and sleep",
+];
+const COACH_ADDS = [
+  "A weekly review of what's working",
+  "A nudge before a week slips",
+  "Plan changes when life gets busy",
+];
+
+/** Before tracking for free: what you keep, what the coach would add, and one more look at the trial. */
+export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClose }: FreeTrackingSheetProps) {
+  const c = useColors();
+  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const row = (Icon: typeof Check, text: string, color: string) => (
+    <View key={text} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <Icon size={17} color={color} />
+      <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>{text}</Text>
+    </View>
+  );
+  return (
+    <PreviewSheet visible={visible} title="Track on your own" onClose={onClose}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 36 }}>
+        <Image
+          source={coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png")}
+          style={{ width: 40, height: 40 }}
+        />
+        <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>
+          No problem, your plan is ready either way.
+        </Text>
+      </View>
+      <View style={{ gap: 10 }}>
+        <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>FREE, FOREVER</Text>
+        {FREE_KEEPS.map((text) => row(Check, text, "#22c55e"))}
+      </View>
+      <View style={{ gap: 10 }}>
+        <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>WHAT {coach.name.toUpperCase()} WOULD ADD</Text>
+        {COACH_ADDS.map((text) => row(Minus, text, c.muted))}
+      </View>
+      <Text style={{ color: c.muted, fontSize: 13 }}>You can add coaching to any plan later.</Text>
+      <PreviewButton
+        label={plan?.trialDays ? `Try ${coach.name} free for ${plan.trialDays} days` : `Start coaching with ${coach.name}`}
+        disabled={busy}
+        onPress={onTrial}
+      />
+      <PreviewButton secondary label="Track for free" disabled={busy} onPress={onFree} />
+    </PreviewSheet>
   );
 }

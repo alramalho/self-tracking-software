@@ -25,6 +25,14 @@ export interface CoachingPlan {
 export interface CoachingOffer extends Omit<CoachingPlan, "id"> {
   plans?: CoachingPlan[];
 }
+export interface FreeTrackingSheetProps {
+  visible: boolean;
+  plan?: CoachingPlan;
+  busy: boolean;
+  onTrial: () => void;
+  onFree: () => void;
+  onClose: () => void;
+}
 export interface PaywallProps {
   facts: import("@tsw/prisma/follow-through").InterviewFacts;
   plans: CoachingPlan[];

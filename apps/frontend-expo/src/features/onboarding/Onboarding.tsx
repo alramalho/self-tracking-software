@@ -37,7 +37,7 @@ import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
 import { CoachingTour } from "./CoachingTour";
 import { PlanConclusion } from "./PlanConclusion";
-import { Paywall, paywallCta } from "./Paywall";
+import { FreeTrackingSheet, Paywall, paywallCta } from "./Paywall";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
@@ -97,6 +97,7 @@ export default function Onboarding({
     [checking, setChecking] = useState(false);
   // Quarterly is the best value, so it starts selected.
   const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
+  const [freeSheet, setFreeSheet] = useState(false);
   const [error, setError] = useState<unknown>();
   const [dictationBusy, setDictationBusy] = useState(false);
   const upgradeIntent = useRef(false);
@@ -800,11 +801,7 @@ export default function Onboarding({
         <Pressable
           accessibilityRole="button"
           disabled={complete.isPending || checkout.isPending}
-          onPress={() => {
-            upgradeIntent.current = false;
-            setAwaitingUpgrade(false);
-            complete.mutate(false);
-          }}
+          onPress={() => setFreeSheet(true)}
           style={{ alignItems: "center", paddingVertical: 6 }}
         >
           <Text style={{ color: c.muted, fontSize: 14, textDecorationLine: "underline" }}>
@@ -828,6 +825,22 @@ export default function Onboarding({
           }}
         />
       )}
+      <FreeTrackingSheet
+        visible={freeSheet}
+        plan={selectedPlan}
+        busy={complete.isPending || checkout.isPending}
+        onTrial={() => {
+          setFreeSheet(false);
+          checkout.mutate();
+        }}
+        onFree={() => {
+          setFreeSheet(false);
+          upgradeIntent.current = false;
+          setAwaitingUpgrade(false);
+          complete.mutate(false);
+        }}
+        onClose={() => setFreeSheet(false)}
+      />
       {coachPaywall && (
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 24 }}>
           {[
