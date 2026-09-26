@@ -233,13 +233,19 @@ export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClos
   );
   return (
     <PreviewSheet visible={visible} title="Track on your own" onClose={onClose}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 36 }}>
+      <View style={{ alignItems: "center", gap: 8 }}>
         <Image
           source={coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png")}
-          style={{ width: 40, height: 40 }}
+          style={{ width: 72, height: 72 }}
         />
-        <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>
-          No problem, your plan is ready either way.
+        <Text
+          accessibilityRole="header"
+          style={{ color: c.text, fontSize: 22, lineHeight: 28, fontWeight: "700", textAlign: "center" }}
+        >
+          Your plan is ready either way
+        </Text>
+        <Text style={{ color: c.muted, fontSize: 15, textAlign: "center" }}>
+          You can add coaching to any plan later.
         </Text>
       </View>
       <View style={{ gap: 10 }}>
@@ -250,7 +256,6 @@ export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClos
         <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>WHAT {coach.name.toUpperCase()} WOULD ADD</Text>
         {COACH_ADDS.map((text) => row(Minus, text, c.muted))}
       </View>
-      <Text style={{ color: c.muted, fontSize: 13 }}>You can add coaching to any plan later.</Text>
       <PreviewButton
         label={plan?.trialDays ? `Try ${coach.name} free for ${plan.trialDays} days` : `Start coaching with ${coach.name}`}
         disabled={busy}
