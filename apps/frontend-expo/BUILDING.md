@@ -48,13 +48,20 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 169, September 25, 2026
+## Current TestFlight release — build 171, September 26, 2026
+
+- Build 169's source plus the App Store preparation: Report/Block (profiles, messages, comments, feed, circles) and Settings → Blocked people / Get help / Privacy / Terms; the AI consent sheet and Settings → AI features; account deletion that fails safely; Garmin hidden unless the server lists the person as a tester; the 9-step onboarding (auto-advancing clean answers, one progress bar, coach preview for everyone, coach avatar on the coach steps); the new coaching paywall (real members, the person's goal and reason, impact lines, plan choice, Terms · Restore · Privacy) and the free-tracking sheet.
+- IPA: `.release/testflight-app-store-prep-b171/tracking.so.ipa` (SHA-256 `7b2c5c6b8505ac97349643e9b4ed84f277925417fc4f8a1ba575f97264df5f0c`), `source.tar.gz` beside it. Phone and Watch build 171; TrackingWatch/Health/Map registered; strict signature, production API and `fixtureMode: false` verified.
+- Delivery `ed1bfaaf-a104-4cd8-a9f1-b8289933c764`; App Store Connect shows the build `VALID` and the upload `COMPLETE`.
+- **Build 170 was rejected by Apple (ITMS-90683: missing `NSMotionUsageDescription`).** `expo-location` references the motion API, so its purpose string must stay even though the app never asks. `altool` crashed while printing its result, hiding the rejection; check `GET /v1/apps/{id}/buildUploads?filter[cfBundleVersion]=N` after every upload.
+
+## Previous TestFlight release — build 169, September 25, 2026
 
 - Build 168's source plus: at-risk dots turn slowly; the warning sheet speaks as the coach (avatar, name, big stat tiles); streaks lose a week for every missed week with no buffer, and the lost week shows on the homepage card as a red ring with a centred cross and "−1", with a friendly coach sheet on tap. Needs the `streak-20260925` backend (live).
 - IPA: `.release/testflight-streak-b169/tracking.so.ipa` (SHA-256 `bc3bd1f7916aacb518880173f6679236298ae94fac41a9fba31b8f62f91d6089`), `source.tar.gz` beside it. Phone and Watch build 169; TrackingWatch/Health/Map registered; strict signature, production API and `fixtureMode: false` verified; new copy present in the Hermes bundle.
 - Apple validation passed; delivery `d1bde7a2-6220-46bf-a0a5-caadeea6732a` processed as `VALID`.
 
-## Previous TestFlight release — build 168, September 25, 2026
+## Earlier TestFlight release — build 168, September 25, 2026
 
 - Build 167's source plus the warning sheet: tapping a homepage plan card with a warning opens the app's native bottom sheet (gone quiet: open the coach's message or log; week at risk: log the activity) with "Open plan" as the second option.
 - IPA: `.release/testflight-warning-sheet-b168/tracking.so.ipa` (SHA-256 `093675e2d755607d097eb2e4c8213a73bcdec9995647dd3ca1e6a2653a95a2a0`), `source.tar.gz` beside it. Build 168; TrackingWatch/Health/Map registered; strict signature verified.
