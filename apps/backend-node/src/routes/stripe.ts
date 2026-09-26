@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import Stripe from "stripe";
 import { loopsService } from "../services/loopsService";
+import { hasActiveAppleSubscription } from "./appleBilling";
 import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -105,7 +106,8 @@ async function updateUserSubscription(
   return await prisma.user.update({
     where: { id: user.id },
     data: {
-      planType,
+      // An active Apple (iOS) subscription keeps coaching when the Stripe one ends.
+      planType: planType === "FREE" && hasActiveAppleSubscription(user) ? "PLUS" : planType,
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscription.id,
       stripeSubscriptionStatus: subscription.status,

@@ -1,0 +1,1 @@
+Apple's public root certificates (DER), from https://www.apple.com/certificateauthority/: AppleRootCA-G3.cer, AppleRootCA-G2.cer, AppleIncRootCertificate.cer. routes/appleBilling.ts uses them to verify App Store signed transactions and notifications; set APPLE_ROOT_CERTS_DIR to load them from another folder.

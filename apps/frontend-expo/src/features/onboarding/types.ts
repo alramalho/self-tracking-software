@@ -14,9 +14,14 @@ export interface NextResponse {
 }
 export interface CoachingPlan {
   id: "weekly" | "monthly" | "quarterly";
-  url: string;
+  /** Stripe checkout link (web). */
+  url?: string;
+  /** App Store product (iOS). */
+  productId?: string;
   trialDays: number;
   amount: number;
+  /** The store's own price text, e.g. "€9.99" from the App Store. */
+  displayPrice?: string;
   currency: string;
   interval: string;
   intervalCount: number;

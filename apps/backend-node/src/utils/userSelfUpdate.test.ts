@@ -20,6 +20,8 @@ describe("userSelfUpdate", () => {
         planType: "PLUS",
         email: "someone@else.test",
         stripeSubscriptionId: "sub_x",
+        appleAppAccountToken: "someone-elses-token",
+        appleSubscriptionExpiresAt: "2099-01-01",
         deletedAt: null,
         plans: { create: { goal: "x" } },
         connections: [{ id: "other" }],

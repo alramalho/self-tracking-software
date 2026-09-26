@@ -39,6 +39,7 @@ import { healthRouter } from "./routes/health";
 import { garminRouter } from "./routes/garmin";
 import { messagesRouter } from "./routes/messages";
 import { apiKeysRouter } from "./routes/apiKeys";
+import { appleBillingRouter } from "./routes/appleBilling";
 import { mcpRouter } from "./routes/mcp";
 import { moderationRouter } from "./routes/moderation";
 import { metricsRouter } from "./routes/metrics";
@@ -67,8 +68,9 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
-  // Garmin must always get a 200: a throttled notification counts as failed delivery.
-  skip: (req) => req.path === "/health/garmin/webhook",
+  // Garmin and Apple must always get a 200: a throttled notification counts as failed delivery.
+  skip: (req) =>
+    req.path === "/health/garmin/webhook" || req.path === "/billing/apple/notifications",
 });
 
 // Security middleware
@@ -172,6 +174,7 @@ app.use("/context-events", contextEventsRouter);
 app.use("/health", healthRouter);
 app.use("/health/garmin", garminRouter);
 app.use("/stripe", stripeRouter);
+app.use("/billing/apple", appleBillingRouter);
 app.use("/utils", utilsRouter);
 app.use("/api-keys", apiKeysRouter);
 app.use("/mcp", mcpRouter);

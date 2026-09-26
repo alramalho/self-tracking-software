@@ -232,6 +232,9 @@ export interface User extends Person {
   iosDeviceToken?: string | null;
   iosDeviceTokenUpdatedAt?: DateValue | null;
   planType?: string;
+  stripeSubscriptionStatus?: string | null;
+  // Set when coaching was bought in the iOS app (Apple in-app purchase).
+  appleSubscriptionStatus?: string | null;
   onboardingCompletedAt?: DateValue | null;
   // AI data sharing consent: allowed when granted is newer than declined.
   aiConsentGrantedAt?: DateValue | null;

@@ -82,6 +82,13 @@ model User {
   stripeSubscriptionId     String?
   stripeSubscriptionStatus String?
 
+  // Apple in-app subscription (iOS). The app passes appleAppAccountToken to StoreKit.
+  appleAppAccountToken       String?   @unique
+  appleOriginalTransactionId String?   @unique
+  appleProductId             String?
+  appleSubscriptionExpiresAt DateTime?
+  appleSubscriptionStatus    String?
+
   // Relations
   activities             Activity[]
   activityEntries        ActivityEntry[]

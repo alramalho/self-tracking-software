@@ -118,6 +118,8 @@ const app: ExpoConfig = {
     ],
     "expo-notifications",
     "expo-web-browser",
+    // StoreKit 2 in-app subscriptions (coaching on iOS).
+    "expo-iap",
   ],
   experiments: { typedRoutes: true },
   extra: {

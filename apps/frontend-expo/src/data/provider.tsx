@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-query";
 import type { ChildrenProps } from "@/core/types";
 import { OfflineLogsProvider } from "@/features/offline/provider";
+import { useAppleTransactionUpdates } from "@/features/billing/apple";
 export function DataProvider({ children }: ChildrenProps) {
   const session = useSession();
   const userId = session.isSignedIn ? session.userId : null;
@@ -77,6 +78,8 @@ function AccountDataProvider({ children, userId }: ChildrenProps & { userId: str
 // A verified account upgrade updates every mounted screen, including cached coaching gates.
 function EntitlementRefresh() {
   const user = useCurrentUser(), client = useQueryClient();
+  // iOS: App Store renewals and late purchases go to the server while signed in.
+  useAppleTransactionUpdates();
   const previous = useRef<string | undefined>(undefined);
   useEffect(() => {
     const plan = user.data?.planType;

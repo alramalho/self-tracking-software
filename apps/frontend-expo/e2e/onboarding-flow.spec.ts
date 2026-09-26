@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
 async function trackForFree(page: Page) {
   await page.getByRole("button", { name: "Just track it for free" }).click();

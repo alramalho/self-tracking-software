@@ -54,6 +54,7 @@ import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
 import { BlockedPeople, SUPPORT_EMAIL } from "@/features/safety/Safety";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
+import { APPLE_SUBSCRIPTIONS_URL, hasAppleSubscription } from "@/features/billing/apple";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
   profile: "User Settings",
@@ -217,7 +218,12 @@ export default function Settings() {
                 icon={CreditCard}
                 title="Manage my subscription"
                 onPress={() =>
-                  open("https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww")
+                  // Bought in the iOS app: Apple manages it. Bought on the website: Stripe does.
+                  open(
+                    hasAppleSubscription(user.data)
+                      ? APPLE_SUBSCRIPTIONS_URL
+                      : "https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww",
+                  )
                 }
               />
             )}

@@ -37,7 +37,8 @@ import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
 import { CoachingTour } from "./CoachingTour";
 import { PlanConclusion } from "./PlanConclusion";
-import { FreeTrackingSheet, Paywall, paywallCta } from "./Paywall";
+import { FreeTrackingSheet, Paywall, paywallCta, price } from "./Paywall";
+import { appleBilling, buyApplePlan, loadApplePlans, restoreApplePurchases } from "@/features/billing/apple";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
 import { CoachValidation } from "./interview/CoachValidation";
@@ -422,14 +423,17 @@ export default function Onboarding({
   });
   const paid =
     !!user.data?.planType && user.data.planType !== "FREE" && !preview;
+  // iOS sells coaching through the App Store only (Guideline 3.1.1); web uses Stripe checkout links.
   const offer = useQuery({
-    queryKey: ["coaching-offer"],
+    queryKey: ["coaching-offer", appleBilling ? "app-store" : "stripe"],
     enabled: paywall && state.facts.wantsCoaching && !paid,
-    queryFn: async () =>
-      (await api.get<CoachingOffer>("/follow-through/onboarding/offer")).data,
+    queryFn: async (): Promise<CoachingPlan[]> => {
+      if (appleBilling) return loadApplePlans();
+      const data = (await api.get<CoachingOffer>("/follow-through/onboarding/offer")).data;
+      return data.plans ?? [{ ...data, id: "monthly" }];
+    },
   });
-  const plans: CoachingPlan[] =
-    offer.data?.plans ?? (offer.data ? [{ ...offer.data, id: "monthly" }] : []);
+  const plans = offer.data ?? [];
   const selectedPlan = plans.find((plan) => plan.id === planId) ?? plans[0];
   // The full coaching paywall, while the choice is still open.
   const coachPaywall =
@@ -493,23 +497,48 @@ export default function Onboarding({
         complete.mutate(true);
         return;
       }
+      if (appleBilling) {
+        const result = await buyApplePlan(selectedPlan.productId!);
+        if (result === "cancelled") return;
+        if (result === "purchased") {
+          await user.refetch();
+          complete.mutate(true);
+          return;
+        }
+        // Ask to Buy: wait here like after a web checkout; the App Store update arrives later.
+        await persist({ ...draft, awaitingUpgrade: true });
+        upgradeIntent.current = true;
+        setAwaitingUpgrade(true);
+        return;
+      }
       await persist({ ...draft, awaitingUpgrade: true });
       upgradeIntent.current = true;
       setAwaitingUpgrade(true);
       checkoutOpen.current = true;
       try {
-        await WebBrowser.openBrowserAsync(selectedPlan.url);
+        await WebBrowser.openBrowserAsync(selectedPlan.url!);
       } finally {
         checkoutOpen.current = false;
         void checkUpgrade.current();
       }
     },
   });
+  // Restore: this Apple ID's App Store subscription (iOS), or one bought on the website.
+  const restore = useMutation({
+    mutationFn: async () => {
+      if (appleBilling) await restoreApplePurchases();
+      const account = await user.refetch();
+      if (account.error) throw account.error;
+      if (account.data?.planType && account.data.planType !== "FREE") complete.mutate(true);
+      else throw new Error("No active subscription found for this account.");
+    },
+  });
   const requestBusy =
     gate.isPending ||
     accept.isPending ||
     complete.isPending ||
-    checkout.isPending;
+    checkout.isPending ||
+    restore.isPending;
   const busy = requestBusy || dictationBusy;
   const statusError =
     error ||
@@ -517,6 +546,7 @@ export default function Onboarding({
     accept.error ||
     complete.error ||
     checkout.error ||
+    restore.error ||
     (!preview && saved.error) ||
     (paywall && offer.error);
   const askingWeeklyFrequency =
@@ -539,6 +569,8 @@ export default function Onboarding({
       complete.mutate(paid && state.facts.wantsCoaching);
     } else if (checkout.error) {
       checkout.mutate();
+    } else if (restore.error) {
+      restore.mutate();
     } else if (saved.error) {
       void saved.refetch();
     } else if (offer.error) {
@@ -551,6 +583,7 @@ export default function Onboarding({
     accept.reset();
     complete.reset();
     checkout.reset();
+    restore.reset();
     setError(undefined);
     const goal = initialGoal?.trim() ?? "";
     const nextDraft = {
@@ -778,8 +811,9 @@ export default function Onboarding({
         ) : awaitingUpgrade ? (
           <>
             <Text style={{ color: c.muted, textAlign: "center", fontSize: 13 }}>
-              Checking your subscription. We’ll open your plan as soon as access
-              is confirmed.
+              {appleBilling
+                ? "Your purchase is waiting for approval. We’ll open your plan as soon as the App Store confirms it."
+                : "Checking your subscription. We’ll open your plan as soon as access is confirmed."}
             </Text>
             <EditorButton
               label="Check subscription again"
@@ -845,7 +879,7 @@ export default function Onboarding({
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 24 }}>
           {[
             ["Terms", () => void WebBrowser.openBrowserAsync("https://tracking.so/terms")],
-            ["Restore", () => void checkUpgrade.current()],
+            ["Restore", () => restore.mutate()],
             ["Privacy", () => void WebBrowser.openBrowserAsync("https://tracking.so/privacy")],
           ].map(([label, onPress]) => (
             <Pressable key={label as string} accessibilityRole="link" onPress={onPress as () => void}>
@@ -853,6 +887,12 @@ export default function Onboarding({
             </Pressable>
           ))}
         </View>
+      )}
+      {coachPaywall && appleBilling && (
+        <Text style={{ color: c.muted, fontSize: 11, lineHeight: 16, textAlign: "center" }}>
+          Payment is charged to your Apple ID. The subscription renews automatically unless you
+          cancel it at least 24 hours before the period ends, in your App Store subscriptions.
+        </Text>
       )}
     </>
   ) : state.stage === "support" ? (
@@ -1174,7 +1214,7 @@ export default function Onboarding({
                   state.facts.wantsCoaching &&
                   !paid &&
                   !coachPaywall &&
-                  offer.data && (
+                  selectedPlan && (
                     <View
                       style={{
                         padding: 16,
@@ -1190,24 +1230,22 @@ export default function Onboarding({
                           fontSize: 18,
                         }}
                       >
-                        {offer.data.trialDays
-                          ? `${offer.data.trialDays} days to try coaching`
+                        {selectedPlan.trialDays
+                          ? `${selectedPlan.trialDays} days to try coaching`
                           : "Coaching"}
                       </Text>
                       <Text
                         style={{ color: c.muted, fontSize: 15, lineHeight: 23 }}
                       >
-                        {offer.data.trialDays ? "Then " : ""}
-                        {new Intl.NumberFormat(undefined, {
-                          style: "currency",
-                          currency: offer.data.currency,
-                        }).format(offer.data.amount / 100)}{" "}
-                        /{" "}
-                        {offer.data.intervalCount > 1
-                          ? `${offer.data.intervalCount} `
+                        {selectedPlan.trialDays ? "Then " : ""}
+                        {price(selectedPlan)} /{" "}
+                        {selectedPlan.intervalCount > 1
+                          ? `${selectedPlan.intervalCount} `
                           : ""}
-                        {offer.data.interval}. Cancel through billing before
-                        renewal.
+                        {selectedPlan.interval}.{" "}
+                        {appleBilling
+                          ? "Cancel in your App Store subscriptions before renewal."
+                          : "Cancel through billing before renewal."}
                       </Text>
                     </View>
                   )}

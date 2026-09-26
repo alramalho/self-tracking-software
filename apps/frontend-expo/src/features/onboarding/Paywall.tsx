@@ -37,6 +37,8 @@ export const weeksIn = (plan: CoachingPlan) => (WEEKS_PER[plan.interval] ?? 1) *
 
 export const money = (plan: CoachingPlan, amount = plan.amount) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency: plan.currency }).format(amount / 100);
+// The store's own price text when there is one (App Store), so it matches the purchase sheet.
+export const price = (plan: CoachingPlan) => plan.displayPrice ?? money(plan);
 
 const period = (plan: CoachingPlan) =>
   plan.intervalCount === 3 && plan.interval === "month"
@@ -131,7 +133,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
               accessibilityRole="radio"
               accessibilityState={{ checked: active }}
               aria-checked={active}
-              accessibilityLabel={`${LABELS[plan.id]}, ${money(plan)} per ${period(plan)}`}
+              accessibilityLabel={`${LABELS[plan.id]}, ${price(plan)} per ${period(plan)}`}
               onPress={() => onSelect(plan.id)}
               style={{
                 borderRadius: 16,
@@ -198,7 +200,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
                 </Text>
               </View>
               <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>
-                {money(plan)}/{period(plan).replace(/^1 /, "")}
+                {price(plan)}/{period(plan).replace(/^1 /, "")}
               </Text>
             </Pressable>
           );

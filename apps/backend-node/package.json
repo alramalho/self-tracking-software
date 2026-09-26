@@ -40,6 +40,7 @@
     "@ai-sdk/gateway": "^4.0.86",
     "@ai-sdk/openai": "^4.0.70",
     "@ai-sdk/openai-compatible": "^1.0.11",
+    "@apple/app-store-server-library": "^3.1.0",
     "@aws-sdk/client-s3": "^3.856.0",
     "@aws-sdk/client-ses": "^3.856.0",
     "@aws-sdk/s3-request-presigner": "^3.856.0",
