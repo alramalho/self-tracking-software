@@ -99,11 +99,12 @@ const app: ExpoConfig = {
       "expo-location",
       {
         locationWhenInUsePermission: "Record your activity location and route.",
-        // The app never asks for Always location or motion; `false` keeps the
-        // plugin's generic descriptions out of Info.plist (App Review flags them).
+        // The app never asks for Always location; `false` keeps the plugin's generic
+        // descriptions out of Info.plist. Motion stays: the library's code references
+        // the motion API, and Apple rejects uploads without a purpose string (ITMS-90683).
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
-        motionUsagePermission: false,
+        motionUsagePermission: "Motion data can improve route recording while you log an activity.",
       },
     ],
     [
