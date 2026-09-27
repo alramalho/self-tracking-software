@@ -1,12 +1,11 @@
 import { IconButton } from "./IconButton";
 import { useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ChevronRight, Search } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Button,
   Copy,
   Field,
   Screen,
@@ -18,10 +17,16 @@ import { Text } from "@/components/typography/Text";
 import { api } from "@/data/api";
 import { useCurrentUser, usePlans } from "@/data/queries";
 import { goBack } from "@/core/navigation";
-import type { Person } from "@/core/types";
 import type { Chat, Coach } from "./types";
 import { getChats, createCoachChat, chatTitle } from "./service";
 import { coachIdentity } from "./coach";
+
+interface SearchPerson {
+  userId: string;
+  username: string;
+  name?: string | null;
+  picture?: string | null;
+}
 
 export function Inbox() {
   const c = useColors();
@@ -39,12 +44,13 @@ export function Inbox() {
     queryKey: ["human-coaches"],
     queryFn: async () => (await api.get<Coach[]>("/coaches")).data,
   });
+  // The search endpoint names the person's id `userId`.
   const people = useQuery({
     queryKey: ["message-search", search.trim()],
     enabled: search.trim().length >= 2,
     queryFn: async () =>
       (
-        await api.get<Person[]>(
+        await api.get<SearchPerson[]>(
           `/users/search-users/${encodeURIComponent(search.trim())}`,
         )
       ).data,
@@ -128,16 +134,56 @@ export function Inbox() {
         {search.trim().length >= 2 ? (
           <>
             <Status loading={people.isPending} error={people.error} />
-            {people.data?.map((person) => (
-              <Button
-                secondary
-                key={person.id}
-                busy={direct.isPending}
-                onPress={() => direct.mutate(person.id)}
-              >
-                {person.name || person.username || "Member"}
-              </Button>
-            ))}
+            {people.data?.length === 0 && <Copy muted>No one found.</Copy>}
+            {people.data?.map((person) => {
+              const opening = direct.isPending && direct.variables === person.userId;
+              return (
+                <Pressable
+                  key={person.userId}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Message ${person.name || person.username}`}
+                  disabled={direct.isPending}
+                  onPress={() => direct.mutate(person.userId)}
+                  style={({ pressed }) => [
+                    s.row,
+                    { paddingVertical: 8, gap: 12, opacity: pressed ? 0.6 : 1 },
+                  ]}
+                >
+                  {person.picture ? (
+                    <Image
+                      source={{ uri: person.picture }}
+                      style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.soft }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        backgroundColor: c.soft,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
+                        {(person.name || person.username || "?").slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>
+                      {person.name || person.username}
+                    </Text>
+                    {!!person.username && (
+                      <Text numberOfLines={1} style={{ color: c.muted, fontSize: 14 }}>
+                        @{person.username}
+                      </Text>
+                    )}
+                  </View>
+                  {opening && <ActivityIndicator color={c.muted} />}
+                </Pressable>
+              );
+            })}
           </>
         ) : (
           <>
