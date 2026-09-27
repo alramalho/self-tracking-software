@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -41,6 +42,8 @@ export function ReactionPicker({
   const [anchor, setAnchor] = useState<ReactionAnchor>();
   const [error, setError] = useState<unknown>();
   const [customizing, setCustomizing] = useState(false);
+  // Only the reaction being saved waits; the rest of the tray stays usable.
+  const [pending, setPending] = useState<string[]>([]);
   const reactions = normalizeReactionEmojis(user.data?.reactionEmojis);
   const close = () => setAnchor(undefined);
   useEffect(() => setAnchor(undefined), [window.width, window.height]);
@@ -131,29 +134,36 @@ export function ReactionPicker({
               ]}
             >
               <View style={styles.pickerRow}>
-                {reactions.map((emoji) => (
+                {reactions.map((emoji) => {
+                  const saving = pending.includes(emoji);
+                  return (
                   <Pressable
                     key={emoji}
                     accessibilityRole="button"
                     accessibilityLabel={emoji}
-                    disabled={disabled}
+                    disabled={saving}
                     accessibilityState={{
-                      disabled,
+                      disabled: saving,
+                      busy: saving,
                       selected: selectedEmojis.includes(emoji),
                     }}
                     onPress={async () => {
+                      setError(undefined);
+                      setPending((list) => [...list, emoji]);
                       try {
                         await onSelect(emoji);
                         close();
                       } catch (error) {
                         setError(error);
+                      } finally {
+                        setPending((list) => list.filter((item) => item !== emoji));
                       }
                     }}
                     style={({ pressed }) => [
                       styles.emojiButton,
                       {
                         width: buttonWidth,
-                        opacity: disabled ? 0.5 : 1,
+                        opacity: saving ? 0.45 : 1,
                         borderRadius: 22,
                         backgroundColor: selectedEmojis.includes(emoji)
                           ? `${c.accent}40`
@@ -163,8 +173,16 @@ export function ReactionPicker({
                     ]}
                   >
                     <Text style={styles.emoji}>{emoji}</Text>
+                    {saving && (
+                      <ActivityIndicator
+                        size="small"
+                        color="#111827"
+                        style={StyleSheet.absoluteFill}
+                      />
+                    )}
                   </Pressable>
-                ))}
+                  );
+                })}
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Customize reaction emojis"
