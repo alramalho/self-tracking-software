@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Apple in-app subscriptions — active since September 27, 2026
+
+Image `local/tracking-so-backend:apple-iap-20260927` from [apple-iap-overlay.Dockerfile](./apple-iap-overlay.Dockerfile) on `coaching-plans-20260926` (live copies matched git `68c9a971`). The image's workspace lockfile can't run `pnpm add`, so `@apple/app-store-server-library@3.1.0` is installed with npm in a temp folder and copied into `apps/backend-node/node_modules` (only packages not already present). Same 30 pre-existing typecheck errors.
+
+- Migration `20260927100000_user_apple_subscription` (additive: `users.appleAppAccountToken`, `appleOriginalTransactionId` (both unique), `appleProductId`, `appleSubscriptionExpiresAt`, `appleSubscriptionStatus`). Dump: `tracking-apple-iap-20260927/backup/database-before.dump`.
+- Routes `/billing/apple/{account-token,transactions,notifications}`; Apple root certificates ship in `apps/backend-node/certs/apple/`.
+- App Store Server Notifications V2 URL set (Production + Sandbox) to `https://api.tracking.so/billing/apple/notifications`; a Sandbox TEST notification was received and verified on September 27.
+
+Rollback: restore `tracking-apple-iap-20260927/backup/deployment.env` to `.env` and `docker compose up -d backend`. The migration is additive.
+
 ## Coaching plans: quarterly, monthly, weekly — active since September 26, 2026
 
 Image `local/tracking-so-backend:coaching-plans-20260926` from [coaching-plans-overlay.Dockerfile](./coaching-plans-overlay.Dockerfile) on `ai-consent-20260925` (1 file, `billing.ts`; live matched git). `/follow-through/onboarding/offer` returns `plans` read live from Stripe, with the first plan also at the top level for older builds.
