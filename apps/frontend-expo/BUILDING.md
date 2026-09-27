@@ -48,14 +48,19 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 173, September 27, 2026
+## Current TestFlight release — build 174, September 27, 2026
+
+- Build 173 plus two fixes: reaction taps only dim/spin the tapped emoji (the rest of the tray stays usable), and Messages search opens chats again (it sent `person.id`, but search returns `userId`) with Instagram-style rows.
+- IPA: `.release/testflight-fixes-b174/tracking.so.ipa` (SHA-256 `2574ca4f9608b9649576a554f481fe43e2dc7b058fadf3c11fd9fdb83d27a8c5`). Delivery `c2ea0f39-bf8e-47d5-8804-959ce1a0109f`; `buildUploads` `COMPLETE`, no errors.
+
+## Previous TestFlight release — build 173, September 27, 2026
 
 - Build 171's source plus Apple in-app subscriptions (`expo-iap` 5.8.1, StoreKit 2): the iOS paywall sells `so.tracking.app.{quarterly,monthly,weekly}` through Apple, Restore syncs App Store purchases, renewals are forwarded on launch, and "Manage my subscription" opens Apple's page for Apple subscribers (the Stripe portal is hidden on iOS). iPhone only (`supportsTablet: false`). Needs the `apple-iap-20260927` backend (live).
 - IPA: `.release/testflight-apple-iap-b173/tracking.so.ipa` (SHA-256 `bf1f9cc31201c91a8d5bf6b9b133ca69c6fc101e309d4daa86a92582870184fb`), `source.tar.gz` beside it. UIDeviceFamily [1]; ExpoIap, TrackingWatch/Health/Map linked; strict signature, production API, `fixtureMode: false`.
 - Delivery `0d855d8d-de7a-4409-8965-519105ad5415`; `buildUploads` state `COMPLETE`, no errors.
 - Build 172 failed at `pod install` (`openiap (= 3.6.0)` missing from the local CocoaPods index). Fix: `LANG=en_US.UTF-8 pod repo update trunk`, then rebuild.
 
-## Previous TestFlight release — build 171, September 26, 2026
+## Earlier TestFlight release — build 171, September 26, 2026
 
 - Build 169's source plus the App Store preparation: Report/Block (profiles, messages, comments, feed, circles) and Settings → Blocked people / Get help / Privacy / Terms; the AI consent sheet and Settings → AI features; account deletion that fails safely; Garmin hidden unless the server lists the person as a tester; the 9-step onboarding (auto-advancing clean answers, one progress bar, coach preview for everyone, coach avatar on the coach steps); the new coaching paywall (real members, the person's goal and reason, impact lines, plan choice, Terms · Restore · Privacy) and the free-tracking sheet.
 - IPA: `.release/testflight-app-store-prep-b171/tracking.so.ipa` (SHA-256 `7b2c5c6b8505ac97349643e9b4ed84f277925417fc4f8a1ba575f97264df5f0c`), `source.tar.gz` beside it. Phone and Watch build 171; TrackingWatch/Health/Map registered; strict signature, production API and `fixtureMode: false` verified.
