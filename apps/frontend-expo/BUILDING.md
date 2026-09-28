@@ -48,12 +48,17 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
-## Current TestFlight release — build 174, September 27, 2026
+## Current TestFlight release — build 175, September 28, 2026
+
+- Build 174 plus: held weeks (one session short, streak unchanged) show a small faded flame on the plan grid, the Badges rules explain the hold, and other people's plan grids use the new `gridEntries` full history so they scroll back. Needs the `streak-hold-20260928` backend (live).
+- IPA: `.release/testflight-streak-hold-b175/tracking.so.ipa` (SHA-256 `7ff7446a2727bb0021adeb7ea742a4d3c76c25b8ba2d8ae6db7244669b3afc6f`). Delivery `8868b8bf-e0ee-401b-b7e7-d2e3b2b5970b`; `buildUploads` `COMPLETE`, no errors.
+
+## Previous TestFlight release — build 174, September 27, 2026
 
 - Build 173 plus two fixes: reaction taps only dim/spin the tapped emoji (the rest of the tray stays usable), and Messages search opens chats again (it sent `person.id`, but search returns `userId`) with Instagram-style rows.
 - IPA: `.release/testflight-fixes-b174/tracking.so.ipa` (SHA-256 `2574ca4f9608b9649576a554f481fe43e2dc7b058fadf3c11fd9fdb83d27a8c5`). Delivery `c2ea0f39-bf8e-47d5-8804-959ce1a0109f`; `buildUploads` `COMPLETE`, no errors.
 
-## Previous TestFlight release — build 173, September 27, 2026
+## Earlier TestFlight release — build 173, September 27, 2026
 
 - Build 171's source plus Apple in-app subscriptions (`expo-iap` 5.8.1, StoreKit 2): the iOS paywall sells `so.tracking.app.{quarterly,monthly,weekly}` through Apple, Restore syncs App Store purchases, renewals are forwarded on launch, and "Manage my subscription" opens Apple's page for Apple subscribers (the Stripe portal is hidden on iOS). iPhone only (`supportsTablet: false`). Needs the `apple-iap-20260927` backend (live).
 - IPA: `.release/testflight-apple-iap-b173/tracking.so.ipa` (SHA-256 `bf1f9cc31201c91a8d5bf6b9b133ca69c6fc101e309d4daa86a92582870184fb`), `source.tar.gz` beside it. UIDeviceFamily [1]; ExpoIap, TrackingWatch/Health/Map linked; strict signature, production API, `fixtureMode: false`.
