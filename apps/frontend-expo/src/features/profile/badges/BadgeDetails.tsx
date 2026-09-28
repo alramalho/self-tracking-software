@@ -235,6 +235,7 @@ export function BadgeDetails({ user, kind, onClose }: BadgeDetailsProps) {
             rules: [
               "Each completed week adds +1 to your streak",
               "Each missed week subtracts -1 from your streak, starting with the first",
+              "One session short (3+ per week): your streak holds, but not two weeks in a row",
               "Streak score cannot go below 0",
             ],
           },

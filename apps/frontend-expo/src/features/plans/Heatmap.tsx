@@ -190,18 +190,25 @@ export const Heatmap = memo(function Heatmap(props: HeatmapProps) {
                   )}
                 </Pressable>
               ))}
+              {/* Full week: 🔥. One session short: a small faded flame, the streak held. */}
               <Text
                 accessibilityLabel={
-                  week.completed ? "Week completed" : "Week incomplete"
+                  week.completed
+                    ? "Week completed"
+                    : week.held
+                      ? "One session short, streak held"
+                      : "Week incomplete"
                 }
                 style={{
                   width: CELL,
                   height: 24,
-                  fontSize: 18,
+                  fontSize: week.held ? 12 : 18,
+                  lineHeight: 24,
                   textAlign: "center",
+                  opacity: week.held ? 0.45 : 1,
                 }}
               >
-                {week.completed ? "🔥" : ""}
+                {week.completed || week.held ? "🔥" : ""}
               </Text>
             </View>
           )}

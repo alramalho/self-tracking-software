@@ -104,6 +104,8 @@ export interface ProgressWeek {
   startDate: DateValue;
   endDate?: DateValue;
   isCompleted: boolean;
+  /** Past weeks: complete (+1), held (one short, streak unchanged) or missed (-1). */
+  outcome?: "complete" | "held" | "missed";
   completedActivities?: ActivityEntry[];
   target?: number;
   plannedActivities?: number | PlanSession[];
@@ -246,6 +248,8 @@ export interface User extends Person {
   plans?: Plan[];
   activities?: Activity[];
   activityEntries?: ActivityEntry[];
+  /** Someone else's profile: their full history for the plan grids (date, activity, amount). */
+  gridEntries?: ActivityEntry[];
   achievementPosts?: Achievement[];
   connections?: Person[];
 }

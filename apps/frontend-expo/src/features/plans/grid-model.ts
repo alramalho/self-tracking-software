@@ -58,6 +58,11 @@ export function buildHeatmap({
       ?.filter((w) => w.isCompleted)
       .map((w) => dayKey(startOfWeek(asDate(w.startDate)))) ?? [],
   );
+  const heldWeeks = new Set(
+    plan?.progress?.weeks
+      ?.filter((w) => w.outcome === "held")
+      .map((w) => dayKey(startOfWeek(asDate(w.startDate)))) ?? [],
+  );
   const weeks = [];
   for (let week = start; week <= end; week = addWeeks(week, 1)) {
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -96,6 +101,7 @@ export function buildHeatmap({
       date: week,
       days,
       completed: completeWeeks.has(dayKey(week)),
+      held: heldWeeks.has(dayKey(week)),
     });
   }
   return { weeks, historyLimited, startDate: start, endDate: end };

@@ -65,6 +65,10 @@ export type PlanProgressState = {
     plannedActivities: number | any[];
     weekActivities: any[];
     isCompleted: boolean;
+    doneCount?: number;
+    targetCount?: number;
+    /** Past weeks: complete (+1), held (one short, streak unchanged) or missed (-1). */
+    outcome?: "complete" | "held" | "missed";
   }>;
   currentWeekState: PlanState | undefined | null;
 } | null;

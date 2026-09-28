@@ -90,6 +90,12 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
     () => (user?.activityEntries ?? []).filter((e) => !e.deletedAt),
     [user?.activityEntries],
   );
+  // Someone else's profile sends 40 detailed entries (history) plus a light full history,
+  // so their plan grids can scroll back as far as yours do.
+  const gridEntries = useMemo(
+    () => [...new Map([...(user?.gridEntries ?? []), ...entries].map((e) => [e.id, e])).values()],
+    [user?.gridEntries, entries],
+  );
   const rows = useMemo<ProfileRow[]>(() => {
     if (!user) return [];
     if (tab === "history") {
@@ -128,7 +134,7 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
     const inPlans = new Set(
       plans.flatMap((p) => p.activities.map((a) => a.id)),
     );
-    const logged = new Set(entries.map((e) => e.activityId));
+    const logged = new Set(gridEntries.map((e) => e.activityId));
     const unplanned = (user.activities ?? []).filter(
       (a) => !a.deletedAt && !inPlans.has(a.id) && logged.has(a.id),
     );
@@ -144,7 +150,7 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
           ]
         : []),
     ];
-  }, [user, entries, tab]);
+  }, [user, entries, gridEntries, tab]);
   const { refresh, refreshing } = useRefresh(
     ...(own
       ? [
@@ -267,7 +273,7 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
               {item.type === "plan" ? (
                 <PlanCard
                   plan={item.plan}
-                  entries={entries}
+                  entries={gridEntries}
                   own={own}
                   premium={current.data?.planType === "PLUS"}
                 />
@@ -278,7 +284,7 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
                   <Heading>Non-plan activities</Heading>
                   <Heatmap
                     activities={item.activities}
-                    entries={entries}
+                    entries={gridEntries}
                     onEntryPress={own ? setEditing : undefined}
                     premium={current.data?.planType === "PLUS"}
                   />

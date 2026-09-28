@@ -152,6 +152,11 @@ type PlanWeek = {
   plannedActivities: number | PlanSession[];
   weekActivities: Activity[];
   isCompleted: boolean;
+  /** Days done and days planned (or scheduled sessions), for the "one short" rule. */
+  doneCount: number;
+  targetCount: number;
+  /** Set for past weeks by scoreWeeks: complete (+1), held (one short, streak unchanged) or missed (-1). */
+  outcome?: "complete" | "held" | "missed";
 };
 export class PlansService {
   constructor() {
@@ -567,14 +572,17 @@ export class PlansService {
       };
     }
 
-    const now = new Date();
+    return this.scoreWeeks(weeks);
+  }
 
-    const currentWeekStart = toMidnightUTCDate(
-      startOfWeek(now, {
-        weekStartsOn: 0,
-      })
-    );
-
+  // Walks the weeks up to this one and scores the streak, marking each past week's outcome:
+  // - complete: +1
+  // - held: one session short of a target of 3 or more; the streak stays the same, but never
+  //   two weeks in a row (the second one counts as missed)
+  // - missed: -1 (no grace week), never below 0
+  // The current week only counts once it's complete.
+  scoreWeeks(weeks: PlanWeek[], now = new Date()): PlanAchievement {
+    const currentWeekStart = toMidnightUTCDate(startOfWeek(now, { weekStartsOn: 0 }));
     const lastWeekStart = toMidnightUTCDate(addWeeks(currentWeekStart, -1));
 
     let streak = 0;
@@ -582,50 +590,39 @@ export class PlansService {
     let incompleteWeeks = 0;
     let totalWeeks = 0;
     let missedLastWeek: PlanAchievement["missedLastWeek"] = null;
+    let previousOutcome: PlanWeek["outcome"];
 
-    // Iterate through weeks up to current week
     for (const week of weeks) {
-      const weekStart = toMidnightUTCDate(
-        startOfWeek(week.startDate, {
-          weekStartsOn: 0,
-        })
-      );
+      const weekStart = toMidnightUTCDate(startOfWeek(week.startDate, { weekStartsOn: 0 }));
       const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
-      const isBeforeCurrentWeek = isBefore(weekStart, currentWeekStart);
-
-      // Only process weeks up to and including current week
-      if (!isCurrentWeek && !isBeforeCurrentWeek) {
-        break;
-      }
-
+      if (!isCurrentWeek && !isBefore(weekStart, currentWeekStart)) break;
       totalWeeks += 1;
-      const wasCompleted = week.isCompleted;
 
-      if (wasCompleted) {
+      if (week.isCompleted) {
         streak += 1;
         completedWeeks += 1;
         if (!isCurrentWeek) {
           incompleteWeeks = 0;
+          week.outcome = previousOutcome = "complete";
         }
-      } else if (!isCurrentWeek) {
-        // A scheduled plan with nothing scheduled that week had nothing to miss.
-        if (
-          Array.isArray(week.plannedActivities) &&
-          week.plannedActivities.length === 0
-        ) {
-          continue;
-        }
-        // No grace week: every missed week costs one week of streak.
-        const streakBefore = streak;
-        streak = Math.max(0, streak - 1);
-        incompleteWeeks += 1;
-        if (isSameDay(weekStart, lastWeekStart)) {
-          missedLastWeek = {
-            streakBefore,
-            streakAfter: streak,
-            inARow: incompleteWeeks,
-          };
-        }
+        continue;
+      }
+      if (isCurrentWeek) continue;
+      // A scheduled plan with nothing scheduled that week had nothing to miss.
+      if (Array.isArray(week.plannedActivities) && week.plannedActivities.length === 0) continue;
+
+      const oneShort = week.targetCount >= 3 && week.doneCount === week.targetCount - 1;
+      if (oneShort && previousOutcome !== "held") {
+        week.outcome = previousOutcome = "held";
+        continue;
+      }
+
+      const streakBefore = streak;
+      streak = Math.max(0, streak - 1);
+      incompleteWeeks += 1;
+      week.outcome = previousOutcome = "missed";
+      if (isSameDay(weekStart, lastWeekStart)) {
+        missedLastWeek = { streakBefore, streakAfter: streak, inARow: incompleteWeeks };
       }
     }
 
@@ -779,7 +776,8 @@ export class PlansService {
     logger.info(`Reading cached progress for plan ${plan.id}`);
 
     const cachedState = plan.progressState as any as PlanProgressState;
-    const cachedWeeks = cachedState!.weeks || [];
+    // Cached before counts/outcomes existed: the cache is recomputed at the next week boundary.
+    const cachedWeeks = (cachedState!.weeks || []) as PlanWeek[];
     const weeks = await this.ensureCurrentWeekForTimesPerWeek(
       plan,
       user,
@@ -953,8 +951,9 @@ export class PlansService {
     const lifestyleAchievement =
       this.calculateLifestyleAchievement(achievement);
 
-    // Get weeks data
+    // Get weeks data, with each past week's outcome (complete / held / missed) for the grid
     const weeks = await this.getPlanWeeks(plan, user);
+    this.scoreWeeks(weeks);
 
     return {
       plan: {
@@ -985,6 +984,8 @@ export class PlansService {
     plannedActivities: number | PlanSession[];
     weekActivities: Activity[];
     isCompleted: boolean;
+    doneCount: number;
+    targetCount: number;
   }> {
     // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
     const weekStart = toMidnightUTCDate(startOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
@@ -1070,6 +1071,9 @@ export class PlansService {
       completedActivities,
       plannedActivities,
       weekActivities,
+      doneCount: numberOfDaysCompletedThisWeek,
+      targetCount:
+        typeof plannedActivities === "number" ? plannedActivities : sessionsThisWeek.length,
       isCompleted:
         plan.outlineType === "TIMES_PER_WEEK"
           ? completedActivities.length > 0 &&

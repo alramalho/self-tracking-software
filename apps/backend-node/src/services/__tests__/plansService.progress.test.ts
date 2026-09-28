@@ -248,4 +248,55 @@ describe("PlansService progress", () => {
       inARow: 1,
     });
   });
+  async function readingPlan(days: string[]) {
+    const user = await prisma.user.create({
+      data: { id: testUserId, email: `${testUserId}@test.com`, username: testUserId, timezone: "UTC" },
+    });
+    const reading = await prisma.activity.create({
+      data: { userId: testUserId, title: "reading", measure: "pages", emoji: "📚" },
+    });
+    const plan = await prisma.plan.create({
+      data: {
+        userId: testUserId,
+        goal: "Read before bed",
+        emoji: "📚",
+        outlineType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 3,
+        activities: { connect: { id: reading.id } },
+      },
+      include: { activities: true },
+    });
+    await prisma.activityEntry.createMany({
+      data: days.map((day) => ({
+        userId: testUserId,
+        activityId: reading.id,
+        quantity: 10,
+        datetime: new Date(`${day}T20:00:00.000Z`),
+      })),
+    });
+    return plansService.computePlanProgress(plan, user);
+  }
+  const weekOf = (progress: Awaited<ReturnType<typeof readingPlan>>, sunday: string) =>
+    progress.weeks.find((week) => week.startDate.toISOString().startsWith(sunday));
+
+  it("holds the streak when a week is one session short", async () => {
+    // 3 of 3 the week of May 17, then 2 of 3 last week (May 24).
+    const progress = await readingPlan(["2026-05-18", "2026-05-19", "2026-05-20", "2026-05-25", "2026-05-26"]);
+    expect(progress.achievement.streak).toBe(1);
+    expect(progress.achievement.missedLastWeek).toBeNull();
+    expect(weekOf(progress, "2026-05-24")?.outcome).toBe("held");
+    expect(weekOf(progress, "2026-05-17")?.outcome).toBe("complete");
+  });
+
+  it("never holds two weeks in a row: the second one-short week is a miss", async () => {
+    const progress = await readingPlan([
+      "2026-05-11", "2026-05-12", "2026-05-13", // complete
+      "2026-05-18", "2026-05-19", // one short: held
+      "2026-05-25", "2026-05-26", // one short again: missed
+    ]);
+    expect(weekOf(progress, "2026-05-17")?.outcome).toBe("held");
+    expect(weekOf(progress, "2026-05-24")?.outcome).toBe("missed");
+    expect(progress.achievement.streak).toBe(0);
+    expect(progress.achievement.missedLastWeek).toEqual({ streakBefore: 1, streakAfter: 0, inARow: 1 });
+  });
 });

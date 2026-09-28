@@ -23,6 +23,8 @@ export interface GridWeek {
   date: Date;
   days: GridDay[];
   completed: boolean;
+  /** One session short: the streak held (shown as a small faded flame). */
+  held: boolean;
 }
 export interface HeatmapInput {
   activities: Activity[];

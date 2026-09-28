@@ -958,6 +958,20 @@ usersRouter.post(
 
       const accountStats = await getAccountStats(user.id);
 
+      // The plan grids need the whole history, not only the 40 detailed entries above:
+      // date, activity and amount, nothing private.
+      const gridEntries = await prisma.activityEntry.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          activityId: { not: null },
+          activity: { deletedAt: null },
+        },
+        orderBy: { datetime: "desc" },
+        take: 3000,
+        select: { id: true, userId: true, activityId: true, datetime: true, quantity: true },
+      });
+
       // If viewing another user's profile, filter out private plans
       const isOwnProfile = user.id === req.user!.id;
       if (!isOwnProfile) {
@@ -993,6 +1007,7 @@ usersRouter.post(
           progress: progressMap.get(plan.id),
         })),
         accountStats,
+        gridEntries,
         // Extract the first (and only) human coach profile if exists
         coachProfile: user.coaches?.[0] || null,
       };
