@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Streak "one short holds" + full grid history on profiles — active since September 28, 2026
+
+Image `local/tracking-so-backend:streak-hold-20260928` from [streak-hold-overlay.Dockerfile](./streak-hold-overlay.Dockerfile) on `apple-iap-20260927` (3 files; live matched git `877c8cb1`). No migration. Same 30 pre-existing typecheck errors.
+
+- A past week one session short of a target of 3+ holds the streak (never two weeks in a row); weeks carry `outcome` complete / held / missed.
+- `POST /users/get-user` also returns `gridEntries` (id, activityId, datetime, quantity; up to 3000) so other people's plan grids show full history.
+- All plan progress caches were invalidated (`UPDATE public.plans SET "progressCalculatedAt" = NULL`, 100 rows) so streaks recompute under the new rule. Dump: `tracking-streak-hold-20260928/backup/database-before.dump`.
+
+Rollback: restore `tracking-streak-hold-20260928/backup/deployment.env` to `.env` and `docker compose up -d backend`, then invalidate caches again.
+
 ## Apple in-app subscriptions — active since September 27, 2026
 
 Image `local/tracking-so-backend:apple-iap-20260927` from [apple-iap-overlay.Dockerfile](./apple-iap-overlay.Dockerfile) on `coaching-plans-20260926` (live copies matched git `68c9a971`). The image's workspace lockfile can't run `pnpm add`, so `@apple/app-store-server-library@3.1.0` is installed with npm in a temp folder and copied into `apps/backend-node/node_modules` (only packages not already present). Same 30 pre-existing typecheck errors.
