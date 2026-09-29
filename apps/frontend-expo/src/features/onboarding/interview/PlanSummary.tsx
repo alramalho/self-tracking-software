@@ -2,7 +2,7 @@ import { View } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import type { PlanSummaryProps } from "./types";
-export function PlanSummary({ facts: f }: PlanSummaryProps) {
+export function PlanSummary({ facts: f, circle }: PlanSummaryProps) {
   const c = useColors();
   return (
     <View
@@ -38,6 +38,7 @@ export function PlanSummary({ facts: f }: PlanSummaryProps) {
         ["Support", f.wantsCoaching ? "AI coaching" : "Simple tracking"],
         ["Resource", f.resourceName],
         ["Target date", f.targetDate],
+        ["Circle", circle],
       ]
         .filter(([, value]) => value)
         .map(([label, value]) => (

@@ -31,6 +31,12 @@ export interface Reaction {
   user?: Person;
   userId?: string;
 }
+/** The circle an entry reached the timeline through, when it wasn't a friend's post. */
+export interface EntryCircle {
+  id: string;
+  name: string;
+  emoji: string;
+}
 export interface ActivityEntry {
   timezone?: string | null;
   _count?: { comments?: number };
@@ -79,6 +85,8 @@ export interface ActivityEntry {
       }[];
     };
   } | null;
+  /** Set when the entry reached your timeline through a circle you share. */
+  circle?: EntryCircle | null;
 }
 export interface PausePeriod {
   pausedAt: string;

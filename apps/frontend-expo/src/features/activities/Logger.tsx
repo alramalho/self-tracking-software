@@ -1,4 +1,5 @@
 import { DifficultyStep } from "./logging/DifficultyStep";
+import { CircleIntroHint } from "@/features/circles/CircleIntroHint";
 import { LoggingDrawer } from "./logging/LoggingDrawer";
 import { PhotoStep } from "./logging/PhotoStep";
 import { QuantityStep } from "./logging/QuantityStep";
@@ -214,6 +215,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           }}
           onBack={() => setStep("quantity")}
         >
+          <CircleIntroHint activityId={activity.id} />
           <FriendPicker value={friend} onChange={setFriend} />
           <Field
             label="Private notes"

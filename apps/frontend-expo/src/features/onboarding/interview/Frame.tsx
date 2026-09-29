@@ -1,7 +1,8 @@
-import { Keyboard, Platform, ScrollView, View, useWindowDimensions } from "react-native";
+import { Keyboard, Platform, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { SafeAreaView, initialWindowMetrics, useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, X } from "lucide-react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { ChevronLeft, X } from "lucide-react-native";
 import { IconButton, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import {
@@ -9,8 +10,26 @@ import {
   RevealContext,
   useRevealViewport,
 } from "@/components/reveal/Reveal";
-import { stageLabels, stages } from "./model";
-import type { InterviewFrameProps } from "./types";
+import { stages } from "./model";
+import type { FooterFadeProps, InterviewFrameProps } from "./types";
+
+// Content scrolls under the buttons and fades out, instead of a dividing line.
+function FooterFade({ color }: FooterFadeProps) {
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: -28, height: 28 }}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="onboarding-fade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={color} stopOpacity="0" />
+            <Stop offset="1" stopColor={color} stopOpacity="1" />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#onboarding-fade)" />
+      </Svg>
+    </View>
+  );
+}
+
 export function InterviewFrame({
   stage,
   progress,
@@ -18,6 +37,8 @@ export function InterviewFrame({
   busy,
   onBack,
   onClose,
+  onSkip,
+  bare,
   backDisabled,
   children,
   actions,
@@ -36,59 +57,73 @@ export function InterviewFrame({
     const hide = Keyboard.addListener("keyboardWillHide", () => setKeyboardHeight(0));
     return () => { frame.remove(); hide.remove(); };
   }, [height]);
+  const current = progress?.current ?? index + 1;
+  const total = progress?.total ?? stages.length;
   return (
     <SafeAreaView
       testID="onboarding-screen"
       style={{ flex: 1, backgroundColor: c.bg, paddingTop: topInset }}
       edges={["bottom", "left", "right"]}
     >
-      <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 8 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <IconButton
-            label="Previous question"
-            icon={ArrowLeft}
-            onPress={onBack}
-            disabled={busy || backDisabled}
-          />
-          <Text style={{ color: c.muted, fontSize: 13, fontWeight: "500" }}>
-            {preview ? "Preview · " : ""}
-            {progress
-              ? `${progress.current} of ${progress.total} · ${progress.label}`
-              : `${index + 1} of ${stages.length} · ${stageLabels[stage]}`}
-          </Text>
-          <IconButton
-            label="Close onboarding"
-            icon={X}
-            onPress={onClose}
-            disabled={busy}
-          />
-        </View>
-        <View
-          accessibilityRole="progressbar"
-          accessibilityLabel="Onboarding progress"
-          accessibilityValue={{ min: 0, max: progress?.total ?? stages.length, now: progress?.current ?? index + 1 }}
-          aria-valuemin={0}
-          aria-valuemax={progress?.total ?? stages.length}
-          aria-valuenow={progress?.current ?? index + 1}
-          style={{ flexDirection: "row", gap: 5 }}
-        >
-          {Array.from({ length: progress?.total ?? stages.length }, (_, i) => (
-            <View
-              key={i}
-              style={{
-                height: 4,
-                flex: 1,
-                borderRadius: 3,
-                backgroundColor: i < (progress?.current ?? index + 1) ? c.accent : c.soft,
-              }}
+      {/* Back, one continuous line with no step count, then Skip or close. */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingBottom: 8,
+          minHeight: 52,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <View style={{ width: 64, alignItems: "flex-start" }}>
+          {!bare && (
+            <IconButton
+              label="Previous question"
+              icon={ChevronLeft}
+              onPress={onBack}
+              disabled={busy || backDisabled}
             />
-          ))}
+          )}
+        </View>
+        <View style={{ alignItems: "center", gap: 4 }}>
+          {!bare && (
+            <View
+              accessibilityRole="progressbar"
+              accessibilityLabel="Onboarding progress"
+              accessibilityValue={{ min: 0, max: total, now: current }}
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-valuenow={current}
+              style={{ width: 88, height: 4, borderRadius: 999, backgroundColor: c.soft, overflow: "hidden" }}
+            >
+              <View
+                style={{
+                  width: `${Math.min(100, (current / total) * 100)}%`,
+                  height: 4,
+                  borderRadius: 999,
+                  backgroundColor: c.accent,
+                }}
+              />
+            </View>
+          )}
+          {preview && <Text style={{ color: c.muted, fontSize: 11, fontWeight: "500" }}>Preview</Text>}
+        </View>
+        <View style={{ width: 64, alignItems: "flex-end" }}>
+          {onSkip ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Skip this question"
+              disabled={busy}
+              onPress={onSkip}
+              hitSlop={12}
+              style={{ paddingVertical: 10, opacity: busy ? 0.5 : 1 }}
+            >
+              <Text style={{ color: c.muted, fontSize: 16 }}>Skip</Text>
+            </Pressable>
+          ) : (
+            <IconButton label="Close onboarding" icon={X} onPress={onClose} disabled={busy} />
+          )}
         </View>
       </View>
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
@@ -104,9 +139,10 @@ export function InterviewFrame({
             keyboardDismissMode="on-drag"
             contentContainerStyle={{
               flexGrow: 1,
+              justifyContent: "center",
               paddingHorizontal: 28,
-              paddingTop: progress?.label === "Your coach" ? 12 : 32,
-              paddingBottom: 32,
+              paddingTop: 12,
+              paddingBottom: 40,
             }}
           >
             <View
@@ -114,7 +150,7 @@ export function InterviewFrame({
                 width: "100%",
                 maxWidth: 448,
                 alignSelf: "center",
-                gap: 28,
+                gap: 24,
               }}
             >
               {children}
@@ -124,12 +160,12 @@ export function InterviewFrame({
             key={`actions-${stage}`}
             style={{
               paddingHorizontal: 24,
-              paddingTop: 16,
+              paddingTop: 8,
               paddingBottom: 20,
-              borderTopWidth: 1,
-              borderColor: c.inputBorder,
+              backgroundColor: c.bg,
             }}
           >
+            <FooterFade color={c.bg} />
             <View
               style={{
                 width: "100%",

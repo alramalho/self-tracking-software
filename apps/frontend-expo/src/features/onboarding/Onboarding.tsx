@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppState, Keyboard, Pressable, TextInput, View } from "react-native";
-import {
-  CalendarDays,
-  Goal,
-  Heart,
-  Route,
-  Sparkles,
-  HeartHandshake,
-} from "lucide-react-native";
+import { CalendarDays, Sparkles, Target, Users } from "lucide-react-native";
 import { randomUUID } from "expo-crypto";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -18,12 +11,18 @@ import type {
   InterviewStage,
   InterviewState,
   GoalGuidanceResult,
+  OnboardingCircleChoice,
   SupportPreferences,
 } from "@tsw/prisma/follow-through";
 import { useColors, Status } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { Reveal } from "@/components/reveal/Reveal";
-import { EditorButton } from "@/features/activities/editor/controls";
+import { EditorButton as BaseEditorButton } from "@/features/activities/editor/controls";
+import type { EditorButtonProps } from "@/features/activities/editor/types";
+import { defaultPreferences } from "@/features/circles/api";
+import { approximateLocation } from "@/features/circles/location";
+import { setPendingMatch } from "@/features/circles/pendingMatch";
+import type { MatchPreferences, PendingMatch } from "@/features/circles/types";
 import { useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
 import { goBack } from "@/core/navigation";
@@ -32,6 +31,10 @@ import { DictationButton } from "@/features/dictation/DictationButton";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
+import { OnboardingArt } from "./interview/OnboardingArt";
+import { OnboardingButton } from "./interview/OnboardingButton";
+import type { OnboardingArtName } from "./interview/types";
+import { CircleAsk, CirclePrefs } from "./CircleSteps";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
 import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
@@ -55,7 +58,7 @@ import {
   startInterview,
   stages,
   weeklyFrequencyQuestion,
-  weeklyFrequencyQuestionTitle,
+  isWeeklyFrequencyTitle,
 } from "./interview/model";
 import type { CoachingOffer, CoachingPlan, OnboardingProps } from "./types";
 
@@ -64,6 +67,19 @@ function frequencyFromAnswer(answer: string | undefined, fallback: number) {
   return Number.isInteger(count) && count >= 1 && count <= 7
     ? count
     : fallback;
+}
+
+// Onboarding's one dominant action is the full-width accent button; the rest stay quiet.
+function EditorButton(props: EditorButtonProps) {
+  return props.secondary || props.destructive ? <BaseEditorButton {...props} /> : <OnboardingButton {...props} />;
+}
+
+function circleSummary(circle?: OnboardingCircleChoice) {
+  if (!circle) return undefined;
+  if (circle.choice === "solo") return "Just me";
+  if (circle.choice === "invite") return "Invite friends";
+  const by = [circle.wantsNearby && "nearby", circle.wantsAge && "similar age"].filter(Boolean);
+  return by.length ? `Find one · ${by.join(", ")}` : "Find one";
 }
 
 export default function Onboarding({
@@ -94,6 +110,13 @@ export default function Onboarding({
   const [paywall, setPaywall] = useState(false),
     [finished, setFinished] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  const [welcome, setWelcome] = useState(true);
+  // Non-null while on "Match me by", after choosing "Find me a circle".
+  const [circlePrefs, setCirclePrefs] = useState<MatchPreferences | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const circleLocation = useRef<PendingMatch["location"] | null>(null);
+  const pendingAge = useRef<number | null>(null);
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false),
     [checking, setChecking] = useState(false);
   // Quarterly is the best value, so it starts selected.
@@ -274,6 +297,29 @@ export default function Onboarding({
     // If the coach can't accept it, the coaching question shows as before.
     if (result.accepted) await commitAccepted(committed.state, committed.draft, result, answer);
   }
+  async function chooseCircle(circle: OnboardingCircleChoice) {
+    if (circle.choice === "find" && circle.wantsAge && pendingAge.current && !preview)
+      await api.patch("/users/user", { age: pendingAge.current });
+    await persist({ ...draft, circle });
+    setCirclePrefs(null);
+  }
+  // Nearby needs a rough location; without it we fall back to time zones.
+  async function changeCirclePrefs(next: MatchPreferences) {
+    setCirclePrefs(next);
+    if (!next.wantsNearby || circlePrefs?.wantsNearby || circleLocation.current || preview) return;
+    setLocating(true);
+    try {
+      const location = await approximateLocation();
+      circleLocation.current = location;
+      setLocationDenied(!location);
+      if (!location) setCirclePrefs({ ...next, wantsNearby: false });
+    } catch {
+      setLocationDenied(true);
+      setCirclePrefs({ ...next, wantsNearby: false });
+    } finally {
+      setLocating(false);
+    }
+  }
   const gate = useMutation({
     mutationFn: async (text: string) => {
       Keyboard.dismiss();
@@ -411,9 +457,23 @@ export default function Onboarding({
           )
         ).data;
         await client.invalidateQueries();
+        // A circle needs the plan to exist, so matching happens right after it's created.
+        const circle = draft.circle;
+        const wantsCircle = !!circle && circle.choice !== "solo";
+        if (circle && circle.choice !== "solo")
+          setPendingMatch({
+            planId: result.planId,
+            mode: circle.choice,
+            wantsPace: circle.wantsPace,
+            wantsNearby: circle.wantsNearby,
+            wantsAge: circle.wantsAge,
+            location: circleLocation.current ?? undefined,
+          });
         if (mounted.current)
           router.replace(
-            `/(tabs)/plans?selectedPlan=${result.planId}` as never,
+            (wantsCircle
+              ? `/circle-match?planId=${result.planId}`
+              : `/(tabs)/plans?selectedPlan=${result.planId}`) as never,
           );
       } catch (err) {
         finishing.current = false;
@@ -551,7 +611,7 @@ export default function Onboarding({
     (paywall && offer.error);
   const askingWeeklyFrequency =
     state.stage === "rhythm" &&
-    state.question.title === weeklyFrequencyQuestionTitle;
+    isWeeklyFrequencyTitle(state.question.title);
   const submittedAnswer = () =>
     askingWeeklyFrequency
       ? `${weeklyFrequency} sessions a week`
@@ -601,6 +661,7 @@ export default function Onboarding({
     setHistory([]);
     setPaywall(false);
     setTourStep(null);
+    setCirclePrefs(null);
     setFinished(false);
     setAwaitingUpgrade(false);
     upgradeIntent.current = false;
@@ -612,6 +673,10 @@ export default function Onboarding({
     }
   }
   async function back() {
+    if (circlePrefs) {
+      setCirclePrefs(null);
+      return;
+    }
     if (tourStep !== null) {
       if (tourStep > 0) {
         await persist({ ...draft, step: `coaching-tour-${tourStep - 1}` });
@@ -646,6 +711,10 @@ export default function Onboarding({
       upgradeIntent.current = false;
       setAwaitingUpgrade(false);
       setPaywall(false);
+      return;
+    }
+    if (!validation && tourStep === null && state.stage === "review" && draft.circle) {
+      await persist({ ...draft, circle: undefined });
       return;
     }
     if (!validation && tourStep === null && state.stage === "review" && state.facts.wantsCoaching) {
@@ -701,7 +770,7 @@ export default function Onboarding({
         .find((turn) => turn.stage === stage);
       const question =
         stage === "rhythm" &&
-        prior?.question === weeklyFrequencyQuestionTitle
+        isWeeklyFrequencyTitle(prior?.question)
           ? weeklyFrequencyQuestion
           : {
               title: prior?.question || "What would you like to change?",
@@ -720,24 +789,29 @@ export default function Onboarding({
         );
     }
   }
-  const Icon = {
-    goal: Goal,
-    baseline: Route,
-    motivation: Heart,
-    rhythm: CalendarDays,
-    support: HeartHandshake,
-    review: Sparkles,
-  }[state.stage];
+  const artName: OnboardingArtName = state.stage;
   const lastTurn = state.turns.at(-1);
-  // One bar from the first question to the paywall: 4 questions, 3 coach steps, the plan, the paywall.
+  // "Do it with a group?" comes after the coach steps, before the plan review.
+  const askingCircle =
+    state.stage === "review" &&
+    !draft.circle &&
+    tourStep === null &&
+    !paywall &&
+    !finished &&
+    !validation &&
+    !gate.isPending;
+  // One line from the first question to the paywall: 4 questions, 3 coach steps,
+  // 2 circle steps, the plan, the paywall.
   const questions: InterviewStage[] = ["goal", "baseline", "motivation", "rhythm"];
   const journeyProgress = paywall
-    ? { current: 9, total: 9, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
+    ? { current: 11, total: 11, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
     : tourStep !== null || state.stage === "support"
-      ? { current: 5 + (tourStep ?? 0), total: 9, label: "Your coach" }
-      : state.stage === "review"
-        ? { current: 8, total: 9, label: stageLabels.review }
-        : { current: questions.indexOf(state.stage) + 1, total: 9, label: stageLabels[state.stage] };
+      ? { current: 5 + (tourStep ?? 0), total: 11, label: "Your coach" }
+      : askingCircle
+        ? { current: circlePrefs ? 9 : 8, total: 11, label: "Your circle" }
+        : state.stage === "review"
+          ? { current: 10, total: 11, label: stageLabels.review }
+          : { current: questions.indexOf(state.stage) + 1, total: 11, label: stageLabels[state.stage] };
   const showingValidation =
     (gate.isPending && state.stage !== "goal") || !!validation;
   const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${tourStep}-${paywall}-${finished}`;
@@ -795,7 +869,7 @@ export default function Onboarding({
     <EditorButton label="Back to Settings" onPress={goBack} />
   ) : tourStep !== null ? (
     <EditorButton
-      label={tourStep === 2 ? "Review my plan" : "Continue"}
+      label="Continue"
       busy={busy}
       onPress={() => void advanceTour().catch(setError)}
     />
@@ -921,14 +995,6 @@ export default function Onboarding({
       }
       onPress={() => gate.mutate(submittedAnswer())}
     />
-    {(state.stage === "baseline" || state.stage === "motivation") && (
-      <EditorButton
-        label="Skip for now"
-        secondary
-        disabled={busy}
-        onPress={() => gate.mutate("")}
-      />
-    )}
     </>
   );
   const actionWithStartOver = finished || tourStep !== null || paywall || state.stage !== "goal" ? (
@@ -936,14 +1002,66 @@ export default function Onboarding({
   ) : (
     <>
       {action}
-      <EditorButton
-        label="Start over"
-        secondary
-        disabled={busy}
-        onPress={() => void startOver()}
-      />
+      {(!!draft.goal || history.length > 0) && (
+        <Pressable
+          accessibilityRole="button"
+          disabled={busy}
+          onPress={() => void startOver()}
+          style={{ alignItems: "center", paddingVertical: 8 }}
+        >
+          <Text style={{ color: c.muted, fontSize: 15 }}>Start over</Text>
+        </Pressable>
+      )}
     </>
   );
+  // A fresh start opens on the welcome screen; resumed drafts and prefilled goals skip it.
+  const freshStart =
+    (preview || saved.isFetched) &&
+    !draft.goal &&
+    state.stage === "goal" &&
+    !state.turns.length &&
+    !history.length &&
+    !paywall;
+  if (welcome && freshStart)
+    return (
+      <InterviewFrame
+        stage="goal"
+        bare
+        preview={preview}
+        busy={false}
+        onBack={() => {}}
+        onClose={goBack}
+        actions={<EditorButton label="Let's start" onPress={() => setWelcome(false)} />}
+      >
+        <View style={{ alignItems: "center", gap: 18 }}>
+          <OnboardingArt name="welcome" size={210} />
+          <Text
+            accessibilityRole="header"
+            style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.6 }}
+          >
+            Welcome to tracking.so
+          </Text>
+          <Text style={{ color: c.muted, fontSize: 17, lineHeight: 24, textAlign: "center" }}>
+            We will go over a few things to ensure you are properly set up and maximize success likelihood!
+          </Text>
+        </View>
+        <View style={{ borderRadius: 16, backgroundColor: c.card, overflow: "hidden" }}>
+          {[
+            { icon: Target, label: "Your goal" },
+            { icon: CalendarDays, label: "Your week" },
+            { icon: Users, label: "Coach and circle" },
+          ].map((row, i) => (
+            <View
+              key={row.label}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 52, paddingHorizontal: 16, borderTopWidth: i ? 1 : 0, borderColor: c.inputBorder }}
+            >
+              <row.icon size={22} color={c.text} strokeWidth={1.8} />
+              <Text style={{ color: c.text, fontSize: 17 }}>{row.label}</Text>
+            </View>
+          ))}
+        </View>
+      </InterviewFrame>
+    );
   // Without AI consent: explain (under the consent sheet), and offer the manual plan editor.
   if (user.data && !aiConsent.allowed)
     return (
@@ -1002,9 +1120,74 @@ export default function Onboarding({
         {aiConsent.sheet}
       </InterviewFrame>
     );
+  if (askingCircle)
+    return (
+      <InterviewFrame
+        stage="review"
+        progress={journeyProgress}
+        preview={preview}
+        busy={busy}
+        onBack={() => void back().catch(setError)}
+        onClose={goBack}
+        actions={
+          circlePrefs ? (
+            <EditorButton
+              label="Continue"
+              disabled={busy || locating}
+              onPress={() => void chooseCircle({ choice: "find", ...circlePrefs }).catch(setError)}
+            />
+          ) : (
+            <View />
+          )
+        }
+      >
+        <View style={{ alignItems: "center", gap: 16 }}>
+          <OnboardingArt name={circlePrefs ? "match" : "circle"} size={170} />
+          <Text
+            accessibilityRole="header"
+            style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.6 }}
+          >
+            {circlePrefs ? "Match me by" : "Do it with a group?"}
+          </Text>
+          {!circlePrefs && (
+            <Text style={{ color: c.muted, fontSize: 17, lineHeight: 24, textAlign: "center" }}>
+              Up to 8 people with a similar goal. You'll see each other's week.
+            </Text>
+          )}
+        </View>
+        {circlePrefs ? (
+          <CirclePrefs
+            value={circlePrefs}
+            onChange={(next) => void changeCirclePrefs(next)}
+            place={circleLocation.current?.place ?? null}
+            age={user.data?.age ?? pendingAge.current}
+            weeklyTarget={state.facts.frequency}
+            locating={locating}
+            locationDenied={locationDenied}
+            onAge={(age) => {
+              pendingAge.current = age;
+            }}
+          />
+        ) : (
+          <CircleAsk
+            busy={busy}
+            onFind={() => setCirclePrefs({ ...defaultPreferences })}
+            onInvite={() => void chooseCircle({ choice: "invite", ...defaultPreferences }).catch(setError)}
+            onSolo={() => void chooseCircle({ choice: "solo", ...defaultPreferences }).catch(setError)}
+          />
+        )}
+        <Status error={statusError} retry={retryStatus} />
+      </InterviewFrame>
+    );
+  const canSkip =
+    (state.stage === "baseline" || state.stage === "motivation") &&
+    !showingValidation &&
+    !paywall &&
+    tourStep === null;
   return (
     <InterviewFrame
       stage={state.stage}
+      onSkip={canSkip ? () => gate.mutate("") : undefined}
       progress={journeyProgress}
       preview={preview}
       busy={busy}
@@ -1034,15 +1217,18 @@ export default function Onboarding({
         <>
           {!coachPaywall && <Reveal key={`heading-${stepKey}`}>
             <View style={{ alignItems: "center", gap: paywall ? 14 : 24 }}>
-              {!paywall && <View style={{ height: 100, justifyContent: "center" }}>
-                <Icon size={80} strokeWidth={1.4} color={c.accent} />
-              </View>}
+              {!paywall && (
+                <OnboardingArt
+                  name={artName}
+                  size={["goal", "baseline", "motivation", "review"].includes(state.stage) ? 150 : 190}
+                />
+              )}
               <Text
                 accessibilityRole="header"
                 style={{
                   color: c.text,
-                  fontSize: paywall ? 26 : 28,
-                  lineHeight: paywall ? 32 : 35,
+                  fontSize: paywall ? 26 : 32,
+                  lineHeight: paywall ? 32 : 38,
                   fontWeight: "700",
                   textAlign: "center",
                   letterSpacing: -0.5,
@@ -1056,6 +1242,7 @@ export default function Onboarding({
                       : "Your plan is ready."
                     : state.question.title}
               </Text>
+{(finished || paywall || !!state.question.purpose) && (
               <Text
                 style={{
                   color: c.muted,
@@ -1074,6 +1261,7 @@ export default function Onboarding({
                       : "Start tracking your sessions for free. You can add coaching later."
                     : state.question.purpose}
               </Text>
+              )}
             </View>
           </Reveal>}
           {!finished && (
@@ -1084,7 +1272,9 @@ export default function Onboarding({
                 ) : (
                   paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />
                 )}
-                {state.stage === "review" && !paywall && <PlanSummary facts={state.facts} />}
+                {state.stage === "review" && !paywall && (
+                  <PlanSummary facts={state.facts} circle={circleSummary(draft.circle)} />
+                )}
                 {!candidate && !paywall && (
                   <>
                     {lastTurn && !lastTurn.accepted && (

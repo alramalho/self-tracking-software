@@ -1,4 +1,4 @@
-import type { Activity, ActivityEntry, Achievement, User } from "@/core/types";
+import type { Activity, ActivityEntry, Achievement, EntryCircle, User } from "@/core/types";
 export interface FeedItem {
   id: string;
   date: number;
@@ -44,6 +44,10 @@ export interface ActivitySummaryProps {
 export interface ParticipantAvatarProps {
   user?: User;
   size?: number;
+}
+
+export interface CircleTagProps {
+  circle: EntryCircle;
 }
 
 export interface FeedCaptionProps {

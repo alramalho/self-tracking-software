@@ -41,6 +41,7 @@ import { WeekCalendar } from "./WeekCalendar";
 import { EntryEditor } from "../activities/EntryEditor";
 import { ActivityEditor } from "../activities/ActivityEditor";
 import { SettingsCard } from "../settings/SettingsCard";
+import { CirclePlanSection } from "../circles/CirclePlanSection";
 interface Props {
   plan: Plan;
   entries: ActivityEntry[];
@@ -314,7 +315,9 @@ export function PlanCard({
               />
             </>
           )}
-          {plan.planGroup && (
+          {own ? (
+            <CirclePlanSection planId={plan.id} />
+          ) : plan.planGroup && (
             <>
               <Heading>Plan group</Heading>
               {plan.planGroup.members

@@ -11,12 +11,47 @@ export interface InterviewFrameProps {
   busy: boolean;
   onBack: () => void;
   onClose: () => void;
+  // Skippable steps show "Skip" where the close button would be.
+  onSkip?: () => void;
+  // Welcome and match screens: no back, no progress line.
+  bare?: boolean;
   backDisabled?: boolean;
   children: ReactNode;
   actions: ReactNode;
 }
+
+export type OnboardingArtName =
+  | "welcome"
+  | "goal"
+  | "baseline"
+  | "motivation"
+  | "rhythm"
+  | "support"
+  | "circle"
+  | "match"
+  | "review";
+
+export interface OnboardingArtSource {
+  still: number;
+  motion?: number;
+}
+
+export interface OnboardingArtProps {
+  name: OnboardingArtName;
+  size?: number;
+}
+
+export interface FooterFadeProps {
+  color: string;
+}
+
+export interface FloatingProps {
+  children: ReactNode;
+}
 export interface PlanSummaryProps {
   facts: InterviewFacts;
+  // "Find one · nearby, age", "Invite friends" or "Just me".
+  circle?: string;
 }
 
 export interface CoachValidationProps {

@@ -72,7 +72,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
         <View style={{ flexDirection: "row" }}>
           {[
             ...MEMBERS.map((uri) => ({ uri })),
-            coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png"),
+            coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png"),
           ].map((source, i) => (
             <Image
               key={i}
@@ -237,7 +237,7 @@ export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClos
     <PreviewSheet visible={visible} title="Track on your own" onClose={onClose}>
       <View style={{ alignItems: "center", gap: 8 }}>
         <Image
-          source={coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png")}
+          source={coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png")}
           style={{ width: 72, height: 72 }}
         />
         <Text

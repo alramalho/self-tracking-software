@@ -1,4 +1,7 @@
-import { ActivityIndicator, Image, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import { Image } from "expo-image";
+import { useReducedMotion } from "react-native-reanimated";
+import { coachAvatar, hellyThumbsUp } from "@/features/coach/avatar";
 import { Check } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
@@ -22,6 +25,8 @@ export function CoachValidation(props: CoachValidationProps) {
   const detail = extractedDetail(props);
   const needsImprovement =
     !!props.result?.accepted && !!props.result.needsImprovement;
+  const approved = !props.loading && !!props.result?.accepted && !needsImprovement;
+  const reduced = useReducedMotion();
 
   return (
     <View
@@ -43,15 +48,16 @@ export function CoachValidation(props: CoachValidationProps) {
         gap: 26,
       }}
     >
+      {/* Helly winks and gives a thumbs up once when the answer is clear; otherwise the coach stays still. */}
       <Image
         accessibilityLabel={`${coach}, your coach`}
         source={
-          props.strategist
-            ? require("../../../../assets/coaches/oli.png")
-            : require("../../../../assets/coaches/helly.png")
+          !props.strategist && approved && !reduced
+            ? hellyThumbsUp
+            : coachAvatar(props.strategist)
         }
-        style={{ width: 112, height: 112 }}
-        resizeMode="contain"
+        style={{ width: 150, height: 150 }}
+        contentFit="contain"
       />
       {props.loading || !props.result ? (
         <View style={{ alignItems: "center", gap: 14 }}>

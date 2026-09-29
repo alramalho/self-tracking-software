@@ -3,7 +3,7 @@ appId: so.tracking.app
 - launchApp:
     stopApp: false
 - extendedWaitUntil:
-    visible: Friend's last activities
+    visible: Friends & circles
     timeout: 120000
 - tapOn: Expand Running 5 kilometers
 - assertVisible: Morning run

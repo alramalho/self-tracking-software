@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, Linking, Platform, Switch, View } from "react-native";
+import { Image, Linking, Platform, View } from "react-native";
 import { Pencil, Smile, Trash2 } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Status, useColors } from "@/components/ui";
@@ -23,16 +23,13 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
     c = useColors();
   const [field, setField] = useState<ProfileField>();
   const [value, setValue] = useState("");
-  const [looking, setLooking] = useState(false);
   const save = useAction(async () => {
     const updates =
-      field === "lookingForAp"
-        ? { lookingForAp: looking }
-        : field === "age"
-          ? { age: Number(value) }
-          : field === "description"
-            ? { profile: value.trim() }
-            : { name: value.trim() };
+      field === "age"
+        ? { age: Number(value) }
+        : field === "description"
+          ? { profile: value.trim() }
+          : { name: value.trim() };
     await api.patch("/users/user", updates);
     setField(undefined);
   });
@@ -56,7 +53,6 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
     save.reset();
     remove.reset();
     setValue(initial);
-    setLooking(!!user.data?.lookingForAp);
     setField(next);
   };
   const pencil = <Pencil size={16} color={c.muted} />;
@@ -69,7 +65,6 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
               {
                 name: "Edit your full name",
                 age: "Select your age",
-                lookingForAp: "Looking for Accountability Partner",
                 description: "Update Your Profile Description",
                 reactionEmojis: "Customize reactions",
                 delete: "Delete Account",
@@ -85,29 +80,6 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
               {hasAppleSubscription(user.data) &&
                 " Apple keeps billing your subscription until you cancel it in your App Store subscriptions."}
             </Text>
-          ) : field === "lookingForAp" ? (
-            <>
-              <Text style={{ color: c.muted, lineHeight: 20 }}>
-                Make your profile discoverable to people also looking for an
-                accountability partner.
-              </Text>
-              <View
-                style={{ flexDirection: "row", gap: 12, alignItems: "center" }}
-              >
-                <Switch
-                  accessibilityLabel="Looking for Accountability Partner"
-                  value={looking}
-                  onValueChange={setLooking}
-                  disabled={busy}
-                  trackColor={{ true: c.accent }}
-                />
-                <Text style={{ color: c.text }}>
-                  {looking
-                    ? "Yes, I'm looking for an AP"
-                    : "No, not looking for an AP"}
-                </Text>
-              </View>
-            </>
           ) : (
             <>
               {field === "description" && (
@@ -169,12 +141,6 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
         </>
       ) : (
         <>
-          <SettingsCard
-            title="Looking for Accountability Partner"
-            description={user.data?.lookingForAp ? "Yes" : "No"}
-            trailing={pencil}
-            onPress={() => edit("lookingForAp")}
-          />
           <SettingsCard
             title="Age"
             description={

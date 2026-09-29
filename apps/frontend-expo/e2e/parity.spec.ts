@@ -17,7 +17,7 @@ test.beforeEach(async ({ request, page }) => {
   await request.post(`${API}/__reset`);
   await page.goto("/");
   await expect(
-    page.getByText("Friend's last activities", { exact: true }),
+    page.getByText("Friends & circles", { exact: true }),
   ).toBeVisible();
 });
 test("logs activity and updates timeline and profile history", async ({

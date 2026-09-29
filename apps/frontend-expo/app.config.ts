@@ -99,7 +99,7 @@ const app: ExpoConfig = {
     [
       "expo-location",
       {
-        locationWhenInUsePermission: "Record your activity location and route.",
+        locationWhenInUsePermission: "Record your activity location and route, and find circles near you.",
         // The app never asks for Always location; `false` keeps the plugin's generic
         // descriptions out of Info.plist. Motion stays: the library's code references
         // the motion API, and Apple rejects uploads without a purpose string (ITMS-90683).

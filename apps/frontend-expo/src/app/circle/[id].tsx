@@ -1,43 +1,244 @@
-import { useState } from "react";
-import { Share, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Pressable, Share, Switch, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, MoreHorizontal } from "lucide-react-native";
-import { useQuery } from "@tanstack/react-query";
-import { Button, Copy, Heading, IconButton, Panel, Screen, Status } from "@/components/ui";
+import { Image } from "expo-image";
+import { ChevronLeft, Flame, MoreHorizontal, UserPlus } from "lucide-react-native";
+import { Copy, Field, Heading, IconButton, Panel, Screen, Sheet, Status, Button, useColors } from "@/components/ui";
+import { Text } from "@/components/typography/Text";
 import { goBack } from "@/core/navigation";
-import { useAction, useCurrentUser, useEntries, usePlans } from "@/data/queries";
-import { api } from "@/data/api";
-import type { CircleDetail } from "@/features/circles/types";
+import { api, errorMessage } from "@/data/api";
+import { useAction, useCurrentUser, usePlans } from "@/data/queries";
+import { coachAvatar } from "@/features/coach/avatar";
+import { MemberRow, firstName } from "@/features/circles/components";
+import { inviteLink, useCircle, useCircleFeed } from "@/features/circles/api";
+import { recapLine } from "@/features/circles/model";
+import { FeedCard } from "@/features/timeline/FeedCard";
+import type { FeedItem } from "@/features/timeline/types";
 import { ReportSheet, personLabel, showActions, useBlockUser } from "@/features/safety/Safety";
 import type { ReportTarget } from "@/features/safety/types";
+import type { BoardMember } from "@/features/circles/types";
+
 export default function Circle() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const user = useCurrentUser(), plans = usePlans(), entries = useEntries();
-  const query = useQuery({ queryKey: ["circle", id], queryFn: async () => (await api.get<CircleDetail>(`/circles/${id}`)).data });
-  const [sharing, setSharing] = useState(false), [leaving, setLeaving] = useState(false), [error, setError] = useState<unknown>();
-  const [report, setReport] = useState<ReportTarget>(), blockUser = useBlockUser();
-  const share = useAction(async (entryId: string) => { await api.post(`/circles/${id}/logs`, { entryId }); setSharing(false); });
-  const unshare = useAction(async (postId: string) => api.delete(`/circles/${id}/logs/${postId}`));
-  const leave = useAction(async () => { await api.delete(`/circles/${id}/membership`); router.replace("/circles" as never); });
-  const membership = query.data?.members.find(m => m.user.id === user.data?.id);
-  const plan = plans.data?.find(p => p.id === membership?.plan.id);
-  const logs = entries.data?.filter(e => !e.deletedAt && plan?.activities.some(a => a.id === e.activityId) && !query.data?.posts.some(p => p.entry.id === e.id)).slice(0, 30) ?? [];
-  return <Screen title={query.data?.name || "Circle"} leading={<IconButton label="Back" icon={ArrowLeft} onPress={goBack} />} actions={query.data && <IconButton label="Circle options" icon={MoreHorizontal} onPress={() => showActions(query.data!.name, [{ label: "Report circle", onPress: () => setReport({ kind: "CIRCLE", id: id, label: "this circle" }) }])} />} onRefresh={() => void query.refetch()} refreshing={query.isRefetching}>
-    <Status loading={query.isLoading} error={query.error ?? share.error ?? unshare.error ?? leave.error ?? error} />
-    {query.data && <>
-      <Copy muted>{query.data.topic}</Copy>
-      <Button secondary onPress={() => void Share.share({ message: `Join ${query.data!.name} in tracking.so. Open Plans → Circles and paste this invite code: ${query.data!.inviteCode}` }).catch(setError)}>Share invite</Button>
-      <Heading>People and their plans</Heading>
-      {query.data.members.map(member => <Panel key={member.user.id} style={{ flexDirection: "row", alignItems: "center" }}><View style={{ flex: 1 }}><Copy>{`${member.user.name || member.user.username} · ${member.plan.emoji} ${member.plan.goal}`}</Copy></View>{member.user.id !== user.data?.id && <IconButton label={`Options for ${personLabel(member.user)}`} icon={MoreHorizontal} onPress={() => showActions(personLabel(member.user), [{ label: `Report ${personLabel(member.user)}`, onPress: () => setReport({ kind: "USER", id: member.user.id, label: personLabel(member.user) }) }, { label: `Block ${personLabel(member.user)}`, destructive: true, onPress: () => blockUser(member.user) }])} />}</Panel>)}
-      <Button onPress={() => setSharing(!sharing)}>{sharing ? "Cancel sharing" : "Share an activity log"}</Button>
-      {sharing && <><Copy muted>Only the activity, quantity and date are shared here. Photos, location and private notes stay out.</Copy>{logs.map(log => <Button key={log.id} secondary busy={share.isPending} onPress={() => share.mutate(log.id)}>{`${log.activity?.emoji || plan?.emoji || ""} ${log.activity?.title || "Activity"} · ${log.quantity} ${log.activity?.measure || ""} · ${new Date(log.datetime).toLocaleDateString()}`}</Button>)}{!logs.length && <Copy muted>No unshared logs from your chosen plan yet.</Copy>}</>}
-      <Heading>Shared progress</Heading>
-      {query.data.posts.map(post => <Panel key={post.id}><Copy>{post.user.name || post.user.username || "Member"}</Copy><Heading>{`${post.entry.activity?.emoji || ""} ${post.entry.activity?.title || "Activity"}`}</Heading><Copy>{`${post.entry.quantity} ${post.entry.activity?.measure || ""} · ${new Date(post.entry.datetime).toLocaleDateString()}`}</Copy>{post.user.id === user.data?.id && <Button secondary busy={unshare.isPending} onPress={() => unshare.mutate(post.id)}>Remove from circle</Button>}</Panel>)}
-      {!query.data.posts.length && <Copy muted>No shared logs yet. Share something when you want to.</Copy>}
-      {leaving && <Copy>Leave this circle? Your posts will be removed from the circle. Your activity history stays in your account.</Copy>}
-      <Button danger busy={leave.isPending} onPress={() => leaving ? leave.mutate() : setLeaving(true)}>{leaving ? "Confirm leave circle" : "Leave circle"}</Button>
-      {leaving && <Button secondary onPress={() => setLeaving(false)}>Cancel</Button>}
-    </>}
-    <ReportSheet target={report} onClose={() => setReport(undefined)} />
-  </Screen>;
+  const c = useColors();
+  const { id, invite } = useLocalSearchParams<{ id: string; invite?: string }>();
+  const user = useCurrentUser();
+  const plans = usePlans();
+  const board = useCircle(id);
+  const feed = useCircleFeed(id);
+  const [report, setReport] = useState<ReportTarget>();
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState("");
+  const blockUser = useBlockUser();
+  const data = board.data;
+  const isOwner = data?.me.role === "OWNER";
+
+  const nudge = useAction(async (member: BoardMember) => api.post(`/circles/${id}/nudges`, { toUserId: member.user.id }));
+  const update = useAction(async (changes: { name?: string; openToMatching?: boolean }) => api.patch(`/circles/${id}`, changes));
+  const leave = useAction(async () => {
+    await api.delete(`/circles/${id}/membership`);
+    goBack();
+  });
+  const remove = useAction(async (member: BoardMember) => api.delete(`/circles/${id}/members/${member.user.id}`));
+
+  const shareInvite = () => {
+    if (!data) return;
+    void Share.share({
+      message: `Join my circle "${data.emoji} ${data.name}" on tracking.so: ${inviteLink(data.inviteCode)}`,
+    }).catch(() => {});
+  };
+  // Straight from "Invite friends" in onboarding: open the share sheet once.
+  const invited = useRef(false);
+  useEffect(() => {
+    if (invite && data && !invited.current) {
+      invited.current = true;
+      shareInvite();
+    }
+  });
+
+  const confirmLeave = () =>
+    Alert.alert("Leave this circle?", "Your own history stays in your account.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Leave", style: "destructive", onPress: () => leave.mutate() },
+    ]);
+
+  const memberActions = (member: BoardMember) => {
+    const name = firstName(member.user);
+    const canNudge = member.week.toGo > 0 && !member.week.isNew && !member.nudgedToday;
+    showActions(`${name} · ${member.week.done} of ${member.week.target} this week`, [
+      ...(canNudge ? [{ label: `Nudge ${name}`, onPress: () => nudge.mutate(member) }] : []),
+      ...(member.user.username ? [{ label: "View profile", onPress: () => router.push(`/profile/${member.user.username}` as never) }] : []),
+      { label: `Report ${name}`, destructive: true, onPress: () => setReport({ kind: "USER", id: member.user.id, label: personLabel(member.user) }) },
+      { label: `Block ${name}`, destructive: true, onPress: () => blockUser(member.user) },
+      ...(isOwner ? [{ label: `Remove ${name} from the circle`, destructive: true, onPress: () => remove.mutate(member) }] : []),
+    ]);
+  };
+
+  const circleActions = () => {
+    if (!data) return;
+    showActions(`${data.emoji} ${data.name}`, [
+      { label: "Invite friends", onPress: shareInvite },
+      ...(isOwner ? [{ label: "Rename", onPress: () => { setName(data.name); setRenaming(true); } }] : []),
+      { label: "Report circle", destructive: true, onPress: () => setReport({ kind: "CIRCLE", id: data.id, label: "this circle" }) },
+      { label: "Leave circle", destructive: true, onPress: confirmLeave },
+    ]);
+  };
+
+  const myPlan = plans.data?.find((p) => p.id === data?.me.planId);
+  const logActivityId = myPlan?.activities?.[0]?.id;
+  const introIds = new Set(feed.data?.introIds ?? []);
+  const items: FeedItem[] = (feed.data?.entries ?? []).map((entry) => ({
+    id: entry.id,
+    date: new Date(entry.datetime).getTime(),
+    entry,
+    user: entry.user as FeedItem["user"],
+    activity: (entry.activity ?? undefined) as FeedItem["activity"],
+  }));
+  const forming = data?.status === "FORMING";
+  const daysLeft = data?.members.find((m) => m.user.id === user.data?.id)?.week.daysLeft;
+  const sub = data
+    ? [`${data.members.length} of ${data.cap}`, data.place, data.paceLabel].filter(Boolean).join(" · ")
+    : "";
+
+  return (
+    <Screen
+      title={data ? `${data.emoji} ${data.name}` : "Circle"}
+      subtitle={sub}
+      leading={<IconButton label="Back" icon={ChevronLeft} onPress={goBack} />}
+      actions={data && <IconButton label="Circle options" icon={MoreHorizontal} onPress={circleActions} />}
+      refreshing={board.isRefetching}
+      onRefresh={() => void Promise.all([board.refetch(), feed.refetch()])}
+    >
+      <Status
+        loading={board.isLoading}
+        error={board.error ?? nudge.error ?? update.error ?? leave.error ?? remove.error}
+        retry={() => void board.refetch()}
+      />
+      {data && (
+        <>
+          {!data.me.hasIntro && (
+            <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Image source={coachAvatar(user.data?.coachPersonality === "STRATEGIST")} style={{ width: 52, height: 52 }} contentFit="contain" />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>Say hi to your circle</Text>
+                <Copy muted>Your first session goes out as your intro. Add a line about yourself.</Copy>
+                <Button onPress={() => router.push((logActivityId ? `/(tabs)/add?activityId=${logActivityId}` : "/(tabs)/add") as never)}>
+                  Log a session
+                </Button>
+              </View>
+            </Panel>
+          )}
+
+          {forming ? (
+            <Panel>
+              <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>Forming</Text>
+              <Copy muted>The weekly board starts once 3 people are in.</Copy>
+              {data.members.map((m) => (
+                <MemberRow key={m.user.id} member={{ ...m, week: { ...m.week, isNew: true } }} isMe={m.user.id === user.data?.id} onPress={m.user.id === user.data?.id ? undefined : () => memberActions(m)} />
+              ))}
+              {Array.from({ length: Math.max(0, 3 - data.members.length) }, (_, i) => (
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderStyle: "dashed", borderColor: c.muted }} />
+                  <Text style={{ color: c.muted, fontSize: 15 }}>Open spot</Text>
+                </View>
+              ))}
+            </Panel>
+          ) : (
+            <>
+              {data.togetherStreak > 0 && (
+                <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Flame size={26} color="#ff9500" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
+                      {data.togetherStreak === 1 ? "1 week together" : `${data.togetherStreak} weeks together`}
+                    </Text>
+                    <Copy muted>Everyone hit their week</Copy>
+                  </View>
+                </Panel>
+              )}
+              <Panel>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>This week</Text>
+                  {daysLeft !== undefined && <Copy muted>{daysLeft === 1 ? "1 day left" : `${daysLeft} days left`}</Copy>}
+                </View>
+                {data.members.map((m) => {
+                  const isMe = m.user.id === user.data?.id;
+                  return (
+                    <MemberRow
+                      key={m.user.id}
+                      member={m}
+                      isMe={isMe}
+                      onPress={isMe ? undefined : () => memberActions(m)}
+                      onNudge={!isMe && m.week.behind && !m.nudgedToday ? () => nudge.mutate(m) : undefined}
+                    />
+                  );
+                })}
+              </Panel>
+              {data.recap && (
+                <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Image source={coachAvatar(user.data?.coachPersonality === "STRATEGIST")} style={{ width: 44, height: 44 }} contentFit="contain" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Last week</Text>
+                    <Copy muted>{recapLine(data.recap, data.togetherStreak)}</Copy>
+                  </View>
+                </Panel>
+              )}
+            </>
+          )}
+
+          {isOwner && (
+            <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Match me with others</Text>
+                <Copy muted>Adds people with a similar goal, up to 5.</Copy>
+              </View>
+              <Switch
+                accessibilityLabel="Match me with others"
+                value={data.openToMatching}
+                disabled={update.isPending}
+                onValueChange={(openToMatching) => update.mutate({ openToMatching })}
+              />
+            </Panel>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            onPress={shareInvite}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.6 : 1 })}
+          >
+            <UserPlus size={22} color={c.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.text, fontSize: 16 }}>Invite friends</Text>
+              <Copy muted>{`${data.members.length} of ${data.cap} spots used`}</Copy>
+            </View>
+          </Pressable>
+
+          <Heading>Latest</Heading>
+          <Status loading={feed.isLoading} error={feed.error} empty={!feed.isLoading && !items.length ? "No sessions yet. Yours could be the first." : undefined} />
+          {items.map((item) => (
+            <View key={item.id} style={{ gap: 6 }}>
+              {introIds.has(item.id) && (
+                <Text style={{ color: c.muted, fontSize: 13 }}>👋 Intro</Text>
+              )}
+              <FeedCard item={item} />
+            </View>
+          ))}
+        </>
+      )}
+      <Sheet visible={renaming} title="Rename circle" onClose={() => setRenaming(false)}>
+        <Field label="Name" value={name} onChangeText={setName} maxLength={60} autoFocus />
+        <Button
+          busy={update.isPending}
+          disabled={!name.trim()}
+          onPress={() =>
+            update.mutate({ name: name.trim() }, {
+              onSuccess: () => setRenaming(false),
+              onError: (error) => Alert.alert("Couldn't rename", errorMessage(error)),
+            })
+          }
+        >
+          Save
+        </Button>
+      </Sheet>
+      <ReportSheet target={report} onClose={() => setReport(undefined)} />
+    </Screen>
+  );
 }

@@ -543,8 +543,8 @@ export function VoiceLogDrawer({
                   accessibilityLabel={`${coachName}, your coach`}
                   source={
                     strategist
-                      ? require("../../../assets/coaches/oli.png")
-                      : require("../../../assets/coaches/helly.png")
+                      ? require("../../../assets/coaches/oli-3d.png")
+                      : require("../../../assets/coaches/helly-3d.png")
                   }
                   style={{ width: 34, height: 34 }}
                   resizeMode="contain"

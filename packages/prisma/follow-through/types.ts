@@ -146,8 +146,15 @@ export interface GoalGuidanceRequirement {
 export interface GoalGuidanceResult {
   requirements: GoalGuidanceRequirement[];
 }
+export interface OnboardingCircleChoice {
+  choice: "find" | "invite" | "solo";
+  wantsPace: boolean;
+  wantsNearby: boolean;
+  wantsAge: boolean;
+}
 export interface OnboardingDraft {
   coaching?: import("./coaching").PlanCoaching;
+  circle?: OnboardingCircleChoice;
   interview?: InterviewState;
   awaitingUpgrade?: boolean;
   id: string;

@@ -38,6 +38,8 @@ import { mergeTimeline } from "./model";
 import { FeedCard } from "./FeedCard";
 import { PlanPreview } from "./home-cards/PlanPreview";
 import { MetricPreview } from "./home-cards/MetricPreview";
+import { CirclePreview } from "./home-cards/CirclePreview";
+import { useMyCircles } from "@/features/circles/api";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { MetricLogger } from "../metrics/MetricLogger";
 import { useTimelineSeen } from "./useTimelineSeen";
@@ -56,6 +58,7 @@ export default function HomeScreen() {
   const user = useCurrentUser();
   const metrics = useMetrics();
   const metricEntries = useMetricEntries();
+  const circles = useMyCircles();
   const [checkin, setCheckin] = useState(false);
   const [voiceLogOpen, setVoiceLogOpen] = useState(false);
   const pendingVoice = usePendingVoiceLog();
@@ -67,6 +70,7 @@ export default function HomeScreen() {
     "activity-entries",
     "metrics",
     "metric-entries",
+    "circles",
   );
   const c = useColors();
   const reveal = useRevealViewport();
@@ -329,10 +333,19 @@ export default function HomeScreen() {
                       <PlanPreview plan={plan} entries={entries.data ?? []} />
                     </Reveal>
                   ))}
+                {circles.data?.map((circle) => (
+                  <Reveal
+                    id={`home-circle-${circle.id}`}
+                    key={circle.id}
+                    style={{ width: "48%" }}
+                  >
+                    <CirclePreview circle={circle} />
+                  </Reveal>
+                ))}
                 <FollowThroughHome plans={active} entries={entries.data ?? []} />
               </View>
               <View style={s.row}>
-                <Heading>Friend's last activities</Heading>
+                <Heading>Friends & circles</Heading>
                 <Copy muted>({items.length})</Copy>
               </View>
             </View>
@@ -347,7 +360,7 @@ export default function HomeScreen() {
               loading={timeline.isPending}
               error={timeline.error}
               retry={() => void timeline.refetch()}
-              empty="No activity yet. Find friends to see what they're up to."
+              empty="No activity yet. Find friends or join a circle to see what people are up to."
             />
           }
           ListFooterComponent={

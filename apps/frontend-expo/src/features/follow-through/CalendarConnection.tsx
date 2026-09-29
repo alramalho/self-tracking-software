@@ -12,7 +12,6 @@ import {
   syncCalendar,
 } from "@/native/calendar-sync";
 import { useFollowThrough } from "./api";
-import { router } from "expo-router";
 import type { CalendarConnectionProps } from "./types";
 export function CalendarConnection({
   asMenu = false,
@@ -116,17 +115,6 @@ export function CalendarConnection({
                 Disconnecting stops updates. Existing calendar events remain.
               </Copy>
             </>
-          )}
-          {asMenu && (
-            <Button
-              secondary
-              onPress={() => {
-                setOpen(false);
-                router.push("/circles" as never);
-              }}
-            >
-              Circles
-            </Button>
           )}
           <Status error={error ?? load.error ?? connect.error} />
         </LoggingDrawer>

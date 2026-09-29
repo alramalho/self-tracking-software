@@ -1,8 +1,12 @@
 import type { ActivityEntry, Metric, MetricEntry, MissedWeek, Plan } from "@/core/types";
 import type { LucideIcon } from "lucide-react-native";
+import type { MyCircle } from "@/features/circles/types";
 export interface PlanPreviewProps {
   plan: Plan;
   entries: ActivityEntry[];
+}
+export interface CirclePreviewProps {
+  circle: MyCircle;
 }
 export interface MetricPreviewProps {
   metrics: Metric[];

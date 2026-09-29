@@ -19,7 +19,7 @@ export function notificationRoute(value: unknown): string | null {
     return id && id.length <= 200 ? `/?${keys[0]}=${encodeURIComponent(id)}` : null;
   }
   if (
-    /^\/(session\/[^/?#]+|\(tabs\)\/plans|chat\/[^/?#]+|plan\/[^/?#]+|health|messages|notifications|plans|profile\/[^/?#]+)(\?[^#]*)?$/.test(
+    /^\/(session\/[^/?#]+|\(tabs\)\/plans|chat\/[^/?#]+|plan\/[^/?#]+|circle\/[^/?#]+|circle-invite\/[^/?#]+|health|messages|notifications|plans|profile\/[^/?#]+)(\?[^#]*)?$/.test(
       path,
     )
   )

@@ -46,9 +46,7 @@ export function ThemeProvider({ children }: ChildrenProps) {
       clearInterval(timer);
     };
   }, [base, session.userId]);
-  const mode =
-    user.data?.themeMode?.toLowerCase() ??
-    (session.isSignedIn ? "dark" : "auto");
+  const mode = user.data?.themeMode?.toLowerCase() ?? "light";
   useEffect(() => {
     if (Platform.OS === "web") return;
     Appearance.setColorScheme(

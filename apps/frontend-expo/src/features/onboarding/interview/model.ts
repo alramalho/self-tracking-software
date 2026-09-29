@@ -6,31 +6,34 @@ import type {
   InterviewResult,
 } from "@tsw/prisma/follow-through";
 export const stages: InterviewStage[] = ["goal", "baseline", "motivation", "rhythm", "support", "review"];
+// Short questions; the placeholder carries the example, so no subtitle is needed.
 export const baselineQuestion = {
-  title: "Where are you starting?",
-  purpose: "What does this look like for you today? Even ‘starting from scratch’ helps.",
+  title: "Where are you now?",
+  purpose: "",
   options: [],
 };
 function startingPointQuestion(goal: string) {
   return /\brun\b|marathon/i.test(goal)
     ? {
         title: "How much do you run now?",
-        purpose: "A recent run or your weekly pattern is enough. ‘I haven’t started’ is useful too.",
+        purpose: "",
         options: [],
       }
     : baselineQuestion;
 }
 export const motivationQuestion = {
-  title: "Why does this matter to you?",
-  purpose: "A reason makes it easier to return when life gets in the way. You can skip this.",
+  title: "Why does it matter?",
+  purpose: "",
   options: [],
 };
-export const weeklyFrequencyQuestionTitle =
-  "How many times per week should this plan support?";
+export const weeklyFrequencyQuestionTitle = "How many times a week?";
+// Drafts saved before the shorter copy still carry the old title.
+const legacyWeeklyFrequencyTitle = "How many times per week should this plan support?";
+export const isWeeklyFrequencyTitle = (title: string | undefined) =>
+  title === weeklyFrequencyQuestionTitle || title === legacyWeeklyFrequencyTitle;
 export const weeklyFrequencyQuestion = {
   title: weeklyFrequencyQuestionTitle,
-  purpose:
-    "Set the weekly cadence. The plan can vary the structure and duration of each session later.",
+  purpose: "",
   options: [],
 };
 export const stageLabels = {
@@ -50,8 +53,8 @@ export function startInterview(draft: OnboardingDraft): InterviewState {
     confirmed: [],
     turns: [],
     question: {
-      title: "What do you want to achieve?",
-      purpose: "Tell me the outcome you want. We’ll ask where you are now and why it matters on the next two screens.",
+      title: "What's your goal?",
+      purpose: "",
       options: [],
     },
     facts: {

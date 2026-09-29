@@ -1,3 +1,4 @@
+import type { MatchPreferences } from "@/features/circles/types";
 export interface FollowupQuestion {
   icon: string;
   title: string;
@@ -61,3 +62,22 @@ export interface PlanConclusionProps {
   coaching?: import("@tsw/prisma/follow-through").PlanCoaching;
   preferences?: import("@tsw/prisma/follow-through").SupportPreferences;
 }
+
+export interface CircleAskProps {
+  busy: boolean;
+  onFind: () => void;
+  onInvite: () => void;
+  onSolo: () => void;
+}
+
+export interface CirclePrefsProps {
+  value: MatchPreferences;
+  onChange: (value: MatchPreferences) => void;
+  place: string | null;
+  age: number | null | undefined;
+  weeklyTarget: number;
+  locating: boolean;
+  locationDenied: boolean;
+  onAge: (age: number) => void;
+}
+

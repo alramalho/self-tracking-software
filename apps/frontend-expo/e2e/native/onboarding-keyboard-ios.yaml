@@ -15,6 +15,7 @@ appId: so.tracking.app
     direction: DOWN
 - tapOn: Preview onboarding
 - tapOn: Start preview
+- tapOn: Let's start
 - assertVisible: Dictate answer
 - tapOn:
     id: onboarding-answer
@@ -36,10 +37,10 @@ appId: so.tracking.app
 - takeScreenshot: onboarding-keyboard-fixed
 - waitForAnimationToEnd:
     timeout: 3000
-- assertVisible: Preview.*1 of 6.*Your goal
+- assertVisible: What's your goal\?
 - tapOn: ^Continue$
-- assertVisible: Preview.*2 of 6.*Starting point
-- tapOn: Skip for now
-- assertVisible: Preview.*3 of 6.*Why it matters
-- tapOn: Skip for now
-- assertVisible: Preview.*4 of 6.*Your week
+- assertVisible: Where are you now\?
+- tapOn: Skip this question
+- assertVisible: Why does it matter\?
+- tapOn: Skip this question
+- assertVisible: How many times a week\?

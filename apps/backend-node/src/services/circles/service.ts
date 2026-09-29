@@ -207,6 +207,8 @@ export interface MyCircle {
   memberCount: number;
   onTrack: number;
   daysLeft: number;
+  // Whether this person has logged their first session on the circle plan yet.
+  hasIntro: boolean;
   people: { name: string | null; picture: string | null; onTrack: boolean; isMe: boolean }[];
 }
 
@@ -230,6 +232,7 @@ export async function myCircles(userId: string): Promise<MyCircle[]> {
       memberCount: board.members.length,
       onTrack: board.members.filter(onTrack).length,
       daysLeft: me?.week.daysLeft ?? 0,
+      hasIntro: board.me.hasIntro,
       people: board.members.map((m) => ({
         name: m.user.name?.split(" ")[0] ?? m.user.username,
         picture: m.user.picture,

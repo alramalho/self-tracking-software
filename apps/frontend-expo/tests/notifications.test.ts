@@ -45,3 +45,9 @@ test("only known destinations can be opened from a push", () => {
   assert.equal(notificationRoute("/?activityEntryId=entry-1&other=1"), null);
   assert.equal(notificationRoute("https://elsewhere.example/?activityEntryId=entry-1"), null);
 });
+
+test("circle notices open their circle", () => {
+  const notice = { id: "n2", title: "Circle", status: "PROCESSED", type: "CIRCLE", relatedData: { url: "/circle/circle-1" } };
+  assert.equal(notificationTarget(notice), "/circle/circle-1");
+  assert.equal(notificationRoute(notificationTarget(notice)), "/circle/circle-1");
+});

@@ -6,6 +6,15 @@ export const draftSchema = z.object({
   coaching: planCoachingSchema.optional(),
   interview: interviewStateSchema.optional(),
   awaitingUpgrade: z.boolean().optional(),
+  // "Do it with a group?" from onboarding; matching runs once the plan exists.
+  circle: z
+    .object({
+      choice: z.enum(["find", "invite", "solo"]),
+      wantsPace: z.boolean(),
+      wantsNearby: z.boolean(),
+      wantsAge: z.boolean(),
+    })
+    .optional(),
   id: z.string().uuid(),
   // Goals may come from dictation and can include context. Keep the same
   // bounded input size as interview answers rather than truncating a natural

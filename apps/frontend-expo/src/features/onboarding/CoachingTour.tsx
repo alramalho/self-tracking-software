@@ -42,7 +42,7 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
         {/* The coach introduces itself on every step. */}
         <View style={{ alignItems: "center", gap: 4 }}>
           <Image
-            source={coach.name === "Oli" ? require("../../../assets/coaches/oli.png") : require("../../../assets/coaches/helly.png")}
+            source={coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png")}
             style={{ width: 64, height: 64 }}
           />
           <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>{coach.name} · your coach</Text>

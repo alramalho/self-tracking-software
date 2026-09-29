@@ -37,7 +37,7 @@ test("real Clerk session logs, edits, renders grids and saves metrics through th
   });
   await page.goto("/");
   await expect(
-    page.getByText("Friend's last activities", { exact: true }),
+    page.getByText("Friends & circles", { exact: true }),
   ).toBeVisible();
   await page.getByTestId("nav-add").click();
   await page.getByRole("button", { name: "Log Running", exact: true }).click();

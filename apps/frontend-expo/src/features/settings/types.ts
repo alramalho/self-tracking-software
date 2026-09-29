@@ -65,7 +65,6 @@ export interface ProfileSettingsProps {
 export type ProfileField =
   | "name"
   | "age"
-  | "lookingForAp"
   | "description"
   | "reactionEmojis"
   | "delete";

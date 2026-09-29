@@ -119,8 +119,8 @@ export function CoachOverview({ plans, entries }: CoachOverviewProps) {
                 <Image
                   source={
                     strategist
-                      ? require("../../../assets/coaches/oli.png")
-                      : require("../../../assets/coaches/helly.png")
+                      ? require("../../../assets/coaches/oli-3d.png")
+                      : require("../../../assets/coaches/helly-3d.png")
                   }
                   style={{ width: 48, height: 48 }}
                   resizeMode="contain"
