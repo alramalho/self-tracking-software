@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Circle coach posts and 2-person boards — active since September 29, 2026
+
+Image `local/tracking-so-backend:circle-coach-20260929` from [circle-coach-overlay.Dockerfile](./circle-coach-overlay.Dockerfile) on `circle-chat-20260929` (live files matched git `d1ea7857`). No schema change.
+
+- Migration `20260929160000_circles_board_from_two` (data only): circles with 2 proven members became ACTIVE; the 1 existing circle ("train 4 times a week") is now ACTIVE. Dump: `tracking-circle-coach-20260929/backup/database-before.dump`, env: `tracking-circle-coach-20260929/backup/deployment.env`.
+- The board starts at 2 proven people. The hourly circle job now has Helly post in each ACTIVE circle's chat (Sunday 19:00 recap, Thursday 18:00 halfway check when someone is behind, owner's time zone), once per circle and week, with a push to members; this replaces the per-person Sunday recap push.
+- Checks: modules loaded with the production env and no network; healthy after activation, `/health` ok.
+
+Rollback: restore `tracking-circle-coach-20260929/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`.
+
 ## Circle chat — active since September 29, 2026
 
 Image `local/tracking-so-backend:circle-chat-20260929` from [circle-chat-overlay.Dockerfile](./circle-chat-overlay.Dockerfile) on `circle-proof-20260929` (live files matched git `fdfc4742`, including `routes/chats.ts`).
