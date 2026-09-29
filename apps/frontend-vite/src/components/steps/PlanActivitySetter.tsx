@@ -4,12 +4,10 @@ import {
   DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
 import { CoachActivitySuggestionCard } from "@/components/CoachActivitySuggestionCard";
-import { shouldShowOnboardingPartnerStep } from "@/components/recommendations/onboardingPartnerGate";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { usePlans } from "@/contexts/plans";
-import { useRecommendations } from "@/contexts/recommendations";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import type { Activity } from "@tsw/prisma";
@@ -35,7 +33,6 @@ function PlanActivitySetter() {
   const api = useApiWithAuth();
   const { upsertActivity } = useActivities();
   const { upsertPlan } = usePlans();
-  const { refetchRecommendations } = useRecommendations();
   const onboardingColors = getThemeVariants("blue");
   const [suggestedActivities, setSuggestedActivities] = useState<SuggestedActivity[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -171,29 +168,18 @@ function PlanActivitySetter() {
     });
   };
 
-  const completeWithPartnerGate = async (activities: Activity[]) => {
+  const completeWithSavedPlan = async (activities: Activity[]) => {
     const uniqueActivities = Array.from(
       new Map(activities.map((activity) => [activity.id, activity])).values()
     );
 
     await createSelfGuidedPlan(uniqueActivities);
 
-    let shouldShowCommunityStep = true;
-    try {
-      shouldShowCommunityStep = await shouldShowOnboardingPartnerStep({
-        api,
-        planId,
-        refetchRecommendations,
-      });
-    } catch (error) {
-      console.error("Failed to check community partner matches:", error);
-    }
-
-    completeStep(
-      "plan-activity-selector",
-      { planActivities: uniqueActivities, partnerType: null },
-      shouldShowCommunityStep ? undefined : { complete: true }
-    );
+    // The circle step needs the saved plan, so it always comes next.
+    completeStep("plan-activity-selector", {
+      planActivities: uniqueActivities,
+      partnerType: null,
+    });
   };
 
   const handleAccept = async (
@@ -203,12 +189,12 @@ function PlanActivitySetter() {
       ...createdFromSuggestions,
       ...(data.activities ?? []),
     ];
-    await completeWithPartnerGate(allActivities);
+    await completeWithSavedPlan(allActivities);
   };
 
   const handleAcceptedSuggestionsContinue = async (): Promise<void> => {
     if (createdFromSuggestions.length === 0) return;
-    await completeWithPartnerGate(createdFromSuggestions);
+    await completeWithSavedPlan(createdFromSuggestions);
   };
 
   const handleDismissSuggestion = (title: string) => {

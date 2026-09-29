@@ -1,10 +1,11 @@
 import { type Activity, Prisma } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
+import type { CircleTag } from "@/components/circles/types";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 import { normalizePlanProgress } from "../plans-progress/service";
 
-export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
+type TimelineActivityEntryBase = Prisma.ActivityEntryGetPayload<{
   include: {
     activity: true;
     comments: {
@@ -68,6 +69,11 @@ export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
     };
   };
 }>;
+
+// Entries from people you share a circle with carry that circle, for the pill on the card.
+export type TimelineActivityEntry = TimelineActivityEntryBase & {
+  circle?: CircleTag | null;
+};
 
 type TimelineUserBase = Prisma.UserGetPayload<{
   select: {

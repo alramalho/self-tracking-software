@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMyCircles } from "@/components/circles/api";
+import { PersonAvatar } from "@/components/circles/components";
 import { Badge } from "@/components/ui/badge";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
-import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -9,15 +9,12 @@ import { GripHorizontal, Pencil, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
-import InviteButton from "./InviteButton";
 import { useNavigate } from "@tanstack/react-router";
 
 interface PlanCardProps {
   plan: CompletePlan;
   isSelected: boolean;
   onSelect: (planId: string) => void;
-  onInviteSuccess: () => void;
-  hideInviteButton?: boolean;
   onPlanRemoved?: () => void;
   priority?: number;
   isDragging?: boolean;
@@ -28,14 +25,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isSelected,
   onSelect,
-  onInviteSuccess,
-  hideInviteButton = false,
   priority,
   isDragging = false,
   dragHandleProps,
 }) => {
-  const { plans, deletePlan } = usePlans();
-  const { currentUser } = useCurrentUser();
+  const { deletePlan } = usePlans();
+  // Your own plan's people are its circle now, not a plan group.
+  const { data: myCircles } = useMyCircles();
+  const circle = myCircles?.find((each) => each.planId === plan.id);
   const navigate = useNavigate();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -115,39 +112,23 @@ const PlanCard: React.FC<PlanCardProps> = ({
               no end date
             </span>
           )}
-          {plan.planGroup?.members && (
-            <div className="flex items-center space-x-1 mt-2">
-              {plan.planGroup.members.map((member) => {
-                const user = member.user || member;
-                if (!currentUser?.id || user.id === currentUser?.id) {
-                  return null;
-                }
-                return (
-                  <Avatar key={member.id} className="w-6 h-6">
-                    <AvatarImage
-                      src={user.picture || ""}
-                      alt={user.name || user.username || ""}
-                    />
-                    <AvatarFallback>
-                      {user.name?.[0] || user.username?.[0] || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                );
-              })}
+          {circle && (
+            <div className="flex items-center space-x-1 mt-2" aria-label={`${circle.emoji} ${circle.name}`}>
+              {circle.people
+                .filter((person) => !person.isMe)
+                .map((person, index) => (
+                  <PersonAvatar
+                    key={index}
+                    name={person.name}
+                    picture={person.picture}
+                    size={24}
+                  />
+                ))}
             </div>
           )}
         </div>
 
         <div className="absolute top-2 right-2 flex gap-1 items-center justify-end">
-          {!hideInviteButton && (
-            <InviteButton
-              planId={plan.id!}
-              onInviteSuccess={onInviteSuccess}
-              isExternalSupported={false}
-              planEmoji={plan.emoji || undefined}
-              planGoal={plan.goal}
-            />
-          )}
           <button
             data-testid="plan-edit-button"
             onClick={handleEditClick}

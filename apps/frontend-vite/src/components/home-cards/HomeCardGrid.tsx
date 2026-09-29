@@ -8,6 +8,8 @@ import { isAfter, startOfDay, subDays } from "date-fns";
 import { CoachCard } from "./CoachCard";
 import { CoachUpgradeCard } from "./CoachUpgradeCard";
 import { PlanCard } from "./PlanCard";
+import { CirclePreviewCard } from "./CirclePreviewCard";
+import { useMyCircles } from "@/components/circles/api";
 import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
 import { UpcomingSessionsCard } from "./UpcomingSessionsCard";
@@ -34,6 +36,7 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   const { currentUser } = useCurrentUser();
   const { chats } = useMessages();
   const { setShowUpgradePopover } = useUpgrade();
+  const { data: circles } = useMyCircles();
 
   const isUserOnFreePlan = userPlanType === "FREE";
   const canUseCoach =
@@ -135,6 +138,13 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
         span: 1,
       });
     });
+
+  circles?.forEach((circle) => {
+    cards.push({
+      node: <CirclePreviewCard key={`circle-${circle.id}`} circle={circle} />,
+      span: 1,
+    });
+  });
 
   const occupiedColumns = cards.reduce((total, card) => total + card.span, 0);
 

@@ -2,7 +2,7 @@ import { OnboardingContainer } from "@/components/OnboardingContainer";
 import { ProgressBar } from "@/components/ProgressBar";
 import CoachingSelector from "@/components/steps/CoachingSelector";
 import CoachSelector from "@/components/steps/CoachSelector";
-import CommunityPartnerFinder from "@/components/steps/CommunityPartnerFinder";
+import CircleFinder from "@/components/steps/CircleFinder";
 import PlanActivitySetter from "@/components/steps/PlanActivitySetter";
 import PlanGenerator from "@/components/steps/PlanGenerator";
 import PlanGoalSetter from "@/components/steps/PlanGoalSetter";
@@ -16,6 +16,12 @@ import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { DEFAULT_COACH_PERSONALITY } from "@/lib/coachPersonality";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, X } from "lucide-react";
+import { useEffect } from "react";
+
+// Saved onboarding progress can still point at the step circles replaced.
+const LEGACY_STEP_ALIASES: Record<string, string> = {
+  "community-partner-finder": "circle-finder",
+};
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -35,7 +41,7 @@ export const Route = createFileRoute("/onboarding")({
  * 6. coach-selector - Choose AI or human coach (only if coaching selected)
  * 7a. If coaching: plan-generator (AI generates activities + adapts frequency)
  * 7b. If self-guided: plan-activity-selector (user picks activities)
- * 8. community-partner-finder - Ask if user wants community accountability partner (merged step)
+ * 8. circle-finder - Find a circle, invite friends, or go solo (the plan exists by now)
  */
 const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
   {
@@ -86,18 +92,18 @@ const getOnboardingSteps = (_state: OnboardingState): OnboardingStep[] => [
   {
     id: "plan-activity-selector",
     component: PlanActivitySetter,
-    next: "community-partner-finder",
+    next: "circle-finder",
     previous: "coaching-selector",
   },
   {
     id: "plan-generator",
     component: PlanGenerator,
-    next: "community-partner-finder",
+    next: "circle-finder",
     previous: "coach-selector",
   },
   {
-    id: "community-partner-finder",
-    component: CommunityPartnerFinder,
+    id: "circle-finder",
+    component: CircleFinder,
     previous: (state) => {
       // Go back based on coaching choice
       if (state.wantsCoaching) return "plan-generator";
@@ -113,7 +119,13 @@ const OnboardingStepRenderer = () => {
     totalSteps,
     prevStep,
     steps,
+    goToStep,
   } = useOnboarding();
+
+  useEffect(() => {
+    const replacement = LEGACY_STEP_ALIASES[currentStep];
+    if (replacement) goToStep(replacement);
+  }, [currentStep, goToStep]);
 
   const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
 

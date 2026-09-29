@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
 import { DEFAULT_COACH_PERSONALITY, type CoachPersonality } from "@/lib/coachPersonality";
 import { buildOnboardingProgressSnapshot } from "./progressSnapshot";
-import { OnboardingContext, type OnboardingContextValue, type OnboardingState, type OnboardingStep } from "./types";
+import { OnboardingContext, type CompleteStepOptions, type OnboardingContextValue, type OnboardingState, type OnboardingStep } from "./types";
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -253,7 +253,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     (
       stepId: string,
       updates?: object,
-      options?: { nextStep?: string; complete?: boolean }
+      options?: CompleteStepOptions
     ) => {
       // Check if this step should mark onboarding as complete
       if (options?.complete) {
@@ -280,7 +280,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
             posthog.capture("onboarding-completed");
             sideCannons({ duration: 500 });
             toast.success("Onboarding Completed! 🎉");
-            navigate({ to: "/" });
+            if (options.onCompleted) options.onCompleted();
+            else navigate({ to: "/" });
           });
       } else {
         setOnboardingState((prevState) => {

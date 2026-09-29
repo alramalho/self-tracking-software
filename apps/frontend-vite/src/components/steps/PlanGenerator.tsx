@@ -3,7 +3,6 @@
 import { useApiWithAuth } from "@/api";
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { shouldShowOnboardingPartnerStep } from "@/components/recommendations/onboardingPartnerGate";
 import { BarProgressLoader } from "@/components/ui/bar-progress-loader";
 import { Button } from "@/components/ui/button";
 import { OnboardingPlanPreview } from "@/components/OnboardingPlanPreview";
@@ -11,7 +10,6 @@ import { useActivities } from "@/contexts/activities/useActivities";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
-import { useRecommendations } from "@/contexts/recommendations";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getCoachAvatar } from "@/lib/coachPersonality";
@@ -65,7 +63,6 @@ const PlanGenerator = () => {
   } = useOnboarding();
   const { upsertPlan } = usePlans();
   const { upsertActivity } = useActivities();
-  const { refetchRecommendations } = useRecommendations();
   const { setShowUpgradePopover, setOnUpgradePopoverClose } = useUpgrade();
   const { isUserPremium } = usePaidPlan();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -112,22 +109,12 @@ const PlanGenerator = () => {
         },
       });
 
-      let shouldShowCommunityStep = true;
-      try {
-        shouldShowCommunityStep = await shouldShowOnboardingPartnerStep({
-          api,
-          planId: plan.id,
-          refetchRecommendations,
-        });
-      } catch (error) {
-        console.error("Failed to check community partner matches:", error);
-      }
-
+      // The circle step needs the saved plan, so it always comes next.
       completeStep("plan-generator", {
         selectedPlan: plan,
         plans: generatedPlans,
         partnerType: null,
-      }, shouldShowCommunityStep ? undefined : { complete: true });
+      });
     } catch (error) {
       console.error("Failed to save onboarding plan:", error);
       toast.error("Failed to save your plan. Please try again.");

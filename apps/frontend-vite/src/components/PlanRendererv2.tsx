@@ -49,14 +49,13 @@ import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { CoachingTimeSelector } from "./CoachingTimeSelector";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
-import InviteButton from "./InviteButton";
 import { MilestoneOverview } from "./MilestoneOverview";
 import { PlanCoachActionPreview } from "./PlanCoachActionPreview";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { PlanCalendarView } from "./PlanCalendarView";
-import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
+import { CirclePlanSection } from "./circles/CirclePlanSection";
 import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
 import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
 import { FireAnimation } from "./FireBadge";
@@ -833,13 +832,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
               >
                 <Trash2 className="h-6 w-6" />
               </Button>
-              <InviteButton
-                planId={selectedPlan.id!}
-                onInviteSuccess={() => {}}
-                isExternalSupported={false}
-                planEmoji={selectedPlan.emoji || undefined}
-                planGoal={selectedPlan.goal}
-              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -1087,66 +1079,12 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
         </AnimatedSection>
       )}
 
-      {/* 4. Plan Group Progress */}
-      {selectedPlan.planGroupId && (
-        <AnimatedSection delay={backgroundImageUrl ? 0.4 : 0.35}>
-          <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Group Progress</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            See how your plan group is progressing this week
-          </p>
-          <PlanGroupProgressChart planId={selectedPlan.id} />
-
-          {selectedPlan.planGroup?.members &&
-            selectedPlan.planGroup.members.length >= 2 && (
-              <div className="bg-card border border-border rounded-lg p-4 mt-4">
-                <div className="flex flex-row items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold">People in this plan</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowLeaveGroupPopover(true)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    Leave Group
-                  </Button>
-                </div>
-                <div className="flex flex-row flex-wrap gap-6">
-                  {selectedPlan.planGroup.members.map((member) => {
-                    const user = (member as any).user || member;
-                    return (
-                      <div
-                        key={member.id}
-                        className="flex flex-row flex-nowrap gap-2 items-center"
-                      >
-                        <Link
-                          to="/profile/$username"
-                          params={{ username: user.username || "" }}
-                        >
-                          <Avatar className="w-12 h-12 text-2xl">
-                            <AvatarImage
-                              src={user.picture || ""}
-                              alt={user.name || user.username || ""}
-                            />
-                            <AvatarFallback>
-                              {user.name?.[0] || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Link>
-                        <div className="text-lg text-foreground">
-                          {currentUser?.username === user.username
-                            ? "You"
-                            : user.name}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </AnimatedSection>
-      )}
+      {/* 4. Circle: plan groups are replaced by circles for your own plans */}
+      <AnimatedSection delay={backgroundImageUrl ? 0.4 : 0.35}>
+        <div className="mb-6">
+          <CirclePlanSection planId={selectedPlan.id} />
+        </div>
+      </AnimatedSection>
 
       {/* 5. Metrics Insights for Plan Activities */}
       {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (

@@ -1,3 +1,9 @@
+import {
+  forgetCircleInvite,
+  inviteCodeFromPath,
+  pendingCircleInvite,
+  rememberCircleInviteAt,
+} from "@/components/circles/pendingInvite";
 import { useAuth } from "@/contexts/auth";
 import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -76,6 +82,7 @@ export default function GeneralInitializer({
       currentUser?.onboardingCompletedAt == null &&
       !isOnboardingPage
     ) {
+      rememberCircleInviteAt(pathname);
       navigate({ to: "/onboarding" });
     }
   }, [
@@ -98,9 +105,22 @@ export default function GeneralInitializer({
       !pathname.startsWith("/download") &&
       !pathname.startsWith("/get-coached")
     ) {
+      rememberCircleInviteAt(pathname);
       navigate({ to: "/signin", search: { redirect_url: pathname } });
     }
   }, [isClerkLoaded, isSignedIn, pathname, navigate]);
+
+  // Back to a circle invite opened before sign-in or onboarding, once the app is usable.
+  // Circle pages are left alone so onboarding's own circle flow can finish first.
+  useEffect(() => {
+    const code = pendingCircleInvite();
+    if (!code || !isSignedIn || !hasLoadedUserData) return;
+    if (currentUser?.onboardingCompletedAt == null) return;
+    if (inviteCodeFromPath(pathname)) return forgetCircleInvite();
+    if (pathname.startsWith("/circle")) return;
+    forgetCircleInvite();
+    navigate({ to: "/circle-invite/$code", params: { code } });
+  }, [isSignedIn, hasLoadedUserData, currentUser?.onboardingCompletedAt, pathname, navigate]);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {

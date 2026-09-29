@@ -1,211 +1,30 @@
-import { useApiWithAuth } from "@/api";
-import AppleLikePopover from "@/components/AppleLikePopover";
-import { RecommendedUsers } from "@/components/RecommendedUsers";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CircleSearch } from "@/components/circles/CircleSearch";
+import { SearchTabs } from "@/components/search/SearchTabs";
+import type { SearchPageSearch, SearchTab } from "@/components/search/types";
 import UserSearch, { type UserSearchResult } from "@/components/UserSearch";
-import { usePlans } from "@/contexts/plans";
-import { useRecommendations } from "@/contexts/recommendations";
-import { useCurrentUser } from "@/contexts/users";
-import { useNotifications } from "@/hooks/useNotifications";
-import { isActivePlanForSelection } from "@/utils/planVisibility";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Bell, ChevronDown, RefreshCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
-import PullToRefresh from "react-simple-pull-to-refresh";
 
 export const Route = createFileRoute("/search")({
   component: SearchPage,
+  validateSearch: (search: Record<string, unknown>): SearchPageSearch => ({
+    tab: search.tab === "circles" ? "circles" : undefined,
+  }),
 });
 
+// People: find friends by name or username. Circles: groups you could join.
 function SearchPage() {
-  const { isPushGranted, requestPermission } = useNotifications();
   const navigate = useNavigate();
-  const api = useApiWithAuth();
-  const { isLoadingCurrentUser } = useCurrentUser();
-  const { plans, isLoadingPlans } = usePlans();
-  const { refetchRecommendations } = useRecommendations();
-
-  const activePlans = useMemo(
-    () => plans?.filter(isActivePlanForSelection) || [],
-    [plans]
-  );
-
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
-    activePlans.length > 0 ? activePlans[0].id : null
-  );
-  const [isRecomputingForPlan, setIsRecomputingForPlan] = useState(false);
-
-  useEffect(() => {
-    if (activePlans.length === 0) {
-      if (selectedPlanId) {
-        setSelectedPlanId(null);
-      }
-      return;
-    }
-
-    const selectedPlanStillActive = activePlans.some(
-      (plan) => plan.id === selectedPlanId
-    );
-
-    if (!selectedPlanId || !selectedPlanStillActive) {
-      setSelectedPlanId(activePlans[0].id);
-    }
-  }, [activePlans, selectedPlanId]);
-
-  function refreshRecommendations() {
-    api.post("/users/compute-recommendations", {
-      planId: selectedPlanId,
-    });
-    refetchRecommendations();
-    toast.success("Recommendations refreshed!");
-  }
-
-  const handleUserClick = (user: UserSearchResult) => {
-    navigate({ to: `/profile/${user.username}` });
-  };
-
-  const handlePlanChange = async (planId: string) => {
-    setSelectedPlanId(planId);
-    setIsRecomputingForPlan(true);
-    try {
-      await api.post("/users/compute-recommendations", {
-        planId: planId,
-      });
-      await refetchRecommendations();
-      toast.success("Recommendations updated!");
-    } catch {
-      toast.error("Failed to update recommendations");
-    } finally {
-      setIsRecomputingForPlan(false);
-    }
-  };
-
-  if (!isPushGranted) {
-    return (
-      <AppleLikePopover
-        open={true}
-        onClose={() => {
-          navigate({ to: "/" });
-        }}
-      >
-        <div className="flex flex-col items-center justify-center py-8">
-          <div className="bg-muted p-4 rounded-full mb-4">
-            <Bell size={48} className="text-muted-foreground" />
-          </div>
-          <h2 className="text-lg font-semibold text-foreground text-center">
-            Please enable notifications to continue
-          </h2>
-          {!isPushGranted && (
-            <p className="text-muted-foreground text-sm">
-              <button className="underline" onClick={requestPermission}>
-                Click here
-              </button>{" "}
-              to be notified of new notifications.
-            </p>
-          )}
-          {isPushGranted && (
-            <p className="text-muted-foreground text-sm text-center">
-              This will enable you to stay on top of newest recommended partners
-              and received friend requests.
-            </p>
-          )}
-          <Button className="mt-4" onClick={requestPermission}>
-            <Bell className="mr-2 h-4 w-4" />
-            Enable Notifications
-          </Button>
-        </div>
-      </AppleLikePopover>
-    );
-  }
+  const search = Route.useSearch();
+  const tab: SearchTab = search.tab ?? "people";
+  const changeTab = (next: SearchTab) =>
+    navigate({ to: "/search", search: next === "circles" ? { tab: "circles" } : {}, replace: true });
+  const openProfile = (user: UserSearchResult) =>
+    navigate({ to: "/profile/$username", params: { username: user.username } });
 
   return (
-    <>
-      <PullToRefresh
-        onRefresh={async () => {
-          refreshRecommendations();
-        }}
-        pullingContent={
-          <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-muted-foreground" />
-          </div>
-        }
-        refreshingContent={
-          <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-muted-foreground animate-spin" />
-          </div>
-        }
-        className="!h-fit"
-      >
-        <div className="container mx-auto pt-4 px-4 max-w-3xl">
-          {/* Search Section */}
-          <UserSearch onUserClick={handleUserClick} />
-
-          {/* Plan Selector */}
-          {!isLoadingCurrentUser &&
-            !isLoadingPlans &&
-            activePlans.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground font-medium">
-                  Find partners for:
-                </span>
-                <div className="relative flex-1">
-                  <select
-                    value={selectedPlanId || ""}
-                    onChange={(e) => handlePlanChange(e.target.value)}
-                    disabled={isRecomputingForPlan}
-                    className="w-full appearance-none bg-card border border-border rounded-lg px-4 py-2 pr-10 text-sm font-medium text-foreground hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {activePlans.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.emoji} {plan.goal}
-                      </option>
-                    ))}
-                  </select>
-                  {isRecomputingForPlan ? (
-                    <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                  ) : (
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  )}
-                </div>
-              </div>
-            )}
-
-          {/* Recommendations Section */}
-          {isLoadingCurrentUser || isLoadingPlans ? (
-            <div className="space-y-6 mt-4">
-              <div>
-                <Skeleton className="h-6 w-32 mb-4" />
-                <div className="grid grid-cols-1 justify-items-center">
-                  <Skeleton className="h-48 w-full max-w-sm rounded-lg" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton key={index} className="h-48 w-full rounded-lg" />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <></>
-          )}
-        </div>
-      </PullToRefresh>
-      {!isLoadingCurrentUser && !isLoadingPlans && (
-        <div className="mt-4 p-4">
-          {isRecomputingForPlan ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-48 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <RecommendedUsers selectedPlanId={selectedPlanId} />
-          )}
-        </div>
-      )}
-    </>
+    <div className="container mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 pb-8">
+      <SearchTabs value={tab} onChange={changeTab} />
+      {tab === "circles" ? <CircleSearch /> : <UserSearch onUserClick={openProfile} />}
+    </div>
   );
 }

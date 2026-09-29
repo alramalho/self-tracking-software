@@ -33,6 +33,7 @@ const stepLabels: Record<string, string> = {
   "plan-activity-selector": "Activity selection",
   "plan-generator": "Plan generation",
   "community-partner-finder": "Accountability partner",
+  "circle-finder": "Circle",
 };
 
 function formatStepLabel(stepId: string) {

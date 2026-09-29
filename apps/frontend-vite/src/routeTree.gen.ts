@@ -24,6 +24,7 @@ import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CreatePlanRouteImport } from './routes/create-plan'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
+import { Route as CircleMatchRouteImport } from './routes/circle-match'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
@@ -35,6 +36,8 @@ import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboar
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 import { Route as EditPlanPlanIdRouteImport } from './routes/edit-plan.$planId'
+import { Route as CircleIdRouteImport } from './routes/circle.$id'
+import { Route as CircleInviteCodeRouteImport } from './routes/circle-invite.$code'
 
 const WrappedRoute = WrappedRouteImport.update({
   id: '/wrapped',
@@ -111,6 +114,11 @@ const CreateCoachProfileRoute = CreateCoachProfileRouteImport.update({
   path: '/create-coach-profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CircleMatchRoute = CircleMatchRouteImport.update({
+  id: '/circle-match',
+  path: '/circle-match',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiRoute = AiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -166,11 +174,22 @@ const EditPlanPlanIdRoute = EditPlanPlanIdRouteImport.update({
   path: '/edit-plan/$planId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CircleIdRoute = CircleIdRouteImport.update({
+  id: '/circle/$id',
+  path: '/circle/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CircleInviteCodeRoute = CircleInviteCodeRouteImport.update({
+  id: '/circle-invite/$code',
+  path: '/circle-invite/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
@@ -186,6 +205,8 @@ export interface FileRoutesByFullPath {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/circle-invite/$code': typeof CircleInviteCodeRoute
+  '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -199,6 +220,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
@@ -214,6 +236,8 @@ export interface FileRoutesByTo {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/circle-invite/$code': typeof CircleInviteCodeRoute
+  '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -228,6 +252,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
   '/download': typeof DownloadRoute
@@ -243,6 +268,8 @@ export interface FileRoutesById {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/circle-invite/$code': typeof CircleInviteCodeRoute
+  '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
@@ -258,6 +285,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
     | '/download'
@@ -273,6 +301,8 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/circle-invite/$code'
+    | '/circle/$id'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -286,6 +316,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
     | '/download'
@@ -301,6 +332,8 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/circle-invite/$code'
+    | '/circle/$id'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -314,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
     | '/download'
@@ -329,6 +363,8 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/circle-invite/$code'
+    | '/circle/$id'
     | '/edit-plan/$planId'
     | '/friends/$username'
     | '/insights/dashboard'
@@ -343,6 +379,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddRoute: typeof AddRoute
   AiRoute: typeof AiRoute
+  CircleMatchRoute: typeof CircleMatchRoute
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
   CreatePlanRoute: typeof CreatePlanRoute
   DownloadRoute: typeof DownloadRoute
@@ -358,6 +395,8 @@ export interface RootRouteChildren {
   SignoutRoute: typeof SignoutRoute
   UpgradeRoute: typeof UpgradeRoute
   WrappedRoute: typeof WrappedRoute
+  CircleInviteCodeRoute: typeof CircleInviteCodeRoute
+  CircleIdRoute: typeof CircleIdRoute
   EditPlanPlanIdRoute: typeof EditPlanPlanIdRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
@@ -475,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateCoachProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/circle-match': {
+      id: '/circle-match'
+      path: '/circle-match'
+      fullPath: '/circle-match'
+      preLoaderRoute: typeof CircleMatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai': {
       id: '/ai'
       path: '/ai'
@@ -552,6 +598,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditPlanPlanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/circle/$id': {
+      id: '/circle/$id'
+      path: '/circle/$id'
+      fullPath: '/circle/$id'
+      preLoaderRoute: typeof CircleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/circle-invite/$code': {
+      id: '/circle-invite/$code'
+      path: '/circle-invite/$code'
+      fullPath: '/circle-invite/$code'
+      preLoaderRoute: typeof CircleInviteCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -559,6 +619,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
   AiRoute: AiRoute,
+  CircleMatchRoute: CircleMatchRoute,
   CreateCoachProfileRoute: CreateCoachProfileRoute,
   CreatePlanRoute: CreatePlanRoute,
   DownloadRoute: DownloadRoute,
@@ -574,6 +635,8 @@ const rootRouteChildren: RootRouteChildren = {
   SignoutRoute: SignoutRoute,
   UpgradeRoute: UpgradeRoute,
   WrappedRoute: WrappedRoute,
+  CircleInviteCodeRoute: CircleInviteCodeRoute,
+  CircleIdRoute: CircleIdRoute,
   EditPlanPlanIdRoute: EditPlanPlanIdRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,

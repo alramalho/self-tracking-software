@@ -10,6 +10,13 @@ export interface OnboardingStep {
   previous?: string | ((state: OnboardingState) => string | undefined);
 }
 
+export interface CompleteStepOptions {
+  nextStep?: string;
+  complete?: boolean;
+  // Where to go once onboarding is saved as complete. Defaults to home.
+  onCompleted?: () => void;
+}
+
 export interface HumanCoachInfo {
   id: string;
   name: string | null;
@@ -30,7 +37,7 @@ export interface OnboardingContextValue {
   completeStep: (
     stepId: string,
     updates?: object,
-    options?: { nextStep?: string; complete?: boolean }
+    options?: CompleteStepOptions
   ) => void;
   isFirstStep: boolean;
   isLastStep: boolean;

@@ -1,4 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CircleTagPill } from "@/components/circles/CircleTagPill";
+import type { CircleTag } from "@/components/circles/types";
 import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type PlanProgressData } from "@/contexts/plans-progress";
@@ -310,6 +312,8 @@ interface ActivityEntryPhotoCardProps {
   onParticipantClick?: (username: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  // The circle this post reached you through, shown as a small pill by the username.
+  circle?: CircleTag | null;
 }
 
 interface ReactionCount {
@@ -339,6 +343,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   sharedActivityEntries = [],
   isCollapsed = false,
   onToggleCollapse,
+  circle,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -1033,6 +1038,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   >
                     @{user.username}
                   </span>
+                  {circle && <CircleTagPill circle={circle} />}
                   {/* {accountLevel.atLeastBronze &&
                     accountLevel.currentLevel?.getIcon({
                       size: 16,

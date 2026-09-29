@@ -805,6 +805,7 @@ const TimelineRenderer: React.FC<{
                       sharedActivityEntries={sharedActivityEntries}
                       isCollapsed={isCollapsed}
                       onToggleCollapse={() => toggleEntryCollapse(entry.id)}
+                      circle={entry.circle}
                       onAvatarClick={() => {
                         navigate({
                           to: `/profile/$username`,
