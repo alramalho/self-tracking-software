@@ -1640,8 +1640,10 @@ router.post(
 
       // Send notifications to other participants
       if (chat.type === "DIRECT" || chat.type === "GROUP") {
+        // Nobody gets a push from someone they blocked, or who blocked them.
+        const hiddenFromSender = new Set(await blockedUserIds(user.id));
         const recipients = chat.participants.filter(
-          (p) => p.userId !== user.id
+          (p) => p.userId !== user.id && !hiddenFromSender.has(p.userId)
         );
         const senderName = user.name || user.username || "Someone";
         const preview =
@@ -1652,7 +1654,7 @@ router.post(
         for (const recipient of recipients) {
           await notificationService.createAndProcessNotification({
             userId: recipient.userId,
-            title: `New message from ${senderName}`,
+            title: chat.circleId && chat.title ? `${senderName} in ${chat.title}` : `New message from ${senderName}`,
             message: preview,
             type: "INFO",
             relatedId: chatId,

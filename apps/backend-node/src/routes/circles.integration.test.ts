@@ -130,6 +130,7 @@ const events = (name: Name) =>
 
 const prefs = { wantsPace: true, wantsNearby: false, wantsAge: false };
 let circleId: string;
+let chatId: string;
 
 describe("circles", () => {
   beforeAll(async () => {
@@ -308,12 +309,28 @@ describe("circles", () => {
     ]);
   });
 
+  it("gives proven members one circle chat, titled after the circle", async () => {
+    const opened = await call("alice", "POST", `/circles/${circleId}/chat`);
+    expect(opened.status).toBe(200);
+    const again = await call("bob", "POST", `/circles/${circleId}/chat`);
+    expect(again.body.chatId).toBe(opened.body.chatId);
+    chatId = opened.body.chatId;
+    const chat = await prisma.chat.findUniqueOrThrow({ where: { id: chatId }, include: { participants: true } });
+    expect(chat).toMatchObject({ type: "GROUP", circleId, title: "🏃 Run a 10K under 50 minutes" });
+    expect(chat.participants.map((p) => p.userId).sort()).toEqual([id("alice"), id("bob"), id("carol")].sort());
+    const outsider = await call("frank", "POST", `/circles/${circleId}/chat`);
+    expect(outsider).toMatchObject({ status: 400, body: { error: "Join this circle to see its week" } });
+  });
+
   it("hands ownership on and goes back to forming when people leave", async () => {
     expect((await call("carol", "DELETE", `/circles/${circleId}/membership`)).status).toBe(204);
     expect((await call("alice", "DELETE", `/circles/${circleId}/membership`)).status).toBe(204);
     const circle = await prisma.circle.findUniqueOrThrow({ where: { id: circleId }, include: { members: true } });
     expect(circle.status).toBe("FORMING");
     expect(circle.members).toEqual([expect.objectContaining({ userId: id("bob"), role: "OWNER" })]);
+    // People who leave lose the circle chat too.
+    const participants = await prisma.chatParticipant.findMany({ where: { chatId } });
+    expect(participants.map((p) => p.userId)).toEqual([id("bob")]);
     expect(await events("carol")).toContain("LEFT");
   });
 

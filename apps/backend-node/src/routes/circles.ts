@@ -2,6 +2,7 @@ import { Router, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
 import { circleBoard, circleFeed } from "../services/circles/board/service";
+import { openCircleChat } from "../services/circles/chat";
 import { CircleError } from "../services/circles/errors";
 import { matchPlan, searchCircles, suggestions } from "../services/circles/matching/service";
 import { nudge } from "../services/circles/nudges";
@@ -122,6 +123,12 @@ router.patch(
     await renameCircle(req.user!.id, req.params.id, name);
     res.sendStatus(204);
   }),
+);
+
+// The circle's group chat, for proven members.
+router.post(
+  "/:id/chat",
+  handle(async (req, res) => res.json(await openCircleChat(req.user!.id, req.params.id))),
 );
 
 // "Later" on the first-photo prompt. They stay pending; the coach reminds them tomorrow.

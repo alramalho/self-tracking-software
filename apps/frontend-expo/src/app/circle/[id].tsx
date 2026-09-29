@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, Share, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
-import { ChevronLeft, Flame, MoreHorizontal, UserPlus } from "lucide-react-native";
+import { Camera, ChevronLeft, Flame, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react-native";
 import { Copy, Field, Heading, IconButton, Panel, Screen, Sheet, Status, Button, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { goBack } from "@/core/navigation";
@@ -10,7 +10,8 @@ import { api, errorMessage } from "@/data/api";
 import { useAction, useCurrentUser, usePlans } from "@/data/queries";
 import { coachAvatar } from "@/features/coach/avatar";
 import { MemberRow, firstName } from "@/features/circles/components";
-import { inviteLink, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
+import { inviteLink, openCircleChat, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
+import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { recapLine } from "@/features/circles/model";
 import { FeedCard } from "@/features/timeline/FeedCard";
 import type { FeedItem } from "@/features/timeline/types";
@@ -36,6 +37,10 @@ export default function Circle() {
   const update = useAction(async (changes: { name: string }) => api.patch(`/circles/${id}`, changes));
   const [proofDismissed, setProofDismissed] = useState(false);
   const loggingStarted = useRef(false);
+  const openChat = useAction(async () => {
+    const { chatId } = await openCircleChat(id);
+    router.push(`/chat/${chatId}` as never);
+  });
   const leave = useAction(async () => {
     await api.delete(`/circles/${id}/membership`);
     goBack();
@@ -117,8 +122,22 @@ export default function Circle() {
     ? [`${data.members.length} of ${data.cap}`, data.place, data.paceLabel].filter(Boolean).join(" · ")
     : "";
 
+  const logWithPhoto = () => {
+    loggingStarted.current = true;
+    router.push((logActivityId ? `/(tabs)/add?activityId=${logActivityId}` : "/(tabs)/add") as never);
+  };
+  // One main action: the circle chat for members, the first photo while pending.
+  const footer = data ? (
+    data.me.pending ? (
+      <OnboardingButton label="Log with a photo" icon={Camera} onPress={logWithPhoto} />
+    ) : (
+      <OnboardingButton label="Circle chat" icon={MessageCircle} busy={openChat.isPending} onPress={() => openChat.mutate()} />
+    )
+  ) : undefined;
+
   return (
     <Screen
+      footer={footer}
       title={data ? `${data.emoji} ${data.name}` : "Circle"}
       subtitle={sub}
       leading={<IconButton label="Back" icon={ChevronLeft} onPress={goBack} />}
@@ -128,7 +147,7 @@ export default function Circle() {
     >
       <Status
         loading={board.isLoading}
-        error={board.error ?? nudge.error ?? update.error ?? leave.error ?? remove.error}
+        error={board.error ?? nudge.error ?? update.error ?? leave.error ?? remove.error ?? openChat.error}
         retry={() => void board.refetch()}
       />
       {data && (
@@ -139,14 +158,6 @@ export default function Circle() {
               <View style={{ flex: 1, gap: 8 }}>
                 <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>You're almost in</Text>
                 <Copy muted>Post a photo from a session to join. Members see you once it's up, and it's your intro.</Copy>
-                <Button
-                  onPress={() => {
-                    loggingStarted.current = true;
-                    router.push((logActivityId ? `/(tabs)/add?activityId=${logActivityId}` : "/(tabs)/add") as never);
-                  }}
-                >
-                  Log with a photo
-                </Button>
                 <Pressable accessibilityRole="button" onPress={later} style={{ alignItems: "center", paddingVertical: 6 }}>
                   <Text style={{ color: c.muted, fontSize: 15 }}>Later</Text>
                 </Pressable>

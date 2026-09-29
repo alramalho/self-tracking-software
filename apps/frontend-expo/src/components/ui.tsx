@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { radii } from "./radii";
 import { Text } from "@/components/typography/Text";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { errorMessage } from "@/data/api";
 import type {
   ButtonProps,
@@ -39,9 +39,11 @@ export function Screen({
   onRefresh,
   actions,
   leading,
+  footer,
 }: ScreenProps) {
   const c = useColors();
   const reveal = useRevealViewport();
+  const insets = useSafeAreaInsets();
   return (
     <RevealContext.Provider value={reveal}>
       <SafeAreaView
@@ -97,6 +99,18 @@ export function Screen({
             </View>
             {children}
           </ScrollView>
+          {footer && (
+            <View
+              style={{
+                paddingHorizontal: 16,
+                paddingTop: 10,
+                paddingBottom: Math.max(insets.bottom, 12),
+                backgroundColor: c.bg,
+              }}
+            >
+              {footer}
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </RevealContext.Provider>

@@ -12,6 +12,7 @@ import {
   RECAP_HOUR,
   STALLED_AFTER_DAYS,
 } from "./config";
+import { syncCircleChat } from "./chat";
 import { recordCircleEvent } from "./events";
 import { settleAfterLeaving } from "./service";
 import { mergeableInto } from "./matching/service";
@@ -60,6 +61,7 @@ export async function mergeFormingCircles(): Promise<number> {
       });
       gone.add(source.id);
       merges += 1;
+      await syncCircleChat(target.id);
       const merged = [...target.members, ...source.members];
       const everyone = merged.filter((m) => m.provenAt).map((m) => m.userId);
       if (everyone.length >= ACTIVE_AT)
@@ -171,6 +173,7 @@ export async function expirePending(now = new Date()): Promise<number> {
       if (removed.count) await settleAfterLeaving(tx, member.circleId, member.role === "OWNER");
     });
     await recordCircleEvent("EXPIRED", member);
+    await syncCircleChat(member.circleId);
   }
   return expired.length;
 }

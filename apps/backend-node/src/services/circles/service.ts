@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger";
 import { prisma } from "../../utils/prisma";
 import { circleBoard, proofEntryId } from "./board/service";
 import { circleCards } from "./cards";
+import { syncCircleChat } from "./chat";
 import { ACTIVE_AT, CIRCLE_CAP, MATCHING_TARGET } from "./config";
 import { CircleError } from "./errors";
 import { recordCircleEvent } from "./events";
@@ -150,7 +151,10 @@ export async function leaveCircle(userId: string, circleId: string): Promise<voi
     await settleAfterLeaving(tx, circleId, member.role === "OWNER");
     return member;
   });
-  if (left) await recordCircleEvent("LEFT", { userId, circleId, planId: left.planId });
+  if (left) {
+    await recordCircleEvent("LEFT", { userId, circleId, planId: left.planId });
+    await syncCircleChat(circleId);
+  }
 }
 
 export async function settleAfterLeaving(tx: Prisma.TransactionClient, circleId: string, ownerLeft: boolean) {
@@ -179,6 +183,7 @@ async function requireOwner(userId: string, circleId: string) {
 export async function renameCircle(userId: string, circleId: string, name: string) {
   await requireOwner(userId, circleId);
   await prisma.circle.update({ where: { id: circleId }, data: { name } });
+  await syncCircleChat(circleId);
 }
 
 export async function removeMember(ownerId: string, circleId: string, memberId: string) {
@@ -189,6 +194,7 @@ export async function removeMember(ownerId: string, circleId: string, memberId: 
     const removed = await tx.circleMember.deleteMany({ where: { circleId, userId: memberId } });
     if (removed.count) await settleAfterLeaving(tx, circleId, false);
   });
+  await syncCircleChat(circleId);
 }
 
 export interface MyCircle {
@@ -254,6 +260,7 @@ async function proveMembership(
   });
   if (!proven.count) return;
   await recordCircleEvent("PROVED", member);
+  await syncCircleChat(member.circleId);
   const hidden = new Set(await blockedUserIds(member.userId));
   const members = await prisma.circleMember.findMany({
     where: { circleId: member.circleId, provenAt: { not: null } },

@@ -984,6 +984,8 @@ model Chat {
   userId      String? // For COACH type chats
   coachId     String? // For COACH type chats
   planGroupId String? // For GROUP type chats
+  // A circle's group chat; its participants follow the circle's proven members.
+  circleId    String?  @unique
   title       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -992,6 +994,7 @@ model Chat {
   user         User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
   coach        Coach?            @relation(fields: [coachId], references: [id], onDelete: Cascade)
   planGroup    PlanGroup?        @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
+  circle       Circle?           @relation(fields: [circleId], references: [id], onDelete: Cascade)
   participants ChatParticipant[]
   messages     Message[]
 
@@ -1494,6 +1497,7 @@ model Circle {
   members         CircleMember[]
   nudges          CircleNudge[]
   events          CircleEvent[]
+  chat            Chat?
 
   @@map("circles")
   @@schema("public")

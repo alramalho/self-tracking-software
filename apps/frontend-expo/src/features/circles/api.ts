@@ -70,6 +70,11 @@ export async function joinByInvite(code: string, planId: string, preferences: Ma
   return (await api.post<{ id: string; pending: boolean }>(`/circles/invites/${code}`, { planId, ...preferences })).data;
 }
 
+// The circle's group chat; only proven members can open it.
+export async function openCircleChat(circleId: string) {
+  return (await api.post<{ chatId: string }>(`/circles/${circleId}/chat`)).data;
+}
+
 // "Later" on the first-photo prompt: recorded so the coach can remind them.
 export async function skipProof(circleId: string) {
   await api.post(`/circles/${circleId}/proof-skipped`);

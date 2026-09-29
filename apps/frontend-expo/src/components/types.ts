@@ -40,6 +40,8 @@ export interface ScreenProps {
   onRefresh?: () => void;
   actions?: ReactNode;
   leading?: ReactNode;
+  // A main action pinned under the scrolling content, above the home indicator.
+  footer?: ReactNode;
 }
 export interface StatusProps {
   loading?: boolean;
