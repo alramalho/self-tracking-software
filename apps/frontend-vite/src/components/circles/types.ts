@@ -398,3 +398,8 @@ export interface CirclePrefsProps extends MatchPreferencesListProps {
 export interface CircleChat {
   chatId: string;
 }
+
+export interface OpenSpotsProps {
+  // How many people are in the circle now.
+  members: number;
+}

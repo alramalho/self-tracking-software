@@ -40,12 +40,17 @@ export async function openCircleChat(userId: string, circleId: string): Promise<
   });
   if (!member) throw new CircleError("Join this circle to see its week");
   if (!member.provenAt) throw new CircleError("Post your first photo to join the chat");
+  return { chatId: await ensureCircleChat(member.circle) };
+}
+
+// The circle's chat, created the first time someone (or the coach) needs it.
+export async function ensureCircleChat(circle: { id: string; name: string; emoji: string }): Promise<string> {
   const chat = await prisma.chat.upsert({
-    where: { circleId },
-    create: { type: "GROUP", circleId, title: circleLabel(member.circle) },
+    where: { circleId: circle.id },
+    create: { type: "GROUP", circleId: circle.id, title: circleLabel(circle) },
     update: {},
     select: { id: true },
   });
-  await syncCircleChat(circleId);
-  return { chatId: chat.id };
+  await syncCircleChat(circle.id);
+  return chat.id;
 }

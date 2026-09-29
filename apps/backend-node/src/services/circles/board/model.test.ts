@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lastWeekRecap, memberWeek, recapMessage, togetherStreak, type MemberHistory } from "./model";
+import { lastWeekRecap, memberWeek, togetherStreak, type MemberHistory } from "./model";
 
 const monday = new Date("2026-09-27T00:00:00Z");
 const stats = (target: number, done: number, left: number) => ({
@@ -41,17 +41,12 @@ describe("circle board", () => {
     expect(togetherStreak([{ name: "A", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "complete")] }])).toBe(0);
   });
 
-  it("recaps last week without naming who fell short", () => {
+  it("recaps last week with who hit their target and who showed up most", () => {
     const members: MemberHistory[] = [
       { name: "Rita", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "complete", 4)] },
       { name: "Jonas", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "missed", 1)] },
       { name: "Tomás", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "complete", 6)] },
     ];
-    const recap = lastWeekRecap(members)!;
-    expect(recap).toMatchObject({ hit: 2, total: 3, topName: "Tomás", topCount: 6 });
-    const message = recapMessage(recap, 0);
-    expect(message).toBe("2 of 3 of you hit your week. Tomás showed up most, 6 times. A fresh week starts now.");
-    expect(message).not.toContain("Jonas");
-    expect(recapMessage({ ...recap, hit: 3 }, 3)).toContain("That's 3 weeks together.");
+    expect(lastWeekRecap(members)).toMatchObject({ hit: 2, total: 3, topName: "Tomás", topCount: 6 });
   });
 });

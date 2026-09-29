@@ -1094,7 +1094,8 @@ router.get(
           imageAttachments: metadata?.imageAttachments || null,
           createdAt: msg.createdAt,
           senderId: msg.senderId,
-          senderName: msg.sender?.name,
+          // Coach posts in a circle chat carry the coach's name.
+          senderName: msg.sender?.name ?? (msg.role === "COACH" ? metadata?.coachName ?? "Helly" : undefined),
           senderPicture: msg.sender?.picture,
         };
       });

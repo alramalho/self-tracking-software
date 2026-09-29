@@ -23,8 +23,10 @@ export const LEVER_WEIGHTS = {
 // Nudges: one per sender and receiver per day, at most three received per day.
 export const NUDGES_RECEIVED_PER_DAY = 3;
 
-// Sunday recap goes out at this local hour.
+// The coach posts the Sunday recap and the Thursday halfway check in the circle chat
+// at these local hours (the owner's time zone).
 export const RECAP_HOUR = 19;
+export const HALFWAY_HOUR = 18;
 
 // People who haven't opened the app in this long aren't matched.
 export const ACTIVE_WITHIN_DAYS = 14;

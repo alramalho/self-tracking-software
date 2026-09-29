@@ -1,18 +1,15 @@
-import { TZDate } from "@date-fns/tz";
 import { subDays, subHours } from "date-fns";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../utils/prisma";
-import { circleBoard } from "./board/service";
-import { recapMessage } from "./board/model";
 import {
   ACTIVE_AT,
   MATCHING_TARGET,
   PENDING_EXPIRES_AFTER_DAYS,
   PROOF_NUDGE_AFTER_HOURS,
-  RECAP_HOUR,
   STALLED_AFTER_DAYS,
 } from "./config";
 import { syncCircleChat } from "./chat";
+import { circleCoachPosts } from "./coach/service";
 import { recordCircleEvent } from "./events";
 import { settleAfterLeaving } from "./service";
 import { mergeableInto } from "./matching/service";
@@ -106,34 +103,6 @@ export async function stalledNotices(now = new Date()): Promise<number> {
   return stalled.length;
 }
 
-// Sunday evening in each member's own time zone: how last week went for the circle.
-export async function sundayRecaps(now = new Date()): Promise<number> {
-  const memberships = await prisma.circleMember.findMany({
-    where: { circle: { status: "ACTIVE" }, user: { deletedAt: null } },
-    include: { user: { select: { timezone: true } }, circle: true },
-  });
-  let sent = 0;
-  for (const m of memberships) {
-    const local = new TZDate(now, m.user.timezone || "UTC");
-    if (local.getDay() !== 0 || local.getHours() !== RECAP_HOUR) continue;
-    try {
-      const board = await circleBoard(m.userId, m.circleId, now);
-      if (!board.recap) continue;
-      await notifyCircle(
-        [m.userId],
-        m.circle,
-        `Sunday recap · ${circleLabel(m.circle)}`,
-        recapMessage(board.recap, board.togetherStreak),
-        `circle-recap:${m.circleId}:${board.recap.weekStart}`,
-      );
-      sent += 1;
-    } catch (error) {
-      logger.error("Circle recap failed", { circleId: m.circleId, userId: m.userId, error });
-    }
-  }
-  return sent;
-}
-
 // The day after joining without a photo, the coach reminds them once what gets them in.
 export async function proofNudges(now = new Date()): Promise<number> {
   const waiting = await prisma.circleMember.findMany({
@@ -183,6 +152,6 @@ export async function runCircleJobs(now = new Date()) {
   const expired = await expirePending(now);
   const merged = await mergeFormingCircles();
   const stalled = await stalledNotices(now);
-  const recaps = await sundayRecaps(now);
-  logger.info("Circle jobs finished", { nudged, expired, merged, stalled, recaps });
+  const coachPosts = await circleCoachPosts(now);
+  logger.info("Circle jobs finished", { nudged, expired, merged, stalled, coachPosts });
 }

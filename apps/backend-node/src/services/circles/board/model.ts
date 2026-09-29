@@ -10,6 +10,7 @@ export interface PastWeek {
   startDate: Date | string;
   outcome?: "complete" | "held" | "missed";
   doneCount?: number;
+  targetCount?: number;
 }
 
 export interface MemberHistory {
@@ -79,16 +80,4 @@ export function lastWeekRecap(members: MemberHistory[]): CircleRecap | null {
     topName: top && (top.week.doneCount ?? 0) > 0 ? top.member.name : null,
     topCount: top?.week.doneCount ?? 0,
   };
-}
-
-// The coach's Sunday line: kind about misses, never naming who fell short.
-export function recapMessage(recap: CircleRecap, streak: number): string {
-  const everyone = recap.hit === recap.total;
-  const lead = everyone
-    ? `All ${recap.total} of you hit your week.`
-    : `${recap.hit} of ${recap.total} of you hit your week.`;
-  const streakLine = everyone && streak >= 2 ? ` That's ${streak} weeks together.` : "";
-  const top = recap.topName ? ` ${recap.topName} showed up most, ${recap.topCount} times.` : "";
-  const next = everyone ? "" : " A fresh week starts now.";
-  return `${lead}${streakLine}${top}${next}`;
 }

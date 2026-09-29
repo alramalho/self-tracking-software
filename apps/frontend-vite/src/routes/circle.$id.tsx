@@ -1,7 +1,7 @@
 import { inviteLink, useCircle, useCircleActions } from "@/components/circles/api";
 import { CircleFeedList } from "@/components/circles/board/CircleFeedList";
 import { RenameCircleDialog } from "@/components/circles/board/RenameCircleDialog";
-import { CirclePanel, MemberRow } from "@/components/circles/components";
+import { CirclePanel, MemberRow, OpenSpots } from "@/components/circles/components";
 import { daysLeftLabel, firstName, recapLine } from "@/components/circles/model";
 import type { BoardMember, CircleBoardSearch } from "@/components/circles/types";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
@@ -221,7 +221,7 @@ function CirclePage() {
           {forming ? (
             <CirclePanel>
               <p className="text-base font-semibold text-foreground">Forming</p>
-              <p className="text-sm text-muted-foreground">The weekly board starts once 3 people are in.</p>
+              <p className="text-sm text-muted-foreground">The weekly board starts once 2 people have posted their first photo.</p>
               {data.members.map((member) => {
                 const isMe = member.user.id === myId;
                 return (
@@ -233,12 +233,7 @@ function CirclePage() {
                   />
                 );
               })}
-              {Array.from({ length: Math.max(0, 3 - data.members.length) }, (_, i) => (
-                <div key={i} className="flex items-center gap-2.5 py-2.5">
-                  <span className="h-[34px] w-[34px] rounded-full border-[1.5px] border-dashed border-muted-foreground" />
-                  <span className="text-[15px] text-muted-foreground">Open spot</span>
-                </div>
-              ))}
+              <OpenSpots members={data.members.length} />
             </CirclePanel>
           ) : (
             <>
@@ -272,6 +267,7 @@ function CirclePage() {
                     />
                   );
                 })}
+                <OpenSpots members={data.members.length} />
               </CirclePanel>
               {data.recap && (
                 <CirclePanel className="flex items-center gap-3">

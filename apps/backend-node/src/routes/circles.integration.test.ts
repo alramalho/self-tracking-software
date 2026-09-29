@@ -48,9 +48,11 @@ vi.mock("../services/plansService", async () => {
 });
 
 import { prisma } from "../utils/prisma";
+import { circleCoachPosts } from "../services/circles/coach/service";
 import { expirePending, mergeFormingCircles, proofNudges } from "../services/circles/jobs";
 import { onEntryLogged } from "../services/circles/service";
 import { circlesRouter } from "./circles";
+import { chatsRouter } from "./chats";
 import { usersRouter } from "./users";
 
 // Fail closed: these tests create and delete only synthetic users in the isolated local database.
@@ -150,6 +152,7 @@ describe("circles", () => {
     app.use(express.json());
     app.use("/circles", circlesRouter);
     app.use("/users", usersRouter);
+    app.use("/chats", chatsRouter);
     await new Promise<void>((resolve) => {
       server = app.listen(0, "127.0.0.1", () => resolve());
     });
@@ -327,6 +330,31 @@ describe("circles", () => {
     expect(chat.participants.map((p) => p.userId).sort()).toEqual([id("alice"), id("bob"), id("carol")].sort());
     const outsider = await call("frank", "POST", `/circles/${circleId}/chat`);
     expect(outsider).toMatchObject({ status: 400, body: { error: "Join this circle to see its week" } });
+  });
+
+  it("has Helly call out who's behind in the circle chat on Thursday evening, once", async () => {
+    await prisma.circleMember.update({
+      where: { circleId_userId: { circleId, userId: id("bob") } },
+      data: { joinedAt: new Date(Date.now() - 30 * 86400000) },
+    });
+    // Thursday 18:30 in Lisbon, the owner's time zone.
+    const thursdayEvening = new Date("2026-10-01T17:30:00Z");
+    fixture.notify.mockClear();
+    expect(await circleCoachPosts(thursdayEvening)).toBe(1);
+    const post = await prisma.message.findFirstOrThrow({ where: { chatId, role: "COACH" } });
+    expect(post.content).toContain("Halfway check 👀");
+    expect(post.content).toContain("Bob needs 3 more in 3 days");
+    expect(post.content).toContain("Who's joining Bob for a session?");
+    expect(fixture.notify.mock.calls.map(([n]) => n.userId).sort()).toEqual([id("alice"), id("bob"), id("carol")].sort());
+    expect(fixture.notify.mock.calls[0][0]).toMatchObject({
+      title: "Helly · 🏃 Run a 10K under 50 minutes",
+      relatedData: { url: `/chat/${chatId}`, chatId, circleId },
+    });
+    const messages = await call("carol", "GET", `/chats/${chatId}/messages`);
+    expect(messages.body.messages.find((m: any) => m.role === "COACH").senderName).toBe("Helly");
+    // The hourly job runs again within the same hour: nothing new.
+    expect(await circleCoachPosts(thursdayEvening)).toBe(0);
+    expect(await prisma.message.count({ where: { chatId, role: "COACH" } })).toBe(1);
   });
 
   it("hands ownership on and goes back to forming when people leave", async () => {
