@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Circles — active since September 29, 2026
+
+Image `local/tracking-so-backend:circles-20260929` from [circles-overlay.Dockerfile](./circles-overlay.Dockerfile) on `streak-hold-20260928` (every overlaid file matched git `520d8fcd` in the live container before the build; only `package.json` differed, and it isn't copied). `sharp@0.34.5` is installed on its own with npm (Alpine musl build) for the blurred circle photo previews, like the Apple library.
+
+- Migration `20260929090000_circles` (additive: `circles`, `circle_members`, `circle_nudges`, enums `CircleStatus`/`CircleRole`, `NotificationType.CIRCLE`, `users.approxLatitude/approxLongitude/approxPlace`, `activity_entries.imagePreview`). Its backfill turned the 1 plan group with 2 active members into 1 forming circle; there were no practice circles. Dump: `tracking-circles-20260929/backup/database-before.dump` (3.9 MB), env: `tracking-circles-20260929/backup/deployment.env`.
+- Before activation, the changed routes and the scheduler loaded in the image with the production env and no network. After activation: healthy container, `/health` ok, `/circles/mine`, `/circles/suggestions` and `/users/timeline` return 401 unauthenticated, scheduler starts 6 tasks (the hourly circle job is new).
+- See [docs/circles.md](../docs/circles.md) for the product rules.
+
+Rollback: restore `tracking-circles-20260929/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
+
 ## Streak "one short holds" + full grid history on profiles — active since September 28, 2026
 
 Image `local/tracking-so-backend:streak-hold-20260928` from [streak-hold-overlay.Dockerfile](./streak-hold-overlay.Dockerfile) on `apple-iap-20260927` (3 files; live matched git `877c8cb1`). No migration. Same 30 pre-existing typecheck errors.
