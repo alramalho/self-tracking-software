@@ -20,7 +20,7 @@ export default function CircleInvite() {
         card={open ? invite.data ?? null : null}
         inviteCode={code}
         onClose={() => setOpen(false)}
-        onJoined={(id) => router.replace(`/circle/${id}` as never)}
+        onJoined={(id) => router.replace(`/circle/${id}?proof=1` as never)}
       />
     </Screen>
   );

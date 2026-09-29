@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, Share, Switch, View } from "react-native";
+import { Alert, Pressable, Share, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { ChevronLeft, Flame, MoreHorizontal, UserPlus } from "lucide-react-native";
@@ -10,7 +10,7 @@ import { api, errorMessage } from "@/data/api";
 import { useAction, useCurrentUser, usePlans } from "@/data/queries";
 import { coachAvatar } from "@/features/coach/avatar";
 import { MemberRow, firstName } from "@/features/circles/components";
-import { inviteLink, useCircle, useCircleFeed } from "@/features/circles/api";
+import { inviteLink, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
 import { recapLine } from "@/features/circles/model";
 import { FeedCard } from "@/features/timeline/FeedCard";
 import type { FeedItem } from "@/features/timeline/types";
@@ -20,7 +20,7 @@ import type { BoardMember } from "@/features/circles/types";
 
 export default function Circle() {
   const c = useColors();
-  const { id, invite } = useLocalSearchParams<{ id: string; invite?: string }>();
+  const { id, invite, proof } = useLocalSearchParams<{ id: string; invite?: string; proof?: string }>();
   const user = useCurrentUser();
   const plans = usePlans();
   const board = useCircle(id);
@@ -33,7 +33,9 @@ export default function Circle() {
   const isOwner = data?.me.role === "OWNER";
 
   const nudge = useAction(async (member: BoardMember) => api.post(`/circles/${id}/nudges`, { toUserId: member.user.id }));
-  const update = useAction(async (changes: { name?: string; openToMatching?: boolean }) => api.patch(`/circles/${id}`, changes));
+  const update = useAction(async (changes: { name: string }) => api.patch(`/circles/${id}`, changes));
+  const [proofDismissed, setProofDismissed] = useState(false);
+  const loggingStarted = useRef(false);
   const leave = useAction(async () => {
     await api.delete(`/circles/${id}/membership`);
     goBack();
@@ -54,6 +56,22 @@ export default function Circle() {
       shareInvite();
     }
   });
+
+  // Right after joining, leaving without logging counts as "Later", so the coach can remind them.
+  const pending = !!data?.me.pending;
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+  useEffect(
+    () => () => {
+      if (proof && pendingRef.current && !loggingStarted.current) void skipProof(id).catch(() => {});
+    },
+    [id, proof],
+  );
+  const later = () => {
+    loggingStarted.current = true;
+    setProofDismissed(true);
+    void skipProof(id).catch(() => {});
+  };
 
   const confirmLeave = () =>
     Alert.alert("Leave this circle?", "Your own history stays in your account.", [
@@ -115,15 +133,23 @@ export default function Circle() {
       />
       {data && (
         <>
-          {!data.me.hasIntro && (
+          {data.me.pending && !proofDismissed && (
             <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <Image source={coachAvatar(user.data?.coachPersonality === "STRATEGIST")} style={{ width: 52, height: 52 }} contentFit="contain" />
               <View style={{ flex: 1, gap: 8 }}>
-                <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>Say hi to your circle</Text>
-                <Copy muted>Your first session goes out as your intro. Add a line about yourself.</Copy>
-                <Button onPress={() => router.push((logActivityId ? `/(tabs)/add?activityId=${logActivityId}` : "/(tabs)/add") as never)}>
-                  Log a session
+                <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>You're almost in</Text>
+                <Copy muted>Post a photo from a session to join. Members see you once it's up, and it's your intro.</Copy>
+                <Button
+                  onPress={() => {
+                    loggingStarted.current = true;
+                    router.push((logActivityId ? `/(tabs)/add?activityId=${logActivityId}` : "/(tabs)/add") as never);
+                  }}
+                >
+                  Log with a photo
                 </Button>
+                <Pressable accessibilityRole="button" onPress={later} style={{ alignItems: "center", paddingVertical: 6 }}>
+                  <Text style={{ color: c.muted, fontSize: 15 }}>Later</Text>
+                </Pressable>
               </View>
             </Panel>
           )}
@@ -185,20 +211,6 @@ export default function Circle() {
             </>
           )}
 
-          {isOwner && (
-            <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Match me with others</Text>
-                <Copy muted>Adds people with a similar goal, up to 5.</Copy>
-              </View>
-              <Switch
-                accessibilityLabel="Match me with others"
-                value={data.openToMatching}
-                disabled={update.isPending}
-                onValueChange={(openToMatching) => update.mutate({ openToMatching })}
-              />
-            </Panel>
-          )}
           <Pressable
             accessibilityRole="button"
             onPress={shareInvite}

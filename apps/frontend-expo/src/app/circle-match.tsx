@@ -26,9 +26,10 @@ export default function CircleMatch() {
     () => takePendingMatch(planId) ?? { planId, mode: "find", ...defaultPreferences },
   );
   const toPlan = () => router.replace(`/(tabs)/plans?selectedPlan=${planId}` as never);
+  // Joining or starting leaves you pending; the circle screen asks for the first photo.
   const openCircle = async (id: string, invite = false) => {
     await client.invalidateQueries();
-    router.replace(`/circle/${id}${invite ? "?invite=1" : ""}` as never);
+    router.replace(`/circle/${id}?proof=1${invite ? "&invite=1" : ""}` as never);
   };
 
   const match = useQuery({
@@ -44,14 +45,14 @@ export default function CircleMatch() {
     },
   });
   const start = useMutation({
-    mutationFn: async (openToMatching: boolean) => {
-      const { id } = await startCircle(planId, pending, openToMatching);
-      await openCircle(id, !openToMatching);
+    mutationFn: async (invite: boolean) => {
+      const { id } = await startCircle(planId, pending);
+      await openCircle(id, invite);
     },
   });
-  // "Invite friends" in onboarding: an invite-only circle, straight to the share sheet.
+  // "Invite friends" in onboarding: start the circle, then straight to the share sheet.
   useEffect(() => {
-    if (pending.mode === "invite" && start.isIdle) start.mutate(false);
+    if (pending.mode === "invite" && start.isIdle) start.mutate(true);
   }, [pending.mode, start]);
 
   const me: OrbitPerson = {
@@ -108,7 +109,7 @@ export default function CircleMatch() {
               ))}
             </View>
             <Text style={{ color: c.muted, fontSize: 13, textAlign: "center" }}>
-              They'll see this plan's week and logs. Never your location.
+              You're in once you post a photo from a session. They'll see this plan's week and logs, never your location.
             </Text>
           </>
         ) : match.data?.state === "none" ? (
@@ -132,7 +133,7 @@ export default function CircleMatch() {
           <OnboardingButton
             label={found ? "Join" : "Start circle"}
             busy={busy}
-            onPress={() => (found ? join.mutate(found.id) : start.mutate(true))}
+            onPress={() => (found ? join.mutate(found.id) : start.mutate(false))}
           />
           <Pressable accessibilityRole="button" onPress={toPlan} disabled={busy} style={{ alignItems: "center", paddingVertical: 12 }}>
             <Text style={{ color: c.muted, fontSize: 16 }}>Not now</Text>

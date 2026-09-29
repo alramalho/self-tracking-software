@@ -107,9 +107,9 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
           {member.plan.goal}
         </Text>
       </View>
-      {week.isNew ? (
+      {member.pending || week.isNew ? (
         <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.soft }}>
-          <Text style={{ color: c.text, fontSize: 11, fontWeight: "600" }}>New</Text>
+          <Text style={{ color: c.text, fontSize: 11, fontWeight: "600" }}>{member.pending ? "Pending" : "New"}</Text>
         </View>
       ) : (
         <WeekDots target={week.target} done={week.done} />
@@ -124,7 +124,7 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
           fontWeight: week.behind ? "600" : "400",
         }}
       >
-        {week.isNew ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`}
+        {member.pending || week.isNew ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`}
       </Text>
       <View style={{ width: 34, alignItems: "flex-end" }}>
         {onNudge && (

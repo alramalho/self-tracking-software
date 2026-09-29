@@ -53,6 +53,8 @@ export interface BoardMember {
   joinedAt: string;
   week: MemberWeek;
   hasIntro: boolean;
+  // Joined but no first photo log yet; only they see themselves.
+  pending: boolean;
   nudgedToday: boolean;
 }
 
@@ -75,7 +77,7 @@ export interface CircleBoard {
   place: string | null;
   paceLabel: string | null;
   cap: number;
-  me: { role: CircleRole; planId: string; hasIntro: boolean };
+  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean };
   members: BoardMember[];
   togetherStreak: number;
   recap: CircleRecap | null;
@@ -98,6 +100,7 @@ export interface MyCircle {
   memberCount: number;
   onTrack: number;
   daysLeft: number;
+  pending: boolean;
   hasIntro: boolean;
   people: { name: string | null; picture: string | null; onTrack: boolean; isMe: boolean }[];
 }

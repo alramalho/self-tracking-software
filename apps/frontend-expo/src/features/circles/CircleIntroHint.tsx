@@ -21,8 +21,12 @@ export function CircleIntroHint({ activityId }: CircleIntroHintProps) {
       <Users size={20} color={c.text} strokeWidth={1.8} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 15 }}>{`Shares to ${circle.emoji} ${circle.name}`}</Text>
-        {!circle.hasIntro && (
-          <Text style={{ color: c.muted, fontSize: 13 }}>This is your intro. Say hi in the caption.</Text>
+        {circle.pending ? (
+          <Text style={{ color: c.muted, fontSize: 13 }}>Add a photo to join. This is your intro, so say hi in the caption.</Text>
+        ) : (
+          !circle.hasIntro && (
+            <Text style={{ color: c.muted, fontSize: 13 }}>This is your intro. Say hi in the caption.</Text>
+          )
         )}
       </View>
     </View>

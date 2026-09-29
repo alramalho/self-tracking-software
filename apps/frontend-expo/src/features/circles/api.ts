@@ -58,16 +58,21 @@ export async function matchCircle(pending: PendingMatch) {
   return (await api.post<MatchResult>("/circles/match", pending)).data;
 }
 
-export async function startCircle(planId: string, preferences: MatchPreferences, openToMatching: boolean) {
-  return (await api.post<{ id: string }>("/circles", { planId, ...preferences, openToMatching })).data;
+export async function startCircle(planId: string, preferences: MatchPreferences) {
+  return (await api.post<{ id: string }>("/circles", { planId, ...preferences })).data;
 }
 
 export async function joinCircle(circleId: string, planId: string, preferences: MatchPreferences) {
-  return (await api.post<{ id: string; status: string }>(`/circles/${circleId}/join`, { planId, ...preferences })).data;
+  return (await api.post<{ id: string; pending: boolean }>(`/circles/${circleId}/join`, { planId, ...preferences })).data;
 }
 
 export async function joinByInvite(code: string, planId: string, preferences: MatchPreferences) {
-  return (await api.post<{ id: string; status: string }>(`/circles/invites/${code}`, { planId, ...preferences })).data;
+  return (await api.post<{ id: string; pending: boolean }>(`/circles/invites/${code}`, { planId, ...preferences })).data;
+}
+
+// "Later" on the first-photo prompt: recorded so the coach can remind them.
+export async function skipProof(circleId: string) {
+  await api.post(`/circles/${circleId}/proof-skipped`);
 }
 
 export const defaultPreferences: MatchPreferences = {

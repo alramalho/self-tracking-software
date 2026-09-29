@@ -41,7 +41,7 @@ export function CircleSearch() {
         onJoined={(id) => {
           setJoining(null);
           void client.invalidateQueries({ queryKey: ["circles"] });
-          router.push(`/circle/${id}`);
+          router.push(`/circle/${id}?proof=1`);
         }}
       />
     </>

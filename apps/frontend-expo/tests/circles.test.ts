@@ -15,9 +15,11 @@ test("recap names the top person but never who fell short", () => {
 });
 
 test("home square says how the circle's week is going", () => {
-  const base = { id: "c", name: "Morning 10K", emoji: "🏃", planId: "p", hasIntro: true, people: [] };
+  const base = { id: "c", name: "Morning 10K", emoji: "🏃", planId: "p", hasIntro: true, pending: false, people: [] };
   assert.equal(circleStatusLine({ ...base, status: "ACTIVE", memberCount: 5, onTrack: 4, daysLeft: 2 }), "4 of 5 on track · 2 days left");
   assert.equal(circleStatusLine({ ...base, status: "FORMING", memberCount: 1, onTrack: 1, daysLeft: 5 }), "Forming · 1 of 3");
+  // Until the first photo log, the square says what gets you in.
+  assert.equal(circleStatusLine({ ...base, pending: true, status: "ACTIVE", memberCount: 4, onTrack: 3, daysLeft: 2 }), "Post a photo to join");
 });
 
 test("circle notifications and invite links open in the app", () => {

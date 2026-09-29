@@ -67,7 +67,7 @@ export function JoinSheet({ card, inviteCode, onClose, onJoined }: JoinSheetProp
             })}
           </View>
           <Copy muted>
-            Members see this plan's week and its logs: activity, amount, date, photo and caption. Never your location or private notes.
+            You're in once you post a photo from a session. Members see this plan's week and its logs: activity, amount, date, photo and caption. Never your location or private notes.
           </Copy>
           <Status error={join.error} />
           <Button busy={join.isPending} disabled={!choice} onPress={() => join.mutate()}>

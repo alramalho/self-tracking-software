@@ -13,6 +13,7 @@ export function recapLine(recap: CircleRecap, streak: number): string {
 
 // Home square line: "4 of 5 on track · 2 days left", or how far a forming circle is.
 export function circleStatusLine(circle: MyCircle): string {
+  if (circle.pending) return "Post a photo to join";
   if (circle.status === "FORMING") return `Forming · ${circle.memberCount} of 3`;
   const days = circle.daysLeft === 1 ? "1 day left" : `${circle.daysLeft} days left`;
   return `${circle.onTrack} of ${circle.memberCount} on track · ${days}`;
