@@ -63,12 +63,12 @@ async function findReportTarget(
       snapshot: { message: post.message, imageUrls: post.images.map((image) => image.url) },
     };
   }
-  const circle = await prisma.practiceCircle.findUnique({
+  const circle = await prisma.circle.findUnique({
     where: { id },
-    include: { members: { where: { owner: true }, take: 1 } },
+    include: { members: { where: { role: "OWNER" }, take: 1 } },
   });
   return circle?.members[0]
-    ? { userId: circle.members[0].userId, snapshot: { name: circle.name, topic: circle.topic } }
+    ? { userId: circle.members[0].userId, snapshot: { name: circle.name, emoji: circle.emoji } }
     : null;
 }
 

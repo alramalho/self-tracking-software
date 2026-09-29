@@ -5,6 +5,7 @@ import { deliverFollowThrough } from "./follow-through/delivery";
 import { deliverPlanMonitoring } from "./coach/monitoring/service";
 import { retryPendingPhotoNotifications } from "./activity-photo/delivery";
 import { retryPhotoNotificationOutbox } from "./activity-photo/outbox";
+import { runCircleJobs } from "./circles/jobs";
 
 interface CronConfig {
   // Random delay window in minutes (0-15 means up to 15 minutes delay)
@@ -38,6 +39,20 @@ export class CronScheduler {
     this.tasks.push(cron.schedule("7 * * * *", async () => {
       await deliverPlanMonitoring();
     }, { noOverlap: true }));
+    // Circles: merge forming circles, nudge stalled owners, Sunday recaps (local 19:00).
+    this.tasks.push(
+      cron.schedule(
+        "23 * * * *",
+        async () => {
+          try {
+            await runCircleJobs();
+          } catch (error) {
+            logger.error("Circle jobs failed", error);
+          }
+        },
+        { noOverlap: true },
+      ),
+    );
     this.tasks.push(
       cron.schedule(
         "*/2 * * * *",

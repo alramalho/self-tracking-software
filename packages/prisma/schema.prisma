@@ -46,7 +46,7 @@ model User {
 
   unactivatedEmailSentAt          DateTime?
   themeBaseColor                  ThemeColor @default(BLUE)
-  themeMode                       ThemeMode  @default(DARK)
+  themeMode                       ThemeMode  @default(LIGHT)
   recommendationsOutdated         Boolean    @default(false)
   recommendationsLastCalculatedAt DateTime?
   onboardingCompletedAt           DateTime?
@@ -141,6 +141,13 @@ model User {
 
   circleMemberships PracticeCircleMember[]
   circlePosts PracticeCirclePost[]
+  circles        CircleMember[]
+  nudgesSent     CircleNudge[] @relation("CircleNudgesSent")
+  nudgesReceived CircleNudge[] @relation("CircleNudgesReceived")
+  // Rounded to 0.1° (about 11 km); only written when someone asks to be matched with people nearby.
+  approxLatitude  Float?
+  approxLongitude Float?
+  approxPlace     String?
 
   // Moderation (App Store Guideline 1.2)
   reportsFiled    ContentReport[] @relation("ContentReportsFiled")
@@ -242,6 +249,8 @@ model ActivityEntry {
   imageExpiresAt DateTime?
   imageCreatedAt DateTime?
   imageIsPublic  Boolean   @default(false)
+  // Tiny blurred JPEG data URI of the first photo, shown to people browsing circles they are not in.
+  imagePreview   String?
 
   // Live tracking
   startedAt       DateTime?
@@ -823,6 +832,7 @@ model Plan {
 
   @@index([userId, deletedAt])
   circleMemberships PracticeCircleMember[]
+  circleMember      CircleMember?
 
   @@index([userId, deletedAt, archivedAt])
   @@index([userId, id])
@@ -1321,6 +1331,7 @@ enum NotificationType {
   METRIC_CHECKIN
   COACH
   SESSION_EDIT
+  CIRCLE
 
   @@schema("public")
 }
@@ -1447,6 +1458,79 @@ model PracticeCirclePost {
   entry ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   @@unique([circleId, entryId])
   @@map("practice_circle_posts")
+  @@schema("public")
+}
+
+// A small group of people on a similar goal who see each other's week.
+// Replaces plan groups and practice circles (kept until the cleanup migration).
+enum CircleStatus {
+  FORMING // fewer than 3 members; no board yet
+  ACTIVE
+
+  @@schema("public")
+}
+
+enum CircleRole {
+  OWNER
+  MEMBER
+
+  @@schema("public")
+}
+
+model Circle {
+  id              String         @id @default(cuid())
+  name            String
+  emoji           String
+  inviteCode      String         @unique
+  status          CircleStatus   @default(FORMING)
+  // Matching adds people with a similar goal until the circle has 5 members.
+  openToMatching  Boolean        @default(true)
+  // Listed in Search → Circles.
+  discoverable    Boolean        @default(true)
+  // Set once the owner has been told the circle is still forming after a week.
+  stalledNoticeAt DateTime?
+  createdAt       DateTime       @default(now())
+  members         CircleMember[]
+  nudges          CircleNudge[]
+
+  @@map("circles")
+  @@schema("public")
+}
+
+model CircleMember {
+  circleId    String
+  userId      String
+  // One circle per plan.
+  planId      String     @unique
+  role        CircleRole @default(MEMBER)
+  // "Match me by" choices, used to score newcomers against this member.
+  wantsPace   Boolean    @default(true)
+  wantsNearby Boolean    @default(false)
+  wantsAge    Boolean    @default(false)
+  joinedAt    DateTime   @default(now())
+  circle      Circle     @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, userId])
+  @@index([userId])
+  @@map("circle_members")
+  @@schema("public")
+}
+
+model CircleNudge {
+  id        String   @id @default(cuid())
+  circleId  String
+  fromId    String
+  toId      String
+  createdAt DateTime @default(now())
+  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  from      User     @relation("CircleNudgesSent", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User     @relation("CircleNudgesReceived", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, createdAt])
+  @@index([fromId, toId, createdAt])
+  @@map("circle_nudges")
   @@schema("public")
 }
 

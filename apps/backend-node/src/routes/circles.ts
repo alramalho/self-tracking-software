@@ -1,111 +1,134 @@
 import { Router, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
+import { circleBoard, circleFeed } from "../services/circles/board/service";
+import { CircleError } from "../services/circles/errors";
+import { matchPlan, searchCircles, suggestions } from "../services/circles/matching/service";
+import { nudge } from "../services/circles/nudges";
 import {
-  circles,
-  circleDetail,
-  createCircle,
+  invitePreview,
+  joinByInvite,
   joinCircle,
-  shareLog,
-  unshareLog,
   leaveCircle,
-} from "../services/follow-through/circles/service";
+  myCircles,
+  removeMember,
+  saveApproxLocation,
+  startCircle,
+  updateCircle,
+} from "../services/circles/service";
 import { logger } from "../utils/logger";
+
 const router: Router = Router();
+
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
 const handle =
   (fn: Operation) => async (req: AuthenticatedRequest, res: Response) => {
     try {
       await fn(req, res);
     } catch (error) {
-      logger.warn("Circle request failed", { error });
-      const message =
-        error instanceof z.ZodError
-          ? error.issues[0]?.message
-          : error instanceof Error &&
-              /^(Choose|Circle not found|This circle|Join this)/.test(
-                error.message,
-              )
-            ? error.message
-            : "Could not update this circle. Please retry.";
-      res.status(400).json({ error: message });
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.issues[0]?.message ?? "Check the details and try again." });
+        return;
+      }
+      if (error instanceof CircleError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      logger.error("Circle request failed", { path: req.path, error });
+      res.status(500).json({ error: "Could not update this circle. Please retry." });
     }
   };
+
+const preferences = z.object({
+  wantsPace: z.boolean().default(true),
+  wantsNearby: z.boolean().default(false),
+  wantsAge: z.boolean().default(false),
+});
+const withPlan = preferences.extend({ planId: z.string().min(1) });
+
 router.use(requireAuth);
+
+router.get("/mine", handle(async (req, res) => res.json(await myCircles(req.user!.id))));
+
+router.get("/suggestions", handle(async (req, res) => res.json(await suggestions(req.user!.id))));
+
 router.get(
-  "/",
-  handle(async (req, res) =>
-    res.json(
-      await circles(
-        req.user!.id,
-        z
-          .string()
-          .max(100)
-          .parse(req.query.search || ""),
-      ),
-    ),
-  ),
+  "/search",
+  handle(async (req, res) => {
+    const query = z.string().trim().min(1).max(80).parse(req.query.q);
+    res.json(await searchCircles(req.user!.id, query));
+  }),
 );
+
+// Finds the best circle for a plan. Nothing is joined until the person taps Join.
+router.post(
+  "/match",
+  handle(async (req, res) => {
+    const body = withPlan
+      .extend({
+        location: z
+          .object({
+            latitude: z.number().min(-90).max(90),
+            longitude: z.number().min(-180).max(180),
+            place: z.string().trim().max(60).optional(),
+          })
+          .optional(),
+      })
+      .parse(req.body);
+    if (body.location && body.wantsNearby) await saveApproxLocation(req.user!.id, body.location);
+    res.json(await matchPlan(req.user!.id, body.planId, body));
+  }),
+);
+
+// Start a circle with this plan; the starter owns it.
 router.post(
   "/",
   handle(async (req, res) => {
-    const body = z
-      .object({
-        name: z.string().trim().min(1).max(80),
-        topic: z.string().trim().min(1).max(120),
-        planId: z.string().min(1),
-        discoverable: z.boolean(),
-      })
-      .parse(req.body);
-    return res.json(
-      await createCircle(
-        req.user!.id,
-        body.name,
-        body.topic,
-        body.planId,
-        body.discoverable,
-      ),
-    );
+    const body = withPlan.extend({ openToMatching: z.boolean().default(true) }).parse(req.body);
+    res.json(await startCircle(req.user!.id, body.planId, body, body.openToMatching));
   }),
 );
-router.post(
-  "/join",
-  handle(async (req, res) => {
-    const body = z
-      .object({
-        id: z.string().optional(),
-        inviteCode: z.string().uuid().optional(),
-        planId: z.string().min(1),
-      })
-      .refine((b) => !!b.id || !!b.inviteCode)
-      .parse(req.body);
-    return res.json(
-      await joinCircle(req.user!.id, body.planId, body.id, body.inviteCode),
-    );
-  }),
-);
+
 router.get(
+  "/invites/:code",
+  handle(async (req, res) => res.json(await invitePreview(req.user!.id, req.params.code))),
+);
+
+router.post(
+  "/invites/:code",
+  handle(async (req, res) => {
+    const body = withPlan.parse(req.body);
+    res.json(await joinByInvite(req.user!.id, req.params.code, body.planId, body));
+  }),
+);
+
+router.get("/:id", handle(async (req, res) => res.json(await circleBoard(req.user!.id, req.params.id))));
+
+router.get("/:id/feed", handle(async (req, res) => res.json(await circleFeed(req.user!.id, req.params.id))));
+
+router.post(
+  "/:id/join",
+  handle(async (req, res) => {
+    const body = withPlan.parse(req.body);
+    res.json(await joinCircle(req.user!.id, req.params.id, body.planId, body, "match"));
+  }),
+);
+
+router.patch(
   "/:id",
-  handle(async (req, res) =>
-    res.json(await circleDetail(req.user!.id, req.params.id)),
-  ),
-);
-router.post(
-  "/:id/logs",
   handle(async (req, res) => {
-    const { entryId } = z
-      .object({ entryId: z.string().min(1) })
+    const body = z
+      .object({
+        name: z.string().trim().min(1).max(60).optional(),
+        openToMatching: z.boolean().optional(),
+        discoverable: z.boolean().optional(),
+      })
       .parse(req.body);
-    return res.json(await shareLog(req.user!.id, req.params.id, entryId));
-  }),
-);
-router.delete(
-  "/:id/logs/:postId",
-  handle(async (req, res) => {
-    await unshareLog(req.user!.id, req.params.id, req.params.postId);
+    await updateCircle(req.user!.id, req.params.id, body);
     res.sendStatus(204);
   }),
 );
+
 router.delete(
   "/:id/membership",
   handle(async (req, res) => {
@@ -113,4 +136,22 @@ router.delete(
     res.sendStatus(204);
   }),
 );
+
+router.delete(
+  "/:id/members/:userId",
+  handle(async (req, res) => {
+    await removeMember(req.user!.id, req.params.id, req.params.userId);
+    res.sendStatus(204);
+  }),
+);
+
+router.post(
+  "/:id/nudges",
+  handle(async (req, res) => {
+    const { toUserId } = z.object({ toUserId: z.string().min(1) }).parse(req.body);
+    await nudge(req.user!.id, req.params.id, toUserId);
+    res.sendStatus(204);
+  }),
+);
+
 export const circlesRouter: Router = router;

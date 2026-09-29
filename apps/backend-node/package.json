@@ -82,6 +82,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^6.9.0",
     "openai": "^5.10.3",
+    "sharp": "^0.34",
     "stripe": "^18.3.0",
     "supermemory": "^4.11.1",
     "svix": "^1.69.0",

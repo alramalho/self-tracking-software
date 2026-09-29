@@ -16,6 +16,7 @@ import type { PhotoActivity } from "../services/activity-photo/types";
 import { processPhotoNotificationOutbox } from "../services/activity-photo/outbox";
 import { s3Service } from "../services/s3Service";
 import { buildActivityEntryImageUpdate } from "../utils/activityEntryImages";
+import { onEntryLogged } from "../services/circles/service";
 import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -861,6 +862,9 @@ router.post(
         logger.info("No photo provided");
       }
 
+      // A member's first log on their circle plan is their intro to the circle.
+      void onEntryLogged(entry);
+
       // Update independent user metadata while fetching affected plans.
       const [plans] = await Promise.all([
         prisma.plan.findMany({
@@ -1378,6 +1382,7 @@ router.delete(
           imageUrl: null,
           imageS3Paths: [],
           imageUrls: [],
+          imagePreview: null,
           imageExpiresAt: null,
           imageCreatedAt: null,
         },

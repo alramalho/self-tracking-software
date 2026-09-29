@@ -954,10 +954,10 @@ router.post(
         if (report.kind === "ACTIVITY_ENTRY")
           await prisma.activityEntry.updateMany({
             where: { id },
-            data: { description: null, imageUrl: null, imageS3Path: null, imageUrls: [], imageS3Paths: [] },
+            data: { description: null, imageUrl: null, imageS3Path: null, imageUrls: [], imageS3Paths: [], imagePreview: null },
           });
         if (report.kind === "CIRCLE")
-          await prisma.practiceCircle.updateMany({ where: { id }, data: { discoverable: false } });
+          await prisma.circle.updateMany({ where: { id }, data: { discoverable: false, openToMatching: false } });
       }
 
       // Other open reports about the same thing are settled by the same decision.

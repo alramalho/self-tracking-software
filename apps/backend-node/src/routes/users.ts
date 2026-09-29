@@ -31,6 +31,7 @@ import {
   TimezoneUpdateSchema,
 } from "../types/user";
 import { blockedUserIds, isBlockedPair } from "../utils/blocks";
+import { timelineCircles } from "../services/circles/timeline";
 import { logger } from "../utils/logger";
 import { userSelfUpdate } from "../utils/userSelfUpdate";
 import { prisma } from "../utils/prisma";
@@ -1122,7 +1123,12 @@ usersRouter.get(
           .map((conn) => conn.from),
       ].filter((connection) => !hidden.includes(connection.id));
 
-      if (!connections.length) {
+      // Circle members see each other's circle-plan logs, friends or not.
+      const circles = await timelineCircles(user.id, hidden);
+      const friendIds = new Set([user.id, ...connections.map((c) => c.id)]);
+      const circleOnlyPeers = circles.peers.filter((p) => !friendIds.has(p.id));
+
+      if (!connections.length && !circles.peers.length) {
         res.json({
           recommendedActivityEntries: [],
           recommendedActivities: [],
@@ -1136,8 +1142,12 @@ usersRouter.get(
       const limit = getTimelineLimit(req.query.limit);
       const cursor = decodeTimelineCursor(req.query.cursor);
       const cursorDate = cursor ? new Date(cursor.ts) : null;
-      const userIds = [user.id, ...connections.map((friend) => friend.id)];
-      const allUsers = [user, ...connections];
+      const userIds = [
+        user.id,
+        ...connections.map((friend) => friend.id),
+        ...circleOnlyPeers.map((peer) => peer.id),
+      ];
+      const allUsers = [user, ...connections, ...circleOnlyPeers];
 
       // Build sets of activity IDs in plans
       const activityIdsInPublicPlans = new Set<string>();
@@ -1160,14 +1170,26 @@ usersRouter.get(
           userId: { in: userIds },
           deletedAt: null,
         },
-        select: { id: true },
+        select: { id: true, userId: true },
       });
 
       // Determine which activity IDs to include:
       // - Activities in at least one PUBLIC plan, OR
       // - Activities not in any plan
+      const visibleWithoutCircles = new Set(
+        allActivities
+          .filter(
+            (activity) =>
+              friendIds.has(activity.userId) &&
+              (activityIdsInPublicPlans.has(activity.id) ||
+                !activityIdsInAnyPlan.has(activity.id))
+          )
+          .map((activity) => activity.id)
+      );
       const validActivityIds = allActivities
         .filter((activity) => {
+          if (circles.sharedSince.has(activity.id)) return true;
+          if (!friendIds.has(activity.userId)) return false;
           if (activityIdsInPublicPlans.has(activity.id)) {
             // If activity is in at least one PUBLIC plan, include it
             return true;
@@ -1300,7 +1322,7 @@ usersRouter.get(
         }),
         prisma.achievementPost.findMany({
           where: {
-            userId: { in: userIds },
+            userId: { in: [...friendIds] },
             deletedAt: null,
             OR: [
               { planId: { in: publicPlanIds } },
@@ -1360,8 +1382,15 @@ usersRouter.get(
         }),
       ]);
 
+      // Circle-only logs count from when their owner joined the circle.
+      const visibleActivityCandidates = activityCandidates.filter((entry) => {
+        if (!entry.activityId || visibleWithoutCircles.has(entry.activityId)) return true;
+        const shared = circles.sharedSince.get(entry.activityId);
+        return !!shared && entry.createdAt >= shared.since;
+      });
+
       const mergedTimelineItems = [
-        ...activityCandidates.map((entry) => ({
+        ...visibleActivityCandidates.map((entry) => ({
           type: "activity" as const,
           id: entry.id,
           timestamp: entry.datetime,
@@ -1409,9 +1438,12 @@ usersRouter.get(
 
       const filteredActivityEntries = pageItems
         .filter((item) => item.type === "activity")
-        .map((item) =>
-          redactActivityEntryPrivateNotes(item.data, req.user!.id)
-        );
+        .map((item) => ({
+          ...redactActivityEntryPrivateNotes(item.data, req.user!.id),
+          circle: item.data.activityId
+            ? circles.activityCircle.get(item.data.activityId) ?? null
+            : null,
+        }));
 
       const achievementPosts = pageItems
         .filter((item) => item.type === "achievement")
