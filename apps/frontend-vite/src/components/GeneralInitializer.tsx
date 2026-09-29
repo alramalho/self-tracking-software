@@ -52,7 +52,7 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
-  const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/");
+  const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/") || pathname.startsWith("/chat/");
   const isProfilePage = pathname.startsWith("/profile");
   const isHomePage = pathname == "/";
 

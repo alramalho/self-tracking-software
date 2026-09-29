@@ -3,6 +3,7 @@ import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CircleBoard,
+  CircleChat,
   CircleCard,
   CircleFeed,
   CircleFeedEntry,
@@ -203,6 +204,13 @@ export const useCircleActions = () => {
     mutationFn: async (circleId: string) => api.post(`/circles/${circleId}/proof-skipped`),
   });
 
+  // The circle's group chat, created on first open. Only proven (non-pending) members get in.
+  const openChat = useMutation({
+    mutationFn: async (circleId: string) =>
+      (await api.post<CircleChat>(`/circles/${circleId}/chat`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chats"] }),
+  });
+
   const nudge = useMutation({
     mutationFn: async (input: CircleMemberInput) =>
       api.post(`/circles/${input.circleId}/nudges`, { toUserId: input.userId }),
@@ -218,6 +226,7 @@ export const useCircleActions = () => {
     leaveCircle,
     removeMember,
     skipProof,
+    openChat,
     nudge,
   };
 };

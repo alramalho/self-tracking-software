@@ -257,3 +257,8 @@ export interface MessagesContextType {
 }
 
 export const MessagesContext = createContext<MessagesContextType | undefined>(undefined);
+
+export interface ZoomedImage {
+  src: string;
+  alt: string;
+}

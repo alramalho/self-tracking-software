@@ -18,7 +18,7 @@ import { getCoachAvatar } from "@/lib/coachPersonality";
 import { cn } from "@/lib/utils";
 import { toApiErrorMessage } from "@/utils/errorMessage";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Flame, Loader2, MoreHorizontal, UserPlus } from "lucide-react";
+import { Camera, ChevronLeft, Flame, Loader2, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -38,7 +38,7 @@ function CirclePage() {
   const { currentUser } = useCurrentUser();
   const board = useCircle(id);
   const { plans } = usePlans();
-  const { nudge, updateCircle, leaveCircle, removeMember, skipProof } = useCircleActions();
+  const { nudge, updateCircle, leaveCircle, removeMember, skipProof, openChat } = useCircleActions();
   const blockUser = useBlockUser();
   const [, copy] = useClipboard();
   const [sheet, setSheet] = useState<ActionSheetContent | null>(null);
@@ -94,6 +94,11 @@ function CirclePage() {
   };
 
   const onError = (error: unknown) => toast.error(toApiErrorMessage(error));
+  const openCircleChat = () =>
+    openChat.mutate(id, {
+      onSuccess: ({ chatId }) => navigate({ to: "/chat/$chatId", params: { chatId } }),
+      onError,
+    });
   const nudgeMember = (member: BoardMember) =>
     nudge.mutate(
       { circleId: id, userId: member.user.id },
@@ -202,9 +207,6 @@ function CirclePage() {
                 <p className="text-sm text-muted-foreground">
                   Post a photo from a session to join. Members see you once it's up, and it's your intro.
                 </p>
-                <Button className="w-full" onClick={logWithPhoto}>
-                  Log with a photo
-                </Button>
                 <button
                   type="button"
                   onClick={later}
@@ -297,6 +299,26 @@ function CirclePage() {
 
           <h2 className="text-lg font-semibold text-foreground">Latest</h2>
           <CircleFeedList circleId={id} />
+
+          {/* One main action: the circle chat for members, the first photo while pending. */}
+          <div className="sticky bottom-[6.4rem] z-20 pt-2 md:bottom-4">
+            {data.me.pending ? (
+              <Button className="h-12 w-full rounded-full text-base" onClick={logWithPhoto}>
+                <Camera className="mr-2 h-5 w-5" />
+                Log with a photo
+              </Button>
+            ) : (
+              <Button
+                className={cn("h-12 w-full rounded-full text-base text-white", theme.bg)}
+                loading={openChat.isPending}
+                disabled={openChat.isPending}
+                onClick={openCircleChat}
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Circle chat
+              </Button>
+            )}
+          </div>
 
           <RenameCircleDialog
             open={renaming}

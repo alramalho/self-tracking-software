@@ -394,3 +394,7 @@ export interface CirclePrefsProps extends MatchPreferencesListProps {
   locationDenied: boolean;
   onAge: (age: number) => void;
 }
+
+export interface CircleChat {
+  chatId: string;
+}

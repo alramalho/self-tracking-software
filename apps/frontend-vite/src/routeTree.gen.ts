@@ -38,6 +38,7 @@ import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 import { Route as EditPlanPlanIdRouteImport } from './routes/edit-plan.$planId'
 import { Route as CircleIdRouteImport } from './routes/circle.$id'
 import { Route as CircleInviteCodeRouteImport } from './routes/circle-invite.$code'
+import { Route as ChatChatIdRouteImport } from './routes/chat.$chatId'
 
 const WrappedRoute = WrappedRouteImport.update({
   id: '/wrapped',
@@ -184,6 +185,11 @@ const CircleInviteCodeRoute = CircleInviteCodeRouteImport.update({
   path: '/circle-invite/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatChatIdRoute = ChatChatIdRouteImport.update({
+  id: '/chat/$chatId',
+  path: '/chat/$chatId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
   '/circle-invite/$code': typeof CircleInviteCodeRoute
   '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
   '/circle-invite/$code': typeof CircleInviteCodeRoute
   '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/signout': typeof SignoutRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
   '/circle-invite/$code': typeof CircleInviteCodeRoute
   '/circle/$id': typeof CircleIdRoute
   '/edit-plan/$planId': typeof EditPlanPlanIdRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/chat/$chatId'
     | '/circle-invite/$code'
     | '/circle/$id'
     | '/edit-plan/$planId'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/chat/$chatId'
     | '/circle-invite/$code'
     | '/circle/$id'
     | '/edit-plan/$planId'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/upgrade'
     | '/wrapped'
+    | '/chat/$chatId'
     | '/circle-invite/$code'
     | '/circle/$id'
     | '/edit-plan/$planId'
@@ -395,6 +407,7 @@ export interface RootRouteChildren {
   SignoutRoute: typeof SignoutRoute
   UpgradeRoute: typeof UpgradeRoute
   WrappedRoute: typeof WrappedRoute
+  ChatChatIdRoute: typeof ChatChatIdRoute
   CircleInviteCodeRoute: typeof CircleInviteCodeRoute
   CircleIdRoute: typeof CircleIdRoute
   EditPlanPlanIdRoute: typeof EditPlanPlanIdRoute
@@ -612,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CircleInviteCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$chatId': {
+      id: '/chat/$chatId'
+      path: '/chat/$chatId'
+      fullPath: '/chat/$chatId'
+      preLoaderRoute: typeof ChatChatIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -635,6 +655,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignoutRoute: SignoutRoute,
   UpgradeRoute: UpgradeRoute,
   WrappedRoute: WrappedRoute,
+  ChatChatIdRoute: ChatChatIdRoute,
   CircleInviteCodeRoute: CircleInviteCodeRoute,
   CircleIdRoute: CircleIdRoute,
   EditPlanPlanIdRoute: EditPlanPlanIdRoute,

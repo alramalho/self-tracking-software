@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Circle chat — active since September 29, 2026
+
+Image `local/tracking-so-backend:circle-chat-20260929` from [circle-chat-overlay.Dockerfile](./circle-chat-overlay.Dockerfile) on `circle-proof-20260929` (live files matched git `fdfc4742`, including `routes/chats.ts`).
+
+- Migration `20260929150000_circle_chat` (additive: `chats.circleId`, unique, cascades with the circle). Dump: `tracking-circle-chat-20260929/backup/database-before.dump`, env: `tracking-circle-chat-20260929/backup/deployment.env`.
+- `POST /circles/:id/chat` opens the circle's group chat for proven members; participants follow proven membership. Group message pushes skip blocked pairs and name the circle.
+- Checks: modules loaded with the production env and no network; after activation healthy, `/health` ok, `/circles/:id/chat` and `/chats` 401 unauthenticated.
+
+Rollback: restore `tracking-circle-chat-20260929/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
+
 ## Circle photo proof — active since September 29, 2026
 
 Image `local/tracking-so-backend:circle-proof-20260929` from [circle-proof-overlay.Dockerfile](./circle-proof-overlay.Dockerfile) on `circles-20260929` (13 circle source files, schema and migration; no new packages).

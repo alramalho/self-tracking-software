@@ -162,6 +162,8 @@ function MessagesPage() {
       if (otherParticipant?.userId) {
         navigate({ to: "/message/$userId", params: { userId: otherParticipant.userId } });
       }
+    } else if (chat.type === "GROUP") {
+      navigate({ to: "/chat/$chatId", params: { chatId: chat.id } });
     }
   };
 

@@ -11,7 +11,7 @@ const MAX_CHAT_IMAGE_DIMENSION = 1800;
 type PendingImageAttachment = Required<Pick<ImageAttachment, "id" | "url" | "mediaType">> &
   Pick<ImageAttachment, "filename">;
 
-type SendPayload = {
+export type SendPayload = {
   message: string;
   imageAttachments: ImageAttachment[];
 };
