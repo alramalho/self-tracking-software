@@ -54,7 +54,13 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 177, September 29, 2026
+## Current TestFlight release — build 183, September 29, 2026
+
+- Build 177 plus the missed-week coach question: after a missed week the plan warning sheet asks "What got in the way?" with one-tap reasons (Busy, Tired or sick, Travelling, Lost motivation) that are sent to the coach chat scoped to the plan; "Something else" opens the chat with the sentence started. Asked once per missed week (stored on the device); other warnings offer "Talk to <coach>" instead of "Open plan". Source `ce821038`. No backend change.
+- IPA: `.release/testflight-miss-reason/tracking.so.ipa` in the `tracking-miss-reason` worktree (SHA-256 `23f4c057b9ad405ce4d4cea4c5957842c6b961f267573b02135b3976432771a3`), version 1.0.0 (183), phone and Watch. Strict signature, App Store profile with certificate `08373DFD…`, production API, live Clerk, `fixtureMode: false`, TrackingWatch/Health/Map and ExpoIap linked, new copy in the Hermes bundle. Apple validation: no errors. Delivery `8f32621a-7093-4771-bb59-4af330733aa1`; `processingState: VALID`.
+- Build 182 failed at export and produced no IPA: a concurrent verycheapaudiobooks local build put its own "iPhone Distribution" certificate (same name, `3B07FDFF…`) in the keychain search list, and Xcode picked it. Run local builds one at a time across **both** apps.
+
+## Previous TestFlight release — build 177, September 29, 2026
 
 - Circles (matching, photo proof, board, nudges, recaps), the clay onboarding with a welcome screen, clay coaches and the light default. Same source as Safari-install build 176 (`94ea8928`). Needs the `circle-proof-20260929` backend (live).
 - IPA: `.release/testflight-2026-09-29T13-04-25-601Z/tracking.so.ipa` in the `tracking-circles` worktree (SHA-256 `2104bdba21249f4dd26b14d035f9014a974aab554658a8561b6a69f08b457fb9`), version 1.0.0 (177). The IPA contains the Watch app and the TrackingWatch, TrackingHealth and TrackingMap modules. Apple validation: no errors. Delivery `35ec2561-d9d5-4714-8cff-8cf16961b708`; App Store Connect `processingState: VALID`.
