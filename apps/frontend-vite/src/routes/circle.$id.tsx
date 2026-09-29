@@ -10,7 +10,7 @@ import { ReportDialog } from "@/components/safety/ReportDialog";
 import type { ActionSheetContent, ReportTarget } from "@/components/safety/types";
 import { personLabel, useBlockUser } from "@/components/safety/useBlockUser";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -26,17 +26,19 @@ export const Route = createFileRoute("/circle/$id")({
   component: CirclePage,
   validateSearch: (search: Record<string, unknown>): CircleBoardSearch => ({
     invite: search.invite === true || search.invite === "true" || undefined,
+    proof: search.proof === true || search.proof === "true" || search.proof === 1 || search.proof === "1" || undefined,
   }),
 });
 
 function CirclePage() {
   const { id } = Route.useParams();
-  const { invite } = Route.useSearch();
+  const { invite, proof } = Route.useSearch();
   const navigate = useNavigate();
   const theme = useThemeColors();
   const { currentUser } = useCurrentUser();
   const board = useCircle(id);
-  const { nudge, updateCircle, leaveCircle, removeMember } = useCircleActions();
+  const { plans } = usePlans();
+  const { nudge, updateCircle, leaveCircle, removeMember, skipProof } = useCircleActions();
   const blockUser = useBlockUser();
   const [, copy] = useClipboard();
   const [sheet, setSheet] = useState<ActionSheetContent | null>(null);
@@ -62,6 +64,34 @@ function CirclePage() {
       void copyInvite();
     }
   });
+
+  // Right after joining, leaving without starting a log counts as "Later", so the coach can remind them.
+  const [proofDismissed, setProofDismissed] = useState(false);
+  const proofHandled = useRef(false);
+  const stillPending = useRef(false);
+  stillPending.current = !!data?.me.pending;
+  const skipProofOnce = () => {
+    if (proofHandled.current) return;
+    proofHandled.current = true;
+    skipProof.mutate(id);
+  };
+  useEffect(
+    () => () => {
+      if (proof && stillPending.current) skipProofOnce();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, proof]
+  );
+  const later = () => {
+    setProofDismissed(true);
+    skipProofOnce();
+  };
+  const logWithPhoto = () => {
+    proofHandled.current = true;
+    const myPlan = plans?.find((plan) => plan.id === data?.me.planId);
+    const activityId = myPlan?.activities?.[0]?.id;
+    navigate({ to: "/add", search: activityId ? { activityId } : {} });
+  };
 
   const onError = (error: unknown) => toast.error(toApiErrorMessage(error));
   const nudgeMember = (member: BoardMember) =>
@@ -164,17 +194,24 @@ function CirclePage() {
 
       {data && (
         <>
-          {!data.me.hasIntro && (
+          {data.me.pending && !proofDismissed && (
             <CirclePanel className="flex items-center gap-3">
               <img src={coachAvatar} alt="" className="h-[52px] w-[52px] object-contain" />
               <div className="flex flex-1 flex-col gap-2">
-                <p className="text-base font-semibold text-foreground">Say hi to your circle</p>
+                <p className="text-base font-semibold text-foreground">You're almost in</p>
                 <p className="text-sm text-muted-foreground">
-                  Your first session goes out as your intro. Add a line about yourself.
+                  Post a photo from a session to join. Members see you once it's up, and it's your intro.
                 </p>
-                <Button className="w-full" onClick={() => navigate({ to: "/add" })}>
-                  Log a session
+                <Button className="w-full" onClick={logWithPhoto}>
+                  Log with a photo
                 </Button>
+                <button
+                  type="button"
+                  onClick={later}
+                  className="py-1.5 text-[15px] text-muted-foreground hover:text-foreground"
+                >
+                  Later
+                </button>
               </div>
             </CirclePanel>
           )}
@@ -246,22 +283,6 @@ function CirclePage() {
             </>
           )}
 
-          {isOwner && (
-            <CirclePanel className="flex items-center gap-3">
-              <div className="flex-1">
-                <p className="text-[15px] font-semibold text-foreground">Match me with others</p>
-                <p className="text-sm text-muted-foreground">Adds people with a similar goal, up to 5.</p>
-              </div>
-              <Switch
-                aria-label="Match me with others"
-                checked={data.openToMatching}
-                disabled={updateCircle.isPending}
-                onCheckedChange={(openToMatching) =>
-                  updateCircle.mutate({ circleId: id, changes: { openToMatching } }, { onError })
-                }
-              />
-            </CirclePanel>
-          )}
           <button
             type="button"
             onClick={() => void copyInvite()}

@@ -76,8 +76,8 @@ export function JoinDialog({ card, inviteCode, onClose, onJoined }: JoinDialogPr
             })}
           </div>
           <p className="text-sm text-muted-foreground">
-            Members see this plan's week and its logs: activity, amount, date, photo and caption. Never your
-            location or private notes.
+            You're in once you post a photo from a session. Members see this plan's week and its logs:
+            activity, amount, date, photo and caption. Never your location or private notes.
           </p>
           {join.error && <p className="text-sm text-red-500">{toApiErrorMessage(join.error)}</p>}
           <Button

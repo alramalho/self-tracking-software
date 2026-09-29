@@ -47,7 +47,7 @@ function CircleInvitePage() {
         card={open ? (invite.data ?? null) : null}
         inviteCode={code}
         onClose={() => setOpen(false)}
-        onJoined={(id) => navigate({ to: "/circle/$id", params: { id }, replace: true })}
+        onJoined={(id) => navigate({ to: "/circle/$id", params: { id }, search: { proof: true }, replace: true })}
       />
     </div>
   );

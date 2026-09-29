@@ -282,6 +282,16 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Circle photo proof — active since September 29, 2026
+
+Image `local/tracking-so-backend:circle-proof-20260929` from [circle-proof-overlay.Dockerfile](./circle-proof-overlay.Dockerfile) on `circles-20260929` (13 circle source files, schema and migration; no new packages).
+
+- Migration `20260929120000_circle_proof` (additive: `circle_members.provenAt/proofNudgedAt`, `circle_events`, enum `CircleEventKind`). It marked the 2 existing members as proven and opened the 1 existing circle. Dump: `tracking-circle-proof-20260929/backup/database-before.dump`, env: `tracking-circle-proof-20260929/backup/deployment.env`.
+- Joining is pending until the first photo log on the circle plan; the hourly circle job now also sends the coach's proof reminder after a day and frees pending spots after a week.
+- Checks: modules loaded in the image with the production env and no network; after activation the container is healthy, `/health` ok, circle routes 401 unauthenticated, scheduler 6 tasks.
+
+Rollback: restore `tracking-circle-proof-20260929/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
+
 ## Circles — active since September 29, 2026
 
 Image `local/tracking-so-backend:circles-20260929` from [circles-overlay.Dockerfile](./circles-overlay.Dockerfile) on `streak-hold-20260928` (every overlaid file matched git `520d8fcd` in the live container before the build; only `package.json` differed, and it isn't copied). `sharp@0.34.5` is installed on its own with npm (Alpine musl build) for the blurred circle photo previews, like the Apple library.

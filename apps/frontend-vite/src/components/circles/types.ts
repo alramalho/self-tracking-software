@@ -81,6 +81,8 @@ export interface BoardMember {
   joinedAt: string;
   week: MemberWeek;
   hasIntro: boolean;
+  // Joined but hasn't posted the first photo log yet; only they can see themselves.
+  pending: boolean;
   nudgedToday: boolean;
 }
 
@@ -96,6 +98,8 @@ export interface CircleMe {
   role: CircleRole;
   planId: string;
   hasIntro: boolean;
+  // Still needs a first photo log on the circle plan to be in.
+  pending: boolean;
 }
 
 export interface CircleBoard {
@@ -176,6 +180,7 @@ export interface MyCircle {
   onTrack: number;
   daysLeft: number;
   hasIntro: boolean;
+  pending: boolean;
   people: MyCirclePerson[];
 }
 
@@ -186,15 +191,15 @@ export interface CircleTag {
   emoji: string;
 }
 
+// Every circle is open, so the only thing an owner changes is the name.
 export interface CircleUpdate {
-  name?: string;
-  openToMatching?: boolean;
-  discoverable?: boolean;
+  name: string;
 }
 
+// Joining (or starting) always leaves you pending until your first photo log.
 export interface JoinedCircle {
   id: string;
-  status: CircleStatus;
+  pending: true;
 }
 
 export type PendingMatchMode = "find" | "invite";
@@ -212,6 +217,8 @@ export interface CircleMatchSearch {
 
 export interface CircleBoardSearch {
   invite?: boolean;
+  // Opened right after joining: leaving without logging counts as "Later".
+  proof?: boolean;
 }
 
 export interface OrbitPerson {
@@ -333,7 +340,6 @@ export interface Coordinates {
 export interface StartCircleInput {
   planId: string;
   preferences: MatchPreferences;
-  openToMatching: boolean;
 }
 
 export interface JoinCircleInput {

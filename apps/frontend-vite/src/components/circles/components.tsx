@@ -81,14 +81,15 @@ export function WeekDots({ target, done }: WeekDotsProps) {
 export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
   const { week } = member;
   const name = isMe ? "You" : firstName(member.user);
-  const progress = week.isNew ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`;
+  const waiting = member.pending || week.isNew;
+  const progress = waiting ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`;
   return (
     <div className="flex items-center gap-2.5 py-2.5">
       <button
         type="button"
         disabled={!onPress}
         onClick={onPress}
-        aria-label={`${name}, ${week.isNew ? "new this week" : `${week.done} of ${week.target} this week`}`}
+        aria-label={`${name}, ${member.pending ? "pending" : week.isNew ? "new this week" : `${week.done} of ${week.target} this week`}`}
         className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-opacity enabled:hover:opacity-70"
       >
         <PersonAvatar
@@ -103,9 +104,9 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
             {member.plan.goal}
           </p>
         </div>
-        {week.isNew ? (
+        {waiting ? (
           <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
-            New
+            {member.pending ? "Pending" : "New"}
           </span>
         ) : (
           <WeekDots target={week.target} done={week.done} />

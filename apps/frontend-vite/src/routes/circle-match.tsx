@@ -38,24 +38,23 @@ function CircleMatchPage() {
     clearPendingMatch();
     navigate({ to: "/plans", search: { selectedPlan: planId } });
   };
-  const openCircle = (id: string, invite = false) => {
+  // Joining or starting leaves you pending; the circle page asks for the first photo.
+  const openCircle = (id: string) => {
     clearPendingMatch();
-    navigate({ to: "/circle/$id", params: { id }, search: invite ? { invite: true } : {}, replace: true });
+    const search = pending.mode === "invite" ? { proof: true, invite: true } : { proof: true };
+    navigate({ to: "/circle/$id", params: { id }, search, replace: true });
   };
   const join = (circleId: string) =>
     joinCircle.mutate({ circleId, planId, preferences: pending }, { onSuccess: () => openCircle(circleId) });
-  const start = (openToMatching: boolean) =>
-    startCircle.mutate(
-      { planId, preferences: pending, openToMatching },
-      { onSuccess: ({ id }) => openCircle(id, !openToMatching) }
-    );
+  const start = () =>
+    startCircle.mutate({ planId, preferences: pending }, { onSuccess: ({ id }) => openCircle(id) });
 
-  // "Invite friends" in onboarding: an invite-only circle, straight to its invite link.
+  // "Invite friends" in onboarding: start a circle straight away and copy its invite link.
   const startedInvite = useRef(false);
   useEffect(() => {
     if (pending.mode !== "invite" || startedInvite.current) return;
     startedInvite.current = true;
-    start(false);
+    start();
   });
 
   const me: OrbitPerson = {
@@ -137,7 +136,8 @@ function CircleMatchPage() {
               ))}
             </div>
             <p className="text-center text-[13px] text-muted-foreground">
-              They'll see this plan's week and logs. Never your location.
+              You're in once you post a photo from a session. They'll see this plan's week and logs, never your
+              location.
             </p>
           </>
         ) : match.data?.state === "none" ? (
@@ -164,7 +164,7 @@ function CircleMatchPage() {
             className="h-12 w-full rounded-full text-base"
             loading={busy}
             disabled={busy}
-            onClick={() => (found ? join(found.id) : start(true))}
+            onClick={() => (found ? join(found.id) : start())}
           >
             {found ? "Join" : "Start circle"}
           </Button>

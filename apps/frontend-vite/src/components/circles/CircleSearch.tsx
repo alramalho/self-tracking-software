@@ -46,7 +46,7 @@ export function CircleSearch() {
         onClose={() => setJoining(null)}
         onJoined={(id) => {
           setJoining(null);
-          navigate({ to: "/circle/$id", params: { id } });
+          navigate({ to: "/circle/$id", params: { id }, search: { proof: true } });
         }}
       />
     </div>

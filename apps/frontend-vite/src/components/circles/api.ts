@@ -150,10 +150,9 @@ export const useCircleActions = () => {
   const startCircle = useMutation({
     mutationFn: async (input: StartCircleInput) =>
       (
-        await api.post<{ id: string }>("/circles", {
+        await api.post<JoinedCircle>("/circles", {
           planId: input.planId,
           ...preferenceFields(input.preferences),
-          openToMatching: input.openToMatching,
         })
       ).data,
     onSuccess: refreshCircles,
@@ -199,6 +198,11 @@ export const useCircleActions = () => {
     onSuccess: refreshCircles,
   });
 
+  // "Later" on the first-photo prompt: recorded so the coach can remind them tomorrow.
+  const skipProof = useMutation({
+    mutationFn: async (circleId: string) => api.post(`/circles/${circleId}/proof-skipped`),
+  });
+
   const nudge = useMutation({
     mutationFn: async (input: CircleMemberInput) =>
       api.post(`/circles/${input.circleId}/nudges`, { toUserId: input.userId }),
@@ -213,6 +217,7 @@ export const useCircleActions = () => {
     updateCircle,
     leaveCircle,
     removeMember,
+    skipProof,
     nudge,
   };
 };

@@ -138,3 +138,7 @@ export interface ActivitiesContextType {
 export const ActivitiesContext = createContext<
   ActivitiesContextType | undefined
 >(undefined);
+
+export interface LogPageSearch {
+  activityId?: string;
+}

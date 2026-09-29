@@ -11,6 +11,7 @@ import SharedActivityPrompt from "@/components/SharedActivityPrompt";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
   ActivityLogData,
+  LogPageSearch,
   SharedActivityCandidate,
 } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
@@ -22,10 +23,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { differenceInHours } from "date-fns";
 import type { Activity, ActivityEntry } from "@tsw/prisma";
 import { Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/add")({
   component: LogPage,
+  // Opened for one activity (e.g. a circle's "Log with a photo"): start logging it straight away.
+  validateSearch: (search: Record<string, unknown>): LogPageSearch => ({
+    activityId: typeof search.activityId === "string" ? search.activityId : undefined,
+  }),
 });
 
 function LogPage() {
@@ -70,6 +75,8 @@ function LogPage() {
   const [showSharedActivityPrompt, setShowSharedActivityPrompt] =
     useState(false);
   const geo = useGeolocation();
+  const { activityId } = Route.useSearch();
+  const openedActivityId = useRef<string | null>(null);
 
   const handleActivityLogSubmit = useCallback(
     async (data: ActivityLogData) => {
@@ -100,6 +107,14 @@ function LogPage() {
     setShowPhotoUploader(false);
     setCurrentActivityLogData(null);
   };
+
+  useEffect(() => {
+    if (!activityId || openedActivityId.current === activityId) return;
+    const activity = activities.find((each) => each.id === activityId);
+    if (!activity) return;
+    openedActivityId.current = activityId;
+    handleActivitySelected(activity);
+  }, [activityId, activities]);
 
   const handleAddActivity = () => {
     setActivityEditorOpen(true);
