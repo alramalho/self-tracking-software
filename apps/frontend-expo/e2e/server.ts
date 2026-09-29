@@ -863,7 +863,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && suffix.startsWith("messages")) {
       const rewrite = suffix.match(/^messages\/([^/]+)\/rewrite\/stream$/);
-      const userMessage = { id: rewrite?.[1] || `user-${Date.now()}`, chatId, role: "USER" as const, senderId: "test-user", content: body.message, imageAttachments: body.imageAttachments, createdAt: now() };
+      const userMessage = { id: rewrite?.[1] || `user-${Date.now()}`, chatId, role: "USER" as const, senderId: "test-user", content: body.message, imageAttachments: body.imageAttachments, ...(body.planId ? { planId: body.planId } : {}), createdAt: now() };
       if (rewrite) state.messages = state.messages.filter(m => m.id !== rewrite[1]);
       state.messages.push(userMessage);
       if (suffix.endsWith("/stream")) {
@@ -871,7 +871,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
         res.write('event: status\ndata: {"state":"thinking"}\n\n');
         setTimeout(() => {
-          const reply = { id: `reply-${Date.now()}`, chatId, role: "COACH" as const, content: "That sounds good. Keep the next run comfortable.", status: "SENT" as const, createdAt: now() };
+          const reply = { id: `reply-${Date.now()}`, chatId, role: "COACH" as const, content: "That sounds good. Keep the next run comfortable.", status: "SENT" as const, ...(body.planId ? { planId: body.planId } : {}), createdAt: now() };
           state.messages.push(reply);
           res.end(`event: done\ndata: ${JSON.stringify({ messages: [userMessage,reply] })}\n\n`);
         },800); return;

@@ -8,11 +8,14 @@ import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { router } from "expo-router";
 import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format, subWeeks } from "date-fns";
-import { Copy, useColors } from "@/components/ui";
-import { PreviewButton, PreviewSheet } from "@/features/messages/entities/PreviewSheet";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Copy, Status, useColors } from "@/components/ui";
+import { PreviewButton, PreviewSheet, PreviewTouch } from "@/features/messages/entities/PreviewSheet";
+import { latestCoachChat } from "@/features/messages/service";
 import { dayKey } from "@/core/dates";
 import type { Plan, ActivityEntry } from "@/core/types";
-import type { PlanPreviewProps, StepsProps, WarningSheetProps } from "./types";
+import type { CoachOpening, PlanPreviewProps, ReasonChipProps, StepsProps, WarningSheetProps } from "./types";
+import { MISS_REASONS, answeredMissedWeek, missMessage, missMessageStart, rememberMissAnswered } from "./miss-reasons";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
 
 function Steps({ value, max, color, iconColor = color, icon: Icon, label, atRisk, lost }: StepsProps) {
@@ -336,7 +339,32 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   );
 }
 
-/** Explains a warning card and offers the one action that fixes it, plus the plan itself. */
+/** A one-tap answer to the coach's question. */
+function ReasonChip({ label, disabled, onPress }: ReasonChipProps) {
+  const c = useColors();
+  return (
+    <PreviewTouch
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      style={{
+        minHeight: 40,
+        justifyContent: "center",
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: c.border,
+        backgroundColor: c.card,
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>{label}</Text>
+    </PreviewTouch>
+  );
+}
+
+/** Explains a warning card, offers the one action that fixes it, and brings the coach in. */
 function WarningSheet({
   visible,
   plan,
@@ -370,7 +398,26 @@ function WarningSheet({
   };
   const hasMessage = !!(nudge?.chatId && nudge.messageId);
   const c = useColors();
+  const client = useQueryClient();
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  // Opens the coach conversation about this plan; a picked reason is sent straight away.
+  const talk = useMutation({
+    mutationFn: async ({ prompt, send }: CoachOpening) => {
+      const chat = await latestCoachChat();
+      await client.invalidateQueries({ queryKey: ["chats"] });
+      onClose();
+      router.push({
+        pathname: "/chat/[id]",
+        params: { id: chat.id, type: "COACH", planId: plan.id, ...(prompt ? { prompt } : {}), ...(send ? { send: "1" } : {}) },
+      });
+    },
+  });
+  const [answered, setAnswered] = useState(false);
+  useEffect(() => {
+    if (visible && missed) void answeredMissedWeek(plan.id).then(setAnswered);
+  }, [visible, missed, plan.id]);
+  const answer = (prompt: string, send: boolean) =>
+    talk.mutate({ prompt, send }, { onSuccess: () => void rememberMissAnswered(plan.id) });
   // Only a missed last week, nothing to rescue yet this week: the sheet is the reckoning.
   const onlyMissed = !slipping && !atRisk && !!missed;
   const status = slipping ? "has gone quiet" : atRisk ? "is at risk this week" : "missed last week";
@@ -411,6 +458,12 @@ function WarningSheet({
               : []),
         ];
   const tone = onlyMissed ? RED : AMBER;
+  // A missed week gets one question, once; if the coach already wrote about it, that note answers first.
+  const askReason = !!missed && !answered && !(slipping && hasMessage);
+  // Otherwise the conversation opens with a forward-looking message, left for the user to send.
+  const opener = atRisk
+    ? `Help me fit the ${needed} ${needed === 1 ? "session" : "sessions"} left for "${plan.goal}" this week.`
+    : `I've gone quiet on "${plan.goal}". Help me get going again.`;
   return (
     // The app's native bottom sheet: sized to content, drag down or tap outside to close.
     <PreviewSheet visible={visible} title={title} onClose={onClose}>
@@ -442,12 +495,44 @@ function WarningSheet({
         </Text>
       )}
       <Copy>{line}</Copy>
+      {askReason && (
+        <View style={{ gap: 10 }}>
+          <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>What got in the way?</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {MISS_REASONS.map((reason) => (
+              <ReasonChip
+                key={reason.label}
+                label={reason.label}
+                disabled={talk.isPending}
+                onPress={() => answer(missMessage(plan.goal, reason.says), true)}
+              />
+            ))}
+            <ReasonChip
+              label="Something else"
+              disabled={talk.isPending}
+              onPress={() => answer(missMessageStart(plan.goal), false)}
+            />
+          </View>
+        </View>
+      )}
+      <Status error={talk.error} />
       {slipping && hasMessage ? (
         <PreviewButton label="Open coach message" onPress={openMessage} />
       ) : (
         <PreviewButton label={`Log ${activity?.title.toLowerCase() ?? "a session"}`} onPress={logIt} />
       )}
-      <PreviewButton secondary label="Open plan" onPress={onOpenPlan} />
+      {slipping && hasMessage ? (
+        <PreviewButton secondary label="Open plan" onPress={onOpenPlan} />
+      ) : (
+        !askReason && (
+          <PreviewButton
+            secondary
+            label={`Talk to ${coach.name}`}
+            disabled={talk.isPending}
+            onPress={() => talk.mutate({ prompt: missed ? undefined : opener })}
+          />
+        )
+      )}
     </PreviewSheet>
   );
 }

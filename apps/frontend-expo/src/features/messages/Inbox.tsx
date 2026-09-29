@@ -18,7 +18,7 @@ import { api } from "@/data/api";
 import { useCurrentUser, usePlans } from "@/data/queries";
 import { goBack } from "@/core/navigation";
 import type { Chat, Coach } from "./types";
-import { getChats, createCoachChat, chatTitle } from "./service";
+import { getChats, latestCoachChat, chatTitle } from "./service";
 import { coachIdentity } from "./coach";
 
 interface SearchPerson {
@@ -57,10 +57,7 @@ export function Inbox() {
   });
   const openCoach = useMutation({
     mutationFn: async () => {
-      const existing = chats.data
-        ?.filter((chat) => chat.type === "COACH")
-        .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
-      const chat = existing ?? (await createCoachChat());
+      const chat = await latestCoachChat(chats.data);
       await client.invalidateQueries({ queryKey: ["chats"] });
       router.push({
         pathname: "/chat/[id]",
