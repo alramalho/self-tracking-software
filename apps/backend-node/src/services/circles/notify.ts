@@ -8,6 +8,11 @@ interface CircleRef {
   emoji: string;
 }
 
+// "you and 1 other", "you and 3 others".
+export function othersLabel(count: number): string {
+  return `you and ${count} ${count === 1 ? "other" : "others"}`;
+}
+
 export function circleLabel(circle: CircleRef): string {
   return `${circle.emoji} ${circle.name}`;
 }

@@ -1,7 +1,8 @@
-// Size rules: matching fills a circle up to 5, invites up to 8, and the board starts at 3.
+// Size rules: matching fills a circle up to 5, invites up to 8, and the board starts as soon
+// as 2 people have posted their proof (a committed pair already holds each other to it).
 export const MATCHING_TARGET = 5;
 export const CIRCLE_CAP = 8;
-export const ACTIVE_AT = 3;
+export const ACTIVE_AT = 2;
 
 // Few users per goal for now, so matching starts wide: a low bar that relaxes after 3 days.
 export const MATCH_THRESHOLD = 0.45;

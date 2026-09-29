@@ -9,7 +9,7 @@ import { syncCircleChat } from "./chat";
 import { ACTIVE_AT, CIRCLE_CAP, MATCHING_TARGET } from "./config";
 import { CircleError } from "./errors";
 import { recordCircleEvent } from "./events";
-import { circleLabel, notifyCircle } from "./notify";
+import { circleLabel, notifyCircle, othersLabel } from "./notify";
 import type { ApproxLocation, CircleCard, MatchPreferences } from "./types";
 
 // Only the three "Match me by" choices are stored on a membership.
@@ -273,7 +273,7 @@ async function proveMembership(
       members.map((m) => m.userId),
       circle,
       "Your circle is ready",
-      `${label}: you and ${members.length - 1} others with a similar goal. The board starts now.`,
+      `${label}: ${othersLabel(members.length - 1)} with a similar goal. The board starts now.`,
       `circle-ready:${circle.id}`,
     );
     return;

@@ -16,7 +16,7 @@ import { syncCircleChat } from "./chat";
 import { recordCircleEvent } from "./events";
 import { settleAfterLeaving } from "./service";
 import { mergeableInto } from "./matching/service";
-import { circleLabel, notifyCircle } from "./notify";
+import { circleLabel, notifyCircle, othersLabel } from "./notify";
 
 const memberSelect = {
   userId: true,
@@ -69,7 +69,7 @@ export async function mergeFormingCircles(): Promise<number> {
           everyone,
           target,
           "Your circle is ready",
-          `${circleLabel(target)}: you and ${everyone.length - 1} others with a similar goal. The board starts now.`,
+          `${circleLabel(target)}: ${othersLabel(everyone.length - 1)} with a similar goal. The board starts now.`,
           `circle-ready:${target.id}`,
         );
       else

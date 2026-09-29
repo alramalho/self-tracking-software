@@ -188,6 +188,11 @@ export interface CirclePlanSectionProps {
   planId: string;
 }
 
+export interface OpenSpotsProps {
+  // People already in the circle, proven or not.
+  members: number;
+}
+
 export interface ReasonChipsProps {
   reasons: MatchReason[];
 }

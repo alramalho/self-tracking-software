@@ -9,7 +9,7 @@ import { goBack } from "@/core/navigation";
 import { api, errorMessage } from "@/data/api";
 import { useAction, useCurrentUser, usePlans } from "@/data/queries";
 import { coachAvatar } from "@/features/coach/avatar";
-import { MemberRow, firstName } from "@/features/circles/components";
+import { MemberRow, OpenSpots, firstName } from "@/features/circles/components";
 import { inviteLink, openCircleChat, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { recapLine } from "@/features/circles/model";
@@ -168,16 +168,11 @@ export default function Circle() {
           {forming ? (
             <Panel>
               <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>Forming</Text>
-              <Copy muted>The weekly board starts once 3 people are in.</Copy>
+              <Copy muted>The weekly board starts once 2 people have posted their first photo.</Copy>
               {data.members.map((m) => (
                 <MemberRow key={m.user.id} member={{ ...m, week: { ...m.week, isNew: true } }} isMe={m.user.id === user.data?.id} onPress={m.user.id === user.data?.id ? undefined : () => memberActions(m)} />
               ))}
-              {Array.from({ length: Math.max(0, 3 - data.members.length) }, (_, i) => (
-                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderStyle: "dashed", borderColor: c.muted }} />
-                  <Text style={{ color: c.muted, fontSize: 15 }}>Open spot</Text>
-                </View>
-              ))}
+              <OpenSpots members={data.members.length} />
             </Panel>
           ) : (
             <>
@@ -209,6 +204,7 @@ export default function Circle() {
                     />
                   );
                 })}
+                <OpenSpots members={data.members.length} />
               </Panel>
               {data.recap && (
                 <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>

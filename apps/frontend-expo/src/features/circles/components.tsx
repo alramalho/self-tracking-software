@@ -3,11 +3,13 @@ import { Image } from "expo-image";
 import { Cake, ChevronRight, Gauge, Hand, Lock, MapPin, Target, Check } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
+import { MATCHING_TARGET } from "./model";
 import type {
   CircleCardViewProps,
   MatchPreferencesListProps,
   MatchReason,
   MemberRowProps,
+  OpenSpotsProps,
   PersonAvatarProps,
   ReasonChipsProps,
   WeekDotsProps,
@@ -140,6 +142,25 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
         )}
       </View>
     </Pressable>
+  );
+}
+
+// Dashed spots for the people matching will still bring in. The circle keeps looking
+// until it has 5, even after its board has started.
+export function OpenSpots({ members }: OpenSpotsProps) {
+  const c = useColors();
+  const open = Math.max(0, MATCHING_TARGET - members);
+  if (!open) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={{ color: c.muted, fontSize: 12, paddingTop: 8 }}>Looking for people with a similar goal</Text>
+      {Array.from({ length: open }, (_, i) => (
+        <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
+          <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderStyle: "dashed", borderColor: c.muted }} />
+          <Text style={{ color: c.muted, fontSize: 15 }}>Open spot</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 

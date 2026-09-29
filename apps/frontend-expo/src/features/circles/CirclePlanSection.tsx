@@ -1,20 +1,27 @@
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
-import { ChevronRight, Users } from "lucide-react-native";
+import { ChevronRight, Flame, Users } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Heading, Panel, s, useColors } from "@/components/ui";
-import { PersonAvatar } from "./components";
-import { circleStatusLine } from "./model";
-import { defaultPreferences, useMyCircles } from "./api";
+import { api } from "@/data/api";
+import { useAction, useCurrentUser } from "@/data/queries";
+import { MemberRow } from "./components";
+import { MATCHING_TARGET } from "./model";
+import { defaultPreferences, useCircle, useMyCircles } from "./api";
 import { setPendingMatch } from "./pendingMatch";
-import type { CirclePlanSectionProps } from "./types";
+import type { BoardMember, CirclePlanSectionProps } from "./types";
 
 // Your plan's circle at a glance, or the way to find one. One circle per plan.
 export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
   const c = useColors();
+  const user = useCurrentUser();
   const mine = useMyCircles();
+  const circle = mine.data?.find((each) => each.planId === planId);
+  const board = useCircle(circle?.id);
+  const nudge = useAction(async (member: BoardMember) =>
+    api.post(`/circles/${circle?.id}/nudges`, { toUserId: member.user.id }),
+  );
   if (!mine.data) return null;
-  const circle = mine.data.find((each) => each.planId === planId);
   if (!circle)
     return (
       <Pressable
@@ -43,7 +50,14 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
       </Pressable>
     );
   const open = () => router.push(`/circle/${circle.id}`);
-  const status = circleStatusLine(circle);
+  const data = board.data;
+  const openSpots = Math.max(0, MATCHING_TARGET - (data?.members.length ?? circle.memberCount));
+  const days = circle.daysLeft === 1 ? "1 day left" : `${circle.daysLeft} days left`;
+  const status = circle.pending
+    ? "Post a photo to join"
+    : circle.status === "FORMING"
+      ? "Forming · the board starts at 2"
+      : `This week · ${days}`;
   return (
     <View style={{ gap: 10 }}>
       <View style={[s.row, { justifyContent: "space-between" }]}>
@@ -52,32 +66,38 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
           <Text style={{ color: c.accent, fontSize: 15, fontWeight: "600" }}>Open ›</Text>
         </Pressable>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${circle.name}, ${status}`}
-        onPress={open}
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      >
-        <Panel style={{ padding: 16, borderRadius: 16, gap: 10 }}>
-          <View style={{ gap: 2 }}>
-            <Text numberOfLines={1} style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
-              {`${circle.emoji} ${circle.name}`}
-            </Text>
+      {/* The circle's week at a glance, like its board: dots, what's left, and a nudge. */}
+      <Panel style={{ padding: 16, borderRadius: 16, gap: 2 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${circle.name}, ${status}`} onPress={open} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 6 }}>
+          <Text style={{ fontSize: 22 }}>{circle.emoji}</Text>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>{circle.name}</Text>
             <Text style={{ color: c.muted, fontSize: 13 }}>{status}</Text>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {circle.people.map((person, i) => (
-              <PersonAvatar
-                key={i}
-                name={person.name}
-                picture={person.picture}
-                size={26}
-                ring={person.onTrack ? "on" : "off"}
-              />
-            ))}
-          </View>
-        </Panel>
-      </Pressable>
+          {!!data?.togetherStreak && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <Flame size={18} color="#ff9500" />
+              <Text style={{ color: c.text, fontSize: 14, fontWeight: "600" }}>{data.togetherStreak}</Text>
+            </View>
+          )}
+        </Pressable>
+        {data?.members.map((m) => {
+          const isMe = m.user.id === user.data?.id;
+          return (
+            <MemberRow
+              key={m.user.id}
+              member={data.status === "FORMING" ? { ...m, week: { ...m.week, isNew: true } } : m}
+              isMe={isMe}
+              onNudge={!isMe && m.week.behind && !m.nudgedToday ? () => nudge.mutate(m) : undefined}
+            />
+          );
+        })}
+        {openSpots > 0 && (
+          <Text style={{ color: c.muted, fontSize: 13, paddingTop: 6 }}>
+            {`${openSpots} open ${openSpots === 1 ? "spot" : "spots"} · looking for people with a similar goal`}
+          </Text>
+        )}
+      </Panel>
     </View>
   );
 }

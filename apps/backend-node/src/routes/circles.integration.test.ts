@@ -205,9 +205,18 @@ describe("circles", () => {
     expect(aliceBoard.body.members.map((m: any) => m.user.id)).toEqual([id("alice")]);
     const bobBoard = await call("bob", "GET", `/circles/${circleId}`);
     expect(bobBoard.body.me.pending).toBe(true);
+    // Two proven people are enough for the weekly board.
     await photoLog("bob");
+    expect((await prisma.circle.findUniqueOrThrow({ where: { id: circleId } })).status).toBe("ACTIVE");
+    expect(fixture.notify.mock.calls.map(([n]) => n.userId).sort()).toEqual([id("alice"), id("bob")].sort());
     expect(fixture.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: id("alice"), type: "CIRCLE", title: "Bob joined", relatedData: { url: `/circle/${circleId}`, circleId } }),
+      expect.objectContaining({
+        userId: id("alice"),
+        type: "CIRCLE",
+        title: "Your circle is ready",
+        message: "🏃 Run a 10K under 50 minutes: you and 1 other with a similar goal. The board starts now.",
+        relatedData: { url: `/circle/${circleId}`, circleId },
+      }),
     );
   });
 
@@ -216,15 +225,13 @@ describe("circles", () => {
     expect(again).toMatchObject({ status: 400, body: { error: "This plan is already in a circle" } });
   });
 
-  it("becomes active at three proven people and tells them", async () => {
+  it("tells the circle when someone new proves in", async () => {
     await call("carol", "POST", `/circles/${circleId}/join`, { planId: plan.carol, ...prefs });
-    expect((await prisma.circle.findUniqueOrThrow({ where: { id: circleId } })).status).toBe("FORMING");
     fixture.notify.mockClear();
     await photoLog("carol");
-    expect((await prisma.circle.findUniqueOrThrow({ where: { id: circleId } })).status).toBe("ACTIVE");
     const told = fixture.notify.mock.calls.map(([n]) => n.userId).sort();
-    expect(told).toEqual([id("alice"), id("bob"), id("carol")].sort());
-    expect(fixture.notify.mock.calls[0][0].title).toBe("Your circle is ready");
+    expect(told).toEqual([id("alice"), id("bob")].sort());
+    expect(fixture.notify.mock.calls[0][0].title).toBe("Carol joined");
   });
 
   it("keeps blocked people out of each other's circles", async () => {
