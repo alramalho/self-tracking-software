@@ -48,6 +48,12 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
+## Safari-install build 176 — Circles and the clay onboarding, September 29, 2026
+
+- Local production build from `fdfc4742` (worktree `tracking-circles`), iPhone and Watch targets, production API and live Clerk, bundled JavaScript. Verified by `build:iphone` and hosted as a Safari install link (7-day presigned link in `.release/2026-09-29T11-17-22-270Z-300bce60/distribution.json`, not written here). IPA SHA-256 `74f529adc92b34cef970d234d16ad68b78fbbc805eee48f9a1004562d9ff61b7`.
+- Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
+- Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
+
 ## Current TestFlight release — build 175, September 28, 2026
 
 - Build 174 plus: held weeks (one session short, streak unchanged) show a small faded flame on the plan grid, the Badges rules explain the hold, and other people's plan grids use the new `gridEntries` full history so they scroll back. Needs the `streak-hold-20260928` backend (live).
