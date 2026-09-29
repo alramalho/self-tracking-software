@@ -54,7 +54,12 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 175, September 28, 2026
+## Current TestFlight release — build 177, September 29, 2026
+
+- Circles (matching, photo proof, board, nudges, recaps), the clay onboarding with a welcome screen, clay coaches and the light default. Same source as Safari-install build 176 (`94ea8928`). Needs the `circle-proof-20260929` backend (live).
+- IPA: `.release/testflight-2026-09-29T13-04-25-601Z/tracking.so.ipa` in the `tracking-circles` worktree (SHA-256 `2104bdba21249f4dd26b14d035f9014a974aab554658a8561b6a69f08b457fb9`), version 1.0.0 (177). The IPA contains the Watch app and the TrackingWatch, TrackingHealth and TrackingMap modules. Apple validation: no errors. Delivery `35ec2561-d9d5-4714-8cff-8cf16961b708`; App Store Connect `processingState: VALID`.
+
+## Previous TestFlight release — build 175, September 28, 2026
 
 - Build 174 plus: held weeks (one session short, streak unchanged) show a small faded flame on the plan grid, the Badges rules explain the hold, and other people's plan grids use the new `gridEntries` full history so they scroll back. Needs the `streak-hold-20260928` backend (live).
 - IPA: `.release/testflight-streak-hold-b175/tracking.so.ipa` (SHA-256 `7ff7446a2727bb0021adeb7ea742a4d3c76c25b8ba2d8ae6db7244669b3afc6f`). Delivery `8868b8bf-e0ee-401b-b7e7-d2e3b2b5970b`; `buildUploads` `COMPLETE`, no errors.
