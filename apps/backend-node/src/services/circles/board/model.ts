@@ -13,6 +13,8 @@ export interface PastWeek {
 }
 
 export interface MemberHistory {
+  // Only proven members (who posted their first photo) count toward streaks and recaps.
+  proven?: boolean;
   name: string | null;
   joinedAt: Date;
   weeks: PastWeek[];

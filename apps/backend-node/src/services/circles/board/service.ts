@@ -29,8 +29,8 @@ export function localStarts(timezone: string | null, now = new Date()) {
   };
 }
 
-// First log on the circle plan after joining: that log is the person's intro.
-export async function introEntryId(
+// First photo log on the circle plan after joining: the proof that gets you in, and your intro.
+export async function proofEntryId(
   userId: string,
   planId: string,
   joinedAt: Date,
@@ -41,6 +41,7 @@ export async function introEntryId(
       deletedAt: null,
       createdAt: { gte: joinedAt },
       activity: { plans: { some: { id: planId } } },
+      OR: [{ imageUrls: { isEmpty: false } }, { imageUrl: { not: null } }],
     },
     orderBy: { createdAt: "asc" },
     select: { id: true },
@@ -56,7 +57,11 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
     where: { id: circleId },
     include: {
       members: {
-        where: { OR: [{ userId: viewerId }, { userId: { notIn: hidden } }], user: { deletedAt: null } },
+        // Pending people (no proof yet) only see themselves; others see proven members.
+        where: {
+          OR: [{ userId: viewerId }, { userId: { notIn: hidden }, provenAt: { not: null } }],
+          user: { deletedAt: null },
+        },
         orderBy: { joinedAt: "asc" },
         include: {
           user: true,
@@ -82,9 +87,10 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
       const [stats, progress, intro] = await Promise.all([
         plansService.getPlanWeekStats(m.plan, m.user, now),
         plansService.getPlanProgress(m.plan, m.user).catch(() => null),
-        introEntryId(m.userId, m.planId, m.joinedAt),
+        proofEntryId(m.userId, m.planId, m.joinedAt),
       ]);
       histories.push({
+        proven: !!m.provenAt,
         name: m.user.name?.split(" ")[0] ?? m.user.username,
         joinedAt: m.joinedAt,
         weeks: (progress?.weeks ?? []) as MemberHistory["weeks"],
@@ -96,6 +102,7 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
         joinedAt: m.joinedAt,
         week: memberWeek(stats, m.joinedAt, localStarts(m.user.timezone, now).week),
         hasIntro: !!intro,
+        pending: !m.provenAt,
         nudgedToday: nudged.has(m.userId),
       };
     }),
@@ -112,10 +119,10 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
     place: sharedPlace(circle.members.map((m) => m.user.approxPlace)),
     paceLabel: paceLabel(circle.members.map((m) => weeklyTarget(m.plan))),
     cap: CIRCLE_CAP,
-    me: { role: me.role, planId: me.planId, hasIntro: !!mine?.hasIntro },
+    me: { role: me.role, planId: me.planId, hasIntro: !!mine?.hasIntro, pending: !me.provenAt },
     members,
-    togetherStreak: circle.status === "ACTIVE" ? togetherStreak(histories) : 0,
-    recap: circle.status === "ACTIVE" ? lastWeekRecap(histories) : null,
+    togetherStreak: circle.status === "ACTIVE" ? togetherStreak(histories.filter((h) => h.proven)) : 0,
+    recap: circle.status === "ACTIVE" ? lastWeekRecap(histories.filter((h) => h.proven)) : null,
   };
 }
 
@@ -124,7 +131,11 @@ export async function circleFeed(viewerId: string, circleId: string, limit = 30)
   await requireMember(viewerId, circleId);
   const hidden = await blockedUserIds(viewerId);
   const members = await prisma.circleMember.findMany({
-    where: { circleId, userId: { notIn: hidden }, user: { deletedAt: null } },
+    where: {
+      circleId,
+      user: { deletedAt: null },
+      OR: [{ userId: viewerId }, { userId: { notIn: hidden }, provenAt: { not: null } }],
+    },
     select: { userId: true, planId: true, joinedAt: true },
   });
   if (!members.length) return { entries: [], introIds: [] };
@@ -168,7 +179,7 @@ export async function circleFeed(viewerId: string, circleId: string, limit = 30)
     },
   });
   const introIds = (
-    await Promise.all(members.map((m) => introEntryId(m.userId, m.planId, m.joinedAt)))
+    await Promise.all(members.map((m) => proofEntryId(m.userId, m.planId, m.joinedAt)))
   ).filter((id): id is string => !!id);
   return { entries, introIds };
 }

@@ -29,6 +29,8 @@ export async function timelineCircles(viewerId: string, hidden: string[]) {
     where: {
       circleId: { in: mine.map((m) => m.circleId) },
       userId: { notIn: hidden },
+      // Only proven members' logs are shared; a pending member's proof shows once it's posted.
+      provenAt: { not: null },
       user: { deletedAt: null },
       plan: { deletedAt: null },
     },

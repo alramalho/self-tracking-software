@@ -27,3 +27,8 @@ export const RECAP_HOUR = 19;
 
 // People who haven't opened the app in this long aren't matched.
 export const ACTIVE_WITHIN_DAYS = 14;
+
+// Joining needs proof: the first photo log on the plan. One coach reminder after a day,
+// and the spot is released after a week.
+export const PROOF_NUDGE_AFTER_HOURS = 24;
+export const PENDING_EXPIRES_AFTER_DAYS = 7;

@@ -22,6 +22,7 @@ export async function nudge(fromId: string, circleId: string, toId: string): Pro
     include: { user: true, plan: { include: { activities: true } }, circle: true },
   });
   if (!target) throw new CircleError("They're not in this circle anymore");
+  if (!target.provenAt) throw new CircleError("They haven't posted their first session yet");
   if (await isBlockedPair(fromId, toId)) throw new CircleError("You can't nudge this person");
 
   const from = await prisma.user.findUniqueOrThrow({

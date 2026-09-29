@@ -1,10 +1,19 @@
 import { TZDate } from "@date-fns/tz";
-import { subDays } from "date-fns";
+import { subDays, subHours } from "date-fns";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../utils/prisma";
 import { circleBoard } from "./board/service";
 import { recapMessage } from "./board/model";
-import { ACTIVE_AT, MATCHING_TARGET, RECAP_HOUR, STALLED_AFTER_DAYS } from "./config";
+import {
+  ACTIVE_AT,
+  MATCHING_TARGET,
+  PENDING_EXPIRES_AFTER_DAYS,
+  PROOF_NUDGE_AFTER_HOURS,
+  RECAP_HOUR,
+  STALLED_AFTER_DAYS,
+} from "./config";
+import { recordCircleEvent } from "./events";
+import { settleAfterLeaving } from "./service";
 import { mergeableInto } from "./matching/service";
 import { circleLabel, notifyCircle } from "./notify";
 
@@ -14,7 +23,10 @@ const memberSelect = {
   wantsPace: true,
   wantsNearby: true,
   wantsAge: true,
+  provenAt: true,
 } as const;
+
+const provenCount = (members: { provenAt: Date | null }[]) => members.filter((m) => m.provenAt).length;
 
 // Two forming circles whose people all fit each other become one: the newer
 // circle's members move into the older one.
@@ -43,12 +55,13 @@ export async function mergeFormingCircles(): Promise<number> {
       await prisma.$transaction(async (tx) => {
         await tx.circleMember.updateMany({ where: { circleId: source.id }, data: { circleId: target.id, role: "MEMBER" } });
         await tx.circle.delete({ where: { id: source.id } });
-        if (target.members.length + source.members.length >= ACTIVE_AT)
+        if (provenCount([...target.members, ...source.members]) >= ACTIVE_AT)
           await tx.circle.update({ where: { id: target.id }, data: { status: "ACTIVE" } });
       });
       gone.add(source.id);
       merges += 1;
-      const everyone = [...target.members, ...source.members].map((m) => m.userId);
+      const merged = [...target.members, ...source.members];
+      const everyone = merged.filter((m) => m.provenAt).map((m) => m.userId);
       if (everyone.length >= ACTIVE_AT)
         await notifyCircle(
           everyone,
@@ -59,7 +72,7 @@ export async function mergeFormingCircles(): Promise<number> {
         );
       else
         await notifyCircle(
-          source.members.map((m) => m.userId),
+          source.members.filter((m) => m.provenAt).map((m) => m.userId),
           target,
           "We found you company",
           `You're now in ${circleLabel(target)} with someone on a similar goal.`,
@@ -119,9 +132,54 @@ export async function sundayRecaps(now = new Date()): Promise<number> {
   return sent;
 }
 
+// The day after joining without a photo, the coach reminds them once what gets them in.
+export async function proofNudges(now = new Date()): Promise<number> {
+  const waiting = await prisma.circleMember.findMany({
+    where: { provenAt: null, proofNudgedAt: null, joinedAt: { lte: subHours(now, PROOF_NUDGE_AFTER_HOURS) } },
+    include: { circle: true, user: { select: { coachPersonality: true } } },
+  });
+  for (const member of waiting) {
+    // The coach steps in, in their own name.
+    const coach = member.user.coachPersonality === "STRATEGIST" ? "Oli" : "Helly";
+    await prisma.circleMember.update({
+      where: { circleId_userId: { circleId: member.circleId, userId: member.userId } },
+      data: { proofNudgedAt: now },
+    });
+    await notifyCircle(
+      [member.userId],
+      member.circle,
+      `${coach} · Your circle is waiting`,
+      `Post a photo from your next session to join ${circleLabel(member.circle)}.`,
+      `circle-proof:${member.circleId}`,
+    );
+    await recordCircleEvent("PROOF_NUDGED", member);
+  }
+  return waiting.length;
+}
+
+// A spot held for a week without proof goes back to the circle.
+export async function expirePending(now = new Date()): Promise<number> {
+  const expired = await prisma.circleMember.findMany({
+    where: { provenAt: null, joinedAt: { lte: subDays(now, PENDING_EXPIRES_AFTER_DAYS) } },
+  });
+  for (const member of expired) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "public"."circles" WHERE "id" = ${member.circleId} FOR UPDATE`;
+      const removed = await tx.circleMember.deleteMany({
+        where: { circleId: member.circleId, userId: member.userId, provenAt: null },
+      });
+      if (removed.count) await settleAfterLeaving(tx, member.circleId, member.role === "OWNER");
+    });
+    await recordCircleEvent("EXPIRED", member);
+  }
+  return expired.length;
+}
+
 export async function runCircleJobs(now = new Date()) {
+  const nudged = await proofNudges(now);
+  const expired = await expirePending(now);
   const merged = await mergeFormingCircles();
   const stalled = await stalledNotices(now);
   const recaps = await sundayRecaps(now);
-  logger.info("Circle jobs finished", { merged, stalled, recaps });
+  logger.info("Circle jobs finished", { nudged, expired, merged, stalled, recaps });
 }

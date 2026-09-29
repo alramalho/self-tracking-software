@@ -144,6 +144,7 @@ model User {
   circles        CircleMember[]
   nudgesSent     CircleNudge[] @relation("CircleNudgesSent")
   nudgesReceived CircleNudge[] @relation("CircleNudgesReceived")
+  circleEvents   CircleEvent[]
   // Rounded to 0.1° (about 11 km); only written when someone asks to be matched with people nearby.
   approxLatitude  Float?
   approxLongitude Float?
@@ -1492,6 +1493,7 @@ model Circle {
   createdAt       DateTime       @default(now())
   members         CircleMember[]
   nudges          CircleNudge[]
+  events          CircleEvent[]
 
   @@map("circles")
   @@schema("public")
@@ -1508,6 +1510,9 @@ model CircleMember {
   wantsNearby Boolean    @default(false)
   wantsAge    Boolean    @default(false)
   joinedAt    DateTime   @default(now())
+  // Pending until the first photo log on this plan after joining: that log is the proof and the intro.
+  provenAt      DateTime?
+  proofNudgedAt DateTime?
   circle      Circle     @relation(fields: [circleId], references: [id], onDelete: Cascade)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan        Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -1531,6 +1536,34 @@ model CircleNudge {
   @@index([toId, createdAt])
   @@index([fromId, toId, createdAt])
   @@map("circle_nudges")
+  @@schema("public")
+}
+
+// What happened with circle memberships, for coach nudges and the join funnel.
+enum CircleEventKind {
+  JOINED
+  PROVED
+  PROOF_SKIPPED
+  PROOF_NUDGED
+  EXPIRED
+  LEFT
+
+  @@schema("public")
+}
+
+model CircleEvent {
+  id        String          @id @default(cuid())
+  circleId  String?
+  userId    String
+  planId    String?
+  kind      CircleEventKind
+  createdAt DateTime        @default(now())
+  circle    Circle?         @relation(fields: [circleId], references: [id], onDelete: SetNull)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
+  @@map("circle_events")
   @@schema("public")
 }
 

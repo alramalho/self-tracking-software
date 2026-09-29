@@ -862,7 +862,7 @@ router.post(
         logger.info("No photo provided");
       }
 
-      // A member's first log on their circle plan is their intro to the circle.
+      // A member's first photo log on their circle plan is their proof and intro.
       void onEntryLogged(entry);
 
       // Update independent user metadata while fetching affected plans.
@@ -1305,6 +1305,8 @@ router.put(
           logger.error(`Error processing photo notification work for entry ${updatedEntry.id}:`, error);
         });
       }
+      // A photo added later can still be someone's proof for their circle.
+      void onEntryLogged(updatedEntry);
     } catch (error) {
       logger.error("Error updating activity entry photo:", error);
       res.status(500).json({ error: "Failed to update photo" });

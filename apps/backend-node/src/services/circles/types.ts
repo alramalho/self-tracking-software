@@ -93,6 +93,8 @@ export interface BoardMember {
   week: MemberWeek;
   // First log on the circle plan after joining.
   hasIntro: boolean;
+  // Joined but hasn't posted the first photo log yet; only they can see themselves.
+  pending: boolean;
   nudgedToday: boolean;
 }
 
@@ -115,7 +117,7 @@ export interface CircleBoard {
   place: string | null;
   paceLabel: string | null;
   cap: number;
-  me: { role: CircleRole; planId: string; hasIntro: boolean };
+  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean };
   members: BoardMember[];
   togetherStreak: number;
   recap: CircleRecap | null;

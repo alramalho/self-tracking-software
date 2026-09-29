@@ -37,7 +37,7 @@ export async function circleCards(
       emoji: true,
       status: true,
       members: {
-        where: { userId: { notIn: hidden }, user: { deletedAt: null } },
+        where: { userId: { notIn: hidden }, user: { deletedAt: null }, provenAt: { not: null } },
         orderBy: { joinedAt: "asc" },
         select: {
           planId: true,

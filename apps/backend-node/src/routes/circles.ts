@@ -12,9 +12,10 @@ import {
   leaveCircle,
   myCircles,
   removeMember,
+  renameCircle,
   saveApproxLocation,
+  skipProof,
   startCircle,
-  updateCircle,
 } from "../services/circles/service";
 import { logger } from "../utils/logger";
 
@@ -80,12 +81,12 @@ router.post(
   }),
 );
 
-// Start a circle with this plan; the starter owns it.
+// Start a circle with this plan; the starter owns it. Every circle is open.
 router.post(
   "/",
   handle(async (req, res) => {
-    const body = withPlan.extend({ openToMatching: z.boolean().default(true) }).parse(req.body);
-    res.json(await startCircle(req.user!.id, body.planId, body, body.openToMatching));
+    const body = withPlan.parse(req.body);
+    res.json(await startCircle(req.user!.id, body.planId, body));
   }),
 );
 
@@ -117,14 +118,17 @@ router.post(
 router.patch(
   "/:id",
   handle(async (req, res) => {
-    const body = z
-      .object({
-        name: z.string().trim().min(1).max(60).optional(),
-        openToMatching: z.boolean().optional(),
-        discoverable: z.boolean().optional(),
-      })
-      .parse(req.body);
-    await updateCircle(req.user!.id, req.params.id, body);
+    const { name } = z.object({ name: z.string().trim().min(1).max(60) }).parse(req.body);
+    await renameCircle(req.user!.id, req.params.id, name);
+    res.sendStatus(204);
+  }),
+);
+
+// "Later" on the first-photo prompt. They stay pending; the coach reminds them tomorrow.
+router.post(
+  "/:id/proof-skipped",
+  handle(async (req, res) => {
+    await skipProof(req.user!.id, req.params.id);
     res.sendStatus(204);
   }),
 );

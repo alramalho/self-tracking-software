@@ -50,6 +50,7 @@ async function openCircles(userId: string, onlyDiscoverable: boolean): Promise<O
           wantsPace: true,
           wantsNearby: true,
           wantsAge: true,
+          provenAt: true,
           user: { select: { lastActiveAt: true, createdAt: true, deletedAt: true, suspendedAt: true } },
           plan: { select: { deletedAt: true, archivedAt: true } },
         },
@@ -65,7 +66,8 @@ async function openCircles(userId: string, onlyDiscoverable: boolean): Promise<O
     }))
     .filter(
       (c) =>
-        c.members.length > 0 &&
+        // Pending people hold a spot; a circle is only offered once someone in it has proven in.
+        c.members.some((m) => m.provenAt) &&
         c.members.length < MATCHING_TARGET &&
         c.members.every((m) => !hidden.has(m.userId)) &&
         c.members.some(
@@ -76,7 +78,7 @@ async function openCircles(userId: string, onlyDiscoverable: boolean): Promise<O
       id: c.id,
       status: c.status,
       discoverable: c.discoverable,
-      members: c.members.map(({ userId, planId, wantsPace, wantsNearby, wantsAge }) => ({
+      members: c.members.filter((m) => m.provenAt).map(({ userId, planId, wantsPace, wantsNearby, wantsAge }) => ({
         userId,
         planId,
         wantsPace,
@@ -195,7 +197,7 @@ export async function searchCircles(userId: string, query: string): Promise<Circ
     where: {
       discoverable: true,
       openToMatching: true,
-      members: { none: { userId: { in: [userId, ...hidden] } } },
+      members: { none: { userId: { in: [userId, ...hidden] } }, some: { provenAt: { not: null } } },
       OR: [
         { name: { contains: query, mode: "insensitive" } },
         { members: { some: { plan: { goal: { contains: query, mode: "insensitive" } } } } },
