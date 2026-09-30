@@ -25,7 +25,7 @@ import {
 } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { hasAiConsent } from "../utils/aiConsent";
-import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
+import { toMidnightUTCDate } from "../utils/date";
 import { withErrorHandling } from "../utils/errorHandling";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -55,16 +55,37 @@ export async function getNextPlanSortOrder(
   return (maxPlanSortOrder._max.sortOrder ?? -1) + 1;
 }
 
+const PROGRESS_CALCULATION_VERSION = 2;
+
 function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   return isBefore(date, threeDaysAgo);
 }
 
-// Same week boundary as the streak (Sunday, UTC midnight).
-function computedBeforeThisWeek(date: Date): boolean {
+// Week labels are UTC date-only values; boundaries for real timestamps are local.
+function localWeekStart(now: Date, timezone: string): Date {
+  return startOfWeek(new TZDate(now, timezone), { weekStartsOn: 0 });
+}
+
+function localMidnight(dateLabel: Date, timezone: string): Date {
+  return new Date(new TZDate(
+    dateLabel.getUTCFullYear(),
+    dateLabel.getUTCMonth(),
+    dateLabel.getUTCDate(),
+    timezone
+  ).getTime());
+}
+
+function hasCurrentCalculation(plan: Plan, user: User): boolean {
+  const state = plan.progressState as PlanProgressState | null;
+  return state?.calculationVersion === PROGRESS_CALCULATION_VERSION &&
+    state?.calculationTimezone === (user.timezone || "UTC");
+}
+
+function computedBeforeThisWeek(date: Date, timezone: string): boolean {
   return isBefore(
     date,
-    toMidnightUTCDate(startOfWeek(new Date(), { weekStartsOn: 0 }))
+    localWeekStart(new Date(), timezone)
   );
 }
 
@@ -211,9 +232,7 @@ export class PlansService {
     const weeks = await this.getPlanWeeks(planWithActivities, user, undefined, now);
 
     // Find the current week from the weeks data
-    const currentWeekStart = toMidnightUTCDate(
-      startOfWeek(userCurrentDate, { weekStartsOn: 0 })
-    );
+    const currentWeekStart = toMidnightUTCDate(localWeekStart(now, timezone));
 
     const currentWeek = weeks.find((week) =>
       isSameDay(week.startDate, currentWeekStart)
@@ -234,7 +253,7 @@ export class PlansService {
 
     // Calculate days left in the week
     const weekEnd = toMidnightUTCDate(
-      endOfWeek(userCurrentDate, { weekStartsOn: 0 })
+      endOfWeek(new TZDate(userCurrentDate, "UTC"), { weekStartsOn: 0 })
     );
     const numLeftDaysInTheWeek = Math.max(
       0,
@@ -572,7 +591,7 @@ export class PlansService {
       };
     }
 
-    return this.scoreWeeks(weeks);
+    return this.scoreWeeks(weeks, new Date(), user.timezone || "UTC");
   }
 
   // Walks the weeks up to this one and scores the streak, marking each past week's outcome:
@@ -581,9 +600,9 @@ export class PlansService {
   //   two weeks in a row (the second one counts as missed)
   // - missed: -1 (no grace week), never below 0
   // The current week only counts once it's complete.
-  scoreWeeks(weeks: PlanWeek[], now = new Date()): PlanAchievement {
-    const currentWeekStart = toMidnightUTCDate(startOfWeek(now, { weekStartsOn: 0 }));
-    const lastWeekStart = toMidnightUTCDate(addWeeks(currentWeekStart, -1));
+  scoreWeeks(weeks: PlanWeek[], now = new Date(), timezone = "UTC"): PlanAchievement {
+    const currentWeekStart = toMidnightUTCDate(localWeekStart(now, timezone));
+    const lastWeekStart = toMidnightUTCDate(addWeeks(new TZDate(currentWeekStart, "UTC"), -1));
 
     let streak = 0;
     let completedWeeks = 0;
@@ -593,7 +612,7 @@ export class PlansService {
     let previousOutcome: PlanWeek["outcome"];
 
     for (const week of weeks) {
-      const weekStart = toMidnightUTCDate(startOfWeek(week.startDate, { weekStartsOn: 0 }));
+      const weekStart = new Date(week.startDate);
       const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
       if (!isCurrentWeek && !isBefore(weekStart, currentWeekStart)) break;
       totalWeeks += 1;
@@ -676,25 +695,17 @@ export class PlansService {
 
   async getBatchPlanProgress(
     planIds: string[],
-    userId: string,
+    _viewerId: string,
     forceRecompute: boolean = false,
     options: { staleWhileRevalidate?: boolean } = {}
   ): Promise<PlanProgressData[]> {
     const plans = await prisma.plan.findMany({
       where: { id: { in: planIds } },
-      include: { activities: true },
+      include: { activities: true, user: true },
     });
 
     if (!plans) {
       throw new Error(`Plans ${planIds.join(", ")} not found.`);
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new Error(`User ${userId} not found`);
     }
 
     let cachedCount = 0;
@@ -703,22 +714,27 @@ export class PlansService {
 
     const progressPromises = Promise.all(
       plans.map(async (plan) => {
+        // A friend's profile must use that friend's calendar, never the viewer's.
+        const user = plan.user;
+        const currentCalculation = hasCurrentCalculation(plan, user);
         const hasExpiredCache =
           !!plan.progressCalculatedAt && is3DaysOld(plan.progressCalculatedAt);
         // A new week can cost streak; never serve last week's numbers.
         const fromEarlierWeek =
           !!plan.progressCalculatedAt &&
-          computedBeforeThisWeek(plan.progressCalculatedAt);
+          computedBeforeThisWeek(plan.progressCalculatedAt, user.timezone || "UTC");
         const shouldRecompute =
           !plan.progressCalculatedAt ||
           forceRecompute ||
           hasExpiredCache ||
-          fromEarlierWeek;
+          fromEarlierWeek ||
+          !currentCalculation;
 
         if (shouldRecompute) {
           if (
             options.staleWhileRevalidate &&
             !forceRecompute &&
+            currentCalculation &&
             !fromEarlierWeek &&
             hasExpiredCache &&
             plan.progressState
@@ -757,7 +773,8 @@ export class PlansService {
     // If progress has never been calculated, or was calculated last week, compute it now
     if (
       !plan.progressCalculatedAt ||
-      computedBeforeThisWeek(plan.progressCalculatedAt)
+      computedBeforeThisWeek(plan.progressCalculatedAt, user.timezone || "UTC") ||
+      !hasCurrentCalculation(plan, user)
     ) {
       logger.info(
         `Progress never calculated for plan ${plan.id}, computing now`
@@ -860,6 +877,8 @@ export class PlansService {
 
     // Cache the computed progress with achievement dates
     const progressState: PlanProgressState = {
+      calculationVersion: PROGRESS_CALCULATION_VERSION,
+      calculationTimezone: user.timezone || "UTC",
       achievement: {
         ...progressData.achievement,
         achievedLastStreakAt,
@@ -953,7 +972,7 @@ export class PlansService {
 
     // Get weeks data, with each past week's outcome (complete / held / missed) for the grid
     const weeks = await this.getPlanWeeks(plan, user);
-    this.scoreWeeks(weeks);
+    this.scoreWeeks(weeks, new Date(), user.timezone || "UTC");
 
     return {
       plan: {
@@ -988,9 +1007,9 @@ export class PlansService {
     targetCount: number;
   }> {
     // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
-    const weekStart = toMidnightUTCDate(startOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
+    const weekStart = toMidnightUTCDate(localWeekStart(date, "UTC")); // Date-only label
     // Use next week's start for exclusive upper bound (lt) to include full Saturday
-    const nextWeekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
+    const nextWeekStart = toMidnightUTCDate(addWeeks(new TZDate(weekStart, "UTC"), 1));
 
     // Filter to have available only the activities present in the plan.activities
     const planActivities = userActivities.filter((activity) =>
@@ -1004,8 +1023,8 @@ export class PlansService {
       where: {
         activityId: { in: plan.activities.map((a) => a.id) },
         datetime: {
-          gte: weekStart,
-          lt: nextWeekStart,
+          gte: localMidnight(weekStart, userTimezone),
+          lt: localMidnight(nextWeekStart, userTimezone),
           lte: now,
         },
         deletedAt: null,
@@ -1098,9 +1117,9 @@ export class PlansService {
     }
 
     const weekEnd = toMidnightUTCDate(
-      endOfWeek(weekStart, { weekStartsOn: 0 })
+      endOfWeek(new TZDate(weekStart, "UTC"), { weekStartsOn: 0 })
     );
-    const finishingDate = toMidnightUTCDate(new Date(plan.finishingDate));
+    const finishingDate = toMidnightUTCDate(new TZDate(plan.finishingDate, "UTC"));
 
     if (isBefore(finishingDate, weekStart)) {
       return 0;
@@ -1158,14 +1177,15 @@ export class PlansService {
     });
 
     // Determine the actual start date - either the earliest activity entry or the provided startDate
+    const userTimezone = user.timezone || "UTC";
     let actualStartDate: Date;
     if (startDate) {
-      actualStartDate = startDate;
+      actualStartDate = new TZDate(startDate, userTimezone);
     } else if (activityEntries.length > 0) {
-      actualStartDate = toMidnightUTCDate(activityEntries[0].datetime);
+      actualStartDate = new TZDate(activityEntries[0].datetime, userTimezone);
     } else {
       // If no activity entries exist, start from current week
-      actualStartDate = todaysLocalDate();
+      actualStartDate = new TZDate(now, userTimezone);
     }
 
     const weeks: Array<PlanWeek> = [];
@@ -1173,12 +1193,9 @@ export class PlansService {
     let weekStart = toMidnightUTCDate(
       startOfWeek(actualStartDate, { weekStartsOn: 0 })
     );
-    const planEndDate = new Date(
-      plan.finishingDate || addWeeks(now, this.LIFESTYLE_WEEKS)
-    );
-
-    // Use user's timezone for consistent day counting
-    const userTimezone = user.timezone || "UTC";
+    const planEndDate = plan.finishingDate
+      ? new TZDate(plan.finishingDate, "UTC")
+      : addWeeks(new TZDate(now, userTimezone), this.LIFESTYLE_WEEKS);
 
     while (
       isBefore(weekStart, planEndDate) ||
@@ -1195,7 +1212,7 @@ export class PlansService {
         now
       );
       weeks.push(weekData);
-      weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
+      weekStart = toMidnightUTCDate(addWeeks(new TZDate(weekStart, "UTC"), 1));
     }
 
     return this.ensureCurrentWeekForTimesPerWeek(
