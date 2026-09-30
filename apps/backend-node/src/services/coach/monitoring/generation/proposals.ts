@@ -5,6 +5,8 @@ import {
 } from "../../../planProposalPatchService";
 import type { FollowUpOutput, LapseOutput, SetupOutput } from "./schema";
 
+type SessionTargetsPatch = NonNullable<SetupOutput["sessions"][number]["targets"]>;
+
 function proposal(
   plan: ActiveCoachPlan,
   description: string,
@@ -34,6 +36,16 @@ function assertSessionDate(date: string) {
     throw new Error(`Invalid session date ${date}`);
 }
 
+/** Nulls mean "not provided"; the patch only carries what the coach actually wrote. */
+function withoutNulls<T extends { title: string | null; targets: SessionTargetsPatch | null }>(session: T) {
+  const { title, targets, ...rest } = session;
+  return {
+    ...rest,
+    ...(title ? { title } : {}),
+    ...(targets ? { targets } : {}),
+  } as Omit<T, "title" | "targets"> & { title?: string; targets?: SessionTargetsPatch };
+}
+
 export function setupMessage(
   plan: ActiveCoachPlan,
   output: SetupOutput,
@@ -58,7 +70,7 @@ export function setupMessage(
   }
   const patch = PlanProposalPatchSchema.parse({
     plan: { outlineType: "SPECIFIC" },
-    sessions: { upsert: output.sessions },
+    sessions: { upsert: output.sessions.map(withoutNulls) },
     ...(track.length ? { track } : {}),
   });
   return {
@@ -123,7 +135,7 @@ export function followUpMessage(
         ? {
             sessions: {
               ...([...change.newSessions, ...change.revisedSessions].length
-                ? { upsert: [...change.newSessions, ...change.revisedSessions] }
+                ? { upsert: [...change.newSessions, ...change.revisedSessions].map(withoutNulls) }
                 : {}),
               ...(change.removeSessionIds.length
                 ? { deleteIds: change.removeSessionIds }

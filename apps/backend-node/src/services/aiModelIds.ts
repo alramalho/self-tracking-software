@@ -1,4 +1,5 @@
 export const GPT_56_LUNA_MODEL = "openai/gpt-5.6-luna";
+export const GPT_6_LUNA_MODEL = "openai/gpt-6-luna";
 export const DEEPSEEK_V4_1_FLASH_MODEL = "deepseek/deepseek-v4.1-flash";
 export const DEFAULT_AI_GATEWAY_MODEL = GPT_56_LUNA_MODEL;
 
@@ -49,4 +50,12 @@ export function onboardingValidationProviderOptions(): Record<
     !onboardingValidationModel().startsWith("openai/")
     ? {}
     : { openai: { reasoningEffort: "low" } };
+}
+
+/**
+ * Plan design (classify, sub-goal question, two routes, rolling extension). Sessions carry pace,
+ * loads and targets, so this runs on a stronger model than the interview taps. PLAN_DESIGN_MODEL overrides.
+ */
+export function planDesignModel(): string {
+  return process.env.PLAN_DESIGN_MODEL || GPT_6_LUNA_MODEL;
 }

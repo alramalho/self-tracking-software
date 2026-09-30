@@ -155,6 +155,7 @@ export interface OnboardingCircleChoice {
 export interface OnboardingDraft {
   coaching?: import("./coaching").PlanCoaching;
   circle?: OnboardingCircleChoice;
+  design?: import("./design").PlanDesign;
   interview?: InterviewState;
   awaitingUpgrade?: boolean;
   id: string;

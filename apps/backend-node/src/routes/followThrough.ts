@@ -5,6 +5,9 @@ import {
 } from "../services/follow-through/onboarding/interview/guidance";
 import { getInterviewContext } from "../services/follow-through/onboarding/interview/context";
 import { interviewRequestSchema } from "../services/follow-through/onboarding/interview/schema";
+import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from "../services/plan-design/service";
+import { classifyRequestSchema, optionsRequestSchema, subgoalRequestSchema } from "../services/plan-design/requests";
+import { formatInTimeZone } from "date-fns-tz";
 import { FollowThroughInputError } from "../services/follow-through/errors";
 import rateLimit from "express-rate-limit";
 import { calendarSessions } from "../services/follow-through/calendar";
@@ -105,6 +108,50 @@ router.post(
   handle(async (req, res) =>
     res.json(await nextQuestion(draftSchema.parse(req.body))),
   ),
+);
+// Plan design: outcome or consistency, one optional sub-goal question, then two routes.
+const designLimit = rateLimit({
+  windowMs: 60000,
+  max: 12,
+  keyGenerator: (req) => (req as AuthenticatedRequest).user!.id,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.post(
+  "/onboarding/design/classify",
+  requireAiConsent,
+  designLimit,
+  handle(async (req, res) => {
+    const input = classifyRequestSchema.parse(req.body);
+    const context = await getInterviewContext(req.user!.id, undefined as never);
+    const { usage, ...result } = await classifyGoal({
+      goal: input.goal,
+      existingActivities: context.existingActivities.map((a) => ({ title: a.title, measure: a.measure })),
+    });
+    logger.info("Plan design classified", { userId: req.user!.id, orientation: result.orientation, usage });
+    res.json({ ...result, activity: { key: activityKey(result.activity.title), ...result.activity } });
+  }),
+);
+router.post(
+  "/onboarding/design/subgoal",
+  requireAiConsent,
+  designLimit,
+  handle(async (req, res) => {
+    const { question } = await nextSubgoalQuestion(subgoalRequestSchema.parse(req.body));
+    res.json({ question });
+  }),
+);
+router.post(
+  "/onboarding/design/options",
+  requireAiConsent,
+  designLimit,
+  handle(async (req, res) => {
+    const { timezone, ...input } = optionsRequestSchema.parse(req.body);
+    const startDate = formatInTimeZone(new Date(), timezone || "UTC", "yyyy-MM-dd");
+    const result = await designOptions({ ...input, startDate });
+    logger.info("Plan design generated", { userId: req.user!.id, status: result.status, usage: result.usage });
+    res.json({ status: result.status, question: result.question, baseline: result.baseline, options: result.options, startDate });
+  }),
 );
 router.post(
   "/onboarding/interview",

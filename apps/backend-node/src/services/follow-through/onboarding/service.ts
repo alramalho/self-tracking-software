@@ -14,6 +14,7 @@ import { monitoringState } from "../../coach/monitoring/model";
 import { finalOnboardingChoice } from "./finish";
 import { onboardingReviewEvents } from "./review";
 import { logger } from "../../../utils/logger";
+import { routeCoach } from "../../plan-design/frequency";
 export async function nextQuestion(draft: OnboardingDraft) {
   const result = await aiService.generateStructuredResponse({
     schema: nextSchema,
@@ -123,6 +124,11 @@ export async function finishOnboarding(
       nextStep: draft.nextStep,
       answers: draft.answers,
     };
+    const design = draft.design;
+    const chosen = design?.options.find((o) => o.id === design.selected);
+    if (design?.orientation === "OUTCOME" && !chosen)
+      throw new FollowThroughInputError("Choose one of the two plans first");
+    const lastDesigned = chosen?.sessions.reduce((m, x) => (x.date > m ? x.date : m), "");
     await tx.plan.create({
       data: {
         id: draft.id,
@@ -130,12 +136,31 @@ export async function finishOnboarding(
         goal: draft.goal,
         goalReason: draft.interview?.facts.goalReason || null,
         emoji: draft.emoji,
-        outlineType: "TIMES_PER_WEEK",
-        timesPerWeek: draft.frequency,
-        durationType: draft.targetDate ? "CUSTOM" : "LIFESTYLE",
-        finishingDate: draft.targetDate
-          ? new Date(`${draft.targetDate}T12:00:00Z`)
-          : null,
+        // An outcome plan is dated sessions the coach keeps extending; a habit is a weekly target.
+        outlineType: chosen ? "SPECIFIC" : "TIMES_PER_WEEK",
+        timesPerWeek: chosen?.trainingDaysPerWeek ?? draft.frequency,
+        durationType: draft.targetDate || chosen ? "CUSTOM" : "LIFESTYLE",
+        finishingDate: chosen
+          ? new Date(`${chosen.finishingDate}T12:00:00Z`)
+          : draft.targetDate
+            ? new Date(`${draft.targetDate}T12:00:00Z`)
+            : null,
+        estimatedWeeks: chosen?.estimatedWeeks ?? null,
+        orientation: design?.orientation ?? null,
+        goalSpec: design?.goalSpec as Prisma.InputJsonValue | undefined,
+        baseline: design?.baseline as Prisma.InputJsonValue | undefined,
+        outline: chosen
+          ? ({
+              route: chosen.id,
+              coach: routeCoach[chosen.id],
+              phases: chosen.phases,
+              assumptions: chosen.assumptions,
+              trainingDaysPerWeek: chosen.trainingDaysPerWeek,
+              startDate: design!.startDate,
+              estimatedWeeks: chosen.estimatedWeeks,
+            } as unknown as Prisma.InputJsonValue)
+          : undefined,
+        designedThrough: lastDesigned ? new Date(`${lastDesigned}T12:00:00Z`) : null,
         visibility: "PRIVATE",
         notes: [
           draft.resourceName
@@ -150,12 +175,27 @@ export async function finishOnboarding(
           .join("\n\n"),
         coachNotes: JSON.stringify(coachContext),
         activities: { connect: { id: selected.id } },
+        sessions: chosen
+          ? {
+              create: chosen.sessions.map((x) => ({
+                activityId: selected.id,
+                date: new Date(`${x.date}T12:00:00Z`),
+                quantity: x.quantity,
+                title: x.title,
+                descriptiveGuide: x.descriptiveGuide,
+                targets: x.targets as unknown as Prisma.InputJsonValue,
+                isCoachSuggested: true,
+              })),
+            }
+          : undefined,
       },
     });
     state.supports[draft.id] = {
       coaching: preferences.coaching
         ? (draft.coaching ?? {
-            role: draft.interview?.facts.coachingRole ?? "consistency",
+            role: design
+              ? design.orientation === "OUTCOME" ? "training" : "consistency"
+              : draft.interview?.facts.coachingRole ?? "consistency",
             followUps: false,
             dataAccess: { workouts: false, sleep: false },
           })
@@ -179,7 +219,8 @@ export async function finishOnboarding(
       effectiveDate: localDate(new Date(), draft.timezone),
     };
     state.draft = { ...draft, preferences, createdPlanId: draft.id };
-    if (state.supports[draft.id].coaching?.role === "training") {
+    // A chosen route already has its first two weeks, so there is nothing for the coach to set up.
+    if (state.supports[draft.id].coaching?.role === "training" && !chosen) {
       state.monitoring ??= monitoringState();
       state.monitoring.setupPlanIds = [
         ...(state.monitoring.setupPlanIds ?? []),

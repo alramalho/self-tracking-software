@@ -810,6 +810,18 @@ model Plan {
   pauseReason  String?
   pauseHistory Json? // Array of {pausedAt: DateTime, resumedAt?: DateTime, reason?: String}
 
+  // What the coach understood at onboarding, kept so later weeks regenerate from the same facts.
+  // orientation: OUTCOME (a finishable result) or CONSISTENCY (a habit, no endpoint).
+  orientation String?
+  // GoalSpec: the person's own target (finish time, lift load, chosen body measure). Never imposed.
+  goalSpec    Json?
+  // BaselineFacts: verbatim starting point plus the numbers extracted from it.
+  baseline    Json?
+  // PlanOutline: the whole road (phases, assumptions, route, finish estimate). Only the near part is dated.
+  outline     Json?
+  // Sessions exist up to this date. The weekly review extends the window from here.
+  designedThrough DateTime? @db.Date
+
   // Who plans the content of this plan's weeks. EXTERNAL_AGENT means a
   // connected agent (over MCP) owns week content; the coach stays on
   // accountability and steps back in when the agent goes stale.
@@ -852,6 +864,11 @@ model PlanSession {
   descriptiveGuide String   @default("")
   quantity         Int
   createdAt        DateTime @default(now())
+
+  // Short name ("Easy run", "Bench day") and the measurable prescription (duration, pace range,
+  // sets × reps × load, rest, what to log). See SessionTargets in follow-through/design.ts.
+  title   String?
+  targets Json?
 
   // AI-generated reference images for the session (exercise poses, techniques, etc.)
   imageUrls String[] @default([])

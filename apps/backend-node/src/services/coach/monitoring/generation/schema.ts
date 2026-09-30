@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { targetsSchema } from "../../../plan-design/schema";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -7,6 +8,10 @@ export const newSessionSchema = z.object({
   date,
   quantity: z.number().int().positive(),
   descriptiveGuide: z.string().min(1).max(3000),
+  title: z.string().max(50).nullable().describe("Short session name, e.g. Easy run. Null if not needed."),
+  targets: targetsSchema
+    .nullable()
+    .describe("Measurable prescription (duration, effort, pace range or sets/reps/load, what to log). Null only for a plain habit."),
 });
 
 export const setupOutputSchema = z.object({
@@ -53,6 +58,8 @@ export const followUpOutputSchema = z.object({
               date,
               quantity: z.number().int().positive(),
               descriptiveGuide: z.string().min(1).max(3000),
+              title: z.string().max(50).nullable(),
+              targets: targetsSchema.nullable(),
             }),
           )
           .max(14),

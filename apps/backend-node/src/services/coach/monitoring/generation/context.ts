@@ -24,6 +24,11 @@ export function scheduledCoachSnapshot(
       coachNotes: p.coachNotes,
       finishingDate: p.finishingDate?.toISOString().slice(0, 10),
       outlineType: p.outlineType,
+      orientation: p.orientation,
+      goalSpec: p.goalSpec,
+      baseline: p.baseline,
+      outline: p.outline,
+      designedThrough: p.designedThrough?.toISOString().slice(0, 10) ?? null,
       timesPerWeek: p.timesPerWeek,
       availability: {
         mode: input.supports[p.id]?.mode,
@@ -52,7 +57,9 @@ export function scheduledCoachSnapshot(
           activityId: s.activityId,
           date: s.date.toISOString().slice(0, 10),
           quantity: s.quantity,
+          title: s.title,
           descriptiveGuide: s.descriptiveGuide,
+          targets: s.targets,
           ...(input.assumedMissedSessionIds.includes(s.id)
             ? { assumedMissed: true }
             : {}),
@@ -73,7 +80,10 @@ export function scheduledCoachSnapshot(
       .slice(-12)
       .map((m) => ({ role: m.role, content: m.content })),
     selectedFeedback: input.entries.find((e) => e.id === input.decision.entryId)
-      ? { entryId: input.decision.entryId }
+      ? {
+          entryId: input.decision.entryId,
+          note: input.entries.find((e) => e.id === input.decision.entryId)?.privateNotes ?? null,
+        }
       : null,
     approvedHealthContext: health || null,
   };

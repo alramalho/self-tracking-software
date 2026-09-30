@@ -1,10 +1,12 @@
 import { interviewStateSchema } from "./interview/schema";
 import { planCoachingSchema } from "../../coach/monitoring/schema";
 import { z } from "zod/v4";
+import { planDesignDraftSchema } from "../../plan-design/draft";
 import { dateKey, time, timezone, preferencesSchema } from "../schema";
 export const draftSchema = z.object({
   coaching: planCoachingSchema.optional(),
   interview: interviewStateSchema.optional(),
+  design: planDesignDraftSchema.optional(),
   awaitingUpgrade: z.boolean().optional(),
   // "Do it with a group?" from onboarding; matching runs once the plan exists.
   circle: z

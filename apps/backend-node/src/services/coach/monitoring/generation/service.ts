@@ -17,6 +17,7 @@ import {
   setupOutputSchema,
 } from "./schema";
 import type { MonitoringGenerated } from "../types";
+import { designNextWindow, windowDue } from "./window";
 import type { ScheduledCoachGenerator, ScheduledCoachInput } from "./types";
 
 // The scheduler decides *when* the coach speaks. These three prompts decide *what* it says.
@@ -74,9 +75,33 @@ export async function generateFromSnapshot(
     }
     case "review":
     case "difficulty": {
+      // Coached outcome plans are designed two weeks at a time. The review extends the road from
+      // what really happened; a hard session swaps the upcoming ones. Other plans get the usual review.
+      const today = (snapshot as { today: string }).today;
+      const feedback = (snapshot as { selectedFeedback?: { note?: string } | null }).selectedFeedback?.note ?? null;
+      const windowPlans = input.plans.filter(
+        (plan) => plan.orientation === "OUTCOME" && (input.decision.kind === "difficulty" || windowDue(plan, today)),
+      );
+      const messages: MonitoringGenerated["draftMessages"] = [];
+      for (const plan of windowPlans) {
+        const designed = await designNextWindow(
+          plan,
+          input,
+          (snapshot as { approvedHealthContext: string | null }).approvedHealthContext,
+          input.decision.kind === "difficulty",
+          feedback,
+        );
+        messages.push(designed.message);
+        usage.model = designed.usage.model;
+        usage.inputTokens += designed.usage.inputTokens;
+        usage.outputTokens += designed.usage.outputTokens;
+        usage.costUsd = (usage.costUsd ?? 0) + (designed.usage.costUsd ?? 0);
+      }
+      const rest = input.plans.filter((plan) => !windowPlans.includes(plan));
+      if (!rest.length) return { draftMessages: messages, skipped: !messages.length, usage };
       const output = await generate(input, followUpOutputSchema, "coachFollowUp", followUpInstructions, snapshot, usage);
-      const draft = followUpMessage(input.plans, output);
-      return { draftMessages: draft ? [draft] : [], skipped: !draft, usage };
+      const draft = followUpMessage(rest, output);
+      return { draftMessages: draft ? [...messages, draft] : messages, skipped: !messages.length && !draft, usage };
     }
     case "lapse": {
       const output = await generate(input, lapseOutputSchema, "coachLapse", lapseInstructions, snapshot, usage);

@@ -8,6 +8,7 @@ import {
 import { z } from "zod/v4";
 import { prisma } from "../utils/prisma";
 import { planProposalBasis, StaleCoachProposalError } from "./coach/monitoring/proposal-basis";
+import { phaseSchema, targetsSchema } from "./plan-design/schema";
 
 const PlanScalarPatchSchema = z
   .object({
@@ -17,6 +18,9 @@ const PlanScalarPatchSchema = z
     finishingDate: z.string().nullable().optional(),
     outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
     timesPerWeek: z.number().positive().nullable().optional(),
+    // A coached outcome plan is designed a few weeks at a time: the road stays, the dated part moves on.
+    designedThrough: z.string().optional(),
+    outlinePhases: z.array(phaseSchema).max(6).optional(),
   })
   .strict();
 
@@ -27,6 +31,8 @@ const SessionPatchSchema = z
     date: z.string().optional(),
     quantity: z.number().positive().optional(),
     descriptiveGuide: z.string().optional(),
+    title: z.string().max(50).optional(),
+    targets: targetsSchema.optional(),
   })
   .strict();
 
@@ -290,6 +296,12 @@ export async function executePlanProposalPatch(params: {
       if (patch.plan.timesPerWeek !== undefined) {
         updateData.timesPerWeek = patch.plan.timesPerWeek;
       }
+      if (patch.plan.designedThrough !== undefined) {
+        updateData.designedThrough = parseDateOnly(patch.plan.designedThrough, "designedThrough");
+      }
+      if (patch.plan.outlinePhases !== undefined && plan.outline && typeof plan.outline === "object") {
+        updateData.outline = { ...(plan.outline as object), phases: patch.plan.outlinePhases } as Prisma.InputJsonValue;
+      }
 
       if (Object.keys(updateData).length > 0) {
         await tx.plan.update({
@@ -357,6 +369,8 @@ export async function executePlanProposalPatch(params: {
         if (sessionPatch.descriptiveGuide !== undefined) {
           updateData.descriptiveGuide = sessionPatch.descriptiveGuide;
         }
+        if (sessionPatch.title !== undefined) updateData.title = sessionPatch.title;
+        if (sessionPatch.targets !== undefined) updateData.targets = sessionPatch.targets as Prisma.InputJsonValue;
 
         await tx.planSession.update({
           where: { id: sessionPatch.id },
@@ -382,6 +396,8 @@ export async function executePlanProposalPatch(params: {
             date: parseDateOnly(sessionPatch.date, "session.date"),
             quantity: sessionPatch.quantity,
             descriptiveGuide: sessionPatch.descriptiveGuide || "",
+            title: sessionPatch.title,
+            targets: sessionPatch.targets as Prisma.InputJsonValue | undefined,
             isCoachSuggested: true,
           },
         });
