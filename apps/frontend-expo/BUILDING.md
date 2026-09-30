@@ -48,6 +48,39 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
+## Safari-install build 188 — circle encouragement, September 30, 2026
+
+- Local production release from `9cce3691`, preserving current main `eda9fab9` and adding encouragement `0022291e`. Tapping the circle hand opens “Motivate Alex” with their avatar and a blank personal message; opening/dismissing sends nothing. Only Send delivers a private message through the ordinary chat notification path. Both circle board and plan entry points use this flow, on Expo and Vite.
+- Verified IPA: `/Users/alramalho/workspace/tracking.so/tracking-circles/apps/frontend-expo/.release/circle-encouragement-b188/tracking.so.ipa`. SHA-256 `199142f74141b5719076ec80762d6b6661622450f00d547429446c11748301c7`; version 1.0.0, iPhone and Watch build 188. Strict release signatures, registered phone/Watch provisioning, production API/live Clerk, fixture exclusion and bundled JavaScript passed. TrackingWatch, TrackingHealth and TrackingMap were installed and compiled; the encouragement copy was checked in the exact Hermes bundle.
+- Hosted installer record: `.release/2026-09-30T21-43-57-519Z-11c2bded/distribution.json` in the same worktree. Installer, manifest identity and all 28,135,732 hosted IPA bytes passed SHA-256 verification. The seven-day link expires October 7, 2026; the precise expiry and private signed URL remain in the ignored record. Installation on a physical device has not been observed.
+- Expo typecheck, Vite production build/typecheck, 17 backend circle integration cases, 3 circle model cases and 2 light/dark phone browser cases passed. The browser suite verifies no request on opening/dismissing, no legacy nudge, retained draft/retry after failure and explicit Send. [Walkthrough and actual app captures](../../docs/reviews/circle-encouragement/index.html) use illustrative members.
+- Web deployment `dpl_Dn8gZhBeDshotj5QcgKKYpkP8FsV` is active at `https://app.tracking.so`; complete HTML, JS/CSS and lazy-loaded drawer/circle assets match the local production output. Previous deployment `dpl_9ZsEHWa7DiZ8ZiajUGTaHqkZrYNg` remains the rollback target. The backend is `circle-encouragement-20260930`; see [deployment and rollback](../../hetzner/MIGRATION.md#circle-encouragement--active-since-september-30-2026). No schema migration.
+- Build 187 was interrupted before export to rebuild with the newer main commits; it produced no IPA and was never published. Build 188 used the app’s existing matched iPhone/Watch ad hoc credentials downloaded locally, without creating a certificate/profile. No cloud build, OTA or TestFlight publication occurred; build 177 remains the recorded TestFlight release.
+
+The build used a clean integration clone at `/private/tmp/tracking-encouragement-integrated`, with the existing workspace dependencies and production environment copied into ignored paths. Preserve the root `.easignore`. For a local matched-credentials build, run EAS credentials in this app directory, select `device-production` → `credentials.json` → Download → Ad hoc, and use the downloaded `credentials.json`/`credentials/ios` only in the local build source (never track them). Set `build.device-production.credentialsSource` to `local` in that build copy’s `eas.json`; keep the tracked default intact. On this Mac:
+
+```sh
+cd /private/tmp/tracking-encouragement-integrated/apps/frontend-expo
+PNPM_MANAGE_PACKAGE_MANAGER_VERSIONS=false pnpm dlx eas-cli@24.0.0 credentials --platform ios
+EAS_PROJECT_ROOT=/private/tmp/tracking-encouragement-integrated \
+PNPM_MANAGE_PACKAGE_MANAGER_VERSIONS=false AWS_PROFILE=default \
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+NODE_OPTIONS='--dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=3000' \
+node --import tsx scripts/iphone/cli.ts build
+```
+
+Build 188’s source archive, local build profile, build log and `verified.json` are beside the preserved IPA. Publish that exact IPA and check the exact hosted bytes from the original worktree:
+
+```sh
+cd /Users/alramalho/workspace/tracking.so/tracking-circles/apps/frontend-expo
+AWS_PROFILE=default DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+NODE_OPTIONS='--dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=3000' \
+node --import tsx scripts/iphone/cli.ts publish .release/circle-encouragement-b188/tracking.so.ipa
+node scripts/iphone/verify-hosted.cjs .release/2026-09-30T21-43-57-519Z-11c2bded/distribution.json
+```
+
+The hosted-byte checker GETs the exact installer, follows its manifest, checks build/bundle metadata and hashes the full IPA against the local verification record. Open the returned HTTPS page in Safari and tap **Install on iPhone**. Signed links stay out of tracked docs.
+
 ## Safari-install build 176 — Circles and the clay onboarding, September 29, 2026
 
 - Local production build from `fdfc4742` (worktree `tracking-circles`), iPhone and Watch targets, production API and live Clerk, bundled JavaScript. Verified by `build:iphone` and hosted as a Safari install link (7-day presigned link in `.release/2026-09-29T11-17-22-270Z-300bce60/distribution.json`, not written here). IPA SHA-256 `74f529adc92b34cef970d234d16ad68b78fbbc805eee48f9a1004562d9ff61b7`.
