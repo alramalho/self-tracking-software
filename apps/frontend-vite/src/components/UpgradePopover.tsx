@@ -14,9 +14,9 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const PLUS_MONTHLY = 9.99;
-const PLUS_QUARTERLY = 24.99;
-const PLUS_YEARLY = 59.99;
+const PLUS_MONTHLY = 8.99;
+const PLUS_QUARTERLY = 19.99;
+const PLUS_YEARLY = 39.99;
 
 const QUARTERLY_MONTHLY_PRICE = Math.floor((PLUS_QUARTERLY / 3) * 100) / 100;
 const YEARLY_MONTHLY_PRICE = Math.floor((PLUS_YEARLY / 12) * 100) / 100;
@@ -51,20 +51,18 @@ const pricingTiers: PricingTier[] = [
     price: PLUS_MONTHLY,
     period: "month",
     positioning: "Try it out",
-    paymentLink: "https://buy.stripe.com/14A3cvdmH5td9E2803cfK0i",
+    paymentLink: "https://buy.stripe.com/aFaaEX6Yj6xh2bA5RVcfK0m",
   },
   {
     id: "quarterly",
     title: "Quarterly",
-    subtitle: "Most Popular",
+    subtitle: "Commit for a season",
     price: PLUS_QUARTERLY,
     period: "3 months",
     equivalentMonthly: QUARTERLY_MONTHLY_PRICE,
     savings: QUARTERLY_SAVINGS,
-    badge: "Most Popular",
     positioning: "Commit to real transformation",
-    paymentLink: "https://buy.stripe.com/eVqeVdeqLcVF6rQ2FJcfK0h",
-    isPopular: true,
+    paymentLink: "https://buy.stripe.com/cNibJ1ciD9JteYm803cfK0n",
   },
   {
     id: "yearly",
@@ -76,7 +74,8 @@ const pricingTiers: PricingTier[] = [
     savings: YEARLY_SAVINGS,
     badge: `Save ${YEARLY_SAVINGS}%`,
     positioning: "Best long term value",
-    paymentLink: "https://buy.stripe.com/8x2aEX1DZ8Fp9E24NRcfK0g",
+    paymentLink: "https://buy.stripe.com/00wcN5ciDf3N3fEdkncfK0o",
+    isPopular: true,
   },
 ];
 
@@ -116,7 +115,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 }) => {
   const [selectedTier, setSelectedTier] = useState<
     "monthly" | "quarterly" | "yearly"
-  >("quarterly");
+  >("yearly");
   const {currentUser, refetchCurrentUser} = useCurrentUser();
   const { getThemeClass } = useTheme();
 
