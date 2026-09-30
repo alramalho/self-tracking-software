@@ -282,6 +282,43 @@ curl -fsS https://api.tracking.so/health
 
 Rollback: restore `$D/backup/deployment.env` to `.env` (mode 600) and `docker compose up -d backend`. The migration is additive and can stay.
 
+## Streak calendar and profile owner — active since September 30, 2026
+
+Production runs `local/tracking-so-backend:streak-calendar-20260930` (image ID `e902cd33773f825a63b370dad37a1014b94e722c037b580037a441637973038b`), built from [streak-calendar-overlay.Dockerfile](./streak-calendar-overlay.Dockerfile) on `circle-coach-20260929`. Only `plansService.ts` and the progress types were overlaid; both original files matched `ce821038` before activation. No database migration or client rebuild is required.
+
+Week queries, scoring and cache expiry now use the plan owner's local Sunday boundary, including DST. Batch progress uses each plan's owner rather than the viewer. Cache version 2 records the calculation timezone; incompatible caches recompute before being returned. Existing completed/held/missed rules and archived-plan handling are unchanged.
+
+The 12 calendar regressions passed inside the exact candidate image with networking disabled. Normalized typecheck diagnostics were identical to the previous image. After activation, the container was healthy with zero restarts, public `/health` returned `{"status":"ok"}`, and unauthenticated plan/profile routes returned 401. Live progress recomputed Alex's training plan to 7 and archived Deep Learning plan to 1, with cache version 2 and `Europe/Lisbon`; another viewer received the same values. This does not identify the separate reported Studying entry.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-streak-calendar-20260930/`. The database dump and previous deployment environment are in its root-only `backup/` directory; `.dockerignore` excludes backups from subsequent builds. Both deployed source hashes match the local fix.
+
+Build, activation and verification commands (on the server, with the verified source already staged):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+D=tracking-streak-calendar-20260930
+docker build --network=none \
+  --build-arg BASE_IMAGE=local/tracking-so-backend:circle-coach-20260929 \
+  -f "$D/hetzner/streak-calendar-overlay.Dockerfile" \
+  -t local/tracking-so-backend:streak-calendar-20260930 "$D"
+docker run --rm --network none --env-file .env --env-file database-local.env \
+  -v "$PWD/$D/apps/backend-node/src/services/__tests__/plansService.calendar.test.ts:/app/apps/backend-node/src/services/__tests__/plansService.calendar.test.ts:ro" \
+  local/tracking-so-backend:streak-calendar-20260930 \
+  node_modules/.bin/vitest run src/services/__tests__/plansService.calendar.test.ts
+sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=local/tracking-so-backend:streak-calendar-20260930|' .env
+docker compose up -d --no-deps backend
+docker inspect --format '{{.Config.Image}} {{.State.Health.Status}}' tsw-backend
+curl --fail --silent https://api.tracking.so/health
+docker exec tsw-backend sha256sum /app/apps/backend-node/src/services/plansService.ts /app/packages/prisma/types/index.ts
+```
+
+Rollback is saved and syntax-checked as `tracking-streak-calendar-20260930/rollback.sh`. It refuses to overwrite a later release, restores `backup/deployment.env` with mode 600, recreates only the backend, invalidates caches written by version 2 so the old rules recompute, and retries public health. Run it only while this release is active:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-streak-calendar-20260930/rollback.sh
+```
+
 ## Circle coach posts and 2-person boards — active since September 29, 2026
 
 Image `local/tracking-so-backend:circle-coach-20260929` from [circle-coach-overlay.Dockerfile](./circle-coach-overlay.Dockerfile) on `circle-chat-20260929` (live files matched git `d1ea7857`). No schema change.

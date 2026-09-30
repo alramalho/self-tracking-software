@@ -7,6 +7,13 @@ export const getChats = async () =>
 export const createCoachChat = async () =>
   (await api.post<{ chat: Chat }>("/ai/coach/chats", { title: null })).data
     .chat;
+/** The user's most recent coach conversation, or a new one when they have none. */
+export async function latestCoachChat(chats?: Chat[]) {
+  const existing = (chats ?? (await getChats()))
+    .filter((chat) => chat.type === "COACH")
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
+  return existing ?? (await createCoachChat());
+}
 export const getMessages = async (id: string, coach: boolean) =>
   (
     await api.get<{ messages: Message[] }>(
