@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppState, Keyboard, Pressable, TextInput, View } from "react-native";
-import { CalendarDays, Sparkles, Target, Users } from "lucide-react-native";
+import { Sparkles } from "lucide-react-native";
 import { randomUUID } from "expo-crypto";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -16,7 +16,7 @@ import type {
 } from "@tsw/prisma/follow-through";
 import { useColors, Status } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
-import { Reveal } from "@/components/reveal/Reveal";
+import { StepSequence } from "./interview/StepReveal";
 import { EditorButton as BaseEditorButton } from "@/features/activities/editor/controls";
 import type { EditorButtonProps } from "@/features/activities/editor/types";
 import { defaultPreferences } from "@/features/circles/api";
@@ -25,6 +25,7 @@ import { setPendingMatch } from "@/features/circles/pendingMatch";
 import type { MatchPreferences, PendingMatch } from "@/features/circles/types";
 import { useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
+import type { User } from "@/core/types";
 import { goBack } from "@/core/navigation";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
@@ -35,6 +36,7 @@ import { OnboardingArt } from "./interview/OnboardingArt";
 import { OnboardingButton } from "./interview/OnboardingButton";
 import type { OnboardingArtName } from "./interview/types";
 import { CircleAsk, CirclePrefs } from "./CircleSteps";
+import { Welcome } from "./Welcome";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
 import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
@@ -297,8 +299,20 @@ export default function Onboarding({
     // If the coach can't accept it, the coaching question shows as before.
     if (result.accepted) await commitAccepted(committed.state, committed.draft, result, answer);
   }
+  const welcomeStart = useMutation({
+    mutationFn: async (age: number) => {
+      if (!Number.isInteger(age) || age < 13 || age > 120) return;
+      if (!preview && age !== user.data?.age) {
+        await api.patch("/users/user", { age });
+        client.setQueryData<User>(["current-user"], current => current ? { ...current, age } : current);
+      }
+      pendingAge.current = age;
+      Keyboard.dismiss();
+      setWelcome(false);
+    },
+  });
   async function chooseCircle(circle: OnboardingCircleChoice) {
-    if (circle.choice === "find" && circle.wantsAge && pendingAge.current && !preview)
+    if (circle.choice === "find" && circle.wantsAge && pendingAge.current && pendingAge.current !== user.data?.age && !preview)
       await api.patch("/users/user", { age: pendingAge.current });
     await persist({ ...draft, circle });
     setCirclePrefs(null);
@@ -1023,50 +1037,13 @@ export default function Onboarding({
     !history.length &&
     !paywall;
   if (welcome && freshStart)
-    return (
-      <InterviewFrame
-        stage="goal"
-        bare
-        preview={preview}
-        busy={false}
-        onBack={() => {}}
-        onClose={goBack}
-        actions={<EditorButton label="Let's start" onPress={() => setWelcome(false)} />}
-      >
-        <View style={{ alignItems: "center", gap: 18 }}>
-          <OnboardingArt name="welcome" size={210} />
-          <Text
-            accessibilityRole="header"
-            style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.6 }}
-          >
-            Welcome to tracking.so
-          </Text>
-          <Text style={{ color: c.muted, fontSize: 17, lineHeight: 24, textAlign: "center" }}>
-            We will go over a few things to ensure you are properly set up and maximize success likelihood!
-          </Text>
-        </View>
-        <View style={{ borderRadius: 16, backgroundColor: c.card, overflow: "hidden" }}>
-          {[
-            { icon: Target, label: "Your goal" },
-            { icon: CalendarDays, label: "Your week" },
-            { icon: Users, label: "Coach and circle" },
-          ].map((row, i) => (
-            <View
-              key={row.label}
-              style={{ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 52, paddingHorizontal: 16, borderTopWidth: i ? 1 : 0, borderColor: c.inputBorder }}
-            >
-              <row.icon size={22} color={c.text} strokeWidth={1.8} />
-              <Text style={{ color: c.text, fontSize: 17 }}>{row.label}</Text>
-            </View>
-          ))}
-        </View>
-      </InterviewFrame>
-    );
+    return <Welcome age={user.data?.age} preview={preview} busy={welcomeStart.isPending} error={welcomeStart.error} onContinue={age => welcomeStart.mutate(age)} onEdit={() => welcomeStart.reset()} onClose={goBack} />;
   // Without AI consent: explain (under the consent sheet), and offer the manual plan editor.
   if (user.data && !aiConsent.allowed)
     return (
       <InterviewFrame
         stage="goal"
+        transitionKey="consent"
         progress={{ current: 1, total: 1, label: "Before we start" }}
         preview={preview}
         busy={false}
@@ -1087,7 +1064,7 @@ export default function Onboarding({
           </>
         }
       >
-        <View style={{ alignItems: "center", gap: 24 }}>
+        <StepSequence prefix="consent" style={{ alignItems: "center", gap: 24 }}>
           <View style={{ height: 100, justifyContent: "center" }}>
             <Sparkles size={80} strokeWidth={1.4} color={c.accent} />
           </View>
@@ -1116,7 +1093,7 @@ export default function Onboarding({
             AI features to continue, or create a plan yourself and track it by
             hand.
           </Text>
-        </View>
+        </StepSequence>
         {aiConsent.sheet}
       </InterviewFrame>
     );
@@ -1124,6 +1101,7 @@ export default function Onboarding({
     return (
       <InterviewFrame
         stage="review"
+        transitionKey={circlePrefs ? "circle-match" : "circle"}
         progress={journeyProgress}
         preview={preview}
         busy={busy}
@@ -1141,7 +1119,7 @@ export default function Onboarding({
           )
         }
       >
-        <View style={{ alignItems: "center", gap: 16 }}>
+        <StepSequence prefix="circle-heading" style={{ alignItems: "center", gap: 16 }}>
           <OnboardingArt name={circlePrefs ? "match" : "circle"} size={170} />
           <Text
             accessibilityRole="header"
@@ -1154,13 +1132,13 @@ export default function Onboarding({
               Up to 8 people with a similar goal. You'll see each other's week.
             </Text>
           )}
-        </View>
+        </StepSequence>
         {circlePrefs ? (
           <CirclePrefs
             value={circlePrefs}
             onChange={(next) => void changeCirclePrefs(next)}
             place={circleLocation.current?.place ?? null}
-            age={user.data?.age ?? pendingAge.current}
+            age={pendingAge.current ?? user.data?.age}
             weeklyTarget={state.facts.frequency}
             locating={locating}
             locationDenied={locationDenied}
@@ -1187,6 +1165,7 @@ export default function Onboarding({
   return (
     <InterviewFrame
       stage={state.stage}
+      transitionKey={`${stepKey}-${showingValidation ? gate.isPending ? "checking" : "feedback" : "question"}`}
       onSkip={canSkip ? () => gate.mutate("") : undefined}
       progress={journeyProgress}
       preview={preview}
@@ -1215,12 +1194,11 @@ export default function Onboarding({
         />
       ) : (
         <>
-          {!coachPaywall && <Reveal key={`heading-${stepKey}`}>
-            <View style={{ alignItems: "center", gap: paywall ? 14 : 24 }}>
+          {!coachPaywall && <StepSequence prefix="heading" style={{ alignItems: "center", gap: paywall ? 14 : 24 }}>
               {!paywall && (
                 <OnboardingArt
                   name={artName}
-                  size={["goal", "baseline", "motivation", "review"].includes(state.stage) ? 150 : 190}
+                  size={["goal", "baseline", "motivation", "review"].includes(state.stage) ? 150 : 160}
                 />
               )}
               <Text
@@ -1242,7 +1220,7 @@ export default function Onboarding({
                       : "Your plan is ready."
                     : state.question.title}
               </Text>
-{(finished || paywall || !!state.question.purpose) && (
+              {(finished || paywall || !!state.question.purpose) && (
               <Text
                 style={{
                   color: c.muted,
@@ -1262,16 +1240,12 @@ export default function Onboarding({
                     : state.question.purpose}
               </Text>
               )}
-            </View>
-          </Reveal>}
-          {!finished && (
-            <Reveal key={`content-${stepKey}`} delay={100}>
-              <View style={{ gap: 16 }}>
-                {coachPaywall ? (
-                  <Paywall facts={state.facts} plans={plans} selected={selectedPlan!.id} onSelect={setPlanId} />
-                ) : (
-                  paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />
-                )}
+          </StepSequence>}
+          {!finished && (coachPaywall ? (
+            <Paywall facts={state.facts} plans={plans} selected={selectedPlan!.id} onSelect={setPlanId} />
+          ) : (
+            <StepSequence start={3} prefix="content" style={{ gap: 16 }}>
+                {paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />}
                 {state.stage === "review" && !paywall && (
                   <PlanSummary facts={state.facts} circle={circleSummary(draft.circle)} />
                 )}
@@ -1448,9 +1422,8 @@ export default function Onboarding({
                       : "Preview only. No plan is created here."}
                   </Text>
                 )}
-              </View>
-            </Reveal>
-          )}
+            </StepSequence>
+          ))}
         </>
       )}
       <Status

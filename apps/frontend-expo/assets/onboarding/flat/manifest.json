@@ -1,0 +1,119 @@
+{
+  "welcome": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of a single coral red hot air balloon with a small warm tan basket, two simple curved strings. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 53,
+    "alpha": {
+      "transparent_frac": 0.7535536024305556,
+      "opaque_frac": 0.2368842230902778,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "goal": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of a round coral red and cream archery bullseye target, one simple dark arrow in its center. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 69,
+    "alpha": {
+      "transparent_frac": 0.4962497287326389,
+      "opaque_frac": 0.4949544270833333,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "start": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of a small coral red flag on a charcoal pole with a short curved sage green path below. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 137,
+    "alpha": {
+      "transparent_frac": 0.73004150390625,
+      "opaque_frac": 0.2581108940972222,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "why": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of one symmetrical coral red heart. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 122,
+    "alpha": {
+      "transparent_frac": 0.5819837782118056,
+      "opaque_frac": 0.4103597005208333,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "week": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of one cream desk calendar with a coral red top binding and three sage green checkmarks, no numerals. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 106,
+    "alpha": {
+      "transparent_frac": 0.37139892578125,
+      "opaque_frac": 0.6162380642361112,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "support": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of a simple sage green speech bubble with a small coral heart inside. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 102,
+    "alpha": {
+      "transparent_frac": 0.4942152235243056,
+      "opaque_frac": 0.4969753689236111,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "circle": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of three simple head-and-shoulders silhouettes grouped together, coral, muted ochre and sage. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 108,
+    "alpha": {
+      "transparent_frac": 0.6044243706597222,
+      "opaque_frac": 0.383544921875,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "match": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of two interlocking jigsaw puzzle pieces, coral red and sage green. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 104,
+    "alpha": {
+      "transparent_frac": 0.6199883355034722,
+      "opaque_frac": 0.369873046875,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  },
+  "plan": {
+    "prompt": "This is an RGBA image with transparency. A flat 2D emoji-like editorial icon of one cream checklist sheet with three sage checkmarks and a small ochre pencil. Clean minimal vector illustration, straight-on front view, smooth simple geometric silhouettes, solid matte color fills with a fine dark charcoal outline, understated premium productivity app style. Use only muted coral red, sage green, warm ochre, cream and charcoal, simple readable shape. One centered icon, isolated and fully visible. NO 3D, NO clay, NO photorealism, NO lighting, NO gradients, NO shadows, NO glossy highlights, NO decorative sparkles, NO text, NO background tile. The image has alpha channel and the background is transparent.",
+    "seed": 42,
+    "model": "Qwen/Qwen-Image-2.1",
+    "lora": "PrunaAI/Pruna-Qwen-Image-2.1",
+    "seconds": 99,
+    "alpha": {
+      "transparent_frac": 0.5580037434895834,
+      "opaque_frac": 0.3740437825520833,
+      "alpha_min": 0,
+      "alpha_max": 255
+    }
+  }
+}

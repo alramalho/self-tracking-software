@@ -59,6 +59,11 @@ export function Reveal({
   children,
   id,
   delay = 0,
+  duration = 500,
+  offset = 20,
+  maxDelay = 200,
+  testID,
+  waitForViewport = true,
   style,
   onReveal,
 }: RevealProps) {
@@ -78,7 +83,7 @@ export function Reveal({
     view.current?.measureInWindow((_x, y, width, height) => {
       if (!mounted.current || shown.current || width <= 0 || height <= 0)
         return;
-      if (!reduced.current && (y >= screenHeight - 50 || y + height <= 0))
+      if (waitForViewport && !reduced.current && (y >= screenHeight - 50 || y + height <= 0))
         return;
       shown.current = true;
       if (id) viewport?.seen.add(id);
@@ -91,8 +96,8 @@ export function Reveal({
       }
       animation.current = Animated.timing(progress, {
         toValue: 1,
-        duration: 500,
-        delay: Math.min(delay, 200),
+        duration,
+        delay: Math.min(delay, maxDelay),
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== "web",
       });
@@ -137,7 +142,7 @@ export function Reveal({
     <Animated.View
       ref={view}
       collapsable={false}
-      testID={id ? `reveal-${id}` : undefined}
+      testID={testID ?? (id ? `reveal-${id}` : undefined)}
       onLayout={() => {
         check.current();
         viewport?.check();
@@ -150,7 +155,7 @@ export function Reveal({
             {
               translateY: progress.interpolate({
                 inputRange: [0, 1],
-                outputRange: [20, 0],
+                outputRange: [offset, 0],
               }),
             },
           ],

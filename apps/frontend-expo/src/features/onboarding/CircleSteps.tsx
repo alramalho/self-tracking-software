@@ -1,8 +1,9 @@
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, TextInput } from "react-native";
 import { Mail, User, Users } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { MatchPreferencesList } from "@/features/circles/components";
+import { StepSequence } from "./interview/StepReveal";
 import type { CircleAskProps, CirclePrefsProps } from "./types";
 
 // "Do it with a group?" Tapping a choice moves on, like the coaching question.
@@ -14,7 +15,7 @@ export function CircleAsk({ busy, onFind, onInvite, onSolo }: CircleAskProps) {
     { label: "Just me", icon: User, onPress: onSolo },
   ];
   return (
-    <View style={{ gap: 12 }}>
+    <StepSequence start={3} prefix="circle-choice" style={{ gap: 12 }}>
       {options.map((option) => (
         <Pressable
           key={option.label}
@@ -37,7 +38,7 @@ export function CircleAsk({ busy, onFind, onInvite, onSolo }: CircleAskProps) {
           <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>{option.label}</Text>
         </Pressable>
       ))}
-    </View>
+    </StepSequence>
   );
 }
 
@@ -54,7 +55,7 @@ export function CirclePrefs({
 }: CirclePrefsProps) {
   const c = useColors();
   return (
-    <View style={{ gap: 12 }}>
+    <StepSequence start={3} prefix="circle-prefs" style={{ gap: 12 }}>
       <MatchPreferencesList
         value={value}
         onChange={onChange}
@@ -90,6 +91,6 @@ export function CirclePrefs({
           ? "Location is off, so we'll match by time zone instead."
           : "Others only see “same city”."}
       </Text>
-    </View>
+    </StepSequence>
   );
 }

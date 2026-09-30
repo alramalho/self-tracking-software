@@ -1,13 +1,17 @@
 import { test, expect, type Page } from "@playwright/test";
+import { enterWelcomeAge } from "./onboarding-welcome";
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
 // Fresh starts open on the welcome screen; resumed drafts go straight to their step.
 async function openOnboarding(page: Page, url: string) {
   await page.goto(url);
-  const start = page.getByRole("button", { name: "Let's start" });
+  const start = page.getByRole("button", { name: "I'm ready!" });
   await start
     .waitFor({ timeout: 3000 })
-    .then(() => start.click())
+    .then(async () => {
+      await enterWelcomeAge(page);
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
+    })
     .catch(() => {});
 }
 async function trackForFree(page: Page) {

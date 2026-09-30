@@ -248,6 +248,8 @@ export function MatchPreferencesList({ value, onChange, place, age, weeklyTarget
           key={row.key}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: row.on, disabled: "locked" in row }}
+          aria-checked={row.on}
+          aria-disabled={"locked" in row}
           accessibilityLabel={row.title}
           disabled={"locked" in row}
           onPress={() => {

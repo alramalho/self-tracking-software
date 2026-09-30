@@ -57,7 +57,11 @@ appId: so.tracking.app
 - tapOn: Start preview
 - assertVisible: Welcome to tracking.so
 - takeScreenshot: onboarding-welcome
-- tapOn: Let's start
+- tapOn: "I'm ready!"
+- assertVisible: What is your age?
+- tapOn: Increase age
+- takeScreenshot: onboarding-welcome-age
+- tapOn: Continue
 - assertVisible: What's your goal\?
 - assertVisible: Dictate answer
 - waitForAnimationToEnd:

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { StyleProp, ViewProps, ViewStyle } from "react-native";
 import type {
   InterviewResult,
   InterviewStage,
@@ -6,6 +7,7 @@ import type {
 } from "@tsw/prisma/follow-through";
 export interface InterviewFrameProps {
   stage: InterviewStage;
+  transitionKey?: string;
   progress?: { current: number; total: number; label: string };
   preview: boolean;
   busy: boolean;
@@ -15,6 +17,7 @@ export interface InterviewFrameProps {
   onSkip?: () => void;
   // Welcome and match screens: no back, no progress line.
   bare?: boolean;
+  backInBare?: boolean;
   backDisabled?: boolean;
   children: ReactNode;
   actions: ReactNode;
@@ -80,4 +83,27 @@ export interface WeeklyFrequencyPickerProps {
   value: number;
   onChange: (value: number) => void;
   disabled?: boolean;
+}
+
+export interface StepRevealProps {
+  children: ReactNode;
+  order: number;
+  name: string;
+  style?: StyleProp<ViewStyle>;
+}
+export interface StepSequenceProps extends ViewProps {
+  children: ReactNode;
+  start?: number;
+  prefix: string;
+}
+
+export interface NumberPickerProps extends WeeklyFrequencyPickerProps {
+  min: number;
+  max: number;
+  unit: string;
+  decreaseLabel: string;
+  increaseLabel: string;
+  valueLabel: string;
+  testID: string;
+  valueTestID?: string;
 }

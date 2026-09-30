@@ -81,3 +81,13 @@ export interface CirclePrefsProps {
   onAge: (age: number) => void;
 }
 
+
+export interface WelcomeProps {
+  age?: number | null;
+  preview: boolean;
+  busy: boolean;
+  error: unknown;
+  onContinue: (age: number) => void;
+  onEdit: () => void;
+  onClose: () => void;
+}

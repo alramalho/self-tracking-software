@@ -15,7 +15,11 @@ appId: so.tracking.app
     direction: DOWN
 - tapOn: Preview onboarding
 - tapOn: Start preview
-- tapOn: Let's start
+- tapOn: "I'm ready!"
+- assertVisible: What is your age?
+- tapOn: Increase age
+- takeScreenshot: onboarding-welcome-age
+- tapOn: Continue
 - assertVisible: Dictate answer
 - tapOn:
     id: onboarding-answer

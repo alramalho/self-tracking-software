@@ -6,11 +6,11 @@ import { ChevronLeft, X } from "lucide-react-native";
 import { IconButton, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import {
-  Reveal,
   RevealContext,
   useRevealViewport,
 } from "@/components/reveal/Reveal";
 import { stages } from "./model";
+import { StepReveal } from "./StepReveal";
 import type { FooterFadeProps, InterviewFrameProps } from "./types";
 
 // Content scrolls under the buttons and fades out, instead of a dividing line.
@@ -32,6 +32,7 @@ function FooterFade({ color }: FooterFadeProps) {
 
 export function InterviewFrame({
   stage,
+  transitionKey = stage,
   progress,
   preview,
   busy,
@@ -39,6 +40,7 @@ export function InterviewFrame({
   onClose,
   onSkip,
   bare,
+  backInBare = false,
   backDisabled,
   children,
   actions,
@@ -77,7 +79,7 @@ export function InterviewFrame({
         }}
       >
         <View style={{ width: 64, alignItems: "flex-start" }}>
-          {!bare && (
+          {(!bare || backInBare) && (
             <IconButton
               label="Previous question"
               icon={ChevronLeft}
@@ -131,7 +133,7 @@ export function InterviewFrame({
           <ScrollView
             ref={scroll}
             onLayout={() => { if (keyboardHeight > 0) scroll.current?.scrollToEnd({ animated: false }); }}
-            key={stage}
+            key={transitionKey}
             onScroll={viewport.check}
             onContentSizeChange={viewport.check}
             scrollEventThrottle={100}
@@ -156,8 +158,10 @@ export function InterviewFrame({
               {children}
             </View>
           </ScrollView>
-          <Reveal
-            key={`actions-${stage}`}
+          <StepReveal
+            key={`actions-${transitionKey}`}
+            name="actions"
+            order={7}
             style={{
               paddingHorizontal: 24,
               paddingTop: 8,
@@ -176,7 +180,7 @@ export function InterviewFrame({
             >
               {actions}
             </View>
-          </Reveal>
+          </StepReveal>
         </RevealContext.Provider>
       </View>
     </SafeAreaView>

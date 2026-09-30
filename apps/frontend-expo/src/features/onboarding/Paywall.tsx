@@ -5,6 +5,7 @@ import { useColors } from "@/components/ui";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { PreviewButton, PreviewSheet } from "@/features/messages/entities/PreviewSheet";
+import { StepSequence } from "./interview/StepReveal";
 import type { CoachingPlan, FreeTrackingSheetProps, PaywallProps } from "./types";
 
 // Real members who agreed to appear on tracking.so (same testimonials as the website).
@@ -66,7 +67,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
   );
 
   return (
-    <View testID="coaching-paywall" style={{ gap: 22 }}>
+    <StepSequence prefix="paywall" testID="coaching-paywall" style={{ gap: 22 }}>
       {/* 1. Social proof: real members. */}
       <View style={{ alignItems: "center", gap: 10 }}>
         <View style={{ flexDirection: "row" }}>
@@ -206,7 +207,7 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
           );
         })}
       </View>
-    </View>
+    </StepSequence>
   );
 }
 
@@ -235,6 +236,7 @@ export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClos
   );
   return (
     <PreviewSheet visible={visible} title="Track on your own" onClose={onClose}>
+      <StepSequence prefix="free-sheet" style={{ gap: 16 }}>
       <View style={{ alignItems: "center", gap: 8 }}>
         <Image
           source={coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png")}
@@ -264,6 +266,7 @@ export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClos
         onPress={onTrial}
       />
       <PreviewButton secondary label="Track for free" disabled={busy} onPress={onFree} />
+      </StepSequence>
     </PreviewSheet>
   );
 }

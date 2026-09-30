@@ -6,6 +6,7 @@ import { Check } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { PlanSummary } from "./PlanSummary";
+import { StepSequence } from "./StepReveal";
 import { WordReveal } from "./WordReveal";
 import type { CoachValidationProps } from "./types";
 
@@ -29,7 +30,8 @@ export function CoachValidation(props: CoachValidationProps) {
   const reduced = useReducedMotion();
 
   return (
-    <View
+    <StepSequence
+      prefix="validation"
       accessible
       accessibilityLabel={
         props.loading || !props.result
@@ -113,6 +115,6 @@ export function CoachValidation(props: CoachValidationProps) {
           ) : null}
         </>
       )}
-    </View>
+    </StepSequence>
   );
 }

@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { CoachingChoice } from "@/features/plans/coaching/CoachingFields";
 import { DaysInput, TimeInput } from "@/features/follow-through/assistance/Inputs";
+import { StepSequence } from "./interview/StepReveal";
 import type { CoachingTourProps } from "./types";
 
 const titles = [
@@ -38,7 +39,7 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
   return (
     <View testID={["coach-tour-role", "coach-tour-contact", "coach-tour-data"][step]} style={{ gap: 20 }}>
-      <View style={{ alignItems: "center", gap: 12 }}>
+      <StepSequence prefix="coach-heading" style={{ alignItems: "center", gap: 12 }}>
         {/* The coach introduces itself on every step. */}
         <View style={{ alignItems: "center", gap: 4 }}>
           <Image
@@ -53,10 +54,10 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
         <Text style={{ color: c.muted, fontSize: 16, lineHeight: 24, textAlign: "center" }}>
           {details[step]}
         </Text>
-      </View>
+      </StepSequence>
 
       {step === 0 && (
-        <View style={{ gap: 14 }}>
+        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <Example label="EXAMPLE · YOUR PLAN">
             {`“Let’s start with the ${facts.activityTitle.toLowerCase()} routine you described. I’ll suggest a first week for you to review.”`}
           </Example>
@@ -65,11 +66,11 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
             <CoachingChoice card label="Plan and adjust training" detail="For a goal with sessions that need to progress." selected={coaching.role === "training"} onPress={() => onCoaching({ ...coaching, role: "training" })} />
             <CoachingChoice card label="Help me stay consistent" detail="For a habit or routine you already know." selected={coaching.role === "consistency"} onPress={() => onCoaching({ ...coaching, role: "consistency" })} />
           </View>
-        </View>
+        </StepSequence>
       )}
 
       {step === 1 && (
-        <View style={{ gap: 14 }}>
+        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <Example label="EXAMPLE · AFTER A DIFFICULT WEEK">
             “Hard week. Should we keep the plan or make it lighter?”
           </Example>
@@ -78,11 +79,11 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
             {preferences.weeklyReview && <View style={{ gap: 12, paddingVertical: 12 }}><DaysInput single value={[preferences.reviewDay]} onChange={([reviewDay]) => onPreferences({ ...preferences, reviewDay })} /><TimeInput value={preferences.reviewTime} onChange={(reviewTime) => onPreferences({ ...preferences, reviewTime })} /></View>}
             <CoachingChoice label="Follow up when useful" detail={coaching.role === "training" ? "Asks after each planned session. No reply counts as missed, and next week adapts." : "One reminder, then a nudge about why you started before offering to archive."} selected={coaching.followUps} onPress={() => onCoaching({ ...coaching, followUps: !coaching.followUps })} />
           </View>
-        </View>
+        </StepSequence>
       )}
 
       {step === 2 && (
-        <View style={{ gap: 14 }}>
+        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <Example label={coaching.role === "training" ? "EXAMPLE · WITH WORKOUT ACCESS" : "EXAMPLE · FROM THIS PLAN'S LOGS"}>
             {coaching.role === "training"
               ? "“I can see yesterday’s workout. Did it feel comfortable enough to repeat?”"
@@ -95,7 +96,7 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
           <Text style={{ color: c.muted, fontSize: 13, lineHeight: 20 }}>
             Selected data goes to the external AI services used by your coach. You can change this in the plan later. Turning access off stops future retrieval; earlier messages remain.
           </Text>
-        </View>
+        </StepSequence>
       )}
     </View>
   );

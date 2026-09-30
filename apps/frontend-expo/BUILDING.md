@@ -48,6 +48,38 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
+## Standalone 3D onboarding — September 30, 2026, not distributed
+
+The selected onboarding uses the original target Lottie on Welcome and Goal, and the original clay assets without blue/tinted circular backplates elsewhere. The original 3D coaches remain. Welcome now has two parts: the requested introduction, cards and commitment end with **I'm ready!**; tapping it fades the body out over 160 ms and progressively reveals **What is your age?** beneath the same target and Welcome title. Age uses the same minus / number / plus control as weekly frequency, bounded to 13–120. It prefills an existing profile age or starts at 25 for the user to adjust and confirm. **Continue** saves the chosen age before advancing to Goal; **Try again** handles save failures. Back returns to the introduction and retains the chosen age. Matching reuses the saved age, and Preview keeps it local.
+
+Every screen change, including back navigation and same-stage coach/circle screens, replays a fast top-to-bottom entrance: each section fades for 240 ms with 55 ms between starts; actions enter last. Typing and changing options do not restart the entrance. The original target animation runs at 0.45× speed (about five seconds per loop). Reduce Motion displays `assets/animations/target-still.png` and completes section fades immediately. Other artwork stays still, apart from the existing coach confirmation gesture.
+
+- Review: [standalone screenshot walkthrough](../../docs/reviews/onboarding-2d/index.html) contains all 16 steps in both themes: 62 actual app screenshots (15 original and 16 new per theme; the added age step has no original equivalent), plus real app journey recordings. These are Expo mobile-web renders at 390 × 664 with fixtures, not iOS simulator captures. Age 29 is example data. The earlier emoji/Lucide report is preserved beside it. Preview captures perform no profile age, plan or subscription writes.
+- Checks: frontend TypeScript; the existing full onboarding behavior suite; two-part Welcome, stable header, outgoing body fade, age bounds, back navigation, profile persistence and retry, prefilled age and preview isolation; progressive fade timing, replay on back and stability during typing; light/dark journey captures and age reuse in matching; Reduce Motion still and immediate section visibility. Logs: `/private/tmp/tracking-onboarding-age-step-types.log` and `tracking-onboarding-age-step.log`. Native Maestro age/keyboard journeys are updated; this iteration has not been run in a fresh iOS binary.
+- Production **build 184 failed to archive** before this final art selection: the phone and Watch ad hoc profiles do not include the EAS-selected certificate. Bundling and CocoaPods completed; signing failed. The supported local toolchain and production preflight passed. No new IPA or installation link exists for these changes.
+- Preserved attempt: `.release/2026-09-30T17-53-05-989Z-e6427fc0/` (no IPA). Private log: `/private/tmp/tracking-onboarding-iphone-build.log`. The app's release folders have no retained `.p12`/credential set. Repair the app's own EAS profile/certificate pairing for **both** `so.tracking.app` and `so.tracking.app.watchkitapp` before retrying. No cloud build quota, OTA or store submission was used.
+- Expo Doctor reported SDK patch drift (20/21 checks passed), unrelated to the signing failure. No dependencies were upgraded.
+
+From this frontend directory:
+
+```sh
+node node_modules/typescript/bin/tsc --noEmit
+CAPTURE_MOTION=1 E2E_WEB_PORT=8094 E2E_API_PORT=4328 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer caffeinate -i node node_modules/@playwright/test/cli.js test e2e/onboarding-visuals.spec.ts e2e/onboarding-motion.spec.ts e2e/onboarding-flow.spec.ts --timeout=90000 --output=/private/tmp/tracking-onboarding-age-step-results
+```
+
+The original baseline is preserved under `screens/current`; the selected version uses `screens/clean-3d`. The old exploratory assets and screenshot variants are not referenced by the selected app. No new image/video API calls were required. From the repository root, regenerate the HTML with `node scripts/onboarding-art/report.cjs`.
+
+After repairing signing, build, verify and host the **actual new artifact and build number**:
+
+```sh
+AWS_PROFILE=default NODE_OPTIONS='--dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=3000' DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/cli.ts build
+python3 ../../scripts/onboarding-art/verify-ipa.py /absolute/path/to/new/tracking.so.ipa ACTUAL_BUILD_NUMBER
+AWS_PROFILE=default node --import tsx scripts/iphone/cli.ts publish /absolute/path/to/new/tracking.so.ipa
+node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distribution.json
+```
+
+The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+
 ## Safari-install build 176 — Circles and the clay onboarding, September 29, 2026
 
 - Local production build from `fdfc4742` (worktree `tracking-circles`), iPhone and Watch targets, production API and live Clerk, bundled JavaScript. Verified by `build:iphone` and hosted as a Safari install link (7-day presigned link in `.release/2026-09-29T11-17-22-270Z-300bce60/distribution.json`, not written here). IPA SHA-256 `74f529adc92b34cef970d234d16ad68b78fbbc805eee48f9a1004562d9ff61b7`.

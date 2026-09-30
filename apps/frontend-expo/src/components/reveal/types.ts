@@ -4,6 +4,11 @@ export interface RevealProps {
   children: ReactNode;
   id?: string;
   delay?: number;
+  duration?: number;
+  offset?: number;
+  maxDelay?: number;
+  testID?: string;
+  waitForViewport?: boolean;
   onReveal?: (reducedMotion: boolean) => void;
   style?: StyleProp<ViewStyle>;
 }
