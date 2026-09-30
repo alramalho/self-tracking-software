@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { ChevronRight, Flame, Users } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Heading, Panel, s, useColors } from "@/components/ui";
-import { api } from "@/data/api";
-import { useAction, useCurrentUser } from "@/data/queries";
+import { useCurrentUser } from "@/data/queries";
+import { MotivateDrawer } from "./MotivateDrawer";
 import { MemberRow } from "./components";
 import { MATCHING_TARGET } from "./model";
 import { defaultPreferences, useCircle, useMyCircles } from "./api";
@@ -18,9 +19,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
   const mine = useMyCircles();
   const circle = mine.data?.find((each) => each.planId === planId);
   const board = useCircle(circle?.id);
-  const nudge = useAction(async (member: BoardMember) =>
-    api.post(`/circles/${circle?.id}/nudges`, { toUserId: member.user.id }),
-  );
+  const [motivating, setMotivating] = useState<BoardMember>();
   if (!mine.data) return null;
   if (!circle)
     return (
@@ -66,7 +65,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
           <Text style={{ color: c.accent, fontSize: 15, fontWeight: "600" }}>Open ›</Text>
         </Pressable>
       </View>
-      {/* The circle's week at a glance, like its board: dots, what's left, and a nudge. */}
+      {/* The circle's week at a glance, like its board: dots, what's left, and encouragement. */}
       <Panel style={{ padding: 16, borderRadius: 16, gap: 2 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={`${circle.name}, ${status}`} onPress={open} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 6 }}>
           <Text style={{ fontSize: 22 }}>{circle.emoji}</Text>
@@ -88,7 +87,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
               key={m.user.id}
               member={data.status === "FORMING" ? { ...m, week: { ...m.week, isNew: true } } : m}
               isMe={isMe}
-              onNudge={!isMe && m.week.behind && !m.nudgedToday ? () => nudge.mutate(m) : undefined}
+              onMotivate={!isMe && m.week.behind ? () => setMotivating(m) : undefined}
             />
           );
         })}
@@ -98,6 +97,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
           </Text>
         )}
       </Panel>
+      {motivating && <MotivateDrawer circleId={circle.id} member={motivating} onClose={() => setMotivating(undefined)} />}
     </View>
   );
 }

@@ -162,6 +162,7 @@ describe("circles", () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve) => server?.close(() => resolve()));
+    await prisma.chat.deleteMany({ where: { type: "DIRECT", participants: { some: { userId: { in: names.map(id) } } } } });
     await prisma.circle.deleteMany({ where: { members: { some: { userId: { in: names.map(id) } } } } });
     await prisma.userBlock.deleteMany({ where: { blockerId: { in: names.map(id) } } });
     await prisma.notification.deleteMany({ where: { userId: { in: names.map(id) } } });
@@ -280,6 +281,33 @@ describe("circles", () => {
     expect(ids).not.toContain(unrelated.id);
     expect(ids).not.toContain(pendingLog.id);
     expect(entries.find((e: { id: string }) => e.id === after.id).circle).toMatchObject({ id: circleId, emoji: "🏃" });
+  });
+
+  it("opens private encouragement for proven members without sending a nudge", async () => {
+    fixture.notify.mockClear();
+    const opened = await call("alice", "POST", "/chats/direct", { userId: id("bob"), circleId });
+    expect(opened.status).toBe(200);
+    expect(opened.body.chat.type).toBe("DIRECT");
+    expect(fixture.notify).not.toHaveBeenCalled();
+    const again = await call("alice", "POST", "/chats/direct", { userId: id("bob"), circleId });
+    expect(again.body.chat.id).toBe(opened.body.chat.id);
+    const text = "You've already made a start. Want to run together tomorrow?";
+    const sent = await call("alice", "POST", `/chats/${opened.body.chat.id}/messages`, { message: text });
+    expect(sent.status).toBe(200);
+    expect(sent.body.message.content).toBe(text);
+    expect(await prisma.circleNudge.count({ where: { circleId } })).toBe(0);
+    expect(fixture.notify).toHaveBeenCalledWith(expect.objectContaining({ userId: id("bob"), title: "New message from Alice Test", message: expect.any(String) }));
+  });
+
+  it("keeps encouragement private to proven, unblocked circle peers", async () => {
+    const pending = await call("alice", "POST", "/chats/direct", { userId: id("erin"), circleId });
+    expect(pending.status).toBe(403);
+    expect((await call("erin", "POST", "/chats/direct", { userId: id("alice"), circleId })).status).toBe(403);
+    expect((await call("frank", "POST", "/chats/direct", { userId: id("alice"), circleId })).status).toBe(403);
+    expect((await call("alice", "POST", "/chats/direct", { userId: id("dave"), circleId })).status).toBe(404);
+    expect((await call("alice", "POST", "/chats/direct", { userId: id("alice"), circleId })).status).toBe(400);
+    // Shared membership doesn't silently change the ordinary friend-only route.
+    expect((await call("alice", "POST", "/chats/direct", { userId: id("carol") })).status).toBe(403);
   });
 
   it("records a skipped photo, nudges once the next day, and frees the spot after a week", async () => {

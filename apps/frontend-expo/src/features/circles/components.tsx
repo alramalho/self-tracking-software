@@ -82,58 +82,61 @@ export function WeekDots({ target, done }: WeekDotsProps) {
   );
 }
 
-// Board row: who, their goal, this week's dots, and a nudge for anyone behind.
+// Board row: who, their goal, this week's dots, and encouragement for anyone behind.
 // "N to go" in orange is the only signal that someone is behind.
-export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
+export function MemberRow({ member, isMe, onPress, onMotivate }: MemberRowProps) {
   const c = useColors();
   const { week } = member;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${isMe ? "You" : firstName(member.user)}, ${week.isNew ? "new this week" : `${week.done} of ${week.target} this week`}`}
-      disabled={!onPress}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        paddingVertical: 10,
-        opacity: pressed ? 0.6 : 1,
-      })}
-    >
-      <PersonAvatar name={member.user.name ?? member.user.username ?? null} picture={member.user.picture} size={34} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>{isMe ? "You" : firstName(member.user)}</Text>
-        <Text numberOfLines={1} style={{ color: c.muted, fontSize: 12 }}>
-          {member.plan.emoji ? `${member.plan.emoji} ` : ""}
-          {member.plan.goal}
-        </Text>
-      </View>
-      {member.pending || week.isNew ? (
-        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.soft }}>
-          <Text style={{ color: c.text, fontSize: 11, fontWeight: "600" }}>{member.pending ? "Pending" : "New"}</Text>
-        </View>
-      ) : (
-        <WeekDots target={week.target} done={week.done} />
-      )}
-      <Text
-        style={{
-          width: 52,
-          textAlign: "right",
-          fontSize: 13,
-          fontVariant: ["tabular-nums"],
-          color: week.behind ? "#fb923c" : c.muted,
-          fontWeight: week.behind ? "600" : "400",
-        }}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${isMe ? "You" : firstName(member.user)}, ${week.isNew ? "new this week" : `${week.done} of ${week.target} this week`}`}
+        disabled={!onPress}
+        onPress={onPress}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          flex: 1,
+          alignItems: "center",
+          gap: 10,
+          paddingVertical: 10,
+          opacity: pressed ? 0.6 : 1,
+        })}
       >
-        {member.pending || week.isNew ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`}
-      </Text>
+        <PersonAvatar name={member.user.name ?? member.user.username ?? null} picture={member.user.picture} size={34} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>{isMe ? "You" : firstName(member.user)}</Text>
+          <Text numberOfLines={1} style={{ color: c.muted, fontSize: 12 }}>
+            {member.plan.emoji ? `${member.plan.emoji} ` : ""}
+            {member.plan.goal}
+          </Text>
+        </View>
+        {member.pending || week.isNew ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.soft }}>
+            <Text style={{ color: c.text, fontSize: 11, fontWeight: "600" }}>{member.pending ? "Pending" : "New"}</Text>
+          </View>
+        ) : (
+          <WeekDots target={week.target} done={week.done} />
+        )}
+        <Text
+          style={{
+            width: 52,
+            textAlign: "right",
+            fontSize: 13,
+            fontVariant: ["tabular-nums"],
+            color: week.behind ? "#fb923c" : c.muted,
+            fontWeight: week.behind ? "600" : "400",
+          }}
+        >
+          {member.pending || week.isNew ? "" : week.behind ? `${week.toGo} to go` : `${week.done}/${week.target}`}
+        </Text>
+      </Pressable>
       <View style={{ width: 34, alignItems: "flex-end" }}>
-        {onNudge && (
+        {onMotivate && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Nudge ${firstName(member.user)}`}
-            onPress={onNudge}
+            accessibilityLabel={`Motivate ${firstName(member.user)}`}
+            onPress={(event) => { event.stopPropagation(); onMotivate(); }}
             hitSlop={8}
             style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.soft, alignItems: "center", justifyContent: "center" }}
           >
@@ -141,7 +144,7 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
           </Pressable>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 

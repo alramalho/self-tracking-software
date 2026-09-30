@@ -1970,10 +1970,16 @@ router.post(
   ): Promise<Response | void> => {
     try {
       const user = req.user!;
-      const { userId: otherUserId } = req.body;
+      const { userId: otherUserId, circleId } = req.body;
 
       if (!otherUserId || typeof otherUserId !== "string") {
         return res.status(400).json({ error: "userId is required" });
+      }
+      if (otherUserId === user.id) {
+        return res.status(400).json({ error: "Choose another person to message" });
+      }
+      if (circleId !== undefined && (typeof circleId !== "string" || !circleId)) {
+        return res.status(400).json({ error: "circleId must be a circle ID" });
       }
 
       // Check if other user exists
@@ -2001,7 +2007,22 @@ router.post(
         },
       });
 
-      if (!connection) {
+      // Personal encouragement is available between proven circle members,
+      // even when matching brought them together without a friend connection.
+      const circle = circleId ? await prisma.circle.findFirst({
+        where: {
+          id: circleId,
+          AND: [
+            { members: { some: { userId: user.id, provenAt: { not: null } } } },
+            { members: { some: { userId: otherUserId, provenAt: { not: null } } } },
+          ],
+        },
+        select: { id: true },
+      }) : null;
+      if (circleId && !circle) {
+        return res.status(403).json({ error: "You can only encourage members of your circle who have posted their first photo" });
+      }
+      if (!connection && !circle) {
         return res.status(403).json({ error: "You can only message users you are connected with" });
       }
 

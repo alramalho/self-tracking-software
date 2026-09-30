@@ -88,3 +88,12 @@ export const defaultPreferences: MatchPreferences = {
 
 // Links people open in Safari or the app. The web app routes /circle-invite/:code too.
 export const inviteLink = (code: string) => `https://app.tracking.so/circle-invite/${code}`;
+
+// Opening the composer is local. Only an explicit Send creates a chat/message.
+export async function openEncouragementChat(circleId: string, userId: string): Promise<string> {
+  return (await api.post<{ chat: { id: string } }>("/chats/direct", { userId, circleId })).data.chat.id;
+}
+
+export async function sendEncouragement(chatId: string, message: string): Promise<void> {
+  await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, { message: message.trim() });
+}

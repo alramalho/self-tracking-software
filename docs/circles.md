@@ -6,12 +6,12 @@ Small groups of people working on a similar goal, who see each other's week. Cir
 
 - **Size:** matching fills a circle up to 5 people, invites up to 8. The weekly board starts at 3; below that a circle is *forming*.
 - **One circle per plan.** You join with one of your plans; that plan's week and logs (activity, amount, date, photo, caption) are shared with the circle, even if the plan is private to everyone else. Location and private notes never are.
-- **Misses are visible, kindly.** The board shows everyone's week. Someone is *behind* when finishing needs every remaining day; they show "N to go" in orange and get a nudge button. People who joined mid-week are *New* and never behind.
+- **Misses are visible, kindly.** The board shows everyone's week. Someone is *behind* when finishing needs every remaining day; they show "N to go" in orange and get a motivate button. People who joined mid-week are *New* and never behind.
 - **No approval step.** Matches and invites join straight away. Owners can rename, invite, turn matching off and remove a member. Report and block work on members and on the circle.
 - **Circles are free.**
 - **Matching starts wide** (few users per goal yet): goal similarity always, pace on by default, time zone instead of distance unless someone asks for "Nearby", age only if asked. A pair scores as its weaker side. If nothing is close enough, the person starts a forming circle and matching fills it; an hourly job merges compatible forming circles.
 - **Intro:** a member's first log on the circle plan after joining is their intro. Helly asks for it on the circle screen and the log editor shows "Shares to …".
-- **Nudges:** one tap, our wording, one per sender and receiver per day, at most three received per day, none once the person has hit their week.
+- **Encouragement:** the hand button and member menu open “Motivate [name]” with their avatar and a blank personal message. Opening or dismissing sends nothing. Only Send encouragement creates a private chat message; normal message notifications apply. Both people must have posted their first photo in the circle and must not have blocked each other. Earlier nudge limits do not hide this composer. The legacy nudge endpoint remains for older clients.
 - **Sunday recap** at 19:00 local: how last week went, never naming who fell short.
 
 ## Code map

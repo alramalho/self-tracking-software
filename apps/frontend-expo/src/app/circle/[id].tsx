@@ -12,6 +12,7 @@ import { coachAvatar } from "@/features/coach/avatar";
 import { MemberRow, OpenSpots, firstName } from "@/features/circles/components";
 import { inviteLink, openCircleChat, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
+import { MotivateDrawer } from "@/features/circles/MotivateDrawer";
 import { recapLine } from "@/features/circles/model";
 import { FeedCard } from "@/features/timeline/FeedCard";
 import type { FeedItem } from "@/features/timeline/types";
@@ -33,7 +34,7 @@ export default function Circle() {
   const data = board.data;
   const isOwner = data?.me.role === "OWNER";
 
-  const nudge = useAction(async (member: BoardMember) => api.post(`/circles/${id}/nudges`, { toUserId: member.user.id }));
+  const [motivating, setMotivating] = useState<BoardMember>();
   const update = useAction(async (changes: { name: string }) => api.patch(`/circles/${id}`, changes));
   const [proofDismissed, setProofDismissed] = useState(false);
   const loggingStarted = useRef(false);
@@ -86,9 +87,9 @@ export default function Circle() {
 
   const memberActions = (member: BoardMember) => {
     const name = firstName(member.user);
-    const canNudge = member.week.toGo > 0 && !member.week.isNew && !member.nudgedToday;
+    const canMotivate = !member.pending && member.week.toGo > 0 && !member.week.isNew;
     showActions(`${name} · ${member.week.done} of ${member.week.target} this week`, [
-      ...(canNudge ? [{ label: `Nudge ${name}`, onPress: () => nudge.mutate(member) }] : []),
+      ...(canMotivate ? [{ label: `Motivate ${name}`, onPress: () => setMotivating(member) }] : []),
       ...(member.user.username ? [{ label: "View profile", onPress: () => router.push(`/profile/${member.user.username}` as never) }] : []),
       { label: `Report ${name}`, destructive: true, onPress: () => setReport({ kind: "USER", id: member.user.id, label: personLabel(member.user) }) },
       { label: `Block ${name}`, destructive: true, onPress: () => blockUser(member.user) },
@@ -147,7 +148,7 @@ export default function Circle() {
     >
       <Status
         loading={board.isLoading}
-        error={board.error ?? nudge.error ?? update.error ?? leave.error ?? remove.error ?? openChat.error}
+        error={board.error ?? update.error ?? leave.error ?? remove.error ?? openChat.error}
         retry={() => void board.refetch()}
       />
       {data && (
@@ -200,7 +201,7 @@ export default function Circle() {
                       member={m}
                       isMe={isMe}
                       onPress={isMe ? undefined : () => memberActions(m)}
-                      onNudge={!isMe && m.week.behind && !m.nudgedToday ? () => nudge.mutate(m) : undefined}
+                      onMotivate={!isMe && m.week.behind ? () => setMotivating(m) : undefined}
                     />
                   );
                 })}
@@ -257,6 +258,7 @@ export default function Circle() {
           Save
         </Button>
       </Sheet>
+      {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportSheet target={report} onClose={() => setReport(undefined)} />
     </Screen>
   );

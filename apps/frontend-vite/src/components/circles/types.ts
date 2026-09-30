@@ -255,7 +255,7 @@ export interface MemberRowProps {
   member: BoardMember;
   isMe: boolean;
   onPress?: () => void;
-  onNudge?: () => void;
+  onMotivate?: () => void;
 }
 
 export interface CircleCardViewProps {
@@ -402,4 +402,10 @@ export interface CircleChat {
 export interface OpenSpotsProps {
   // How many people are in the circle now.
   members: number;
+}
+
+export interface MotivateDrawerProps {
+  circleId: string;
+  member: BoardMember;
+  onClose: () => void;
 }

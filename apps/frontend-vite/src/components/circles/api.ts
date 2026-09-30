@@ -211,13 +211,6 @@ export const useCircleActions = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chats"] }),
   });
 
-  const nudge = useMutation({
-    mutationFn: async (input: CircleMemberInput) =>
-      api.post(`/circles/${input.circleId}/nudges`, { toUserId: input.userId }),
-    onSuccess: (_, input) =>
-      queryClient.invalidateQueries({ queryKey: circleQueryKeys.board(input.circleId) }),
-  });
-
   return {
     startCircle,
     joinCircle,
@@ -227,6 +220,17 @@ export const useCircleActions = () => {
     removeMember,
     skipProof,
     openChat,
-    nudge,
   };
 };
+
+// Opening the composer is local. Only an explicit Send creates a chat/message.
+export function useEncouragementActions() {
+  const api = useApiWithAuth();
+  return {
+    openEncouragementChat: async (circleId: string, userId: string): Promise<string> =>
+      (await api.post<{ chat: { id: string } }>("/chats/direct", { userId, circleId })).data.chat.id,
+    sendEncouragement: async (chatId: string, message: string): Promise<void> => {
+      await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, { message: message.trim() });
+    },
+  };
+}

@@ -1,13 +1,13 @@
+import { useState } from "react";
+import { MotivateDrawer } from "./MotivateDrawer";
 import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
-import { toApiErrorMessage } from "@/utils/errorMessage";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Flame, Users } from "lucide-react";
-import toast from "react-hot-toast";
-import { defaultPreferences, useCircle, useCircleActions, useMyCircles } from "./api";
+import { defaultPreferences, useCircle, useMyCircles } from "./api";
 import { CirclePanel, MemberRow } from "./components";
-import { daysLeftLabel, firstName, MATCHING_TARGET } from "./model";
+import { daysLeftLabel, MATCHING_TARGET } from "./model";
 import { setPendingMatch } from "./pendingMatch";
 import type { BoardMember, CirclePlanSectionProps, MyCircle } from "./types";
 
@@ -25,7 +25,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
   const mine = useMyCircles();
   const circle = mine.data?.find((each) => each.planId === planId);
   const board = useCircle(circle?.id);
-  const { nudge } = useCircleActions();
+  const [motivating, setMotivating] = useState<BoardMember>();
   if (!mine.data) return null;
 
   if (!circle)
@@ -49,14 +49,6 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
   const data = board.data;
   const openSpots = Math.max(0, MATCHING_TARGET - (data?.members.length ?? circle.memberCount));
   const status = planStatusLine(circle);
-  const nudgeMember = (member: BoardMember) =>
-    nudge.mutate(
-      { circleId: circle.id, userId: member.user.id },
-      {
-        onSuccess: () => toast.success(`Nudged ${firstName(member.user)}`),
-        onError: (error) => toast.error(toApiErrorMessage(error)),
-      }
-    );
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -71,7 +63,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
           Open ›
         </button>
       </div>
-      {/* The circle's week at a glance, like its board: dots, what's left, and a nudge. */}
+      {/* The circle's week at a glance, like its board: dots, what's left, and encouragement. */}
       <CirclePanel className="flex flex-col gap-0.5">
         <button
           type="button"
@@ -98,7 +90,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
               key={member.user.id}
               member={data.status === "FORMING" ? { ...member, week: { ...member.week, isNew: true } } : member}
               isMe={isMe}
-              onNudge={!isMe && member.week.behind && !member.nudgedToday ? () => nudgeMember(member) : undefined}
+              onMotivate={!isMe && member.week.behind ? () => setMotivating(member) : undefined}
             />
           );
         })}
@@ -108,6 +100,7 @@ export function CirclePlanSection({ planId }: CirclePlanSectionProps) {
           </p>
         )}
       </CirclePanel>
+      {motivating && <MotivateDrawer circleId={circle.id} member={motivating} onClose={() => setMotivating(undefined)} />}
     </div>
   );
 }

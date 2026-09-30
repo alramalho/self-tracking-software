@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circle encouragement · tracking.so</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f2ef;color:#252525;font:16px/1.5 system-ui,-apple-system,sans-serif}main{max-width:1100px;margin:auto;padding:40px 24px}h1{font-size:38px;letter-spacing:-1px;margin:6px 0 12px}h2{font-size:25px;margin:0 0 12px}p{max-width:680px;color:#626262}.eyebrow{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#767676}.controls{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0}button{border:1px solid #d5d3d0;background:#fff;border-radius:100px;padding:10px 16px;font:inherit;cursor:pointer}button[aria-pressed=true]{background:#252525;color:#fff;border-color:#252525}button:focus-visible{outline:3px solid #3b82f6;outline-offset:3px}.journey{display:grid;grid-template-columns:minmax(280px,390px) 1fr;gap:52px;align-items:start}.phone{width:100%;border:7px solid #242424;border-radius:36px;overflow:hidden;box-shadow:0 16px 40px #0002;background:#242424}.phone img{display:block;width:100%}.notes{padding-top:24px}.step{display:block;width:100%;text-align:left;border-radius:16px;margin-bottom:10px;padding:16px}small{display:block;color:#777}button[aria-pressed=true] small{color:#bbb}.detail{background:#fff;border-radius:18px;padding:22px;margin-top:22px}.detail p{margin:8px 0}.evidence{margin-top:36px;font-size:14px;color:#777}.example{border-left:3px solid #3b82f6;padding:6px 14px;margin-top:20px}@media(max-width:720px){main{padding:24px 18px}h1{font-size:30px}.journey{grid-template-columns:1fr;gap:16px}.phone{max-width:390px;margin:auto}.notes{padding-top:0}}
+</style>
+<main>
+  <span class="eyebrow">tracking.so · circles · review</span>
+  <h1>A few words could make the difference.</h1>
+  <p>Tap the hand beside a member’s week to open a personal encouragement drawer. Their avatar and name keep the focus on the person you’re supporting.</p>
+  <p><strong>Actual app screenshots</strong> captured from the Expo app in a phone-sized web viewport. Alex, the circle, and the message are illustrative test data. These are not on-device iOS screenshots.</p>
+  <div class="controls" aria-label="Theme"><button data-theme="LIGHT" aria-pressed="true">Light</button><button data-theme="DARK" aria-pressed="false">Dark</button></div>
+  <div class="journey">
+    <div class="phone"><img id="screen" src="drawer-LIGHT.png" alt="Motivate Alex encouragement drawer in light mode"></div>
+    <section class="notes">
+      <h2 id="heading">2. Make it personal</h2>
+      <p id="description">The drawer shows Alex’s avatar, “Motivate Alex,” and a blank message field. Nothing is sent when it opens, and closing it sends nothing.</p>
+      <button class="step" data-step="board" aria-pressed="false">1. Notice someone could use support<small>Circle board → hand button</small></button>
+      <button class="step" data-step="drawer" aria-pressed="true">2. Make it personal<small>Avatar, name, and a gentle writing prompt</small></button>
+      <button class="step" data-step="message" aria-pressed="false">3. Say something that helps<small>Your own words → Send encouragement</small></button>
+      <button class="step" data-step="sent" aria-pressed="false">4. Know it reached the chat<small>Private message confirmation</small></button>
+      <button class="step" data-step="plan-drawer" aria-pressed="false">5. Reach it from your plan too<small>The plan preview opens the same drawer</small></button>
+      <div class="detail"><strong>Opening stays quiet. Sending is intentional.</strong><p>The sender chooses what to say and explicitly taps Send encouragement. The resulting private chat message uses ordinary message notifications. It never sends the preset circle nudge.</p><p>Empty messages can’t be sent. If sending fails, the message stays in the drawer for a retry. Your previous daily nudge status doesn’t hide the new action.</p></div>
+      <div class="example"><strong>Illustrative message</strong><p>“You’ve already made a start. Want to run together tomorrow?”</p></div>
+    </section>
+  </div>
+  <p class="evidence">Verified: two light/dark interaction tests, 17 circle backend integration tests, three existing circle model tests, and Expo/PWA TypeScript checks. Implemented in the Circles branch; this walkthrough does not represent a published release.</p>
+</main>
+<script>
+const steps = {
+  board: ['1. Notice someone could use support', 'Alex has three sessions left. The hand opens the drawer instead of immediately nudging them. The member menu offers Motivate Alex too.'],
+  drawer: ['2. Make it personal', 'The drawer shows Alex’s avatar, “Motivate Alex,” and a blank message field. Nothing is sent when it opens, and closing it sends nothing.'],
+  message: ['3. Say something that helps', 'The prompt encourages a personal note: recognise their effort, remind them why they started, or offer company. Send encouragement is the main action.'],
+  sent: ['4. Know it reached the chat', 'After a successful send, the drawer confirms that the encouragement is in your private chat. Done returns you to the circle.'],
+  'plan-drawer': ['5. Reach it from your plan too', 'The circle section inside your plan opens the same encouragement drawer. There is one consistent interaction across both entry points.']
+};
+let theme = 'LIGHT', step = 'drawer';
+function render() {
+  document.getElementById('screen').src = step + '-' + theme + '.png';
+  document.getElementById('screen').alt = steps[step][0] + ' in ' + theme.toLowerCase() + ' mode';
+  document.getElementById('heading').textContent = steps[step][0];
+  document.getElementById('description').textContent = steps[step][1];
+  document.querySelectorAll('[data-step]').forEach(b => b.setAttribute('aria-pressed', b.dataset.step === step));
+  document.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === theme));
+}
+document.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { theme = b.dataset.theme; render(); });
+document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => { step = b.dataset.step; render(); });
+</script>
+</html>

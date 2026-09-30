@@ -1,4 +1,5 @@
 import { inviteLink, useCircle, useCircleActions } from "@/components/circles/api";
+import { MotivateDrawer } from "@/components/circles/MotivateDrawer";
 import { CircleFeedList } from "@/components/circles/board/CircleFeedList";
 import { RenameCircleDialog } from "@/components/circles/board/RenameCircleDialog";
 import { CirclePanel, MemberRow, OpenSpots } from "@/components/circles/components";
@@ -38,11 +39,12 @@ function CirclePage() {
   const { currentUser } = useCurrentUser();
   const board = useCircle(id);
   const { plans } = usePlans();
-  const { nudge, updateCircle, leaveCircle, removeMember, skipProof, openChat } = useCircleActions();
+  const { updateCircle, leaveCircle, removeMember, skipProof, openChat } = useCircleActions();
   const blockUser = useBlockUser();
   const [, copy] = useClipboard();
   const [sheet, setSheet] = useState<ActionSheetContent | null>(null);
   const [report, setReport] = useState<ReportTarget>();
+  const [motivating, setMotivating] = useState<BoardMember>();
   const [renaming, setRenaming] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const data = board.data;
@@ -99,11 +101,6 @@ function CirclePage() {
       onSuccess: ({ chatId }) => navigate({ to: "/chat/$chatId", params: { chatId } }),
       onError,
     });
-  const nudgeMember = (member: BoardMember) =>
-    nudge.mutate(
-      { circleId: id, userId: member.user.id },
-      { onSuccess: () => toast.success(`Nudged ${firstName(member.user)}`), onError }
-    );
   const leave = () =>
     leaveCircle.mutate(id, {
       onSuccess: () => navigate({ to: "/plans", search: { selectedPlan: data?.me.planId } }),
@@ -112,12 +109,12 @@ function CirclePage() {
 
   const openMemberMenu = (member: BoardMember) => {
     const name = firstName(member.user);
-    const canNudge = member.week.toGo > 0 && !member.week.isNew && !member.nudgedToday;
+    const canMotivate = !member.pending && member.week.toGo > 0 && !member.week.isNew;
     const username = member.user.username;
     setSheet({
       title: `${name} · ${member.week.done} of ${member.week.target} this week`,
       actions: [
-        ...(canNudge ? [{ label: `Nudge ${name}`, onPress: () => nudgeMember(member) }] : []),
+        ...(canMotivate ? [{ label: `Motivate ${name}`, onPress: () => setMotivating(member) }] : []),
         ...(username
           ? [{ label: "View profile", onPress: () => navigate({ to: "/profile/$username", params: { username } }) }]
           : []),
@@ -261,8 +258,8 @@ function CirclePage() {
                       member={member}
                       isMe={isMe}
                       onPress={isMe ? undefined : () => openMemberMenu(member)}
-                      onNudge={
-                        !isMe && member.week.behind && !member.nudgedToday ? () => nudgeMember(member) : undefined
+                      onMotivate={
+                        !isMe && member.week.behind ? () => setMotivating(member) : undefined
                       }
                     />
                   );
@@ -331,6 +328,7 @@ function CirclePage() {
         actions={sheet?.actions ?? []}
         onClose={() => setSheet(null)}
       />
+      {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportDialog target={report} onClose={() => setReport(undefined)} />
       <ConfirmDialogOrPopover
         isOpen={confirmingLeave}

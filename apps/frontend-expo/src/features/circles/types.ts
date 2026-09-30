@@ -153,7 +153,7 @@ export interface MemberRowProps {
   member: BoardMember;
   isMe: boolean;
   onPress?: () => void;
-  onNudge?: () => void;
+  onMotivate?: () => void;
 }
 
 export interface CircleCardViewProps {
@@ -203,4 +203,10 @@ export interface PersonAvatarProps {
   size?: number;
   ring?: "on" | "off" | "accent";
   children?: ReactNode;
+}
+
+export interface MotivateDrawerProps {
+  circleId: string;
+  member: BoardMember;
+  onClose: () => void;
 }

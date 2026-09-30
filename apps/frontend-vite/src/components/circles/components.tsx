@@ -77,9 +77,9 @@ export function WeekDots({ target, done }: WeekDotsProps) {
   );
 }
 
-// Board row: who, their goal, this week's dots, and a nudge for anyone behind.
+// Board row: who, their goal, this week's dots, and encouragement for anyone behind.
 // "N to go" in orange is the only signal that someone is behind.
-export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
+export function MemberRow({ member, isMe, onPress, onMotivate }: MemberRowProps) {
   const { week } = member;
   const name = isMe ? "You" : firstName(member.user);
   const waiting = member.pending || week.isNew;
@@ -123,11 +123,11 @@ export function MemberRow({ member, isMe, onPress, onNudge }: MemberRowProps) {
         </span>
       </button>
       <div className="flex w-[34px] justify-end">
-        {onNudge && (
+        {onMotivate && (
           <button
             type="button"
-            aria-label={`Nudge ${firstName(member.user)}`}
-            onClick={onNudge}
+            aria-label={`Motivate ${firstName(member.user)}`}
+            onClick={onMotivate}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground hover:opacity-70"
           >
             <Hand className="h-4 w-4" />
