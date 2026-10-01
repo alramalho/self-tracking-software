@@ -459,3 +459,22 @@ chmod 600 .env
 docker compose up -d --no-deps backend
 curl --fail --silent https://api.tracking.so/health
 ```
+
+## Plan design (coached outcome plans) — active since October 1, 2026 15:16 UTC
+
+Image `local/tracking-so-backend:plan-design-20261001` (image ID `5872f521d5d3…`), built with [plan-design-overlay.Dockerfile](./plan-design-overlay.Dockerfile) on `circle-encouragement-20260930`. Source commit `a30dc209` (branch `outcome-onboarding`, with main `681c5050` merged in). All 14 existing files that the overlay replaces matched `origin/main` in the live container before the build; 15 files are new. The Prisma client is regenerated in the image. No new dependencies.
+
+- Migration `20261001090000_plan_design` (additive, nullable columns only): `plans.orientation/goalSpec/baseline/outline/designedThrough` and `plan_sessions.title/targets`. It was the only pending migration and was applied with `prisma migrate deploy` from the new image before the switch; the previous backend ignores the new columns.
+- New endpoints under `/follow-through`: `POST onboarding/design/classify`, `POST onboarding/design/subgoal`, `POST onboarding/design/options`, `GET onboarding/design/baseline`, `POST plans/:planId/redesign`. Existing onboarding, finish and weekly review paths are unchanged for plans without an orientation, so older app builds keep working.
+- Models through the AI Gateway (same production key): Opus 5.5 designs the two routes at onboarding, Sonnet 5.5 extends outcome plans by two weeks at review, each falls back to the other; gpt-6-luna for the short calls. Overrides: `PLAN_DESIGN_MODEL`, `PLAN_ADAPT_MODEL`, `PLAN_QUICK_MODEL`, `PLAN_FALLBACK_MODEL`, `PLAN_DESIGN_EFFORT`. None are set.
+- Before activation, in the exact candidate image: all 29 overlaid source hashes matched, the changed routes and services loaded with the production environment and no network, typecheck reported the same 30 existing errors as the previous image, and the 40 plan-design unit tests passed offline. All three models were listed for the production key.
+- After activation: healthy container with zero restarts, public `/health` 200, the four new endpoints return 401 unauthenticated, `prisma migrate status` up to date, and one real goal classification inside the live container returned OUTCOME for "Finish my first half marathon" and CONSISTENCY for "Train 4x a week".
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-plan-design-20261001/` (`context/`, `source-hashes.json`, `activate.py`, `verified.json`, `rollback.sh`). `backup/` holds the environment, compose file and a 3.9 MB database dump taken before the migration; `backup-first-attempt/` is an identical earlier backup from a first run that stopped before changing anything (the status check exits 1 while a migration is pending).
+
+Rollback, only while this release is active (the migration is additive and can stay):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-plan-design-20261001/rollback.sh
+```
