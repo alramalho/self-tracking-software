@@ -4,7 +4,7 @@ Small groups of people working on a similar goal, who see each other's week. Cir
 
 ## Product rules
 
-- **Size:** matching fills a circle up to 5 people, invites up to 8. The weekly board starts at 3; below that a circle is *forming*.
+- **Size:** matching fills a circle up to 5 people, invites up to 8. The weekly board starts once 2 people have posted their first photo; below that a circle is *forming*.
 - **One circle per plan.** You join with one of your plans; that plan's week and logs (activity, amount, date, photo, caption) are shared with the circle, even if the plan is private to everyone else. Location and private notes never are.
 - **Misses are visible, kindly.** The board shows everyone's week. Someone is *behind* when finishing needs every remaining day; they show "N to go" in orange and get a motivate button. People who joined mid-week are *New* and never behind.
 - **No approval step.** Matches and invites join straight away. Owners can rename, invite, turn matching off and remove a member. Report and block work on members and on the circle.
