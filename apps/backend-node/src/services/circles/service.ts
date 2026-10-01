@@ -180,10 +180,21 @@ async function requireOwner(userId: string, circleId: string) {
   if (member.role !== "OWNER") throw new CircleError("Only the circle's owner can do that");
 }
 
-export async function renameCircle(userId: string, circleId: string, name: string) {
+// The owner's settings: the circle's name, and whether the coach posts in its chat.
+export async function updateCircle(
+  userId: string,
+  circleId: string,
+  changes: { name?: string; coachPosts?: boolean },
+) {
   await requireOwner(userId, circleId);
-  await prisma.circle.update({ where: { id: circleId }, data: { name } });
-  await syncCircleChat(circleId);
+  await prisma.circle.update({ where: { id: circleId }, data: changes });
+  if (changes.name) await syncCircleChat(circleId);
+}
+
+// Each member's own switch: no pushes from this circle's chat or the coach's posts.
+export async function muteCircle(userId: string, circleId: string, muted: boolean) {
+  const { count } = await prisma.circleMember.updateMany({ where: { circleId, userId }, data: { muted } });
+  if (!count) throw new CircleError("Join this circle to change its notifications");
 }
 
 export async function removeMember(ownerId: string, circleId: string, memberId: string) {

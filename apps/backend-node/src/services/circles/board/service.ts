@@ -7,7 +7,8 @@ import { paceLabel, sharedPlace } from "../cards";
 import { CIRCLE_CAP } from "../config";
 import { CircleError } from "../errors";
 import { weeklyTarget } from "../matching/profiles";
-import { lastWeekRecap, memberWeek, togetherStreak, type MemberHistory } from "./model";
+import { lastWeekRecap, memberWeek, pastWeeks, togetherStreak, type MemberHistory } from "./model";
+import { weekChips, type ChipPlan } from "../timeline";
 import type { BoardMember, CircleBoard } from "../types";
 
 const person = { id: true, name: true, username: true, picture: true } as const;
@@ -91,6 +92,7 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
       ]);
       histories.push({
         proven: !!m.provenAt,
+        id: m.userId,
         name: m.user.name?.split(" ")[0] ?? m.user.username,
         joinedAt: m.joinedAt,
         weeks: (progress?.weeks ?? []) as MemberHistory["weeks"],
@@ -108,6 +110,8 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
     }),
   );
   const mine = members.find((m) => m.user.id === viewerId);
+  const proven = histories.filter((h) => h.proven);
+  const active = circle.status === "ACTIVE";
   return {
     id: circle.id,
     name: circle.name,
@@ -119,10 +123,12 @@ export async function circleBoard(viewerId: string, circleId: string, now = new 
     place: sharedPlace(circle.members.map((m) => m.user.approxPlace)),
     paceLabel: paceLabel(circle.members.map((m) => weeklyTarget(m.plan))),
     cap: CIRCLE_CAP,
-    me: { role: me.role, planId: me.planId, hasIntro: !!mine?.hasIntro, pending: !me.provenAt },
+    coachPosts: circle.coachPosts,
+    me: { role: me.role, planId: me.planId, hasIntro: !!mine?.hasIntro, pending: !me.provenAt, muted: me.muted },
     members,
-    togetherStreak: circle.status === "ACTIVE" ? togetherStreak(histories.filter((h) => h.proven)) : 0,
-    recap: circle.status === "ACTIVE" ? lastWeekRecap(histories.filter((h) => h.proven)) : null,
+    togetherStreak: active ? togetherStreak(proven) : 0,
+    recap: active ? lastWeekRecap(proven) : null,
+    pastWeeks: active ? pastWeeks(proven) : null,
   };
 }
 
@@ -136,7 +142,20 @@ export async function circleFeed(viewerId: string, circleId: string, limit = 30)
       user: { deletedAt: null },
       OR: [{ userId: viewerId }, { userId: { notIn: hidden }, provenAt: { not: null } }],
     },
-    select: { userId: true, planId: true, joinedAt: true },
+    select: {
+      userId: true,
+      planId: true,
+      joinedAt: true,
+      user: { select: { timezone: true } },
+      plan: {
+        select: {
+          timesPerWeek: true,
+          coachSuggestedTimesPerWeek: true,
+          progressState: true,
+          activities: { select: { id: true } },
+        },
+      },
+    },
   });
   if (!members.length) return { entries: [], introIds: [] };
   const visibleComments = { deletedAt: null, userId: { notIn: hidden } };
@@ -181,5 +200,13 @@ export async function circleFeed(viewerId: string, circleId: string, limit = 30)
   const introIds = (
     await Promise.all(members.map((m) => proofEntryId(m.userId, m.planId, m.joinedAt)))
   ).filter((id): id is string => !!id);
-  return { entries, introIds };
+  // Same "3 of 4 this week" chip as the home timeline.
+  const chipPlans = new Map<string, ChipPlan>();
+  for (const m of members) {
+    const activityIds = m.plan.activities.map((a) => a.id);
+    const chipPlan = { userId: m.userId, timezone: m.user.timezone, target: weeklyTarget(m.plan), activityIds };
+    for (const activityId of activityIds) chipPlans.set(activityId, chipPlan);
+  }
+  const chips = await weekChips(entries, chipPlans);
+  return { entries: entries.map((entry) => ({ ...entry, weekChip: chips.get(entry.id) ?? null })), introIds };
 }

@@ -1,4 +1,5 @@
-import type { CircleRecap, MemberWeek } from "../types";
+import { PAST_WEEKS } from "../config";
+import type { CircleRecap, MemberWeek, PastWeeks } from "../types";
 
 export interface WeekStats {
   numActiveDaysInTheWeek: number;
@@ -16,6 +17,7 @@ export interface PastWeek {
 export interface MemberHistory {
   // Only proven members (who posted their first photo) count toward streaks and recaps.
   proven?: boolean;
+  id?: string;
   name: string | null;
   joinedAt: Date;
   weeks: PastWeek[];
@@ -80,4 +82,42 @@ export function lastWeekRecap(members: MemberHistory[]): CircleRecap | null {
     topName: top && (top.week.doneCount ?? 0) > 0 ? top.member.name : null,
     topCount: top?.week.doneCount ?? 0,
   };
+}
+
+// The friendly race: the circle's last finished weeks, and how much of their own target each
+// person did. Extra sessions don't count, so twice a week can beat five times a week.
+export function pastWeeks(members: MemberHistory[], count = PAST_WEEKS): PastWeeks | null {
+  const recent = finishedWeeks(members)
+    .filter((week) => week.people.length >= 2)
+    .slice(0, count)
+    .reverse();
+  if (!recent.length) return null;
+  const weeks = recent.map((week) => ({
+    start: week.key,
+    allHit: week.people.every((p) => hit(p.week)),
+    people: week.people.map((p) => ({
+      userId: p.member.id ?? "",
+      done: p.week.doneCount ?? 0,
+      target: p.week.targetCount ?? 0,
+      hit: hit(p.week),
+    })),
+  }));
+  const scores = members
+    .map((member) => {
+      const mine = weeks.map((week) => week.people.find((p) => p.userId === member.id) ?? null);
+      const target = mine.reduce((sum, p) => sum + (p?.target ?? 0), 0);
+      const done = mine.reduce((sum, p) => sum + Math.min(p?.done ?? 0, p?.target ?? 0), 0);
+      return {
+        userId: member.id ?? "",
+        percent: target ? Math.round((100 * done) / target) : -1,
+        hits: mine.map((p) => (p ? p.hit : null)),
+      };
+    })
+    .filter((score) => score.percent >= 0)
+    .sort((a, b) => b.percent - a.percent);
+  const ranking = scores.map((score) => ({
+    ...score,
+    rank: scores.findIndex((other) => other.percent === score.percent) + 1,
+  }));
+  return { weeks, ranking };
 }

@@ -5,11 +5,12 @@ import { prisma } from "../../../utils/prisma";
 import { notificationService } from "../../notificationService";
 import { plansService } from "../../plansService";
 import { circleBoard } from "../board/service";
-import { togetherStreak, type MemberHistory } from "../board/model";
+import { pastWeeks, togetherStreak, type MemberHistory } from "../board/model";
 import { ensureCircleChat } from "../chat";
 import { HALFWAY_HOUR, RECAP_HOUR } from "../config";
 import { circleLabel } from "../notify";
-import { halfwayPost, weekRecapPost, type RecapPerson } from "./model";
+import { getActivityEntryImageUrls } from "../../../utils/activityEntryImages";
+import { halfwayPost, weekRecapPost, type RecapExtras, type RecapPerson } from "./model";
 
 const COACH_NAME = "Helly";
 
@@ -22,9 +23,15 @@ interface CircleRef {
 const firstName = (user: { name: string | null; username: string | null }) =>
   user.name?.split(" ")[0] ?? user.username ?? "Someone";
 
-// Posts once per key (a circle and a week): the coach's message in the circle chat,
-// and a push to every member that opens the chat.
-export async function postCoachMessage(circle: CircleRef, content: string, key: string, headline: string) {
+// Posts once per key (a circle and a week): the coach's message in the circle chat, with a
+// photo when there is one, and a push that opens the chat for members who haven't muted it.
+export async function postCoachMessage(
+  circle: CircleRef,
+  content: string,
+  key: string,
+  headline: string,
+  photo?: { id: string; url: string },
+) {
   const chatId = await ensureCircleChat(circle);
   const already = await prisma.message.findFirst({
     where: { chatId, role: "COACH", metadata: { path: ["postKey"], equals: key } },
@@ -36,12 +43,18 @@ export async function postCoachMessage(circle: CircleRef, content: string, key: 
       chatId,
       role: "COACH",
       content,
-      metadata: { source: "circle_coach", postKey: key, coachName: COACH_NAME, circleId: circle.id },
+      metadata: {
+        source: "circle_coach",
+        postKey: key,
+        coachName: COACH_NAME,
+        circleId: circle.id,
+        ...(photo && { imageAttachments: [{ id: photo.id, url: photo.url, mediaType: "image/jpeg" }] }),
+      },
     },
   });
   await prisma.chat.update({ where: { id: chatId }, data: { updatedAt: new Date() } });
   const members = await prisma.circleMember.findMany({
-    where: { circleId: circle.id, provenAt: { not: null } },
+    where: { circleId: circle.id, provenAt: { not: null }, muted: false },
     select: { userId: true },
   });
   for (const { userId } of members) {
@@ -74,7 +87,7 @@ async function lastWeek(circleId: string) {
   for (const m of members) {
     const progress = await plansService.getPlanProgress(m.plan, m.user).catch(() => null);
     const weeks = (progress?.weeks ?? []) as MemberHistory["weeks"];
-    histories.push({ proven: true, name: firstName(m.user), joinedAt: m.joinedAt, weeks });
+    histories.push({ proven: true, id: m.userId, name: firstName(m.user), joinedAt: m.joinedAt, weeks });
     const finished = weeks.filter((w) => w.outcome).at(-1);
     if (!finished || m.joinedAt > new Date(finished.startDate)) continue;
     people.push({
@@ -85,18 +98,54 @@ async function lastWeek(circleId: string) {
       weekStart: new Date(finished.startDate).toISOString().slice(0, 10),
     });
   }
-  return { people, streak: togetherStreak(histories) };
+  return { people, streak: togetherStreak(histories), members, race: pastWeeks(histories) };
+}
+
+// The week's photo with the most reactions (the latest one wins a tie), from the circle's own logs.
+async function photoOfTheWeek(members: { userId: string; planId: string }[], weekStart: string) {
+  const from = new Date(`${weekStart}T00:00:00Z`);
+  const entries = await prisma.activityEntry.findMany({
+    where: {
+      deletedAt: null,
+      datetime: { gte: from, lt: new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000) },
+      AND: [
+        { OR: members.map((m) => ({ userId: m.userId, activity: { plans: { some: { id: m.planId } } } })) },
+        { OR: [{ imageUrls: { isEmpty: false } }, { imageUrl: { not: null } }] },
+      ],
+    },
+    orderBy: { datetime: "desc" },
+    select: { id: true, userId: true, imageUrl: true, imageUrls: true, _count: { select: { reactions: true } } },
+  });
+  const [best] = entries.sort((a, b) => b._count.reactions - a._count.reactions);
+  const url = best && getActivityEntryImageUrls(best)[0];
+  return url ? { id: best.id, url, userId: best.userId } : null;
 }
 
 async function weekRecap(circle: CircleRef) {
-  const { people, streak } = await lastWeek(circle.id);
-  const content = weekRecapPost(people, streak);
+  const { people, streak, members, race } = await lastWeek(circle.id);
+  if (people.length < 2) return false;
+  const nameOf = (userId: string) => {
+    const member = members.find((m) => m.userId === userId);
+    return member ? firstName(member.user) : null;
+  };
+  const photo = await photoOfTheWeek(members, people[0].weekStart);
+  // "Who leads" only means something when not everyone is level.
+  const leaders = race?.ranking.filter((r) => r.rank === 1) ?? [];
+  const extras: RecapExtras = {
+    photoBy: (photo && nameOf(photo.userId)) ?? undefined,
+    leaders:
+      race && leaders.length < race.ranking.length
+        ? leaders.map((r) => nameOf(r.userId)).filter((name): name is string => !!name)
+        : [],
+    weeks: race?.weeks.length,
+  };
+  const content = weekRecapPost(people, streak, extras);
   if (!content) return false;
   const missed = people.filter((p) => !p.hit).map((p) => p.name);
   const headline = missed.length
     ? `Week recap is up. ${missed.join(", ")} could use some support.`
     : "Week recap is up. Everyone hit their week 🔥";
-  return postCoachMessage(circle, content, `recap:${circle.id}:${people[0].weekStart}`, headline);
+  return postCoachMessage(circle, content, `recap:${circle.id}:${people[0].weekStart}`, headline, photo ?? undefined);
 }
 
 async function halfwayCheck(circle: CircleRef, ownerId: string, now: Date) {
@@ -114,10 +163,11 @@ async function halfwayCheck(circle: CircleRef, ownerId: string, now: Date) {
   );
 }
 
-// Sunday evening recap and a Thursday halfway check, in the owner's time zone.
+// Sunday evening recap and a Thursday halfway check, in the owner's time zone,
+// unless the owner switched the coach's posts off.
 export async function circleCoachPosts(now = new Date()): Promise<number> {
   const circles = await prisma.circle.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", coachPosts: true },
     select: {
       id: true,
       name: true,

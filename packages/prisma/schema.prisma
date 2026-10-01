@@ -1510,6 +1510,8 @@ model Circle {
   discoverable    Boolean        @default(true)
   // Set once the owner has been told the circle is still forming after a week.
   stalledNoticeAt DateTime?
+  // The owner can switch off the coach's Sunday recap and Thursday check in the chat.
+  coachPosts      Boolean        @default(true)
   createdAt       DateTime       @default(now())
   members         CircleMember[]
   nudges          CircleNudge[]
@@ -1534,6 +1536,8 @@ model CircleMember {
   // Pending until the first photo log on this plan after joining: that log is the proof and the intro.
   provenAt      DateTime?
   proofNudgedAt DateTime?
+  // No pushes from this circle's chat or the coach's posts; everything still shows in the app.
+  muted         Boolean    @default(false)
   circle      Circle     @relation(fields: [circleId], references: [id], onDelete: Cascade)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan        Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)

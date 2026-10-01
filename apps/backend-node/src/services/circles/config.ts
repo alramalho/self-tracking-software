@@ -28,6 +28,9 @@ export const NUDGES_RECEIVED_PER_DAY = 3;
 export const RECAP_HOUR = 19;
 export const HALFWAY_HOUR = 18;
 
+// "Past weeks" on the circle page, and the coach's "who leads" line, look this far back.
+export const PAST_WEEKS = 6;
+
 // People who haven't opened the app in this long aren't matched.
 export const ACTIVE_WITHIN_DAYS = 14;
 

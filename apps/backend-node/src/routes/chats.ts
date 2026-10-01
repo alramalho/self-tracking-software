@@ -20,6 +20,7 @@ import {
   AUTONOMOUS_COACH_PROMPT_TAG,
   concludeResolvedAutonomousCoachNotifications,
 } from "../services/autonomousCoachNotificationService";
+import { mutedMembers } from "../services/circles/notify";
 import { blockedUserIds, isBlockedPair } from "../utils/blocks";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -1643,8 +1644,9 @@ router.post(
       if (chat.type === "DIRECT" || chat.type === "GROUP") {
         // Nobody gets a push from someone they blocked, or who blocked them.
         const hiddenFromSender = new Set(await blockedUserIds(user.id));
+        const muted = chat.circleId ? await mutedMembers(chat.circleId) : new Set<string>();
         const recipients = chat.participants.filter(
-          (p) => p.userId !== user.id && !hiddenFromSender.has(p.userId)
+          (p) => p.userId !== user.id && !hiddenFromSender.has(p.userId) && !muted.has(p.userId)
         );
         const senderName = user.name || user.username || "Someone";
         const preview =

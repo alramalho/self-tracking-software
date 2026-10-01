@@ -11,12 +11,13 @@ import {
   joinByInvite,
   joinCircle,
   leaveCircle,
+  muteCircle,
   myCircles,
   removeMember,
-  renameCircle,
   saveApproxLocation,
   skipProof,
   startCircle,
+  updateCircle,
 } from "../services/circles/service";
 import { logger } from "../utils/logger";
 
@@ -119,8 +120,10 @@ router.post(
 router.patch(
   "/:id",
   handle(async (req, res) => {
-    const { name } = z.object({ name: z.string().trim().min(1).max(60) }).parse(req.body);
-    await renameCircle(req.user!.id, req.params.id, name);
+    const changes = z
+      .object({ name: z.string().trim().min(1).max(60).optional(), coachPosts: z.boolean().optional() })
+      .parse(req.body);
+    await updateCircle(req.user!.id, req.params.id, changes);
     res.sendStatus(204);
   }),
 );
@@ -136,6 +139,15 @@ router.post(
   "/:id/proof-skipped",
   handle(async (req, res) => {
     await skipProof(req.user!.id, req.params.id);
+    res.sendStatus(204);
+  }),
+);
+
+router.patch(
+  "/:id/membership",
+  handle(async (req, res) => {
+    const { muted } = z.object({ muted: z.boolean() }).parse(req.body);
+    await muteCircle(req.user!.id, req.params.id, muted);
     res.sendStatus(204);
   }),
 );

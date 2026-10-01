@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lastWeekRecap, memberWeek, togetherStreak, type MemberHistory } from "./model";
+import { lastWeekRecap, memberWeek, pastWeeks, togetherStreak, type MemberHistory } from "./model";
 
 const monday = new Date("2026-09-27T00:00:00Z");
 const stats = (target: number, done: number, left: number) => ({
@@ -48,5 +48,33 @@ describe("circle board", () => {
       { name: "Tomás", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "complete", 6)] },
     ];
     expect(lastWeekRecap(members)).toMatchObject({ hit: 2, total: 3, topName: "Tomás", topCount: 6 });
+  });
+
+  it("ranks the past weeks by each person's share of their own target, extras not counted", () => {
+    const counted = (date: string, outcome: "complete" | "held" | "missed", doneCount: number, targetCount: number) => ({
+      ...week(date, outcome, doneCount),
+      targetCount,
+    });
+    const members: MemberHistory[] = [
+      // Twice a week, never missed: beats five sessions a week with one bad week.
+      { id: "rita", name: "Rita", joinedAt: new Date("2026-08-01"), weeks: [counted("2026-09-13", "complete", 2, 2), counted("2026-09-20", "complete", 3, 2)] },
+      { id: "tomas", name: "Tomás", joinedAt: new Date("2026-08-01"), weeks: [counted("2026-09-13", "complete", 5, 5), counted("2026-09-20", "missed", 2, 5)] },
+      // Joined after 13 Sep: ranked on the one full week since.
+      { id: "mia", name: "Mia", joinedAt: new Date("2026-09-15"), weeks: [counted("2026-09-13", "missed", 0, 3), counted("2026-09-20", "complete", 3, 3)] },
+    ];
+    const race = pastWeeks(members)!;
+    expect(race.weeks.map((w) => [w.start, w.allHit, w.people.length])).toEqual([
+      ["2026-09-13", true, 2],
+      ["2026-09-20", false, 3],
+    ]);
+    expect(race.ranking).toEqual([
+      { userId: "rita", percent: 100, rank: 1, hits: [true, true] },
+      { userId: "mia", percent: 100, rank: 1, hits: [null, true] },
+      { userId: "tomas", percent: 70, rank: 3, hits: [true, false] },
+    ]);
+  });
+
+  it("has no past weeks to show until two people have finished a week together", () => {
+    expect(pastWeeks([{ id: "a", name: "A", joinedAt: new Date("2026-08-01"), weeks: [week("2026-09-20", "complete")] }])).toBeNull();
   });
 });

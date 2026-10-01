@@ -106,6 +106,27 @@ export interface CircleRecap {
   topCount: number;
 }
 
+// "3 of 4 this week" on a circle log: the days its owner had done that week, up to that log.
+export interface WeekChip {
+  done: number;
+  target: number;
+}
+
+export interface PastWeekPerson {
+  userId: string;
+  done: number;
+  target: number;
+  hit: boolean;
+}
+
+export interface PastWeeks {
+  // Finished weeks, oldest first, with whoever was already in the circle that week.
+  weeks: { start: string; allHit: boolean; people: PastWeekPerson[] }[];
+  // Share of their own target each person did (never above 100%); ties share a rank.
+  // `hits` lines up with `weeks`; null for weeks before they joined.
+  ranking: { userId: string; percent: number; rank: number; hits: (boolean | null)[] }[];
+}
+
 export interface CircleBoard {
   id: string;
   name: string;
@@ -117,8 +138,11 @@ export interface CircleBoard {
   place: string | null;
   paceLabel: string | null;
   cap: number;
-  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean };
+  // The owner's switch for the coach's recap and halfway check in the chat.
+  coachPosts: boolean;
+  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean; muted: boolean };
   members: BoardMember[];
   togetherStreak: number;
   recap: CircleRecap | null;
+  pastWeeks: PastWeeks | null;
 }

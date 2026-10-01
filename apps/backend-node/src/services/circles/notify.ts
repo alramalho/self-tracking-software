@@ -1,5 +1,6 @@
 import { Prisma } from "@tsw/prisma";
 import { logger } from "../../utils/logger";
+import { prisma } from "../../utils/prisma";
 import { notificationService } from "../notificationService";
 
 interface CircleRef {
@@ -48,4 +49,10 @@ export async function notifyCircle(
       }
     }),
   );
+}
+
+// Members who switched this circle's pushes off.
+export async function mutedMembers(circleId: string): Promise<Set<string>> {
+  const muted = await prisma.circleMember.findMany({ where: { circleId, muted: true }, select: { userId: true } });
+  return new Set(muted.map((m) => m.userId));
 }

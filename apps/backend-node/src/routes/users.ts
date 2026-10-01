@@ -31,7 +31,7 @@ import {
   TimezoneUpdateSchema,
 } from "../types/user";
 import { blockedUserIds, isBlockedPair } from "../utils/blocks";
-import { timelineCircles } from "../services/circles/timeline";
+import { timelineCircles, weekChips } from "../services/circles/timeline";
 import { logger } from "../utils/logger";
 import { userSelfUpdate } from "../utils/userSelfUpdate";
 import { prisma } from "../utils/prisma";
@@ -1436,14 +1436,15 @@ usersRouter.get(
           })
         : null;
 
-      const filteredActivityEntries = pageItems
-        .filter((item) => item.type === "activity")
-        .map((item) => ({
-          ...redactActivityEntryPrivateNotes(item.data, req.user!.id),
-          circle: item.data.activityId
-            ? circles.activityCircle.get(item.data.activityId) ?? null
-            : null,
-        }));
+      const pageEntries = pageItems.filter((item) => item.type === "activity");
+      const chips = await weekChips(pageEntries.map((item) => item.data), circles.chipPlans);
+      const filteredActivityEntries = pageEntries.map((item) => ({
+        ...redactActivityEntryPrivateNotes(item.data, req.user!.id),
+        circle: item.data.activityId
+          ? circles.activityCircle.get(item.data.activityId) ?? null
+          : null,
+        weekChip: chips.get(item.data.id) ?? null,
+      }));
 
       const achievementPosts = pageItems
         .filter((item) => item.type === "achievement")

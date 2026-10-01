@@ -6,6 +6,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 // Each request runs as the fixture user named in its x-test-user header.
 const fixture = vi.hoisted(() => ({
   users: {} as Record<string, any>,
+  // Finished weeks per plan, for the recap and the past-weeks race.
+  weeks: {} as Record<string, any[]>,
   notify: vi.fn(async (data: any) => ({ id: "n", ...data })),
 }));
 vi.mock("../middleware/auth", () => ({
@@ -31,7 +33,7 @@ vi.mock("../services/plansService", async () => {
     plansService: {
       getPlanEmbedding: async () => null,
       getBatchPlanProgress: async () => [],
-      getPlanProgress: async () => ({ weeks: [] }),
+      getPlanProgress: async (plan: { id: string }) => ({ weeks: fixture.weeks[plan.id] ?? [] }),
       getPlanWeekStats: async (plan: { id: string }) => {
         const done = await prisma.activityEntry.count({
           where: { deletedAt: null, activity: { plans: { some: { id: plan.id } } } },
@@ -281,6 +283,19 @@ describe("circles", () => {
     expect(ids).not.toContain(unrelated.id);
     expect(ids).not.toContain(pendingLog.id);
     expect(entries.find((e: { id: string }) => e.id === after.id).circle).toMatchObject({ id: circleId, emoji: "🏃" });
+    expect(entries.find((e: { id: string }) => e.id === after.id).weekChip).toMatchObject({ target: 4 });
+  });
+
+  it("shows how far into their week each circle log was: 1 of 4, then 2 of 4", async () => {
+    const tuesday = await log("alice", new Date("2026-09-22T12:00:00Z"));
+    const sameDay = await log("alice", new Date("2026-09-22T18:00:00Z"));
+    const wednesday = await log("alice", new Date("2026-09-23T12:00:00Z"));
+    const feed = await call("bob", "GET", `/circles/${circleId}/feed`);
+    const chip = (entryId: string) => feed.body.entries.find((e: { id: string }) => e.id === entryId).weekChip;
+    expect(chip(tuesday.id)).toEqual({ done: 1, target: 4 });
+    // Two logs on one day are still one day done.
+    expect(chip(sameDay.id)).toEqual({ done: 1, target: 4 });
+    expect(chip(wednesday.id)).toEqual({ done: 2, target: 4 });
   });
 
   it("opens private encouragement for proven members without sending a nudge", async () => {
@@ -383,6 +398,73 @@ describe("circles", () => {
     // The hourly job runs again within the same hour: nothing new.
     expect(await circleCoachPosts(thursdayEvening)).toBe(0);
     expect(await prisma.message.count({ where: { chatId, role: "COACH" } })).toBe(1);
+  });
+
+  it("has Helly recap the week on Sunday with the photo of the week, who leads, and an ask for whoever missed", async () => {
+    await prisma.circleMember.update({
+      where: { circleId_userId: { circleId, userId: id("carol") } },
+      data: { joinedAt: new Date(Date.now() - 30 * 86400000) },
+    });
+    const finished = (date: string, outcome: string, doneCount: number) => ({
+      startDate: `${date}T00:00:00.000Z`,
+      outcome,
+      doneCount,
+      targetCount: 4,
+    });
+    fixture.weeks[plan.alice] = [finished("2026-09-13", "complete", 4), finished("2026-09-20", "complete", 4)];
+    fixture.weeks[plan.bob] = [finished("2026-09-13", "complete", 4), finished("2026-09-20", "missed", 1)];
+    fixture.weeks[plan.carol] = [finished("2026-09-13", "missed", 2), finished("2026-09-20", "complete", 4)];
+    // Two photos that week; Carol's got a reaction.
+    const photo = (name: Name, url: string, when: string) =>
+      prisma.activityEntry.create({
+        data: { userId: id(name), activityId: activity[name], quantity: 5, datetime: new Date(when), imageUrls: [url] },
+      });
+    await photo("alice", "https://example.test/alice.jpg", "2026-09-24T08:00:00Z");
+    const carols = await photo("carol", "https://example.test/carol.jpg", "2026-09-22T08:00:00Z");
+    await prisma.reaction.create({ data: { activityEntryId: carols.id, userId: id("alice"), emoji: "🔥" } });
+
+    // Carol muted this circle's pushes; she still sees everything in the app.
+    expect((await call("carol", "PATCH", `/circles/${circleId}/membership`, { muted: true })).status).toBe(204);
+    const board = await call("carol", "GET", `/circles/${circleId}`);
+    expect(board.body).toMatchObject({ coachPosts: true, me: { muted: true } });
+    expect(board.body.pastWeeks.weeks.map((w: any) => w.start)).toEqual(["2026-09-13", "2026-09-20"]);
+    expect(board.body.pastWeeks.ranking.map((r: any) => [r.userId, r.percent, r.rank])).toEqual([
+      [id("alice"), 100, 1],
+      [id("carol"), 75, 2],
+      [id("bob"), 63, 3],
+    ]);
+
+    // Sunday 19:30 in Lisbon.
+    const sundayEvening = new Date("2026-09-27T18:30:00Z");
+    fixture.notify.mockClear();
+    expect(await circleCoachPosts(sundayEvening)).toBe(1);
+    const post = await prisma.message.findFirstOrThrow({ where: { chatId, role: "COACH" }, orderBy: { createdAt: "desc" } });
+    expect(post.content.split("\n")).toEqual([
+      "Week recap 🏁",
+      "✅ Alice 4/4 · Carol 4/4",
+      "💪 Bob 1/4",
+      "📸 Photo of the week goes to Carol.",
+      "🏆 Alice leads the last 2 weeks.",
+      "Bob, one missed week is nothing. Let's not make it two. What's one session you'll lock in for Monday?",
+      "Everyone, drop Bob a word 👇",
+    ]);
+    expect(fixture.notify.mock.calls.map(([n]) => n.userId).sort()).toEqual([id("alice"), id("bob")].sort());
+    const messages = await call("bob", "GET", `/chats/${chatId}/messages`);
+    expect(messages.body.messages.find((m: any) => m.id === post.id).imageAttachments).toEqual([
+      { id: carols.id, url: "https://example.test/carol.jpg", mediaType: "image/jpeg" },
+    ]);
+  });
+
+  it("lets the owner, and only the owner, switch Helly's posts off", async () => {
+    expect((await call("bob", "PATCH", `/circles/${circleId}`, { coachPosts: false })).status).toBe(400);
+    expect((await call("alice", "PATCH", `/circles/${circleId}`, { coachPosts: false })).status).toBe(204);
+    expect((await call("bob", "GET", `/circles/${circleId}`)).body.coachPosts).toBe(false);
+    // The next Thursday evening: someone is behind, but Helly stays quiet.
+    expect(await circleCoachPosts(new Date("2026-10-08T17:30:00Z"))).toBe(0);
+    // Renaming still works on its own, and doesn't touch the switch.
+    expect((await call("alice", "PATCH", `/circles/${circleId}`, { name: "Morning 10K" })).status).toBe(204);
+    const circle = await prisma.circle.findUniqueOrThrow({ where: { id: circleId } });
+    expect(circle).toMatchObject({ name: "Morning 10K", coachPosts: false });
   });
 
   it("hands ownership on and goes back to forming when people leave", async () => {

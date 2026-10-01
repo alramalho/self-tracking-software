@@ -16,7 +16,7 @@ describe("coach posts in a circle", () => {
         "Week recap 🏁",
         "✅ Rita 4/4 · Tomás 3/3",
         "💪 Jonas 1/4",
-        "Jonas, a fresh week starts now. What's one session you'll lock in for Monday?",
+        "Jonas, one missed week is nothing. Let's not make it two. What's one session you'll lock in for Monday?",
         "Everyone, drop Jonas a word 👇",
       ].join("\n"),
     );
@@ -42,8 +42,25 @@ describe("coach posts in a circle", () => {
       ],
       0,
     )!;
-    expect(post).toContain("A, B and C, a fresh week starts now.");
+    expect(post).toContain("A, B and C, one missed week is nothing.");
     expect(post).toContain("Everyone, drop them a word 👇");
+  });
+
+  it("adds the photo of the week and who leads, only when there is something to say", () => {
+    const people = [
+      { name: "Rita", done: 4, target: 4, hit: true },
+      { name: "Jonas", done: 1, target: 4, hit: false },
+    ];
+    const post = weekRecapPost(people, 0, { photoBy: "Rita", leaders: ["Rita", "Tomás"], weeks: 6 })!;
+    expect(post.split("\n").slice(3, 5)).toEqual([
+      "📸 Photo of the week goes to Rita.",
+      "🏆 Rita and Tomás lead the last 6 weeks.",
+    ]);
+    expect(weekRecapPost(people, 0, { leaders: ["Rita"], weeks: 3 })).toContain("🏆 Rita leads the last 3 weeks.");
+    // One week isn't a race yet, and no photo means no photo line.
+    const plain = weekRecapPost(people, 0, { leaders: ["Rita"], weeks: 1 })!;
+    expect(plain).not.toContain("🏆");
+    expect(plain).not.toContain("📸");
   });
 
   it("needs at least two people, and stays quiet midweek when nobody is behind", () => {
