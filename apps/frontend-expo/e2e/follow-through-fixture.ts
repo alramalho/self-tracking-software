@@ -1,4 +1,5 @@
 import { interviewFixture } from "./interview-fixture";
+import { exampleFor, startDate as exampleStart } from "./design-examples";
 import type {
   FollowThroughState,
   OnboardingDraft,
@@ -288,7 +289,7 @@ export function followThroughFixture(
   if (path === "/follow-through/onboarding/goal-guidance") {
     const step = body.step || "goal";
     const rejected = /asdf|ignore.*instructions|bullshit|be better/i.test(body.answer);
-    const passed = !rejected && (step === "goal" ? /run|write|learn|meditat|exercise|walk|study|read/i.test(body.answer) : step === "baseline" ? /start|begin|currently|now|run|practice|know|never|week/i.test(body.answer) : /because|express|matters|enjoy|love|feel|friend|calm/i.test(body.answer));
+    const passed = !rejected && (step === "goal" ? /run|write|learn|meditat|exercise|walk|study|read|marathon|bench|lift|train|play|lose|song|guitar|fat/i.test(body.answer) : step === "baseline" ? /start|begin|currently|now|run|practice|know|never|week/i.test(body.answer) : /because|express|matters|enjoy|love|feel|friend|calm/i.test(body.answer));
     return {
       requirements: [{
         key: step,
@@ -298,6 +299,27 @@ export function followThroughFixture(
         passed,
         detail: passed ? "This helps shape your plan." : step === "goal" ? "Name one concrete outcome." : "Add a relevant detail, or skip for now.",
       }],
+    };
+  }
+  // Plan design fixtures serve the hand-written illustrative examples; they are not model output.
+  if (path === "/follow-through/onboarding/design/classify") {
+    const example = exampleFor(body.goal);
+    return { orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion };
+  }
+  if (path === "/follow-through/onboarding/design/subgoal") {
+    const example = exampleFor(body.goal);
+    return { question: example.subgoal && !body.asked.length ? example.subgoal.question : null };
+  }
+  if (path === "/follow-through/onboarding/design/options") {
+    const example = exampleFor(body.goal);
+    const days = body.availableDays;
+    const scale = (option: any, n: number) => ({ ...option, trainingDaysPerWeek: n });
+    return {
+      status: "READY",
+      question: null,
+      baseline: { text: body.baseline, measurements: example.baselineMeasurements },
+      options: example.options.map((o) => scale(o, o.id === "focused" ? Math.max(o.trainingDaysPerWeek, Math.min(days, o.trainingDaysPerWeek)) : o.trainingDaysPerWeek)),
+      startDate: exampleStart,
     };
   }
   if (path === "/follow-through/onboarding/interview")
@@ -354,8 +376,8 @@ export function followThroughFixture(
         goal: d.goal,
         emoji: d.emoji,
         activities: [a],
-        sessions: [],
-        outlineType: "TIMES_PER_WEEK",
+        sessions: (d.design?.options.find((o) => o.id === d.design?.selected)?.sessions ?? []).map((x, i) => ({ id: `s${i}`, planId: d.id, activityId: a.id, date: x.date, quantity: x.quantity, title: x.title, descriptiveGuide: x.descriptiveGuide, targets: x.targets })),
+        outlineType: d.design?.selected ? "SPECIFIC" : "TIMES_PER_WEEK",
         timesPerWeek: d.frequency,
         createdAt: new Date().toISOString(),
         visibility: "PRIVATE",

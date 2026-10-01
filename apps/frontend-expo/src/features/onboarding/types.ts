@@ -50,6 +50,8 @@ export interface OnboardingProps {
   initialGoal?: string;
 }
 export interface CoachingTourProps {
+  /** The plan type already decides what the coach does, so there is no role to pick. */
+  locked?: boolean;
   step: number;
   facts: import("@tsw/prisma/follow-through").InterviewFacts;
   coaching: import("@tsw/prisma/follow-through").PlanCoaching;

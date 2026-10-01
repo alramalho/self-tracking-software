@@ -1,4 +1,5 @@
 export type * from "./coaching";
+export type * from "./design";
 export type CommitmentMode = "WEEKLY" | "DAYS" | "TIMED";
 export type SessionFormat = "LOG" | "TIMER" | "RESOURCE";
 export interface SupportPreferences {

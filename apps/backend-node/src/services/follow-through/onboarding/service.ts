@@ -237,6 +237,8 @@ export async function finishOnboarding(
           draftId: draft.id,
         } as Prisma.InputJsonValue,
         proactiveCoachingEnabled: false,
+        // The route you chose is the coach you get: Helly is the Champion, Oli the Strategist.
+        ...(chosen ? { coachPersonality: chosen.id === "focused" ? "STRATEGIST" : "CHAMPION" } : {}),
       },
     });
     materialize(state, await ownedPlans(user.id, tx), new Date());

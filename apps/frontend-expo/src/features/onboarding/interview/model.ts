@@ -85,11 +85,12 @@ export function startInterview(draft: OnboardingDraft): InterviewState {
 export function acceptGoal(
   state: InterviewState,
   answer: string,
+  baselineTitle?: string,
 ): InterviewState {
   return {
     ...state,
     stage: "baseline",
-    question: startingPointQuestion(answer),
+    question: baselineTitle ? { title: baselineTitle, purpose: "", options: [] } : startingPointQuestion(answer),
     turns: [
       ...state.turns,
       {

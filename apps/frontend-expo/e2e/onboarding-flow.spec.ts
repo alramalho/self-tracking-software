@@ -2,484 +2,167 @@ import { test, expect, type Page } from "@playwright/test";
 import { enterWelcomeAge } from "./onboarding-welcome";
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
-// Fresh starts open on the welcome screen; resumed drafts go straight to their step.
+const next = (page: Page, name = "Continue") => page.getByRole("button", { name, exact: true }).click();
+const progress = (page: Page) => page.getByRole("progressbar", { name: "Onboarding progress" });
+// The designed flow (outcome and consistency screens) is covered in outcome-onboarding.spec.ts.
+// This file keeps the gates, resume, retry and checkout behaviour that sit around it.
 async function openOnboarding(page: Page, url: string) {
   await page.goto(url);
-  const start = page.getByRole("button", { name: "I'm ready!" });
-  await start
-    .waitFor({ timeout: 3000 })
-    .then(async () => {
-      await enterWelcomeAge(page);
-      await page.getByRole("button", { name: "Continue", exact: true }).click();
-    })
-    .catch(() => {});
+  await page.getByRole("button", { name: "I'm ready!" }).waitFor({ timeout: 3000 }).then(async () => {
+    await enterWelcomeAge(page);
+    await next(page);
+  }).catch(() => {});
 }
-async function trackForFree(page: Page) {
-  await page.getByRole("button", { name: "Just track it for free" }).click();
-  await page.getByRole("button", { name: "Track for free", exact: true }).click();
-}
-async function chooseWeeklyFrequency(page: Page) {
-  const value = page.getByTestId("onboarding-weekly-frequency-value");
-  await expect(value).toHaveText("3");
-  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveCount(
-    0,
-  );
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  // An accepted rhythm moves straight on and coaching is answered for them.
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "5");
-}
-async function answerGoal(page: Page, value: string) {
+async function answerText(page: Page, value: string) {
   await page.getByRole("textbox", { name: "Your answer" }).fill(value);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  const progress = page.getByRole("progressbar", { name: "Onboarding progress" });
-  // The baseline question is phrased for the goal ("How much do you run now?").
-  await expect(progress).toHaveAttribute("aria-valuenow", "2");
-  await page.getByRole("button", { name: "Skip this question" }).click();
-  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
-  await expect(progress).toHaveAttribute("aria-valuenow", "3");
-  await page.getByRole("button", { name: "Skip this question" }).click();
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "4");
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+  await next(page);
 }
-async function reviewCoachTour(page: Page) {
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-tour-contact")).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-tour-data")).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  // "Do it with a group?" comes before the plan review.
-  await page.getByRole("button", { name: "Just me" }).click();
+async function throughMotivation(page: Page, goal = "Run my first half marathon") {
+  await answerText(page, goal);
+  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+  await answerText(page, "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes.");
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("button", { name: "Skip this question" }).click();
+  await expect(page.getByRole("heading", { name: "Do you have a finish time in mind?" })).toBeVisible();
 }
 async function toPaywall(page: Page) {
-  await answerGoal(page, "I want to write guitar songs to express myself");
-  await chooseWeeklyFrequency(page);
-  await reviewCoachTour(page);
-  await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
-    "Guitar practice",
-  );
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "10");
-  await page.getByRole("button", { name: "This feels right" }).click();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "11");
-}
-for (const theme of ["DARK", "LIGHT"])
-  test(`coach interview preview shares four gates without account writes in ${theme}`, async ({
-    page,
-    request,
-  }) => {
-    await request.post(`${API}/__reset`);
-    await request.patch(`${API}/users/user`, {
-      headers,
-      data: { themeMode: theme },
-    });
-    await openOnboarding(page, "/onboarding?preview=1");
-    await expect(
-      page.getByRole("progressbar", { name: "Onboarding progress" }),
-    ).toHaveAttribute("aria-valuenow", "1");
-    await page.waitForTimeout(800);
-    await page.screenshot({
-      path: `test-results/interview-start-${theme}.png`,
-    });
-    await toPaywall(page);
-    await page.waitForTimeout(600);
-    await page.screenshot({
-      path: `test-results/interview-paywall-${theme}.png`,
-    });
-    await expect(page.getByTestId("coaching-paywall")).toBeVisible();
-    await expect(page.getByRole("radio", { name: /^Quarterly/ })).toBeVisible();
-    await page.getByRole("button", { name: "Start my 7 free days" }).click();
-    await expect(page.getByText("Your preview is complete")).toBeVisible();
-    const state = await (await request.get(`${API}/__state`)).json();
-    expect(
-      state.requests.filter((r: any) => r.path.endsWith("/interview")),
-    ).toHaveLength(3);
-    expect(
-      state.requests.find(
-        (r: any) =>
-          r.path.endsWith("/interview") && r.body.state.stage === "rhythm",
-      )?.body.answer,
-    ).toBe("3 sessions a week");
-    expect(
-      state.requests.filter(
-        (r: any) => r.path.endsWith("/draft") || r.path.endsWith("/finish"),
-      ),
-    ).toHaveLength(0);
-    expect(state.plans).toHaveLength(2);
-  });
-test("weekly picker keeps its count within 1–7 and shows flexible days in the running plan", async ({
-  page,
-  request,
-}) => {
-  await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding?preview=1");
-  await answerGoal(
-    page,
-    "I want to run my first half marathon under 2 hours because I love running with friends",
-  );
-  const value = page.getByTestId("onboarding-weekly-frequency-value");
-  const decrease = page.getByRole("button", {
-    name: "Decrease sessions per week",
-  });
-  const increase = page.getByRole("button", {
-    name: "Increase sessions per week",
-  });
-  await expect(value).toHaveText("3");
-  await decrease.click();
-  await decrease.click();
-  await expect(value).toHaveText("1");
-  await expect(decrease).toBeDisabled();
-  for (let count = 2; count <= 7; count++) await increase.click();
-  await expect(value).toHaveText("7");
-  await expect(increase).toBeDisabled();
-  await decrease.click();
-  await decrease.click();
-  await expect(value).toHaveText("5");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  const state = await (await request.get(`${API}/__state`)).json();
-  expect(
-    state.requests.find(
-      (r: any) =>
-        r.path.endsWith("/interview") && r.body.state.stage === "rhythm",
-    )?.body.answer,
-  ).toBe("5 sessions a week");
-  await reviewCoachTour(page);
-  await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
-    "5 sessions a week · flexible days",
-  );
-  // Back from the plan review reopens "Do it with a group?" first.
-  await page.getByRole("button", { name: "Previous question" }).click();
-  await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
-  for (const step of ["coach-tour-data", "coach-tour-contact", "coach-tour-role"]) {
-    await page.getByRole("button", { name: "Previous question" }).click();
-    await expect(page.getByTestId(step)).toBeVisible();
-  }
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "5");
-  await page.getByRole("button", { name: "Previous question" }).click();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "4");
-  await expect(value).toHaveText("5");
-  await decrease.click();
-  await expect(value).toHaveText("4");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  const revisedState = await (await request.get(`${API}/__state`)).json();
-  const revisedRhythm = revisedState.requests
-    .filter(
-      (r: any) =>
-        r.path.endsWith("/interview") && r.body.state.stage === "rhythm",
-    )
-    .at(-1);
-  expect(revisedRhythm?.body.answer).toBe("4 sessions a week");
-  expect(
-    revisedRhythm?.body.state.turns.filter(
-      (turn: any) => turn.stage === "rhythm",
-    ),
-  ).toHaveLength(0);
-  expect(revisedRhythm?.body.state.confirmed).not.toContain("rhythm");
-  await reviewCoachTour(page);
-  await expect(page.getByTestId("onboarding-plan-summary")).toContainText(
-    "4 sessions a week · flexible days",
-  );
-});
-test("Jev completes the goal without a second coach-validation screen", async ({
-  page,
-  request,
-}) => {
-  await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding?preview=1");
-  // A fresh goal screen has nothing to start over.
-  await expect(
-    page.getByRole("button", { name: "Start over", exact: true }),
-  ).toHaveCount(0);
-  await answerGoal(page, "I want to write guitar songs to express myself");
-  await expect(
-    page.getByRole("progressbar", { name: "Automatic continue" }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "4");
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Previous question" }).click();
-  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue(
-    "I want to write guitar songs to express myself",
-  );
-});
-test("optional goal context does not create a second validation screen", async ({
-  page,
-  request,
-}) => {
-  await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding?preview=1");
-  await answerGoal(page, "I want to write guitar songs");
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  await expect(
-    page.getByRole("progressbar", { name: "Automatic continue" }),
-  ).toHaveCount(0);
-});
-test("each goal screen checks only its own answer and saves the context supplied", async ({ page, request }) => {
-  await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding?preview=1");
-  await page.getByRole("textbox", { name: "Your answer" }).fill("Run my first half marathon under two hours");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Your answer" }).fill("I currently run two easy 3 km runs a week");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
-  await page.getByRole("button", { name: "Previous question" }).click();
-  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue("I currently run two easy 3 km runs a week");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("textbox", { name: "Your answer" }).fill("I want to finish with my friends");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("onboarding-weekly-frequency-value")).toHaveText("3");
-  const state = await (await request.get(`${API}/__state`)).json();
-  expect(state.requests.filter((r: any) => r.path.endsWith("/goal-guidance")).map((r: any) => r.body.step)).toEqual(expect.arrayContaining(["goal", "baseline", "motivation"]));
-});
-test("coach role cards and review-time picker carry the chosen settings to the conclusion", async ({ page, request }) => {
-  await request.post(`${API}/__reset`);
-  // A paid member skips the coaching paywall and sees the plan conclusion.
-  await openOnboarding(page, "/onboarding");
-  await answerGoal(page, "I want to write my own guitar songs");
-  await chooseWeeklyFrequency(page);
-  await page.getByRole("radio", { name: "Plan and adjust training" }).click();
-  await expect(page.getByRole("radio", { name: "Plan and adjust training" })).toHaveAttribute("aria-checked", "true");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Review time 18:00" }).click();
-  await page.getByRole("button", { name: "Hour 19" }).click();
-  await expect(page.getByRole("button", { name: "Review time 19:00" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await throughMotivation(page);
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
+  await next(page);
+  await page.getByTestId("route-focused").click();
+  await next(page);
+  for (let i = 0; i < 3; i++) await next(page);
   await page.getByRole("button", { name: "Just me" }).click();
-  await page.getByRole("button", { name: "This feels right" }).click();
-  await expect(page.getByText("Weekly review · Sunday 19:00")).toBeVisible();
-  await expect(page.getByTestId("coaching-paywall")).toHaveCount(0);
+}
+const trackForFree = async (page: Page) => {
+  await page.getByRole("button", { name: "Just track it for free" }).click();
+  await page.getByRole("button", { name: "Track for free", exact: true }).click();
+};
+
+test("a paid member meets the coach straight after choosing a route, with no coaching question", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await openOnboarding(page, "/onboarding");
+  await toPaywall(page);
+  await expect(page.getByText(/coach this plan/i)).toHaveCount(0);
   await page.getByRole("button", { name: "Start with my coach" }).click();
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
   const finish = state.requests.filter((r: any) => r.path.endsWith("/finish")).at(-1);
-  expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: true, reviewTime: "19:00" });
+  expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: true, checkIn: true });
+  expect(finish.body.draft.design).toMatchObject({ orientation: "OUTCOME", selected: "focused" });
+  expect(finish.body.draft.coaching.role).toBe("training");
+  // The two reviewed weeks become the plan's sessions.
+  const plan = state.plans.at(-1);
+  expect(plan.outlineType).toBe("SPECIFIC");
+  expect(plan.sessions.length).toBeGreaterThanOrEqual(8);
+  expect(plan.sessions[0].targets.pace.basis).toBe("USER_REPORTED_EASY_PACE");
 });
-test("Jev blocks nonsense and later interview errors can be retried", async ({
-  page,
-  request,
-}) => {
+
+test("nonsense is blocked at the goal and the coach reads a good goal before asking anything", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
   await openOnboarding(page, "/onboarding?preview=1");
   await page.getByRole("textbox", { name: "Your answer" }).fill("asdf");
-  await expect(
-    page.getByRole("button", { name: "Continue", exact: true }),
-  ).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
   await expect(page.getByTestId("goal-guidance")).toContainText("Name one concrete outcome");
-  await answerGoal(page, "I want to write guitar songs because music matters to me");
-  await request.post(`${API}/__fail`, {
-    data: { path: "/follow-through/onboarding/interview" },
-  });
-  await expect(
-    page.getByTestId("onboarding-weekly-frequency-value"),
-  ).toHaveText("3");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(
-    page.getByText("Simulated network failure. Please try again."),
-  ).toBeVisible();
-  await expect(
-    page.getByTestId("onboarding-weekly-frequency-value"),
-  ).toHaveText("3");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "5");
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Your answer" }).fill("Run my first half marathon");
+  await next(page);
+  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+  const state = await (await request.get(`${API}/__state`)).json();
+  expect(state.requests.filter((r: any) => r.path.endsWith("/design/classify"))).toHaveLength(1);
 });
-test("start over resets a failed interview to the goal gate", async ({
-  page,
-  request,
-}) => {
+
+test("going back keeps what was typed, and the baseline can't be skipped for an outcome", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
   await openOnboarding(page, "/onboarding?preview=1");
-  await page
-    .getByRole("textbox", { name: "Your answer" })
-    .fill("I want to write songs");
-  await expect(
-    page.getByRole("button", { name: "Continue", exact: true }),
-  ).toBeEnabled();
-  await request.post(`${API}/__fail`, {
-    data: { path: "/follow-through/onboarding/interview" },
-  });
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Skip this question" }).click();
-  await page.getByRole("button", { name: "Skip this question" }).click();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "4");
-  await expect(
-    page.getByTestId("onboarding-weekly-frequency-value"),
-  ).toHaveText("3");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(
-    page.getByText("Simulated network failure. Please try again."),
-  ).toBeVisible();
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Previous question" }).click();
-  await page.getByRole("button", { name: "Start over", exact: true }).click();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "1");
-  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue(
-    "",
-  );
+  await answerText(page, "Run my first half marathon");
+  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Skip this question" })).toHaveCount(0);
+  await answerText(page, "I currently run two easy 3 km runs a week");
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("button", { name: "Previous question" }).click();
+  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue("I currently run two easy 3 km runs a week");
 });
-test("resume retains extracted answer and a delayed upgrade unlocks and continues exactly once", async ({
-  page,
-  request,
-}) => {
+
+test("a failed goal read can be retried and start over resets the flow", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
-  await request.patch(`${API}/users/user`, {
-    headers,
-    data: { planType: "FREE" },
-  });
+  await openOnboarding(page, "/onboarding?preview=1");
+  await page.getByRole("textbox", { name: "Your answer" }).fill("Run my first half marathon");
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+  await request.post(`${API}/__fail`, { data: { path: "/follow-through/onboarding/design/classify" } });
+  await next(page);
+  await expect(page.getByText("Simulated network failure. Please try again.")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue("Run my first half marathon");
+  await next(page);
+  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+  await page.getByRole("button", { name: "Previous question" }).click();
+  await page.getByRole("button", { name: "Start over", exact: true }).click();
+  await expect(progress(page)).toHaveAttribute("aria-valuenow", "1");
+  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue("");
+});
+
+test("closing and reopening returns to the chosen plan, not the start", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await openOnboarding(page, "/onboarding");
+  await throughMotivation(page);
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
+  await next(page);
+  await page.getByTestId("route-steady").click();
+  await expect(page.getByTestId("two-weeks")).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("two-weeks")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Helly · 3 days a week" })).toBeVisible();
+});
+
+test("resume retains the plan and a delayed upgrade unlocks and continues exactly once", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await request.patch(`${API}/users/user`, { headers, data: { planType: "FREE" } });
   await openOnboarding(page, "/onboarding");
   await toPaywall(page);
   await page.getByRole("button", { name: "Start my 7 free days" }).click();
-  await expect(
-    page.getByRole("button", { name: "Check subscription again" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check subscription again" })).toBeVisible();
   let state = await (await request.get(`${API}/__state`)).json();
-  expect(
-    state.requests.filter((r: any) => r.path.endsWith("/finish")),
-  ).toHaveLength(0);
+  expect(state.requests.filter((r: any) => r.path.endsWith("/finish"))).toHaveLength(0);
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Check subscription again" }),
-  ).toBeVisible();
-  await request.patch(`${API}/users/user`, {
-    headers,
-    data: { planType: "PLUS" },
-  });
+  await expect(page.getByRole("button", { name: "Check subscription again" })).toBeVisible();
+  await request.patch(`${API}/users/user`, { headers, data: { planType: "PLUS" } });
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   state = await (await request.get(`${API}/__state`)).json();
-  expect(
-    state.requests.filter((r: any) => r.path.endsWith("/finish")),
-  ).toHaveLength(1);
-  expect(
-    state.requests.find((r: any) => r.path.endsWith("/finish")).body.preferences
-      .coaching,
-  ).toBe(true);
+  expect(state.requests.filter((r: any) => r.path.endsWith("/finish"))).toHaveLength(1);
+  expect(state.requests.find((r: any) => r.path.endsWith("/finish")).body.preferences.coaching).toBe(true);
 });
-test("declining the trial creates free tracking without checkout", async ({
-  page,
-  request,
-}) => {
+
+test("free tracking keeps the designed plan, without a trial or checkout", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
-  await request.patch(`${API}/users/user`, {
-    headers,
-    data: { planType: "FREE" },
-  });
+  await request.patch(`${API}/users/user`, { headers, data: { planType: "FREE" } });
   await openOnboarding(page, "/onboarding");
   await toPaywall(page);
-  await request.post(`${API}/__fail`, {
-    data: { path: "/follow-through/onboarding/finish" },
-  });
+  await expect(page.getByTestId("coaching-paywall")).toBeVisible();
+  // Quarterly (7 free days) is preselected; weekly has no trial.
+  await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
+  await page.getByRole("radio", { name: /^Weekly/ }).click();
+  await expect(page.getByRole("button", { name: "Start coaching", exact: true })).toBeVisible();
+  for (const link of ["Terms", "Restore", "Privacy"]) await expect(page.getByRole("link", { name: link, exact: true })).toBeVisible();
+  await request.post(`${API}/__fail`, { data: { path: "/follow-through/onboarding/finish" } });
   await trackForFree(page);
-  await expect(
-    page.getByText("Simulated network failure. Please try again."),
-  ).toBeVisible();
+  await expect(page.getByText("Simulated network failure. Please try again.")).toBeVisible();
   await trackForFree(page);
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
-  expect(state.plans).toHaveLength(3);
   const finish = state.requests.filter((r: any) => r.path.endsWith("/finish")).at(-1);
   expect(finish.body.preferences.coaching).toBe(false);
   expect(finish.body.draft.wantsCoaching).toBe(false);
-});
-test("choosing free tracking on the paywall creates a free plan without a trial", async ({
-  page,
-  request,
-}) => {
-  await request.post(`${API}/__reset`);
-  await request.patch(`${API}/users/user`, {
-    headers,
-    data: { planType: "FREE" },
-  });
-  await openOnboarding(page, "/onboarding");
-  await toPaywall(page);
-  const paywall = page.getByTestId("coaching-paywall");
-  await expect(paywall).toBeVisible();
-  // Quarterly (7 free days) is preselected; weekly has no trial.
-  await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
-  await expect(page.getByRole("radio", { name: /^Monthly/ })).toBeVisible();
-  await page.getByRole("radio", { name: /^Weekly/ }).click();
-  await expect(page.getByRole("button", { name: "Start coaching", exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: /^Quarterly/ }).click();
-  await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
-  for (const link of ["Terms", "Restore", "Privacy"])
-    await expect(page.getByRole("link", { name: link, exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue with free tracking" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Start with my coach" })).toHaveCount(0);
-  // Back from the paywall returns to the plan review.
-  await page.getByRole("button", { name: "Previous question" }).click();
-  await expect(page.getByTestId("onboarding-plan-summary")).toBeVisible();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "10");
-  await page.getByRole("button", { name: "This feels right" }).click();
-  await expect(paywall).toBeVisible();
-  await page.waitForTimeout(650);
-  await page.screenshot({ path: "test-results/interview-free-paywall.png" });
-  // The free choice explains what stays free and offers the trial once more.
-  await page.getByRole("button", { name: "Just track it for free" }).click();
-  await expect(page.getByText("Reminders at the times you choose")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Try \w+ free for 7 days$/ })).toBeVisible();
-  await page.getByRole("button", { name: "Track for free", exact: true }).click();
-  await expect(page).toHaveURL(/plans\?selectedPlan=/);
-  const state = await (await request.get(`${API}/__state`)).json();
-  const finishes = state.requests.filter((r: any) =>
-    r.path.endsWith("/finish"),
-  );
-  expect(finishes).toHaveLength(1);
-  expect(finishes[0].body.preferences.coaching).toBe(false);
-  expect(finishes[0].body.draft.wantsCoaching).toBe(false);
-  expect(finishes[0].body.draft.interview.facts.baseline).toBe("");
-  expect(finishes[0].body.draft.interview.facts.goalReason).toBe("");
-  expect(state.plans).toHaveLength(3);
-});
-test("confirmed extraction survives closing and reopening onboarding", async ({
-  page,
-  request,
-}) => {
-  await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding");
-  await answerGoal(page, "I want to write guitar songs to express myself");
-  await page.reload();
-  await expect(
-    page.getByRole("progressbar", { name: "Onboarding progress" }),
-  ).toHaveAttribute("aria-valuenow", "4");
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
+  expect(finish.body.draft.design.selected).toBe("focused");
 });
 
-test("Jev keeps an unclear goal on the first gate", async ({
-  page,
-  request,
-}) => {
+test("back from the paywall returns to the circle question", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
-  await openOnboarding(page, "/onboarding?preview=1");
-  await page.getByRole("textbox", { name: "Your answer" }).fill("asdf");
-  await expect(
-    page.getByRole("button", { name: "Continue", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByTestId("coach-validation")).toHaveCount(0);
-  await answerGoal(page, "I want to write guitar songs to express myself");
+  await request.patch(`${API}/users/user`, { headers, data: { planType: "FREE" } });
+  await openOnboarding(page, "/onboarding");
+  await toPaywall(page);
+  await expect(page.getByTestId("coaching-paywall")).toBeVisible();
+  await page.getByRole("button", { name: "Previous question" }).click();
+  await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
 });

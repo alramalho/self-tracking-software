@@ -12,6 +12,7 @@ import type {
   InterviewState,
   GoalGuidanceResult,
   OnboardingCircleChoice,
+  PlanDesign,
   SupportPreferences,
 } from "@tsw/prisma/follow-through";
 import { useColors, Status } from "@/components/ui";
@@ -36,6 +37,9 @@ import { OnboardingArt } from "./interview/OnboardingArt";
 import { OnboardingButton } from "./interview/OnboardingButton";
 import type { OnboardingArtName } from "./interview/types";
 import { CircleAsk, CirclePrefs } from "./CircleSteps";
+import { DesignSection } from "./design/DesignSection";
+import { classifyGoal } from "./design/api";
+import { designedFacts, initialDesign } from "./design/model";
 import { Welcome } from "./Welcome";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
 import { PlanSummary } from "./interview/PlanSummary";
@@ -311,9 +315,33 @@ export default function Onboarding({
       setWelcome(false);
     },
   });
+  // The route (or weekly target) is chosen: the coach is part of the plan, so go straight to meeting it.
+  async function completeDesign(design: PlanDesign) {
+    const facts = { ...state.facts, ...designedFacts(design), baseline: design.baseline.text };
+    const next: InterviewState = { ...state, stage: "review", question: { title: "Your plan", purpose: "", options: [] }, facts, pending: undefined, confirmed: [...new Set<InterviewStage>([...state.confirmed, "rhythm"])] };
+    const role = facts.coachingRole;
+    await persist({
+      ...applyFacts(draft, facts),
+      design,
+      interview: next,
+      coaching: { ...initialCoaching(), role },
+      preferences: { ...onboardingPreferences(draft), coaching: true, weeklyReview: true, checkIn: role === "training" },
+      step: "coaching-tour-0",
+    });
+    setHistory((h) => [...h, state]);
+    setState(next);
+    setTourStep(0);
+  }
   async function chooseCircle(circle: OnboardingCircleChoice) {
     if (circle.choice === "find" && circle.wantsAge && pendingAge.current && pendingAge.current !== user.data?.age && !preview)
       await api.patch("/users/user", { age: pendingAge.current });
+    // A designed plan was already reviewed day by day, so the circle choice leads straight to the start.
+    if (draft.design) {
+      await persist({ ...draft, circle, step: "interview-finish" });
+      setCirclePrefs(null);
+      setPaywall(true);
+      return;
+    }
     await persist({ ...draft, circle });
     setCirclePrefs(null);
   }
@@ -339,9 +367,15 @@ export default function Onboarding({
       Keyboard.dismiss();
       setError(undefined);
       if (state.stage === "goal") {
-        const next = acceptGoal(state, text);
+        // The coach reads the goal first: outcome or consistency, the activity, and the right first question.
+        const classified = await classifyGoal(text.trim());
+        const next = acceptGoal(state, text, classified.baselineQuestion);
         const nextDraft = {
           ...draft,
+          emoji: classified.activity.emoji,
+          activityTitle: classified.activity.title,
+          measure: classified.activity.measure,
+          design: initialDesign(classified, "", draft.frequency),
           goal: text.trim(),
           interview: next,
           step: "interview",
@@ -364,6 +398,9 @@ export default function Onboarding({
         const next = acceptContext(state, text);
         await persist({
           ...draft,
+          ...(draft.design && state.stage === "baseline"
+            ? { design: { ...draft.design, baseline: { text: text.trim(), measurements: [] } } }
+            : {}),
           interview: next,
           step: "interview",
           answers: next.turns.map((turn) => ({
@@ -707,6 +744,13 @@ export default function Onboarding({
     setValidationReady(false);
     gate.reset();
     accept.reset();
+    if (paywall && draft.design) {
+      await persist({ ...draft, circle: undefined, step: "interview", awaitingUpgrade: false });
+      upgradeIntent.current = false;
+      setAwaitingUpgrade(false);
+      setPaywall(false);
+      return;
+    }
     if (paywall) {
       const reviewStartIndex = history.findLastIndex(
         (entry) => entry.stage === "review" && !entry.turns.some((turn) => turn.stage === "review"),
@@ -817,7 +861,16 @@ export default function Onboarding({
   // One line from the first question to the paywall: 4 questions, 3 coach steps,
   // 2 circle steps, the plan, the paywall.
   const questions: InterviewStage[] = ["goal", "baseline", "motivation", "rhythm"];
-  const journeyProgress = paywall
+  const designed = !!draft.design;
+  const designedLate = designed && (paywall || tourStep !== null || state.stage === "review");
+  const total = designed ? 12 : 11;
+  const journeyProgress = designedLate
+    ? paywall
+      ? { current: 12, total: 12, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
+      : tourStep !== null
+        ? { current: 7 + tourStep, total: 12, label: "Your coach" }
+        : { current: circlePrefs ? 11 : 10, total: 12, label: "Your circle" }
+    : paywall
     ? { current: 11, total: 11, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
     : tourStep !== null || state.stage === "support"
       ? { current: 5 + (tourStep ?? 0), total: 11, label: "Your coach" }
@@ -825,7 +878,7 @@ export default function Onboarding({
         ? { current: circlePrefs ? 9 : 8, total: 11, label: "Your circle" }
         : state.stage === "review"
           ? { current: 10, total: 11, label: stageLabels.review }
-          : { current: questions.indexOf(state.stage) + 1, total: 11, label: stageLabels[state.stage] };
+          : { current: questions.indexOf(state.stage) + 1, total, label: stageLabels[state.stage] };
   const showingValidation =
     (gate.isPending && state.stage !== "goal") || !!validation;
   const stepKey = `${state.stage}-${state.turns.length}-${showingValidation}-${tourStep}-${paywall}-${finished}`;
@@ -1097,6 +1150,22 @@ export default function Onboarding({
         {aiConsent.sheet}
       </InterviewFrame>
     );
+  // Section "Your week" for a designed plan: one ask per screen, two routes, the first two weeks.
+  if (state.stage === "rhythm" && draft.design && tourStep === null && !paywall && !finished && !validation && !gate.isPending)
+    return (
+      <DesignSection
+        design={draft.design}
+        goal={state.facts.goal}
+        goalReason={state.facts.goalReason}
+        timezone={draft.timezone}
+        preview={preview}
+        busy={busy}
+        onChange={(design) => persist({ ...draft, design })}
+        onBack={() => void back().catch(setError)}
+        onClose={goBack}
+        onDone={(design) => void completeDesign(design).catch(setError)}
+      />
+    );
   if (askingCircle)
     return (
       <InterviewFrame
@@ -1158,7 +1227,7 @@ export default function Onboarding({
       </InterviewFrame>
     );
   const canSkip =
-    (state.stage === "baseline" || state.stage === "motivation") &&
+    (state.stage === "motivation" || (state.stage === "baseline" && draft.design?.orientation !== "OUTCOME")) &&
     !showingValidation &&
     !paywall &&
     tourStep === null;
@@ -1185,6 +1254,7 @@ export default function Onboarding({
         />
       ) : tourStep !== null ? (
         <CoachingTour
+          locked={!!draft.design}
           step={tourStep}
           facts={state.facts}
           coaching={draft.coaching ?? { ...initialCoaching(), role: state.facts.coachingRole ?? "consistency" }}

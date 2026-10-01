@@ -34,7 +34,7 @@ function Example({ label, children }: { label: string; children: string }) {
   );
 }
 
-export function CoachingTour({ step, facts, coaching, preferences, onCoaching, onPreferences }: CoachingTourProps) {
+export function CoachingTour({ locked = false, step, facts, coaching, preferences, onCoaching, onPreferences }: CoachingTourProps) {
   const c = useColors();
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
   return (
@@ -59,13 +59,17 @@ export function CoachingTour({ step, facts, coaching, preferences, onCoaching, o
       {step === 0 && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <Example label="EXAMPLE · YOUR PLAN">
-            {`“Let’s start with the ${facts.activityTitle.toLowerCase()} routine you described. I’ll suggest a first week for you to review.”`}
+            {locked
+              ? coaching.role === "training"
+                ? "“Your first two weeks are set. I’ll plan the next ones from how these go.”"
+                : "“I’ll check in when a week slips, and help you pick it back up.”"
+              : `“Let’s start with the ${facts.activityTitle.toLowerCase()} routine you described. I’ll suggest a first week for you to review.”`}
           </Example>
-          <View style={{ gap: 10 }}>
+          {!locked && <View style={{ gap: 10 }}>
             <Text style={{ color: c.text, fontSize: 15, fontWeight: "600", marginBottom: 4 }}>What help do you want?</Text>
             <CoachingChoice card label="Plan and adjust training" detail="For a goal with sessions that need to progress." selected={coaching.role === "training"} onPress={() => onCoaching({ ...coaching, role: "training" })} />
             <CoachingChoice card label="Help me stay consistent" detail="For a habit or routine you already know." selected={coaching.role === "consistency"} onPress={() => onCoaching({ ...coaching, role: "consistency" })} />
-          </View>
+          </View>}
         </StepSequence>
       )}
 
