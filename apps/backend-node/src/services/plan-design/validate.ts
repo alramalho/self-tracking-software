@@ -146,3 +146,49 @@ export const weeklyVolumeFrom = (m: Measurement[]) => m.find((x) => /^current_we
 /** "current_session": their usual single session, same unit. */
 export const sessionSizeFrom = (m: Measurement[]) => m.find((x) => /^current_session$/i.test(x.metric))?.value ?? null;
 export const topLoadFrom = (m: Measurement[]) => m.find((x) => /^current_top_load$/i.test(x.metric) && /kg/i.test(x.unit))?.value ?? null;
+
+export interface LoggedResult {
+  date: string;
+  quantity: number;
+  difficulty: string | null;
+}
+
+/**
+ * How much the next two weeks may ask, from what the person actually did (one activity, one unit).
+ * Coaching rules, not model judgement:
+ * - after a missed week (illness, life): restart at no more than 75% of the last week they trained,
+ *   and don't go past that pre-break week until a full week is back;
+ * - after a session logged hard: the next week stays at or under 90% of the week just done;
+ * - otherwise: grow at most about 10% a week.
+ * Rounded up to whole units, so a 13 km week may become 10, 12 or 14 rather than 9.75 or 14.3.
+ */
+export function loadChangeProblems(
+  results: LoggedResult[],
+  sessions: { date: string; quantity: number }[],
+  windowStart: string,
+): string[] {
+  const total = (from: string, to: string) =>
+    results.filter((r) => r.date >= from && r.date < to).reduce((n, r) => n + r.quantity, 0);
+  const lastWeek = total(addDays(windowStart, -7), windowStart);
+  const a = weekTotal(sessions, windowStart, addDays(windowStart, 7));
+  const b = weekTotal(sessions, addDays(windowStart, 7), addDays(windowStart, 14));
+  const problems: string[] = [];
+  if (lastWeek === 0) {
+    // The most recent week they trained, within the last month.
+    const before = [14, 21, 28].map((d) => total(addDays(windowStart, -d), addDays(windowStart, -d + 7))).find((t) => t > 0);
+    if (!before) return problems;
+    const restart = Math.ceil(before * 0.75);
+    if (a > restart) problems.push(`after a missed week, the first week should restart at ${restart} or less (75% of the ${before} they last did); it totals ${a}`);
+    if (b > before) problems.push(`week 2 totals ${b}; don't go past the ${before} they did before the break yet`);
+    return problems;
+  }
+  const hard = results.some((r) => r.date >= addDays(windowStart, -7) && r.date < windowStart && /hard/i.test(r.difficulty ?? ""));
+  const capA = Math.ceil(lastWeek * (hard ? 0.9 : 1.1));
+  if (a > capA)
+    problems.push(hard
+      ? `after a hard session, the first week should be ${capA} or less (90% of the ${lastWeek} just done); it totals ${a}`
+      : `the first week totals ${a}; grow at most about 10% from the ${lastWeek} just done (${capA} or less)`);
+  const capB = Math.ceil(a * 1.1);
+  if (b > capB) problems.push(`week 2 totals ${b}; grow at most about 10% from week 1 (${capB} or less)`);
+  return problems;
+}

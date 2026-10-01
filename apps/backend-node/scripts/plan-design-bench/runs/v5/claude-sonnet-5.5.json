@@ -1,0 +1,712 @@
+{
+  "model": "anthropic/claude-sonnet-5.5",
+  "startedAt": "2026-10-01T12:27:30.445Z",
+  "pricePerMillion": {
+    "input": 2,
+    "output": 10
+  },
+  "cases": [
+    {
+      "id": "adapt-hard",
+      "title": "The long run felt too hard",
+      "expect": "Ease the next two weeks, keep the goal, don't stack what was missed",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "hard",
+            "note": "Last 2 km were a struggle, legs heavy"
+          }
+        ],
+        "feedback": "The long run felt too hard. Keep the goal, make next week easier.",
+        "today": "2026-10-12"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "sessions": [
+          {
+            "date": "2026-10-12",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "A short, relaxed 3 km at a pace where you can speak full sentences. Walk a minute if your legs feel heavy.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-14",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "An easy 4 km at conversation pace. Start slowly and keep the effort even all the way through.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-17",
+            "quantity": 4,
+            "title": "Steady easy run",
+            "descriptiveGuide": "Your longest run this week is 4 km, kept comfortable and unhurried. Finish feeling you could have gone a little further.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Legs feel fresh, not heavy, in the final km"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-19",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "A relaxed 4 km at conversation pace. Keep your breathing calm and settle into a rhythm.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "A short 3 km to help recovery between the longer runs. Keep it light and comfortable.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 5,
+            "title": "Long easy run",
+            "descriptiveGuide": "Your 5 km long run this week, taken slowly at the start. Walk breaks are fine if you need them, and stay at an easy effort.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 5 km easy with no heavy legs in the last 2 km"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy, able to talk, by the end of week 4"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "Because the long run felt hard and your recent total was 13 km, I've eased the next two weeks to 11 km and then 12 km, with the longest run held at 4 to 5 km. The goal and the phase outline stay as they are, and we build back up gently once easy runs feel comfortable.",
+        "designedThrough": "2026-10-25",
+        "usage": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4362,
+          "outputTokens": 2400,
+          "reasoningTokens": 665,
+          "costUsd": 0.032724
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-sonnet-5.5",
+            "inputTokens": 4362,
+            "outputTokens": 2400,
+            "reasoningTokens": 665,
+            "costUsd": 0.032724
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4362,
+          "outputTokens": 2400,
+          "reasoningTokens": 665,
+          "costUsd": 0.032724
+        }
+      ],
+      "costUsd": 0.032724,
+      "seconds": 20.8
+    },
+    {
+      "id": "adapt-well",
+      "title": "Two easy weeks, everything done",
+      "expect": "Progress gradually (about 10% a week), long run grows a little",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-12",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-14",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": "Felt great"
+          },
+          {
+            "date": "2026-10-17",
+            "activityId": "running",
+            "quantity": 7,
+            "difficulty": "normal",
+            "note": "Comfortable the whole way"
+          }
+        ],
+        "feedback": null,
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-20",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Run 4 km at a relaxed pace where you can talk in full sentences. Start slowly and keep the effort steady throughout.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Run 4 km easy and relaxed. Keep your breathing calm and stop the effort short of feeling strained.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-25",
+            "quantity": 8,
+            "title": "Long easy run",
+            "descriptiveGuide": "Run 8 km at an easy conversational effort. This is a small step up from your 7 km long run, so go slowly early on.",
+            "targets": {
+              "durationMinutes": 66,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-27",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Run 4 km at an easy, relaxed effort. Focus on smooth, even steps and a calm breathing rhythm.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-29",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Run 5 km at a comfortable easy effort where you can still talk. Keep the pace steady from start to finish.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-11-01",
+            "quantity": 9,
+            "title": "Long easy run",
+            "descriptiveGuide": "Run 9 km at an easy conversational effort. Walk briefly if you need to, and keep the first few kilometres very relaxed.",
+            "targets": {
+              "durationMinutes": 74,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week, already met; hold three easy runs"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "Your last week went well at 15 km with nothing logged as hard, so I'm growing the load gently, about 10% in week 1 and again in week 2. Each week keeps three runs with the long run as the main builder, and no missed work is stacked on.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4454,
+          "outputTokens": 1722,
+          "reasoningTokens": 0,
+          "costUsd": 0.026128
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-sonnet-5.5",
+            "inputTokens": 4454,
+            "outputTokens": 1722,
+            "reasoningTokens": 0,
+            "costUsd": 0.026128
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4454,
+          "outputTokens": 1722,
+          "reasoningTokens": 0,
+          "costUsd": 0.026128
+        }
+      ],
+      "costUsd": 0.026128000000000002,
+      "seconds": 14.2
+    },
+    {
+      "id": "adapt-sick",
+      "title": "Missed week 2 with the flu",
+      "expect": "Restart below where they were, don't make up missed runs, check in on recovery",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          }
+        ],
+        "feedback": "Had the flu all week, feeling better now.",
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-19",
+            "quantity": 3,
+            "title": "Gentle return run",
+            "descriptiveGuide": "Easy 3 km to ease back in after the flu. Keep it conversational and stop to walk if you feel drained or breathless.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Easy 3 km at a relaxed, talking pace. Notice how your energy and breathing feel compared with before the flu.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 3,
+            "title": "Easy steady run",
+            "descriptiveGuide": "Easy 3 km, steady and unhurried. Stay at a pace where you could chat the whole way and finish feeling you could do more.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-26",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Easy 3 km at a conversational pace. If last week felt good, keep the same relaxed effort rather than pushing faster.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-28",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Easy 3 km, smooth and relaxed. Focus on a light, even stride and comfortable breathing throughout.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-31",
+            "quantity": 3,
+            "title": "Easy steady run",
+            "descriptiveGuide": "Easy 3 km to close the fortnight. If all three runs this week felt comfortable, we'll step up the distance next block.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "After flu, run 5 km easy twice in a week, a little later than planned"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "Since the flu kept you off your feet last week, I've restarted you below your earlier load: 9 km across three easy runs, then the same again to settle back in. The goal and finish date stay as they are, and we'll build again once you've had two comfortable weeks.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4336,
+          "outputTokens": 2426,
+          "reasoningTokens": 693,
+          "costUsd": 0.032932
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-sonnet-5.5",
+            "inputTokens": 4336,
+            "outputTokens": 2426,
+            "reasoningTokens": 693,
+            "costUsd": 0.032932
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-sonnet-5.5",
+          "inputTokens": 4336,
+          "outputTokens": 2426,
+          "reasoningTokens": 693,
+          "costUsd": 0.032932
+        }
+      ],
+      "costUsd": 0.032932,
+      "seconds": 21.2
+    }
+  ],
+  "finishedAt": "2026-10-01T12:28:26.634Z",
+  "totalCostUsd": 0.091784
+}

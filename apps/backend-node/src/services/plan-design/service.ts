@@ -9,7 +9,7 @@ import type {
 import { FollowThroughInputError } from "../follow-through/errors";
 import { addDays, daysBetween, finishingDateFor } from "./dates";
 import { gatewayGenerator } from "./generator";
-import { effortFor, planModel } from "../aiModelIds";
+import { effortFor, fallbackModel, planModel } from "../aiModelIds";
 import { defaultRanges, routeCoach, sameRanges, sanitizeRanges, type DayRange } from "./frequency";
 import { assessPrompt, classifyPrompt, designPrompt, subgoalPrompt, windowPrompt } from "./prompts";
 import { assessSchema, classifySchema, routeSchema, subgoalSchema, windowSchema, type RouteOutput } from "./schema";
@@ -23,19 +23,19 @@ import type {
   WindowInput,
   WindowResult,
 } from "./types";
-import { easyPaceFrom, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
+import { easyPaceFrom, loadChangeProblems, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
 
 /** Short calls (goal read, target question, days check) run on the quick model. */
 const quick = () => {
-  const model = planModel("quick")!;
+  const model = planModel("quick");
   return { model, effort: effortFor(model) };
 };
 
 /** The model to use first for a job, then the fallback if it is different and enabled. */
 function modelsFor(role: "design" | "adapt") {
-  const first = planModel(role)!;
-  const fallback = planModel("fallback");
-  return fallback && fallback !== first ? [first, fallback] : [first];
+  const first = planModel(role);
+  const fallback = fallbackModel(first);
+  return fallback ? [first, fallback] : [first];
 }
 
 const DECLINE = /^(just|no |none|skip|not sure|i.?ll|nothing)/i;
@@ -330,6 +330,7 @@ export async function extendWindow(
     windowEnd: addDays(windowStart, 13),
     existingSessions: input.sessions,
     results: input.results,
+    lastWeekLogged: input.results.filter((r) => r.date >= addDays(windowStart, -7) && r.date < windowStart).reduce((n, r) => n + r.quantity, 0),
     approvedHealthContext: input.approvedHealthContext,
     feedback: input.feedback,
   });
@@ -355,7 +356,7 @@ export async function extendWindow(
         easyPace: easyPaceFrom(measurements),
         personText: [input.goal, input.baseline?.text ?? "", input.feedback ?? "", ...input.results.map((r) => r.note ?? "")].join(" "),
         weeks: 2,
-      });
+      }).concat(loadChangeProblems(input.results, result.object.sessions, windowStart));
       if (!problems.length)
         return {
           replaceSessionIds,

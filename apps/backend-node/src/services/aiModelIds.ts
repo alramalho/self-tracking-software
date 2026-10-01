@@ -53,26 +53,28 @@ export function onboardingValidationProviderOptions(): Record<
 }
 
 export const CLAUDE_SONNET_5_5_MODEL = "anthropic/claude-sonnet-5.5";
+export const CLAUDE_OPUS_5_5_MODEL = "anthropic/claude-opus-5.5";
 
 /**
- * Plan design uses a different model per job, chosen from the live benchmark (Oct 2026):
- * - quick: reading the goal, the target question, the coach's check of the days. Short, cheap calls.
- * - design: the two routes at onboarding. Once per person, the first impression: Sonnet 5.5 built
- *   better-progressing, more distinct routes and passed every rule first time (~$0.09 a plan).
- * - adapt: the next two weeks, every couple of weeks. gpt-6-luna was as good as Sonnet here (~$0.001).
- * - fallback: when a plan fails the checks twice, try once more on a stronger model before showing an error.
- * Each can be overridden: PLAN_QUICK_MODEL, PLAN_DESIGN_MODEL, PLAN_ADAPT_MODEL, PLAN_FALLBACK_MODEL ("none" disables).
+ * Plan design uses a different model per job, chosen from the live benchmarks (Oct 2026):
+ * - quick: reading the goal, the target question, the coach's check of the days. Short, cheap calls (gpt-6-luna).
+ * - design: the two routes at onboarding, once per person. Opus 5.5 wrote the most expert plans
+ *   (warm-up sets, progression gated on reps in reserve, distinct heavy/volume days) for ~$0.17 a plan.
+ * - adapt: the next two weeks, every couple of weeks, in the background. With the load rules enforced in code
+ *   (validate.ts loadChangeProblems), Sonnet 5.5 made the same decisions as Opus for ~$0.03 instead of ~$0.07.
+ * - fallback: when a plan fails the checks twice, the other Claude model tries before the person sees an error.
+ * Overrides: PLAN_QUICK_MODEL, PLAN_DESIGN_MODEL, PLAN_ADAPT_MODEL, PLAN_FALLBACK_MODEL ("none" disables).
  */
-export type PlanModelRole = "quick" | "design" | "adapt" | "fallback";
-export function planModel(role: PlanModelRole): string | null {
-  const env = {
-    quick: process.env.PLAN_QUICK_MODEL,
-    design: process.env.PLAN_DESIGN_MODEL,
-    adapt: process.env.PLAN_ADAPT_MODEL,
-    fallback: process.env.PLAN_FALLBACK_MODEL,
-  }[role];
+export type PlanModelRole = "quick" | "design" | "adapt";
+export function planModel(role: PlanModelRole): string {
+  const env = { quick: process.env.PLAN_QUICK_MODEL, design: process.env.PLAN_DESIGN_MODEL, adapt: process.env.PLAN_ADAPT_MODEL }[role];
+  return env || { quick: GPT_6_LUNA_MODEL, design: CLAUDE_OPUS_5_5_MODEL, adapt: CLAUDE_SONNET_5_5_MODEL }[role];
+}
+export function fallbackModel(primary: string): string | null {
+  const env = process.env.PLAN_FALLBACK_MODEL;
   if (env === "none") return null;
-  return env || { quick: GPT_6_LUNA_MODEL, design: CLAUDE_SONNET_5_5_MODEL, adapt: GPT_6_LUNA_MODEL, fallback: CLAUDE_SONNET_5_5_MODEL }[role];
+  const fallback = env || (primary === CLAUDE_OPUS_5_5_MODEL ? CLAUDE_SONNET_5_5_MODEL : CLAUDE_OPUS_5_5_MODEL);
+  return fallback === primary ? null : fallback;
 }
 
 /**

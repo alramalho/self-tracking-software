@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultRanges, sanitizeRanges } from "./frequency";
 import { classifyGoal, designOptions, extendWindow, nextSubgoalQuestion } from "./service";
-import { validateSessions } from "./validate";
+import { loadChangeProblems, validateSessions } from "./validate";
 import type { ObjectGenerator } from "./types";
 import type { DesignInput, WindowInput } from "./types";
 
@@ -144,14 +144,11 @@ describe("designOptions", () => {
   it("steps up to the fallback model before giving up", async () => {
     const bad = routeOutput("steady", 20, [0, 2]);
     const { generate, calls } = fake(fitsNote, bad, routeOutput("focused", 16, FOCUSED), bad, routeOutput("steady", 20, STEADY));
-    process.env.PLAN_DESIGN_MODEL = "openai/gpt-6-luna";
-    try {
-      const result = await designOptions(input, generate);
-      expect(calls.map((c) => c.model)).toContain("anthropic/claude-sonnet-5.5");
-      expect(result.models).toContain("anthropic/claude-sonnet-5.5");
-    } finally {
-      delete process.env.PLAN_DESIGN_MODEL;
-    }
+    // Opus designs by default; Sonnet is its fallback.
+    const result = await designOptions(input, generate);
+    expect(calls.map((c) => c.model)).toContain("anthropic/claude-opus-5.5");
+    expect(calls.map((c) => c.model)).toContain("anthropic/claude-sonnet-5.5");
+    expect(result.models).toContain("anthropic/claude-sonnet-5.5");
   });
 
   it("fails loudly instead of showing an unreliable plan", async () => {
@@ -259,6 +256,27 @@ describe("builds from what the person already does", () => {
   });
 });
 
+describe("adaptation load rules", () => {
+  const log = (date: string, quantity: number, difficulty: string | null = "normal") => ({ date, quantity, difficulty });
+  const plan = (km: number[], start = "2026-10-12") =>
+    [0, 2, 5, 7, 9, 12].map((d, i) => ({ date: new Date(Date.parse(`${start}T12:00:00Z`) + d * 86400000).toISOString().slice(0, 10), quantity: km[i] }));
+  const week1 = [log("2026-10-05", 3), log("2026-10-07", 4), log("2026-10-10", 6)];
+  it("after a hard session the next week stays at or under 90%", () => {
+    const hard = [...week1.slice(0, 2), log("2026-10-10", 6, "hard")];
+    expect(loadChangeProblems(hard, plan([4, 4, 5, 4, 5, 6]), "2026-10-12").join()).toContain("12 or less");
+    expect(loadChangeProblems(hard, plan([3, 4, 5, 4, 4, 6]), "2026-10-12")).toEqual([]);
+  });
+  it("good weeks grow at most about 10%", () => {
+    expect(loadChangeProblems(week1, plan([5, 5, 8, 5, 5, 9]), "2026-10-12").join()).toContain("15 or less");
+    expect(loadChangeProblems(week1, plan([4, 4, 6, 4, 5, 6]), "2026-10-12")).toEqual([]);
+  });
+  it("after a missed week, restart at 75% and don't pass the pre-break week", () => {
+    expect(loadChangeProblems(week1, plan([3, 4, 5, 4, 5, 6], "2026-10-19"), "2026-10-19").join()).toContain("10 or less");
+    expect(loadChangeProblems(week1, plan([3, 3, 4, 4, 5, 5], "2026-10-19"), "2026-10-19").join()).toContain("past the 13");
+    expect(loadChangeProblems(week1, plan([3, 3, 4, 4, 4, 5], "2026-10-19"), "2026-10-19")).toEqual([]);
+  });
+});
+
 describe("stray characters", () => {
   it("rejects text in a writing system the person never used, but allows it when they did", () => {
     const sessions = [session(offsets([0])[0], { targets: targets({ effort: "easy, you should be.аб" }) })];
@@ -326,7 +344,10 @@ describe("extendWindow (rolling regeneration)", () => {
       { id: "s2", date: "2026-10-16", activityId: "act1", quantity: 5, title: "Long run", targets: null, completed: false },
       { id: "s3", date: "2026-10-18", activityId: "act1", quantity: 4, title: "Easy run", targets: null, completed: false },
     ],
-    results: [{ date: "2026-10-05", activityId: "act1", quantity: 4, difficulty: "hard", note: "legs heavy" }],
+    results: [
+      { date: "2026-10-05", activityId: "act1", quantity: 4, difficulty: "hard", note: "legs heavy" },
+      ...["2026-10-09", "2026-10-11", "2026-10-13", "2026-10-16", "2026-10-18"].map((date) => ({ date, activityId: "act1", quantity: 4, difficulty: "normal", note: null })),
+    ],
     approvedHealthContext: null,
     today: "2026-10-15",
     feedback: null,
