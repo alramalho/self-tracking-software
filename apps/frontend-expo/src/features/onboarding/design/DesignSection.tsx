@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Image, Pressable, TextInput, View } from "react-native";
 import { Check } from "lucide-react-native";
+import { EditorButton } from "@/features/activities/editor/controls";
 import type { DesignOption, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
 import { Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
@@ -11,7 +12,7 @@ import { OnboardingArt } from "../interview/OnboardingArt";
 import { OnboardingButton } from "../interview/OnboardingButton";
 import { StepSequence } from "../interview/StepReveal";
 import { designRoutes, nextSubgoal } from "./api";
-import { RouteCard } from "./RouteCard";
+import { RouteCard, days } from "./RouteCard";
 import { TwoWeeks } from "./TwoWeeks";
 import type { DesignSectionProps, DesignStepName } from "./types";
 
@@ -84,7 +85,12 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
         setStep("ask");
         return;
       }
-      const next = { ...from, baseline: result.baseline, options: result.options, startDate: result.startDate, selected: null };
+      if (result.status === "PUSHBACK") {
+        await save({ ...from, coachNote: result.coachNote, options: [], selected: null });
+        setStep("pushback");
+        return;
+      }
+      const next = { ...from, baseline: result.baseline, options: result.options, startDate: result.startDate, selected: null, coachNote: result.coachNote };
       await save(next);
       setStep("options");
     } catch (e) {
@@ -102,7 +108,8 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     setError(undefined);
     if (step === "preview") return setStep("options");
     if (step === "options") return setStep("days");
-    if (step === "ask") return setStep("days");
+    if (step === "ask" || step === "pushback") return setStep("days");
+    if (step === "retarget") return setStep("pushback");
     if (step === "days" && outcome && design.asked.length) return setStep("subgoal");
     onBack();
   };
@@ -117,7 +124,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   if (step === "subgoal") {
     body = (
       <StepSequence prefix="design-subgoal" style={{ alignItems: "center", gap: 20 }}>
-        <OnboardingArt name="goal" size={120} />
+        <OnboardingArt name="question" size={120} />
         <Text accessibilityRole="header" style={{ color: c.text, fontSize: 30, lineHeight: 36, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>
           {question?.title ?? "One moment…"}
         </Text>
@@ -165,23 +172,23 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
       <StepSequence prefix="design-days" style={{ alignItems: "center", gap: 12 }}>
         <OnboardingArt name="rhythm" size={150} />
         <Text accessibilityRole="header" style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>
-          {outcome ? "How many days can you train?" : "How many times a week?"}
+          {outcome ? "How many days would you prefer?" : "How many times a week?"}
         </Text>
         <NumberPicker
-          value={design.availableDays}
-          onChange={(availableDays) => void save({ ...design, availableDays })}
+          value={design.preferredDays}
+          onChange={(preferredDays) => void save({ ...design, preferredDays, options: [], selected: null, coachNote: null })}
           disabled={anything}
           min={1}
           max={7}
-          unit={outcome ? "days a week" : "times a week"}
+          unit={outcome ? "training days per week" : "times per week"}
           decreaseLabel="Fewer days"
           increaseLabel="More days"
-          valueLabel={`${design.availableDays} days a week`}
+          valueLabel={`${design.preferredDays} days per week`}
           testID="design-days"
         />
         {outcome ? (
           <Text style={{ color: c.muted, fontSize: 15, lineHeight: 22, textAlign: "center" }}>
-            Oli uses every day you give. Helly leaves room to recover.
+            Your coach will check whether this supports your goal.
           </Text>
         ) : (
           <Text style={{ color: c.muted, fontSize: 15, textAlign: "center" }}>
@@ -190,7 +197,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
         )}
       </StepSequence>
     );
-    actions = <OnboardingButton label="Continue" disabled={anything} onPress={() => void generate(design)} />;
+    actions = <OnboardingButton label={outcome ? "Ask my coach" : "Continue"} disabled={anything} onPress={() => void generate(design)} />;
   } else if (step === "ask") {
     body = (
       <StepSequence prefix="design-ask" style={{ alignItems: "center", gap: 20 }}>
@@ -219,6 +226,68 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
         }}
       />
     );
+  } else if (step === "pushback") {
+    const note = design.coachNote;
+    body = (
+      <StepSequence prefix="design-pushback" style={{ alignItems: "center", gap: 18 }}>
+        <Image source={require("../../../../assets/coaches/helly-3d.png")} style={{ width: 104, height: 104 }} />
+        <Text accessibilityRole="header" style={{ color: c.text, fontSize: 28, lineHeight: 34, fontWeight: "700", textAlign: "center", letterSpacing: -0.4 }}>A quick reality check</Text>
+        <Text testID="pushback-message" style={{ color: c.muted, fontSize: 17, lineHeight: 25, textAlign: "center" }}>{note?.message}</Text>
+      </StepSequence>
+    );
+    actions = (
+      <>
+        {note?.suggestedDays ? (
+          <OnboardingButton
+            label={`Use ${note.suggestedDays} days`}
+            disabled={anything}
+            onPress={() => {
+              const next = { ...design, preferredDays: note.suggestedDays!, coachNote: null };
+              void Promise.resolve(save(next)).then(() => generate(next));
+            }}
+          />
+        ) : (
+          <OnboardingButton label="Change my days" disabled={anything} onPress={() => setStep("days")} />
+        )}
+        {note?.targetInvolved && <EditorButton label="Change my target" secondary disabled={anything} onPress={() => { setTyped(""); setStep("retarget"); }} />}
+        {note?.suggestedDays ? (
+          <Pressable accessibilityRole="button" onPress={() => setStep("days")} style={{ alignItems: "center", paddingVertical: 6 }}>
+            <Text style={{ color: c.muted, fontSize: 15, textDecorationLine: "underline" }}>Change my days</Text>
+          </Pressable>
+        ) : null}
+      </>
+    );
+  } else if (step === "retarget") {
+    const apply = (text: string | null) => {
+      const next: PlanDesign = {
+        ...design,
+        coachNote: null,
+        asked: [...design.asked, { question: "What would you like to aim for instead?", answer: text ?? "Just finish, no target" }].slice(-4),
+        goalSpec: text ? { ...design.goalSpec, text, value: null, unit: null, chosenByUser: true } : { metric: null, value: null, unit: null, text: null, chosenByUser: false },
+      };
+      void Promise.resolve(save(next)).then(() => generate(next));
+    };
+    body = (
+      <StepSequence prefix="design-retarget" style={{ alignItems: "center", gap: 20 }}>
+        <OnboardingArt name="question" size={120} />
+        <Text accessibilityRole="header" style={{ color: c.text, fontSize: 30, lineHeight: 36, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>What would you like to aim for?</Text>
+        <TextInput
+          testID="retarget-input"
+          accessibilityLabel="Your new target"
+          value={typed}
+          onChangeText={setTyped}
+          placeholder="In your own words"
+          placeholderTextColor={c.muted}
+          style={{ alignSelf: "stretch", minHeight: 58, borderRadius: 16, borderWidth: 1, borderColor: c.inputBorder, backgroundColor: c.card, paddingHorizontal: 18, fontSize: 17, color: c.text }}
+        />
+      </StepSequence>
+    );
+    actions = (
+      <>
+        <OnboardingButton label="Ask my coach" disabled={!typed.trim() || anything} onPress={() => apply(typed.trim())} />
+        <EditorButton label="Just finish, no target" secondary disabled={anything} onPress={() => apply(null)} />
+      </>
+    );
   } else if (step === "loading") {
     body = <Planning />;
   } else if (step === "options") {
@@ -229,6 +298,12 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
           <Text accessibilityRole="header" style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>Choose your plan</Text>
           <Text style={{ color: c.muted, fontSize: 16, textAlign: "center" }}>Same goal. Two ways to get there.</Text>
         </View>
+        {design.coachNote?.verdict === "ADJUSTED" && design.coachNote.message && (
+          <View testID="coach-note" style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 18, backgroundColor: c.card }}>
+            <Image source={require("../../../../assets/coaches/helly-3d.png")} style={{ width: 40, height: 40 }} />
+            <Text style={{ flex: 1, color: c.text, fontSize: 15, lineHeight: 21 }}>{design.coachNote.message}</Text>
+          </View>
+        )}
         {design.options.map((option) => (
           <RouteCard key={option.id} option={option} selected={design.selected === option.id} onPress={() => void choose(option)} />
         ))}
@@ -243,7 +318,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <Check size={18} color={c.accent} />
           <Text accessibilityRole="header" style={{ color: c.text, fontSize: 20, fontWeight: "700" }}>
-            {chosen.coach} · {chosen.trainingDaysPerWeek} days a week
+            {chosen.coach} · {days(chosen)} days per week
           </Text>
         </View>
         <TwoWeeks sessions={chosen.sessions} activity={activity} startDate={design.startDate} />

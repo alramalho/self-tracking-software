@@ -29,8 +29,8 @@ async function throughMotivation(page: Page, goal = "Run my first half marathon"
 async function toPaywall(page: Page) {
   await throughMotivation(page);
   await page.getByRole("button", { name: "No target in mind" }).click();
-  await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
-  await next(page);
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  await next(page, "Ask my coach");
   await page.getByTestId("route-focused").click();
   await next(page);
   for (let i = 0; i < 3; i++) await next(page);
@@ -107,13 +107,13 @@ test("closing and reopening returns to the chosen plan, not the start", async ({
   await openOnboarding(page, "/onboarding");
   await throughMotivation(page);
   await page.getByRole("button", { name: "No target in mind" }).click();
-  await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
-  await next(page);
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  await next(page, "Ask my coach");
   await page.getByTestId("route-steady").click();
   await expect(page.getByTestId("two-weeks")).toBeVisible();
   await page.reload();
   await expect(page.getByTestId("two-weeks")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Helly · 3 days a week" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Helly · 2–3 days per week" })).toBeVisible();
 });
 
 test("resume retains the plan and a delayed upgrade unlocks and continues exactly once", async ({ page, request }) => {
@@ -165,4 +165,25 @@ test("back from the paywall returns to the circle question", async ({ page, requ
   await expect(page.getByTestId("coaching-paywall")).toBeVisible();
   await page.getByRole("button", { name: "Previous question" }).click();
   await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
+});
+
+test("creating a plan inside the app skips the welcome and starts the baseline from the person's logs", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await page.goto("/create-plan?voiceGoal=Run%20my%20first%20half%20marathon");
+  await expect(page.getByRole("button", { name: "I'm ready!" })).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue("Run my first half marathon");
+  await next(page);
+  await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+  const box = page.getByRole("textbox", { name: "Your answer" });
+  await expect(box).toHaveValue(/9 sessions in the last 4 weeks/);
+  await next(page);
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("button", { name: "Skip this question" }).click();
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await next(page, "Ask my coach");
+  await expect(page.getByTestId("route-steady")).toBeVisible();
+  const state = await (await request.get(`${API}/__state`)).json();
+  const ask = state.requests.find((r: any) => r.path.endsWith("/design/options"));
+  // The text carries the numbers from their logs, so the coach can ground the plan in them.
+  expect(ask.body.baseline).toContain("9 sessions in the last 4 weeks");
 });

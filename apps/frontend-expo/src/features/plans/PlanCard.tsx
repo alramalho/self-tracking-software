@@ -50,6 +50,7 @@ interface Props {
   detail?: boolean;
 }
 type ManageView = "actions" | "pause" | "delete";
+import { SessionTargetRows } from "./SessionTargetRows";
 export function PlanCard({
   plan,
   entries,
@@ -349,6 +350,8 @@ export function PlanCard({
             }{" "}
             · {sessionDetail.quantity}
           </Copy>
+          {!!sessionDetail.title && <Copy>{sessionDetail.title}</Copy>}
+          {!!sessionDetail.targets && <SessionTargetRows targets={sessionDetail.targets} />}
           {!!sessionDetail.descriptiveGuide && (
             <Copy>{sessionDetail.descriptiveGuide}</Copy>
           )}

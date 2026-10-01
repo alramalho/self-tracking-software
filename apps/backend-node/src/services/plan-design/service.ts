@@ -1,5 +1,6 @@
 import type {
   ClassifyResult,
+  CoachNote,
   DesignActivity,
   DesignOption,
   DesignSession,
@@ -9,9 +10,9 @@ import { FollowThroughInputError } from "../follow-through/errors";
 import { addDays, daysBetween, finishingDateFor } from "./dates";
 import { gatewayGenerator } from "./generator";
 import { designEffort } from "../aiModelIds";
-import { routeCoach, routeDays } from "./frequency";
-import { classifyPrompt, designPrompt, subgoalPrompt, windowPrompt } from "./prompts";
-import { classifySchema, routeSchema, subgoalSchema, windowSchema, type RouteOutput } from "./schema";
+import { defaultRanges, routeCoach, sameRanges, sanitizeRanges, type DayRange } from "./frequency";
+import { assessPrompt, classifyPrompt, designPrompt, subgoalPrompt, windowPrompt } from "./prompts";
+import { assessSchema, classifySchema, routeSchema, subgoalSchema, windowSchema, type RouteOutput } from "./schema";
 import type {
   ClassifyInput,
   DesignInput,
@@ -81,7 +82,7 @@ export async function nextSubgoalQuestion(
 
 type RouteId = "steady" | "focused";
 
-function routePrompt(input: DesignInput, id: RouteId, trainingDays: number, extra = "") {
+function routePrompt(input: DesignInput, id: RouteId, range: DayRange, extra = "") {
   return JSON.stringify({
     route: id,
     goal: input.goal,
@@ -89,21 +90,22 @@ function routePrompt(input: DesignInput, id: RouteId, trainingDays: number, extr
     baselineVerbatim: input.baseline,
     answers: input.asked,
     activities: input.activities,
-    trainingDays,
+    daysRange: { min: range.min, max: range.max },
     startDate: input.startDate,
     fixedDate: input.fixedDate,
     window: { firstDay: input.startDate, lastDay: addDays(input.startDate, 13) },
   }) + extra;
 }
 
-function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId) {
+function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange) {
   const route = output.route;
   if (!route) return [`route ${id} is missing`];
   if (route.id !== id) return [`route id must be ${id}`];
   return validateSessions(route.sessions, {
     activities: input.activities,
     windowStart: input.startDate,
-    trainingDaysPerWeek: routeDays(input.availableDays)[id],
+    daysMin: range.min,
+    daysMax: range.max,
     easyPace: easyPaceFrom(output.baselineMeasurements),
     weeks: 2,
   });
@@ -112,30 +114,32 @@ function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId) {
 async function designRoute(
   input: DesignInput,
   id: RouteId,
+  range: DayRange,
   generate: ObjectGenerator,
   extra = "",
-): Promise<{ output: RouteOutput; usage: GenerationUsage[] }> {
+): Promise<{ output: RouteOutput; usage: GenerationUsage[]; retried: string[] }> {
   const usage: GenerationUsage[] = [];
-  const days = routeDays(input.availableDays)[id];
+  const retried: string[] = [];
   let retry = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const result = await generate({
       name: `designRoute_${id}`,
       schema: routeSchema,
       system: designPrompt,
-      prompt: routePrompt(input, id, days, extra) + retry,
+      prompt: routePrompt(input, id, range, extra) + retry,
       effort: designEffort(),
     });
     usage.push(result.usage);
-    if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage };
-    const problems = problemsIn(result.object, input, id);
-    if (!problems.length) return { output: result.object, usage };
+    if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage, retried };
+    const problems = problemsIn(result.object, input, id, range);
+    if (!problems.length) return { output: result.object, usage, retried };
+    retried.push(...problems.slice(0, 4).map((p) => `${id}: ${p}`));
     retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
   }
   throw new FollowThroughInputError("We couldn't build a reliable plan just now. Please try again.");
 }
 
-function toOption(output: RouteOutput, input: DesignInput, id: RouteId): DesignOption {
+function toOption(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange): DesignOption {
   const route = output.route!;
   const weeks = input.fixedDate
     ? Math.max(2, Math.ceil((daysBetween(input.startDate, input.fixedDate) + 1) / 7))
@@ -143,7 +147,8 @@ function toOption(output: RouteOutput, input: DesignInput, id: RouteId): DesignO
   return {
     id,
     coach: routeCoach[id],
-    trainingDaysPerWeek: routeDays(input.availableDays)[id],
+    daysMin: range.min,
+    daysMax: range.max,
     estimatedWeeks: weeks,
     finishingDate: input.fixedDate ?? finishingDateFor(input.startDate, weeks),
     rationale: route.rationale,
@@ -154,29 +159,81 @@ function toOption(output: RouteOutput, input: DesignInput, id: RouteId): DesignO
 }
 
 /**
- * Step 4: two honest routes (Helly steady, Oli focused) with the first two weeks each. Each route
- * is its own call, run in parallel: the answers are shorter and the wait is one call, not two.
- * Validated in code; one retry per route with the exact problems, then a clear failure rather than a bad plan.
- * Oli must come out shorter than Helly (unless the finish date is fixed); if not, Oli is asked again once.
+ * Step 4a, the coach's reality check: do the preferred days fit the goal and the starting point?
+ * FITS keeps the deterministic Garmin-style bracket (3 days: Helly 2–3, Oli 3–4). ADJUSTED lets the
+ * coach move the ranges, within sanity limits, and say why. PUSHBACK stops: no plan is built that
+ * pretends the goal fits. Without a usable explanation the coach is not allowed to block or adjust.
+ */
+export async function assessPreferredDays(
+  input: DesignInput,
+  generate: ObjectGenerator,
+): Promise<{ note: CoachNote; ranges: Record<RouteId, DayRange>; usage: GenerationUsage }> {
+  const base = defaultRanges(input.preferredDays);
+  const { object, usage } = await generate({
+    name: "assessDays",
+    schema: assessSchema,
+    system: assessPrompt,
+    prompt: JSON.stringify({
+      goal: input.goal,
+      goalSpec: input.goalSpec,
+      baselineVerbatim: input.baseline,
+      answers: input.asked,
+      preferredDays: input.preferredDays,
+      fixedDate: input.fixedDate,
+      startDate: input.startDate,
+    }),
+    effort: "low",
+  });
+  const fits = { verdict: "FITS" as const, message: null, suggestedDays: null, targetInvolved: false };
+  if (object.verdict === "FITS" || !object.message?.trim()) return { note: fits, ranges: base, usage };
+  if (object.verdict === "PUSHBACK") {
+    // Never ask for the same days again: the suggestion must differ from the preference.
+    const suggested = object.suggestedDays && object.suggestedDays !== input.preferredDays ? object.suggestedDays : null;
+    return {
+      note: { verdict: "PUSHBACK", message: object.message.trim(), suggestedDays: suggested, targetInvolved: object.targetInvolved },
+      ranges: base,
+      usage,
+    };
+  }
+  const ranges = sanitizeRanges({
+    steady: { min: object.steady.daysMin, max: object.steady.daysMax },
+    focused: { min: object.focused.daysMin, max: object.focused.daysMax },
+  });
+  if (sameRanges(ranges, base)) return { note: fits, ranges: base, usage };
+  return { note: { verdict: "ADJUSTED", message: object.message.trim(), suggestedDays: null, targetInvolved: false }, ranges, usage };
+}
+
+/**
+ * Step 4: the coach's reality check, then two honest routes (Helly steady, Oli focused) with the
+ * first two weeks each. Each route is its own call, run in parallel: the answers are shorter and the
+ * wait is one call, not two. Validated in code; one retry per route with the exact problems, then a
+ * clear failure rather than a bad plan. Oli must come out shorter than Helly (unless the finish date
+ * is fixed); if not, Oli is asked again once.
  */
 export async function designOptions(
   input: DesignInput,
   generate: ObjectGenerator = gatewayGenerator,
 ): Promise<DesignResult> {
+  const assessed = await assessPreferredDays(input, generate);
+  const usage: GenerationUsage[] = [assessed.usage];
+  if (assessed.note.verdict === "PUSHBACK")
+    return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
+  const { steady: steadyRange, focused: focusedRange } = assessed.ranges;
   const [steady, focusedFirst] = await Promise.all([
-    designRoute(input, "steady", generate),
-    designRoute(input, "focused", generate),
+    designRoute(input, "steady", steadyRange, generate),
+    designRoute(input, "focused", focusedRange, generate),
   ]);
-  const usage = [...steady.usage, ...focusedFirst.usage];
+  usage.push(...steady.usage, ...focusedFirst.usage);
+  const retried = [...steady.retried, ...focusedFirst.retried];
   const asked = [steady.output, focusedFirst.output].find((o) => o.status === "ASK" && o.question);
-  const measurements = steady.output.baselineMeasurements;
-  const baseline = { text: input.baseline, measurements };
-  if (asked) return { status: "ASK", question: asked.question, baseline, options: [], usage };
+  const baseline = { text: input.baseline, measurements: steady.output.baselineMeasurements };
+  if (asked) return { status: "ASK", question: asked.question, coachNote: assessed.note, retried, baseline, options: [], usage };
   let focused = focusedFirst.output;
   const steadyWeeks = steady.output.route!.estimatedWeeks;
   if (!input.fixedDate && focused.route!.estimatedWeeks >= steadyWeeks) {
-    const again = await designRoute(input, "focused", generate, `\nsteadyWeeks: ${steadyWeeks}. Your estimatedWeeks must be lower.`);
+    const again = await designRoute(input, "focused", focusedRange, generate, `\nsteadyWeeks: ${steadyWeeks}. Your estimatedWeeks must be lower.`);
     usage.push(...again.usage);
+    retried.push(...again.retried);
     focused = again.output;
     if (focused.route!.estimatedWeeks >= steadyWeeks)
       throw new FollowThroughInputError("We couldn't build two distinct plans just now. Please try again.");
@@ -184,8 +241,10 @@ export async function designOptions(
   return {
     status: "READY",
     question: null,
+    coachNote: assessed.note,
+    retried,
     baseline,
-    options: [toOption(steady.output, input, "steady"), toOption(focused, input, "focused")],
+    options: [toOption(steady.output, input, "steady", steadyRange), toOption(focused, input, "focused", focusedRange)],
     usage,
   };
 }
@@ -214,7 +273,7 @@ export async function extendWindow(
     outline: input.outline,
     finishingDate: input.finishingDate,
     activities: input.activities.map((a) => ({ key: a.id, title: a.title, measure: a.measure })),
-    trainingDays: input.outline.trainingDaysPerWeek,
+    daysRange: { min: input.outline.daysMin, max: input.outline.daysMax },
     today: input.today,
     windowStart,
     windowEnd: addDays(windowStart, 13),
@@ -237,7 +296,8 @@ export async function extendWindow(
     const problems = validateSessions(result.object.sessions, {
       activities: input.activities.map((a) => ({ key: a.id, measure: a.measure })),
       windowStart,
-      trainingDaysPerWeek: input.outline.trainingDaysPerWeek,
+      daysMin: input.outline.daysMin,
+      daysMax: input.outline.daysMax,
       easyPace: easyPaceFrom(measurements),
       weeks: 2,
     });

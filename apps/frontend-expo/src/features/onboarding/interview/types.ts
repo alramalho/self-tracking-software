@@ -32,7 +32,8 @@ export type OnboardingArtName =
   | "support"
   | "circle"
   | "match"
-  | "review";
+  | "review"
+  | "question";
 
 export interface OnboardingArtSource {
   still: number;

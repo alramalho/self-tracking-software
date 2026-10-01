@@ -10,7 +10,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { createGateway } from "ai";
 import { designOptions, extendWindow } from "../../src/services/plan-design/service";
-import { routeDays } from "../../src/services/plan-design/frequency";
 import type { GenerationUsage } from "../../src/services/plan-design/types";
 import { cases, extensionCase } from "./cases";
 
@@ -43,20 +42,23 @@ async function main() {
       const text = JSON.stringify(result.options);
       const paces = result.options.flatMap((o) => o.sessions.map((s) => s.targets.pace?.basis).filter(Boolean));
       record.status = result.status;
+      record.coachNote = result.coachNote;
       record.question = result.question;
       record.baselineMeasurements = result.baseline.measurements;
       record.options = result.options;
       record.attempts = result.usage.length;
+      record.retried = result.retried;
       record.usage = result.usage;
       record.costUsd = dollars(result.usage);
       record.seconds = Math.round((Date.now() - started) / 100) / 10;
       record.checks = {
-        days: result.options.map((o) => o.trainingDaysPerWeek).join("/") === `${routeDays(c.input.availableDays).steady}/${routeDays(c.input.availableDays).focused}`,
+        verdict: (result.coachNote?.verdict ?? "FITS") === (c.expect.verdict ?? "FITS"),
+          rangesBracketPreference: result.status !== "READY" || (result.coachNote?.verdict !== "FITS") || (result.options[0].daysMax === c.input.preferredDays && result.options[1].daysMin === c.input.preferredDays),
         paceBasis: c.expect.paceBasis ? paces.length > 0 && paces.every((p) => p === c.expect.paceBasis) : null,
         targetKept: c.expect.targetPreserved ? text.includes(c.expect.targetPreserved) || /./.test(c.input.goalSpec.text ?? "") : null,
         noInvented: c.expect.noInvented ? !c.expect.noInvented.test(text) : null,
         lifting: c.expect.lifting ? result.options.every((o) => o.sessions.every((s) => s.targets.sets && s.targets.reps && s.targets.loadKg)) : null,
-        routesDiffer: result.options.length === 2 && result.options[0].estimatedWeeks !== result.options[1].estimatedWeeks,
+        routesDiffer: result.options.length === 0 ? null : result.options.length === 2 && result.options[0].estimatedWeeks !== result.options[1].estimatedWeeks,
       };
     } catch (e: any) {
       record.status = "error";

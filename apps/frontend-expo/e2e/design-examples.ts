@@ -24,7 +24,7 @@ export interface DesignExample {
   baselineMeasurements: BaselineMeasurement[];
   goalSpec: GoalSpec;
   subgoal: { question: SubgoalQuestion; answer: string } | null;
-  availableDays: number;
+  preferredDays: number;
   options: DesignOption[];
   note: string;
 }
@@ -50,7 +50,8 @@ const longRun = "Go slower than feels necessary and take walk breaks if you want
 const runOption = (id: "steady" | "focused", perWeek: number[][], weeks: number, daysPerWeek: number, rationale: string): DesignOption => ({
   id,
   coach: id === "steady" ? "Helly" : "Oli",
-  trainingDaysPerWeek: daysPerWeek,
+  daysMin: 0,
+  daysMax: 0,
   estimatedWeeks: weeks,
   finishingDate: addDay(weeks * 7 - 1),
   rationale,
@@ -105,7 +106,7 @@ export const examples: DesignExample[] = [
       question: { kind: "FINISH_TIME", title: "Do you have a finish time in mind?", choices: ["Under 2 hours", "Under 2:30", "No target in mind"] },
       answer: "No target in mind",
     },
-    availableDays: 4,
+    preferredDays: 4,
     options: [
       runOption("steady", [[3, 4, 6], [4, 4, 7]], 20, 3, "Three easy runs build from your two-run routine, with a rest day between most of them."),
       runOption("focused", [[3, 3, 4, 6], [3, 4, 4, 7]], 16, 4, "A fourth day spreads the work in shorter runs, so the finish comes four weeks earlier."),
@@ -126,12 +127,13 @@ export const examples: DesignExample[] = [
     ],
     goalSpec: { metric: "LIFT_LOAD", value: 80, unit: "kg", text: "80 kg for 5 reps", chosenByUser: true },
     subgoal: null,
-    availableDays: 3,
+    preferredDays: 3,
     options: [
       {
         id: "steady",
         coach: "Helly",
-        trainingDaysPerWeek: 3,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 16,
         finishingDate: addDay(16 * 7 - 1),
         rationale: "One small jump every two weeks, on your existing three lifting days.",
@@ -153,7 +155,8 @@ export const examples: DesignExample[] = [
       {
         id: "focused",
         coach: "Oli",
-        trainingDaysPerWeek: 3,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 12,
         finishingDate: addDay(12 * 7 - 1),
         rationale: "Heavier jumps each week, so it only works if recovery holds.",
@@ -189,12 +192,13 @@ export const examples: DesignExample[] = [
       question: { kind: "BODY_MEASURE", title: "Is there something you'd like to watch?", choices: ["The scale", "My waist", "How clothes fit", "No number in mind"] },
       answer: "How clothes fit",
     },
-    availableDays: 2,
+    preferredDays: 2,
     options: [
       {
         id: "steady",
         coach: "Helly",
-        trainingDaysPerWeek: 2,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 14,
         finishingDate: addDay(14 * 7 - 1),
         rationale: "Two full-body sessions that hold your strength while you eat a little less. No target weight is set.",
@@ -213,7 +217,8 @@ export const examples: DesignExample[] = [
       {
         id: "focused",
         coach: "Oli",
-        trainingDaysPerWeek: 2,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 10,
         finishingDate: addDay(10 * 7 - 1),
         rationale: "Same two days with a third short finisher each session. The road is shorter; the watch-point is identical.",
@@ -246,12 +251,13 @@ export const examples: DesignExample[] = [
       question: { kind: "SONG", title: "Which song?", choices: ["My own song", "A song I know", "No target in mind"] },
       answer: "My own four-chord song with a chord sheet",
     },
-    availableDays: 5,
+    preferredDays: 5,
     options: [
       {
         id: "steady",
         coach: "Helly",
-        trainingDaysPerWeek: 4,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 8,
         finishingDate: addDay(8 * 7 - 1),
         rationale: "Short daily practice on chord changes, then the song in pieces.",
@@ -266,7 +272,8 @@ export const examples: DesignExample[] = [
       {
         id: "focused",
         coach: "Oli",
-        trainingDaysPerWeek: 5,
+        daysMin: 0,
+  daysMax: 0,
         estimatedWeeks: 6,
         finishingDate: addDay(6 * 7 - 1),
         rationale: "Five days of 20 minutes, with the song introduced in week 2.",
@@ -292,11 +299,18 @@ export const examples: DesignExample[] = [
     baselineMeasurements: [{ metric: "sessions_per_week", value: 2, unit: "per week", sourceQuote: "Two sessions a week" }],
     goalSpec: { metric: "WEEKLY_SESSIONS", value: 4, unit: "per week", text: "4 times a week", chosenByUser: true },
     subgoal: null,
-    availableDays: 4,
+    preferredDays: 4,
     options: [],
     note: "No finish line, so no two routes and no dated sessions: a weekly target with a coach who adjusts it as weeks go by.",
   },
 ];
+
+/** The same bracket the server uses when the coach agrees: Helly up to the preferred days, Oli at or above. */
+export const bracket = (preferred: number) => ({
+  steady: { daysMin: Math.max(1, preferred - 1), daysMax: preferred },
+  focused: { daysMin: preferred, daysMax: Math.min(7, preferred + 1) },
+});
+for (const e of examples) for (const o of e.options) Object.assign(o, bracket(e.preferredDays)[o.id]);
 
 export const exampleFor = (goal: string) =>
   examples.find((e) => e.goal.toLowerCase() === goal.trim().toLowerCase()) ??

@@ -8,6 +8,7 @@ const art = {
   Helly: require("../../../../assets/coaches/helly-3d.png"),
   Oli: require("../../../../assets/coaches/oli-3d.png"),
 };
+export const days = (o: { daysMin: number; daysMax: number }) => (o.daysMin === o.daysMax ? `${o.daysMin}` : `${o.daysMin}–${o.daysMax}`);
 const label = { steady: "Moderate", focused: "Intense" } as const;
 
 // The old web plan card, kept: coach, intensity, days a week, length and finish date.
@@ -17,7 +18,7 @@ export function RouteCard({ option, selected, onPress }: RouteCardProps) {
     <Pressable
       testID={`route-${option.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${option.coach}, ${label[option.id]}. ${option.trainingDaysPerWeek} days a week. ${option.estimatedWeeks} weeks, finish ${shortDate(option.finishingDate)}`}
+      accessibilityLabel={`${option.coach}, ${label[option.id]}. ${days(option)} days per week. ${option.estimatedWeeks} weeks, finish ${shortDate(option.finishingDate)}`}
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: "row",
@@ -36,7 +37,7 @@ export function RouteCard({ option, selected, onPress }: RouteCardProps) {
         <Text style={{ color: c.text, fontSize: 19, fontWeight: "700" }}>
           {option.coach} · {label[option.id]}
         </Text>
-        <Text style={{ color: c.muted, fontSize: 15 }}>{option.trainingDaysPerWeek} days a week</Text>
+        <Text style={{ color: c.muted, fontSize: 15 }}>{days(option)} days per week</Text>
         <Text style={{ color: c.muted, fontSize: 15 }}>
           {option.estimatedWeeks} weeks · Finish {shortDate(option.finishingDate)}
         </Text>

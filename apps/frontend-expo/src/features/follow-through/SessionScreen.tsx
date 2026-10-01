@@ -30,6 +30,7 @@ import {
   timerSeconds,
   clockLabel,
 } from "./model";
+import { SessionTargetRows } from "@/features/plans/SessionTargetRows";
 export default function SessionScreen() {
   const {
     id,
@@ -166,6 +167,14 @@ export default function SessionScreen() {
               <Copy>{support.nextStep}</Copy>
             </Panel>
           )}
+          {session.source === "EXISTING" &&
+            !!plan?.sessions.find((s) => `existing:${s.id}` === id)?.targets && (
+              <Panel>
+                <SessionTargetRows
+                  targets={plan!.sessions.find((s) => `existing:${s.id}` === id)!.targets!}
+                />
+              </Panel>
+            )}
           {session.source === "EXISTING" &&
             !!plan?.sessions.find((s) => `existing:${s.id}` === id)
               ?.descriptiveGuide && (

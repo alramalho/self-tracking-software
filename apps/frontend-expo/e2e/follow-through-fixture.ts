@@ -1,5 +1,5 @@
 import { interviewFixture } from "./interview-fixture";
-import { exampleFor, startDate as exampleStart } from "./design-examples";
+import { bracket, exampleFor, startDate as exampleStart } from "./design-examples";
 import type {
   FollowThroughState,
   OnboardingDraft,
@@ -306,19 +306,48 @@ export function followThroughFixture(
     const example = exampleFor(body.goal);
     return { orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion };
   }
+  // In-app creation: a starting point measured from the person's own logs. Hand-written fixture.
+  if (path === "/follow-through/onboarding/design/baseline" && method === "GET")
+    return {
+      baseline: {
+        text: "Running: 9 sessions in the last 4 weeks, about 2.3 a week. Typically 5 km, longest 7 km.",
+        measurements: [
+          { metric: "sessions_per_week", value: 2.3, unit: "per week", sourceQuote: "from your logs, last 4 weeks" },
+          { metric: "typical_quantity", value: 5, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
+          { metric: "longest_quantity", value: 7, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
+        ],
+      },
+    };
   if (path === "/follow-through/onboarding/design/subgoal") {
     const example = exampleFor(body.goal);
     return { question: example.subgoal && !body.asked.length ? example.subgoal.question : null };
   }
   if (path === "/follow-through/onboarding/design/options") {
     const example = exampleFor(body.goal);
-    const days = body.availableDays;
-    const scale = (option: any, n: number) => ({ ...option, trainingDaysPerWeek: n });
+    const days: number = body.preferredDays;
+    const halfMarathon = example.id === "half-marathon";
+    const ambitious = /1[:h]\s?30|under 1 hour|sub.?1.?30/i.test(`${body.goal} ${body.goalSpec?.text ?? ""}`);
+    // Hand-written coach reality checks, so the screens can be reviewed. Not model output.
+    if (halfMarathon && ambitious && days <= 2)
+      return {
+        status: "PUSHBACK",
+        question: null,
+        coachNote: { verdict: "PUSHBACK", message: "One or two runs a week won't get a first-timer to a half marathon in under 1:30. Three days is the least that could work, and the time may need to come later.", suggestedDays: 3, targetInvolved: true },
+        baseline: { text: body.baseline, measurements: [] },
+        options: [],
+        startDate: exampleStart,
+      };
+    const adjusted = halfMarathon && days <= 2;
+    const used = adjusted ? 3 : days;
+    const ranges = adjusted ? { steady: { daysMin: 3, daysMax: 3 }, focused: { daysMin: 3, daysMax: 4 } } : bracket(used);
     return {
       status: "READY",
       question: null,
+      coachNote: adjusted
+        ? { verdict: "ADJUSTED", message: "A first half marathon needs at least 3 runs a week, so both plans use 3–4.", suggestedDays: null, targetInvolved: false }
+        : { verdict: "FITS", message: null, suggestedDays: null, targetInvolved: false },
       baseline: { text: body.baseline, measurements: example.baselineMeasurements },
-      options: example.options.map((o) => scale(o, o.id === "focused" ? Math.max(o.trainingDaysPerWeek, Math.min(days, o.trainingDaysPerWeek)) : o.trainingDaysPerWeek)),
+      options: example.options.map((o) => ({ ...o, ...ranges[o.id] })),
       startDate: exampleStart,
     };
   }

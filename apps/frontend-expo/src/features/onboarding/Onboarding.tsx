@@ -13,6 +13,7 @@ import type {
   GoalGuidanceResult,
   OnboardingCircleChoice,
   PlanDesign,
+  DesignBaseline,
   SupportPreferences,
 } from "@tsw/prisma/follow-through";
 import { useColors, Status } from "@/components/ui";
@@ -34,11 +35,13 @@ import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
 import { OnboardingArt } from "./interview/OnboardingArt";
+import { Orbit } from "@/features/circles/Orbit";
+import type { OrbitPerson } from "@/features/circles/types";
 import { OnboardingButton } from "./interview/OnboardingButton";
 import type { OnboardingArtName } from "./interview/types";
 import { CircleAsk, CirclePrefs } from "./CircleSteps";
 import { DesignSection } from "./design/DesignSection";
-import { classifyGoal } from "./design/api";
+import { classifyGoal, suggestBaseline } from "./design/api";
 import { designedFacts, initialDesign } from "./design/model";
 import { Welcome } from "./Welcome";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
@@ -91,6 +94,7 @@ function circleSummary(circle?: OnboardingCircleChoice) {
 export default function Onboarding({
   preview = false,
   initialGoal,
+  flow = "onboarding",
 }: OnboardingProps) {
   const c = useColors(),
     client = useQueryClient(),
@@ -116,7 +120,10 @@ export default function Onboarding({
   const [paywall, setPaywall] = useState(false),
     [finished, setFinished] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
-  const [welcome, setWelcome] = useState(true);
+  // Creating a plan inside the app skips the welcome and the age: the person is already here.
+  const [welcome, setWelcome] = useState(flow !== "create");
+  // A starting point measured from their own logs, when they have some (in-app creation only).
+  const loggedBaseline = useRef<DesignBaseline | null>(null);
   // Non-null while on "Match me by", after choosing "Find me a circle".
   const [circlePrefs, setCirclePrefs] = useState<MatchPreferences | null>(null);
   const [locating, setLocating] = useState(false);
@@ -369,6 +376,10 @@ export default function Onboarding({
       if (state.stage === "goal") {
         // The coach reads the goal first: outcome or consistency, the activity, and the right first question.
         const classified = await classifyGoal(text.trim());
+        loggedBaseline.current = null;
+        if (flow === "create" && !preview) {
+          loggedBaseline.current = await suggestBaseline(classified.activity).catch(() => null);
+        }
         const next = acceptGoal(state, text, classified.baselineQuestion);
         const nextDraft = {
           ...draft,
@@ -391,7 +402,7 @@ export default function Onboarding({
         setCandidate(undefined);
         setValidation(undefined);
         setValidationReady(false);
-        setAnswer("");
+        setAnswer(loggedBaseline.current?.text ?? "");
         return;
       }
       if (state.stage === "baseline" || state.stage === "motivation") {
@@ -399,7 +410,16 @@ export default function Onboarding({
         await persist({
           ...draft,
           ...(draft.design && state.stage === "baseline"
-            ? { design: { ...draft.design, baseline: { text: text.trim(), measurements: [] } } }
+            ? {
+                design: {
+                  ...draft.design,
+                  // Numbers measured from their logs stay attached only while the text is still theirs.
+                  baseline: {
+                    text: text.trim(),
+                    measurements: loggedBaseline.current?.text === text.trim() ? loggedBaseline.current.measurements : [],
+                  },
+                },
+              }
             : {}),
           interview: next,
           step: "interview",
@@ -1150,6 +1170,12 @@ export default function Onboarding({
         {aiConsent.sheet}
       </InterviewFrame>
     );
+  const orbitPeople: OrbitPerson[] = [
+    { key: "me", label: user.data?.name ?? user.data?.username ?? "You", color: c.accent, picture: user.data?.picture, isMe: true },
+    { key: "m1", label: "A", color: "#c77d2e" },
+    { key: "e1", label: "", color: "", empty: true },
+    { key: "e2", label: "", color: "", empty: true },
+  ];
   // Section "Your week" for a designed plan: one ask per screen, two routes, the first two weeks.
   if (state.stage === "rhythm" && draft.design && tourStep === null && !paywall && !finished && !validation && !gate.isPending)
     return (
@@ -1189,7 +1215,14 @@ export default function Onboarding({
         }
       >
         <StepSequence prefix="circle-heading" style={{ alignItems: "center", gap: 16 }}>
-          <OnboardingArt name={circlePrefs ? "match" : "circle"} size={170} />
+          {circlePrefs ? (
+            <OnboardingArt name="match" size={170} />
+          ) : (
+            // The circle drifting round its dashed orbit: you, one person already in, and open seats.
+            <View style={{ marginHorizontal: -28, marginTop: -24, alignItems: "center" }}>
+              <Orbit people={orbitPeople} height={190} />
+            </View>
+          )}
           <Text
             accessibilityRole="header"
             style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.6 }}

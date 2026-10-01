@@ -48,6 +48,8 @@ export interface PaywallProps {
 export interface OnboardingProps {
   preview?: boolean;
   initialGoal?: string;
+  /** "create": a plan made inside the app. No welcome or age, and the baseline starts from their logs. */
+  flow?: "onboarding" | "create";
 }
 export interface CoachingTourProps {
   /** The plan type already decides what the coach does, so there is no role to pick. */

@@ -99,6 +99,9 @@ export interface PlanSession {
   activityId: string;
   quantity?: number;
   descriptiveGuide?: string | null;
+  /** Short name and measurable prescription written by the coach (see SessionTargets). */
+  title?: string | null;
+  targets?: import("@tsw/prisma/follow-through").SessionTargets | null;
   imageUrls?: string[];
 }
 export interface Milestone {

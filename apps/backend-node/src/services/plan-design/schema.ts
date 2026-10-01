@@ -102,3 +102,16 @@ export const windowSchema = z.object({
 
 export type RouteOutput = z.infer<typeof routeSchema>;
 export type WindowOutput = z.infer<typeof windowSchema>;
+
+/** The coach's read of the preferred days against the goal and starting point, before any route is built. */
+export const assessSchema = z.object({
+  verdict: z.enum(["FITS", "ADJUSTED", "PUSHBACK"]),
+  /** In the coach's voice, one or two short sentences. Required unless FITS. */
+  message: z.string().max(360).nullable(),
+  steady: z.object({ daysMin: z.number().int().min(1).max(7), daysMax: z.number().int().min(1).max(7) }),
+  focused: z.object({ daysMin: z.number().int().min(1).max(7), daysMax: z.number().int().min(1).max(7) }),
+  /** PUSHBACK only: the fewest days a first honest plan needs. */
+  suggestedDays: z.number().int().min(1).max(7).nullable(),
+  /** PUSHBACK only: true when the person's own target (finish time, load) is part of the problem. */
+  targetInvolved: z.boolean(),
+});

@@ -11,7 +11,9 @@ export interface ValidationContext {
   activities: { key: string; measure: string }[];
   /** YYYY-MM-DD, first day of the window. */
   windowStart: string;
-  trainingDaysPerWeek: number;
+  /** Each week's distinct training days must fall inside this range. */
+  daysMin: number;
+  daysMax: number;
   /** Easy-pace bounds, in seconds per km, extracted from the person's own baseline. */
   easyPace: { fast: number; slow: number } | null;
   /** Number of complete weeks that must be present (2 for onboarding, 2 for a rolling window). */
@@ -66,8 +68,8 @@ export function validateSessions(
     const from = addDays(ctx.windowStart, w * 7);
     const to = addDays(ctx.windowStart, w * 7 + 7);
     const days = new Set(sessions.filter((s) => s.date >= from && s.date < to).map((s) => s.date));
-    if (days.size !== ctx.trainingDaysPerWeek)
-      problems.push(`week ${w + 1} has ${days.size} training days, expected ${ctx.trainingDaysPerWeek}`);
+    if (days.size < ctx.daysMin || days.size > ctx.daysMax)
+      problems.push(`week ${w + 1} has ${days.size} training days, expected ${ctx.daysMin === ctx.daysMax ? ctx.daysMin : `${ctx.daysMin}-${ctx.daysMax}`}`);
   }
   return problems;
 }

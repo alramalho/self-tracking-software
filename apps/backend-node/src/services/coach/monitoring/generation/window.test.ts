@@ -21,7 +21,7 @@ const plan = {
   orientation: "OUTCOME",
   goalSpec: null,
   baseline: { text: "Easy 5 km in 35–37 min", measurements: [] },
-  outline: { route: "steady", coach: "Helly", phases: [], assumptions: [], trainingDaysPerWeek: 3, startDate: "2026-10-05", estimatedWeeks: 20 },
+  outline: { route: "steady", coach: "Helly", phases: [], assumptions: [], daysMin: 3, daysMax: 3, startDate: "2026-10-05", estimatedWeeks: 20 },
   finishingDate: new Date("2027-02-21"),
   designedThrough: new Date("2026-10-18T12:00:00Z"),
   activities: [{ id: "run", title: "Running", measure: "km", emoji: "🏃" }],

@@ -297,6 +297,8 @@ export interface ProposalOperation {
   date?: string | Date;
   quantity?: number;
   descriptiveGuide?: string | null;
+  title?: string | null;
+  targets?: import("@tsw/prisma/follow-through").SessionTargets | null;
   goal?: string;
   goalReason?: string | null;
   notes?: string | null;

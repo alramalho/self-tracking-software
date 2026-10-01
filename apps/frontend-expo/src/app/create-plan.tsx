@@ -6,5 +6,5 @@ export default function CreatePlanRoute() {
     voiceGoal?: string | string[];
   }>();
   const initialGoal = Array.isArray(voiceGoal) ? voiceGoal[0] : voiceGoal;
-  return <Onboarding initialGoal={initialGoal} />;
+  return <Onboarding initialGoal={initialGoal} flow="create" />;
 }

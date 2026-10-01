@@ -61,20 +61,20 @@ for (const theme of ["LIGHT", "DARK"])
     await capture(page, `half-marathon-04-target-${theme}`);
     await page.getByRole("button", { name: "No target in mind" }).click();
 
-    await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
     await page.getByRole("button", { name: "More days" }).click();
     await expect(page.getByTestId("design-days-value")).toHaveText("4");
     await capture(page, `half-marathon-05-days-${theme}`);
     await page.route("**/design/options", async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
-    await next(page);
+    await next(page, "Ask my coach");
     await expect(page.getByTestId("design-loading")).toBeVisible();
     await capture(page, `half-marathon-06-planning-${theme}`);
 
     await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
     await expect(page.getByTestId("route-steady")).toContainText("Helly · Moderate");
-    await expect(page.getByTestId("route-steady")).toContainText("3 days a week");
+    await expect(page.getByTestId("route-steady")).toContainText("3–4 days per week");
     await expect(page.getByTestId("route-focused")).toContainText("Oli · Intense");
-    await expect(page.getByTestId("route-focused")).toContainText("4 days a week");
+    await expect(page.getByTestId("route-focused")).toContainText("4–5 days per week");
     await capture(page, `half-marathon-07-routes-${theme}`);
 
     await page.getByTestId("route-focused").click();
@@ -88,7 +88,7 @@ for (const theme of ["LIGHT", "DARK"])
     await capture(page, `half-marathon-10-rest-day-${theme}`);
     await page.getByRole("button", { name: "Choose the other plan" }).click();
     await page.getByTestId("route-steady").click();
-    await expect(page.getByRole("heading", { name: "Helly · 3 days a week" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Helly · 3–4 days per week" })).toBeVisible();
     await page.getByTestId("day-2026-10-10").click();
     await capture(page, `half-marathon-11-helly-long-run-${theme}`);
     await next(page);
@@ -102,13 +102,15 @@ for (const theme of ["LIGHT", "DARK"])
     await next(page);
     await next(page, "Continue").catch(() => {});
     await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
+    await expect(page.getByLabel(/people in this circle/)).toBeVisible();
+    await capture(page, `half-marathon-12b-circle-${theme}`);
     await page.getByRole("button", { name: "Just me" }).click();
     await expect(page.getByTestId("coaching-paywall")).toBeVisible();
     await capture(page, `half-marathon-13-paywall-${theme}`);
 
     const state = await (await request.get(`${API}/__state`)).json();
     const options = state.requests.find((r: any) => r.path.endsWith("/design/options"));
-    expect(options.body).toMatchObject({ availableDays: 4, fixedDate: null, baseline: expect.stringContaining("35–37") });
+    expect(options.body).toMatchObject({ preferredDays: 4, fixedDate: null, baseline: expect.stringContaining("35–37") });
     // A declined target stays declined: nothing is sent as a chosen goal spec.
     expect(options.body.goalSpec.chosenByUser).toBe(false);
     expect(options.body.asked[0]).toMatchObject({ answer: "No target in mind" });
@@ -158,17 +160,70 @@ for (const theme of ["LIGHT", "DARK"])
       await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
       await page.getByRole("button", { name: "Skip this question" }).click();
       if (o.target) {
-        await expect(page.getByTestId("onboarding-art-goal")).toBeVisible();
+        await expect(page.getByTestId("onboarding-art-question")).toBeVisible();
         await capture(page, `${o.id}-01-target-${theme}`);
         await page.getByRole("button", { name: o.target }).click();
       }
-      await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
       const value = page.getByTestId("design-days-value");
       while (Number(await value.textContent()) !== o.days) await page.getByRole("button", { name: Number(await value.textContent()) < o.days ? "More days" : "Fewer days" }).click();
-      await next(page);
+      await next(page, "Ask my coach");
       await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
       await capture(page, `${o.id}-02-routes-${theme}`);
       await page.getByTestId(o.route).click();
       await expect(page.getByTestId("session-detail")).toContainText(o.detail);
       await capture(page, `${o.id}-03-first-day-${theme}`);
     });
+
+// The coach does not bend a plan without limit: it can adjust the days, or say no and explain.
+async function toDays(page: Page, goal: string, baseline: string, baselineHeading: RegExp | string, theme: string) {
+  await page.getByRole("textbox", { name: "Your answer" }).fill(goal);
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+  await next(page);
+  await answer(page, baselineHeading, baseline);
+  await next(page);
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("button", { name: "Skip this question" }).click();
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  void theme;
+}
+for (const theme of ["LIGHT", "DARK"]) {
+  test(`reality check: one day a week for a first half marathon under 1:30 is pushed back (${theme})`, async ({ page, request }) => {
+    test.setTimeout(90000);
+    await start(page, request, theme);
+    await toDays(page, "Finish a half marathon in under 1:30", "I have never run. I can't jog for more than a minute.", "How much do you run now?", theme);
+    await page.getByRole("button", { name: "Fewer days" }).click();
+    await page.getByRole("button", { name: "Fewer days" }).click();
+    await expect(page.getByTestId("design-days-value")).toHaveText("1");
+    await capture(page, `reality-01-one-day-${theme}`);
+    await next(page, "Ask my coach");
+    await expect(page.getByTestId("pushback-message")).toContainText("Three days is the least that could work");
+    await expect(page.getByRole("heading", { name: "Choose your plan" })).toHaveCount(0);
+    await capture(page, `reality-02-pushback-${theme}`);
+    await page.getByRole("button", { name: "Change my target" }).click();
+    await expect(page.getByRole("heading", { name: "What would you like to aim for?" })).toBeVisible();
+    await capture(page, `reality-03-retarget-${theme}`);
+    await page.getByRole("button", { name: "Previous question" }).click();
+    await page.getByRole("button", { name: "Use 3 days" }).click();
+    await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
+    await expect(page.getByTestId("route-steady")).toContainText("2–3 days per week");
+    await expect(page.getByTestId("route-focused")).toContainText("3–4 days per week");
+    const state = await (await request.get(`${API}/__state`)).json();
+    const asks = state.requests.filter((r: any) => r.path.endsWith("/design/options"));
+    expect(asks.map((r: any) => r.body.preferredDays)).toEqual([1, 3]);
+  });
+
+  test(`reality check: the coach adjusts the days and says why (${theme})`, async ({ page, request }) => {
+    test.setTimeout(90000);
+    await start(page, request, theme);
+    await toDays(page, "Finish my first half marathon", "I run 3 km once a week at an easy pace.", "How much do you run now?", theme);
+    await page.getByRole("button", { name: "Fewer days" }).click();
+    await page.getByRole("button", { name: "Fewer days" }).click();
+    await next(page, "Ask my coach");
+    await expect(page.getByTestId("coach-note")).toContainText("at least 3 runs a week");
+    await expect(page.getByTestId("route-steady")).toContainText("3 days per week");
+    await expect(page.getByTestId("route-focused")).toContainText("3–4 days per week");
+    await capture(page, `reality-04-adjusted-${theme}`);
+  });
+}

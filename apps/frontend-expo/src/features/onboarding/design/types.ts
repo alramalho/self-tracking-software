@@ -1,4 +1,4 @@
-import type { DesignActivity, DesignOption, DesignSession, PlanDesign } from "@tsw/prisma/follow-through";
+import type { CoachNote, DesignActivity, DesignOption, DesignSession, PlanDesign } from "@tsw/prisma/follow-through";
 
 export interface DesignSectionProps {
   design: PlanDesign;
@@ -15,7 +15,7 @@ export interface DesignSectionProps {
   onDone: (design: PlanDesign) => void;
 }
 
-export type DesignStepName = "subgoal" | "days" | "loading" | "ask" | "options" | "preview";
+export type DesignStepName = "subgoal" | "days" | "loading" | "ask" | "pushback" | "retarget" | "options" | "preview";
 
 export interface RouteCardProps {
   option: DesignOption;
@@ -43,8 +43,9 @@ export interface ClassifyResponse {
 }
 
 export interface OptionsResponse {
-  status: "READY" | "ASK";
+  status: "READY" | "ASK" | "PUSHBACK";
   question: string | null;
+  coachNote: CoachNote | null;
   baseline: PlanDesign["baseline"];
   options: DesignOption[];
   startDate: string;

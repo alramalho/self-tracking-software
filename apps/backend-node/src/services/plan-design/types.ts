@@ -1,5 +1,6 @@
 import type {
   ClassifyResult,
+  CoachNote,
   DesignActivity,
   DesignBaseline,
   DesignOption,
@@ -53,7 +54,8 @@ export interface DesignInput {
   goalSpec: GoalSpec;
   baseline: string;
   activities: DesignActivity[];
-  availableDays: number;
+  /** What the person asked for. The coach decides what the routes use. */
+  preferredDays: number;
   fixedDate: string | null;
   asked: { question: string; answer: string }[];
   /** First day of the two-week window, YYYY-MM-DD in the person's timezone. */
@@ -61,8 +63,11 @@ export interface DesignInput {
 }
 
 export interface DesignResult {
-  status: "READY" | "ASK";
+  status: "READY" | "ASK" | "PUSHBACK";
   question: string | null;
+  coachNote: CoachNote | null;
+  /** What the validator rejected before the final answer, for the benchmark and for tuning prompts. */
+  retried: string[];
   baseline: DesignBaseline;
   options: DesignOption[];
   usage: GenerationUsage[];
@@ -78,7 +83,8 @@ export interface WindowInput {
     coach: "Helly" | "Oli";
     phases: DesignPhase[];
     assumptions: string[];
-    trainingDaysPerWeek: number;
+    daysMin: number;
+    daysMax: number;
     startDate: string;
     estimatedWeeks: number;
   };

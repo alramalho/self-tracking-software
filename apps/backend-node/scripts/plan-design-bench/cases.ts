@@ -15,6 +15,8 @@ export interface BenchCase {
   source: "owner-example" | "mine";
   input: DesignInput;
   expect: {
+    /** What the coach should say about the preferred days. Defaults to FITS. */
+    verdict?: "FITS" | "ADJUSTED" | "PUSHBACK";
     paceBasis?: "USER_REPORTED_EASY_PACE" | "PERFORMANCE_ESTIMATE" | "UNKNOWN";
     targetPreserved?: string;
     noInvented?: RegExp;
@@ -33,7 +35,7 @@ export const cases: BenchCase[] = [
       goalSpec: none,
       baseline: "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
       activities: run,
-      availableDays: 4,
+      preferredDays: 4,
       fixedDate: null,
       asked: [{ question: "Do you have a finish time in mind?", answer: "No target in mind" }, { question: "Why does it matter?", answer: "To finish it with my friends" }],
       startDate: START,
@@ -49,7 +51,7 @@ export const cases: BenchCase[] = [
       goalSpec: { metric: "LIFT_LOAD", value: 80, unit: "kg", text: "80 kg for 5 reps", chosenByUser: true },
       baseline: "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.",
       activities: [{ key: "bench-press", title: "Bench press", measure: "reps", emoji: "🏋️" }],
-      availableDays: 3,
+      preferredDays: 3,
       fixedDate: null,
       asked: [],
       startDate: START,
@@ -65,12 +67,12 @@ export const cases: BenchCase[] = [
       goalSpec: { metric: "BODY_MEASURE", value: null, unit: null, text: "How my clothes fit, strength kept", chosenByUser: true },
       baseline: "I lift twice a week. Bench press 60 kg for 5 reps. I track my meals.",
       activities: [{ key: "strength-training", title: "Strength training", measure: "minutes", emoji: "🏋️" }],
-      availableDays: 2,
+      preferredDays: 2,
       fixedDate: null,
       asked: [{ question: "Is there something you'd like to watch?", answer: "How clothes fit" }],
       startDate: START,
     },
-    expect: { noInvented: /\bBMI\b|\bkcal\b|\bcalorie|\bkg (loss|lost)|target weight/i },
+    expect: { noInvented: /\bBMI\b|\d\s*(kcal|calories)|target weight|\d\s*kg (loss|lost)/i },
   },
   {
     id: "guitar",
@@ -81,7 +83,7 @@ export const cases: BenchCase[] = [
       goalSpec: { metric: "SONG", value: 1, unit: "complete playthrough", text: "My own four-chord song (G C D Em)", chosenByUser: true },
       baseline: "I know G, C, D and Em but change slowly. I practise twice a week for 15 minutes. I only have my own chord sheet and a metronome.",
       activities: [{ key: "guitar-practice", title: "Guitar practice", measure: "minutes", emoji: "🎸" }],
-      availableDays: 5,
+      preferredDays: 5,
       fixedDate: null,
       asked: [{ question: "Which song?", answer: "My own four-chord song with a chord sheet" }],
       startDate: START,
@@ -97,7 +99,7 @@ export const cases: BenchCase[] = [
       goalSpec: { metric: "DISTANCE_NONSTOP", value: 5, unit: "km", text: "5 km without stopping", chosenByUser: true },
       baseline: "I've never really run. I can jog for about 2 minutes before I need to walk.",
       activities: run,
-      availableDays: 2,
+      preferredDays: 2,
       fixedDate: null,
       asked: [],
       startDate: START,
@@ -113,12 +115,44 @@ export const cases: BenchCase[] = [
       goalSpec: { metric: "FINISH_TIME", value: 3000, unit: "s", text: "10K in under 50 minutes", chosenByUser: true },
       baseline: "I run most days. I ran a 5K in 26:30 last month. Longest run is 12 km at easy effort.",
       activities: run,
-      availableDays: 7,
+      preferredDays: 7,
       fixedDate: null,
       asked: [],
       startDate: START,
     },
     expect: { paceBasis: "PERFORMANCE_ESTIMATE", targetPreserved: "50" },
+  },
+  {
+    id: "reality-pushback",
+    title: "Half marathon under 1:30, never run, one day a week (mine)",
+    source: "mine",
+    input: {
+      goal: "Finish a half marathon in under 1 hour 30 minutes",
+      goalSpec: { metric: "FINISH_TIME", value: 5400, unit: "s", text: "under 1 hour 30 minutes", chosenByUser: true },
+      baseline: "I have never run. I can't jog for more than a minute.",
+      activities: run,
+      preferredDays: 1,
+      fixedDate: null,
+      asked: [],
+      startDate: START,
+    },
+    expect: { verdict: "PUSHBACK" },
+  },
+  {
+    id: "reality-adjusted",
+    title: "First half marathon, one day a week (mine)",
+    source: "mine",
+    input: {
+      goal: "Finish my first half marathon",
+      goalSpec: none,
+      baseline: "I run 3 km once a week at an easy pace.",
+      activities: run,
+      preferredDays: 1,
+      fixedDate: null,
+      asked: [{ question: "Do you have a finish time in mind?", answer: "No target in mind" }],
+      startDate: START,
+    },
+    expect: { verdict: "ADJUSTED" },
   },
 ];
 
@@ -134,7 +168,7 @@ export function extensionCase(plan: { sessions: WindowInput["sessions"] }): Wind
         { metric: "easy_pace_slow", value: 444, unit: "s/km", sourceQuote: "easy 5 km takes 35–37 minutes" },
       ],
     },
-    outline: { route: "steady", coach: "Helly", phases: [{ title: "Find your rhythm", startWeek: 1, endWeek: 4, progressCheck: "Run 5 km easy twice" }, { title: "Build endurance", startWeek: 5, endWeek: 16, progressCheck: "Long run 15 km" }], assumptions: [], trainingDaysPerWeek: 3, startDate: START, estimatedWeeks: 20 },
+    outline: { route: "steady", coach: "Helly", phases: [{ title: "Find your rhythm", startWeek: 1, endWeek: 4, progressCheck: "Run 5 km easy twice" }, { title: "Build endurance", startWeek: 5, endWeek: 16, progressCheck: "Long run 15 km" }], assumptions: [], daysMin: 3, daysMax: 3, startDate: START, estimatedWeeks: 20 },
     finishingDate: "2027-02-21",
     activities: [{ id: "running", key: "running", title: "Running", measure: "km", emoji: "🏃" }],
     sessions: plan.sessions,

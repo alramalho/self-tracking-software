@@ -78,7 +78,9 @@ export interface DesignPhase {
 export interface DesignOption {
   id: RouteId;
   coach: "Helly" | "Oli";
-  trainingDaysPerWeek: number;
+  /** Days a week, as a range (Garmin-style "3–4"). The first two weeks sit inside it. */
+  daysMin: number;
+  daysMax: number;
   estimatedWeeks: number;
   finishingDate: string;
   rationale: string;
@@ -100,8 +102,10 @@ export interface PlanDesign {
   goalSpec: GoalSpec;
   baseline: DesignBaseline;
   activities: DesignActivity[];
-  /** Days the person can train: a limit for Helly, the target for Oli. */
-  availableDays: number;
+  /** The days the person would like. An anchor, not a command: the coach may adjust it or push back. */
+  preferredDays: number;
+  /** What the coach said about the preference. Null until the coach has looked. */
+  coachNote: CoachNote | null;
   fixedDate: string | null;
   /** Questions already asked, so the coach never repeats one. */
   asked: { question: string; answer: string }[];
@@ -116,9 +120,23 @@ export interface PlanOutline {
   coach: "Helly" | "Oli";
   phases: DesignPhase[];
   assumptions: string[];
-  trainingDaysPerWeek: number;
+  daysMin: number;
+  daysMax: number;
   startDate: string;
   estimatedWeeks: number;
+}
+
+export type DesignVerdict = "FITS" | "ADJUSTED" | "PUSHBACK";
+
+/** The coach's honest read of the person's preferred days against their goal and starting point. */
+export interface CoachNote {
+  verdict: DesignVerdict;
+  /** Shown to the person. Always present for ADJUSTED and PUSHBACK. */
+  message: string | null;
+  /** For PUSHBACK: the fewest days that could work, offered as one tap. */
+  suggestedDays: number | null;
+  /** For PUSHBACK: whether the person's own target is part of the problem (so "change my target" makes sense). */
+  targetInvolved: boolean;
 }
 
 export interface ClassifyResult {

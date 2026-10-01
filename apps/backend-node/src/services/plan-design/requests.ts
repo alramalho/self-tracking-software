@@ -23,7 +23,7 @@ export const optionsRequestSchema = z.object({
   goalSpec: goalSpecSchema,
   baseline: z.string().trim().max(1000),
   activities: z.array(activity).length(1),
-  availableDays: z.number().int().min(1).max(7),
+  preferredDays: z.number().int().min(1).max(7),
   fixedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   asked,
   timezone: z.string().max(100),

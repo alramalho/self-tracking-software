@@ -1,27 +1,14 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { Clock, Dumbbell, Footprints, Gauge, Target } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
-import { addDay, dayNumber, liftText, longDate, paceText, sessionsOn, unitLabel, weekRange, weekday } from "./format";
+import { SessionTargetRows } from "@/features/plans/SessionTargetRows";
+import { addDay, dayNumber, longDate, sessionsOn, unitLabel, weekRange, weekday } from "./format";
 import type { SessionDetailProps, TwoWeeksProps } from "./types";
-
-function Row({ icon: Icon, children }: { icon: typeof Clock; children: string }) {
-  const c = useColors();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-      <Icon size={18} color={c.muted} strokeWidth={1.8} style={{ marginTop: 2 }} />
-      <Text style={{ flex: 1, color: c.text, fontSize: 15, lineHeight: 21 }}>{children}</Text>
-    </View>
-  );
-}
 
 // What a session asks for, in numbers: time, effort and pace (or sets, reps, load), and how you'll know it worked.
 export function SessionDetail({ session, activity }: SessionDetailProps) {
   const c = useColors();
-  const t = session.targets;
-  const pace = paceText(t);
-  const lift = liftText(t);
   return (
     <View testID="session-detail" style={{ gap: 12, padding: 18, borderRadius: 18, backgroundColor: c.card }}>
       <View style={{ gap: 2 }}>
@@ -32,12 +19,8 @@ export function SessionDetail({ session, activity }: SessionDetailProps) {
           {longDate(session.date)} · {session.quantity} {unitLabel(activity.measure, session.quantity)}
         </Text>
       </View>
-      <Row icon={Clock}>{`${t.durationMinutes} min`}</Row>
-      <Row icon={Gauge}>{t.effort}</Row>
-      {pace && <Row icon={Footprints}>{pace}</Row>}
-      {lift && <Row icon={Dumbbell}>{`${t.exercise ? `${t.exercise} · ` : ""}${lift}`}</Row>}
+      <SessionTargetRows targets={session.targets} />
       <Text style={{ color: c.muted, fontSize: 14, lineHeight: 20 }}>{session.descriptiveGuide}</Text>
-      <Row icon={Target}>{t.progressMeasure}</Row>
     </View>
   );
 }

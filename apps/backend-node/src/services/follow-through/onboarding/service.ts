@@ -138,7 +138,8 @@ export async function finishOnboarding(
         emoji: draft.emoji,
         // An outcome plan is dated sessions the coach keeps extending; a habit is a weekly target.
         outlineType: chosen ? "SPECIFIC" : "TIMES_PER_WEEK",
-        timesPerWeek: chosen?.trainingDaysPerWeek ?? draft.frequency,
+        // The weekly target is the low end of the range: reaching it counts as on track.
+        timesPerWeek: chosen?.daysMin ?? draft.frequency,
         durationType: draft.targetDate || chosen ? "CUSTOM" : "LIFESTYLE",
         finishingDate: chosen
           ? new Date(`${chosen.finishingDate}T12:00:00Z`)
@@ -155,7 +156,8 @@ export async function finishOnboarding(
               coach: routeCoach[chosen.id],
               phases: chosen.phases,
               assumptions: chosen.assumptions,
-              trainingDaysPerWeek: chosen.trainingDaysPerWeek,
+              daysMin: chosen.daysMin,
+              daysMax: chosen.daysMax,
               startDate: design!.startDate,
               estimatedWeeks: chosen.estimatedWeeks,
             } as unknown as Prisma.InputJsonValue)

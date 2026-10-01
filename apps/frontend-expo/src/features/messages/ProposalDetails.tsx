@@ -1,3 +1,4 @@
+import { SessionTargetRows } from "@/features/plans/SessionTargetRows";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { format, parseISO } from "date-fns";
@@ -32,11 +33,12 @@ function SessionCard({ op, activity, removed }: SessionCardProps) {
   const [open, setOpen] = useState(false);
   const day = op.date ? onDay(op.date) : undefined;
   const guide = op.descriptiveGuide?.trim();
+  const targets = op.targets ?? undefined;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${activity?.title ?? "Session"}${day ? ` on ${format(day, "EEEE, MMM d")}` : ""}`}
-      disabled={!guide}
+      disabled={!guide && !targets}
       onPress={() => setOpen((value) => !value)}
       style={{
         flexDirection: "row",
@@ -73,9 +75,11 @@ function SessionCard({ op, activity, removed }: SessionCardProps) {
           {op.quantity != null
             ? amount(op.quantity, activity?.measure)
             : (activity?.title ?? "Session")}
+          {op.title ? `  · ${op.title}` : ""}
           {op.type === "update_session" ? "  · changed" : ""}
           {removed ? "  · removed" : ""}
         </Text>
+        {open && !!targets && <SessionTargetRows targets={targets} />}
         {!!guide && (
           <Text
             numberOfLines={open ? undefined : 2}
@@ -91,7 +95,7 @@ function SessionCard({ op, activity, removed }: SessionCardProps) {
 
 /** Switching to dated sessions is how a first week is stored, not a choice to review. */
 const isOutlineOnly = (plan: Partial<ProposalOperation>) =>
-  Object.keys(plan).every((key) => key === "outlineType");
+  Object.keys(plan).every((key) => ["outlineType", "designedThrough", "outlinePhases"].includes(key));
 const sessionTypes = ["add_session", "update_session", "delete_session"];
 
 export function ProposalDetails({

@@ -6,6 +6,9 @@ import {
 import { getInterviewContext } from "../services/follow-through/onboarding/interview/context";
 import { interviewRequestSchema } from "../services/follow-through/onboarding/interview/schema";
 import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from "../services/plan-design/service";
+import { baselineFromLogs } from "../services/plan-design/baseline";
+import { healthSafeActivityFilter } from "../services/health/apple/ai-boundary";
+import { prisma } from "../utils/prisma";
 import { classifyRequestSchema, optionsRequestSchema, subgoalRequestSchema } from "../services/plan-design/requests";
 import { formatInTimeZone } from "date-fns-tz";
 import { FollowThroughInputError } from "../services/follow-through/errors";
@@ -132,6 +135,27 @@ router.post(
     res.json({ ...result, activity: { key: activityKey(result.activity.title), ...result.activity } });
   }),
 );
+// Creating a plan inside the app: a starting point measured from the person's own logs, when there are enough.
+router.get(
+  "/onboarding/design/baseline",
+  handle(async (req, res) => {
+    const { title, measure } = z.object({ title: z.string().min(1).max(40), measure: z.string().min(1).max(24) }).parse(req.query);
+    const now = new Date();
+    const activity = await prisma.activity.findFirst({
+      where: { userId: req.user!.id, deletedAt: null, title: { equals: title, mode: "insensitive" }, measure },
+      select: { id: true },
+    });
+    if (!activity) {
+      res.json({ baseline: null });
+      return;
+    }
+    const entries = await prisma.activityEntry.findMany({
+      where: { ...healthSafeActivityFilter, userId: req.user!.id, activityId: activity.id, deletedAt: null, datetime: { gte: new Date(now.getTime() - 28 * 86400000) } },
+      select: { datetime: true, quantity: true },
+    });
+    res.json({ baseline: baselineFromLogs(entries, { title, measure, now }) });
+  }),
+);
 router.post(
   "/onboarding/design/subgoal",
   requireAiConsent,
@@ -150,7 +174,7 @@ router.post(
     const startDate = formatInTimeZone(new Date(), timezone || "UTC", "yyyy-MM-dd");
     const result = await designOptions({ ...input, startDate });
     logger.info("Plan design generated", { userId: req.user!.id, status: result.status, usage: result.usage });
-    res.json({ status: result.status, question: result.question, baseline: result.baseline, options: result.options, startDate });
+    res.json({ status: result.status, question: result.question, coachNote: result.coachNote, baseline: result.baseline, options: result.options, startDate });
   }),
 );
 router.post(
