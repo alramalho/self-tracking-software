@@ -7,7 +7,6 @@ export const OG_HEIGHT = 630;
 const INK = "#0b0d12";
 const MUTED = "#6b7280";
 const ACCENT = "#2563eb";
-const TINT = "#eaf1fe";
 const ORBIT = "#a9bde8";
 const WHITE = "#ffffff";
 
@@ -119,8 +118,7 @@ const openSeat = ([x, y]: readonly [number, number]): OgNode =>
 function rightSide(card: OgCard, images: OgImages): OgNode[] {
   if (!card.orbit) {
     return [
-      box({ ...centred(930, 330, 400), backgroundColor: TINT }),
-      image(images[card.art], 300, { position: "absolute", left: 780, top: 180 }),
+      image(images[card.art], 340, { position: "absolute", left: 760, top: 160 }),
     ];
   }
   const members = card.orbit.members.slice(0, ORBIT_SEATS);
@@ -130,7 +128,6 @@ function rightSide(card: OgCard, images: OgImages): OgNode[] {
       ? [BOTTOM_SEAT]
       : SEATS.slice(members.length, members.length + card.orbit.openSpots);
   return [
-    box({ ...centred(910, 315, 352), backgroundColor: TINT }),
     box({
       position: "absolute",
       left: 690,
