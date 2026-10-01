@@ -10,7 +10,15 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useEffect, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -19,7 +27,11 @@ import { Text } from "@/components/typography/Text";
 import { IconButton, useColors } from "@/components/ui";
 import type { LoggingDrawerProps } from "./types";
 
-// Match the PWA's content-sized drawer instead of stretching a short form to a full page.
+// The curve iOS sheets use: quick out of the gate, long soft landing.
+const SHEET_IN = Easing.bezier(0.32, 0.72, 0, 1);
+
+// A content-sized bottom sheet that behaves like a native one: the dim fades in place while
+// only the sheet slides, the sheet follows a downward drag, and it slides away before closing.
 export function LoggingDrawer({
   title,
   testID = "activity-logging-drawer",
@@ -55,20 +67,65 @@ export function LoggingDrawer({
       hide.remove();
     };
   }, [height]);
+  // 0 = off screen, 1 = resting. `travel` is the sheet's own height once measured.
+  const shown = useSharedValue(reduced ? 1 : 0);
+  const dragged = useSharedValue(0);
+  const travel = useSharedValue(height);
+  const mounted = useRef(true);
+  const closing = useRef(false);
+  useEffect(() => {
+    shown.value = withTiming(1, { duration: 420, easing: SHEET_IN });
+    return () => {
+      mounted.current = false;
+    };
+  }, [shown]);
+  // The parent may refuse to close (a save in progress): then the sheet comes back up.
+  const finishClose = () => {
+    onClose();
+    setTimeout(() => {
+      if (!mounted.current) return;
+      closing.current = false;
+      dragged.value = 0;
+      shown.value = withTiming(1, { duration: 420, easing: SHEET_IN });
+    }, 200);
+  };
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    if (reduced) {
+      finishClose();
+      return;
+    }
+    shown.value = withTiming(0, { duration: 220, easing: Easing.in(Easing.cubic) }, (finished) => {
+      if (finished) runOnJS(finishClose)();
+    });
+  };
   const drag = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) =>
       gesture.dy > 8 && Math.abs(gesture.dx) < gesture.dy,
+    onPanResponderMove: (_, gesture) => {
+      dragged.value = Math.max(0, gesture.dy);
+    },
     onPanResponderRelease: (_, gesture) => {
-      if (gesture.dy > 48 || gesture.vy > 0.7) onClose();
+      if (gesture.dy > 48 || gesture.vy > 0.7) close();
+      else dragged.value = withSpring(0, { damping: 30, stiffness: 320 });
+    },
+    onPanResponderTerminate: () => {
+      dragged.value = withSpring(0, { damping: 30, stiffness: 320 });
     },
   });
+  const dim = useAnimatedStyle(() => ({ opacity: shown.value }));
+  const sheet = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - shown.value) * travel.value + dragged.value }],
+  }));
   return (
     <Modal
       transparent
       visible
-      animationType={reduced ? "none" : "slide"}
+      // The modal itself only fades; the sheet's slide is animated below, so the dim never moves.
+      animationType={reduced ? "none" : "fade"}
       statusBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={close}
     >
       <StatusBar style={c.dark ? "light" : "dark"} />
       <View
@@ -78,28 +135,36 @@ export function LoggingDrawer({
           paddingBottom: keyboardHeight,
         }}
       >
-        <Pressable
-          accessibilityLabel={dismissLabel}
-          onPress={onClose}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(0,0,0,0.8)" },
-          ]}
-        />
-        <View
+        <Animated.View style={[StyleSheet.absoluteFill, dim]}>
+          <Pressable
+            accessibilityLabel={dismissLabel}
+            onPress={close}
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: "rgba(0,0,0,0.5)" },
+            ]}
+          />
+        </Animated.View>
+        <Animated.View
           testID={testID}
           accessibilityViewIsModal
-          style={{
-            flexShrink: 1,
-            width: "100%",
-            maxWidth: 540,
-            alignSelf: "center",
-            maxHeight: drawerMaxHeight,
-            backgroundColor: c.bg,
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            overflow: "hidden",
+          onLayout={(event) => {
+            travel.value = event.nativeEvent.layout.height;
           }}
+          style={[
+            {
+              flexShrink: 1,
+              width: "100%",
+              maxWidth: 540,
+              alignSelf: "center",
+              maxHeight: drawerMaxHeight,
+              backgroundColor: c.bg,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              overflow: "hidden",
+            },
+            sheet,
+          ]}
         >
           <View
             {...drag.panHandlers}
@@ -181,9 +246,9 @@ export function LoggingDrawer({
             </View>
           )}
           <View style={{ position: "absolute", top: 20, right: 12 }}>
-            <IconButton label="Close" icon={X} onPress={onClose} />
+            <IconButton label="Close" icon={X} onPress={close} />
           </View>
-        </View>
+        </Animated.View>
         {Platform.OS === "ios" && (
           <InputAccessoryView
             nativeID="logging-input-done"
