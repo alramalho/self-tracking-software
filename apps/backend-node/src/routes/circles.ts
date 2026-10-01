@@ -4,6 +4,7 @@ import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
 import { circleBoard, circleFeed } from "../services/circles/board/service";
 import { openCircleChat } from "../services/circles/chat";
 import { CircleError } from "../services/circles/errors";
+import { invitableFriends, inviteFriend } from "../services/circles/invites";
 import { matchPlan, searchCircles, suggestions } from "../services/circles/matching/service";
 import { nudge } from "../services/circles/nudges";
 import {
@@ -124,6 +125,21 @@ router.patch(
       .object({ name: z.string().trim().min(1).max(60).optional(), coachPosts: z.boolean().optional() })
       .parse(req.body);
     await updateCircle(req.user!.id, req.params.id, changes);
+    res.sendStatus(204);
+  }),
+);
+
+// Inviting from inside the app: the member's friends, and one invite notification each.
+router.get(
+  "/:id/invitable",
+  handle(async (req, res) => res.json(await invitableFriends(req.user!.id, req.params.id))),
+);
+
+router.post(
+  "/:id/invites",
+  handle(async (req, res) => {
+    const { userId } = z.object({ userId: z.string().min(1) }).parse(req.body);
+    await inviteFriend(req.user!.id, req.params.id, userId);
     res.sendStatus(204);
   }),
 );

@@ -106,6 +106,15 @@ export interface CircleRecap {
   topCount: number;
 }
 
+// A friend in the in-app invite list: already in the circle, already invited, or open to invite.
+export interface InvitableFriend {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  picture: string | null;
+  state: "member" | "invited" | "open";
+}
+
 // "3 of 4 this week" on a circle log: the days its owner had done that week, up to that log.
 export interface WeekChip {
   done: number;

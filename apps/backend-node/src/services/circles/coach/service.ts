@@ -80,6 +80,8 @@ export async function postCoachMessage(
 async function lastWeek(circleId: string) {
   const members = await prisma.circleMember.findMany({
     where: { circleId, provenAt: { not: null }, user: { deletedAt: null } },
+    // The same order as the board, so the recap reads the same every time.
+    orderBy: { joinedAt: "asc" },
     include: { user: true, plan: { include: { activities: true } } },
   });
   const histories: MemberHistory[] = [];

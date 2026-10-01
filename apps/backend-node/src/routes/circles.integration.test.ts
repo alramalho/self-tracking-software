@@ -455,6 +455,48 @@ describe("circles", () => {
     ]);
   });
 
+  it("lets members invite their friends from inside the app, once each", async () => {
+    // Alice is friends with Bob (already in), Frank (not in) and Gina (who blocked her).
+    await prisma.connection.createMany({
+      data: [
+        { fromId: id("alice"), toId: id("bob"), status: "ACCEPTED" },
+        { fromId: id("frank"), toId: id("alice"), status: "ACCEPTED" },
+        { fromId: id("alice"), toId: id("gina"), status: "ACCEPTED" },
+      ],
+    });
+    await prisma.userBlock.create({ data: { blockerId: id("gina"), blockedId: id("alice") } });
+    const states = async () =>
+      Object.fromEntries((await call("alice", "GET", `/circles/${circleId}/invitable`)).body.map((f: any) => [f.userId, f.state]));
+    expect(await states()).toEqual({ [id("bob")]: "member", [id("frank")]: "open" });
+
+    fixture.notify.mockClear();
+    expect((await call("alice", "POST", `/circles/${circleId}/invites`, { userId: id("frank") })).status).toBe(204);
+    const circle = await prisma.circle.findUniqueOrThrow({ where: { id: circleId } });
+    expect(fixture.notify.mock.calls.map(([n]) => n)).toEqual([
+      expect.objectContaining({
+        userId: id("frank"),
+        type: "CIRCLE",
+        title: "Alice invited you to a circle",
+        relatedData: { url: `/circle-invite/${circle.inviteCode}`, circleId },
+      }),
+    ]);
+    expect(await states()).toMatchObject({ [id("frank")]: "invited" });
+    expect(await events("frank")).toContain("INVITED");
+    // Asking again, or inviting someone already in, sends nothing more.
+    expect((await call("alice", "POST", `/circles/${circleId}/invites`, { userId: id("frank") })).status).toBe(204);
+    expect((await call("alice", "POST", `/circles/${circleId}/invites`, { userId: id("bob") })).status).toBe(204);
+    expect(fixture.notify).toHaveBeenCalledTimes(1);
+    // Only friends, and only by members.
+    expect(await call("alice", "POST", `/circles/${circleId}/invites`, { userId: id("dave") })).toMatchObject({
+      status: 400,
+      body: { error: "You can only invite your friends" },
+    });
+    expect(await call("alice", "POST", `/circles/${circleId}/invites`, { userId: id("gina") })).toMatchObject({ status: 400 });
+    expect((await call("frank", "GET", `/circles/${circleId}/invitable`)).status).toBe(400);
+    await prisma.userBlock.deleteMany({ where: { blockerId: id("gina") } });
+    await prisma.connection.deleteMany({ where: { OR: [{ fromId: id("alice") }, { toId: id("alice") }] } });
+  });
+
   it("lets the owner, and only the owner, switch Helly's posts off", async () => {
     expect((await call("bob", "PATCH", `/circles/${circleId}`, { coachPosts: false })).status).toBe(400);
     expect((await call("alice", "PATCH", `/circles/${circleId}`, { coachPosts: false })).status).toBe(204);

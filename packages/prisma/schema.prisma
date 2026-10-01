@@ -1572,6 +1572,8 @@ enum CircleEventKind {
   PROOF_NUDGED
   EXPIRED
   LEFT
+  // A member invited this person from inside the app (the event's user is the person invited).
+  INVITED
 
   @@schema("public")
 }
