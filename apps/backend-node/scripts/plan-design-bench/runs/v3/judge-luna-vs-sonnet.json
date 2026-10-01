@@ -1,0 +1,83 @@
+{
+  "judge": "openai/gpt-6.1-sol",
+  "a": "openai/gpt-6-luna",
+  "b": "anthropic/claude-sonnet-5.5",
+  "cases": [
+    {
+      "id": "half-marathon",
+      "scores": {
+        "anthropic/claude-sonnet-5.5": {
+          "baseline": 3,
+          "progression": 4,
+          "specificity": 3,
+          "differentiation": 3,
+          "safety": 3,
+          "overall": 3,
+          "note": "The longer build and explicit taper suit a first half marathon, but the intense route immediately doubles running frequency and raises weekly distance from 10 to 15 km, contradicting its gradual-growth claim."
+        },
+        "openai/gpt-6-luna": {
+          "baseline": 3,
+          "progression": 2,
+          "specificity": 3,
+          "differentiation": 2,
+          "safety": 3,
+          "overall": 2,
+          "note": "The intense route compresses preparation into 12 weeks without a compelling reason, while initially prescribing less distance than the moderate route and rebuilding a long run below the runner's existing ability."
+        }
+      },
+      "better": "anthropic/claude-sonnet-5.5",
+      "why": "A provides more time to develop endurance, clearer weekly-volume milestones, and a better-defined taper. Both give followable opening sessions but only broad guidance afterward, and both increase frequency abruptly. B adds unnecessary time pressure and weaker route differentiation; its moderate plan"
+    },
+    {
+      "id": "bench",
+      "scores": {
+        "openai/gpt-6-luna": {
+          "baseline": 4,
+          "progression": 2,
+          "specificity": 3,
+          "differentiation": 1,
+          "safety": 4,
+          "overall": 3,
+          "note": "The opening sessions match the stated working sets, but later phases mostly prescribe logging rather than actionable load progression toward 80 kg."
+        },
+        "anthropic/claude-sonnet-5.5": {
+          "baseline": 3,
+          "progression": 3,
+          "specificity": 4,
+          "differentiation": 4,
+          "safety": 3,
+          "overall": 3,
+          "note": "The intense route immediately adds a fourth bench day, then increases volume and heavy loads, without adequately conditioning those increases on recovery and successful completion."
+        }
+      },
+      "better": "anthropic/claude-sonnet-5.5",
+      "why": "B narrowly wins through concrete load milestones, meaningful heavy/light variation, and genuinely different routes. Its moderate route is the better fit for the preferred three days. However, the intense route needs a more gradual frequency increase and clearer fatigue-based adjustments. A starts at"
+    },
+    {
+      "id": "extend-after-hard-run",
+      "scores": {
+        "openai/gpt-6-luna": {
+          "baseline": 3,
+          "progression": 3,
+          "specificity": 4,
+          "differentiation": 3,
+          "safety": 4,
+          "overall": 3,
+          "note": "Shorter easy runs suit recovery, but adding a third weekly run leaves total running time roughly unchanged rather than clearly reducing the load."
+        },
+        "anthropic/claude-sonnet-5.5": {
+          "baseline": 3,
+          "progression": 3,
+          "specificity": 4,
+          "differentiation": 3,
+          "safety": 3,
+          "overall": 3,
+          "note": "Despite promising two lighter weeks, it increases frequency immediately and raises week-two running time above the usual baseline without requiring recovery first."
+        }
+      },
+      "better": "openai/gpt-6-luna",
+      "why": "A narrowly wins by holding the shorter sessions steady for both weeks. B increases running time from 74 to 82 minutes and invents missed runs not reported by the runner. Both would better honor the recovery request by retaining two weekly runs, reducing their length temporarily, and making any build"
+    }
+  ],
+  "costUsd": 0.039408
+}
