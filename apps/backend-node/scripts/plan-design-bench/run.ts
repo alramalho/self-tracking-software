@@ -11,24 +11,29 @@ import path from "node:path";
 import { createGateway } from "ai";
 import { designOptions, extendWindow } from "../../src/services/plan-design/service";
 import type { GenerationUsage } from "../../src/services/plan-design/types";
-import { cases, extensionCase } from "./cases";
+import { adaptCases, cases } from "./cases";
 
 async function main() {
   const arg = (name: string) => process.argv[process.argv.indexOf(`--${name}`) + 1];
   const model = process.argv.includes("--model") ? arg("model") : "openai/gpt-6-luna";
   const out = process.argv.includes("--out") ? arg("out") : path.join(__dirname, `results-${model.replace("/", "_")}.json`);
+  // The model under test designs the routes and adapts the plan. The short calls (goal read, days check)
+  // stay on the default quick model so every run shares them, and the fallback is off for a fair comparison.
   process.env.PLAN_DESIGN_MODEL = model;
+  process.env.PLAN_ADAPT_MODEL = model;
+  process.env.PLAN_FALLBACK_MODEL = "none";
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error("Set AI_GATEWAY_API_KEY (never commit it)");
 
   const { gatewayGenerator } = await import("../../src/services/plan-design/generator");
   const gateway = createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY });
-  const listing = (await gateway.getAvailableModels()).models.find((m) => m.id === model);
-  const price = {
-    input: Number(listing?.pricing?.input ?? NaN),
-    output: Number(listing?.pricing?.output ?? NaN),
-    cachedInput: Number(listing?.pricing?.cachedInputTokens ?? NaN),
+  const listed = (await gateway.getAvailableModels()).models;
+  const priceOf = (id: string) => {
+    const m = listed.find((x) => x.id === id);
+    return { input: Number(m?.pricing?.input ?? NaN), output: Number(m?.pricing?.output ?? NaN) };
   };
-  const dollars = (u: GenerationUsage[]) => u.reduce((n, x) => n + x.inputTokens * price.input + x.outputTokens * price.output, 0);
+  const price = priceOf(model);
+  // Each call is priced at its own model's listed rate (the short calls run on a different model).
+  const dollars = (u: GenerationUsage[]) => u.reduce((n, x) => n + x.inputTokens * priceOf(x.model).input + x.outputTokens * priceOf(x.model).output, 0);
 
   const results: any = { model, startedAt: new Date().toISOString(), pricePerMillion: { input: price.input * 1e6, output: price.output * 1e6 }, cases: [] as any[] };
   const save = () => fs.writeFileSync(out, JSON.stringify(results, null, 2));
@@ -49,6 +54,7 @@ async function main() {
       record.options = result.options;
       record.attempts = result.usage.length;
       record.retried = result.retried;
+      record.models = result.models;
       record.usage = result.usage;
       record.costUsd = dollars(result.usage);
       record.seconds = Math.round((Date.now() - started) / 100) / 10;
@@ -69,21 +75,17 @@ async function main() {
     console.log(c.id, record.status, record.costUsd?.toFixed(5), record.checks);
   }
 
-  // Rolling regeneration from the first case's chosen route.
-  const first = results.cases.find((c: any) => c.id === "half-marathon" && c.options);
-  if (first && (!only || only.includes("extend"))) {
-    const sessions = first.options[0].sessions.map((s: any, i: number) => ({
-      id: `s${i}`, date: s.date, activityId: "running", quantity: s.quantity, title: s.title, targets: s.targets, completed: i < 3,
-    }));
+  // Plan adaptation: the same fixed plan and three situations for every model.
+  for (const c of adaptCases.filter((x) => !only || only.includes(x.id) || only.includes("adapt"))) {
     const started = Date.now();
-    const record: any = { id: "extend-after-hard-run", title: "Next two weeks after a hard long run", status: "running" };
+    const record: any = { id: c.id, title: c.title, expect: c.expect, input: { results: c.input.results, feedback: c.input.feedback, today: c.input.today }, status: "running" };
     results.cases.push(record);
     try {
-      const window = await extendWindow(extensionCase({ sessions }), gatewayGenerator);
+      const window = await extendWindow(c.input, gatewayGenerator);
       record.status = "READY";
       record.window = window;
-      record.usage = [window.usage];
-      record.costUsd = dollars([window.usage]);
+      record.usage = window.calls ?? [window.usage];
+      record.costUsd = dollars(record.usage);
       record.seconds = Math.round((Date.now() - started) / 100) / 10;
     } catch (e: any) {
       record.status = "error";

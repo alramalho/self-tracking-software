@@ -7,9 +7,9 @@ import type { DesignInput, WindowInput } from "./types";
 
 const usage = { model: "fake", inputTokens: 1, outputTokens: 1, reasoningTokens: 0 };
 const fake = (...outputs: unknown[]) => {
-  const calls: { prompt: string }[] = [];
-  const generate: ObjectGenerator = async ({ schema, prompt }) => {
-    calls.push({ prompt });
+  const calls: { prompt: string; model: string }[] = [];
+  const generate: ObjectGenerator = async ({ schema, prompt, model }) => {
+    calls.push({ prompt, model });
     const next = outputs[Math.min(calls.length - 1, outputs.length - 1)];
     return { object: schema.parse(next), usage };
   };
@@ -141,6 +141,19 @@ describe("designOptions", () => {
     expect(calls[3].prompt).toContain("week 2 has 2 training days, expected 3-4");
   });
 
+  it("steps up to the fallback model before giving up", async () => {
+    const bad = routeOutput("steady", 20, [0, 2]);
+    const { generate, calls } = fake(fitsNote, bad, routeOutput("focused", 16, FOCUSED), bad, routeOutput("steady", 20, STEADY));
+    process.env.PLAN_DESIGN_MODEL = "openai/gpt-6-luna";
+    try {
+      const result = await designOptions(input, generate);
+      expect(calls.map((c) => c.model)).toContain("anthropic/claude-sonnet-5.5");
+      expect(result.models).toContain("anthropic/claude-sonnet-5.5");
+    } finally {
+      delete process.env.PLAN_DESIGN_MODEL;
+    }
+  });
+
   it("fails loudly instead of showing an unreliable plan", async () => {
     const { generate } = fake(fitsNote, routeOutput("steady", 20, [0, 2]));
     await expect(designOptions(input, generate)).rejects.toThrow(/reliable plan/);
@@ -213,9 +226,12 @@ describe("builds from what the person already does", () => {
     expect(validateSessions(week([2, 3, 2, 4]), { ...ctx, baselineWeekly: 10 })).toEqual([]);
   });
   it("rejects a first-week jump and a week of tiny sessions", () => {
-    expect(validateSessions(week([5, 3, 5, 4]), { ...ctx, baselineWeekly: 10, baselineSession: 5 }).join()).toContain("a jump from the 10");
+    expect(validateSessions(week([5, 3, 5, 3]), { ...ctx, baselineWeekly: 10, baselineSession: 5 }).join()).toContain("a jump from the 10");
     expect(validateSessions(week([2, 2, 5, 5]), { ...ctx, baselineWeekly: 10, baselineSession: 5 }).join()).toContain("2 sessions under half");
-    expect(validateSessions(week([2, 3, 4, 4]), { ...ctx, baselineWeekly: 10, baselineSession: 5 })).toEqual([]);
+    expect(validateSessions(week([2, 3, 4, 3]), { ...ctx, baselineWeekly: 10, baselineSession: 5 })).toEqual([]);
+    // One 3 km run a week, coach asks for 3 days: three shorter runs are fine.
+    const three = offsets([0, 2, 4]).map((d, i) => session(d, { quantity: [2, 2, 1][i] }));
+    expect(validateSessions(three, { ...ctx, daysMin: 3, daysMax: 3, baselineWeekly: 3, baselineSession: 3 })).toEqual([]);
   });
   it("rejects a week whose heaviest set is below what they lift now; lighter volume days are fine", () => {
     const lift = (load: number) => session(offsets([0])[0], { activity: "bench", quantity: 15, targets: targets({ pace: null, sets: 3, reps: 5, loadKg: load }) });

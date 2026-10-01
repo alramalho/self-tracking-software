@@ -2,12 +2,10 @@ import { gateway } from "@ai-sdk/gateway";
 import { jsonSchema } from "ai";
 import { z } from "zod/v4";
 import { generateObject } from "../../utils/aiSdk";
-import { planDesignModel } from "../aiModelIds";
 import type { ObjectGenerator } from "./types";
 
 /** The real model call. Reasoning effort goes through provider options, keyed by the real provider name. */
-export const gatewayGenerator: ObjectGenerator = async ({ name, schema, system, prompt, effort }) => {
-  const model = planDesignModel();
+export const gatewayGenerator: ObjectGenerator = async ({ name, schema, system, prompt, model, effort }) => {
   const result = await generateObject({
     model: gateway(model),
     schema: jsonSchema(z.toJSONSchema(schema) as never),

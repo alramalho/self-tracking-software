@@ -100,8 +100,11 @@ export function validateSessions(
     // A coach builds from what you already do. Allow 10% for rounding to whole units.
     if (w === 0 && ctx.baselineWeekly && total < ctx.baselineWeekly * 0.9)
       problems.push(`week 1 totals ${total}, less than the ${ctx.baselineWeekly} the person already does each week`);
-    // Nor a jump: about 30% more, or one extra usual session, whichever is larger.
-    const ceiling = ctx.baselineWeekly ? Math.max(ctx.baselineWeekly * 1.3, ctx.baselineWeekly + (ctx.baselineSession ?? 0)) : null;
+    // Nor a jump: at most 25% more. When the coach added days (say 1 run a week becomes 3), allow the
+    // shorter sessions those days need: about 60% of a usual session each.
+    const ceiling = ctx.baselineWeekly
+      ? Math.max(ctx.baselineWeekly * 1.25, ctx.daysMin * 0.6 * (ctx.baselineSession ?? 0))
+      : null;
     if (w === 0 && ceiling && total > Math.ceil(ceiling))
       problems.push(`week 1 totals ${total}, a jump from the ${ctx.baselineWeekly} the person does now (keep it at or under ${Math.ceil(ceiling)})`);
     if (ctx.baselineSession) {

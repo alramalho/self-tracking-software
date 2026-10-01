@@ -157,30 +157,90 @@ export const cases: BenchCase[] = [
   },
 ];
 
-/** A coached half-marathon plan, a week in, after a hard session: the rolling regeneration case. */
-export function extensionCase(plan: { sessions: WindowInput["sessions"] }): WindowInput & { replaceUpcoming: boolean } {
-  return {
-    goal: "Finish my first half marathon",
-    goalSpec: null,
-    baseline: {
-      text: "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
-      measurements: [
-        { metric: "easy_pace_fast", value: 420, unit: "s/km", sourceQuote: "easy 5 km takes 35–37 minutes" },
-        { metric: "easy_pace_slow", value: 444, unit: "s/km", sourceQuote: "easy 5 km takes 35–37 minutes" },
-      ],
-    },
-    outline: { route: "steady", coach: "Helly", phases: [{ title: "Find your rhythm", startWeek: 1, endWeek: 4, progressCheck: "Run 5 km easy twice" }, { title: "Build endurance", startWeek: 5, endWeek: 16, progressCheck: "Long run 15 km" }], assumptions: [], daysMin: 3, daysMax: 3, startDate: START, estimatedWeeks: 20 },
-    finishingDate: "2027-02-21",
-    activities: [{ id: "running", key: "running", title: "Running", measure: "km", emoji: "🏃" }],
-    sessions: plan.sessions,
-    results: [
-      { date: "2026-10-05", activityId: "running", quantity: 3, difficulty: "normal", note: null },
-      { date: "2026-10-07", activityId: "running", quantity: 4, difficulty: "normal", note: null },
-      { date: "2026-10-10", activityId: "running", quantity: 6, difficulty: "hard", note: "Last 2 km were a struggle, legs heavy" },
-    ],
-    approvedHealthContext: null,
-    today: "2026-10-12",
-    feedback: "The long run felt too hard. Keep the goal, make next week easier.",
-    replaceUpcoming: true,
-  };
+/**
+ * Plan adaptation, from one fixed plan so every model faces the same facts: a first half marathon,
+ * Helly's route, 3 runs a week (3, 4, 6 km, then 4, 4, 7 km), easy pace 7:00–7:24 /km.
+ * - hard: the long run felt too hard after week 1 → the coach should ease off without stacking.
+ * - well: both weeks done and easy → the coach should progress, gradually.
+ * - sick: week 2 missed with the flu → the coach should restart lower, not make up the missed runs.
+ */
+const plannedSessions = [
+  ["2026-10-05", 3], ["2026-10-07", 4], ["2026-10-10", 6], ["2026-10-12", 4], ["2026-10-14", 4], ["2026-10-17", 7],
+].map(([date, km], i) => ({
+  id: `s${i}`, date: date as string, activityId: "running", quantity: km as number, title: i % 3 === 2 ? "Long easy run" : "Easy run",
+  targets: { durationMinutes: Math.ceil((km as number) * 7.4) + 6, effort: "easy, can talk", pace: { minSecondsPerKm: 420, maxSecondsPerKm: 444, basis: "USER_REPORTED_EASY_PACE" as const, evidence: "easy 5 km in 35–37 min" }, exercise: null, sets: null, reps: null, loadKg: null, restSeconds: null, progressMeasure: "Finish able to talk in sentences" },
+  completed: false,
+}));
+const logged = (rows: [string, number, string | null, string | null][]) =>
+  rows.map(([date, quantity, difficulty, note]) => ({ date, activityId: "running", quantity, difficulty, note }));
+
+export interface AdaptCase {
+  id: string;
+  title: string;
+  expect: string;
+  input: WindowInput & { replaceUpcoming: boolean };
 }
+const base = {
+  goal: "Finish my first half marathon",
+  goalSpec: null,
+  baseline: {
+    text: "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+    measurements: [
+      { metric: "easy_pace_fast", value: 420, unit: "s/km", sourceQuote: "easy 5 km takes 35–37 minutes" },
+      { metric: "easy_pace_slow", value: 444, unit: "s/km", sourceQuote: "easy 5 km takes 35–37 minutes" },
+    ],
+  },
+  outline: {
+    route: "steady" as const, coach: "Helly" as const,
+    phases: [
+      { title: "Find your rhythm", startWeek: 1, endWeek: 4, progressCheck: "Run 5 km easy twice in a week" },
+      { title: "Build endurance", startWeek: 5, endWeek: 14, progressCheck: "Long run reaches 15 km at easy pace" },
+      { title: "Sharpen and taper", startWeek: 15, endWeek: 18, progressCheck: "Last long run 18 km, then two lighter weeks" },
+    ],
+    assumptions: ["No injury or long break"], daysMin: 3, daysMax: 3, startDate: START, estimatedWeeks: 18,
+  },
+  finishingDate: "2027-02-07",
+  activities: [{ id: "running", key: "running", title: "Running", measure: "km", emoji: "🏃" }],
+  approvedHealthContext: null,
+};
+export const adaptCases: AdaptCase[] = [
+  {
+    id: "adapt-hard",
+    title: "The long run felt too hard",
+    expect: "Ease the next two weeks, keep the goal, don't stack what was missed",
+    input: {
+      ...base,
+      sessions: plannedSessions.map((x, i) => ({ ...x, completed: i < 3 })),
+      results: logged([["2026-10-05", 3, "normal", null], ["2026-10-07", 4, "normal", null], ["2026-10-10", 6, "hard", "Last 2 km were a struggle, legs heavy"]]),
+      today: "2026-10-12",
+      feedback: "The long run felt too hard. Keep the goal, make next week easier.",
+      replaceUpcoming: true,
+    },
+  },
+  {
+    id: "adapt-well",
+    title: "Two easy weeks, everything done",
+    expect: "Progress gradually (about 10% a week), long run grows a little",
+    input: {
+      ...base,
+      sessions: plannedSessions.map((x) => ({ ...x, completed: true })),
+      results: logged([["2026-10-05", 3, "easy", null], ["2026-10-07", 4, "easy", null], ["2026-10-10", 6, "normal", null], ["2026-10-12", 4, "easy", null], ["2026-10-14", 4, "easy", "Felt great"], ["2026-10-17", 7, "normal", "Comfortable the whole way"]]),
+      today: "2026-10-18",
+      feedback: null,
+      replaceUpcoming: false,
+    },
+  },
+  {
+    id: "adapt-sick",
+    title: "Missed week 2 with the flu",
+    expect: "Restart below where they were, don't make up missed runs, check in on recovery",
+    input: {
+      ...base,
+      sessions: plannedSessions.map((x, i) => ({ ...x, completed: i < 3 })),
+      results: logged([["2026-10-05", 3, "easy", null], ["2026-10-07", 4, "normal", null], ["2026-10-10", 6, "normal", null]]),
+      today: "2026-10-18",
+      feedback: "Had the flu all week, feeling better now.",
+      replaceUpcoming: false,
+    },
+  },
+];

@@ -9,7 +9,7 @@ import type {
 import { FollowThroughInputError } from "../follow-through/errors";
 import { addDays, daysBetween, finishingDateFor } from "./dates";
 import { gatewayGenerator } from "./generator";
-import { designEffort } from "../aiModelIds";
+import { effortFor, planModel } from "../aiModelIds";
 import { defaultRanges, routeCoach, sameRanges, sanitizeRanges, type DayRange } from "./frequency";
 import { assessPrompt, classifyPrompt, designPrompt, subgoalPrompt, windowPrompt } from "./prompts";
 import { assessSchema, classifySchema, routeSchema, subgoalSchema, windowSchema, type RouteOutput } from "./schema";
@@ -24,6 +24,19 @@ import type {
   WindowResult,
 } from "./types";
 import { easyPaceFrom, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
+
+/** Short calls (goal read, target question, days check) run on the quick model. */
+const quick = () => {
+  const model = planModel("quick")!;
+  return { model, effort: effortFor(model) };
+};
+
+/** The model to use first for a job, then the fallback if it is different and enabled. */
+function modelsFor(role: "design" | "adapt") {
+  const first = planModel(role)!;
+  const fallback = planModel("fallback");
+  return fallback && fallback !== first ? [first, fallback] : [first];
+}
 
 const DECLINE = /^(just|no |none|skip|not sure|i.?ll|nothing)/i;
 
@@ -40,7 +53,7 @@ export async function classifyGoal(
     schema: classifySchema,
     system: classifyPrompt,
     prompt: JSON.stringify(input),
-    effort: "low",
+    ...quick(),
   });
   // A number is only a target if the person wrote it.
   const goalSpec = object.goalSpec.chosenByUser
@@ -67,7 +80,7 @@ export async function nextSubgoalQuestion(
     schema: subgoalSchema,
     system: subgoalPrompt,
     prompt: JSON.stringify(input),
-    effort: "low",
+    ...quick(),
   });
   if (!object.ask || !object.title || object.choices.length < 2) return { question: null, usage };
   const repeated = input.asked.some(
@@ -122,6 +135,10 @@ function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range:
   }));
 }
 
+/**
+ * One route: two tries on the design model, then two on the fallback model, before giving up.
+ * The person never sees a plan that fails the checks; they see an error only if both models fail.
+ */
 async function designRoute(
   input: DesignInput,
   id: RouteId,
@@ -129,24 +146,27 @@ async function designRoute(
   weeks: number,
   generate: ObjectGenerator,
   extra = "",
-): Promise<{ output: RouteOutput; usage: GenerationUsage[]; retried: string[] }> {
+): Promise<{ output: RouteOutput; usage: GenerationUsage[]; retried: string[]; model: string }> {
   const usage: GenerationUsage[] = [];
   const retried: string[] = [];
-  let retry = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await generate({
-      name: `designRoute_${id}`,
-      schema: routeSchema,
-      system: designPrompt,
-      prompt: routePrompt(input, id, range, weeks, extra) + retry,
-      effort: designEffort(),
-    });
-    usage.push(result.usage);
-    if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage, retried };
-    const problems = problemsIn(result.object, input, id, range, weeks);
-    if (!problems.length) return { output: result.object, usage, retried };
-    retried.push(...problems.slice(0, 4).map((p) => `${id}: ${p}`));
-    retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
+  for (const model of modelsFor("design")) {
+    let retry = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await generate({
+        name: `designRoute_${id}`,
+        schema: routeSchema,
+        system: designPrompt,
+        prompt: routePrompt(input, id, range, weeks, extra) + retry,
+        model,
+        effort: effortFor(model),
+      });
+      usage.push(result.usage);
+      if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage, retried, model };
+      const problems = problemsIn(result.object, input, id, range, weeks);
+      if (!problems.length) return { output: result.object, usage, retried, model };
+      retried.push(...problems.slice(0, 4).map((p) => `${id} (${model}): ${p}`));
+      retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
+    }
   }
   throw new FollowThroughInputError("We couldn't build a reliable plan just now. Please try again.");
 }
@@ -200,7 +220,7 @@ export async function assessPreferredDays(
       fixedDate: input.fixedDate,
       startDate: input.startDate,
     }),
-    effort: "low",
+    ...quick(),
   });
   const weeks = coherentWeeks(object.steady.weeks, object.focused.weeks, input);
   const fits = { verdict: "FITS" as const, message: null, suggestedDays: null, targetInvolved: false };
@@ -237,7 +257,7 @@ export async function designOptions(
   const assessed = await assessPreferredDays(input, generate);
   const usage: GenerationUsage[] = [assessed.usage];
   if (assessed.note.verdict === "PUSHBACK")
-    return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
+    return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], models: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
   const { steady: steadyRange, focused: focusedRange } = assessed.ranges;
   const { steady: steadyWeeks, focused: focusedWeeks } = assessed.weeks;
   const [steady, focusedFirst] = await Promise.all([
@@ -248,7 +268,7 @@ export async function designOptions(
   const retried = [...steady.retried, ...focusedFirst.retried];
   const asked = [steady.output, focusedFirst.output].find((o) => o.status === "ASK" && o.question);
   const baseline = { text: input.baseline, measurements: steady.output.baselineMeasurements };
-  if (asked) return { status: "ASK", question: asked.question, coachNote: assessed.note, retried, baseline, options: [], usage };
+  if (asked) return { status: "ASK", question: asked.question, coachNote: assessed.note, retried, models: [steady.model, focusedFirst.model], baseline, options: [], usage };
   // Oli is the intense coach: his first week can't ask for less total work than Helly's.
   let focused = focusedFirst;
   const week1 = (o: RouteOutput) => weekTotal(o.route!.sessions, input.startDate, addDays(input.startDate, 7));
@@ -266,6 +286,7 @@ export async function designOptions(
     question: null,
     coachNote: assessed.note,
     retried,
+    models: [...new Set([steady.model, focused.model])],
     baseline,
     options: [toOption(steady.output, input, "steady", steadyRange, steadyWeeks), toOption(focused.output, input, "focused", focusedRange, focusedWeeks)],
     usage,
@@ -305,38 +326,43 @@ export async function extendWindow(
     approvedHealthContext: input.approvedHealthContext,
     feedback: input.feedback,
   });
-  let retry = "";
-  let usage: GenerationUsage | undefined;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await generate({
-      name: "extendWindow",
-      schema: windowSchema,
-      system: windowPrompt,
-      prompt: prompt + retry,
-      effort: designEffort(),
-    });
-    usage = result.usage;
-    const problems = validateSessions(result.object.sessions, {
-      activities: input.activities.map((a) => ({ key: a.id, measure: a.measure })),
-      windowStart,
-      daysMin: input.outline.daysMin,
-      daysMax: input.outline.daysMax,
-      easyPace: easyPaceFrom(measurements),
-      personText: [input.goal, input.baseline?.text ?? "", input.feedback ?? "", ...input.results.map((r) => r.note ?? "")].join(" "),
-      weeks: 2,
-    });
-    if (!problems.length)
-      return {
-        replaceSessionIds,
-        sessions: result.object.sessions.map(({ activity, ...s }) => ({ ...s, activityId: activity })),
-        phases: result.object.phases,
-        summary: result.object.summary,
-        designedThrough: addDays(windowStart, 13),
-        usage,
-      };
-    retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
+  const calls: GenerationUsage[] = [];
+  for (const model of modelsFor("adapt")) {
+    let retry = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await generate({
+        name: "extendWindow",
+        schema: windowSchema,
+        system: windowPrompt,
+        prompt: prompt + retry,
+        model,
+        effort: effortFor(model),
+      });
+      const usage = result.usage;
+      calls.push(usage);
+      const problems = validateSessions(result.object.sessions, {
+        activities: input.activities.map((a) => ({ key: a.id, measure: a.measure })),
+        windowStart,
+        daysMin: input.outline.daysMin,
+        daysMax: input.outline.daysMax,
+        easyPace: easyPaceFrom(measurements),
+        personText: [input.goal, input.baseline?.text ?? "", input.feedback ?? "", ...input.results.map((r) => r.note ?? "")].join(" "),
+        weeks: 2,
+      });
+      if (!problems.length)
+        return {
+          replaceSessionIds,
+          sessions: result.object.sessions.map(({ activity, ...s }) => ({ ...s, activityId: activity })),
+          phases: result.object.phases,
+          summary: result.object.summary,
+          designedThrough: addDays(windowStart, 13),
+          usage,
+          calls,
+        };
+      retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
+    }
   }
-  throw new Error("Window design failed validation twice");
+  throw new Error("Window design failed validation on every model");
 }
 
 export type { DesignActivity };

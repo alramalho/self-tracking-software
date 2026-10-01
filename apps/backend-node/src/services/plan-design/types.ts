@@ -19,6 +19,8 @@ export interface GenerateObjectArgs<T extends z.ZodType> {
   schema: T;
   system: string;
   prompt: string;
+  /** AI Gateway model id, e.g. openai/gpt-6-luna. */
+  model: string;
   effort: Effort;
 }
 
@@ -68,6 +70,8 @@ export interface DesignResult {
   coachNote: CoachNote | null;
   /** What the validator rejected before the final answer, for the benchmark and for tuning prompts. */
   retried: string[];
+  /** Models that produced the routes (more than one when the fallback stepped in). */
+  models: string[];
   baseline: DesignBaseline;
   options: DesignOption[];
   usage: GenerationUsage[];
@@ -122,6 +126,8 @@ export interface WindowResult {
   summary: string;
   designedThrough: string;
   usage: GenerationUsage;
+  /** Every call this window took, including a fallback model's. */
+  calls?: GenerationUsage[];
 }
 
 export type { ClassifyResult, SubgoalQuestion };
