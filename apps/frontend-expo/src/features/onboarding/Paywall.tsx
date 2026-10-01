@@ -1,12 +1,11 @@
 import { Image, Pressable, View } from "react-native";
-import { CalendarCheck, Check, Compass, Minus, TrendingUp } from "lucide-react-native";
+import { Check } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
-import { PreviewButton, PreviewSheet } from "@/features/messages/entities/PreviewSheet";
 import { StepSequence } from "./interview/StepReveal";
-import type { CoachingPlan, FreeTrackingSheetProps, PaywallProps } from "./types";
+import type { CoachingPlan, PaywallProps } from "./types";
 
 // Real members who agreed to appear on tracking.so (same testimonials as the website).
 const MEMBERS = [
@@ -19,11 +18,23 @@ const QUOTE = {
   name: "Barbara",
 };
 
-// What coaching changes, not what it contains.
-const IMPACT = [
-  { icon: Compass, text: "A plan that adjusts when life gets busy" },
-  { icon: CalendarCheck, text: "A nudge before a week slips, not after" },
-  { icon: TrendingUp, text: "An honest weekly review of what's working" },
+// What stays either way, and what the coach adds. Same facts for everyone; the grey checks show the gap
+// without naming a loss. Reminders, streaks, friends and Apple Health are free (checked against the app).
+type Row = { text: string; free: boolean };
+const OUTCOME_ROWS: Row[] = [
+  { text: "Two weeks, pace, targets", free: true },
+  { text: "Reminders, streaks, friends", free: true },
+  { text: "Next weeks planned as you go", free: false },
+  { text: "Lighter week after a hard one", free: false },
+  { text: "Nudge before a week slips", free: false },
+  { text: "Weekly review", free: false },
+];
+const HABIT_ROWS: Row[] = [
+  { text: "Your habit and streaks", free: true },
+  { text: "Reminders, friends, Health", free: true },
+  { text: "Target adjusts as weeks go", free: false },
+  { text: "Nudge before a week slips", free: false },
+  { text: "Weekly review", free: false },
 ];
 
 const LABELS: Record<CoachingPlan["id"], string> = {
@@ -53,9 +64,12 @@ export const paywallCta = (plan?: CoachingPlan) =>
   plan?.trialDays ? `Start my ${plan.trialDays} free days` : "Start coaching";
 
 /** The coaching paywall: who's in, the person's own goal, what changes, and the plans. */
-export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
+export function Paywall({ facts, plans, selected, onSelect, coach: chosenCoach }: PaywallProps) {
   const c = useColors();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const account = coachIdentity(useCurrentUser().data?.coachPersonality);
+  // The route chosen in onboarding names the coach, because that is who the plan was built by.
+  const coach = chosenCoach ? { ...account, name: chosenCoach } : account;
+  const coachName = coach.name;
   const weekly = plans.find((plan) => plan.id === "weekly");
   const saving = (plan: CoachingPlan) =>
     weekly && plan.id !== "weekly"
@@ -67,42 +81,15 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
   );
 
   return (
-    <StepSequence prefix="paywall" testID="coaching-paywall" style={{ gap: 22 }}>
-      {/* 1. Social proof: real members. */}
-      <View style={{ alignItems: "center", gap: 10 }}>
-        <View style={{ flexDirection: "row" }}>
-          {[
-            ...MEMBERS.map((uri) => ({ uri })),
-            coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png"),
-          ].map((source, i) => (
-            <Image
-              key={i}
-              source={source}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                marginLeft: i ? -12 : 0,
-                borderWidth: 2,
-                borderColor: c.bg,
-                backgroundColor: c.soft,
-              }}
-            />
-          ))}
-        </View>
-        <Text style={{ color: c.muted, fontSize: 13, textAlign: "center", fontStyle: "italic" }}>
-          “{QUOTE.text}” — {QUOTE.name}
-        </Text>
-      </View>
-
+    <StepSequence prefix="paywall" testID="coaching-paywall" style={{ gap: 14 }}>
       {/* 2. The vision, in their own words. */}
-      <View style={{ alignItems: "center", gap: 8 }}>
-        <Text style={{ color: c.accent, fontSize: 13, fontWeight: "700", letterSpacing: 0.4 }}>
+      <View style={{ alignItems: "center", gap: 4 }}>
+        <Text style={{ color: c.accent, fontSize: 12, fontWeight: "700", letterSpacing: 0.4 }}>
           {coach.name.toUpperCase()} WILL GET YOU THERE
         </Text>
         <Text
           accessibilityRole="header"
-          style={{ color: c.text, fontSize: 23, lineHeight: 29, fontWeight: "700", textAlign: "center", letterSpacing: -0.4 }}
+          style={{ color: c.text, fontSize: 21, lineHeight: 26, fontWeight: "700", textAlign: "center", letterSpacing: -0.4 }}
         >
           {facts.emoji} {facts.goal}
         </Text>
@@ -113,14 +100,51 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
         )}
       </View>
 
-      {/* 3. Impact. */}
-      <View style={{ gap: 12, paddingHorizontal: 8 }}>
-        {IMPACT.map(({ icon: Icon, text }) => (
-          <View key={text} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Icon size={20} color={c.accent} />
-            <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>{text}</Text>
+      {/* 3. What you keep, and what the coach adds. */}
+      <View testID="paywall-compare" style={{ backgroundColor: c.card, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 6 }}>
+          <View style={{ flex: 1 }} />
+          <Text style={{ width: 62, textAlign: "center", color: c.muted, fontSize: 11, lineHeight: 14, fontWeight: "700" }}>On your own</Text>
+          <Text style={{ width: 62, textAlign: "center", color: c.muted, fontSize: 11, lineHeight: 14, fontWeight: "700" }}>With {coachName}</Text>
+        </View>
+        {(facts.coachingRole === "consistency" ? HABIT_ROWS : OUTCOME_ROWS).map((row) => (
+          <View key={row.text} style={{ flexDirection: "row", alignItems: "center", minHeight: 34, borderTopWidth: 1, borderColor: c.border }}>
+            <Text style={{ flex: 1, color: c.text, fontSize: 14, lineHeight: 18, paddingVertical: 6, paddingRight: 6 }}>{row.text}</Text>
+            <View accessibilityLabel={row.free ? "Included" : "Not included"} style={{ width: 62, alignItems: "center" }}>
+              <Check size={18} strokeWidth={3} color={row.free ? c.accent : c.muted} style={{ opacity: row.free ? 1 : 0.4 }} />
+            </View>
+            <View accessibilityLabel="Included" style={{ width: 62, alignItems: "center" }}>
+              <Check size={18} strokeWidth={3} color={c.accent} />
+            </View>
           </View>
         ))}
+      </View>
+
+      {/* 1. Social proof: real members. */}
+      <View style={{ alignItems: "center", gap: 6 }}>
+        <View style={{ flexDirection: "row" }}>
+          {[
+            ...MEMBERS.map((uri) => ({ uri })),
+            coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png"),
+          ].map((source, i) => (
+            <Image
+              key={i}
+              source={source}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                marginLeft: i ? -10 : 0,
+                borderWidth: 2,
+                borderColor: c.bg,
+                backgroundColor: c.soft,
+              }}
+            />
+          ))}
+        </View>
+        <Text style={{ color: c.muted, fontSize: 12, textAlign: "center", fontStyle: "italic" }}>
+          “{QUOTE.text}” — {QUOTE.name}
+        </Text>
       </View>
 
       {/* 4. Plans, best value preselected. */}
@@ -208,65 +232,5 @@ export function Paywall({ facts, plans, selected, onSelect }: PaywallProps) {
         })}
       </View>
     </StepSequence>
-  );
-}
-
-// Checked against the app: reminders, streaks, friends and Apple Health work without a subscription.
-const FREE_KEEPS = [
-  "Your plan, streaks and progress",
-  "Reminders at the times you choose",
-  "Friends, the feed and reactions",
-  "Apple Health workouts and sleep",
-];
-const COACH_ADDS = [
-  "A weekly review of what's working",
-  "A nudge before a week slips",
-  "Plan changes when life gets busy",
-];
-
-/** Before tracking for free: what you keep, what the coach would add, and one more look at the trial. */
-export function FreeTrackingSheet({ visible, plan, busy, onTrial, onFree, onClose }: FreeTrackingSheetProps) {
-  const c = useColors();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
-  const row = (Icon: typeof Check, text: string, color: string) => (
-    <View key={text} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <Icon size={17} color={color} />
-      <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>{text}</Text>
-    </View>
-  );
-  return (
-    <PreviewSheet visible={visible} title="Track on your own" onClose={onClose}>
-      <StepSequence prefix="free-sheet" style={{ gap: 16 }}>
-      <View style={{ alignItems: "center", gap: 8 }}>
-        <Image
-          source={coach.name === "Oli" ? require("../../../assets/coaches/oli-3d.png") : require("../../../assets/coaches/helly-3d.png")}
-          style={{ width: 72, height: 72 }}
-        />
-        <Text
-          accessibilityRole="header"
-          style={{ color: c.text, fontSize: 22, lineHeight: 28, fontWeight: "700", textAlign: "center" }}
-        >
-          Your plan is ready either way
-        </Text>
-        <Text style={{ color: c.muted, fontSize: 15, textAlign: "center" }}>
-          You can add coaching to any plan later.
-        </Text>
-      </View>
-      <View style={{ gap: 10 }}>
-        <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>FREE, FOREVER</Text>
-        {FREE_KEEPS.map((text) => row(Check, text, "#22c55e"))}
-      </View>
-      <View style={{ gap: 10 }}>
-        <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>WHAT {coach.name.toUpperCase()} WOULD ADD</Text>
-        {COACH_ADDS.map((text) => row(Minus, text, c.muted))}
-      </View>
-      <PreviewButton
-        label={plan?.trialDays ? `Try ${coach.name} free for ${plan.trialDays} days` : `Start coaching with ${coach.name}`}
-        disabled={busy}
-        onPress={onTrial}
-      />
-      <PreviewButton secondary label="Track for free" disabled={busy} onPress={onFree} />
-      </StepSequence>
-    </PreviewSheet>
   );
 }

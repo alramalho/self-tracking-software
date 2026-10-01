@@ -31,19 +31,13 @@ export interface CoachingPlan {
 export interface CoachingOffer extends Omit<CoachingPlan, "id"> {
   plans?: CoachingPlan[];
 }
-export interface FreeTrackingSheetProps {
-  visible: boolean;
-  plan?: CoachingPlan;
-  busy: boolean;
-  onTrial: () => void;
-  onFree: () => void;
-  onClose: () => void;
-}
 export interface PaywallProps {
   facts: import("@tsw/prisma/follow-through").InterviewFacts;
   plans: CoachingPlan[];
   selected: CoachingPlan["id"];
   onSelect: (id: CoachingPlan["id"]) => void;
+  /** The coach whose route the person chose; falls back to their account's coach. */
+  coach?: "Helly" | "Oli";
 }
 export interface OnboardingProps {
   preview?: boolean;

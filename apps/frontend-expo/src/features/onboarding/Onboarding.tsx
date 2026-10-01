@@ -49,7 +49,7 @@ import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
 import { CoachingTour } from "./CoachingTour";
 import { PlanConclusion } from "./PlanConclusion";
-import { FreeTrackingSheet, Paywall, paywallCta, price } from "./Paywall";
+import { Paywall, paywallCta, price } from "./Paywall";
 import { appleBilling, buyApplePlan, loadApplePlans, restoreApplePurchases } from "@/features/billing/apple";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
@@ -134,7 +134,6 @@ export default function Onboarding({
     [checking, setChecking] = useState(false);
   // Quarterly is the best value, so it starts selected.
   const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
-  const [freeSheet, setFreeSheet] = useState(false);
   const [error, setError] = useState<unknown>();
   const [dictationBusy, setDictationBusy] = useState(false);
   const upgradeIntent = useRef(false);
@@ -996,11 +995,16 @@ export default function Onboarding({
         <Pressable
           accessibilityRole="button"
           disabled={complete.isPending || checkout.isPending}
-          onPress={() => setFreeSheet(true)}
+          onPress={() => {
+            // One decision on one screen: the table above already showed what the coach adds.
+            upgradeIntent.current = false;
+            setAwaitingUpgrade(false);
+            complete.mutate(false);
+          }}
           style={{ alignItems: "center", paddingVertical: 6 }}
         >
-          <Text style={{ color: c.muted, fontSize: 14, textDecorationLine: "underline" }}>
-            Just track it for free
+          <Text style={{ color: c.muted, fontSize: 15, textDecorationLine: "underline" }}>
+            Continue without {draft.design?.selected === "focused" ? "Oli" : draft.design?.selected === "steady" ? "Helly" : "my coach"}
           </Text>
         </Pressable>
       ) : (
@@ -1020,22 +1024,6 @@ export default function Onboarding({
           }}
         />
       )}
-      <FreeTrackingSheet
-        visible={freeSheet}
-        plan={selectedPlan}
-        busy={complete.isPending || checkout.isPending}
-        onTrial={() => {
-          setFreeSheet(false);
-          checkout.mutate();
-        }}
-        onFree={() => {
-          setFreeSheet(false);
-          upgradeIntent.current = false;
-          setAwaitingUpgrade(false);
-          complete.mutate(false);
-        }}
-        onClose={() => setFreeSheet(false)}
-      />
       {coachPaywall && (
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 24 }}>
           {[
@@ -1345,7 +1333,7 @@ export default function Onboarding({
               )}
           </StepSequence>}
           {!finished && (coachPaywall ? (
-            <Paywall facts={state.facts} plans={plans} selected={selectedPlan!.id} onSelect={setPlanId} />
+            <Paywall facts={state.facts} plans={plans} selected={selectedPlan!.id} onSelect={setPlanId} coach={draft.design?.selected === "focused" ? "Oli" : draft.design?.selected === "steady" ? "Helly" : undefined} />
           ) : (
             <StepSequence start={3} prefix="content" style={{ gap: 16 }}>
                 {paywall && <PlanConclusion facts={state.facts} coaching={draft.coaching} preferences={draft.preferences} />}

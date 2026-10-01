@@ -36,9 +36,9 @@ async function toPaywall(page: Page) {
   for (let i = 0; i < 3; i++) await next(page);
   await page.getByRole("button", { name: "Just me" }).click();
 }
+// One decision on one screen: the link under the table creates the plan directly, with no second sheet.
 const trackForFree = async (page: Page) => {
-  await page.getByRole("button", { name: "Just track it for free" }).click();
-  await page.getByRole("button", { name: "Track for free", exact: true }).click();
+  await page.getByRole("button", { name: /^Continue without / }).click();
 };
 
 test("a paid member meets the coach straight after choosing a route, with no coaching question", async ({ page, request }) => {
@@ -140,6 +140,14 @@ test("free tracking keeps the designed plan, without a trial or checkout", async
   await openOnboarding(page, "/onboarding");
   await toPaywall(page);
   await expect(page.getByTestId("coaching-paywall")).toBeVisible();
+  // What stays and what the coach adds, side by side. The coach is the one whose route was chosen.
+  const compare = page.getByTestId("paywall-compare");
+  await expect(compare).toContainText("On your own");
+  await expect(compare).toContainText("With Oli");
+  await expect(compare).toContainText("Two weeks, pace, targets");
+  await expect(compare).toContainText("Next weeks planned as you go");
+  await expect(compare.getByLabel("Not included")).toHaveCount(4);
+  await expect(page.getByText("Your plan is ready either way")).toHaveCount(0);
   // Quarterly (7 free days) is preselected; weekly has no trial.
   await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();
   await page.getByRole("radio", { name: /^Weekly/ }).click();
