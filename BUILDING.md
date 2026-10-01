@@ -17,3 +17,7 @@ The selected `tracking-circles` onboarding uses the original 3D artwork without 
 ## Latest Safari-install release — build 188, September 30, 2026
 
 Circle encouragement is deployed on the web and backend, and local signed iPhone/Watch build 188 is verified and hosted. Source `9cce3691` combines the approved encouragement change `0022291e` with existing main `eda9fab9`; opening the member hand opens a personal composer, and sending explicitly delivers a private message. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-188--circle-encouragement-september-30-2026) for exact commands, artifacts and verification. This is a Safari test release; the recorded TestFlight release remains 177.
+
+## Latest TestFlight release — build 192, October 1, 2026
+
+Coached outcome plans (outcome/consistency goals, two routes by Helly and Oli, two reviewed weeks, paywall table) are live on the backend (`plan-design-20261001`) and uploaded to TestFlight as build 192 from `a30dc209`. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-192-october-1-2026). The Vite web app is unchanged by this release.
