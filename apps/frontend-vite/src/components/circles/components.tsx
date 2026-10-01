@@ -1,7 +1,7 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { Cake, Check, ChevronRight, Gauge, Hand, Lock, MapPin, Target } from "lucide-react";
-import { avatarColor, firstName, MATCHING_TARGET } from "./model";
+import { avatarColor, firstName, MATCHING_TARGET, weekChipLabel } from "./model";
 import type {
   CircleCardViewProps,
   CirclePanelProps,
@@ -12,6 +12,7 @@ import type {
   PersonAvatarProps,
   PreferenceChoice,
   ReasonChipsProps,
+  WeekChipPillProps,
   WeekDotsProps,
 } from "./types";
 
@@ -59,6 +60,21 @@ export function PersonAvatar({ name, picture, size = 32, ring }: PersonAvatarPro
         )}
       </div>
     </div>
+  );
+}
+
+// On a circle log: how far into their week it was. Green only on the one that completes the week.
+export function WeekChipPill({ chip }: WeekChipPillProps) {
+  const { text, done } = weekChipLabel(chip);
+  return (
+    <span
+      className={cn(
+        "whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        done ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-muted text-foreground"
+      )}
+    >
+      {text}
+    </span>
   );
 }
 

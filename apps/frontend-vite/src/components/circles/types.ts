@@ -86,12 +86,34 @@ export interface BoardMember {
   nudgedToday: boolean;
 }
 
-export interface CircleRecap {
-  weekStart: string;
-  hit: number;
-  total: number;
-  topName: string | null;
-  topCount: number;
+// "3 of 4 this week" on a circle log: the days its owner had done that week, up to that log.
+export interface WeekChip {
+  done: number;
+  target: number;
+}
+
+export interface PastWeekPerson {
+  userId: string;
+  done: number;
+  target: number;
+  hit: boolean;
+}
+
+// Finished weeks (oldest first) and each person's share of their own target.
+export interface PastWeeks {
+  weeks: { start: string; allHit: boolean; people: PastWeekPerson[] }[];
+  // `hits` lines up with `weeks`; null for weeks before they joined.
+  ranking: { userId: string; percent: number; rank: number; hits: (boolean | null)[] }[];
+}
+
+// One bar in the past-weeks chart: a finished week, or the week in progress.
+export interface WeekBar {
+  key: string;
+  label: string;
+  current: boolean;
+  allHit: boolean;
+  target: number;
+  segments: { userId: string; done: number }[];
 }
 
 export interface CircleMe {
@@ -100,6 +122,8 @@ export interface CircleMe {
   hasIntro: boolean;
   // Still needs a first photo log on the circle plan to be in.
   pending: boolean;
+  // Their own switch for this circle's pushes.
+  muted: boolean;
 }
 
 export interface CircleBoard {
@@ -113,10 +137,12 @@ export interface CircleBoard {
   place: string | null;
   paceLabel: string | null;
   cap: number;
+  // The owner's switch for Helly's recap and halfway check in the chat.
+  coachPosts: boolean;
   me: CircleMe;
   members: BoardMember[];
   togetherStreak: number;
-  recap: CircleRecap | null;
+  pastWeeks: PastWeeks | null;
 }
 
 export interface CircleFeedActivity {
@@ -156,6 +182,7 @@ export interface CircleFeedEntry {
   reactions: CircleFeedReaction[];
   comments: CircleFeedComment[];
   _count: { comments: number };
+  weekChip: WeekChip | null;
 }
 
 export interface CircleFeed {
@@ -191,9 +218,10 @@ export interface CircleTag {
   emoji: string;
 }
 
-// Every circle is open, so the only thing an owner changes is the name.
+// Owner settings: the circle's name, and whether Helly posts in its chat.
 export interface CircleUpdate {
-  name: string;
+  name?: string;
+  coachPosts?: boolean;
 }
 
 // Joining (or starting) always leaves you pending until your first photo log.
@@ -240,10 +268,37 @@ export interface OrbitEllipse {
 export interface OrbitProps {
   people: OrbitPerson[];
   height?: number;
+  // The whole ellipse, sized to its container, instead of the wide arc used in onboarding.
+  ring?: boolean;
 }
 
 export interface OrbitAvatarProps {
   person: OrbitPerson;
+  size: number;
+}
+
+export interface PastWeeksRowProps {
+  board: CircleBoard;
+  viewerId: string | undefined;
+  onPress: () => void;
+}
+
+export interface PastWeeksSheetProps {
+  board: CircleBoard;
+  viewerId: string | undefined;
+  open: boolean;
+  onClose: () => void;
+}
+
+export interface PastWeeksChartProps {
+  bars: WeekBar[];
+  colors: Record<string, string>;
+  // When set, everyone else's slices dim.
+  highlight: string | undefined;
+}
+
+export interface WeekChipPillProps {
+  chip: WeekChip;
 }
 
 export interface WeekDotsProps {
@@ -362,6 +417,11 @@ export interface UpdateCircleInput {
 export interface CircleMemberInput {
   circleId: string;
   userId: string;
+}
+
+export interface MuteCircleInput {
+  circleId: string;
+  muted: boolean;
 }
 
 export interface LoadErrorProps {

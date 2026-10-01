@@ -13,6 +13,7 @@ import type {
   JoinedCircle,
   MatchPreferences,
   MatchResult,
+  MuteCircleInput,
   MyCircle,
   PendingMatch,
   PlanSuggestions,
@@ -187,6 +188,13 @@ export const useCircleActions = () => {
     onSuccess: refreshCircles,
   });
 
+  // Your own switch for this circle's pushes (chat messages and Helly's posts).
+  const muteCircle = useMutation({
+    mutationFn: async (input: MuteCircleInput) =>
+      api.patch(`/circles/${input.circleId}/membership`, { muted: input.muted }),
+    onSuccess: refreshCircles,
+  });
+
   const leaveCircle = useMutation({
     mutationFn: async (circleId: string) =>
       api.delete(`/circles/${circleId}/membership`),
@@ -216,6 +224,7 @@ export const useCircleActions = () => {
     joinCircle,
     joinByInvite,
     updateCircle,
+    muteCircle,
     leaveCircle,
     removeMember,
     skipProof,

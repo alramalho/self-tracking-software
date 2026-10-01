@@ -1,7 +1,7 @@
 import { type Activity, Prisma } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
-import type { CircleTag } from "@/components/circles/types";
+import type { CircleTag, WeekChip } from "@/components/circles/types";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 import { normalizePlanProgress } from "../plans-progress/service";
 
@@ -71,8 +71,10 @@ type TimelineActivityEntryBase = Prisma.ActivityEntryGetPayload<{
 }>;
 
 // Entries from people you share a circle with carry that circle, for the pill on the card.
+// Logs on a circle plan also carry how far into the week they were.
 export type TimelineActivityEntry = TimelineActivityEntryBase & {
   circle?: CircleTag | null;
+  weekChip?: WeekChip | null;
 };
 
 type TimelineUserBase = Prisma.UserGetPayload<{

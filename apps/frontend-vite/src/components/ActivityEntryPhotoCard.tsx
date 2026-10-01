@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CircleTagPill } from "@/components/circles/CircleTagPill";
-import type { CircleTag } from "@/components/circles/types";
+import { WeekChipPill } from "@/components/circles/components";
+import type { CircleTag, WeekChip } from "@/components/circles/types";
 import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type PlanProgressData } from "@/contexts/plans-progress";
@@ -314,6 +315,8 @@ interface ActivityEntryPhotoCardProps {
   onToggleCollapse?: () => void;
   // The circle this post reached you through, shown as a small pill by the username.
   circle?: CircleTag | null;
+  // On a circle log: how far into their week it was ("3 of 4 this week").
+  weekChip?: WeekChip | null;
 }
 
 interface ReactionCount {
@@ -344,6 +347,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   circle,
+  weekChip,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -1030,7 +1034,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activity.emoji}
               </span>
               <div className="flex flex-col">
-                <div className="flex items-center gap-1 flex-row flex-nowrap">
+                <div className="flex items-center gap-1 flex-row flex-wrap">
                   <span
                     className="text-sm text-muted-foreground hover:underline cursor-pointer"
                     onClick={onUsernameClick}
@@ -1039,6 +1043,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     @{user.username}
                   </span>
                   {circle && <CircleTagPill circle={circle} />}
+                  {weekChip && <WeekChipPill chip={weekChip} />}
                   {/* {accountLevel.atLeastBronze &&
                     accountLevel.currentLevel?.getIcon({
                       size: 16,

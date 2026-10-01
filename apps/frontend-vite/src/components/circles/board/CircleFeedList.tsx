@@ -47,6 +47,7 @@ export function CircleFeedList({ circleId }: CircleFeedListProps) {
           <ActivityEntryPhotoCard
             {...asCardProps(entry)}
             userPlansProgressData={[]}
+            weekChip={entry.weekChip}
             onAvatarClick={() => openProfile(entry.user.username)}
             onUsernameClick={() => openProfile(entry.user.username)}
             onParticipantClick={openProfile}

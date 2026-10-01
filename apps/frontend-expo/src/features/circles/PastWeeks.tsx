@@ -101,12 +101,12 @@ function Chart({ bars, colors, highlight }: PastWeeksChartProps) {
                     />
                   ) : null;
                 })}
-                {bar.current && (
+                {bar.current && target > 0 && (
                   <Rect
                     x={x - 0.5}
-                    y={base - bar.target * unit}
+                    y={targetY}
                     width={barWidth + 1}
-                    height={bar.target * unit}
+                    height={base - targetY}
                     rx={4}
                     fill="none"
                     stroke={c.muted}

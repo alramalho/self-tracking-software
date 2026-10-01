@@ -3,8 +3,10 @@ import { MotivateDrawer } from "@/components/circles/MotivateDrawer";
 import { CircleFeedList } from "@/components/circles/board/CircleFeedList";
 import { RenameCircleDialog } from "@/components/circles/board/RenameCircleDialog";
 import { CirclePanel, MemberRow, OpenSpots } from "@/components/circles/components";
-import { daysLeftLabel, firstName, recapLine } from "@/components/circles/model";
-import type { BoardMember, CircleBoardSearch } from "@/components/circles/types";
+import { daysLeftLabel, firstName, personColors } from "@/components/circles/model";
+import { Orbit } from "@/components/circles/Orbit";
+import { PastWeeksRow, PastWeeksSheet } from "@/components/circles/PastWeeks";
+import type { BoardMember, CircleBoardSearch, OrbitPerson } from "@/components/circles/types";
 import ConfirmDialogOrPopover from "@/components/ConfirmDialogOrPopover";
 import { ActionSheet } from "@/components/safety/ActionSheet";
 import { ReportDialog } from "@/components/safety/ReportDialog";
@@ -19,7 +21,7 @@ import { getCoachAvatar } from "@/lib/coachPersonality";
 import { cn } from "@/lib/utils";
 import { toApiErrorMessage } from "@/utils/errorMessage";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Camera, ChevronLeft, Flame, Loader2, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react";
+import { Camera, ChevronLeft, Loader2, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -39,13 +41,14 @@ function CirclePage() {
   const { currentUser } = useCurrentUser();
   const board = useCircle(id);
   const { plans } = usePlans();
-  const { updateCircle, leaveCircle, removeMember, skipProof, openChat } = useCircleActions();
+  const { updateCircle, muteCircle, leaveCircle, removeMember, skipProof, openChat } = useCircleActions();
   const blockUser = useBlockUser();
   const [, copy] = useClipboard();
   const [sheet, setSheet] = useState<ActionSheetContent | null>(null);
   const [report, setReport] = useState<ReportTarget>();
   const [motivating, setMotivating] = useState<BoardMember>();
   const [renaming, setRenaming] = useState(false);
+  const [pastWeeksOpen, setPastWeeksOpen] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const data = board.data;
   const isOwner = data?.me.role === "OWNER";
@@ -144,6 +147,19 @@ function CirclePage() {
       actions: [
         { label: "Invite friends", onPress: () => void copyInvite() },
         ...(isOwner ? [{ label: "Rename", onPress: () => setRenaming(true) }] : []),
+        ...(isOwner
+          ? [
+              {
+                label: data.coachPosts ? "Turn off Helly's posts" : "Turn on Helly's posts",
+                onPress: () =>
+                  updateCircle.mutate({ circleId: id, changes: { coachPosts: !data.coachPosts } }, { onError }),
+              },
+            ]
+          : []),
+        {
+          label: data.me.muted ? "Unmute notifications" : "Mute notifications",
+          onPress: () => muteCircle.mutate({ circleId: id, muted: !data.me.muted }, { onError }),
+        },
         {
           label: "Report circle",
           destructive: true,
@@ -155,6 +171,26 @@ function CirclePage() {
   };
 
   const forming = data?.status === "FORMING";
+  // Who's in the circle, drifting on the orbit (same colours as the past-weeks chart),
+  // with dashed spots while there's room.
+  const colors = personColors(data?.members ?? []);
+  const orbit: OrbitPerson[] = data
+    ? [
+        ...data.members.map((member) => ({
+          key: member.user.id,
+          label: firstName(member.user),
+          color: colors[member.user.id],
+          picture: member.user.picture,
+          isMe: member.user.id === myId,
+        })),
+        ...Array.from({ length: Math.max(0, Math.min(3, data.cap - data.members.length)) }, (_, i) => ({
+          key: `open-${i}`,
+          label: "",
+          color: "transparent",
+          empty: true,
+        })),
+      ]
+    : [];
   const daysLeft = data?.members.find((member) => member.user.id === myId)?.week.daysLeft;
   const subtitle = data
     ? [`${data.members.length} of ${data.cap}`, data.place, data.paceLabel].filter(Boolean).join(" · ")
@@ -215,6 +251,8 @@ function CirclePage() {
             </CirclePanel>
           )}
 
+          {!data.me.pending && <Orbit ring people={orbit} height={124} />}
+
           {forming ? (
             <CirclePanel>
               <p className="text-base font-semibold text-foreground">Forming</p>
@@ -234,17 +272,6 @@ function CirclePage() {
             </CirclePanel>
           ) : (
             <>
-              {data.togetherStreak > 0 && (
-                <CirclePanel className="flex items-center gap-3">
-                  <Flame className="h-[26px] w-[26px]" color="#ff9500" />
-                  <div className="flex-1">
-                    <p className="text-base font-semibold text-foreground">
-                      {data.togetherStreak === 1 ? "1 week together" : `${data.togetherStreak} weeks together`}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Everyone hit their week</p>
-                  </div>
-                </CirclePanel>
-              )}
               <CirclePanel>
                 <div className="flex justify-between">
                   <p className="text-base font-semibold text-foreground">This week</p>
@@ -266,15 +293,7 @@ function CirclePage() {
                 })}
                 <OpenSpots members={data.members.length} />
               </CirclePanel>
-              {data.recap && (
-                <CirclePanel className="flex items-center gap-3">
-                  <img src={coachAvatar} alt="" className="h-11 w-11 object-contain" />
-                  <div className="flex-1">
-                    <p className="text-[15px] font-semibold text-foreground">Last week</p>
-                    <p className="text-sm text-muted-foreground">{recapLine(data.recap, data.togetherStreak)}</p>
-                  </div>
-                </CirclePanel>
-              )}
+              <PastWeeksRow board={data} viewerId={myId} onPress={() => setPastWeeksOpen(true)} />
             </>
           )}
 
@@ -328,6 +347,9 @@ function CirclePage() {
         actions={sheet?.actions ?? []}
         onClose={() => setSheet(null)}
       />
+      {data && (
+        <PastWeeksSheet board={data} viewerId={myId} open={pastWeeksOpen} onClose={() => setPastWeeksOpen(false)} />
+      )}
       {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportDialog target={report} onClose={() => setReport(undefined)} />
       <ConfirmDialogOrPopover
