@@ -151,6 +151,13 @@ describe("designOptions", () => {
     expect(result.models).toContain("anthropic/claude-sonnet-5.5");
   });
 
+  it("treats a reply that breaks the format as a failed attempt and retries", async () => {
+    const { generate, calls } = fake(fitsNote, "not a route", routeOutput("focused", 16, FOCUSED), routeOutput("steady", 20, STEADY));
+    const result = await designOptions(input, generate);
+    expect(result.options).toHaveLength(2);
+    expect(calls[3].prompt).toContain("could not be used");
+  });
+
   it("fails loudly instead of showing an unreliable plan", async () => {
     const { generate } = fake(fitsNote, routeOutput("steady", 20, [0, 2]));
     await expect(designOptions(input, generate)).rejects.toThrow(/reliable plan/);
@@ -372,5 +379,12 @@ describe("extendWindow (rolling regeneration)", () => {
     const result = await extendWindow({ ...plan, replaceUpcoming: true, feedback: "Too hard" }, generate);
     expect(result.replaceSessionIds).toEqual(["s2", "s3"]);
     expect(result.designedThrough).toBe("2026-10-28");
+  });
+  it("retries when a reply breaks the format, instead of failing the review", async () => {
+    const tooLong = { ...windowOutput("2026-10-19"), summary: "x".repeat(400) };
+    const { generate, calls } = fake(tooLong, windowOutput("2026-10-19"));
+    const result = await extendWindow({ ...plan, replaceUpcoming: false }, generate);
+    expect(result.sessions.length).toBeGreaterThan(0);
+    expect(calls[1].prompt).toContain("could not be used");
   });
 });

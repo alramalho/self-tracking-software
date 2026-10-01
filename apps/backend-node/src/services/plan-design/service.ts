@@ -139,6 +139,17 @@ function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range:
  * One route: two tries on the design model, then two on the fallback model, before giving up.
  * The person never sees a plan that fails the checks; they see an error only if both models fail.
  */
+/**
+ * A reply that breaks the schema (e.g. a summary over its length limit) or times out counts as a failed
+ * attempt, so the retry and the other model still run instead of the error reaching the person.
+ */
+function briefError(error: unknown): string {
+  return String((error as Error)?.message ?? error).replace(/\s+/g, " ").slice(0, 200);
+}
+function unreadable(error: unknown): string {
+  return `\nYour previous answer could not be used (${briefError(error)}). Return a corrected full answer that fits the schema and its length limits.`;
+}
+
 async function designRoute(
   input: DesignInput,
   id: RouteId,
@@ -152,14 +163,21 @@ async function designRoute(
   for (const model of modelsFor("design")) {
     let retry = "";
     for (let attempt = 0; attempt < 2; attempt++) {
-      const result = await generate({
-        name: `designRoute_${id}`,
-        schema: routeSchema,
-        system: designPrompt,
-        prompt: routePrompt(input, id, range, weeks, extra) + retry,
-        model,
-        effort: effortFor(model),
-      });
+      let result;
+      try {
+        result = await generate({
+          name: `designRoute_${id}`,
+          schema: routeSchema,
+          system: designPrompt,
+          prompt: routePrompt(input, id, range, weeks, extra) + retry,
+          model,
+          effort: effortFor(model),
+        });
+      } catch (error) {
+        retried.push(`${id} (${model}): ${briefError(error)}`);
+        retry = unreadable(error);
+        continue;
+      }
       usage.push(result.usage);
       // The coach has already checked the days, so a route may only stop to ask about a fixed finish date.
       // Anything else (e.g. "can you lower the minimum days?") is the route's own puzzle to solve.
@@ -338,14 +356,20 @@ export async function extendWindow(
   for (const model of modelsFor("adapt")) {
     let retry = "";
     for (let attempt = 0; attempt < 2; attempt++) {
-      const result = await generate({
-        name: "extendWindow",
-        schema: windowSchema,
-        system: windowPrompt,
-        prompt: prompt + retry,
-        model,
-        effort: effortFor(model),
-      });
+      let result;
+      try {
+        result = await generate({
+          name: "extendWindow",
+          schema: windowSchema,
+          system: windowPrompt,
+          prompt: prompt + retry,
+          model,
+          effort: effortFor(model),
+        });
+      } catch (error) {
+        retry = unreadable(error);
+        continue;
+      }
       const usage = result.usage;
       calls.push(usage);
       const problems = validateSessions(result.object.sessions, {
