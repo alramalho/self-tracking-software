@@ -79,6 +79,13 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 193 — circle momentum, October 1, 2026
+
+- Local production release from branch `circle-momentum` (main `01a7c312` plus the circle momentum commits). Adds the orbit header and "Past weeks" row and sheet on the circle screen, the week chip on circle logs, and the "Turn off Helly's posts" / "Mute notifications" actions.
+- **Needs the `circle-momentum-20261001` backend, which is built on the server but not active yet.** Until it is switched on, the new row and chips don't appear and the two new menu actions fail. Not a TestFlight upload; build 192 stays the current TestFlight release.
+- Verified IPA: `tracking-circle-momentum/apps/frontend-expo/.release/2026-10-01T16-04-48-584Z-a45c14a5/tracking.so.ipa`, SHA-256 `6e8dfede06d20552594cc81df6a6b70f3181927b275e33b1961f3386b4706019`; version 1.0.0, iPhone and Watch build 193; profiles expire September 10, 2027. The wrapper's production-config, bundled-JavaScript, signing and device-provisioning checks passed, and the bundle contains the new screen text. The signed link is in `distribution.json` beside the IPA and expires October 8, 2026.
+- Checks: Expo and Vite typecheck, 54 backend circle and preview tests, 5 circle model tests, and the light/dark browser test `e2e/circle-momentum.spec.ts` (screens in `docs/reviews/circle-momentum/`). Installation on a phone is not confirmed. No Expo cloud build, OTA or store submission was used.
+
 ## Safari-install build 188 — circle encouragement, September 30, 2026
 
 - Local production release from `9cce3691`, preserving current main `eda9fab9` and adding encouragement `0022291e`. Tapping the circle hand opens “Motivate Alex” with their avatar and a blank personal message; opening/dismissing sends nothing. Only Send delivers a private message through the ordinary chat notification path. Both circle board and plan entry points use this flow, on Expo and Vite.
