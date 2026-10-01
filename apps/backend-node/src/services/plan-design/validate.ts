@@ -36,6 +36,12 @@ export interface ValidationContext {
   daysMax: number;
   /** Easy-pace bounds, in seconds per km, extracted from the person's own baseline. */
   easyPace: { fast: number; slow: number } | null;
+  /** What the person does now in a week, in the activity's unit (from their own words). Week 1 never drops below it. */
+  baselineWeekly?: number | null;
+  /** Their usual single session, same unit. Sessions don't shrink far below it just because there are more days. */
+  baselineSession?: number | null;
+  /** The heaviest working load they lift now. Each week's heaviest set stays at or above it. */
+  baselineLoadKg?: number | null;
   /** Number of complete weeks that must be present (2 for onboarding, 2 for a rolling window). */
   weeks: number;
 }
@@ -90,6 +96,22 @@ export function validateSessions(
     const from = addDays(ctx.windowStart, w * 7);
     const to = addDays(ctx.windowStart, w * 7 + 7);
     const days = new Set(sessions.filter((s) => s.date >= from && s.date < to).map((s) => s.date));
+    const total = weekTotal(sessions, from, to);
+    // A coach builds from what you already do. Allow 10% for rounding to whole units.
+    if (w === 0 && ctx.baselineWeekly && total < ctx.baselineWeekly * 0.9)
+      problems.push(`week 1 totals ${total}, less than the ${ctx.baselineWeekly} the person already does each week`);
+    // Nor a jump: about 30% more, or one extra usual session, whichever is larger.
+    const ceiling = ctx.baselineWeekly ? Math.max(ctx.baselineWeekly * 1.3, ctx.baselineWeekly + (ctx.baselineSession ?? 0)) : null;
+    if (w === 0 && ceiling && total > Math.ceil(ceiling))
+      problems.push(`week 1 totals ${total}, a jump from the ${ctx.baselineWeekly} the person does now (keep it at or under ${Math.ceil(ceiling)})`);
+    if (ctx.baselineSession) {
+      const tiny = sessions.filter((x) => x.date >= from && x.date < to && x.quantity < ctx.baselineSession! * 0.5).length;
+      if (tiny > 1)
+        problems.push(`week ${w + 1} has ${tiny} sessions under half the person's usual ${ctx.baselineSession}; at most one short easy session a week`);
+    }
+    const heaviest = Math.max(0, ...sessions.filter((x) => x.date >= from && x.date < to).map((x) => x.targets.loadKg ?? 0));
+    if (ctx.baselineLoadKg && heaviest > 0 && heaviest < ctx.baselineLoadKg * 0.95)
+      problems.push(`week ${w + 1}'s heaviest set is ${heaviest} kg, below the ${ctx.baselineLoadKg} kg the person already lifts`);
     if (days.size < ctx.daysMin || days.size > ctx.daysMax)
       problems.push(`week ${w + 1} has ${days.size} training days, expected ${ctx.daysMin === ctx.daysMax ? ctx.daysMin : `${ctx.daysMin}-${ctx.daysMax}`}`);
   }
@@ -107,3 +129,16 @@ export function easyPaceFrom(
 }
 
 export type { DesignSession };
+
+/** Sum of session quantities between two days (one activity per plan, so one unit). */
+export function weekTotal(sessions: { date: string; quantity: number }[], from: string, to: string) {
+  return sessions.filter((x) => x.date >= from && x.date < to).reduce((n, x) => n + x.quantity, 0);
+}
+
+type Measurement = { metric: string; value: number; unit: string };
+/** "current_weekly_volume" from the baseline, if the person's words allowed it. */
+export const weeklyVolumeFrom = (m: Measurement[]) => m.find((x) => /^current_weekly_volume$/i.test(x.metric))?.value ?? null;
+/** "current_top_load" in kg, if they gave one. */
+/** "current_session": their usual single session, same unit. */
+export const sessionSizeFrom = (m: Measurement[]) => m.find((x) => /^current_session$/i.test(x.metric))?.value ?? null;
+export const topLoadFrom = (m: Measurement[]) => m.find((x) => /^current_top_load$/i.test(x.metric) && /kg/i.test(x.unit))?.value ?? null;

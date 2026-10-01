@@ -16,7 +16,12 @@ export const gatewayGenerator: ObjectGenerator = async ({ name, schema, system, 
     prompt,
     maxRetries: 1,
     abortSignal: AbortSignal.timeout(170_000),
-    providerOptions: model.startsWith("openai/") ? { openai: { reasoningEffort: effort } } : {},
+    // Effort goes under the real provider's key; the Gateway forwards it.
+    providerOptions: model.startsWith("openai/")
+      ? { openai: { reasoningEffort: effort } }
+      : model.startsWith("anthropic/")
+        ? { anthropic: { effort } }
+        : {},
   });
   const cost = (result.providerMetadata?.gateway as { cost?: string } | undefined)?.cost;
   return {

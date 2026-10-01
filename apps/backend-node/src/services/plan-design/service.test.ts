@@ -205,6 +205,36 @@ describe("pace is grounded", () => {
   });
 });
 
+describe("builds from what the person already does", () => {
+  const ctx = { activities: [{ key: "running", measure: "km" }], windowStart: START, daysMin: 4, daysMax: 4, easyPace: { fast: 420, slow: 444 }, weeks: 1 };
+  const week = (km: number[]) => offsets([0, 2, 4, 6]).map((d, i) => session(d, { quantity: km[i] }));
+  it("rejects a first week below the current weekly volume, accepts one at or above it", () => {
+    expect(validateSessions(week([2, 2, 2, 2]), { ...ctx, baselineWeekly: 10 }).join()).toContain("less than the 10 the person already does");
+    expect(validateSessions(week([2, 3, 2, 4]), { ...ctx, baselineWeekly: 10 })).toEqual([]);
+  });
+  it("rejects a first-week jump and a week of tiny sessions", () => {
+    expect(validateSessions(week([5, 3, 5, 4]), { ...ctx, baselineWeekly: 10, baselineSession: 5 }).join()).toContain("a jump from the 10");
+    expect(validateSessions(week([2, 2, 5, 5]), { ...ctx, baselineWeekly: 10, baselineSession: 5 }).join()).toContain("2 sessions under half");
+    expect(validateSessions(week([2, 3, 4, 4]), { ...ctx, baselineWeekly: 10, baselineSession: 5 })).toEqual([]);
+  });
+  it("rejects a week whose heaviest set is below what they lift now; lighter volume days are fine", () => {
+    const lift = (load: number) => session(offsets([0])[0], { activity: "bench", quantity: 15, targets: targets({ pace: null, sets: 3, reps: 5, loadKg: load }) });
+    const c = { activities: [{ key: "bench", measure: "reps" }], windowStart: START, daysMin: 2, daysMax: 2, easyPace: null, weeks: 1, baselineLoadKg: 60 };
+    const two = (a: number, b: number) => [lift(a), { ...lift(b), date: offsets([2])[0] }];
+    expect(validateSessions(two(55, 55), c).join()).toContain("below the 60 kg");
+    expect(validateSessions(two(60, 55), c)).toEqual([]);
+  });
+  it("asks Oli again when his first week asks for less than Helly's", async () => {
+    const light = [0, 1, 3, 5, 7, 8, 10, 12];
+    const lightFocused = { ...routeOutput("focused", 16, light), route: { ...routeOutput("focused", 16, light).route, sessions: offsets(light).map((d) => session(d, { quantity: 2 })) } };
+    const { generate, calls } = fake(fitsNote, routeOutput("steady", 20, STEADY), lightFocused, routeOutput("focused", 16, FOCUSED));
+    const result = await designOptions(input, generate);
+    expect(calls).toHaveLength(4);
+    expect(calls[3].prompt).toContain("must be at least 12");
+    expect(result.retried.join()).toContain("less than steady's 12");
+  });
+});
+
 describe("stray characters", () => {
   it("rejects text in a writing system the person never used, but allows it when they did", () => {
     const sessions = [session(offsets([0])[0], { targets: targets({ effort: "easy, you should be.аб" }) })];

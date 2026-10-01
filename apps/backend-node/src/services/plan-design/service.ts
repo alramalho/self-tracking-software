@@ -23,7 +23,7 @@ import type {
   WindowInput,
   WindowResult,
 } from "./types";
-import { easyPaceFrom, validateSessions } from "./validate";
+import { easyPaceFrom, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
 
 const DECLINE = /^(just|no |none|skip|not sure|i.?ll|nothing)/i;
 
@@ -114,6 +114,9 @@ function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range:
     daysMin: range.min,
     daysMax: range.max,
     easyPace: easyPaceFrom(output.baselineMeasurements),
+    baselineWeekly: weeklyVolumeFrom(output.baselineMeasurements),
+    baselineSession: sessionSizeFrom(output.baselineMeasurements),
+    baselineLoadKg: topLoadFrom(output.baselineMeasurements),
     personText: personText(input),
     weeks: 2,
   }));
@@ -237,15 +240,27 @@ export async function designOptions(
     return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
   const { steady: steadyRange, focused: focusedRange } = assessed.ranges;
   const { steady: steadyWeeks, focused: focusedWeeks } = assessed.weeks;
-  const [steady, focused] = await Promise.all([
+  const [steady, focusedFirst] = await Promise.all([
     designRoute(input, "steady", steadyRange, steadyWeeks, generate),
     designRoute(input, "focused", focusedRange, focusedWeeks, generate),
   ]);
-  usage.push(...steady.usage, ...focused.usage);
-  const retried = [...steady.retried, ...focused.retried];
-  const asked = [steady.output, focused.output].find((o) => o.status === "ASK" && o.question);
+  usage.push(...steady.usage, ...focusedFirst.usage);
+  const retried = [...steady.retried, ...focusedFirst.retried];
+  const asked = [steady.output, focusedFirst.output].find((o) => o.status === "ASK" && o.question);
   const baseline = { text: input.baseline, measurements: steady.output.baselineMeasurements };
   if (asked) return { status: "ASK", question: asked.question, coachNote: assessed.note, retried, baseline, options: [], usage };
+  // Oli is the intense coach: his first week can't ask for less total work than Helly's.
+  let focused = focusedFirst;
+  const week1 = (o: RouteOutput) => weekTotal(o.route!.sessions, input.startDate, addDays(input.startDate, 7));
+  const helly = week1(steady.output);
+  if (week1(focusedFirst.output) < helly) {
+    retried.push(`focused: week 1 totals ${week1(focusedFirst.output)}, less than steady's ${helly}`);
+    focused = await designRoute(input, "focused", focusedRange, focusedWeeks, generate, `\nThe steady route's week 1 totals ${helly}. As the more demanding route, your week 1 total must be at least ${helly}.`);
+    usage.push(...focused.usage);
+    retried.push(...focused.retried);
+    if (week1(focused.output) < helly)
+      throw new FollowThroughInputError("We couldn't build two distinct plans just now. Please try again.");
+  }
   return {
     status: "READY",
     question: null,
