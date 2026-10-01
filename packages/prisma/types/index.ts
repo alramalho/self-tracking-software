@@ -32,6 +32,8 @@ export type PlanAchievement = {
 };
 
 export type PlanProgressState = {
+  calculationVersion?: number;
+  calculationTimezone?: string;
   achievement: PlanAchievement & {
     achievedLastStreakAt?: Date | null;
     celebratedStreakAt?: Date | null;

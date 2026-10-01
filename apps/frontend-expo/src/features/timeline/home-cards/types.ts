@@ -44,3 +44,18 @@ export interface WarningSheetProps {
   onOpenPlan: () => void;
   onClose: () => void;
 }
+export interface MissReason {
+  label: string;
+  /** The reason in the user's own words, as sent to the coach. */
+  says: string;
+}
+/** How the coach chat opens from the sheet: a prefilled message, optionally sent straight away. */
+export interface CoachOpening {
+  prompt?: string;
+  send?: boolean;
+}
+export interface ReasonChipProps {
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}
