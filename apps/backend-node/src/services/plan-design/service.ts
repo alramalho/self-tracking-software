@@ -8,9 +8,10 @@ import type {
 import { FollowThroughInputError } from "../follow-through/errors";
 import { addDays, daysBetween, finishingDateFor } from "./dates";
 import { gatewayGenerator } from "./generator";
+import { designEffort } from "../aiModelIds";
 import { routeCoach, routeDays } from "./frequency";
 import { classifyPrompt, designPrompt, subgoalPrompt, windowPrompt } from "./prompts";
-import { classifySchema, designSchema, subgoalSchema, windowSchema, type DesignOutput } from "./schema";
+import { classifySchema, routeSchema, subgoalSchema, windowSchema, type RouteOutput } from "./schema";
 import type {
   ClassifyInput,
   DesignInput,
@@ -78,8 +79,11 @@ export async function nextSubgoalQuestion(
   return { question: { kind: object.kind ?? "OTHER", title: object.title, choices }, usage };
 }
 
-function designPromptInput(input: DesignInput, trainingDays: Record<"steady" | "focused", number>) {
+type RouteId = "steady" | "focused";
+
+function routePrompt(input: DesignInput, id: RouteId, trainingDays: number, extra = "") {
   return JSON.stringify({
+    route: id,
     goal: input.goal,
     goalSpec: input.goalSpec,
     baselineVerbatim: input.baseline,
@@ -89,90 +93,101 @@ function designPromptInput(input: DesignInput, trainingDays: Record<"steady" | "
     startDate: input.startDate,
     fixedDate: input.fixedDate,
     window: { firstDay: input.startDate, lastDay: addDays(input.startDate, 13) },
+  }) + extra;
+}
+
+function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId) {
+  const route = output.route;
+  if (!route) return [`route ${id} is missing`];
+  if (route.id !== id) return [`route id must be ${id}`];
+  return validateSessions(route.sessions, {
+    activities: input.activities,
+    windowStart: input.startDate,
+    trainingDaysPerWeek: routeDays(input.availableDays)[id],
+    easyPace: easyPaceFrom(output.baselineMeasurements),
+    weeks: 2,
   });
 }
 
-function toOptions(output: DesignOutput, input: DesignInput): DesignOption[] {
-  const days = routeDays(input.availableDays);
-  return (["steady", "focused"] as const).map((id) => {
-    const option = output.options.find((o) => o.id === id);
-    if (!option) throw new FollowThroughInputError("The plan came back incomplete. Please try again.");
-    const weeks = input.fixedDate
-      ? Math.max(2, Math.ceil((daysBetween(input.startDate, input.fixedDate) + 1) / 7))
-      : option.estimatedWeeks;
-    return {
-      id,
-      coach: routeCoach[id],
-      trainingDaysPerWeek: days[id],
-      estimatedWeeks: weeks,
-      finishingDate: input.fixedDate ?? finishingDateFor(input.startDate, weeks),
-      rationale: option.rationale,
-      assumptions: option.assumptions,
-      phases: option.phases,
-      sessions: option.sessions as DesignSession[],
-    };
-  });
-}
-
-function problemsIn(output: DesignOutput, input: DesignInput) {
-  const days = routeDays(input.availableDays);
-  const easyPace = easyPaceFrom(output.baselineMeasurements);
-  const problems: string[] = [];
-  for (const id of ["steady", "focused"] as const) {
-    const option = output.options.find((o) => o.id === id);
-    if (!option) {
-      problems.push(`route ${id} is missing`);
-      continue;
-    }
-    for (const p of validateSessions(option.sessions, {
-      activities: input.activities,
-      windowStart: input.startDate,
-      trainingDaysPerWeek: days[id],
-      easyPace,
-      weeks: 2,
-    }))
-      problems.push(`${id}: ${p}`);
+async function designRoute(
+  input: DesignInput,
+  id: RouteId,
+  generate: ObjectGenerator,
+  extra = "",
+): Promise<{ output: RouteOutput; usage: GenerationUsage[] }> {
+  const usage: GenerationUsage[] = [];
+  const days = routeDays(input.availableDays)[id];
+  let retry = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await generate({
+      name: `designRoute_${id}`,
+      schema: routeSchema,
+      system: designPrompt,
+      prompt: routePrompt(input, id, days, extra) + retry,
+      effort: designEffort(),
+    });
+    usage.push(result.usage);
+    if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage };
+    const problems = problemsIn(result.object, input, id);
+    if (!problems.length) return { output: result.object, usage };
+    retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
   }
-  if (
-    output.options.length === 2 &&
-    !input.fixedDate &&
-    output.options[0].estimatedWeeks === output.options[1].estimatedWeeks
-  )
-    problems.push("the two routes must not have the same estimatedWeeks");
-  return problems;
+  throw new FollowThroughInputError("We couldn't build a reliable plan just now. Please try again.");
+}
+
+function toOption(output: RouteOutput, input: DesignInput, id: RouteId): DesignOption {
+  const route = output.route!;
+  const weeks = input.fixedDate
+    ? Math.max(2, Math.ceil((daysBetween(input.startDate, input.fixedDate) + 1) / 7))
+    : route.estimatedWeeks;
+  return {
+    id,
+    coach: routeCoach[id],
+    trainingDaysPerWeek: routeDays(input.availableDays)[id],
+    estimatedWeeks: weeks,
+    finishingDate: input.fixedDate ?? finishingDateFor(input.startDate, weeks),
+    rationale: route.rationale,
+    assumptions: route.assumptions,
+    phases: route.phases,
+    sessions: route.sessions as DesignSession[],
+  };
 }
 
 /**
- * Step 4: two honest routes (Helly steady, Oli focused) with the first two weeks each.
- * Validated in code; one retry with the exact problems, then a clear failure rather than a bad plan.
+ * Step 4: two honest routes (Helly steady, Oli focused) with the first two weeks each. Each route
+ * is its own call, run in parallel: the answers are shorter and the wait is one call, not two.
+ * Validated in code; one retry per route with the exact problems, then a clear failure rather than a bad plan.
+ * Oli must come out shorter than Helly (unless the finish date is fixed); if not, Oli is asked again once.
  */
 export async function designOptions(
   input: DesignInput,
   generate: ObjectGenerator = gatewayGenerator,
 ): Promise<DesignResult> {
-  const usage: GenerationUsage[] = [];
-  const days = routeDays(input.availableDays);
-  let prompt = designPromptInput(input, days);
-  let output: DesignOutput | null = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await generate({
-      name: "designRoutes",
-      schema: designSchema,
-      system: designPrompt,
-      prompt,
-      effort: "high",
-    });
-    usage.push(result.usage);
-    output = result.object;
-    const baseline = { text: input.baseline, measurements: output.baselineMeasurements };
-    if (output.status === "ASK" && output.question)
-      return { status: "ASK", question: output.question, baseline, options: [], usage };
-    const problems = problemsIn(output, input);
-    if (!problems.length)
-      return { status: "READY", question: null, baseline, options: toOptions(output, input), usage };
-    prompt = `${designPromptInput(input, days)}\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
+  const [steady, focusedFirst] = await Promise.all([
+    designRoute(input, "steady", generate),
+    designRoute(input, "focused", generate),
+  ]);
+  const usage = [...steady.usage, ...focusedFirst.usage];
+  const asked = [steady.output, focusedFirst.output].find((o) => o.status === "ASK" && o.question);
+  const measurements = steady.output.baselineMeasurements;
+  const baseline = { text: input.baseline, measurements };
+  if (asked) return { status: "ASK", question: asked.question, baseline, options: [], usage };
+  let focused = focusedFirst.output;
+  const steadyWeeks = steady.output.route!.estimatedWeeks;
+  if (!input.fixedDate && focused.route!.estimatedWeeks >= steadyWeeks) {
+    const again = await designRoute(input, "focused", generate, `\nsteadyWeeks: ${steadyWeeks}. Your estimatedWeeks must be lower.`);
+    usage.push(...again.usage);
+    focused = again.output;
+    if (focused.route!.estimatedWeeks >= steadyWeeks)
+      throw new FollowThroughInputError("We couldn't build two distinct plans just now. Please try again.");
   }
-  throw new FollowThroughInputError("We couldn't build a reliable plan just now. Please try again.");
+  return {
+    status: "READY",
+    question: null,
+    baseline,
+    options: [toOption(steady.output, input, "steady"), toOption(focused, input, "focused")],
+    usage,
+  };
 }
 
 /**
@@ -216,7 +231,7 @@ export async function extendWindow(
       schema: windowSchema,
       system: windowPrompt,
       prompt: prompt + retry,
-      effort: "high",
+      effort: designEffort(),
     });
     usage = result.usage;
     const problems = validateSessions(result.object.sessions, {

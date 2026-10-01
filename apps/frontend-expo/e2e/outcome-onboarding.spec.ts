@@ -138,3 +138,37 @@ for (const theme of ["LIGHT", "DARK"])
     expect(state.requests.filter((r: any) => r.path.endsWith("/design/options"))).toHaveLength(0);
     expect(state.requests.filter((r: any) => r.path.endsWith("/design/subgoal"))).toHaveLength(0);
   });
+
+// The same screens for goals that are not running: loads and reps, a declined number, a skill.
+const others = [
+  { id: "bench", goal: "Bench press 80 kg for 5 reps", baselineHeading: "What do you bench now?", baseline: "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.", target: null, days: 3, route: "route-steady", detail: "Bench day" },
+  { id: "cutting", goal: "Lose fat while keeping my strength", baselineHeading: "What do you do now?", baseline: "I lift twice a week. Bench press 60 kg for 5 reps. I track my meals.", target: "How clothes fit", days: 2, route: "route-steady", detail: "Full body A" },
+  { id: "guitar", goal: "Play a complete song smoothly", baselineHeading: "What can you play now?", baseline: "I know G, C, D and Em but change slowly. I practise twice a week for 15 minutes.", target: "My own song", days: 5, route: "route-focused", detail: "Chord changes" },
+];
+for (const theme of ["LIGHT", "DARK"])
+  for (const o of others)
+    test(`${o.id}: the same screens, measurable sessions (${theme})`, async ({ page, request }) => {
+      test.setTimeout(90000);
+      await start(page, request, theme);
+      await page.getByRole("textbox", { name: "Your answer" }).fill(o.goal);
+      await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+      await next(page);
+      await answer(page, o.baselineHeading, o.baseline);
+      await next(page);
+      await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+      await page.getByRole("button", { name: "Skip this question" }).click();
+      if (o.target) {
+        await expect(page.getByTestId("onboarding-art-goal")).toBeVisible();
+        await capture(page, `${o.id}-01-target-${theme}`);
+        await page.getByRole("button", { name: o.target }).click();
+      }
+      await expect(page.getByRole("heading", { name: "How many days can you train?" })).toBeVisible();
+      const value = page.getByTestId("design-days-value");
+      while (Number(await value.textContent()) !== o.days) await page.getByRole("button", { name: Number(await value.textContent()) < o.days ? "More days" : "Fewer days" }).click();
+      await next(page);
+      await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
+      await capture(page, `${o.id}-02-routes-${theme}`);
+      await page.getByTestId(o.route).click();
+      await expect(page.getByTestId("session-detail")).toContainText(o.detail);
+      await capture(page, `${o.id}-03-first-day-${theme}`);
+    });

@@ -76,9 +76,10 @@ export const optionSchema = z.object({
   sessions: z.array(sessionSchema).max(28),
 });
 
-export const designSchema = z.object({
+/** One route per call, so the two routes are built in parallel instead of one long answer. */
+export const routeSchema = z.object({
   status: z.enum(["READY", "ASK"]),
-  /** Only when a missing fact makes two honest routes impossible. */
+  /** Only when a missing fact makes an honest route impossible. */
   question: z.string().max(160).nullable(),
   baselineMeasurements: z
     .array(
@@ -90,7 +91,7 @@ export const designSchema = z.object({
       }),
     )
     .max(8),
-  options: z.array(optionSchema).max(2),
+  route: optionSchema.nullable(),
 });
 
 export const windowSchema = z.object({
@@ -99,5 +100,5 @@ export const windowSchema = z.object({
   sessions: z.array(sessionSchema).max(28),
 });
 
-export type DesignOutput = z.infer<typeof designSchema>;
+export type RouteOutput = z.infer<typeof routeSchema>;
 export type WindowOutput = z.infer<typeof windowSchema>;

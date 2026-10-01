@@ -51,18 +51,18 @@ const route = (id: "steady" | "focused", weeks: number, dayOffsets: number[], ov
   sessions: offsets(dayOffsets).map((d) => session(d, over)),
   ...over,
 });
-const readyOutput = (steady = [0, 2, 5, 7, 9, 12], focused = [0, 1, 3, 5, 7, 8, 10, 12]) => ({
+const measurements = [
+  { metric: "easy_pace_fast", value: 420, unit: "s/km", sourceQuote: "Easy 5 km in 35–37 min" },
+  { metric: "easy_pace_slow", value: 444, unit: "s/km", sourceQuote: "Easy 5 km in 35–37 min" },
+];
+const routeOutput = (id: "steady" | "focused", weeks: number, dayOffsets: number[]) => ({
   status: "READY",
   question: null,
-  baselineMeasurements: [
-    { metric: "easy_pace_fast", value: 420, unit: "s/km", sourceQuote: "Easy 5 km in 35–37 min" },
-    { metric: "easy_pace_slow", value: 444, unit: "s/km", sourceQuote: "Easy 5 km in 35–37 min" },
-  ],
-  options: [
-    { ...route("steady", 20, steady), sessions: offsets(steady).map((d) => session(d)) },
-    { ...route("focused", 16, focused), sessions: offsets(focused).map((d) => session(d)) },
-  ],
+  baselineMeasurements: measurements,
+  route: { ...route(id, weeks, dayOffsets), sessions: offsets(dayOffsets).map((d) => session(d)) },
 });
+const STEADY = [0, 2, 5, 7, 9, 12];
+const FOCUSED = [0, 1, 3, 5, 7, 8, 10, 12];
 const input: DesignInput = {
   goal: "Finish my first half marathon",
   goalSpec: { metric: null, value: null, unit: null, text: null, chosenByUser: false },
@@ -84,9 +84,12 @@ describe("how many days", () => {
 });
 
 describe("designOptions", () => {
-  it("returns two routes with the days fixed by code, finish dates derived from weeks", async () => {
-    const { generate } = fake(readyOutput());
+  it("builds each route in its own call; days are fixed by code, finish dates derived from weeks", async () => {
+    const { generate, calls } = fake(routeOutput("steady", 20, STEADY), routeOutput("focused", 16, FOCUSED));
     const result = await designOptions(input, generate);
+    expect(calls).toHaveLength(2);
+    expect(calls[0].prompt).toContain('"route":"steady"');
+    expect(calls[1].prompt).toContain('"route":"focused"');
     expect(result.status).toBe("READY");
     expect(result.options.map((o) => [o.coach, o.trainingDaysPerWeek])).toEqual([["Helly", 3], ["Oli", 4]]);
     expect(result.options[0].finishingDate).toBe("2027-02-21");
@@ -94,28 +97,37 @@ describe("designOptions", () => {
     expect(result.baseline.measurements).toHaveLength(2);
   });
 
-  it("retries once with the exact problems, then succeeds", async () => {
-    const bad = readyOutput([0, 2, 5, 7, 9]); // steady week 2 has two days
-    const { generate, calls } = fake(bad, readyOutput());
+  it("retries only the route that failed, with the exact problems", async () => {
+    // steady's second week has two days, expected three
+    const { generate, calls } = fake(routeOutput("steady", 20, [0, 2, 5, 7, 9]), routeOutput("focused", 16, FOCUSED), routeOutput("steady", 20, STEADY));
     const result = await designOptions(input, generate);
     expect(result.options).toHaveLength(2);
-    expect(calls).toHaveLength(2);
-    expect(calls[1].prompt).toContain("steady: week 2 has 2 training days, expected 3");
+    expect(calls).toHaveLength(3);
+    expect(calls[2].prompt).toContain('"route":"steady"');
+    expect(calls[2].prompt).toContain("week 2 has 2 training days, expected 3");
   });
 
   it("fails loudly instead of showing an unreliable plan", async () => {
-    const { generate } = fake(readyOutput([0, 2]));
+    const { generate } = fake(routeOutput("steady", 20, [0, 2]));
     await expect(designOptions(input, generate)).rejects.toThrow(/reliable plan/);
   });
 
+  it("asks Oli again when Oli is not shorter than Helly", async () => {
+    const { generate, calls } = fake(routeOutput("steady", 16, STEADY), routeOutput("focused", 16, FOCUSED), routeOutput("focused", 12, FOCUSED));
+    const result = await designOptions(input, generate);
+    expect(result.options.map((o) => o.estimatedWeeks)).toEqual([16, 12]);
+    expect(calls[2].prompt).toContain("steadyWeeks: 16");
+  });
+
   it("passes a fixed date through as the finish of both routes", async () => {
-    const { generate } = fake(readyOutput());
+    const { generate } = fake(routeOutput("steady", 20, STEADY), routeOutput("focused", 16, FOCUSED));
     const result = await designOptions({ ...input, fixedDate: "2027-03-14" }, generate);
     expect(result.options.map((o) => o.finishingDate)).toEqual(["2027-03-14", "2027-03-14"]);
   });
 
   it("asks one question instead of inventing when blocked", async () => {
-    const { generate } = fake({ status: "ASK", question: "Is your race on a fixed date?", baselineMeasurements: [], options: [] });
+    const ask = { status: "ASK", question: "Is your race on a fixed date?", baselineMeasurements: [], route: null };
+    const { generate } = fake(ask);
     const result = await designOptions(input, generate);
     expect(result).toMatchObject({ status: "ASK", question: "Is your race on a fixed date?", options: [] });
   });
