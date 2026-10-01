@@ -242,6 +242,23 @@ export interface CirclePlanSectionProps {
 export interface OpenSpotsProps {
   // People already in the circle, proven or not.
   members: number;
+  // On the circle page an open spot is a way in: tapping it opens the invite sheet.
+  onInvite?: () => void;
+}
+
+export interface InvitableFriend {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  picture: string | null;
+  state: "member" | "invited" | "open";
+}
+
+export interface InviteSheetProps {
+  circleId: string;
+  visible: boolean;
+  onClose: () => void;
+  onShareLink: () => void;
 }
 
 export interface ReasonChipsProps {

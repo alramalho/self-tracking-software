@@ -171,7 +171,7 @@ export function MemberRow({ member, isMe, onPress, onMotivate }: MemberRowProps)
 
 // Dashed spots for the people matching will still bring in. The circle keeps looking
 // until it has 5, even after its board has started.
-export function OpenSpots({ members }: OpenSpotsProps) {
+export function OpenSpots({ members, onInvite }: OpenSpotsProps) {
   const c = useColors();
   const open = Math.max(0, MATCHING_TARGET - members);
   if (!open) return null;
@@ -179,10 +179,17 @@ export function OpenSpots({ members }: OpenSpotsProps) {
     <View style={{ gap: 2 }}>
       <Text style={{ color: c.muted, fontSize: 12, paddingTop: 8 }}>Looking for people with a similar goal</Text>
       {Array.from({ length: open }, (_, i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
+        <Pressable
+          key={i}
+          accessibilityRole={onInvite ? "button" : undefined}
+          accessibilityLabel={onInvite ? "Invite to an open spot" : undefined}
+          disabled={!onInvite}
+          onPress={onInvite}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}
+        >
           <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderStyle: "dashed", borderColor: c.muted }} />
           <Text style={{ color: c.muted, fontSize: 15 }}>Open spot</Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );

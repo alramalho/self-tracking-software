@@ -4,6 +4,7 @@ import type {
   CircleBoard,
   CircleCard,
   CircleFeed,
+  InvitableFriend,
   MatchPreferences,
   MatchResult,
   MyCircle,
@@ -31,6 +32,19 @@ export const useCircleFeed = (id?: string) =>
     queryKey: ["circle", id, "feed"],
     queryFn: async () => (await api.get<CircleFeed>(`/circles/${id}/feed`)).data,
   });
+
+// The viewer's friends, with who's already in this circle or already invited.
+export const useInvitableFriends = (id: string, enabled: boolean) =>
+  useQuery({
+    enabled,
+    queryKey: ["circle", id, "invitable"],
+    queryFn: async () => (await api.get<InvitableFriend[]>(`/circles/${id}/invitable`)).data,
+  });
+
+// One notification that opens the circle's join screen.
+export async function inviteFriend(circleId: string, userId: string) {
+  await api.post(`/circles/${circleId}/invites`, { userId });
+}
 
 export const useCircleSuggestions = (enabled = true) =>
   useQuery({

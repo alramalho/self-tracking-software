@@ -108,7 +108,14 @@ for (const theme of ["LIGHT", "DARK"]) {
         await route.fulfill({ status: 204, body: "" });
         return;
       }
-      const data = url.endsWith("/feed")
+      const friend = (userId: string, name: string, state: string) => ({ userId, name, username: userId, picture: null, state });
+      const data = url.endsWith("/invitable")
+        ? [
+            friend("lia", "Lia Santos", writes.some((w) => w.url.endsWith("/invites")) ? "invited" : "open"),
+            friend("sam", "Sam Okafor", "invited"),
+            friend("tomas", "Tomás Reis", "member"),
+          ]
+        : url.endsWith("/feed")
         ? { entries: [entry("done", members[0], { done: 4, target: 4 }), entry("comeback", members[4], { done: 1, target: 4 })], introIds: [] }
         : url.endsWith("/mine")
           ? []
@@ -143,6 +150,22 @@ for (const theme of ["LIGHT", "DARK"]) {
     await expect(page.getByRole("button", { name: "Jonas, 63% of own target" })).toHaveAttribute("aria-pressed", "true");
     await page.screenshot({ path: path.join(output, `past-weeks-jonas-${theme}.png`) });
     await page.getByRole("button", { name: "Close", exact: true }).click();
+
+    // Inviting from inside the app: friends with an Invite button, and the link as a fallback.
+    await page.getByRole("button", { name: "Invite friends" }).click();
+    await expect(page.getByText("Invite to circle", { exact: true })).toBeVisible();
+    await expect(page.getByText("In the circle", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Share a link" })).toBeVisible();
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: path.join(output, `invite-${theme}.png`) });
+    await page.getByRole("textbox", { name: "Search friends" }).fill("lia");
+    await expect(page.getByText("Sam Okafor", { exact: true })).toHaveCount(0);
+    await page.getByTestId("invite-lia").click();
+    await expect.poll(() => writes.at(-1)).toEqual({ url: `${API}/circles/momentum/invites`, body: { userId: "lia" } });
+    await expect(page.getByTestId("invite-lia")).toHaveCount(0);
+    await expect(page.getByText("Invited", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    writes.length = 0;
 
     // On the web the ⋯ menu asks about each action in turn.
     const choose = async (label: string) => {

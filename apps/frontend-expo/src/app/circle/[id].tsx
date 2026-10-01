@@ -12,6 +12,7 @@ import { coachAvatar } from "@/features/coach/avatar";
 import { MemberRow, OpenSpots, firstName } from "@/features/circles/components";
 import { inviteLink, muteCircle, openCircleChat, skipProof, updateCircle, useCircle, useCircleFeed } from "@/features/circles/api";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
+import { InviteSheet } from "@/features/circles/InviteSheet";
 import { MotivateDrawer } from "@/features/circles/MotivateDrawer";
 import { personColors } from "@/features/circles/model";
 import { Orbit } from "@/features/circles/Orbit";
@@ -38,6 +39,7 @@ export default function Circle() {
 
   const [motivating, setMotivating] = useState<BoardMember>();
   const [pastWeeksOpen, setPastWeeksOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const update = useAction(async (changes: { name?: string; coachPosts?: boolean }) => updateCircle(id, changes));
   const mute = useAction(async (muted: boolean) => muteCircle(id, muted));
   const [proofDismissed, setProofDismissed] = useState(false);
@@ -104,7 +106,7 @@ export default function Circle() {
   const circleActions = () => {
     if (!data) return;
     showActions(`${data.emoji} ${data.name}`, [
-      { label: "Invite friends", onPress: shareInvite },
+      { label: "Invite friends", onPress: () => setInviting(true) },
       ...(isOwner ? [{ label: "Rename", onPress: () => { setName(data.name); setRenaming(true); } }] : []),
       ...(isOwner
         ? [{
@@ -209,7 +211,7 @@ export default function Circle() {
               {data.members.map((m) => (
                 <MemberRow key={m.user.id} member={{ ...m, week: { ...m.week, isNew: true } }} isMe={m.user.id === user.data?.id} onPress={m.user.id === user.data?.id ? undefined : () => memberActions(m)} />
               ))}
-              <OpenSpots members={data.members.length} />
+              <OpenSpots members={data.members.length} onInvite={() => setInviting(true)} />
             </Panel>
           ) : (
             <>
@@ -230,7 +232,7 @@ export default function Circle() {
                     />
                   );
                 })}
-                <OpenSpots members={data.members.length} />
+                <OpenSpots members={data.members.length} onInvite={() => setInviting(true)} />
               </Panel>
               <PastWeeksRow board={data} viewerId={user.data?.id} onPress={() => setPastWeeksOpen(true)} />
             </>
@@ -238,7 +240,7 @@ export default function Circle() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={shareInvite}
+            onPress={() => setInviting(true)}
             style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.6 : 1 })}
           >
             <UserPlus size={22} color={c.accent} />
@@ -278,6 +280,7 @@ export default function Circle() {
       {data && (
         <PastWeeksSheet board={data} viewerId={user.data?.id} visible={pastWeeksOpen} onClose={() => setPastWeeksOpen(false)} />
       )}
+      <InviteSheet circleId={id} visible={inviting} onClose={() => setInviting(false)} onShareLink={shareInvite} />
       {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportSheet target={report} onClose={() => setReport(undefined)} />
     </Screen>
