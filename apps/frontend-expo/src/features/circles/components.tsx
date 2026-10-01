@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { Cake, ChevronRight, Gauge, Hand, Lock, MapPin, Target, Check } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
-import { MATCHING_TARGET } from "./model";
+import { MATCHING_TARGET, weekChipLabel } from "./model";
 import type {
   CircleCardViewProps,
   MatchPreferencesListProps,
@@ -12,6 +12,7 @@ import type {
   OpenSpotsProps,
   PersonAvatarProps,
   ReasonChipsProps,
+  WeekChipPillProps,
   WeekDotsProps,
 } from "./types";
 
@@ -63,6 +64,26 @@ export function PersonAvatar({ name, picture, size = 32, ring }: PersonAvatarPro
           </Text>
         )}
       </View>
+    </View>
+  );
+}
+
+// On a circle log: how far into their week it was. Green only on the one that completes the week.
+export function WeekChipPill({ chip }: WeekChipPillProps) {
+  const c = useColors();
+  const { text, done } = weekChipLabel(chip);
+  return (
+    <View
+      style={{
+        borderRadius: 999,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        backgroundColor: done ? (c.dark ? "#14532d" : "#dcfce7") : c.soft,
+      }}
+    >
+      <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "600", color: done ? (c.dark ? "#86efac" : "#15803d") : c.text }}>
+        {text}
+      </Text>
     </View>
   );
 }

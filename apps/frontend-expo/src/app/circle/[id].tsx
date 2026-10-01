@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, Share, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
-import { Camera, ChevronLeft, Flame, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react-native";
+import { Camera, ChevronLeft, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react-native";
 import { Copy, Field, Heading, IconButton, Panel, Screen, Sheet, Status, Button, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { goBack } from "@/core/navigation";
@@ -10,15 +10,17 @@ import { api, errorMessage } from "@/data/api";
 import { useAction, useCurrentUser, usePlans } from "@/data/queries";
 import { coachAvatar } from "@/features/coach/avatar";
 import { MemberRow, OpenSpots, firstName } from "@/features/circles/components";
-import { inviteLink, openCircleChat, skipProof, useCircle, useCircleFeed } from "@/features/circles/api";
+import { inviteLink, muteCircle, openCircleChat, skipProof, updateCircle, useCircle, useCircleFeed } from "@/features/circles/api";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { MotivateDrawer } from "@/features/circles/MotivateDrawer";
-import { recapLine } from "@/features/circles/model";
+import { personColors } from "@/features/circles/model";
+import { Orbit } from "@/features/circles/Orbit";
+import { PastWeeksRow, PastWeeksSheet } from "@/features/circles/PastWeeks";
 import { FeedCard } from "@/features/timeline/FeedCard";
 import type { FeedItem } from "@/features/timeline/types";
 import { ReportSheet, personLabel, showActions, useBlockUser } from "@/features/safety/Safety";
 import type { ReportTarget } from "@/features/safety/types";
-import type { BoardMember } from "@/features/circles/types";
+import type { BoardMember, OrbitPerson } from "@/features/circles/types";
 
 export default function Circle() {
   const c = useColors();
@@ -35,7 +37,9 @@ export default function Circle() {
   const isOwner = data?.me.role === "OWNER";
 
   const [motivating, setMotivating] = useState<BoardMember>();
-  const update = useAction(async (changes: { name: string }) => api.patch(`/circles/${id}`, changes));
+  const [pastWeeksOpen, setPastWeeksOpen] = useState(false);
+  const update = useAction(async (changes: { name?: string; coachPosts?: boolean }) => updateCircle(id, changes));
+  const mute = useAction(async (muted: boolean) => muteCircle(id, muted));
   const [proofDismissed, setProofDismissed] = useState(false);
   const loggingStarted = useRef(false);
   const openChat = useAction(async () => {
@@ -102,6 +106,16 @@ export default function Circle() {
     showActions(`${data.emoji} ${data.name}`, [
       { label: "Invite friends", onPress: shareInvite },
       ...(isOwner ? [{ label: "Rename", onPress: () => { setName(data.name); setRenaming(true); } }] : []),
+      ...(isOwner
+        ? [{
+            label: data.coachPosts ? "Turn off Helly's posts" : "Turn on Helly's posts",
+            onPress: () => update.mutate({ coachPosts: !data.coachPosts }),
+          }]
+        : []),
+      {
+        label: data.me.muted ? "Unmute notifications" : "Mute notifications",
+        onPress: () => mute.mutate(!data.me.muted),
+      },
       { label: "Report circle", destructive: true, onPress: () => setReport({ kind: "CIRCLE", id: data.id, label: "this circle" }) },
       { label: "Leave circle", destructive: true, onPress: confirmLeave },
     ]);
@@ -118,6 +132,26 @@ export default function Circle() {
     activity: (entry.activity ?? undefined) as FeedItem["activity"],
   }));
   const forming = data?.status === "FORMING";
+  // Who's in the circle, drifting on the orbit (same colours as the past-weeks chart),
+  // with dashed spots while there's room.
+  const colors = personColors(data?.members ?? []);
+  const orbit: OrbitPerson[] = data
+    ? [
+        ...data.members.map((m) => ({
+          key: m.user.id,
+          label: firstName(m.user),
+          color: colors[m.user.id],
+          picture: m.user.picture,
+          isMe: m.user.id === user.data?.id,
+        })),
+        ...Array.from({ length: Math.max(0, Math.min(3, data.cap - data.members.length)) }, (_, i) => ({
+          key: `open-${i}`,
+          label: "",
+          color: "transparent",
+          empty: true,
+        })),
+      ]
+    : [];
   const daysLeft = data?.members.find((m) => m.user.id === user.data?.id)?.week.daysLeft;
   const sub = data
     ? [`${data.members.length} of ${data.cap}`, data.place, data.paceLabel].filter(Boolean).join(" · ")
@@ -148,7 +182,7 @@ export default function Circle() {
     >
       <Status
         loading={board.isLoading}
-        error={board.error ?? update.error ?? leave.error ?? remove.error ?? openChat.error}
+        error={board.error ?? update.error ?? mute.error ?? leave.error ?? remove.error ?? openChat.error}
         retry={() => void board.refetch()}
       />
       {data && (
@@ -166,6 +200,8 @@ export default function Circle() {
             </Panel>
           )}
 
+          {!data.me.pending && <Orbit ring people={orbit} height={124} />}
+
           {forming ? (
             <Panel>
               <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>Forming</Text>
@@ -177,17 +213,6 @@ export default function Circle() {
             </Panel>
           ) : (
             <>
-              {data.togetherStreak > 0 && (
-                <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <Flame size={26} color="#ff9500" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
-                      {data.togetherStreak === 1 ? "1 week together" : `${data.togetherStreak} weeks together`}
-                    </Text>
-                    <Copy muted>Everyone hit their week</Copy>
-                  </View>
-                </Panel>
-              )}
               <Panel>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>This week</Text>
@@ -207,15 +232,7 @@ export default function Circle() {
                 })}
                 <OpenSpots members={data.members.length} />
               </Panel>
-              {data.recap && (
-                <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <Image source={coachAvatar(user.data?.coachPersonality === "STRATEGIST")} style={{ width: 44, height: 44 }} contentFit="contain" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Last week</Text>
-                    <Copy muted>{recapLine(data.recap, data.togetherStreak)}</Copy>
-                  </View>
-                </Panel>
-              )}
+              <PastWeeksRow board={data} viewerId={user.data?.id} onPress={() => setPastWeeksOpen(true)} />
             </>
           )}
 
@@ -258,6 +275,9 @@ export default function Circle() {
           Save
         </Button>
       </Sheet>
+      {data && (
+        <PastWeeksSheet board={data} viewerId={user.data?.id} visible={pastWeeksOpen} onClose={() => setPastWeeksOpen(false)} />
+      )}
       {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportSheet target={report} onClose={() => setReport(undefined)} />
     </Screen>

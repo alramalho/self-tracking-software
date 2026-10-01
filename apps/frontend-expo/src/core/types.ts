@@ -87,6 +87,8 @@ export interface ActivityEntry {
   } | null;
   /** Set when the entry reached your timeline through a circle you share. */
   circle?: EntryCircle | null;
+  /** On circle-plan logs: the days its owner had done that week, up to this log. */
+  weekChip?: { done: number; target: number } | null;
 }
 export interface PausePeriod {
   pausedAt: string;

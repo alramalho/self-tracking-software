@@ -75,6 +75,16 @@ export async function openCircleChat(circleId: string) {
   return (await api.post<{ chatId: string }>(`/circles/${circleId}/chat`)).data;
 }
 
+// Owner settings: the circle's name, and whether Helly posts in its chat.
+export async function updateCircle(circleId: string, changes: { name?: string; coachPosts?: boolean }) {
+  await api.patch(`/circles/${circleId}`, changes);
+}
+
+// Your own switch for this circle's pushes (chat messages and Helly's posts).
+export async function muteCircle(circleId: string, muted: boolean) {
+  await api.patch(`/circles/${circleId}/membership`, { muted });
+}
+
 // "Later" on the first-photo prompt: recorded so the coach can remind them.
 export async function skipProof(circleId: string) {
   await api.post(`/circles/${circleId}/proof-skipped`);

@@ -10,6 +10,7 @@ import {
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { useProfile } from "@/data/queries";
+import { WeekChipPill } from "../circles/components";
 import { profileStats } from "../profile/model";
 import type {
   ActivitySummaryProps,
@@ -273,6 +274,7 @@ export function ActivitySummary({
         {item.entry?.timezone ? ` - 📍 ${item.entry.timezone}` : ""}
       </Text>
       {circle && <CircleTag circle={circle} />}
+      {item.entry?.weekChip && <WeekChipPill chip={item.entry.weekChip} />}
     </View>
   );
   if (joint)

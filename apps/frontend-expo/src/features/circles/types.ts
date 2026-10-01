@@ -58,12 +58,33 @@ export interface BoardMember {
   nudgedToday: boolean;
 }
 
-export interface CircleRecap {
-  weekStart: string;
-  hit: number;
-  total: number;
-  topName: string | null;
-  topCount: number;
+export interface WeekChip {
+  done: number;
+  target: number;
+}
+
+export interface PastWeekPerson {
+  userId: string;
+  done: number;
+  target: number;
+  hit: boolean;
+}
+
+// Finished weeks (oldest first) and each person's share of their own target.
+export interface PastWeeks {
+  weeks: { start: string; allHit: boolean; people: PastWeekPerson[] }[];
+  // `hits` lines up with `weeks`; null for weeks before they joined.
+  ranking: { userId: string; percent: number; rank: number; hits: (boolean | null)[] }[];
+}
+
+// One bar in the past-weeks chart: a finished week, or the week in progress.
+export interface WeekBar {
+  key: string;
+  label: string;
+  current: boolean;
+  allHit: boolean;
+  target: number;
+  segments: { userId: string; done: number }[];
 }
 
 export interface CircleBoard {
@@ -77,10 +98,12 @@ export interface CircleBoard {
   place: string | null;
   paceLabel: string | null;
   cap: number;
-  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean };
+  // The owner's switch for Helly's recap and halfway check in the chat.
+  coachPosts: boolean;
+  me: { role: CircleRole; planId: string; hasIntro: boolean; pending: boolean; muted: boolean };
   members: BoardMember[];
   togetherStreak: number;
-  recap: CircleRecap | null;
+  pastWeeks: PastWeeks | null;
 }
 
 export interface CircleFeed {
@@ -135,6 +158,8 @@ export interface OrbitEllipse {
 export interface OrbitPersonViewProps {
   person: OrbitPerson;
   index: number;
+  slots: number;
+  small: boolean;
   turn: SharedValue<number>;
   ellipse: OrbitEllipse;
 }
@@ -142,6 +167,32 @@ export interface OrbitPersonViewProps {
 export interface OrbitProps {
   people: OrbitPerson[];
   height?: number;
+  // The whole ellipse, sized to its container, instead of the wide arc used in onboarding.
+  ring?: boolean;
+}
+
+export interface PastWeeksRowProps {
+  board: CircleBoard;
+  viewerId: string | undefined;
+  onPress: () => void;
+}
+
+export interface PastWeeksSheetProps {
+  board: CircleBoard;
+  viewerId: string | undefined;
+  visible: boolean;
+  onClose: () => void;
+}
+
+export interface PastWeeksChartProps {
+  bars: WeekBar[];
+  colors: Record<string, string>;
+  // When set, everyone else's slices dim.
+  highlight: string | undefined;
+}
+
+export interface WeekChipPillProps {
+  chip: WeekChip;
 }
 
 export interface WeekDotsProps {
