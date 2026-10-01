@@ -15,6 +15,7 @@ Small groups of people working on a similar goal, who see each other's week. Cir
 - **Helly in the circle chat.** Sunday 19:00 (owner's time zone): scores, the photo of the week (most reactions, attached to the message), who leads the last weeks, and one "never miss twice" ask for whoever missed. Thursday 18:00: who's behind, only if someone is. The owner can switch Helly's posts off (⋯ menu); each member can mute the circle's pushes.
 - **Together before against.** The circle page keeps "This week" as the place to act. "Past weeks" opens the last 6 finished weeks: the circle's sessions against its combined target (🔥 when everyone hit theirs), then everyone ranked by the share of their *own* target, capped at 100%, ties sharing a rank. Nobody is labelled last; new members rank after their first full week.
 - **Week chip on circle logs:** "3 of 4 this week", or "Week done ✅" on the log that completes the week, on the home timeline and the circle feed.
+- **Inviting from inside the app:** "Invite friends" and every open spot open "Invite to circle": the member's friends with an Invite button (one notification each, which opens the circle's join screen; recorded as an `INVITED` circle event), and "Share a link" for people not on the app yet. Friends only, so nobody gets circle invites from strangers.
 - **Invite previews:** `/og/circle-invite/:code.png` draws a light 1200×630 card per circle (satori + sharp); the web app's `middleware.ts` puts it in the meta tags for link crawlers.
 
 ## Code map
