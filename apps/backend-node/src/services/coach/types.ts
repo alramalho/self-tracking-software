@@ -116,11 +116,15 @@ export type CoachDraftMessage = {
       date: string;
       criteria?: string | null;
     }>;
+    orientation?: "OUTCOME" | "CONSISTENCY" | null;
+    goalSpec?: import("@tsw/prisma/follow-through").GoalSpec | null;
     sessions?: Array<{
       activityTitle: string;
       date: string;
       quantity?: number | null;
       descriptiveGuide?: string | null;
+      title?: string | null;
+      targets?: import("@tsw/prisma/follow-through").SessionTargets | null;
     }>;
     description: string;
     status: null;

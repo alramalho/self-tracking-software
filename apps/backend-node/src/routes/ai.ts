@@ -1,3 +1,4 @@
+import type { Prisma } from "@tsw/prisma";
 import { resolveCoachConversation } from "../services/coach/monitoring/requests";
 import { StaleCoachProposalError } from "../services/coach/monitoring/proposal-basis";
 import { Response, Router } from "express";
@@ -1873,6 +1874,8 @@ router.post(
           date: Date;
           quantity: number;
           descriptiveGuide: string;
+          title?: string | null;
+          targets?: Prisma.InputJsonValue;
         }> = [];
 
         for (const session of proposal.sessions || []) {
@@ -1918,6 +1921,8 @@ router.post(
               date: sessionDate,
               quantity: session.quantity || 1,
               descriptiveGuide: session.descriptiveGuide || "",
+              title: session.title || null,
+              targets: session.targets ? (session.targets as Prisma.InputJsonValue) : undefined,
             });
           }
         }
@@ -1954,6 +1959,12 @@ router.post(
             notes: proposal.notes || null,
             emoji: proposal.emoji || "🎯",
             finishingDate: parseProposalDateTime(proposal.finishingDate),
+            orientation: proposal.orientation || null,
+            goalSpec: proposal.goalSpec ? (proposal.goalSpec as Prisma.InputJsonValue) : undefined,
+            // A chat-made plan with dated sessions is designed through its last session; the weekly review extends it.
+            designedThrough: sessionCreates.length
+              ? sessionCreates.reduce((latest, s) => (s.date > latest ? s.date : latest), sessionCreates[0].date)
+              : undefined,
             outlineType,
             timesPerWeek:
               outlineType === "TIMES_PER_WEEK"

@@ -74,7 +74,7 @@ const input: DesignInput = {
   startDate: START,
 };
 
-const fitsNote = { verdict: "FITS", message: null, steady: { daysMin: 3, daysMax: 4 }, focused: { daysMin: 4, daysMax: 5 }, suggestedDays: null, targetInvolved: false };
+const fitsNote = { verdict: "FITS", message: null, steady: { daysMin: 3, daysMax: 4, weeks: 20 }, focused: { daysMin: 4, daysMax: 5, weeks: 16 }, suggestedDays: null, targetInvolved: false };
 
 describe("days a person prefers", () => {
   it("are bracketed by the two coaches: Helly up to them, Oli at or above", () => {
@@ -104,7 +104,7 @@ describe("designOptions", () => {
   });
 
   it("lets the coach adjust the days, and says why", async () => {
-    const adjusted = { ...fitsNote, verdict: "ADJUSTED", message: "A first half marathon needs at least 3 runs a week, so both plans use 3–4.", steady: { daysMin: 3, daysMax: 3 }, focused: { daysMin: 3, daysMax: 4 } };
+    const adjusted = { ...fitsNote, verdict: "ADJUSTED", message: "A first half marathon needs at least 3 runs a week, so both plans use 3–4.", steady: { daysMin: 3, daysMax: 3, weeks: 20 }, focused: { daysMin: 3, daysMax: 4, weeks: 16 } };
     const { generate, calls } = fake(adjusted, routeOutput("steady", 20, STEADY), routeOutput("focused", 16, [0, 2, 5, 7, 9, 12]));
     const result = await designOptions({ ...input, preferredDays: 1 }, generate);
     expect(result.coachNote).toMatchObject({ verdict: "ADJUSTED", message: expect.stringContaining("at least 3") });
@@ -146,15 +146,24 @@ describe("designOptions", () => {
     await expect(designOptions(input, generate)).rejects.toThrow(/reliable plan/);
   });
 
-  it("asks Oli again when Oli is not shorter than Helly", async () => {
-    const { generate, calls } = fake(fitsNote, routeOutput("steady", 16, STEADY), routeOutput("focused", 16, FOCUSED), routeOutput("focused", 12, FOCUSED));
+  it("fixes the weeks of both roads up front, and Oli is always shorter", async () => {
+    const longer = { ...fitsNote, steady: { ...fitsNote.steady, weeks: 16 }, focused: { ...fitsNote.focused, weeks: 18 } };
+    const { generate, calls } = fake(longer, routeOutput("steady", 16, STEADY), routeOutput("focused", 12, FOCUSED));
     const result = await designOptions(input, generate);
+    expect(calls).toHaveLength(3);
+    expect(calls[1].prompt).toContain('"weeks":16');
+    expect(calls[2].prompt).toContain('"weeks":12');
     expect(result.options.map((o) => o.estimatedWeeks)).toEqual([16, 12]);
-    expect(calls[3].prompt).toContain("steadyWeeks: 16");
+  });
+
+  it("rejects a route that ignores the weeks it was given", async () => {
+    const { generate, calls } = fake(fitsNote, routeOutput("steady", 18, STEADY), routeOutput("focused", 16, FOCUSED), routeOutput("steady", 20, STEADY));
+    await designOptions(input, generate);
+    expect(calls[3].prompt).toContain("estimatedWeeks must be exactly 20");
   });
 
   it("passes a fixed date through as the finish of both routes", async () => {
-    const { generate } = fake(fitsNote, routeOutput("steady", 20, STEADY), routeOutput("focused", 16, FOCUSED));
+    const { generate } = fake(fitsNote, routeOutput("steady", 23, STEADY), routeOutput("focused", 23, FOCUSED));
     const result = await designOptions({ ...input, fixedDate: "2027-03-14" }, generate);
     expect(result.options.map((o) => o.finishingDate)).toEqual(["2027-03-14", "2027-03-14"]);
   });
@@ -193,6 +202,15 @@ describe("pace is grounded", () => {
   it("requires distance to fit the time", () => {
     const long = [session(offsets([0])[0], { quantity: 10, targets: targets({ durationMinutes: 30 }) })];
     expect(validateSessions(long, ctx({ fast: 420, slow: 444 })).join()).toContain("does not fit");
+  });
+});
+
+describe("stray characters", () => {
+  it("rejects text in a writing system the person never used, but allows it when they did", () => {
+    const sessions = [session(offsets([0])[0], { targets: targets({ effort: "easy, you should be.аб" }) })];
+    const ctx = { activities: [{ key: "running", measure: "km" }], windowStart: START, daysMin: 1, daysMax: 1, easyPace: { fast: 420, slow: 444 }, weeks: 1 };
+    expect(validateSessions(sessions, { ...ctx, personText: "I run twice a week" }).join()).toContain("Cyrillic");
+    expect(validateSessions(sessions, { ...ctx, personText: "Я бегаю дважды в неделю" }).join()).not.toContain("Cyrillic");
   });
 });
 

@@ -1,0 +1,1688 @@
+{
+  "model": "openai/gpt-6.1-sol",
+  "startedAt": "2026-10-01T01:05:50.259Z",
+  "pricePerMillion": {
+    "input": 2,
+    "output": 10
+  },
+  "cases": [
+    {
+      "id": "half-marathon",
+      "title": "First half marathon · finish only",
+      "source": "owner-example",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 4,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          },
+          {
+            "question": "Why does it matter?",
+            "answer": "To finish it with my friends"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "runs_per_week",
+          "value": 2,
+          "unit": "runs/week",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "usual_run_distance",
+          "value": 5,
+          "unit": "km",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "easy_run_distance",
+          "value": 5,
+          "unit": "km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_run_duration_fast",
+          "value": 35,
+          "unit": "minutes",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_run_duration_slow",
+          "value": 37,
+          "unit": "minutes",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_pace_fast",
+          "value": 420,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_pace_slow",
+          "value": 444,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "longest_run_distance",
+          "value": 7,
+          "unit": "km",
+          "sourceQuote": "Longest run was 7 km."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 20,
+          "finishingDate": "2027-02-21",
+          "rationale": "A patient, finish-focused route to your first half marathon with your friends, without a finish-time target. Start by spreading approximately 10 km per week across three training days, reaching 11 km in week 1 and 12 km in week 2. Continue with mostly easy, un",
+          "assumptions": [
+            "Your current weekly distance is approximately 10 km.",
+            "Three running days each week are workable throughout the route.",
+            "Later increases depend on comfortable recovery; repeat or reduce weeks when needed.",
+            "The half marathon can take place in week 20; completion is not guaranteed."
+          ],
+          "phases": [
+            {
+              "title": "Establish three easy running days",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Log three runs each week, beginning with 11 km and then 12 km. If recovery remains comfortable, work toward approximately 14 km per week with a 6–7 km longest /"
+            },
+            {
+              "title": "Build comfortable endurance",
+              "startWeek": 5,
+              "endWeek": 9,
+              "progressCheck": "Maintain three training days per week. Gradually work toward approximately 20–22 km per week and a 10–12 km longest run, keeping increases around 10% or less in"
+            },
+            {
+              "title": "Extend the long run patiently",
+              "startWeek": 10,
+              "endWeek": 14,
+              "progressCheck": "Across three training days each week, work toward approximately 26–29 km per week and a 14–16 km longest outing. Log distance, conversational effort, any walk "
+            },
+            {
+              "title": "Rehearse sustained, finish-focused",
+              "startWeek": 15,
+              "endWeek": 18,
+              "progressCheck": "Keep three training days per week. If earlier milestones are comfortable, work toward approximately 30–34 km per week and one 17–19 km long outing. Practise "
+            },
+            {
+              "title": "Reduce training and attempt the",
+              "startWeek": 19,
+              "endWeek": 20,
+              "progressCheck": "Keep three training days in each week, with the event counting as one in week 20. Reduce pre-event training distance from your peak, keep the other outings "
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Short easy start",
+              "descriptiveGuide": "Run 3 km at your reported easy pace, staying conversational. The shorter distance helps introduce a third weekly run without a large mileage jump. Allow roughly ",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, relaxed, able to talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 3 km, running time, whether conversation stayed comfortable, and how your legs feel the following morning."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Repeat a comfortable short run",
+              "descriptiveGuide": "Repeat 3 km without trying to beat Monday's time. Keep the pace within your reported easy range. Allow roughly one minute within the session for settling ",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, can talk comfortably throughout",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and time; compare effort and next-morning recovery with Monday rather than comparing speed."
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Familiar-distance easy run",
+              "descriptiveGuide": "Run your familiar 5 km at an easy, conversational effort. This brings the first week's total to 11 km. Do not add distance or speed simply ",
+              "targets": {
+                "durationMinutes": 37,
+                "effort": "Easy and controlled, with enough energy to finish feeling un",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 5 km and elapsed running time. Check that the final kilometre remains conversational and note recovery the next day."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy reset",
+              "descriptiveGuide": "Keep this run short and familiar after Saturday's outing. Run 3 km at your reported easy pace, with roughly one minute available for settling ",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, relaxed, full-sentence conversation",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, time, and whether your legs have returned to their usual baseline after the weekend run."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Keep the routine easy",
+              "descriptiveGuide": "Run 3 km without increasing speed. This session maintains the three-day routine while leaving room for a small weekend distance increase. Allow roughly one minute for ",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, can talk; no hard finish",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 3 km and running time. Note any accumulating fatigue before deciding whether Saturday's increase feels appropriate."
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 6,
+              "title": "Small long-run extension",
+              "descriptiveGuide": "If recovery has been comfortable, run 6 km at your reported easy pace: below your previous 7 km longest run. Expect 42–44.4 minutes ",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Easy, conversational throughout; no push for speed",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes. This equals 7:00–7:24/km."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, running time, final-kilometre effort, and next-day recovery. The planned week totals 12 km, approximately 9% above week 1."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 4,
+          "daysMax": 5,
+          "estimatedWeeks": 16,
+          "finishingDate": "2027-01-24",
+          "rationale": "Build toward finishing your first half marathon with your friends, without a finish-time target. This focused route asks for four running days each week rather than adding speedwork. Initially, your approximately 10 weekly kilometres are redistributed into br​",
+          "assumptions": [
+            "The stated baseline represents approximately 10 km of current weekly running.",
+            "Four shorter easy runs are initially tolerable; frequency increases before volume.",
+            "The supplied 16 weeks is a planning estimate, not a guarantee of finishing.",
+            "There is no fixed race date or finish-time target; walking breaks are acceptable."
+          ],
+          "phases": [
+            {
+              "title": "Establish four easy running days",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Complete four running days weekly: 10 km in week 1, 11 km in week 2, and approximately 12 km in week 3 only if recovery is comfortable. Log conversational ease,"
+            },
+            {
+              "title": "Build a consistent endurance base",
+              "startWeek": 4,
+              "endWeek": 7,
+              "progressCheck": "Maintain four easy running days weekly, gradually reaching approximately 13–16 km per week and a 6–7 km longest run. Check that ordinary walking feels normal"
+            },
+            {
+              "title": "Extend the comfortable long run",
+              "startWeek": 8,
+              "endWeek": 11,
+              "progressCheck": "Maintain four running days weekly and build approximately 17–20 km per week, with the longest run reaching about 10–11 km. Record time on feet and next-day"
+            },
+            {
+              "title": "Develop half-marathon endurance",
+              "startWeek": 12,
+              "endWeek": 14,
+              "progressCheck": "Maintain four running days weekly, progressing toward approximately 22, 24, then 26 km per week. Gradually extend the longest outing toward 14–15 km, using"
+            },
+            {
+              "title": "Reduce training and attempt the finish",
+              "startWeek": 15,
+              "endWeek": 16,
+              "progressCheck": "Keep four distinct running days each week while shortening training. Reduce week 15 volume by approximately 20–30% from the peak. In week 16, use three "
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy frequency-building run",
+              "descriptiveGuide": "Run 3 km comfortably. This shorter session redistributes your usual weekly distance while you adjust to four running days. Do not chase the faster end",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, relaxed, able to speak in full sentences.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 3 km, elapsed minutes, conversational ease, and any discomfort."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Short easy run",
+              "descriptiveGuide": "Keep this 2 km outing deliberately light. Choose the comfortable part of your reported easy pace range and finish without accelerating.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Easy recovery effort, able to talk comfortably.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 2 km and minutes; note whether your legs feel recovered from Monday."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Easy consistency run",
+              "descriptiveGuide": "Run 2 km at conversational effort. The purpose is comfortable repetition, not fitness testing.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Easy, controlled, full-sentence conversation.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record distance, minutes, and whether effort stayed easy throughout."
+              }
+            },
+            {
+              "date": "2026-10-11",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Comfortable week-one finish",
+              "descriptiveGuide": "Complete 3 km without a fast finish. This brings week one to 10 km across four days, matching your approximate baseline volume.",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy, conversational, finish with energy in reserve.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 3 km and minutes; review whether all four runs felt manageable."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Light back-to-back outing",
+              "descriptiveGuide": "Keep this 2 km run especially relaxed after Sunday. If soreness changes your stride or easy effort is unavailable, stop rather than forcing the distance",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Very easy, comfortable conversation, no pushing.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log completed distance and minutes; compare leg comfort before and after."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Steady conversational run",
+              "descriptiveGuide": "Run 3 km evenly after a rest day. Stay within your reported easy pace only while it remains conversational; do not force the pace.",
+              "targets": {
+                "durationMinutes": 23,
+                "effort": "Easy aerobic effort, full-sentence conversation.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record 3 km, minutes, and whether the final kilometre felt as controlled as the first."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Short run before the longer outing",
+              "descriptiveGuide": "Complete 2 km easily. Avoid adding distance or a fast finish; save your energy for Sunday's modest extension.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Easy recovery effort, relaxed breathing.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 2 km and minutes; note any accumulated fatigue before the weekend."
+              }
+            },
+            {
+              "date": "2026-10-18",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy endurance extension",
+              "descriptiveGuide": "Run 4 km comfortably, still below your usual 5 km outing and previous 7 km longest run. Week two totals 11 km, a 10% increase from week one. No sprint fin",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Easy, conversational throughout, finish with reserve.",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "My easy 5 km takes 35–37 minutes."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 4 km, minutes, and next-morning leg comfort; repeat rather than increase if recovery is not comfortable."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 748,
+          "outputTokens": 64,
+          "reasoningTokens": 0,
+          "costUsd": 0.002136
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1403,
+          "outputTokens": 2842,
+          "reasoningTokens": 443,
+          "costUsd": 0.031926
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1403,
+          "outputTokens": 3497,
+          "reasoningTokens": 818,
+          "costUsd": 0.038476
+        }
+      ],
+      "costUsd": 0.071138,
+      "seconds": 71.3,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": true,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "5k-beginner",
+      "title": "First 5K · no pace known (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Run 5 km without stopping",
+        "goalSpec": {
+          "metric": "DISTANCE_NONSTOP",
+          "value": 5,
+          "unit": "km",
+          "text": "5 km without stopping",
+          "chosenByUser": true
+        },
+        "baseline": "I've never really run. I can jog for about 2 minutes before I need to walk.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 2,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "continuous_jog_duration",
+          "value": 2,
+          "unit": "minutes",
+          "sourceQuote": "I've never really run. I can jog for about 2 minutes before I need to walk."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 1,
+          "daysMax": 2,
+          "estimatedWeeks": 16,
+          "finishingDate": "2027-01-24",
+          "rationale": "Build toward your exact goal, 5 km without stopping, through two easy run/walk days per week. Begin with jogging bouts shorter than your reported two-minute limit, then gradually increase total distance and continuous jogging. Sixteen weeks is a planning frame",
+          "assumptions": [
+            "You can comfortably walk 1 km; initial session durations are estimates because walking pace is unknown.",
+            "Session kilometres include both jogging and walking.",
+            "Two training days per week are available, with recovery days between them.",
+            "Progress depends on comfortable recovery; repeat weeks when needed rather than forcing the 16-week goal."
+          ],
+          "phases": [
+            {
+              "title": "Establish comfortable run/walk sessions",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Complete two easy sessions each week and log distance, total jogging time and longest jogging bout. Check whether repeated one-minute bouts become comfortable."
+            },
+            {
+              "title": "Extend jogging bouts gradually",
+              "startWeek": 4,
+              "endWeek": 6,
+              "progressCheck": "Work toward a comfortable three-minute continuous jog within run/walk sessions. Increase total weekly distance or jogging time by roughly 10% at most, not both."
+            },
+            {
+              "title": "Link longer stretches",
+              "startWeek": 7,
+              "endWeek": 10,
+              "progressCheck": "Work toward 8–10 minutes of continuous easy jogging while maintaining two weekly training days. Log walk breaks and next-day recovery; repeat a week if needed."
+            },
+            {
+              "title": "Build toward the goal distance",
+              "startWeek": 11,
+              "endWeek": 13,
+              "progressCheck": "Gradually extend one session toward 4 km, using walk breaks as needed, while keeping the other shorter and easy. Record the longest uninterrupted jogging time."
+            },
+            {
+              "title": "Consolidate and assess 5 km readiness",
+              "startWeek": 14,
+              "endWeek": 16,
+              "progressCheck": "Maintain two easy training days weekly. When preceding sessions support it, attempt 5 km without stopping at conversational effort; record uninterrupted kilomet"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 1,
+              "title": "First easy run/walk kilometre",
+              "descriptiveGuide": "Start with two minutes of walking. Alternate one minute of gentle jogging with two minutes of walking until you have covered 1 km, including all walking. Keep jogging below your two-minute limit; take longer walks whenever needed. About 15 minutes is an estimate, not a pace requirement.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Very easy; able to speak in full sentences during jogging",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total time for 1 km, total jogging minutes, number of jogging bouts and whether breathing stayed conversational."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Repeat the comfortable starting point",
+              "descriptiveGuide": "Walk for two minutes, then alternate one-minute jogs with two-minute walks until the total reaches 1 km. Repeat rather than trying to go faster. If the first session felt demanding, shorten jogging bouts or lengthen walking breaks.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "Easy and relaxed; finish feeling you could do a little more",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record distance, total time, total jogging minutes and how recovered you felt before starting."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 1,
+              "title": "A small increase, only if comfortable",
+              "descriptiveGuide": "Begin with two minutes of walking. If both previous sessions were comfortable, alternate 65 seconds of jogging with two minutes of walking for a total of 1 km. Keep total jogging time no more than roughly 10% above the previous session. Otherwise repeat the one-minute bouts. Allow about 16 minutes without chasing a speed.",
+              "targets": {
+                "durationMinutes": 16,
+                "effort": "Easy, conversational jogging with recovery walks",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total jogging seconds and compare with the previous session; note whether the slightly longer bouts remained comfortable."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Consolidate your easy rhythm",
+              "descriptiveGuide": "Cover 1 km including walking, starting with a two-minute walk. Repeat Monday's comfortable interval pattern: up to 65 seconds jogging, then two minutes walking. Do not add speed or extra bouts. Longer walking breaks are welcome if recovery is incomplete.",
+              "targets": {
+                "durationMinutes": 16,
+                "effort": "Easy; relaxed breathing and no push to exhaustion",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record total time, jogging time and longest comfortable bout. Compare weekly jogging time with week 1; keep any increase around 10% or less."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 12,
+          "finishingDate": "2026-12-27",
+          "rationale": "Work toward 5 km without stopping through three easy run-walk days each week. Start with jogging bouts no longer than your reported 2 minutes, then gradually replace walking with jogging. The focused approach asks for consistent attendance, not speedwork. The ",
+          "assumptions": [
+            "You can comfortably cover about 2 km with walking breaks; the initial 30-minute estimate includes walking.",
+            "Your baseline describes a continuous jogging limit, not your total session duration.",
+            "Later weekly distance and total jogging time increase by roughly 10%, only when the previous week feels manageable.",
+            "Twelve weeks is a planning horizon, not a guarantee; repeat a week if needed."
+          ],
+          "phases": [
+            {
+              "title": "Establish comfortable run-walk sessions",
+              "startWeek": 1,
+              "endWeek": 2,
+              "progressCheck": "Complete three easy sessions per week. Build from up to 12 to 13 minutes of accumulated jogging per session, with walking between bouts and no requirement to go"
+            },
+            {
+              "title": "Build consistency and gently extend the",
+              "startWeek": 3,
+              "endWeek": 5,
+              "progressCheck": "Gradually reach about 2.6 km and 17 minutes of accumulated jogging per session. Log the longest comfortable continuous bout; extend bouts only if breathing and"
+            },
+            {
+              "title": "Reduce walking gradually",
+              "startWeek": 6,
+              "endWeek": 8,
+              "progressCheck": "Progress toward about 3.5 km and 23 minutes of accumulated jogging per session. Join short jogging bouts together without increasing total weekly"
+            },
+            {
+              "title": "Develop longer continuous running",
+              "startWeek": 9,
+              "endWeek": 10,
+              "progressCheck": "Progress toward about 4.2 km and 28 minutes of accumulated jogging per session. Record continuous distance, walking breaks, and next-day recovery; keep all"
+            },
+            {
+              "title": "Approach and attempt 5 km without",
+              "startWeek": 11,
+              "endWeek": 12,
+              "progressCheck": "Build toward 5 km total distance gradually. Attempt 5 km without stopping only after the preceding distance feels comfortable without walking; record nonstop"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Easy run-walk introduction",
+              "descriptiveGuide": "Cover 2 km including all walking. Begin with about 5 minutes of walking. Alternate up to six 2-minute easy jogs with comfortable walking recoveries of roughly 90 seconds. Finish walking. The 30 minutes is an estimate, not a deadline: shorten jogging bouts or use more walking whenever needed, and do not add jogging to force the distance.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Easy, able to speak in full sentences; walk before breathing",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total distance, actual duration, completed jogging minutes, longest comfortable bout, and"
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Repeat, rather than push",
+              "descriptiveGuide": "Repeat the 2 km run-walk session with a walking start and finish. Use up to six 2-minute easy jogs, separated by roughly 90 seconds or more of walking. Do not exceed the jogging volume you comfortably completed on Monday. Total distance includes walking; elapsed time may exceed the estimate.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Easy and conversational throughout; recover fully",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record jogging minutes and walking breaks; compare effort and next-day recovery with"
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Finish the first week comfortably",
+              "descriptiveGuide": "Cover 2 km with the same walking start, up to six 2-minute jogs, and walking recoveries. Keep the jogging dose unchanged. Walk any remaining distance and finish feeling able to do a little more, rather than exhausted.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Relaxed, conversational jogging with",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and total jogging minutes. Check whether all three sessions were manageable without"
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 2,
+              "title": "A small increase in jogging time",
+              "descriptiveGuide": "If week 1 was comfortable, cover 2 km with a walking start and finish, six 2-minute jogs, and one additional 1-minute jog. Walk roughly 90 seconds or longer between bouts. This raises planned jogging time from 12 to 13 minutes, about 8%. Otherwise repeat your comfortable week-1 dose. Distance includes walking, and 32 minutes is an estimate.",
+              "targets": {
+                "durationMinutes": 32,
+                "effort": "Easy, full-sentence conversation; no",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record whether you completed 13 comfortable jogging minutes or repeated week 1, plus total time and"
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Consolidate the new dose",
+              "descriptiveGuide": "Repeat Monday's comfortable dose over 2 km: walking warm-up, up to six 2-minute jogs plus one 1-minute jog, walking recoveries, and a walking finish. Do not add more jogging or shorten recoveries just because the session feels easier.",
+              "targets": {
+                "durationMinutes": 32,
+                "effort": "Comfortable and conversational, with",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log actual duration, accumulated jogging time, recovery lengths, and how your legs feel"
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Two-week consistency check",
+              "descriptiveGuide": "Complete another easy 2 km run-walk session using the same dose as Wednesday. Keep jogging bouts at 2 minutes or less, with the optional final 1-minute bout only if this week's increase has felt comfortable. Walk any remaining distance. Do not test your maximum continuous run yet.",
+              "targets": {
+                "durationMinutes": 32,
+                "effort": "Easy and controlled; finish",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Compare both weeks' total jogging minutes, session effort, and next-day recovery. Progress only if the"
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 706,
+          "outputTokens": 187,
+          "reasoningTokens": 121,
+          "costUsd": 0.003282
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1361,
+          "outputTokens": 2287,
+          "reasoningTokens": 743,
+          "costUsd": 0.023367
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1361,
+          "outputTokens": 3374,
+          "reasoningTokens": 1345,
+          "costUsd": 0.034237
+        }
+      ],
+      "costUsd": 0.065336,
+      "seconds": 87.4,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": true,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "reality-pushback",
+      "title": "Half marathon under 1:30, never run, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish a half marathon in under 1 hour 30 minutes",
+        "goalSpec": {
+          "metric": "FINISH_TIME",
+          "value": 5400,
+          "unit": "s",
+          "text": "under 1 hour 30 minutes",
+          "chosenByUser": true
+        },
+        "baseline": "I have never run. I can't jog for more than a minute.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "PUSHBACK",
+      "coachNote": {
+        "verdict": "PUSHBACK",
+        "message": "With no running experience and less than a minute of jogging, one day a week cannot support a safe sub-1:30 plan. Start with at least 4 training days; that time goal remains uncertain.",
+        "suggestedDays": 4,
+        "targetInvolved": true
+      },
+      "question": null,
+      "baselineMeasurements": [],
+      "options": [],
+      "attempts": 1,
+      "retried": [],
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 710,
+          "outputTokens": 210,
+          "reasoningTokens": 103,
+          "costUsd": 0.00352
+        }
+      ],
+      "costUsd": 0.0035200000000000006,
+      "seconds": 7.3,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "reality-adjusted",
+      "title": "First half marathon, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "I run 3 km once a week at an easy pace.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "ADJUSTED",
+        "message": "From 3 km once a week, a first half marathon needs at least 3 running days a week. Both plans use 3–4 days, building gradually toward finishing.",
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "distance_per_run",
+          "value": 3,
+          "unit": "km",
+          "sourceQuote": "I run 3 km once a week at an easy pace."
+        },
+        {
+          "metric": "runs_per_week",
+          "value": 1,
+          "unit": "runs/week",
+          "sourceQuote": "I run 3 km once a week at an easy pace."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 24,
+          "finishingDate": "2027-03-21",
+          "rationale": "Build toward finishing your first half marathon without a time target. Start by spreading your existing 3 km weekly distance across three easy training days rather than immediately increasing distance. Then build endurance patiently, with repeat weeks and walk",
+          "assumptions": [
+            "Three training days each week are available.",
+            "Walking breaks are acceptable for training and finishing.",
+            "Initial 12-minute session budgets are provisional because your current running duration is unknown.",
+            "Progress depends on comfortable recovery; 24 weeks is an estimate, not a guarantee."
+          ],
+          "phases": [
+            {
+              "title": "Establish three easy training days",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Complete three easy sessions each week, initially totaling 3 km. Log actual minutes and confirm that you recover comfortably before the next session."
+            },
+            {
+              "title": "Build a consistent endurance base",
+              "startWeek": 5,
+              "endWeek": 10,
+              "progressCheck": "Work toward approximately 5–6 km per week across three days, with a longest outing of 2–3 km. Increase easy running time gradually, roughly 10% in build weeks;,"
+            },
+            {
+              "title": "Extend the longest easy outing",
+              "startWeek": 11,
+              "endWeek": 16,
+              "progressCheck": "Work toward approximately 10–12 km per week across three days, including a 5–7 km easy run/walk. Record distance, minutes, talk-test effort and next-day comfort"
+            },
+            {
+              "title": "Develop half-marathon endurance",
+              "startWeek": 17,
+              "endWeek": 22,
+              "progressCheck": "If recovery remains comfortable, work toward approximately 18–22 km per week, including a 12–15 km easy run/walk. Rehearse repeatable walking breaks"
+            },
+            {
+              "title": "Reduce training and attempt the finish",
+              "startWeek": 23,
+              "endWeek": 24,
+              "progressCheck": "Reduce training volume while retaining three training days weekly; the half marathon counts as one day in the final week. Success is completing 21.1 km, with no"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy kilometre: establish your starting effort",
+              "descriptiveGuide": "Cover 1 km gently, using walking breaks whenever needed. The 12-minute budget is provisional, not a speed requirement. Log your actual time rather than rushing to meet it.",
+              "targets": {
+                "durationMinutes": 12,
+                "effort": "Easy, able to speak in full sentences; walk if needed.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 1 km, actual elapsed minutes, walking breaks and whether full-sentence conversation remained comfortable."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Repeat an easy kilometre",
+              "descriptiveGuide": "Repeat 1 km at conversational effort. Keep this deliberately gentle while adapting to more frequent outings. Use walking breaks and treat the duration as a provisional budget.",
+              "targets": {
+                "durationMinutes": 12,
+                "effort": "Easy and relaxed, never breathless.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "No numerical easy pace or recent race result was reported."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, actual minutes and whether you felt recovered from Monday."
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Finish your first three-day week",
+              "descriptiveGuide": "Cover 1 km easily without a faster finish. This brings the week's running distance to your reported 3 km baseline, distributed across three days.",
+              "targets": {
+                "durationMinutes": 12,
+                "effort": "Easy, full-sentence conversation; walking breaks welcome.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The reported easy effort has no numerical pace."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Confirm three outings and 3 km for the week; record actual minutes and next-day comfort."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy kilometre with an unhurried start",
+              "descriptiveGuide": "Keep the same 1 km distance. Allow a little more time for gentle walking breaks rather than adding distance or speed. The duration remains provisional.",
+              "targets": {
+                "durationMinutes": 13,
+                "effort": "Easy, conversational run/walk.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "No numerical pace can be derived from the baseline."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log actual minutes, walking breaks and whether effort stayed as comfortable as last week."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Gentle consistency session",
+              "descriptiveGuide": "Cover 1 km at an easy effort. Do not try to beat an earlier time; the aim is recovering well between three weekly outings.",
+              "targets": {
+                "durationMinutes": 13,
+                "effort": "Easy or recovery effort, able to talk throughout.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline supplies distance and frequency, but no numerical pace."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record distance, actual minutes and any discomfort during or after the session."
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Two-week consistency check",
+              "descriptiveGuide": "Complete another gentle 1 km, with walking breaks as needed. Review your log before considering any future increase. All other dates in these two weeks are rest days.",
+              "targets": {
+                "durationMinutes": 13,
+                "effort": "Easy, comfortable conversation; no finishing push.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "An easy effort was reported, but its pace is unknown."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Confirm three sessions and 3 km this week. Compare actual duration, effort and next-day recovery with week one."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 18,
+          "finishingDate": "2027-02-07",
+          "rationale": "Work toward finishing your first half marathon, without a finish-time target. This focused route asks for three training days each week rather than immediately increasing your current 3 km weekly distance. The first fortnight redistributes that distance into短,",
+          "assumptions": [
+            "Run–walk completion is acceptable; any event cutoff must accommodate it.",
+            "The initial 10-minute session budgets are provisional because your current run duration is unknown.",
+            "Later increases depend on comfortable recovery, not simply the calendar.",
+            "Eighteen weeks is a planning horizon, not a guarantee of race readiness."
+          ],
+          "phases": [
+            {
+              "title": "Establish three easy training days",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Complete three easy outings per week. Keep weeks 1 and 2 at 3 km total; consider approximately 3.3 km in week 3 only if recovery is comfortable. Log actual time"
+            },
+            {
+              "title": "Build a repeatable aerobic routine",
+              "startWeek": 4,
+              "endWeek": 8,
+              "progressCheck": "Maintain three training days weekly and gradually build toward approximately 5 km total per week. Keep increases around 10% or less; repeat a week when needed. "
+            },
+            {
+              "title": "Extend one outing gradually",
+              "startWeek": 9,
+              "endWeek": 13,
+              "progressCheck": "Maintain three training days and build toward approximately 8–8.5 km weekly. Gradually lengthen one outing while retaining two short, easy outings; record walk "
+            },
+            {
+              "title": "Develop endurance and check readiness",
+              "startWeek": 14,
+              "endWeek": 16,
+              "progressCheck": "Build toward approximately 10–11 km weekly across three days, with one outing around 7–9 km if recovery allows. Practise comfortable run–walk pacing. Compare "
+            },
+            {
+              "title": "Freshen up and attempt completion only ",
+              "startWeek": 17,
+              "endWeek": 18,
+              "progressCheck": "Use three training days each week, with the half marathon counting as one day in week 18 if proceeding. Reduce preparatory volume rather than cramming missed "
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy introduction to three-day training",
+              "descriptiveGuide": "Cover 1 km at a comfortable, conversational effort. Short walk breaks are welcome. The 10-minute budget is provisional, not a requirement to run faster; log ",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Easy, able to speak in full sentences",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log 1 km completed, actual elapsed minutes, any walk breaks, and how your legs feel the following morning."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy repeat",
+              "descriptiveGuide": "Repeat 1 km without trying to beat Monday's time. Keep the effort comfortable and use walking breaks if needed. Record actual duration to improve future ",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Easy, relaxed and conversational",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, actual minutes, conversational comfort, and whether you recovered from the previous outing."
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Complete the first consistent week",
+              "descriptiveGuide": "Cover 1 km easily, bringing the week's total to your existing 3 km baseline. Finish without a fast final section. Walk breaks are optional, not a failure.",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Easy, finish feeling you could continue",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Confirm 3 km across three days this week; log actual minutes and next-day fatigue or discomfort."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Keep the routine easy",
+              "descriptiveGuide": "Start the second week with another comfortable 1 km. Keep weekly distance unchanged while adapting to the additional training days. Do not chase pace.",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Easy, full-sentence conversation",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log actual time, walk breaks, and whether you felt recovered before starting."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Recovery-minded kilometre",
+              "descriptiveGuide": "Cover 1 km at an especially relaxed effort. Use brief walk breaks as needed and avoid making this a test. Stop if discomfort changes your stride.",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Very easy, relaxed breathing",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Record completed distance, actual minutes, and any discomfort during or after the outing."
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Fortnight consistency check",
+              "descriptiveGuide": "Complete another easy 1 km, keeping week 2 at 3 km total. Review both weeks before increasing anything: comfortable recovery matters more than speed.",
+              "targets": {
+                "durationMinutes": 10,
+                "effort": "Easy, conversational throughout",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": "The baseline describes an easy effort but gives no pace or elapsed time."
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Confirm three training days and 3 km this week. Compare recovery, actual session duration, and walk-break needs with week 1."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 713,
+          "outputTokens": 197,
+          "reasoningTokens": 96,
+          "costUsd": 0.003396
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1368,
+          "outputTokens": 2731,
+          "reasoningTokens": 784,
+          "costUsd": 0.0278245
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1368,
+          "outputTokens": 3002,
+          "reasoningTokens": 1034,
+          "costUsd": 0.0305345
+        }
+      ],
+      "costUsd": 0.066198,
+      "seconds": 73.6,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "extend-after-hard-run",
+      "title": "Next two weeks after a hard long run",
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "sessions": [
+          {
+            "date": "2026-10-12",
+            "quantity": 3,
+            "title": "Gentle recovery run",
+            "descriptiveGuide": "Start gently and keep full-sentence conversation comfortable. The pace range is a reference, not a requirement; slow down or take walking breaks if your legs still feel heavy. Stop early if easy effort is not possible.",
+            "targets": {
+              "durationMinutes": 23,
+              "effort": "Easy and relaxed, full-sentence conversation; no push for a ",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance, running time, any walking breaks, conversational comfort and whether leg heaviness improves or persists the next morning."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-14",
+            "quantity": 3,
+            "title": "Repeat a comfortable short run",
+            "descriptiveGuide": "Repeat the short distance without adding speed or a fast finish. Let comfortable effort determine your pace, and shorten the run if fatigue is still making it hard.",
+            "targets": {
+              "durationMinutes": 23,
+              "effort": "Easy, able to talk comfortably throughout",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance and running time; compare effort and next-morning leg heaviness with Monday."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-17",
+            "quantity": 4,
+            "title": "Shorter weekend run",
+            "descriptiveGuide": "Replace the planned 6 km extension with 4 km at genuinely easy effort. Keep the final kilometre as relaxed as the first; use walking breaks or finish early rather than pushing through another difficult ending.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "Easy and conversational from start to finish",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance, running time, final-kilometre effort and next-day recovery. Planned weekly distance is 10 km, compared with the 13 km you logged last week."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-19",
+            "quantity": 3,
+            "title": "Hold the easy routine",
+            "descriptiveGuide": "Keep the same short distance rather than increasing it. Use comfortable conversation as your guide, even if that means running slower than the reference pace or taking walking breaks.",
+            "targets": {
+              "durationMinutes": 23,
+              "effort": "Easy, relaxed, full-sentence conversation",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance, running time and whether your legs feel back to their usual baseline after the weekend run."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 3,
+            "title": "Comfort before progression",
+            "descriptiveGuide": "Keep this run short and unhurried, with no extra distance to make up anything missed. If the previous runs were hard or recovery remains poor, shorten this session rather than forcing the full target.",
+            "targets": {
+              "durationMinutes": 23,
+              "effort": "Easy and conversational; no hard finish",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance, running time, difficulty and next-morning recovery; note whether easy running now feels consistently manageable."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 4,
+            "title": "Repeat the lighter weekend distance",
+            "descriptiveGuide": "Hold at 4 km rather than assuming you are ready for an increase. Prioritize an easy final kilometre and comfortable recovery; stop early or walk if the heavy-legged struggle returns.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "Easy and controlled, conversational throughout",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes, equivalent to 7:00–7:24/km."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Log actual distance, running time, final-kilometre effort and next-day recovery. Compare with the previous 4 km run; consider a later increase only if recentss "
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice; keep this check pending while the next two weeks focus on comfortable effort and recovery."
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 16,
+            "progressCheck": "Long run 15 km; review readiness after the rhythm phase before increasing long-run distance."
+          }
+        ],
+        "summary": "Your logged 6 km run ended with a difficult final 2 km and heavy legs, so next week's planned 6 km run becomes an easier 4 km, with two short runs alongside it. We'll hold that lighter pattern for both weeks, keeping your half-marathon goal, Helly's steady route and February 21 finish date unchanged",
+        "designedThrough": "2026-10-25",
+        "usage": {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1922,
+          "outputTokens": 1825,
+          "reasoningTokens": 104,
+          "costUsd": 0.0230535
+        }
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1922,
+          "outputTokens": 1825,
+          "reasoningTokens": 104,
+          "costUsd": 0.0230535
+        }
+      ],
+      "costUsd": 0.022094000000000003,
+      "seconds": 36
+    }
+  ],
+  "finishedAt": "2026-10-01T01:10:25.910Z",
+  "totalCostUsd": 0.22828600000000002
+}

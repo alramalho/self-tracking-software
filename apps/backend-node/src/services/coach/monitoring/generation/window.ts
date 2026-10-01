@@ -9,11 +9,33 @@ import type { ScheduledCoachInput } from "./types";
 type CoachPlan = ScheduledCoachInput["plans"][number];
 type Outline = WindowInput["outline"];
 
-const outlineOf = (plan: CoachPlan) => plan.outline as Outline | null;
+/** Plans made by the onboarding carry their road. A chat-made outcome plan gets a plain one from its own sessions. */
+function outlineOf(plan: CoachPlan): Outline | null {
+  if (plan.outline) return plan.outline as unknown as Outline;
+  if (plan.orientation !== "OUTCOME" || !plan.sessions.length) return null;
+  const perWeek = new Map<string, Set<string>>();
+  for (const s of plan.sessions) {
+    const day = s.date.toISOString().slice(0, 10);
+    const week = new Date(s.date.getTime() - ((s.date.getUTCDay() + 6) % 7) * 86_400_000).toISOString().slice(0, 10);
+    perWeek.set(week, (perWeek.get(week) ?? new Set()).add(day));
+  }
+  const counts = [...perWeek.values()].map((days) => days.size);
+  const start = plan.createdAt.toISOString().slice(0, 10);
+  return {
+    route: "steady",
+    coach: "Helly",
+    phases: [],
+    assumptions: [],
+    daysMin: Math.min(...counts),
+    daysMax: Math.max(...counts),
+    startDate: start,
+    estimatedWeeks: plan.finishingDate ? Math.max(2, Math.ceil((plan.finishingDate.getTime() - plan.createdAt.getTime()) / (7 * 86_400_000))) : 12,
+  };
+}
 
 /** A coached outcome plan whose dated sessions end within a week needs its next weeks designed. */
 export function windowDue(plan: CoachPlan, today: string) {
-  if (plan.orientation !== "OUTCOME" || !outlineOf(plan) || !plan.designedThrough) return false;
+  if (plan.orientation !== "OUTCOME" || !plan.designedThrough || !outlineOf(plan)) return false;
   const left = (plan.designedThrough.getTime() - Date.parse(`${today}T12:00:00Z`)) / 86_400_000;
   return left < 8;
 }

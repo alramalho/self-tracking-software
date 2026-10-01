@@ -187,3 +187,26 @@ test("creating a plan inside the app skips the welcome and starts the baseline f
   // The text carries the numbers from their logs, so the coach can ground the plan in them.
   expect(ask.body.baseline).toContain("9 sessions in the last 4 weeks");
 });
+
+test("an existing plan can be designed with the coach: logs baseline, days check, two routes, applied to that plan", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  const plans = await (await request.get(`${API}/plans`, { headers })).json();
+  const plan = (Array.isArray(plans) ? plans : plans.plans)[0];
+  await page.goto(`/plan/${plan.id}`);
+  await page.getByText("Plan this with my coach").click();
+  await expect(page.getByTestId("redesign-baseline")).toHaveValue(/9 sessions in the last 4 weeks/);
+  await expect(page.getByText("From your logs.")).toBeVisible();
+  await next(page);
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  await next(page, "Ask my coach");
+  await page.getByTestId("route-steady").click();
+  await expect(page.getByTestId("two-weeks")).toBeVisible();
+  await next(page);
+  await expect(page).toHaveURL(new RegExp(`/plan/${plan.id}`));
+  const state = await (await request.get(`${API}/__state`)).json();
+  const applied = state.requests.find((r: any) => r.path === `/follow-through/plans/${plan.id}/redesign`);
+  expect(applied.body.design).toMatchObject({ orientation: "OUTCOME", selected: "steady" });
+  expect(applied.body.design.baseline.text).toContain("9 sessions in the last 4 weeks");
+  expect(applied.body.design.baseline.measurements.length).toBeGreaterThan(0);
+});

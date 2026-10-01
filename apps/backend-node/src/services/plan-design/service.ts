@@ -82,9 +82,10 @@ export async function nextSubgoalQuestion(
 
 type RouteId = "steady" | "focused";
 
-function routePrompt(input: DesignInput, id: RouteId, range: DayRange, extra = "") {
+function routePrompt(input: DesignInput, id: RouteId, range: DayRange, weeks: number, extra = "") {
   return JSON.stringify({
     route: id,
+    weeks,
     goal: input.goal,
     goalSpec: input.goalSpec,
     baselineVerbatim: input.baseline,
@@ -97,24 +98,32 @@ function routePrompt(input: DesignInput, id: RouteId, range: DayRange, extra = "
   }) + extra;
 }
 
-function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange) {
+/** What the person wrote, for the stray-character check. */
+const personText = (input: DesignInput) => [input.goal, input.goalSpec.text ?? "", input.baseline, ...input.asked.map((a) => `${a.question} ${a.answer}`)].join(" ");
+
+function problemsIn(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange, weeks: number) {
   const route = output.route;
   if (!route) return [`route ${id} is missing`];
   if (route.id !== id) return [`route id must be ${id}`];
-  return validateSessions(route.sessions, {
+  const early: string[] = [];
+  if (route.estimatedWeeks !== weeks) early.push(`estimatedWeeks must be exactly ${weeks}`);
+  if (route.phases.at(-1)?.endWeek !== weeks) early.push(`the last phase must end at week ${weeks}`);
+  return early.concat(validateSessions(route.sessions, {
     activities: input.activities,
     windowStart: input.startDate,
     daysMin: range.min,
     daysMax: range.max,
     easyPace: easyPaceFrom(output.baselineMeasurements),
+    personText: personText(input),
     weeks: 2,
-  });
+  }));
 }
 
 async function designRoute(
   input: DesignInput,
   id: RouteId,
   range: DayRange,
+  weeks: number,
   generate: ObjectGenerator,
   extra = "",
 ): Promise<{ output: RouteOutput; usage: GenerationUsage[]; retried: string[] }> {
@@ -126,12 +135,12 @@ async function designRoute(
       name: `designRoute_${id}`,
       schema: routeSchema,
       system: designPrompt,
-      prompt: routePrompt(input, id, range, extra) + retry,
+      prompt: routePrompt(input, id, range, weeks, extra) + retry,
       effort: designEffort(),
     });
     usage.push(result.usage);
     if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage, retried };
-    const problems = problemsIn(result.object, input, id, range);
+    const problems = problemsIn(result.object, input, id, range, weeks);
     if (!problems.length) return { output: result.object, usage, retried };
     retried.push(...problems.slice(0, 4).map((p) => `${id}: ${p}`));
     retry = `\nYour previous answer was rejected for: ${problems.slice(0, 8).join("; ")}. Return a corrected full answer.`;
@@ -139,11 +148,8 @@ async function designRoute(
   throw new FollowThroughInputError("We couldn't build a reliable plan just now. Please try again.");
 }
 
-function toOption(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange): DesignOption {
+function toOption(output: RouteOutput, input: DesignInput, id: RouteId, range: DayRange, weeks: number): DesignOption {
   const route = output.route!;
-  const weeks = input.fixedDate
-    ? Math.max(2, Math.ceil((daysBetween(input.startDate, input.fixedDate) + 1) / 7))
-    : route.estimatedWeeks;
   return {
     id,
     coach: routeCoach[id],
@@ -158,6 +164,15 @@ function toOption(output: RouteOutput, input: DesignInput, id: RouteId, range: D
   };
 }
 
+/** The coach sets the length of both roads once, so the routes cannot contradict each other. Oli is always shorter. */
+function coherentWeeks(steady: number, focused: number, input: DesignInput): Record<RouteId, number> {
+  if (input.fixedDate) {
+    const fixed = Math.max(2, Math.ceil((daysBetween(input.startDate, input.fixedDate) + 1) / 7));
+    return { steady: fixed, focused: fixed };
+  }
+  return { steady, focused: focused < steady ? focused : Math.max(2, Math.round(steady * 0.75)) };
+}
+
 /**
  * Step 4a, the coach's reality check: do the preferred days fit the goal and the starting point?
  * FITS keeps the deterministic Garmin-style bracket (3 days: Helly 2–3, Oli 3–4). ADJUSTED lets the
@@ -167,7 +182,7 @@ function toOption(output: RouteOutput, input: DesignInput, id: RouteId, range: D
 export async function assessPreferredDays(
   input: DesignInput,
   generate: ObjectGenerator,
-): Promise<{ note: CoachNote; ranges: Record<RouteId, DayRange>; usage: GenerationUsage }> {
+): Promise<{ note: CoachNote; ranges: Record<RouteId, DayRange>; weeks: Record<RouteId, number>; usage: GenerationUsage }> {
   const base = defaultRanges(input.preferredDays);
   const { object, usage } = await generate({
     name: "assessDays",
@@ -184,14 +199,16 @@ export async function assessPreferredDays(
     }),
     effort: "low",
   });
+  const weeks = coherentWeeks(object.steady.weeks, object.focused.weeks, input);
   const fits = { verdict: "FITS" as const, message: null, suggestedDays: null, targetInvolved: false };
-  if (object.verdict === "FITS" || !object.message?.trim()) return { note: fits, ranges: base, usage };
+  if (object.verdict === "FITS" || !object.message?.trim()) return { note: fits, ranges: base, weeks, usage };
   if (object.verdict === "PUSHBACK") {
     // Never ask for the same days again: the suggestion must differ from the preference.
     const suggested = object.suggestedDays && object.suggestedDays !== input.preferredDays ? object.suggestedDays : null;
     return {
       note: { verdict: "PUSHBACK", message: object.message.trim(), suggestedDays: suggested, targetInvolved: object.targetInvolved },
       ranges: base,
+      weeks,
       usage,
     };
   }
@@ -199,16 +216,16 @@ export async function assessPreferredDays(
     steady: { min: object.steady.daysMin, max: object.steady.daysMax },
     focused: { min: object.focused.daysMin, max: object.focused.daysMax },
   });
-  if (sameRanges(ranges, base)) return { note: fits, ranges: base, usage };
-  return { note: { verdict: "ADJUSTED", message: object.message.trim(), suggestedDays: null, targetInvolved: false }, ranges, usage };
+  if (sameRanges(ranges, base)) return { note: fits, ranges: base, weeks, usage };
+  return { note: { verdict: "ADJUSTED", message: object.message.trim(), suggestedDays: null, targetInvolved: false }, ranges, weeks, usage };
 }
 
 /**
  * Step 4: the coach's reality check, then two honest routes (Helly steady, Oli focused) with the
  * first two weeks each. Each route is its own call, run in parallel: the answers are shorter and the
  * wait is one call, not two. Validated in code; one retry per route with the exact problems, then a
- * clear failure rather than a bad plan. Oli must come out shorter than Helly (unless the finish date
- * is fixed); if not, Oli is asked again once.
+ * clear failure rather than a bad plan. The coach fixes the weeks of both roads first (Oli shorter), so
+ * the two parallel calls cannot contradict each other.
  */
 export async function designOptions(
   input: DesignInput,
@@ -219,32 +236,23 @@ export async function designOptions(
   if (assessed.note.verdict === "PUSHBACK")
     return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
   const { steady: steadyRange, focused: focusedRange } = assessed.ranges;
-  const [steady, focusedFirst] = await Promise.all([
-    designRoute(input, "steady", steadyRange, generate),
-    designRoute(input, "focused", focusedRange, generate),
+  const { steady: steadyWeeks, focused: focusedWeeks } = assessed.weeks;
+  const [steady, focused] = await Promise.all([
+    designRoute(input, "steady", steadyRange, steadyWeeks, generate),
+    designRoute(input, "focused", focusedRange, focusedWeeks, generate),
   ]);
-  usage.push(...steady.usage, ...focusedFirst.usage);
-  const retried = [...steady.retried, ...focusedFirst.retried];
-  const asked = [steady.output, focusedFirst.output].find((o) => o.status === "ASK" && o.question);
+  usage.push(...steady.usage, ...focused.usage);
+  const retried = [...steady.retried, ...focused.retried];
+  const asked = [steady.output, focused.output].find((o) => o.status === "ASK" && o.question);
   const baseline = { text: input.baseline, measurements: steady.output.baselineMeasurements };
   if (asked) return { status: "ASK", question: asked.question, coachNote: assessed.note, retried, baseline, options: [], usage };
-  let focused = focusedFirst.output;
-  const steadyWeeks = steady.output.route!.estimatedWeeks;
-  if (!input.fixedDate && focused.route!.estimatedWeeks >= steadyWeeks) {
-    const again = await designRoute(input, "focused", focusedRange, generate, `\nsteadyWeeks: ${steadyWeeks}. Your estimatedWeeks must be lower.`);
-    usage.push(...again.usage);
-    retried.push(...again.retried);
-    focused = again.output;
-    if (focused.route!.estimatedWeeks >= steadyWeeks)
-      throw new FollowThroughInputError("We couldn't build two distinct plans just now. Please try again.");
-  }
   return {
     status: "READY",
     question: null,
     coachNote: assessed.note,
     retried,
     baseline,
-    options: [toOption(steady.output, input, "steady", steadyRange), toOption(focused, input, "focused", focusedRange)],
+    options: [toOption(steady.output, input, "steady", steadyRange, steadyWeeks), toOption(focused.output, input, "focused", focusedRange, focusedWeeks)],
     usage,
   };
 }
@@ -299,6 +307,7 @@ export async function extendWindow(
       daysMin: input.outline.daysMin,
       daysMax: input.outline.daysMax,
       easyPace: easyPaceFrom(measurements),
+      personText: [input.goal, input.baseline?.text ?? "", input.feedback ?? "", ...input.results.map((r) => r.note ?? "")].join(" "),
       weeks: 2,
     });
     if (!problems.length)

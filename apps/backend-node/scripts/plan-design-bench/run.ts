@@ -33,7 +33,8 @@ async function main() {
   const results: any = { model, startedAt: new Date().toISOString(), pricePerMillion: { input: price.input * 1e6, output: price.output * 1e6 }, cases: [] as any[] };
   const save = () => fs.writeFileSync(out, JSON.stringify(results, null, 2));
 
-  for (const c of cases) {
+  const only = process.argv.includes("--only") ? arg("only").split(",") : null;
+  for (const c of cases.filter((x) => !only || only.includes(x.id))) {
     const started = Date.now();
     const record: any = { id: c.id, title: c.title, source: c.source, input: c.input, status: "running" };
     results.cases.push(record);
@@ -52,7 +53,7 @@ async function main() {
       record.costUsd = dollars(result.usage);
       record.seconds = Math.round((Date.now() - started) / 100) / 10;
       record.checks = {
-        verdict: (result.coachNote?.verdict ?? "FITS") === (c.expect.verdict ?? "FITS"),
+        verdict: [c.expect.verdict ?? "FITS"].flat().includes(result.coachNote?.verdict ?? "FITS"),
           rangesBracketPreference: result.status !== "READY" || (result.coachNote?.verdict !== "FITS") || (result.options[0].daysMax === c.input.preferredDays && result.options[1].daysMin === c.input.preferredDays),
         paceBasis: c.expect.paceBasis ? paces.length > 0 && paces.every((p) => p === c.expect.paceBasis) : null,
         targetKept: c.expect.targetPreserved ? text.includes(c.expect.targetPreserved) || /./.test(c.input.goalSpec.text ?? "") : null,
@@ -70,7 +71,7 @@ async function main() {
 
   // Rolling regeneration from the first case's chosen route.
   const first = results.cases.find((c: any) => c.id === "half-marathon" && c.options);
-  if (first) {
+  if (first && (!only || only.includes("extend"))) {
     const sessions = first.options[0].sessions.map((s: any, i: number) => ({
       id: `s${i}`, date: s.date, activityId: "running", quantity: s.quantity, title: s.title, targets: s.targets, completed: i < 3,
     }));

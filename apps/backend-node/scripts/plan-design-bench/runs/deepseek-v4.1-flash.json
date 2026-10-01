@@ -1,0 +1,258 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "startedAt": "2026-10-01T01:05:50.269Z",
+  "pricePerMillion": {
+    "input": 0.3,
+    "output": 1.2
+  },
+  "cases": [
+    {
+      "id": "half-marathon",
+      "title": "First half marathon · finish only",
+      "source": "owner-example",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 4,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          },
+          {
+            "question": "Why does it matter?",
+            "answer": "To finish it with my friends"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "ASK",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": "Focused route requires an actual goal target or pace; baseline gives only easy runs, no race or time trial — what pace or time should the goal be built around?",
+      "baselineMeasurements": [
+        {
+          "metric": "weekly_runs",
+          "value": 2,
+          "unit": "runs/week",
+          "sourceQuote": "Twice a week"
+        },
+        {
+          "metric": "typical_run_distance",
+          "value": 5,
+          "unit": "km",
+          "sourceQuote": "about 5 km each"
+        },
+        {
+          "metric": "easy_pace_fast",
+          "value": 420,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_pace_slow",
+          "value": 444,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "longest_run",
+          "value": 7,
+          "unit": "km",
+          "sourceQuote": "Longest run was 7 km."
+        }
+      ],
+      "options": [],
+      "attempts": 5,
+      "retried": [
+        "steady: route steady is missing",
+        "focused: route focused is missing"
+      ],
+      "usage": [
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 1038,
+          "outputTokens": 639,
+          "reasoningTokens": 576,
+          "costUsd": 0.0006501
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 980,
+          "outputTokens": 5693,
+          "reasoningTokens": 5658,
+          "costUsd": 0.0071256
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 2203,
+          "outputTokens": 8193,
+          "reasoningTokens": 6464,
+          "costUsd": 0.00589204
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 981,
+          "outputTokens": 9357,
+          "reasoningTokens": 9326,
+          "costUsd": 0.0115227
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 999,
+          "outputTokens": 6814,
+          "reasoningTokens": 6517,
+          "costUsd": 0.008251476
+        }
+      ],
+      "costUsd": 0.0386955,
+      "seconds": 125.5,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": false,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "bench",
+      "title": "Bench press · user chooses 80 kg × 5",
+      "source": "owner-example",
+      "input": {
+        "goal": "Bench press 80 kg for 5 reps",
+        "goalSpec": {
+          "metric": "LIFT_LOAD",
+          "value": 80,
+          "unit": "kg",
+          "text": "80 kg for 5 reps",
+          "chosenByUser": true
+        },
+        "baseline": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.",
+        "activities": [
+          {
+            "key": "bench-press",
+            "title": "Bench press",
+            "measure": "reps",
+            "emoji": "🏋️"
+          }
+        ],
+        "preferredDays": 3,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "ASK",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": "Your input says the route is 'focused' but includes no target for 'weeks'. Please provide the estimated number of weeks so I can design the full route.",
+      "baselineMeasurements": [
+        {
+          "metric": "bench_press_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps"
+        },
+        {
+          "metric": "bench_press_reps",
+          "value": 5,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps"
+        },
+        {
+          "metric": "bench_press_sets",
+          "value": 3,
+          "unit": "sets",
+          "sourceQuote": "3 sets"
+        },
+        {
+          "metric": "lifting_days_per_week",
+          "value": 3,
+          "unit": "days/week",
+          "sourceQuote": "I lift 3 days a week"
+        }
+      ],
+      "options": [],
+      "attempts": 5,
+      "retried": [
+        "steady: week 1 has 0 training days, expected 2-3",
+        "steady: week 2 has 0 training days, expected 2-3",
+        "focused: route focused is missing"
+      ],
+      "usage": [
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 624,
+          "outputTokens": 2148,
+          "reasoningTokens": 2046,
+          "costUsd": 0.0027648
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 956,
+          "outputTokens": 5219,
+          "reasoningTokens": 4525,
+          "costUsd": 0.0065496
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 2204,
+          "outputTokens": 5740,
+          "reasoningTokens": 4284,
+          "costUsd": 0.00427328
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 957,
+          "outputTokens": 8138,
+          "reasoningTokens": 8106,
+          "costUsd": 0.0100527
+        },
+        {
+          "model": "deepseek/deepseek-v4.1-flash",
+          "inputTokens": 975,
+          "outputTokens": 9573,
+          "reasoningTokens": 9376,
+          "costUsd": 0.0117801
+        }
+      ],
+      "costUsd": 0.0386964,
+      "seconds": 88.5,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": true,
+        "routesDiffer": null
+      }
+    }
+  ]
+}

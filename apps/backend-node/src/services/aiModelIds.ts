@@ -60,8 +60,12 @@ export function planDesignModel(): string {
   return process.env.PLAN_DESIGN_MODEL || GPT_6_LUNA_MODEL;
 }
 
-/** Reasoning effort for building a route. Medium: the earlier trial at high spent more than half the output on hidden reasoning (45–97 s). */
+/**
+ * Reasoning effort for building routes and extending a plan. Low: in the live benchmark it passed every check
+ * at about 20 s and $0.0025 a plan on gpt-6-luna, where medium was slower and less reliable (one timeout).
+ * The validator, not extra thinking, is what keeps the numbers honest. PLAN_DESIGN_EFFORT overrides.
+ */
 export function designEffort(): "low" | "medium" | "high" {
   const value = process.env.PLAN_DESIGN_EFFORT;
-  return value === "low" || value === "high" ? value : "medium";
+  return value === "medium" || value === "high" ? value : "low";
 }

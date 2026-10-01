@@ -312,7 +312,17 @@ export function PlanCard({
               <SupportEditor plan={plan} />
               <PlanCoachingRow
                 plan={plan}
-                leadingRows={coachRequest ? [coachRequest] : []}
+                leadingRows={[
+                  ...(coachRequest ? [coachRequest] : []),
+                  // The same designer as onboarding, for a plan that already exists.
+                  {
+                    id: "redesign",
+                    icon: "🗺️",
+                    title: "Plan this with my coach",
+                    value: plan.orientation === "OUTCOME" ? "Redo the road" : "Build a road to it",
+                    onPress: () => router.push(`/redesign-plan?planId=${plan.id}` as never),
+                  },
+                ]}
               />
             </>
           )}

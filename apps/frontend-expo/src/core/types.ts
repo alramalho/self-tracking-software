@@ -127,6 +127,8 @@ export interface Plan {
   goal: string;
   emoji: string;
   goalReason?: string | null;
+  /** What the coach understood: a finishable outcome or an ongoing habit. Null for plans made before coached design. */
+  orientation?: "OUTCOME" | "CONSISTENCY" | null;
   notes?: string | null;
   outlineType: "TIMES_PER_WEEK" | "SPECIFIC";
   timesPerWeek: number;

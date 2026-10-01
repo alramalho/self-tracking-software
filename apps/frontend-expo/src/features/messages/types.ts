@@ -127,6 +127,8 @@ export interface Message {
       date: string;
       quantity?: number | null;
       descriptiveGuide?: string | null;
+      title?: string | null;
+      targets?: import("@tsw/prisma/follow-through").SessionTargets | null;
     }>;
     description: string;
     status: "accepted" | "rejected" | "changes_requested" | "cancelled" | null;

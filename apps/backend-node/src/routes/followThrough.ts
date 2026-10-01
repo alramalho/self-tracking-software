@@ -6,6 +6,8 @@ import {
 import { getInterviewContext } from "../services/follow-through/onboarding/interview/context";
 import { interviewRequestSchema } from "../services/follow-through/onboarding/interview/schema";
 import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from "../services/plan-design/service";
+import { redesignPlan } from "../services/plan-design/apply";
+import { planDesignDraftSchema } from "../services/plan-design/draft";
 import { baselineFromLogs } from "../services/plan-design/baseline";
 import { healthSafeActivityFilter } from "../services/health/apple/ai-boundary";
 import { prisma } from "../utils/prisma";
@@ -154,6 +156,15 @@ router.get(
       select: { datetime: true, quantity: true },
     });
     res.json({ baseline: baselineFromLogs(entries, { title, measure, now }) });
+  }),
+);
+// "Plan this with my coach" for a plan that already exists: the same reviewed design, applied to it.
+router.post(
+  "/plans/:planId/redesign",
+  handle(async (req, res) => {
+    const { design } = z.object({ design: planDesignDraftSchema }).parse(req.body);
+    res.json(await redesignPlan(req.user!, String(req.params.planId), design));
+    startPlanMonitoring(req.user!);
   }),
 );
 router.post(

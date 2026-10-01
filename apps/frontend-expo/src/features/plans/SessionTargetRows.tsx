@@ -32,3 +32,8 @@ export function SessionTargetRows({ targets }: { targets: SessionTargets }) {
     </View>
   );
 }
+
+/** One line for tight places such as a chat card: "35 min · easy, can talk · 7:00–7:24 /km". */
+export function targetsLine(targets: SessionTargets) {
+  return [`${targets.durationMinutes} min`, targets.effort, paceText(targets), liftText(targets)].filter(Boolean).join(" · ");
+}

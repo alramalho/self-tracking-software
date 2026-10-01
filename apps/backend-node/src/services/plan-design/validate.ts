@@ -1,4 +1,22 @@
 import type { DesignSession, SessionTargets } from "@tsw/prisma/follow-through";
+
+// Scripts a model can leak into text by accident. Allowed only when the person's own words use them.
+const SCRIPTS: [string, RegExp][] = [
+  ["Cyrillic", /\p{Script=Cyrillic}/u],
+  ["Arabic", /\p{Script=Arabic}/u],
+  ["Hebrew", /\p{Script=Hebrew}/u],
+  ["Devanagari", /\p{Script=Devanagari}/u],
+  ["Thai", /\p{Script=Thai}/u],
+  ["Hangul", /\p{Script=Hangul}/u],
+  ["Han", /\p{Script=Han}/u],
+  ["Hiragana", /\p{Script=Hiragana}/u],
+  ["Katakana", /\p{Script=Katakana}/u],
+];
+
+/** Writing systems that appear in the output but nowhere in what the person wrote. Empty means clean. */
+export function strayScripts(output: string, personText: string) {
+  return SCRIPTS.filter(([, re]) => re.test(output) && !re.test(personText)).map(([name]) => name);
+}
 import { addDays, daysBetween } from "./dates";
 
 export interface ValidatableSession {
@@ -8,6 +26,8 @@ export interface ValidatableSession {
   targets: SessionTargets;
 }
 export interface ValidationContext {
+  /** Everything the person wrote (goal, baseline, answers). Used to spot characters the model leaked in by accident. */
+  personText?: string;
   activities: { key: string; measure: string }[];
   /** YYYY-MM-DD, first day of the window. */
   windowStart: string;
@@ -28,6 +48,8 @@ export function validateSessions(
   ctx: ValidationContext,
 ): string[] {
   const problems: string[] = [];
+  const stray = strayScripts(JSON.stringify(sessions.map((x) => [(x as unknown as DesignSession).title, (x as unknown as DesignSession).descriptiveGuide, x.targets])), ctx.personText ?? "");
+  if (stray.length) problems.push(`text contains ${stray.join(", ")} characters the person did not use`);
   const end = addDays(ctx.windowStart, ctx.weeks * 7);
   const byDay = new Map<string, ValidatableSession[]>();
   for (const s of sessions) {

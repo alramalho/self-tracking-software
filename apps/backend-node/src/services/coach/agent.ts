@@ -12,6 +12,7 @@ import {
   type UserContent,
 } from "../../utils/aiSdk";
 import { z } from "zod/v4";
+import { goalSpecSchema, targetsSchema } from "../plan-design/schema";
 import type { Plan, User } from "@tsw/prisma";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { prisma } from "../../utils/prisma";
@@ -1079,7 +1080,11 @@ export class CoachAgentService {
               date: z.string().describe("Session date in YYYY-MM-DD format"),
               quantity: z.number().positive().optional().describe("Session quantity using the activity measure"),
               descriptiveGuide: z.string().optional().nullable().describe("Markdown-supported session instructions. Use concise bullets for multi-step work. Put workout type, intensity, focus, or optional alternatives here instead of creating separate activity buckets. For source-backed learning plans, include exact lesson/video/module/chapter names or numbers, what portion to complete, a practice/review task, and target duration when relevant. Avoid one dense paragraph."),
+              title: z.string().max(50).optional().nullable().describe("Short session name, e.g. Easy run or Bench day."),
+              targets: targetsSchema.optional().nullable().describe("Measurable prescription for training-type sessions (duration, effort, pace range or sets/reps/load/rest, and what to log). Pace only from a baseline the user gave: basis USER_REPORTED_EASY_PACE or PERFORMANCE_ESTIMATE with the evidence written; otherwise basis UNKNOWN with null numbers and an effort target. Never invent a pace, load, or body-weight/BMI/calorie target. Omit for plain habits."),
             })).max(21).optional(),
+            orientation: z.enum(["OUTCOME", "CONSISTENCY"]).optional().nullable().describe("OUTCOME for a finishable goal (finish a half marathon, lift 80 kg), CONSISTENCY for an ongoing habit with no finish line."),
+            goalSpec: goalSpecSchema.optional().nullable().describe("Only the target the user themselves stated or chose (finish time, lift load, chosen measure). Null/omitted when they chose none. Never impose one."),
             description: z.string().optional().describe("Short human-readable description"),
           }),
           execute: async ({
@@ -1093,6 +1098,8 @@ export class CoachAgentService {
             finishingDate,
             milestones,
             sessions,
+            orientation,
+            goalSpec,
             description,
           }) => {
             if (successfulPlanCreationProposals >= 1) {
@@ -1176,6 +1183,8 @@ export class CoachAgentService {
                 finishingDate: finishingDate || null,
                 milestones: milestones || [],
                 sessions: proposedSessions,
+                orientation: orientation || null,
+                goalSpec: goalSpec?.chosenByUser ? goalSpec : null,
                 description: description || `Create tracked plan: ${goal}`,
               },
             };

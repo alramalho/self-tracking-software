@@ -433,6 +433,19 @@ export function followThroughFixture(
     state.user.onboardingCompletedAt = new Date().toISOString();
     return { planId: d.id };
   }
+  // "Plan this with my coach" on an existing plan: record what the app sent and apply the reviewed design.
+  if (path.endsWith("/redesign") && method === "POST") {
+    const id = path.split("/").at(-2)!;
+    const plan = state.plans.find((p: any) => p.id === id);
+    const chosen = body.design.options.find((o: any) => o.id === body.design.selected);
+    if (plan && chosen) {
+      plan.orientation = "OUTCOME";
+      plan.outlineType = "SPECIFIC";
+      plan.timesPerWeek = chosen.daysMin;
+      plan.sessions = chosen.sessions.map((x: any, i: number) => ({ id: `d${i}`, planId: id, activityId: plan.activities[0].id, date: x.date, quantity: x.quantity, title: x.title, descriptiveGuide: x.descriptiveGuide, targets: x.targets }));
+    }
+    return { planId: id };
+  }
   if (path.startsWith("/follow-through/plans/")) {
     const id = path.split("/").at(-1)!;
     support.supports[id] = body;

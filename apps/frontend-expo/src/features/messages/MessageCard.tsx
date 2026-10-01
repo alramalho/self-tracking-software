@@ -32,6 +32,7 @@ const reasons = [
   "Unsafe or problematic",
   "Biased",
 ];
+import { targetsLine } from "@/features/plans/SessionTargetRows";
 export function MessageCard({
   message: m,
   own,
@@ -332,6 +333,7 @@ export function MessageCard({
             <Copy key={i}>
               {session.date.slice(0, 10)} · {session.activityTitle}
               {session.quantity ? ` · ${session.quantity}` : ""}
+              {session.targets ? `\n${targetsLine(session.targets)}` : ""}
               {session.descriptiveGuide ? `\n${session.descriptiveGuide}` : ""}
             </Copy>
           ))}

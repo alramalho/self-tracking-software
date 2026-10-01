@@ -16,7 +16,7 @@ export interface BenchCase {
   input: DesignInput;
   expect: {
     /** What the coach should say about the preferred days. Defaults to FITS. */
-    verdict?: "FITS" | "ADJUSTED" | "PUSHBACK";
+    verdict?: "FITS" | "ADJUSTED" | "PUSHBACK" | ("FITS" | "ADJUSTED" | "PUSHBACK")[];
     paceBasis?: "USER_REPORTED_EASY_PACE" | "PERFORMANCE_ESTIMATE" | "UNKNOWN";
     targetPreserved?: string;
     noInvented?: RegExp;
@@ -120,7 +120,8 @@ export const cases: BenchCase[] = [
       asked: [],
       startDate: START,
     },
-    expect: { paceBasis: "PERFORMANCE_ESTIMATE", targetPreserved: "50" },
+    // A coach may reasonably say seven running days is too many; both answers are acceptable.
+    expect: { verdict: ["FITS", "ADJUSTED"], paceBasis: "PERFORMANCE_ESTIMATE", targetPreserved: "50" },
   },
   {
     id: "reality-pushback",
