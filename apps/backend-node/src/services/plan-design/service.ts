@@ -23,7 +23,8 @@ import type {
   WindowInput,
   WindowResult,
 } from "./types";
-import { easyPaceFrom, loadChangeProblems, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
+import { easyPaceFrom, loadChangeProblems, loadLimits, sessionSizeFrom, topLoadFrom, validateSessions, weekTotal, weeklyVolumeFrom } from "./validate";
+import type { LoadContext } from "./validate";
 
 /** Short calls (goal read, target question, days check) run on the quick model. */
 const quick = () => {
@@ -334,6 +335,11 @@ export async function extendWindow(
     ? input.sessions.filter((s) => !s.completed && s.date >= input.today).map((s) => s.id)
     : [];
   const measurements = input.baseline?.measurements ?? [];
+  const weekBefore = input.sessions.filter((s) => s.date >= addDays(windowStart, -7) && s.date < windowStart);
+  const previousTopLoads: Record<string, number> = {};
+  for (const s of input.sessions.filter((x) => x.date >= addDays(windowStart, -14) && x.date < windowStart && x.targets?.loadKg))
+    previousTopLoads[s.targets!.exercise ?? ""] = Math.max(previousTopLoads[s.targets!.exercise ?? ""] ?? 0, s.targets!.loadKg!);
+  const load: LoadContext = { route: input.outline.route, plannedLastWeek: weekBefore.reduce((n, s) => n + s.quantity, 0), previousTopLoads };
   const prompt = JSON.stringify({
     goal: input.goal,
     goalSpec: input.goalSpec,
@@ -348,7 +354,7 @@ export async function extendWindow(
     windowEnd: addDays(windowStart, 13),
     existingSessions: input.sessions,
     results: input.results,
-    lastWeekLogged: input.results.filter((r) => r.date >= addDays(windowStart, -7) && r.date < windowStart).reduce((n, r) => n + r.quantity, 0),
+    loadLimits: loadLimits(input.results, windowStart, load),
     approvedHealthContext: input.approvedHealthContext,
     feedback: input.feedback,
   });
@@ -380,7 +386,7 @@ export async function extendWindow(
         easyPace: easyPaceFrom(measurements),
         personText: [input.goal, input.baseline?.text ?? "", input.feedback ?? "", ...input.results.map((r) => r.note ?? "")].join(" "),
         weeks: 2,
-      }).concat(loadChangeProblems(input.results, result.object.sessions, windowStart));
+      }).concat(loadChangeProblems(input.results, result.object.sessions, windowStart, load));
       if (!problems.length)
         return {
           replaceSessionIds,

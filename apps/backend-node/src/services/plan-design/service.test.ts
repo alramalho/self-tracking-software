@@ -282,6 +282,39 @@ describe("adaptation load rules", () => {
     expect(loadChangeProblems(week1, plan([3, 3, 4, 4, 5, 5], "2026-10-19"), "2026-10-19").join()).toContain("past the 13");
     expect(loadChangeProblems(week1, plan([3, 3, 4, 4, 4, 5], "2026-10-19"), "2026-10-19")).toEqual([]);
   });
+
+  const bigWeek = [log("2026-10-05", 5), log("2026-10-07", 6), log("2026-10-10", 9)];
+  const oli = { route: "focused" as const, plannedLastWeek: 20 };
+  it("Oli may grow about 15% after a full week with nothing hard; Helly stays at about 10%", () => {
+    const next = plan([6, 7, 10, 6, 8, 11]);
+    expect(loadChangeProblems(bigWeek, next, "2026-10-12", oli)).toEqual([]);
+    expect(loadChangeProblems(bigWeek, next, "2026-10-12", { route: "steady", plannedLastWeek: 20 }).join()).toContain("22 or less");
+  });
+  it("Oli grows like Helly when last week wasn't done in full or something was hard", () => {
+    const next = plan([6, 7, 10, 6, 8, 11]);
+    expect(loadChangeProblems(bigWeek, next, "2026-10-12", { ...oli, plannedLastWeek: 22 }).join()).toContain("22 or less");
+    const hard = [...bigWeek.slice(0, 2), log("2026-10-10", 9, "hard")];
+    expect(loadChangeProblems(hard, next, "2026-10-12", oli).join()).toContain("18 or less");
+  });
+  it("Oli never adds more than 25% over the two weeks", () => {
+    expect(loadChangeProblems(bigWeek, plan([6, 7, 10, 7, 8, 11]), "2026-10-12", oli).join()).toContain("25% over the two weeks");
+  });
+  it("one session is at most a small step past the longest of the last 30 days, for both coaches", () => {
+    expect(loadChangeProblems(bigWeek, plan([4, 4, 12, 4, 5, 12]), "2026-10-12", oli).join()).toContain("stay at 10 or less");
+    expect(loadChangeProblems(bigWeek, plan([5, 6, 10, 5, 6, 12]), "2026-10-12").join()).toContain("stay at 11 or less");
+    const hard = [...bigWeek.slice(0, 2), log("2026-10-10", 9, "hard")];
+    expect(loadChangeProblems(hard, plan([4, 4, 10, 4, 4, 9]), "2026-10-12").join()).toContain("stay at 9 or less");
+  });
+  it("weights go up one plate step a week, bigger with Oli on heavy lifts, and not after a hard week", () => {
+    const lift = (kg: number[], exercise = "Squat") => plan([15, 15, 15, 15, 15, 15]).map((s, i) => ({ ...s, targets: { loadKg: kg[i], exercise } }));
+    const lifted = [log("2026-10-05", 15), log("2026-10-07", 15), log("2026-10-09", 15)];
+    const squat = { plannedLastWeek: 45, previousTopLoads: { Squat: 100 } };
+    expect(loadChangeProblems(lifted, lift([105, 100, 105, 110, 100, 110]), "2026-10-12", { ...squat, route: "focused" })).toEqual([]);
+    expect(loadChangeProblems(lifted, lift([105, 100, 105, 105, 100, 105]), "2026-10-12", { ...squat, route: "steady" }).join()).toContain("102.5 kg or less");
+    expect(loadChangeProblems(lifted, lift([102.5, 100, 102.5, 107.5, 100, 105]), "2026-10-12", { ...squat, route: "steady" }).join()).toContain("add at most 2.5 kg a week");
+    const hard = [...lifted.slice(0, 2), log("2026-10-09", 15, "hard")];
+    expect(loadChangeProblems(hard, lift([102.5, 95, 100, 100, 95, 100]).map((s) => ({ ...s, quantity: 13 })), "2026-10-12", { ...squat, route: "focused" }).join()).toContain("100 kg or less");
+  });
 });
 
 describe("stray characters", () => {

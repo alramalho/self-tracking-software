@@ -153,42 +153,119 @@ export interface LoggedResult {
   difficulty: string | null;
 }
 
+export interface LoadContext {
+  /** Helly (steady) or Oli (focused). Oli may add weekly volume faster, never a bigger single-session jump. */
+  route: "steady" | "focused";
+  /** What the plan asked for in the 7 days before the window. Oli's faster growth needs it done in full. */
+  plannedLastWeek: number;
+  /** Heaviest planned load per exercise in the 14 days before the window, in kg. */
+  previousTopLoads: Record<string, number>;
+}
+type WindowSession = { date: string; quantity: number; targets?: { loadKg?: number | null; exercise?: string | null } | null };
+
+export interface LoadLimits {
+  situation: "no history" | "missed week" | "hard week" | "normal";
+  lastWeek: number;
+  /** Most the first week may total, or null without history. */
+  week1Max: number | null;
+  /** Week 2 may grow this much over week 1 (0.1 = 10%)... */
+  weeklyGrowth: number;
+  /** ...and never past this total. */
+  week2Max: number | null;
+  /** Longest single session they logged in the last 30 days, and the most one session may ask in week 1. */
+  longestSession: number;
+  sessionMax: number | null;
+  /** Whether week 2 may go one step past week 1's longest session. */
+  sessionMayGrow: boolean;
+  /** Per exercise: heaviest load allowed in week 1 and the step week 2 may add, in kg. */
+  loads: Record<string, { week1Max: number; step: number }>;
+}
+
+const sessionStep = (longest: number) => Math.max(longest + 1, Math.ceil(longest * 1.1));
+const plates = (kg: number) => Math.round(kg / 2.5) * 2.5;
+
 /**
  * How much the next two weeks may ask, from what the person actually did (one activity, one unit).
- * Coaching rules, not model judgement:
+ * Coaching rules, not model judgement, and the same numbers go to the model and to the check:
  * - after a missed week (illness, life): restart at no more than 75% of the last week they trained,
- *   and don't go past that pre-break week until a full week is back;
- * - after a session logged hard: the next week stays at or under 90% of the week just done;
- * - otherwise: grow at most about 10% a week.
+ *   don't go past that pre-break week until a full week is back, and set no new longest session;
+ * - after a session logged hard: the next week stays at or under 90% of the week just done, no new longest session;
+ * - otherwise weekly volume grows at most about 10% with Helly. Oli may grow about 15% when last week was done
+ *   in full and nothing was hard, and at most 25% over the two weeks (jumps over 30% in two weeks are where
+ *   novice runners get hurt);
+ * - one session is at most one unit or 10% longer than their longest of the last 30 days, for both coaches:
+ *   a single long session, not the weekly total, is the best-supported injury risk;
+ * - weights go up one plate step a week (2.5 kg, or 2.5% with Helly and 5% with Oli), and not after a hard week.
  * Rounded up to whole units, so a 13 km week may become 10, 12 or 14 rather than 9.75 or 14.3.
  */
-export function loadChangeProblems(
-  results: LoggedResult[],
-  sessions: { date: string; quantity: number }[],
-  windowStart: string,
-): string[] {
+export function loadLimits(results: LoggedResult[], windowStart: string, context?: Partial<LoadContext>): LoadLimits {
+  const route = context?.route ?? "steady";
   const total = (from: string, to: string) =>
     results.filter((r) => r.date >= from && r.date < to).reduce((n, r) => n + r.quantity, 0);
   const lastWeek = total(addDays(windowStart, -7), windowStart);
-  const a = weekTotal(sessions, windowStart, addDays(windowStart, 7));
-  const b = weekTotal(sessions, addDays(windowStart, 7), addDays(windowStart, 14));
-  const problems: string[] = [];
-  if (lastWeek === 0) {
-    // The most recent week they trained, within the last month.
-    const before = [14, 21, 28].map((d) => total(addDays(windowStart, -d), addDays(windowStart, -d + 7))).find((t) => t > 0);
-    if (!before) return problems;
-    const restart = Math.ceil(before * 0.75);
-    if (a > restart) problems.push(`after a missed week, the first week should restart at ${restart} or less (75% of the ${before} they last did); it totals ${a}`);
-    if (b > before) problems.push(`week 2 totals ${b}; don't go past the ${before} they did before the break yet`);
-    return problems;
-  }
+  const longestSession = results.filter((r) => r.date >= addDays(windowStart, -30) && r.date < windowStart).reduce((m, r) => Math.max(m, r.quantity), 0);
   const hard = results.some((r) => r.date >= addDays(windowStart, -7) && r.date < windowStart && /hard/i.test(r.difficulty ?? ""));
-  const capA = Math.ceil(lastWeek * (hard ? 0.9 : 1.1));
-  if (a > capA)
-    problems.push(hard
-      ? `after a hard session, the first week should be ${capA} or less (90% of the ${lastWeek} just done); it totals ${a}`
-      : `the first week totals ${a}; grow at most about 10% from the ${lastWeek} just done (${capA} or less)`);
-  const capB = Math.ceil(a * 1.1);
-  if (b > capB) problems.push(`week 2 totals ${b}; grow at most about 10% from week 1 (${capB} or less)`);
+  // The most recent week they trained, within the last month.
+  const before = lastWeek ? 0 : ([14, 21, 28].map((d) => total(addDays(windowStart, -d), addDays(windowStart, -d + 7))).find((t) => t > 0) ?? 0);
+  const situation = lastWeek ? (hard ? "hard week" : "normal") : before ? "missed week" : "no history";
+  const fullWeek = situation === "normal" && (context?.plannedLastWeek ?? 0) > 0 && lastWeek >= (context?.plannedLastWeek ?? 0);
+  const weeklyGrowth = route === "focused" && fullWeek ? 0.15 : 0.1;
+  const careful = situation === "hard week" || situation === "missed week";
+  const loads = Object.fromEntries(
+    Object.entries(context?.previousTopLoads ?? {}).map(([exercise, top]) => {
+      const step = Math.max(2.5, plates(top * (route === "focused" ? 0.05 : 0.025)));
+      return [exercise, { week1Max: careful ? top : top + step, step }];
+    }),
+  );
+  return {
+    situation,
+    lastWeek,
+    week1Max: situation === "missed week" ? Math.ceil(before * 0.75) : situation === "hard week" ? Math.ceil(lastWeek * 0.9) : situation === "normal" ? Math.ceil(lastWeek * (1 + weeklyGrowth)) : null,
+    weeklyGrowth,
+    week2Max: situation === "missed week" ? before : situation === "normal" && route === "focused" ? Math.ceil(lastWeek * 1.25) : null,
+    longestSession,
+    sessionMax: longestSession ? (careful ? longestSession : sessionStep(longestSession)) : null,
+    sessionMayGrow: !careful,
+    loads,
+  };
+}
+
+export function loadChangeProblems(
+  results: LoggedResult[],
+  sessions: WindowSession[],
+  windowStart: string,
+  context?: Partial<LoadContext>,
+): string[] {
+  const limits = loadLimits(results, windowStart, context);
+  const middle = addDays(windowStart, 7);
+  const weeks = [sessions.filter((s) => s.date < middle), sessions.filter((s) => s.date >= middle)];
+  const [a, b] = weeks.map((w) => w.reduce((n, s) => n + s.quantity, 0));
+  const problems: string[] = [];
+  if (limits.week1Max !== null && a > limits.week1Max)
+    problems.push(
+      limits.situation === "missed week" ? `after a missed week, the first week should restart at ${limits.week1Max} or less (75% of the week they last did); it totals ${a}`
+      : limits.situation === "hard week" ? `after a hard session, the first week should be ${limits.week1Max} or less (90% of the ${limits.lastWeek} just done); it totals ${a}`
+      : `the first week totals ${a}; grow at most about ${Math.round(limits.weeklyGrowth * 100)}% from the ${limits.lastWeek} just done (${limits.week1Max} or less)`);
+  if (limits.situation === "missed week") {
+    if (limits.week2Max !== null && b > limits.week2Max) problems.push(`week 2 totals ${b}; don't go past the ${limits.week2Max} they did before the break yet`);
+  } else if (limits.situation !== "no history") {
+    const capB = Math.min(Math.ceil(a * (1 + limits.weeklyGrowth)), limits.week2Max ?? Infinity);
+    if (b > capB) problems.push(`week 2 totals ${b}; grow at most about ${Math.round(limits.weeklyGrowth * 100)}% from week 1${limits.week2Max ? ` and 25% over the two weeks` : ""} (${capB} or less)`);
+  }
+  // One long session is the risk, so the cap is on the session, not only on the week. Lifting is capped by load instead.
+  if (limits.sessionMax !== null) {
+    const distance = (w: WindowSession[]) => w.filter((s) => !s.targets?.loadKg).reduce((m, s) => Math.max(m, s.quantity), 0);
+    const [long1, long2] = weeks.map(distance);
+    if (long1 > limits.sessionMax) problems.push(`a week 1 session asks ${long1}; their longest in the last 30 days is ${limits.longestSession}, so stay at ${limits.sessionMax} or less`);
+    const max2 = limits.sessionMayGrow ? sessionStep(Math.max(limits.longestSession, Math.min(long1, limits.sessionMax))) : limits.sessionMax;
+    if (long2 > max2) problems.push(`a week 2 session asks ${long2}; stay at ${max2} or less (one small step past the longest so far)`);
+  }
+  for (const [exercise, limit] of Object.entries(limits.loads)) {
+    const top = (w: WindowSession[]) => w.filter((s) => (s.targets?.exercise ?? "") === exercise).reduce((m, s) => Math.max(m, s.targets?.loadKg ?? 0), 0);
+    const [top1, top2] = weeks.map(top);
+    if (top1 > limit.week1Max) problems.push(`${exercise || "the lift"} goes to ${top1} kg in week 1; stay at ${limit.week1Max} kg or less`);
+    const max2 = Math.max(top1, limit.week1Max - (limits.sessionMayGrow ? limit.step : 0)) + limit.step;
+    if (top2 > max2) problems.push(`${exercise || "the lift"} goes to ${top2} kg in week 2; add at most ${limit.step} kg a week (${max2} kg or less)`);
+  }
   return problems;
 }

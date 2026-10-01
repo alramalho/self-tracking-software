@@ -231,6 +231,20 @@ export const adaptCases: AdaptCase[] = [
     },
   },
   {
+    id: "adapt-well-oli",
+    title: "Two easy weeks, everything done, with Oli",
+    expect: "Oli may grow faster than Helly (about 15% a week, at most 25% over two weeks); no single run more than a small step past the longest",
+    input: {
+      ...base,
+      outline: { ...base.outline, route: "focused" as const, coach: "Oli" as const },
+      sessions: plannedSessions.map((x) => ({ ...x, completed: true })),
+      results: logged([["2026-10-05", 3, "easy", null], ["2026-10-07", 4, "easy", null], ["2026-10-10", 6, "normal", null], ["2026-10-12", 4, "easy", null], ["2026-10-14", 4, "easy", "Felt great"], ["2026-10-17", 7, "normal", "Comfortable the whole way"]]),
+      today: "2026-10-18",
+      feedback: null,
+      replaceUpcoming: false,
+    },
+  },
+  {
     id: "adapt-sick",
     title: "Missed week 2 with the flu",
     expect: "Restart below where they were, don't make up missed runs, check in on recovery",
