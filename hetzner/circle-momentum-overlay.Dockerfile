@@ -23,6 +23,7 @@ COPY apps/backend-node/src/services/circles/board/service.ts /app/apps/backend-n
 COPY apps/backend-node/src/services/circles/coach/model.ts /app/apps/backend-node/src/services/circles/coach/model.ts
 COPY apps/backend-node/src/services/circles/coach/service.ts /app/apps/backend-node/src/services/circles/coach/service.ts
 COPY apps/backend-node/src/services/circles/config.ts /app/apps/backend-node/src/services/circles/config.ts
+COPY apps/backend-node/src/services/circles/invites.ts /app/apps/backend-node/src/services/circles/invites.ts
 COPY apps/backend-node/src/services/circles/notify.ts /app/apps/backend-node/src/services/circles/notify.ts
 COPY apps/backend-node/src/services/circles/service.ts /app/apps/backend-node/src/services/circles/service.ts
 COPY apps/backend-node/src/services/circles/timeline.ts /app/apps/backend-node/src/services/circles/timeline.ts
@@ -31,7 +32,9 @@ COPY apps/backend-node/src/services/og/card.ts /app/apps/backend-node/src/servic
 COPY apps/backend-node/src/services/og/circleInvite.ts /app/apps/backend-node/src/services/og/circleInvite.ts
 COPY apps/backend-node/src/services/og/render.ts /app/apps/backend-node/src/services/og/render.ts
 COPY packages/prisma/migrations/20261001170000_circle_momentum/migration.sql /app/packages/prisma/migrations/20261001170000_circle_momentum/migration.sql
+COPY packages/prisma/migrations/20261001180000_circle_invited_event/migration.sql /app/packages/prisma/migrations/20261001180000_circle_invited_event/migration.sql
 COPY packages/prisma/schema.prisma /app/packages/prisma/schema.prisma
-# The schema gained Circle.coachPosts and CircleMember.muted (on top of the live account switch model).
+# The schema gained Circle.coachPosts, CircleMember.muted and the INVITED circle event
+# (on top of the live account switch model).
 RUN pnpm --dir /app/packages/prisma exec prisma generate
 LABEL tracking.feature="circle-momentum-20261001"

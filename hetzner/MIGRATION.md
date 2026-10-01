@@ -478,3 +478,21 @@ Rollback, only while this release is active (the migration is additive and can s
 cd /root/workspace/tracking.so/deployment
 ./tracking-plan-design-20261001/rollback.sh
 ```
+
+## Circle momentum and in-app invites — active since October 1, 2026 20:04 UTC
+
+Image `local/tracking-so-backend:circle-momentum-20261001`, built with [circle-momentum-overlay.Dockerfile](./circle-momentum-overlay.Dockerfile) on `account-switch-20261001` (the account switch release was live but not yet on main, so the overlay keeps it: the image's schema is the live one plus this release's two fields and one enum value). Source: branch `circle-momentum`. The 14 existing files the overlay replaces matched `origin/main` in the live container; `package.json` is not copied (the live copy predates main). New dependency `satori@0.33.5`, installed into the image the same way as sharp.
+
+- Migrations `20261001170000_circle_momentum` (`circles.coachPosts`, `circle_members.muted`, both with defaults) and `20261001180000_circle_invited_event` (enum value `INVITED` on `CircleEventKind`). Both additive; they were the only pending migrations and were applied with `prisma migrate deploy` from the new image before the switch.
+- What it adds: `pastWeeks`, `coachPosts` and `me.muted` on the circle board; `weekChip` on circle logs in `/users/timeline` and `/circles/:id/feed`; `PATCH /circles/:id` takes `coachPosts`; `PATCH /circles/:id/membership` (`muted`); `GET /circles/:id/invitable` and `POST /circles/:id/invites`; the Sunday recap gains the photo of the week (as a message image attachment), a "who leads" line and a "never miss twice" ask, and stays quiet when the owner switched it off; public `GET /og/circle-invite/:code` and `/og/circle-invite/:code.png` for link previews. Older app builds keep working: `recap` and `togetherStreak` are still returned.
+- Before activation, in the exact candidate image with the production environment and no network: the changed modules loaded, a preview image rendered, the Prisma client had both the account switch model and the new enum value, and typecheck reported the same 30 existing errors as the previous image.
+- After activation: healthy container with zero restarts, public `/health` 200, the new circle endpoints return 401 unauthenticated, an unknown invite returns 404 (meta) and a 302 to the default image, `POST /auth/switch` still answers 400, and a real circle's preview returned a 1200×630 PNG with its members' photos.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-circle-momentum-20261001/` (`source-hashes.txt`, `activate.py`, `verified.json`, `rollback.sh`). `backup/` holds the environment, compose file and a 3.9 MB database dump taken before the migrations.
+
+Rollback, only while this release is active (the migrations are additive and can stay):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-circle-momentum-20261001/rollback.sh
+```
