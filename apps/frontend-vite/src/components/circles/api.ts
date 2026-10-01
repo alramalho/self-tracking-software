@@ -8,6 +8,8 @@ import type {
   CircleFeed,
   CircleFeedEntry,
   CircleMemberInput,
+  InvitableFriend,
+  InviteFriendInput,
   JoinByInviteInput,
   JoinCircleInput,
   JoinedCircle,
@@ -38,6 +40,7 @@ export const circleQueryKeys = {
   search: (query: string) => ["circles", "search", query] as const,
   board: (id: string) => ["circle", id] as const,
   feed: (id: string) => ["circle", id, "feed"] as const,
+  invitable: (id: string) => ["circle", id, "invitable"] as const,
   invite: (code: string) => ["circle-invite", code] as const,
   match: (planId: string) => ["circle-match", planId] as const,
 };
@@ -86,6 +89,17 @@ export const useCircleFeed = (id?: string) => {
       return { ...feed, entries: feed.entries.map(normalizeFeedEntry) };
     },
     staleTime: 1000 * 30,
+  });
+};
+
+// The viewer's friends, with who's already in this circle or already invited.
+export const useInvitableFriends = (id: string, enabled: boolean) => {
+  const api = useApiWithAuth();
+  return useQuery({
+    enabled,
+    queryKey: circleQueryKeys.invitable(id),
+    queryFn: async () =>
+      (await api.get<InvitableFriend[]>(`/circles/${id}/invitable`)).data,
   });
 };
 
@@ -207,6 +221,14 @@ export const useCircleActions = () => {
     onSuccess: refreshCircles,
   });
 
+  // One notification that opens the circle's join screen.
+  const inviteFriend = useMutation({
+    mutationFn: async (input: InviteFriendInput) =>
+      api.post(`/circles/${input.circleId}/invites`, { userId: input.userId }),
+    onSuccess: (_, input) =>
+      queryClient.invalidateQueries({ queryKey: circleQueryKeys.invitable(input.circleId) }),
+  });
+
   // "Later" on the first-photo prompt: recorded so the coach can remind them tomorrow.
   const skipProof = useMutation({
     mutationFn: async (circleId: string) => api.post(`/circles/${circleId}/proof-skipped`),
@@ -227,6 +249,7 @@ export const useCircleActions = () => {
     muteCircle,
     leaveCircle,
     removeMember,
+    inviteFriend,
     skipProof,
     openChat,
   };

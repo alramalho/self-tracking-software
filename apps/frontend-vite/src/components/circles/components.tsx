@@ -154,18 +154,25 @@ export function MemberRow({ member, isMe, onPress, onMotivate }: MemberRowProps)
   );
 }
 
-// Spots matching will still fill, up to MATCHING_TARGET members.
-export function OpenSpots({ members }: OpenSpotsProps) {
+// Spots matching will still fill, up to MATCHING_TARGET members. With onInvite, each one opens the invite sheet.
+export function OpenSpots({ members, onInvite }: OpenSpotsProps) {
   const open = Math.max(0, MATCHING_TARGET - members);
   if (!open) return null;
   return (
     <div className="flex flex-col gap-0.5">
       <p className="pt-2 text-xs text-muted-foreground">Looking for people with a similar goal</p>
       {Array.from({ length: open }, (_, i) => (
-        <div key={i} className="flex items-center gap-2.5 py-2">
+        <button
+          key={i}
+          type="button"
+          disabled={!onInvite}
+          onClick={onInvite}
+          aria-label={onInvite ? "Invite to an open spot" : undefined}
+          className="flex items-center gap-2.5 py-2 text-left transition-opacity enabled:hover:opacity-60"
+        >
           <span className="h-[34px] w-[34px] rounded-full border-[1.5px] border-dashed border-muted-foreground" />
           <span className="text-[15px] text-muted-foreground">Open spot</span>
-        </div>
+        </button>
       ))}
     </div>
   );

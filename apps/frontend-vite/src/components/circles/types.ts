@@ -224,6 +224,17 @@ export interface CircleUpdate {
   coachPosts?: boolean;
 }
 
+// A friend on the invite sheet: already in this circle, already invited to it, or open to invite.
+export type InvitableState = "member" | "invited" | "open";
+
+export interface InvitableFriend {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  picture: string | null;
+  state: InvitableState;
+}
+
 // Joining (or starting) always leaves you pending until your first photo log.
 export interface JoinedCircle {
   id: string;
@@ -424,6 +435,11 @@ export interface MuteCircleInput {
   muted: boolean;
 }
 
+export interface InviteFriendInput {
+  circleId: string;
+  userId: string;
+}
+
 export interface LoadErrorProps {
   message: string;
   retry: () => void;
@@ -462,6 +478,15 @@ export interface CircleChat {
 export interface OpenSpotsProps {
   // How many people are in the circle now.
   members: number;
+  // When set, each open spot is a button that opens the invite sheet.
+  onInvite?: () => void;
+}
+
+export interface InviteSheetProps {
+  circleId: string;
+  open: boolean;
+  onClose: () => void;
+  onShareLink: () => void;
 }
 
 export interface MotivateDrawerProps {

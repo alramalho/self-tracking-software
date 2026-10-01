@@ -3,6 +3,7 @@ import { MotivateDrawer } from "@/components/circles/MotivateDrawer";
 import { CircleFeedList } from "@/components/circles/board/CircleFeedList";
 import { RenameCircleDialog } from "@/components/circles/board/RenameCircleDialog";
 import { CirclePanel, MemberRow, OpenSpots } from "@/components/circles/components";
+import { InviteSheet } from "@/components/circles/InviteSheet";
 import { daysLeftLabel, firstName, personColors } from "@/components/circles/model";
 import { Orbit } from "@/components/circles/Orbit";
 import { PastWeeksRow, PastWeeksSheet } from "@/components/circles/PastWeeks";
@@ -49,6 +50,7 @@ function CirclePage() {
   const [motivating, setMotivating] = useState<BoardMember>();
   const [renaming, setRenaming] = useState(false);
   const [pastWeeksOpen, setPastWeeksOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const data = board.data;
   const isOwner = data?.me.role === "OWNER";
@@ -145,7 +147,7 @@ function CirclePage() {
     setSheet({
       title: `${data.emoji} ${data.name}`,
       actions: [
-        { label: "Invite friends", onPress: () => void copyInvite() },
+        { label: "Invite friends", onPress: () => setInviting(true) },
         ...(isOwner ? [{ label: "Rename", onPress: () => setRenaming(true) }] : []),
         ...(isOwner
           ? [
@@ -268,7 +270,7 @@ function CirclePage() {
                   />
                 );
               })}
-              <OpenSpots members={data.members.length} />
+              <OpenSpots members={data.members.length} onInvite={() => setInviting(true)} />
             </CirclePanel>
           ) : (
             <>
@@ -291,7 +293,7 @@ function CirclePage() {
                     />
                   );
                 })}
-                <OpenSpots members={data.members.length} />
+                <OpenSpots members={data.members.length} onInvite={() => setInviting(true)} />
               </CirclePanel>
               <PastWeeksRow board={data} viewerId={myId} onPress={() => setPastWeeksOpen(true)} />
             </>
@@ -299,7 +301,7 @@ function CirclePage() {
 
           <button
             type="button"
-            onClick={() => void copyInvite()}
+            onClick={() => setInviting(true)}
             className="flex items-center gap-3 py-3 text-left transition-opacity hover:opacity-60"
           >
             <UserPlus className={cn("h-[22px] w-[22px]", theme.text)} />
@@ -350,6 +352,12 @@ function CirclePage() {
       {data && (
         <PastWeeksSheet board={data} viewerId={myId} open={pastWeeksOpen} onClose={() => setPastWeeksOpen(false)} />
       )}
+      <InviteSheet
+        circleId={id}
+        open={inviting}
+        onClose={() => setInviting(false)}
+        onShareLink={() => void copyInvite()}
+      />
       {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportDialog target={report} onClose={() => setReport(undefined)} />
       <ConfirmDialogOrPopover
