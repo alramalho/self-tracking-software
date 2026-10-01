@@ -1,0 +1,885 @@
+{
+  "model": "openai/gpt-6-luna",
+  "startedAt": "2026-10-01T12:10:39.168Z",
+  "pricePerMillion": {
+    "input": 0.09999999999999999,
+    "output": 0.5
+  },
+  "cases": [
+    {
+      "id": "half-marathon",
+      "title": "First half marathon · finish only",
+      "source": "owner-example",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 4,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          },
+          {
+            "question": "Why does it matter?",
+            "answer": "To finish it with my friends"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "ASK",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": "Could you lower the minimum to 2 training days per week, or allow week 1 to exceed 12.5 km? With a 4-day minimum, keeping three sessions near your usual 5 km (a",
+      "baselineMeasurements": [
+        {
+          "metric": "current_weekly_volume",
+          "value": 10,
+          "unit": "km/week",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "current_session",
+          "value": 5,
+          "unit": "km/session",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "easy_pace_fast",
+          "value": 420,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_pace_slow",
+          "value": 444,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "longest_run",
+          "value": 7,
+          "unit": "km",
+          "sourceQuote": "Longest run was 7 km."
+        }
+      ],
+      "options": [],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6-luna",
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 748,
+          "outputTokens": 186,
+          "reasoningTokens": 120,
+          "costUsd": 0.0001678
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1703,
+          "outputTokens": 1370,
+          "reasoningTokens": 0,
+          "costUsd": 0.0008978
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1703,
+          "outputTokens": 557,
+          "reasoningTokens": 339,
+          "costUsd": 0.0004913
+        }
+      ],
+      "costUsd": 0.0014719,
+      "seconds": 12.8,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": false,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "bench",
+      "title": "Bench press · user chooses 80 kg × 5",
+      "source": "owner-example",
+      "input": {
+        "goal": "Bench press 80 kg for 5 reps",
+        "goalSpec": {
+          "metric": "LIFT_LOAD",
+          "value": 80,
+          "unit": "kg",
+          "text": "80 kg for 5 reps",
+          "chosenByUser": true
+        },
+        "baseline": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.",
+        "activities": [
+          {
+            "key": "bench-press",
+            "title": "Bench press",
+            "measure": "reps",
+            "emoji": "🏋️"
+          }
+        ],
+        "preferredDays": 3,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "reps_per_set",
+          "value": 5,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "sets_per_session",
+          "value": 3,
+          "unit": "sets",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "training_days_per_week",
+          "value": 3,
+          "unit": "days/week",
+          "sourceQuote": "I lift 3 days a week, with a rack and a spotter."
+        },
+        {
+          "metric": "current_weekly_volume",
+          "value": 45,
+          "unit": "reps/week",
+          "sourceQuote": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter."
+        },
+        {
+          "metric": "current_session",
+          "value": 15,
+          "unit": "reps/session",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_top_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 20,
+          "finishingDate": "2027-02-21",
+          "rationale": "A gradual 20-week progression toward the stated goal of 80 kg for 5 reps, keeping the current three weekly bench sessions and building from the reported working load.",
+          "assumptions": [
+            "The reported 60 kg for 3 sets of 5 reps is the current bench-press working prescription on each of the three weekly training days.",
+            "The available rack and spotter are used for bench sessions.",
+            "Progress depends on completing the planned work with controlled reps; no success is guaranteed."
+          ],
+          "phases": [
+            {
+              "title": "Establish consistent working sets",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Log all three sessions each week and whether all 3 sets of 5 are completed with controlled reps."
+            },
+            {
+              "title": "Build strength gradually",
+              "startWeek": 5,
+              "endWeek": 9,
+              "progressCheck": "Record the load and completed reps for every set; note whether the planned sets remain controlled."
+            },
+            {
+              "title": "Progress toward heavier sets",
+              "startWeek": 10,
+              "endWeek": 14,
+              "progressCheck": "Log the heaviest completed working set each week and the reps completed at that load."
+            },
+            {
+              "title": "Consolidate heavier work",
+              "startWeek": 15,
+              "endWeek": 18,
+              "progressCheck": "Record completed sets and reps at the week's heaviest load, without counting incomplete reps."
+            },
+            {
+              "title": "Check the stated goal",
+              "startWeek": 19,
+              "endWeek": 20,
+              "progressCheck": "Log whether 80 kg for 5 controlled reps is completed; if not, record the heaviest controlled set instead."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter; leave the session if reps cannot be completed with control.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter; keep the reps controlled and consistent.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter; keep the reps controlled and consistent.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter. If all reps stay controlled, begin the gradual increase from the baseline load.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter; keep every rep controlled.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press",
+              "descriptiveGuide": "Complete 3 sets of 5 reps. Use the rack and spotter; keep every rep controlled.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "Moderate, controlled reps; finish each set with some reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load, reps completed in each set, and whether every rep was controlled."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 15,
+          "finishingDate": "2027-01-17",
+          "rationale": "A focused 15-week progression toward your chosen target of 80 kg for 5 reps, using three bench sessions per week and gradual load increases. This is a plan, not a promise of success.",
+          "assumptions": [
+            "The stated 60 kg for 5 reps across 3 sets is your current working load and volume.",
+            "You can use the stated rack and spotter for each session.",
+            "Load increases are made only when the prescribed reps are completed with controlled technique."
+          ],
+          "phases": [
+            {
+              "title": "Establish consistent working sets",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Log load and completed reps for all 3 sets in each session; establish whether 60 kg and small increases are manageable."
+            },
+            {
+              "title": "Build working strength",
+              "startWeek": 4,
+              "endWeek": 7,
+              "progressCheck": "Record the heaviest completed working set each week and the reps completed across all sets."
+            },
+            {
+              "title": "Progress toward target load",
+              "startWeek": 8,
+              "endWeek": 11,
+              "progressCheck": "Track weekly working loads and confirm you complete the prescribed sets and reps before increasing load."
+            },
+            {
+              "title": "Specific target preparation",
+              "startWeek": 12,
+              "endWeek": 14,
+              "progressCheck": "Log the heaviest controlled working set and whether 5 reps are completed at progressively heavier loads."
+            },
+            {
+              "title": "Target attempt",
+              "startWeek": 15,
+              "endWeek": 15,
+              "progressCheck": "Record whether you complete 5 reps at 80 kg; stop if you cannot maintain controlled technique."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — working sets",
+              "descriptiveGuide": "Use your rack and spotter. Complete three sets of five at your established 60 kg working load, resting between sets.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; note whether all reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — working sets",
+              "descriptiveGuide": "Complete three sets of five at 60 kg with your rack and spotter. Keep the movement controlled and rest fully between sets.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; note whether all reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — working sets",
+              "descriptiveGuide": "Complete three sets of five at 60 kg with your rack and spotter. Do not add weight during this session.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; note whether all reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — small load increase",
+              "descriptiveGuide": "If you completed all 3 sets of 5 at 60 kg with controlled reps in week 1, use 62.5 kg for three sets of five. Otherwise repeat 60 kg.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; record whether you used 62.5 kg or repeated 60 kg."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — working sets",
+              "descriptiveGuide": "Use the same load as your previous session if all reps were controlled; otherwise repeat the last successfully completed load. Complete three sets of five.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; note whether all reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Bench press — working sets",
+              "descriptiveGuide": "Use the same load as your previous session if all reps were controlled; otherwise repeat the last successfully completed load. Complete three sets of five.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Controlled, challenging working sets; leave room to complete",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log load and reps completed for each set; note whether all reps were controlled."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 718,
+          "outputTokens": 222,
+          "reasoningTokens": 156,
+          "costUsd": 0.0001828
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1678,
+          "outputTokens": 2203,
+          "reasoningTokens": 365,
+          "costUsd": 0.001137525
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1678,
+          "outputTokens": 1641,
+          "reasoningTokens": 317,
+          "costUsd": 0.000856525
+        }
+      ],
+      "costUsd": 0.0024404,
+      "seconds": 19.3,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": true,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "cutting",
+      "title": "Cutting · user watches how clothes fit",
+      "source": "owner-example",
+      "input": {
+        "goal": "Lose fat while keeping my strength",
+        "goalSpec": {
+          "metric": "BODY_MEASURE",
+          "value": null,
+          "unit": null,
+          "text": "How my clothes fit, strength kept",
+          "chosenByUser": true
+        },
+        "baseline": "I lift twice a week. Bench press 60 kg for 5 reps. I track my meals.",
+        "activities": [
+          {
+            "key": "strength-training",
+            "title": "Strength training",
+            "measure": "minutes",
+            "emoji": "🏋️"
+          }
+        ],
+        "preferredDays": 2,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Is there something you'd like to watch?",
+            "answer": "How clothes fit"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "strength_training_frequency",
+          "value": 2,
+          "unit": "sessions per week",
+          "sourceQuote": "I lift twice a week."
+        },
+        {
+          "metric": "bench_press_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "Bench press 60 kg for 5 reps."
+        },
+        {
+          "metric": "bench_press_reps",
+          "value": 5,
+          "unit": "reps",
+          "sourceQuote": "Bench press 60 kg for 5 reps."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 1,
+          "daysMax": 2,
+          "estimatedWeeks": 12,
+          "finishingDate": "2026-12-27",
+          "rationale": "A gradual 12-week strength-training route that keeps your stated bench press load in the plan and uses clothes fit and strength as tracking markers. It does not promise a particular change in body composition.",
+          "assumptions": [
+            "The baseline does not state session length, so planned sessions are 45 minutes; adjust to match your usual safe session length.",
+            "Use the bench press load and repetitions you reported; no meal or body-weight target is added.",
+            "Track clothes fit consistently and log bench press load and reps to monitor the outcomes you named."
+          ],
+          "phases": [
+            {
+              "title": "Establish a consistent routine",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Log each session's duration, bench press load and reps; note clothes fit once a week under similar conditions."
+            },
+            {
+              "title": "Build gradually",
+              "startWeek": 5,
+              "endWeek": 8,
+              "progressCheck": "Continue weekly clothes-fit notes and compare logged bench press loads and reps with week 1."
+            },
+            {
+              "title": "Consolidate and review",
+              "startWeek": 9,
+              "endWeek": 12,
+              "progressCheck": "Review clothes-fit notes and strength logs across the 12 weeks; record whether strength was maintained."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Strength training",
+              "descriptiveGuide": "Train at a controlled, familiar effort. Bench press: 3 sets of 5 reps at 60 kg, resting 120 seconds between sets. Keep any other work within your familiar routine.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Moderate and controlled; finish sets with good form and room",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log session duration, bench press load and reps; note how your clothes fit this week."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Strength training",
+              "descriptiveGuide": "Train at a controlled, familiar effort. Bench press: 3 sets of 5 reps at 60 kg, resting 120 seconds between sets. Keep any other work within your familiar routine.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Moderate and controlled; finish sets with good form and room",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log session duration, bench press load and reps; note how your clothes fit this week."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Strength training",
+              "descriptiveGuide": "Train at a controlled, familiar effort. Bench press: 3 sets of 5 reps at 60 kg, resting 120 seconds between sets. Keep any other work within your familiar routine.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Moderate and controlled; finish sets with good form and room",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log session duration, bench press load and reps; note how your clothes fit this week."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Strength training",
+              "descriptiveGuide": "Train at a controlled, familiar effort. Bench press: 3 sets of 5 reps at 60 kg, resting 120 seconds between sets. Keep any other work within your familiar routine.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Moderate and controlled; finish sets with good form and room",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log session duration, bench press load and reps; note how your clothes fit this week."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 10,
+          "finishingDate": "2026-12-13",
+          "rationale": "A focused 10-week route toward the stated outcome: track how clothes fit while keeping strength. Maintain the reported bench-press load and use consistent strength sessions; no body-measure or time target was specified.",
+          "assumptions": [
+            "The reported twice-weekly lifting can be scheduled on the available days.",
+            "Session duration was not reported; the 45-minute sessions are a planning estimate, not a baseline measurement.",
+            "Use the reported 60 kg bench-press load only if it remains comfortable and controlled."
+          ],
+          "phases": [
+            {
+              "title": "Establish a consistent routine",
+              "startWeek": 1,
+              "endWeek": 2,
+              "progressCheck": "Log each session, bench-press load and reps, and a consistent clothes-fit observation."
+            },
+            {
+              "title": "Build consistency",
+              "startWeek": 3,
+              "endWeek": 5,
+              "progressCheck": "Review weekly session completion and compare clothes fit and bench-press performance with week 1."
+            },
+            {
+              "title": "Sustain the strength work",
+              "startWeek": 6,
+              "endWeek": 8,
+              "progressCheck": "Log weekly sessions and confirm whether bench press remains at or above 60 kg for controlled working sets."
+            },
+            {
+              "title": "Review and carry forward",
+              "startWeek": 9,
+              "endWeek": 10,
+              "progressCheck": "Compare clothes fit and bench-press load and reps with the week 1 logs."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Bench press strength session",
+              "descriptiveGuide": "Work at a controlled effort. Use the reported bench-press load only if it feels comfortable and your reps stay controlled; rest between sets. The remaining time is for warm-up and rest.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Controlled, challenging but not to failure; stop if reps are",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log load, reps, and whether all working reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Bench press strength session",
+              "descriptiveGuide": "Repeat the controlled bench-press work. Use 60 kg only if it remains comfortable and your reps stay controlled; rest between sets. The remaining time is for warm-up and rest.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Controlled, challenging but not to failure; stop if reps are",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log load, reps, and whether all working reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Bench press strength session",
+              "descriptiveGuide": "Work at a controlled effort. Use the reported bench-press load only if it feels comfortable and your reps stay controlled; rest between sets. The remaining time is for warm-up and rest.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Controlled, challenging but not to failure",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log load, reps, and whether all working reps were controlled."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "strength-training",
+              "quantity": 45,
+              "title": "Bench press strength session",
+              "descriptiveGuide": "Repeat the controlled bench-press work. Use 60 kg only if it remains comfortable and your reps stay controlled; rest between sets. The remaining time is for warm-up and rest.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "Controlled, challenging but not to failure",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 120,
+                "progressMeasure": "Log load, reps, and whether all working reps were controlled."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 728,
+          "outputTokens": 257,
+          "reasoningTokens": 191,
+          "costUsd": 0.0002013
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1686,
+          "outputTokens": 1326,
+          "reasoningTokens": 404,
+          "costUsd": 0.000700025
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1686,
+          "outputTokens": 1353,
+          "reasoningTokens": 430,
+          "costUsd": 0.000713525
+        }
+      ],
+      "costUsd": 0.0018780000000000001,
+      "seconds": 15.7,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    }
+  ]
+}

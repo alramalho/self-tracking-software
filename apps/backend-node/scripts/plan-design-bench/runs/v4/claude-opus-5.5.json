@@ -1,0 +1,536 @@
+{
+  "model": "anthropic/claude-opus-5.5",
+  "startedAt": "2026-10-01T12:10:39.169Z",
+  "pricePerMillion": {
+    "input": 4,
+    "output": 20
+  },
+  "cases": [
+    {
+      "id": "half-marathon",
+      "title": "First half marathon · finish only",
+      "source": "owner-example",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 4,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          },
+          {
+            "question": "Why does it matter?",
+            "answer": "To finish it with my friends"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "current_weekly_volume",
+          "value": 10,
+          "unit": "km",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "current_session",
+          "value": 5,
+          "unit": "km",
+          "sourceQuote": "Twice a week, about 5 km each."
+        },
+        {
+          "metric": "easy_pace_fast",
+          "value": 420,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "easy_pace_slow",
+          "value": 444,
+          "unit": "s/km",
+          "sourceQuote": "My easy 5 km takes 35–37 minutes."
+        },
+        {
+          "metric": "longest_run",
+          "value": 7,
+          "unit": "km",
+          "sourceQuote": "Longest run was 7 km."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 16,
+          "finishingDate": "2027-01-24",
+          "rationale": "Starting from about 10 km a week and a 7 km longest run, a patient 16-week road adds a third day first, then grows weekly volume and the long run by roughly 10% at a time so you can finish the half marathon with your friends.",
+          "assumptions": [
+            "You keep running 3 days most weeks, with a 4th short day only when it feels easy",
+            "Easy runs stay around 7:00–7:24 per km, at talking effort",
+            "No time target: success means completing the 21.1 km",
+            "Missed weeks are repeated rather than skipped ahead"
+          ],
+          "phases": [
+            {
+              "title": "Base: three easy days",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Three easy runs a week completed; weekly total about 15 km and long run 8–9 km by week 4"
+            },
+            {
+              "title": "Build volume",
+              "startWeek": 5,
+              "endWeek": 9,
+              "progressCheck": "Weekly total about 20–24 km over 3–4 days; long run reaches 12 km at easy effort"
+            },
+            {
+              "title": "Long run build",
+              "startWeek": 10,
+              "endWeek": 13,
+              "progressCheck": "Long run reaches 16–18 km by week 13 with easy breathing and legs fine the next day"
+            },
+            {
+              "title": "Taper and race",
+              "startWeek": 14,
+              "endWeek": 16,
+              "progressCheck": "Volume eased about 30–40%; you feel fresh and finish the half marathon in week 16"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-06",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Walk 3 minutes to warm up, then run 4 km at your usual easy pace. You should be able to talk in full sentences. Walk briefly if needed; finishing relaxed matters more than speed.",
+              "targets": {
+                "durationMinutes": 32,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time and distance, and rate how easy it felt from 1 to 10"
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Short easy run",
+              "descriptiveGuide": "Your new third day, kept short. Run 3 km gently at conversational pace, staying at the slower end of your easy range. This is about adding a day without adding strain.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "very easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 430,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Note how your legs feel from the Tuesday run before and after"
+              }
+            },
+            {
+              "date": "2026-10-11",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Weekend easy 5 km",
+              "descriptiveGuide": "Run your familiar 5 km at easy pace after a 3 minute walk warm-up. Keep it steady and conversational; this is the run that will slowly grow into your long run.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total time; week total should be 12 km over 3 days"
+              }
+            },
+            {
+              "date": "2026-10-13",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Walk 3 minutes, then 5 km at easy pace. Same feel as last weekend: relaxed breathing, able to chat. If your legs feel heavy, slow to the top of the range.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time and effort from 1 to 10; aim for 4 or lower"
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Short easy run",
+              "descriptiveGuide": "An easy 3 km to keep the third day going. Stay gentle and conversational; it should feel like you could keep going comfortably at the end.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "very easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 430,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Note any soreness; it should be gone by the next morning"
+              }
+            },
+            {
+              "date": "2026-10-18",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Weekend easy 5 km",
+              "descriptiveGuide": "Easy 5 km after a 3 minute walk warm-up. Consider running it with your friends at talking pace. Next week this run starts growing toward 6 km.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35–37 min = 7:00–7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Week total 13 km over 3 days; log whether it felt as easy as last week"
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 4,
+          "daysMax": 5,
+          "estimatedWeeks": 12,
+          "finishingDate": "2026-12-27",
+          "rationale": "You run 10 km a week now. Four runs a week, growing about 10% weekly, take the long run from 7 km toward 16 km, so you can finish the half marathon with your friends. All runs stay easy, with no speedwork.",
+          "assumptions": [
+            "You can run 4 days a week without pain",
+            "Weekly distance can grow about 10% most weeks",
+            "The long run can reach about 16 km by weeks 9-10",
+            "Missed weeks may mean repeating a week rather than skipping ahead"
+          ],
+          "phases": [
+            {
+              "title": "Base: four easy days",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Complete 4 easy runs a week, reaching about 15 km a week and a 6 km long run"
+            },
+            {
+              "title": "Build the long run",
+              "startWeek": 4,
+              "endWeek": 7,
+              "progressCheck": "Long run reaches 11-12 km at easy pace; weekly total about 20-23 km"
+            },
+            {
+              "title": "Peak distance",
+              "startWeek": 8,
+              "endWeek": 10,
+              "progressCheck": "Complete one long run of about 16 km at an easy, talkable effort"
+            },
+            {
+              "title": "Taper and race",
+              "startWeek": 11,
+              "endWeek": 12,
+              "progressCheck": "Weekly distance drops 30-50%, legs feel fresh, and you finish the 21.1 km"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy 3 km",
+              "descriptiveGuide": "Run 3 km at your usual easy pace, about 7:00-7:24 per km. Keep it relaxed enough to talk in full sentences. Walk for a minute if you need to.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time, distance and how your legs felt from 1 to 10"
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy 3 km",
+              "descriptiveGuide": "Another relaxed 3 km at 7:00-7:24 per km. Focus on a smooth, light stride and steady breathing. Do not speed up at the end.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time and note any soreness from Monday's run"
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Short shakeout 2 km",
+              "descriptiveGuide": "A short, very easy 2 km to get used to running more often. Stay at the slow end of your easy pace. This is the shorter run of the week.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "very easy, conversational",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Note whether your legs feel fresher at the end than at the start"
+              }
+            },
+            {
+              "date": "2026-10-11",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Long-ish easy 4 km",
+              "descriptiveGuide": "Run 4 km at an easy, steady pace of 7:00-7:24 per km. This is the week's longest run. Keep the effort the same the whole way.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total time and weekly total (target 12 km)"
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy 3 km",
+              "descriptiveGuide": "Start week 2 with an easy 3 km at 7:00-7:24 per km. Talkable effort throughout.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time and energy from 1 to 10"
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy 3 km",
+              "descriptiveGuide": "Relaxed 3 km at 7:00-7:24 per km. Keep your shoulders loose and your breathing calm.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Compare your average pace with last Wednesday at the same effort"
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "running",
+              "quantity": 2,
+              "title": "Short shakeout 2 km",
+              "descriptiveGuide": "Very easy 2 km to keep the legs moving before the weekend long run. Stay at the slow end of easy.",
+              "targets": {
+                "durationMinutes": 15,
+                "effort": "very easy, conversational",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Note any tightness or soreness to watch before Sunday"
+              }
+            },
+            {
+              "date": "2026-10-18",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Long easy 5 km",
+              "descriptiveGuide": "Run 5 km at an easy 7:00-7:24 per km, the same distance as your usual runs but now as part of a 4-day week. Hold an even effort and finish feeling you could do more.",
+              "targets": {
+                "durationMinutes": 40,
+                "effort": "easy, can talk",
+                "pace": {
+                  "minSecondsPerKm": 420,
+                  "maxSecondsPerKm": 444,
+                  "basis": "USER_REPORTED_EASY_PACE",
+                  "evidence": "Easy 5 km in 35-37 min = 7:00-7:24 per km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log time, weekly total (target 13 km) and how the last km felt"
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "anthropic/claude-opus-5.5"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 748,
+          "outputTokens": 168,
+          "reasoningTokens": 102,
+          "costUsd": 0.0001588
+        },
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4490,
+          "outputTokens": 3226,
+          "reasoningTokens": 775,
+          "costUsd": 0.08248
+        },
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4490,
+          "outputTokens": 4016,
+          "reasoningTokens": 1097,
+          "costUsd": 0.09828
+        }
+      ],
+      "costUsd": 0.18091880000000002,
+      "seconds": 40,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": true,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    }
+  ]
+}

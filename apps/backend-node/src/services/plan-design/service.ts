@@ -161,7 +161,14 @@ async function designRoute(
         effort: effortFor(model),
       });
       usage.push(result.usage);
-      if (result.object.status === "ASK" && result.object.question) return { output: result.object, usage, retried, model };
+      // The coach has already checked the days, so a route may only stop to ask about a fixed finish date.
+      // Anything else (e.g. "can you lower the minimum days?") is the route's own puzzle to solve.
+      if (result.object.status === "ASK" && result.object.question && input.fixedDate) return { output: result.object, usage, retried, model };
+      if (result.object.status === "ASK") {
+        retried.push(`${id} (${model}): asked "${(result.object.question ?? "").slice(0, 80)}" instead of planning`);
+        retry = `\nDo not ask: the days are already agreed. Return status READY with a route inside daysRange that satisfies the rules (shorter easy sessions are fine on extra days).`;
+        continue;
+      }
       const problems = problemsIn(result.object, input, id, range, weeks);
       if (!problems.length) return { output: result.object, usage, retried, model };
       retried.push(...problems.slice(0, 4).map((p) => `${id} (${model}): ${p}`));

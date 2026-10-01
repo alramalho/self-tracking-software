@@ -181,10 +181,18 @@ describe("designOptions", () => {
     expect(result.options.map((o) => o.finishingDate)).toEqual(["2027-03-14", "2027-03-14"]);
   });
 
-  it("asks one question instead of inventing when blocked", async () => {
+  it("a route may ask only about a fixed finish date; otherwise it must plan", async () => {
+    const ask = { status: "ASK", question: "Can you lower the minimum days?", baselineMeasurements: [], route: null };
+    const { generate, calls } = fake(fitsNote, ask, routeOutput("focused", 16, FOCUSED), routeOutput("steady", 20, STEADY));
+    const result = await designOptions(input, generate);
+    expect(result.status).toBe("READY");
+    expect(calls[3].prompt).toContain("Do not ask");
+  });
+
+  it("asks one question about a fixed date it cannot meet", async () => {
     const ask = { status: "ASK", question: "Is your race on a fixed date?", baselineMeasurements: [], route: null };
     const { generate } = fake(fitsNote, ask, ask);
-    const result = await designOptions(input, generate);
+    const result = await designOptions({ ...input, fixedDate: "2026-10-26" }, generate);
     expect(result).toMatchObject({ status: "ASK", question: "Is your race on a fixed date?", options: [] });
   });
 });
