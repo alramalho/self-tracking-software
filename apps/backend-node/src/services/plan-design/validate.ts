@@ -107,7 +107,8 @@ export function validateSessions(
       : null;
     if (w === 0 && ceiling && total > Math.ceil(ceiling))
       problems.push(`week 1 totals ${total}, a jump from the ${ctx.baselineWeekly} the person does now (keep it at or under ${Math.ceil(ceiling)})`);
-    if (ctx.baselineSession) {
+    // Whole units are too coarse to judge "half a session" when a usual session is 3 km or less.
+    if (ctx.baselineSession && ctx.baselineSession > 3) {
       const tiny = sessions.filter((x) => x.date >= from && x.date < to && x.quantity < ctx.baselineSession! * 0.5).length;
       if (tiny > 1)
         problems.push(`week ${w + 1} has ${tiny} sessions under half the person's usual ${ctx.baselineSession}; at most one short easy session a week`);

@@ -1,0 +1,1307 @@
+{
+  "model": "openai/gpt-6.1-sol",
+  "startedAt": "2026-10-01T12:10:39.169Z",
+  "pricePerMillion": {
+    "input": 2,
+    "output": 10
+  },
+  "cases": [
+    {
+      "id": "half-marathon",
+      "title": "First half marathon · finish only",
+      "source": "owner-example",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes. Longest run was 7 km.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 4,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          },
+          {
+            "question": "Why does it matter?",
+            "answer": "To finish it with my friends"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "error",
+      "error": "Delay was aborted"
+    },
+    {
+      "id": "bench",
+      "title": "Bench press · user chooses 80 kg × 5",
+      "source": "owner-example",
+      "input": {
+        "goal": "Bench press 80 kg for 5 reps",
+        "goalSpec": {
+          "metric": "LIFT_LOAD",
+          "value": 80,
+          "unit": "kg",
+          "text": "80 kg for 5 reps",
+          "chosenByUser": true
+        },
+        "baseline": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.",
+        "activities": [
+          {
+            "key": "bench-press",
+            "title": "Bench press",
+            "measure": "reps",
+            "emoji": "🏋️"
+          }
+        ],
+        "preferredDays": 3,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "current_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "reps_per_set",
+          "value": 5,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "sets_per_session",
+          "value": 3,
+          "unit": "sets",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_training_days",
+          "value": 3,
+          "unit": "days/week",
+          "sourceQuote": "I lift 3 days a week, with a rack and a spotter."
+        },
+        {
+          "metric": "current_session",
+          "value": 15,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_weekly_volume",
+          "value": 45,
+          "unit": "reps/week",
+          "sourceQuote": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter."
+        },
+        {
+          "metric": "current_top_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 20,
+          "finishingDate": "2027-02-21",
+          "rationale": "Keep three bench days and your current 45 working reps per week, then increase load gradually rather than adding sets. Week 2 introduces 62.5 kg on one day while retaining two familiar 60 kg sessions. Later increases depend on clean repetitions and recovery. A",
+          "assumptions": [
+            "Your stated 3 sets of 5 describes bench work on each of your three lifting days.",
+            "Your current 60 kg sets are repeatable without failed repetitions or pain.",
+            "A 62.5 kg total load is available; otherwise use an available smaller increase or repeat 60 kg.",
+            "Session duration was not reported; 25 minutes is an initial allowance to adjust around adequate rest."
+          ],
+          "phases": [
+            {
+              "title": "Establish repeatable technique and the",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Log 45 working reps weekly. Aim to complete 3 sets of 5 at 62.5 kg with consistent technique and about two repetitions in reserve before increasing again."
+            },
+            {
+              "title": "Build to 67.5 kg",
+              "startWeek": 5,
+              "endWeek": 8,
+              "progressCheck": "Work toward 3 sets of 5 at 67.5 kg, introducing each load increase on one day first. Repeat loads until all prescribed reps are controlled."
+            },
+            {
+              "title": "Build to 72.5 kg",
+              "startWeek": 9,
+              "endWeek": 12,
+              "progressCheck": "Work toward 3 sets of 5 at 72.5 kg. Record completed reps and repetitions in reserve; hold the load after missed or grinding reps."
+            },
+            {
+              "title": "Prepare heavier sets",
+              "startWeek": 13,
+              "endWeek": 16,
+              "progressCheck": "Work toward one clean set of 5 at 77.5 kg, followed by two sets of 5 at the previous comfortable load. Keep three training days and at least 45 working reps per"
+            },
+            {
+              "title": "Consolidate and check 80 kg for 5 reps",
+              "startWeek": 17,
+              "endWeek": 20,
+              "progressCheck": "When 77.5 kg for 5 is controlled and repeatable, attempt 80 kg for 5 reps with your spotter. Log clean completed reps; if readiness is insufficient, repeat the"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Baseline bench session",
+              "descriptiveGuide": "Warm up gradually before the listed working sets. Use your rack and spotter. Complete 3 sets of 5 at 60 kg with a consistent touch point and no bouncing. Stop rather than force a failed rep.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Controlled and submaximal; aim to leave about two reps in",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Record reps in each set, estimated reps in reserve, and whether all repetitions had a consistent touch point."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Unhurried technique bench",
+              "descriptiveGuide": "Repeat your usual 3 sets of 5 at 60 kg. Warm up first, use your spotter, and take the longer rest to limit fatigue. Keep the movement familiar; do not add difficult tempo or pause work.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Easy to moderate relative to your baseline; smooth reps, no",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 240,
+                "progressMeasure": "Log all 15 working reps and whether the final set stayed as controlled as the first."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Confirm your starting load",
+              "descriptiveGuide": "After warming up, complete 3 sets of 5 at 60 kg with your spotter. Do not add reps or test a maximum. Use this session to decide whether the small increase next week is justified.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Moderate and controlled; keep about two reps in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Confirm 45 working reps for week 1; note any missed reps, discomfort, or grinding before progressing."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "First small load increase",
+              "descriptiveGuide": "Attempt 3 sets of 5 at 62.5 kg only if last week's sets were controlled, comfortable, and left about two reps in reserve. Warm up gradually and use your spotter. If that load is unavailable or you are not ready, repeat 60 kg and record the actual load. Do not force failed reps.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Moderately challenging but submaximal; no grinding or forced",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 240,
+                "progressMeasure": "Record actual load, completed reps per set, and reps in reserve. The planned increase is 2.5 kg, about 4.2%."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Familiar-load recovery emphasis",
+              "descriptiveGuide": "Return to 60 kg for 3 sets of 5 after warming up. Use your rack and spotter. Take full rests and aim for relaxed, consistent execution without adding extra work.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Easy to moderate relative to the heavier day; comfortably",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 240,
+                "progressMeasure": "Log all 15 working reps and compare effort with week 1 at the same load."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Finish the fortnight consistently",
+              "descriptiveGuide": "Complete your familiar 3 sets of 5 at 60 kg after warming up, with your spotter. Keep this session steady rather than testing another increase. Review the heavier session before setting next week's loads.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Moderate, controlled, with about two reps in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Confirm 45 working reps for week 2. Record whether 62.5 kg was completed cleanly and whether recovery supported all three sessions."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 15,
+          "finishingDate": "2027-01-17",
+          "rationale": "Work toward your exact goal of 80 kg for 5 reps over 15 weeks. This focused route asks for more working sets while retaining your existing three-day schedule and recovery days. Week 1 contains 55 working reps, 22% above the inferred baseline of 45; week 2 has ",
+          "assumptions": [
+            "Your three weekly lifting days each include the stated 3 sets of 5 bench-press reps.",
+            "The reported 60 kg sets are repeatable without assistance from your spotter.",
+            "Small load increases are available with your existing setup.",
+            "Progress depends on recovery and clean repetitions; 80 kg for 5 reps is not guaranteed."
+          ],
+          "phases": [
+            {
+              "title": "Build repeatable working volume",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Log every working set, load and estimated reps remaining. Complete 55 working reps in week 1 and 60 in week 2, with at least one weekly session at 60 kg or more"
+            },
+            {
+              "title": "Gradually raise the working load",
+              "startWeek": 4,
+              "endWeek": 6,
+              "progressCheck": "Aim for a clean set of 5 at 65-67.5 kg. Increase load only after completing the prescribed sets with about 2 reps remaining; keep any weekly repetition-volume"
+            },
+            {
+              "title": "Develop heavier five-rep strength",
+              "startWeek": 7,
+              "endWeek": 10,
+              "progressCheck": "Aim for a clean set of 5 at 70-72.5 kg while maintaining three weekly sessions. Log whether the fifth rep remains controlled and unassisted; repeat a load"
+            },
+            {
+              "title": "Practice near-goal loads",
+              "startWeek": 11,
+              "endWeek": 13,
+              "progressCheck": "Aim for an unassisted set of 5 at 75-77.5 kg, keeping lighter sessions between heavier exposures. Reduce supporting sets if fatigue rises rather than forcing"
+            },
+            {
+              "title": "Reduce fatigue and check the goal",
+              "startWeek": 14,
+              "endWeek": 15,
+              "progressCheck": "Maintain three training days with reduced supporting volume. Attempt 80 kg for 5 reps with your spotter only if recent near-goal sets were controlled; record"
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Baseline load, one additional set",
+              "descriptiveGuide": "After gradual preparation with your existing setup, perform 4 working sets of 5 at 60 kg. Use your spotter. Keep the lowering controlled and avoid forced repetitions. Listed reps count working sets only.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Moderate, finish each set with about 2 reps remaining",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log completed reps for all four sets, estimated reps remaining and any spotter assistance."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Lighter recovery practice",
+              "descriptiveGuide": "Perform 3 working sets of 5 at 55 kg after gradual preparation. Use the same controlled technique and your spotter. This is the week's single shorter, easier session.",
+              "targets": {
+                "durationMinutes": 25,
+                "effort": "Easy, at least 3 reps remaining per set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 55,
+                "restSeconds": 180,
+                "progressMeasure": "Record whether all 15 reps feel easier than Monday and whether you feel recovered between sessions."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Repeat the expanded baseline",
+              "descriptiveGuide": "Perform 4 working sets of 5 at 60 kg with your spotter after gradual preparation. Match Monday's control. Do not add load or extra sets today; stop a set before a failed repetition.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Moderate, about 2 reps remaining; no grinding",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Compare completed reps and reps remaining with Monday. Check readiness for a small load increase next week."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "First small load increase",
+              "descriptiveGuide": "Target 4 working sets of 5 at 62.5 kg with your spotter. Take this increase only if both 60 kg sessions were completed cleanly with about 2 reps remaining. Otherwise repeat 60 kg and log the actual load. Never force the final reps.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Challenging but controlled, about 2 reps remaining",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log actual load, completed reps and reps remaining for each set; note whether the increase preserved control."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Easy volume with controlled repetitions",
+              "descriptiveGuide": "Perform 4 working sets of 5 at 55 kg after gradual preparation. Use your spotter and keep every rep comfortable. The additional easy set brings week 2 to 60 working reps, about 9% above week 1.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Easy, at least 3 reps remaining per set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 55,
+                "restSeconds": 180,
+                "progressMeasure": "Record all 20 working reps and whether fatigue stays low despite the additional set."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Consolidate before the next progression",
+              "descriptiveGuide": "Perform 4 working sets of 5 at 60 kg with your spotter after gradual preparation. Keep this below Monday's planned heavier load. Use the results from both weeks to decide whether to repeat or progress next week.",
+              "targets": {
+                "durationMinutes": 30,
+                "effort": "Moderate, about 2 reps remaining; controlled throughout",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Compare this session with week 1 at the same load. Log completed reps, reps remaining and recovery before planning week 3."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6.1-sol"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 718,
+          "outputTokens": 368,
+          "reasoningTokens": 302,
+          "costUsd": 0.0002558
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1678,
+          "outputTokens": 2681,
+          "reasoningTokens": 516,
+          "costUsd": 0.0273795
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1678,
+          "outputTokens": 2642,
+          "reasoningTokens": 516,
+          "costUsd": 0.0269895
+        }
+      ],
+      "costUsd": 0.060197799999999996,
+      "seconds": 61.6,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": true,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "reality-adjusted",
+      "title": "First half marathon, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "I run 3 km once a week at an easy pace.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "ASK",
+      "coachNote": {
+        "verdict": "ADJUSTED",
+        "message": "A first half marathon needs at least 3 runs a week, so both plans use 3–4.",
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": "With a baseline of 3 km per week, three whole-kilometre sessions cannot satisfy both the gradual-volume limit and the session-length requirements. May your plan",
+      "baselineMeasurements": [
+        {
+          "metric": "current_session",
+          "value": 3,
+          "unit": "km",
+          "sourceQuote": "I run 3 km once a week at an easy pace."
+        },
+        {
+          "metric": "current_weekly_volume",
+          "value": 3,
+          "unit": "km",
+          "sourceQuote": "I run 3 km once a week at an easy pace."
+        },
+        {
+          "metric": "current_training_frequency",
+          "value": 1,
+          "unit": "days/week",
+          "sourceQuote": "I run 3 km once a week at an easy pace."
+        }
+      ],
+      "options": [],
+      "attempts": 5,
+      "retried": [
+        "steady (openai/gpt-6.1-sol): week 1 has 3 sessions under half the person's usual 3; at most one short easy session a week",
+        "steady (openai/gpt-6.1-sol): week 2 has 3 sessions under half the person's usual 3; at most one short easy session a week",
+        "focused (openai/gpt-6.1-sol): week 1 has 3 sessions under half the person's usual 3; at most one short easy session a week",
+        "focused (openai/gpt-6.1-sol): week 2 has 3 sessions under half the person's usual 3; at most one short easy session a week"
+      ],
+      "models": [
+        "openai/gpt-6.1-sol",
+        "openai/gpt-6.1-sol"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 713,
+          "outputTokens": 435,
+          "reasoningTokens": 348,
+          "costUsd": 0.0002888
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1668,
+          "outputTokens": 2592,
+          "reasoningTokens": 516,
+          "costUsd": 0.0264645
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1730,
+          "outputTokens": 731,
+          "reasoningTokens": 516,
+          "costUsd": 0.0080095
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1668,
+          "outputTokens": 2686,
+          "reasoningTokens": 779,
+          "costUsd": 0.0274045
+        },
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1730,
+          "outputTokens": 619,
+          "reasoningTokens": 396,
+          "costUsd": 0.0068895
+        }
+      ],
+      "costUsd": 0.0801608,
+      "seconds": 84.8,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "adapt-hard",
+      "title": "The long run felt too hard",
+      "expect": "Ease the next two weeks, keep the goal, don't stack what was missed",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "hard",
+            "note": "Last 2 km were a struggle, legs heavy"
+          }
+        ],
+        "feedback": "The long run felt too hard. Keep the goal, make next week easier.",
+        "today": "2026-10-12"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "sessions": [
+          {
+            "date": "2026-10-12",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Keep this deliberately gentle. The duration allows time for an easy warm-up and brief walk breaks; use your reported pace only while it feels conversational, and slow down if needed.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and whether your legs felt heavy."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-14",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Repeat the short, relaxed run rather than adding distance. Walk briefly whenever needed to keep the effort easy; do not chase the pace range.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and whether your legs felt heavy."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-17",
+            "quantity": 5,
+            "title": "Reduced long easy run",
+            "descriptiveGuide": "The planned 7 km becomes 5 km to reduce fatigue. Start gently, use walk breaks before the effort becomes a struggle, and shorten the run if heavy legs return.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record whether the final 2 km felt manageable."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-19",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Hold the lighter distance rather than progressing without fresh feedback. Keep the effort conversational; if the previous week still felt hard, shorten this run or use more walking.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and whether your legs felt heavy."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Keep the same relaxed distance and effort. Leave any missed distance behind rather than adding it here, and use walk breaks as needed.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and whether your legs felt heavy."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 5,
+            "title": "Steady long easy run",
+            "descriptiveGuide": "Repeat 5 km only if the recent runs felt manageable. Otherwise shorten it or use an easy run-walk; the aim is a comfortable finish, not making up distance.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "My easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record whether the final 2 km felt manageable."
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week; review readiness after this lighter fortnight and only attempt the check when runs feel manageable."
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace."
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks."
+          }
+        ],
+        "summary": "Because the last 2 km of your 6 km run felt hard and your legs were heavy, I’ve made the next week easier with two 3 km runs and a 5 km long run, then held that lighter pattern for the following week. Your first-half-marathon goal, Helly’s steady route and 7 February finish date stay unchanged; we‘’",
+        "designedThrough": "2026-10-25",
+        "usage": {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1753,
+          "outputTokens": 1684,
+          "reasoningTokens": 114,
+          "costUsd": 0.021221
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6.1-sol",
+            "inputTokens": 1753,
+            "outputTokens": 1684,
+            "reasoningTokens": 114,
+            "costUsd": 0.021221
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1753,
+          "outputTokens": 1684,
+          "reasoningTokens": 114,
+          "costUsd": 0.021221
+        }
+      ],
+      "costUsd": 0.020346,
+      "seconds": 30.6
+    },
+    {
+      "id": "adapt-well",
+      "title": "Two easy weeks, everything done",
+      "expect": "Progress gradually (about 10% a week), long run grows a little",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-12",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-14",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": "Felt great"
+          },
+          {
+            "date": "2026-10-17",
+            "activityId": "running",
+            "quantity": 7,
+            "difficulty": "normal",
+            "note": "Comfortable the whole way"
+          }
+        ],
+        "feedback": null,
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-19",
+            "quantity": 4,
+            "title": "Easy recovery run",
+            "descriptiveGuide": "Keep this relaxed after Saturday’s long run. Allow about three minutes of walking before and after the run; the duration includes those walks, while the pace range applies only to running. Slow down or take walk breaks whenever needed to keep talking comfortably.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 4 km able to talk in sentences; record difficulty and any discomfort."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 5,
+            "title": "Easy run — a small distance step",
+            "descriptiveGuide": "Extend the weekday run to 5 km without increasing effort. Include about six minutes of walking across your warm-up and cool-down within the estimated duration. If Monday felt hard or was missed, hold this at 4 km rather than making up distance.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 5 km at conversational effort; record whether the extra kilometre felt manageable."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 7,
+            "title": "Long easy run — consolidate",
+            "descriptiveGuide": "Repeat your comfortable 7 km distance instead of increasing both weekday and long-run distance together. Include about six minutes of warm-up and cool-down walking in the estimated duration. Effort takes priority over pace; shorten the run if this week has felt hard.",
+            "targets": {
+              "durationMinutes": 58,
+              "effort": "easy, can talk in full sentences throughout",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 7 km conversationally and record whether it remained comfortable throughout."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-26",
+            "quantity": 5,
+            "title": "Easy run — rhythm check",
+            "descriptiveGuide": "Run 5 km only if the preceding week was completed and manageable; otherwise hold at 4 km or shorten further if needed. Include about six minutes of walking within the estimated duration. Do not add any missed distance.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 5 km conversationally if recovered; record actual distance and difficulty."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-28",
+            "quantity": 5,
+            "title": "Easy run — confirm your rhythm",
+            "descriptiveGuide": "Repeat Monday’s distance if it felt manageable. Keep this entirely easy, with about six minutes of walking included in the estimated duration. If Monday was hard or missed, use 4 km instead and leave the phase check open.",
+            "targets": {
+              "durationMinutes": 43,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Confirm two completed, manageable 5 km easy runs this week; otherwise record the check as pending."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-31",
+            "quantity": 8,
+            "title": "Long easy run — conditional step to 8 km",
+            "descriptiveGuide": "Increase to 8 km only if the recent runs were completed and felt manageable. Otherwise repeat 7 km, or shorten if tired; never make up missed work. Include about six minutes of walking in the estimated duration and keep conversational effort even if that means running slower than the pace range.",
+            "targets": {
+              "durationMinutes": 65,
+              "effort": "easy, can talk in full sentences throughout",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Your stated easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete up to 8 km at conversational effort; record actual distance, difficulty and how the final kilometre felt."
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in week 4 if the preceding sessions remain manageable; your completed easy runs and comfortable 7 km support a gradual build."
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace, progressing only when recent sessions are completed and manageable."
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks before the fixed finish date of 2027-02-07."
+          }
+        ],
+        "summary": "With all six sessions completed and your latest 7 km run comfortable throughout, we’ll gently increase your easy-run distance while keeping three running days each week. The first week holds the long run at 7 km before a planned step to 8 km, with your half-marathon goal, Helly’s steady route and 7–",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1813,
+          "outputTokens": 1923,
+          "reasoningTokens": 180,
+          "costUsd": 0.023761
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6.1-sol",
+            "inputTokens": 1813,
+            "outputTokens": 1923,
+            "reasoningTokens": 180,
+            "costUsd": 0.023761
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1813,
+          "outputTokens": 1923,
+          "reasoningTokens": 180,
+          "costUsd": 0.023761
+        }
+      ],
+      "costUsd": 0.022856,
+      "seconds": 39.1
+    },
+    {
+      "id": "adapt-sick",
+      "title": "Missed week 2 with the flu",
+      "expect": "Restart below where they were, don't make up missed runs, check in on recovery",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          }
+        ],
+        "feedback": "Had the flu all week, feeling better now.",
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-19",
+            "quantity": 2,
+            "title": "Gentle return run",
+            "descriptiveGuide": "Run only if fever-free for at least 24 hours without fever-reducing medicine and normal daily activities feel comfortable. Keep this gentle, with walk breaks if needed; effort matters more than pace. Skip rather than reschedule if still unwell. Stop and seek medical advice for chest pain, palpitations, dizziness or unusual breathlessness.",
+            "targets": {
+              "durationMinutes": 15,
+              "effort": "very easy, comfortable full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish comfortable and record effort, any symptoms and how you feel the next morning."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Attempt this only if recovered and the return run caused no symptom flare or unusual next-day fatigue. Otherwise shorten or skip it without making it up. Use walk breaks or go slower than the pace range to keep conversation comfortable.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and next-day recovery."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-25",
+            "quantity": 4,
+            "title": "Reduced longer easy run",
+            "descriptiveGuide": "This is shorter than your completed 6 km run, not a replacement for the missed 7 km. Proceed only if the earlier runs felt manageable and recovery remains comfortable; shorten or skip if fatigue or symptoms return.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete comfortably without a symptom flare; record difficulty and next-morning fatigue."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-27",
+            "quantity": 2,
+            "title": "Gentle easy run",
+            "descriptiveGuide": "Repeat the lighter workload rather than increasing it before recovery is confirmed. Keep full-sentence conversation comfortable, and shorten or skip if you are still unwell or unusually tired.",
+            "targets": {
+              "durationMinutes": 15,
+              "effort": "very easy, comfortable full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish comfortable and record effort, any symptoms and how you feel the next morning."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-29",
+            "quantity": 3,
+            "title": "Short easy run",
+            "descriptiveGuide": "Hold the same distance as last week. Let effort override pace, using walk breaks when needed; do not add distance from any skipped session.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; record difficulty and next-day recovery."
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-11-01",
+            "quantity": 4,
+            "title": "Reduced longer run and rhythm review",
+            "descriptiveGuide": "Repeat 4 km only if recent runs were manageable and you remain well. Afterwards, review completed sessions, effort and next-day recovery to decide whether the next block should hold steady or build; the twice-weekly 5 km check remains deferred.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "Reported easy 5 km takes 35–37 minutes."
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete comfortably without a symptom flare; report completed runs, difficulty and next-day recovery before any increase."
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Re-establish manageable easy running after flu; defer the check of running 5 km easy twice in a week until recovered, reviewing readiness at the end of week 4."
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace; begin building only after recent sessions are completed and manageable."
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks; reassess readiness before the final long run."
+          }
+        ],
+        "summary": "After a week missed with flu, these next two weeks are lighter and repeat the same distances, with no catch-up runs or increases before recovery and manageable sessions are confirmed. Your first-half-marathon goal, Helly’s steady route and 7 February finish date stay unchanged, while the rhythm and ",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1738,
+          "outputTokens": 1823,
+          "reasoningTokens": 148,
+          "costUsd": 0.0225735
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6.1-sol",
+            "inputTokens": 1738,
+            "outputTokens": 1823,
+            "reasoningTokens": 148,
+            "costUsd": 0.0225735
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6.1-sol",
+          "inputTokens": 1738,
+          "outputTokens": 1823,
+          "reasoningTokens": 148,
+          "costUsd": 0.0225735
+        }
+      ],
+      "costUsd": 0.021706000000000003,
+      "seconds": 35.8
+    }
+  ],
+  "finishedAt": "2026-10-01T12:17:45.928Z",
+  "totalCostUsd": 0.20526660000000002
+}

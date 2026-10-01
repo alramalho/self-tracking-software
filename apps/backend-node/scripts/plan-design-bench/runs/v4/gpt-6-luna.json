@@ -880,6 +880,2047 @@
         "lifting": null,
         "routesDiffer": true
       }
+    },
+    {
+      "id": "guitar",
+      "title": "Play a song · only their own chord sheet",
+      "source": "owner-example",
+      "input": {
+        "goal": "Play a complete song smoothly",
+        "goalSpec": {
+          "metric": "SONG",
+          "value": 1,
+          "unit": "complete playthrough",
+          "text": "My own four-chord song (G C D Em)",
+          "chosenByUser": true
+        },
+        "baseline": "I know G, C, D and Em but change slowly. I practise twice a week for 15 minutes. I only have my own chord sheet and a metronome.",
+        "activities": [
+          {
+            "key": "guitar-practice",
+            "title": "Guitar practice",
+            "measure": "minutes",
+            "emoji": "🎸"
+          }
+        ],
+        "preferredDays": 5,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Which song?",
+            "answer": "My own four-chord song with a chord sheet"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "ASK",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": "Your minimum of 5 practice days requires at least 37.5 minutes if each session is at least half your usual 15 minutes, but week 1 is capped at 37.5 minutes. Can",
+      "baselineMeasurements": [
+        {
+          "metric": "current_weekly_volume",
+          "value": 30,
+          "unit": "minutes/week",
+          "sourceQuote": "I practise twice a week for 15 minutes."
+        },
+        {
+          "metric": "current_session",
+          "value": 15,
+          "unit": "minutes",
+          "sourceQuote": "I practise twice a week for 15 minutes."
+        }
+      ],
+      "options": [],
+      "attempts": 4,
+      "retried": [
+        "focused (openai/gpt-6-luna): week 1 has 5 sessions under half the person's usual 15; at most one short easy session a week"
+      ],
+      "models": [
+        "openai/gpt-6-luna",
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 750,
+          "outputTokens": 351,
+          "reasoningTokens": 285,
+          "costUsd": 0.0002505
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1710,
+          "outputTokens": 1784,
+          "reasoningTokens": 325,
+          "costUsd": 0.000932025
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1710,
+          "outputTokens": 2473,
+          "reasoningTokens": 727,
+          "costUsd": 0.001276525
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1748,
+          "outputTokens": 1047,
+          "reasoningTokens": 915,
+          "costUsd": 0.000568275
+        }
+      ],
+      "costUsd": 0.0034193,
+      "seconds": 39,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": true,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "5k-beginner",
+      "title": "First 5K · no pace known (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Run 5 km without stopping",
+        "goalSpec": {
+          "metric": "DISTANCE_NONSTOP",
+          "value": 5,
+          "unit": "km",
+          "text": "5 km without stopping",
+          "chosenByUser": true
+        },
+        "baseline": "I've never really run. I can jog for about 2 minutes before I need to walk.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 2,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "jog_duration",
+          "value": 2,
+          "unit": "minutes",
+          "sourceQuote": "I can jog for about 2 minutes before I need to walk."
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 1,
+          "daysMax": 2,
+          "estimatedWeeks": 12,
+          "finishingDate": "2026-12-27",
+          "rationale": "A gradual run/walk progression toward completing 5 km without stopping, starting from the reported ability to jog for about 2 minutes.",
+          "assumptions": [
+            "No current weekly running volume or session distance was stated, so week 1 starts with two 1 km sessions.",
+            "Pace is unknown; use comfortable effort and walk breaks as needed.",
+            "Progress depends on how each session feels; completing 5 km without stopping is the goal, not a guarantee."
+          ],
+          "phases": [
+            {
+              "title": "Establish a run/walk routine",
+              "startWeek": 1,
+              "endWeek": 3,
+              "progressCheck": "Log both sessions each week and the longest comfortable jogging interval; increase jogging intervals only when the sessions feel manageable."
+            },
+            {
+              "title": "Build continuous jogging time",
+              "startWeek": 4,
+              "endWeek": 6,
+              "progressCheck": "Log the longest uninterrupted jog in minutes and whether recovery between efforts feels comfortable."
+            },
+            {
+              "title": "Extend comfortable running distance",
+              "startWeek": 7,
+              "endWeek": 9,
+              "progressCheck": "Log the longest continuous distance and keep effort comfortable throughout."
+            },
+            {
+              "title": "Work toward the goal distance",
+              "startWeek": 10,
+              "endWeek": 12,
+              "progressCheck": "Record whether you can complete 5 km without stopping; keep the effort comfortable and do not force the target."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run/walk",
+              "descriptiveGuide": "Cover 1 km at an easy effort. Alternate short jogging stretches of up to about 2 minutes with walking; walk sooner whenever needed.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, able to talk; walk breaks are expected.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log the distance, total time, and longest comfortable uninterrupted jog."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run/walk",
+              "descriptiveGuide": "Cover 1 km at an easy effort. Alternate short jogging stretches of up to about 2 minutes with walking; walk sooner whenever needed.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, able to talk; walk breaks are expected.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log the distance, total time, and longest comfortable uninterrupted jog."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run/walk",
+              "descriptiveGuide": "Cover 1 km at an easy effort. Alternate short jogging stretches of up to about 2 minutes with walking; walk sooner whenever needed.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, able to talk; walk breaks are expected.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log the distance, total time, and longest comfortable uninterrupted jog."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run/walk",
+              "descriptiveGuide": "Cover 1 km at an easy effort. Alternate short jogging stretches of up to about 2 minutes with walking; walk sooner whenever needed.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, able to talk; walk breaks are expected.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log the distance, total time, and longest comfortable uninterrupted jog."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 9,
+          "finishingDate": "2026-12-06",
+          "rationale": "A focused nine-week progression toward running 5 km without stopping, using gradual run-walk sessions and recovery between them.",
+          "assumptions": [
+            "No current running frequency or weekly distance was provided, so there is no measurable weekly-volume baseline to match.",
+            "Sessions begin with short jogging intervals and walking recoveries; progress depends on completing them comfortably.",
+            "Pace is unknown, so effort and run-walk structure guide each session. This is a plan, not a promise of success."
+          ],
+          "phases": [
+            {
+              "title": "Build a run-walk routine",
+              "startWeek": 1,
+              "endWeek": 2,
+              "progressCheck": "Complete two sessions per week, including repeated jog intervals of about 2 minutes with walking recoveries."
+            },
+            {
+              "title": "Extend jogging intervals",
+              "startWeek": 3,
+              "endWeek": 4,
+              "progressCheck": "Log the longest comfortable continuous jog interval in each session; aim to make it longer than in weeks 1–2."
+            },
+            {
+              "title": "Develop continuous running",
+              "startWeek": 5,
+              "endWeek": 6,
+              "progressCheck": "Log continuous jogging time and complete the planned run-walk sessions without needing to increase walking breaks."
+            },
+            {
+              "title": "Extend the longest run",
+              "startWeek": 7,
+              "endWeek": 8,
+              "progressCheck": "Record the longest continuous distance completed and progress it gradually across these weeks."
+            },
+            {
+              "title": "Complete the goal distance",
+              "startWeek": 9,
+              "endWeek": 9,
+              "progressCheck": "Attempt 5 km continuously at an easy, conversational effort, and log whether it was completed without stopping."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run-walk introduction",
+              "descriptiveGuide": "Alternate about 2 minutes of gentle jogging with walking recoveries. Keep the effort relaxed and finish feeling able to continue.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, conversational; walk whenever needed.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total distance, the number of jog intervals, and the longest continuous jog interval."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run-walk repeat",
+              "descriptiveGuide": "Repeat gentle jogging intervals of about 2 minutes, with walking recoveries. Keep the effort comfortable rather than trying to jog farther at any cost.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, conversational; walk whenever needed.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total distance, the number of jog intervals, and the longest continuous jog interval."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run-walk introduction",
+              "descriptiveGuide": "Alternate about 2 minutes of gentle jogging with walking recoveries. Keep the effort relaxed and finish feeling able to continue.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, conversational; walk whenever needed.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total distance, the number of jog intervals, and the longest continuous jog interval."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 1,
+              "title": "Easy run-walk repeat",
+              "descriptiveGuide": "Repeat gentle jogging intervals of about 2 minutes, with walking recoveries. Walk as needed and keep the session easy.",
+              "targets": {
+                "durationMinutes": 20,
+                "effort": "Easy, conversational; walk whenever needed.",
+                "pace": {
+                  "minSecondsPerKm": null,
+                  "maxSecondsPerKm": null,
+                  "basis": "UNKNOWN",
+                  "evidence": null
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log total distance, the number of jog intervals, and the longest continuous jog interval."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 706,
+          "outputTokens": 223,
+          "reasoningTokens": 157,
+          "costUsd": 0.0001821
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1661,
+          "outputTokens": 1262,
+          "reasoningTokens": 360,
+          "costUsd": 0.0006649
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1661,
+          "outputTokens": 1342,
+          "reasoningTokens": 392,
+          "costUsd": 0.0007049
+        }
+      ],
+      "costUsd": 0.0018162999999999999,
+      "seconds": 17.6,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": true,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "10k-daily",
+      "title": "10K under 50 min · can train every day (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Run a 10K in under 50 minutes",
+        "goalSpec": {
+          "metric": "FINISH_TIME",
+          "value": 3000,
+          "unit": "s",
+          "text": "10K in under 50 minutes",
+          "chosenByUser": true
+        },
+        "baseline": "I run most days. I ran a 5K in 26:30 last month. Longest run is 12 km at easy effort.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 7,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "recent_5k_distance",
+          "value": 5,
+          "unit": "km",
+          "sourceQuote": "5K"
+        },
+        {
+          "metric": "recent_5k_time",
+          "value": 1590,
+          "unit": "s",
+          "sourceQuote": "26:30"
+        },
+        {
+          "metric": "longest_run",
+          "value": 12,
+          "unit": "km",
+          "sourceQuote": "12 km"
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 6,
+          "daysMax": 7,
+          "estimatedWeeks": 10,
+          "finishingDate": "2026-12-13",
+          "rationale": "Build consistent easy running and gradually add distance toward the user’s goal of 10K in under 50 minutes. The recent 5K performance informs easy-running pace, but does not guarantee the goal.",
+          "assumptions": [
+            "No exact weekly volume or usual session distance was provided; the first week uses six 5 km runs as a conservative starting structure.",
+            "The 5K was a recent race effort, not an easy pace; easy runs are estimated 60–90 seconds per km slower.",
+            "Six training days are used each week, within the requested range; at least one day remains a rest day."
+          ],
+          "phases": [
+            {
+              "title": "Establish routine",
+              "startWeek": 1,
+              "endWeek": 2,
+              "progressCheck": "Log distance, duration, and effort for each run; complete the six planned runs each week at easy effort."
+            },
+            {
+              "title": "Build endurance",
+              "startWeek": 3,
+              "endWeek": 5,
+              "progressCheck": "Record the longest comfortable easy run each week and total weekly distance; progress gradually only when easy effort remains conversational."
+            },
+            {
+              "title": "Develop 10K readiness",
+              "startWeek": 6,
+              "endWeek": 8,
+              "progressCheck": "Log a continuous easy run of at least 8 km and note whether effort remains controlled throughout."
+            },
+            {
+              "title": "Consolidate and assess",
+              "startWeek": 9,
+              "endWeek": 10,
+              "progressCheck": "Complete a continuous 10K and record the finish time and perceived effort; the stated time goal is not guaranteed."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Run comfortably and keep the effort conversational.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and whether you could talk comfortably."
+              }
+            },
+            {
+              "date": "2026-10-06",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep the run relaxed and even; do not push the pace.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and whether the effort stayed easy."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Run at a comfortable conversational effort.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Stay relaxed and conversational for the whole run.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and whether you could talk comfortably."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep the effort comfortable; shorten your stride if you feel yourself pushing.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Finish feeling comfortable, not depleted.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and how comfortable the run felt."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Start gently and maintain a conversational effort throughout.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-13",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Run comfortably and avoid turning this into a hard effort.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and whether you could talk comfortably."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep the pace relaxed and steady.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Stay conversational from start to finish.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and how easy the effort felt."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "running",
+              "quantity": 6,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep this slightly longer run relaxed and conversational.",
+              "targets": {
+                "durationMinutes": 42,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and whether the effort remained comfortable."
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 6,
+              "title": "Easy run",
+              "descriptiveGuide": "Run easily and finish feeling controlled.",
+              "targets": {
+                "durationMinutes": 42,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, duration, and perceived effort."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 7,
+          "daysMax": 7,
+          "estimatedWeeks": 8,
+          "finishingDate": "2026-11-29",
+          "rationale": "An eight-week focused progression toward your stated 10K goal, building from your recent 5K result and 12 km longest run. This plan does not guarantee the outcome.",
+          "assumptions": [
+            "Your recent 5K result is a useful performance reference; estimated easy pace is 60–90 seconds per km slower.",
+            "Your usual weekly running volume is not stated, so the opening volume cannot be checked against it.",
+            "All seven required weekly training days are running days; keep the shorter runs easy and adjust if recovery is poor."
+          ],
+          "phases": [
+            {
+              "title": "Establish consistent easy running",
+              "startWeek": 1,
+              "endWeek": 2,
+              "progressCheck": "Log distance and effort for all seven runs each week; keep the long run at or below 12 km."
+            },
+            {
+              "title": "Build aerobic volume gradually",
+              "startWeek": 3,
+              "endWeek": 4,
+              "progressCheck": "Log weekly running distance and long-run distance; increase total volume gradually and keep most running conversational."
+            },
+            {
+              "title": "Extend sustained running",
+              "startWeek": 5,
+              "endWeek": 6,
+              "progressCheck": "Log weekly distance and one comfortably sustained run each week; note whether effort remains controlled."
+            },
+            {
+              "title": "Consolidate and prepare for the goal",
+              "startWeek": 7,
+              "endWeek": 8,
+              "progressCheck": "Log a controlled 10K effort or event, including elapsed time and perceived effort; do not treat the target time as guaranteed."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Easy run",
+              "descriptiveGuide": "Run comfortably and keep the effort conversational.",
+              "targets": {
+                "durationMinutes": 21,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and whether you could talk comfortably."
+              }
+            },
+            {
+              "date": "2026-10-06",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep this relaxed; finish feeling able to continue.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Stay at an even, comfortable effort throughout.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and note whether the effort stayed conversational."
+              }
+            },
+            {
+              "date": "2026-10-08",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Short recovery run",
+              "descriptiveGuide": "Make this shorter run especially relaxed.",
+              "targets": {
+                "durationMinutes": 21,
+                "effort": "Very easy, conversational",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and whether you felt recovered afterward."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep the pace controlled and conversational.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-10",
+              "activity": "running",
+              "quantity": 3,
+              "title": "Short easy run",
+              "descriptiveGuide": "Run gently and keep this one short.",
+              "targets": {
+                "durationMinutes": 21,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and how comfortable the run felt."
+              }
+            },
+            {
+              "date": "2026-10-11",
+              "activity": "running",
+              "quantity": 12,
+              "title": "Long easy run",
+              "descriptiveGuide": "Keep the full run at easy effort; do not push the pace.",
+              "targets": {
+                "durationMinutes": 82,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and whether effort stayed easy throughout."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Start the second week gently after the long run.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and note how recovered your legs feel."
+              }
+            },
+            {
+              "date": "2026-10-13",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Run comfortably without forcing the pace.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and conversational effort."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Easy run",
+              "descriptiveGuide": "Keep the effort even and comfortable.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and whether the pace felt easy."
+              }
+            },
+            {
+              "date": "2026-10-15",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Short recovery run",
+              "descriptiveGuide": "Keep this run relaxed and avoid adding extra effort.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Very easy, conversational",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and note whether you feel recovered afterward."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "running",
+              "quantity": 5,
+              "title": "Easy run",
+              "descriptiveGuide": "Stay relaxed from start to finish.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and perceived effort."
+              }
+            },
+            {
+              "date": "2026-10-17",
+              "activity": "running",
+              "quantity": 4,
+              "title": "Short easy run",
+              "descriptiveGuide": "Keep this short run light and comfortable.",
+              "targets": {
+                "durationMinutes": 28,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance and whether the run felt comfortable."
+              }
+            },
+            {
+              "date": "2026-10-18",
+              "activity": "running",
+              "quantity": 12,
+              "title": "Long easy run",
+              "descriptiveGuide": "Keep the effort controlled and conversational throughout.",
+              "targets": {
+                "durationMinutes": 82,
+                "effort": "Easy, can talk in full sentences",
+                "pace": {
+                  "minSecondsPerKm": 378,
+                  "maxSecondsPerKm": 408,
+                  "basis": "PERFORMANCE_ESTIMATE",
+                  "evidence": "5K in 26:30 = 5:18/km, easy about 6:18–6:48/km"
+                },
+                "exercise": null,
+                "sets": null,
+                "reps": null,
+                "loadKg": null,
+                "restSeconds": null,
+                "progressMeasure": "Log distance, elapsed time, and whether effort stayed easy throughout."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "openai/gpt-6-luna"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 724,
+          "outputTokens": 411,
+          "reasoningTokens": 345,
+          "costUsd": 0.0002779
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1679,
+          "outputTokens": 2582,
+          "reasoningTokens": 451,
+          "costUsd": 0.00132715
+        },
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1679,
+          "outputTokens": 3074,
+          "reasoningTokens": 598,
+          "costUsd": 0.00157315
+        }
+      ],
+      "costUsd": 0.0034417,
+      "seconds": 30.3,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": true,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "reality-pushback",
+      "title": "Half marathon under 1:30, never run, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish a half marathon in under 1 hour 30 minutes",
+        "goalSpec": {
+          "metric": "FINISH_TIME",
+          "value": 5400,
+          "unit": "s",
+          "text": "under 1 hour 30 minutes",
+          "chosenByUser": true
+        },
+        "baseline": "I have never run. I can't jog for more than a minute.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "PUSHBACK",
+      "coachNote": {
+        "verdict": "PUSHBACK",
+        "message": "From never running and being unable to jog more than a minute, under 1:30 for a half marathon is not a safe, likely target to plan around. Three days a week is the fewest I’d suggest for an honest first plan; build your running base before revisiting that time.",
+        "suggestedDays": 3,
+        "targetInvolved": true
+      },
+      "question": null,
+      "baselineMeasurements": [],
+      "options": [],
+      "attempts": 1,
+      "retried": [],
+      "models": [],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 710,
+          "outputTokens": 463,
+          "reasoningTokens": 338,
+          "costUsd": 0.0003025
+        }
+      ],
+      "costUsd": 0.0003025,
+      "seconds": 4.5,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": null,
+        "noInvented": null,
+        "lifting": null,
+        "routesDiffer": null
+      }
+    },
+    {
+      "id": "reality-adjusted",
+      "title": "First half marathon, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "I run 3 km once a week at an easy pace.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "error",
+      "error": "We couldn't build a reliable plan just now. Please try again."
+    },
+    {
+      "id": "adapt-hard",
+      "title": "The long run felt too hard",
+      "expect": "Ease the next two weeks, keep the goal, don't stack what was missed",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "hard",
+            "note": "Last 2 km were a struggle, legs heavy"
+          }
+        ],
+        "feedback": "The long run felt too hard. Keep the goal, make next week easier.",
+        "today": "2026-10-12"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "sessions": [
+          {
+            "date": "2026-10-14",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep this relaxed and conversational; shorten or walk if it stops feeling easy.",
+            "targets": {
+              "durationMinutes": 27,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-16",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Stay at an easy conversational effort; keep the run comfortable rather than chasing pace.",
+            "targets": {
+              "durationMinutes": 27,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-18",
+            "quantity": 5,
+            "title": "Shortened long easy run",
+            "descriptiveGuide": "Keep this shorter than the previous long run and easy throughout. Walk briefly if needed to stay comfortable.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-20",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Run easily and conversationally, keeping the effort comfortable.",
+            "targets": {
+              "durationMinutes": 27,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep this relaxed and conversational; no need to make up any missed work.",
+            "targets": {
+              "durationMinutes": 27,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-25",
+            "quantity": 6,
+            "title": "Long easy run",
+            "descriptiveGuide": "If the previous week felt manageable, extend gently to 6 km while keeping a conversational effort. Stop or shorten if it feels hard.",
+            "targets": {
+              "durationMinutes": 53,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Aim for two easy runs in a week; build consistency without forcing distance"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "The 7 km long run felt too hard, so I’ve kept the next two weeks gentle rather than increasing distance. We’ll build back with three manageable runs each week and keep the same easy effort and pace guidance.",
+        "designedThrough": "2026-10-25",
+        "usage": {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1753,
+          "outputTokens": 1262,
+          "reasoningTokens": 299,
+          "costUsd": 0.00085005
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6-luna",
+            "inputTokens": 1753,
+            "outputTokens": 1262,
+            "reasoningTokens": 299,
+            "costUsd": 0.00085005
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1753,
+          "outputTokens": 1262,
+          "reasoningTokens": 299,
+          "costUsd": 0.00085005
+        }
+      ],
+      "costUsd": 0.0008062999999999999,
+      "seconds": 10.3
+    },
+    {
+      "id": "adapt-well",
+      "title": "Two easy weeks, everything done",
+      "expect": "Progress gradually (about 10% a week), long run grows a little",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-12",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-14",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": "Felt great"
+          },
+          {
+            "date": "2026-10-17",
+            "activityId": "running",
+            "quantity": 7,
+            "difficulty": "normal",
+            "note": "Comfortable the whole way"
+          }
+        ],
+        "feedback": null,
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-20",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Run at a relaxed, conversational effort; keep the pace comfortable rather than pushing.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep this run gentle and conversational, matching the established easy effort.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-25",
+            "quantity": 8,
+            "title": "Long easy run",
+            "descriptiveGuide": "Build gently from the recent comfortable 7 km run. Stay at conversational effort throughout.",
+            "targets": {
+              "durationMinutes": 70,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-27",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Run easily and conversationally; keep the effort relaxed.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-29",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep a steady, easy conversational effort, without trying to run faster.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-11-01",
+            "quantity": 9,
+            "title": "Long easy run",
+            "descriptiveGuide": "A modest step up from the last long run. Keep it easy and conversational from start to finish.",
+            "targets": {
+              "durationMinutes": 79,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km takes 35–37 minutes"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "You completed all six recent runs, and the 7 km long run felt comfortable, so we can make a small, steady increase while keeping the runs easy. The phase checks and half-marathon goal stay unchanged; this window remains focused on building consistency and endurance.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1813,
+          "outputTokens": 950,
+          "reasoningTokens": 0,
+          "costUsd": 0.00070155
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6-luna",
+            "inputTokens": 1813,
+            "outputTokens": 950,
+            "reasoningTokens": 0,
+            "costUsd": 0.00070155
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1813,
+          "outputTokens": 950,
+          "reasoningTokens": 0,
+          "costUsd": 0.00070155
+        }
+      ],
+      "costUsd": 0.0006563,
+      "seconds": 7.3
+    },
+    {
+      "id": "adapt-sick",
+      "title": "Missed week 2 with the flu",
+      "expect": "Restart below where they were, don't make up missed runs, check in on recovery",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          }
+        ],
+        "feedback": "Had the flu all week, feeling better now.",
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-20",
+            "quantity": 3,
+            "title": "Easy return run",
+            "descriptiveGuide": "Keep this relaxed as you return after flu; stop if you feel unwell.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Run comfortably and keep the effort conversational.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-25",
+            "quantity": 5,
+            "title": "Long easy run",
+            "descriptiveGuide": "Keep the whole run easy; do not add distance to compensate for missed sessions.",
+            "targets": {
+              "durationMinutes": 37,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-27",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep this gentle and conversational.",
+            "targets": {
+              "durationMinutes": 22,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-29",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Stay at a comfortable, conversational effort.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-11-01",
+            "quantity": 6,
+            "title": "Long easy run",
+            "descriptiveGuide": "Keep this easy and finish feeling you could continue a little longer.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "By the end of week 4, aim to run 5 km easy twice in a week; keep this check flexible while returning after flu."
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "You completed the first three runs comfortably, then missed the next week while recovering from flu, so we’ll ease back in rather than make up missed distance. The rhythm-building phase stays in place, with this window focused on returning to three manageable easy runs.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1738,
+          "outputTokens": 1527,
+          "reasoningTokens": 174,
+          "costUsd": 0.000980675
+        },
+        "calls": [
+          {
+            "model": "openai/gpt-6-luna",
+            "inputTokens": 1738,
+            "outputTokens": 1527,
+            "reasoningTokens": 174,
+            "costUsd": 0.000980675
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 1738,
+          "outputTokens": 1527,
+          "reasoningTokens": 174,
+          "costUsd": 0.000980675
+        }
+      ],
+      "costUsd": 0.0009373,
+      "seconds": 11.5
     }
-  ]
+  ],
+  "finishedAt": "2026-10-01T12:13:59.112Z",
+  "totalCostUsd": 0.017169999999999998
 }

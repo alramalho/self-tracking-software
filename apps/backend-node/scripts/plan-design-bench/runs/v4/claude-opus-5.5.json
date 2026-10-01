@@ -531,6 +531,1186 @@
         "lifting": null,
         "routesDiffer": true
       }
+    },
+    {
+      "id": "bench",
+      "title": "Bench press · user chooses 80 kg × 5",
+      "source": "owner-example",
+      "input": {
+        "goal": "Bench press 80 kg for 5 reps",
+        "goalSpec": {
+          "metric": "LIFT_LOAD",
+          "value": 80,
+          "unit": "kg",
+          "text": "80 kg for 5 reps",
+          "chosenByUser": true
+        },
+        "baseline": "60 kg for 5 reps, 3 sets. I lift 3 days a week, with a rack and a spotter.",
+        "activities": [
+          {
+            "key": "bench-press",
+            "title": "Bench press",
+            "measure": "reps",
+            "emoji": "🏋️"
+          }
+        ],
+        "preferredDays": 3,
+        "fixedDate": null,
+        "asked": [],
+        "startDate": "2026-10-05"
+      },
+      "status": "READY",
+      "coachNote": {
+        "verdict": "FITS",
+        "message": null,
+        "suggestedDays": null,
+        "targetInvolved": false
+      },
+      "question": null,
+      "baselineMeasurements": [
+        {
+          "metric": "current_top_load",
+          "value": 60,
+          "unit": "kg",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_reps_per_set",
+          "value": 5,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_sets",
+          "value": 3,
+          "unit": "sets",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_session",
+          "value": 15,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets."
+        },
+        {
+          "metric": "current_days_per_week",
+          "value": 3,
+          "unit": "days",
+          "sourceQuote": "I lift 3 days a week, with a rack and a spotter."
+        },
+        {
+          "metric": "current_weekly_volume",
+          "value": 45,
+          "unit": "reps",
+          "sourceQuote": "60 kg for 5 reps, 3 sets. I lift 3 days a week"
+        }
+      ],
+      "options": [
+        {
+          "id": "steady",
+          "coach": "Helly",
+          "daysMin": 2,
+          "daysMax": 3,
+          "estimatedWeeks": 24,
+          "finishingDate": "2027-03-21",
+          "rationale": "From 60 kg to 80 kg for 5 is a 20 kg gain. Adding about 2.5 kg every 2-3 weeks on the heavy days, with one lighter technique day each week, gives a patient path that leaves room for repeat weeks.",
+          "assumptions": [
+            "You keep lifting 3 days a week with the rack and a spotter.",
+            "Your 60 kg x 5 x 3 is a solid, repeatable effort today.",
+            "Progress slows past 70 kg, so later steps may need repeat weeks.",
+            "Sleep and recovery stay similar to now; 80 kg is a target, not a promise."
+          ],
+          "phases": [
+            {
+              "title": "Base and form",
+              "startWeek": 1,
+              "endWeek": 6,
+              "progressCheck": "Complete 65 kg for 3 sets of 5 with steady bar path and no failed reps."
+            },
+            {
+              "title": "Build strength",
+              "startWeek": 7,
+              "endWeek": 12,
+              "progressCheck": "Complete 70 kg for 3 sets of 5 on a heavy day."
+            },
+            {
+              "title": "Heavier fives",
+              "startWeek": 13,
+              "endWeek": 18,
+              "progressCheck": "Complete 75 kg for 3 sets of 5, or 2 sets of 5 plus 1 set of 4."
+            },
+            {
+              "title": "Peak",
+              "startWeek": 19,
+              "endWeek": 22,
+              "progressCheck": "Complete 77.5 kg for 2 sets of 5 with the spotter present."
+            },
+            {
+              "title": "Taper and test",
+              "startWeek": 23,
+              "endWeek": 24,
+              "progressCheck": "Attempt 80 kg for 5 reps with the spotter after a lighter week."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 60 kg 3x5",
+              "descriptiveGuide": "Warm up with the empty bar and two lighter sets (e.g. 40 kg x5, 50 kg x3). Then 3 working sets of 5 at 60 kg in the rack with your spotter. Pause briefly on the chest, press with feet planted. Rest 3 minutes between sets.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "hard but controlled, 1-2 reps left in each set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log reps per set and how many reps you felt were left after the last set."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Technique day: 52.5 kg 3x5",
+              "descriptiveGuide": "Lighter day to practise form. After warm-up, 3 sets of 5 at 52.5 kg. Lower the bar slowly (about 2 seconds), touch the same spot each rep, keep shoulders pinned. Rest 2 minutes.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "moderate, bar moves fast",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 52.5,
+                "restSeconds": 120,
+                "progressMeasure": "Note whether every rep had the same touch point and a smooth press."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 60 kg 3x5",
+              "descriptiveGuide": "Same warm-up as Monday, then 3 sets of 5 at 60 kg with your spotter. Aim for all sets to feel a little easier than Monday. Rest 3 minutes.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "hard but controlled, 1-2 reps left in each set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 60,
+                "restSeconds": 180,
+                "progressMeasure": "Log reps left in the last set; if 2 or more, move to 62.5 kg next week."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 62.5 kg 3x5",
+              "descriptiveGuide": "First step up. Warm up (40 kg x5, 50 kg x3, 57.5 kg x1), then 3 sets of 5 at 62.5 kg with your spotter. If a set stalls, the spotter helps and you log the reps you did alone. Rest 3 minutes.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "hard, about 1 rep left in each set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log reps completed without help in each set."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Technique day: 55 kg 3x5",
+              "descriptiveGuide": "Lighter practice day. 3 sets of 5 at 55 kg, slow 2-second lowering, brief pause on the chest, then press. Rest 2 minutes.",
+              "targets": {
+                "durationMinutes": 35,
+                "effort": "moderate, bar moves fast",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 55,
+                "restSeconds": 120,
+                "progressMeasure": "Note if the pause on the chest stayed still and the bar path felt consistent."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 62.5 kg 3x5",
+              "descriptiveGuide": "Repeat 62.5 kg for 3 sets of 5 with your spotter after the usual warm-up. Goal: all 15 reps on your own. Rest 3 minutes.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "hard, 1-2 reps left in each set",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "If all 15 reps were done alone, plan 62.5 kg again next week, then 65 kg after."
+              }
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "coach": "Oli",
+          "daysMin": 3,
+          "daysMax": 4,
+          "estimatedWeeks": 18,
+          "finishingDate": "2027-02-07",
+          "rationale": "Three bench days a week (heavy, volume, medium) with the top set rising about 2.5 kg every week or two from 60 kg, aiming at 80 kg for 5 reps by week 18. More weekly volume than steady, never reckless jumps.",
+          "assumptions": [
+            "You keep 3 bench days a week with the rack and spotter present for heavy sets.",
+            "Most weeks you complete all planned reps with clean form before load goes up.",
+            "Progress may slow above 72.5 kg; repeating a week is normal, not failure.",
+            "No pain or injury interrupts training; stop and rest if pain appears."
+          ],
+          "phases": [
+            {
+              "title": "Base: own the 60s",
+              "startWeek": 1,
+              "endWeek": 4,
+              "progressCheck": "Week 4: heavy day 3x5 at 67.5 kg completed with all reps."
+            },
+            {
+              "title": "Build volume and load",
+              "startWeek": 5,
+              "endWeek": 9,
+              "progressCheck": "Week 9: heavy day 3x5 at 72.5 kg completed; volume day 4x5 at 62.5 kg."
+            },
+            {
+              "title": "Strength block",
+              "startWeek": 10,
+              "endWeek": 14,
+              "progressCheck": "Week 14: heavy day 3x5 at 77.5 kg or 5x3 at 80 kg completed with spotter."
+            },
+            {
+              "title": "Peak toward 80 kg",
+              "startWeek": 15,
+              "endWeek": 16,
+              "progressCheck": "Week 16: 2x4 at 80 kg or 1x5 at 77.5 kg plus 1x3 at 80 kg completed."
+            },
+            {
+              "title": "Taper and test",
+              "startWeek": 17,
+              "endWeek": 18,
+              "progressCheck": "Week 18: attempt 80 kg for 5 reps with spotter; log reps achieved."
+            }
+          ],
+          "sessions": [
+            {
+              "date": "2026-10-05",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 3x5 at 62.5 kg",
+              "descriptiveGuide": "Warm up with the empty bar and lighter sets (e.g. 40 kg x5, 50 kg x3). Then 3 working sets of 5 at 62.5 kg in the rack with your spotter. Controlled lowering, bar touches chest, press up. Rest 3 minutes between sets.",
+              "targets": {
+                "durationMinutes": 50,
+                "effort": "hard, about 1-2 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 62.5,
+                "restSeconds": 180,
+                "progressMeasure": "Log reps per set and how many reps you felt were left after set 3."
+              }
+            },
+            {
+              "date": "2026-10-07",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Volume day: 4x5 at 55 kg",
+              "descriptiveGuide": "Warm up with lighter sets. Then 4 sets of 5 at 55 kg. Focus on the same bar path every rep and a brief pause on the chest. Rest 2 minutes between sets. Should feel moderate, not grinding.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "moderate, 3-4 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 55,
+                "restSeconds": 120,
+                "progressMeasure": "Log whether all 20 reps were clean with a short chest pause."
+              }
+            },
+            {
+              "date": "2026-10-09",
+              "activity": "bench-press",
+              "quantity": 18,
+              "title": "Medium day: 3x6 at 57.5 kg",
+              "descriptiveGuide": "Warm up with lighter sets. Then 3 sets of 6 at 57.5 kg with your spotter nearby. Keep shoulders set and feet planted. Rest 2.5 minutes between sets.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "moderately hard, 2-3 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 6,
+                "loadKg": 57.5,
+                "restSeconds": 150,
+                "progressMeasure": "Log reps per set; note if the last reps slowed down."
+              }
+            },
+            {
+              "date": "2026-10-12",
+              "activity": "bench-press",
+              "quantity": 15,
+              "title": "Heavy day: 3x5 at 65 kg",
+              "descriptiveGuide": "Warm up as last week (empty bar, 40 kg x5, 50 kg x3, 57.5 kg x2). Then 3 sets of 5 at 65 kg with your spotter. If Monday last week left fewer than 1 rep in reserve, stay at 62.5 kg instead. Rest 3 minutes.",
+              "targets": {
+                "durationMinutes": 50,
+                "effort": "hard, about 1-2 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 5,
+                "loadKg": 65,
+                "restSeconds": 180,
+                "progressMeasure": "Log load used, reps per set, and reps left in reserve on set 3."
+              }
+            },
+            {
+              "date": "2026-10-14",
+              "activity": "bench-press",
+              "quantity": 20,
+              "title": "Volume day: 4x5 at 57.5 kg",
+              "descriptiveGuide": "Warm up with lighter sets. Then 4 sets of 5 at 57.5 kg with a brief pause on the chest each rep. Rest 2 minutes between sets. Keep every rep smooth.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "moderate, 3 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 4,
+                "reps": 5,
+                "loadKg": 57.5,
+                "restSeconds": 120,
+                "progressMeasure": "Log whether all 20 reps were completed with the pause."
+              }
+            },
+            {
+              "date": "2026-10-16",
+              "activity": "bench-press",
+              "quantity": 18,
+              "title": "Medium day: 3x6 at 60 kg",
+              "descriptiveGuide": "Warm up with lighter sets. Then 3 sets of 6 at 60 kg with your spotter. This is one more rep per set than your current 60 kg sets. Rest 2.5 minutes between sets.",
+              "targets": {
+                "durationMinutes": 45,
+                "effort": "moderately hard, 1-2 reps left in reserve",
+                "pace": null,
+                "exercise": "Bench press",
+                "sets": 3,
+                "reps": 6,
+                "loadKg": 60,
+                "restSeconds": 150,
+                "progressMeasure": "Log reps per set at 60 kg and compare with your baseline of 3x5."
+              }
+            }
+          ]
+        }
+      ],
+      "attempts": 3,
+      "retried": [],
+      "models": [
+        "anthropic/claude-opus-5.5"
+      ],
+      "usage": [
+        {
+          "model": "openai/gpt-6-luna",
+          "inputTokens": 718,
+          "outputTokens": 188,
+          "reasoningTokens": 122,
+          "costUsd": 0.0001658
+        },
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4461,
+          "outputTokens": 3210,
+          "reasoningTokens": 827,
+          "costUsd": 0.082044
+        },
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4461,
+          "outputTokens": 3151,
+          "reasoningTokens": 670,
+          "costUsd": 0.080864
+        }
+      ],
+      "costUsd": 0.1630738,
+      "seconds": 32.6,
+      "checks": {
+        "verdict": true,
+        "rangesBracketPreference": true,
+        "paceBasis": null,
+        "targetKept": true,
+        "noInvented": null,
+        "lifting": true,
+        "routesDiffer": true
+      }
+    },
+    {
+      "id": "reality-adjusted",
+      "title": "First half marathon, one day a week (mine)",
+      "source": "mine",
+      "input": {
+        "goal": "Finish my first half marathon",
+        "goalSpec": {
+          "metric": null,
+          "value": null,
+          "unit": null,
+          "text": null,
+          "chosenByUser": false
+        },
+        "baseline": "I run 3 km once a week at an easy pace.",
+        "activities": [
+          {
+            "key": "running",
+            "title": "Running",
+            "measure": "km",
+            "emoji": "🏃"
+          }
+        ],
+        "preferredDays": 1,
+        "fixedDate": null,
+        "asked": [
+          {
+            "question": "Do you have a finish time in mind?",
+            "answer": "No target in mind"
+          }
+        ],
+        "startDate": "2026-10-05"
+      },
+      "status": "error",
+      "error": "We couldn't build a reliable plan just now. Please try again."
+    },
+    {
+      "id": "adapt-hard",
+      "title": "The long run felt too hard",
+      "expect": "Ease the next two weeks, keep the goal, don't stack what was missed",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "hard",
+            "note": "Last 2 km were a struggle, legs heavy"
+          }
+        ],
+        "feedback": "The long run felt too hard. Keep the goal, make next week easier.",
+        "today": "2026-10-12"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "sessions": [
+          {
+            "date": "2026-10-12",
+            "quantity": 3,
+            "title": "Easy recovery run",
+            "descriptiveGuide": "A short, gentle run to let your legs recover from Saturday. Start slower than feels necessary and keep your breathing relaxed. Walking for a minute is fine if your legs still feel heavy.",
+            "targets": {
+              "durationMinutes": 23,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences, legs feeling lighter than at the start"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-14",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "A steady, conversational run. Stay at the slow end of your easy pace range. If you can't talk in full sentences, ease off.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-17",
+            "quantity": 5,
+            "title": "Shorter long run",
+            "descriptiveGuide": "This week's long run is lighter than last week's. Keep the first 2 km especially slow so the final kilometre still feels controlled. Bring water if it's warm.",
+            "targets": {
+              "durationMinutes": 37,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Last kilometre feels no harder than the first; difficulty logged as normal"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-19",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "A relaxed, conversational run to start the week. Keep it comfortable, with no need to push.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Another easy 4 km. Pay attention to how your legs feel. Fresh legs today are a good sign for the weekend long run.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 6,
+            "title": "Long easy run",
+            "descriptiveGuide": "We return to 6 km, but slower than last time. Stay at or just slower than your easy pace from the very start. A short walk break after 3 km is allowed. If last week's 5 km felt hard, run 5 km again instead.",
+            "targets": {
+              "durationMinutes": 45,
+              "effort": "easy, can talk throughout",
+              "pace": {
+                "minSecondsPerKm": 430,
+                "maxSecondsPerKm": 450,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 6 km with the last 2 km still manageable; difficulty logged as normal"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week and finish a 6 km long run feeling manageable"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "Your 6 km long run felt hard in the last 2 km, so this week we step back to a 5 km long run and slightly shorter easy runs. Next week holds steady and revisits 6 km only at a truly relaxed pace. Your half marathon goal and finish date stay the same.",
+        "designedThrough": "2026-10-25",
+        "usage": {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4257,
+          "outputTokens": 2490,
+          "reasoningTokens": 642,
+          "costUsd": 0.066828
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-opus-5.5",
+            "inputTokens": 4257,
+            "outputTokens": 2490,
+            "reasoningTokens": 642,
+            "costUsd": 0.066828
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4257,
+          "outputTokens": 2490,
+          "reasoningTokens": 642,
+          "costUsd": 0.066828
+        }
+      ],
+      "costUsd": 0.066828,
+      "seconds": 24.7
+    },
+    {
+      "id": "adapt-well",
+      "title": "Two easy weeks, everything done",
+      "expect": "Progress gradually (about 10% a week), long run grows a little",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-12",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-14",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "easy",
+            "note": "Felt great"
+          },
+          {
+            "date": "2026-10-17",
+            "activityId": "running",
+            "quantity": 7,
+            "difficulty": "normal",
+            "note": "Comfortable the whole way"
+          }
+        ],
+        "feedback": null,
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-19",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Relaxed 4 km at a conversational effort. Start slower than feels necessary for the first kilometre, then settle into your usual easy rhythm. Keep breathing calm enough to speak in full sentences.",
+            "targets": {
+              "durationMinutes": 30,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-21",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Easy 5 km, back to your familiar baseline distance. Keep the effort conversational throughout; if the last kilometre feels harder, slow down rather than push.",
+            "targets": {
+              "durationMinutes": 37,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish 5 km able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 8,
+            "title": "Long easy run",
+            "descriptiveGuide": "8 km at easy effort, your longest run so far by one kilometre. Go out gently, stay conversational, and take short walk breaks if needed; finishing comfortably matters more than pace. Bring water if it is warm.",
+            "targets": {
+              "durationMinutes": 59,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 8 km feeling you could talk the whole way"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-26",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Easy 5 km after the long run. Keep it light and unhurried; if your legs feel heavy from Saturday, ease the pace further.",
+            "targets": {
+              "durationMinutes": 37,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish 5 km able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-28",
+            "quantity": 5,
+            "title": "Easy run",
+            "descriptiveGuide": "Second easy 5 km of the week, which completes your first phase check. Same relaxed, conversational effort as Monday.",
+            "targets": {
+              "durationMinutes": 37,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Second easy 5 km this week, finished talking comfortably"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-31",
+            "quantity": 8,
+            "title": "Long easy run",
+            "descriptiveGuide": "Repeat 8 km at easy effort to consolidate before the endurance phase. Aim for it to feel a little smoother than last week, not faster.",
+            "targets": {
+              "durationMinutes": 59,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "8 km feels as easy or easier than the previous week"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "Every session so far was completed and felt easy or normal, including your 7 km long run, so we are nudging volume up gently: the midweek runs grow to 5 km and the long run moves to 8 km. Week four holds that level so you can meet the first check of two easy 5 km runs in a week without strain.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4349,
+          "outputTokens": 2322,
+          "reasoningTokens": 484,
+          "costUsd": 0.063836
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-opus-5.5",
+            "inputTokens": 4349,
+            "outputTokens": 2322,
+            "reasoningTokens": 484,
+            "costUsd": 0.063836
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4349,
+          "outputTokens": 2322,
+          "reasoningTokens": 484,
+          "costUsd": 0.063836
+        }
+      ],
+      "costUsd": 0.063836,
+      "seconds": 20.9
+    },
+    {
+      "id": "adapt-sick",
+      "title": "Missed week 2 with the flu",
+      "expect": "Restart below where they were, don't make up missed runs, check in on recovery",
+      "input": {
+        "results": [
+          {
+            "date": "2026-10-05",
+            "activityId": "running",
+            "quantity": 3,
+            "difficulty": "easy",
+            "note": null
+          },
+          {
+            "date": "2026-10-07",
+            "activityId": "running",
+            "quantity": 4,
+            "difficulty": "normal",
+            "note": null
+          },
+          {
+            "date": "2026-10-10",
+            "activityId": "running",
+            "quantity": 6,
+            "difficulty": "normal",
+            "note": null
+          }
+        ],
+        "feedback": "Had the flu all week, feeling better now.",
+        "today": "2026-10-18"
+      },
+      "status": "READY",
+      "window": {
+        "replaceSessionIds": [],
+        "sessions": [
+          {
+            "date": "2026-10-20",
+            "quantity": 3,
+            "title": "Gentle return run",
+            "descriptiveGuide": "Your first run after the flu. Start with a few minutes of brisk walking, then run very easily. Walk breaks are fine. Stop early if you feel dizzy, have chest symptoms or feel unusually tired.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "very easy, can talk in full sentences",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences and feel fine the next day"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-22",
+            "quantity": 3,
+            "title": "Easy run",
+            "descriptiveGuide": "Another short, easy run. Keep it relaxed and conversational. If Tuesday's run left you drained, walk part of this one instead.",
+            "targets": {
+              "durationMinutes": 29,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-24",
+            "quantity": 4,
+            "title": "Easy longer run",
+            "descriptiveGuide": "A slightly longer easy run to close the week. Keep the same gentle effort the whole way, and take walk breaks whenever you need them.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences; difficulty easy or normal"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-27",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Run easily at a conversational effort. If last week felt hard, repeat 3 km instead of stepping up to 4 km.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-29",
+            "quantity": 4,
+            "title": "Easy run",
+            "descriptiveGuide": "Keep this one steady and relaxed, at the same easy feel as Tuesday. Don't push the pace.",
+            "targets": {
+              "durationMinutes": 36,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Finish able to talk in sentences"
+            },
+            "activityId": "running"
+          },
+          {
+            "date": "2026-10-31",
+            "quantity": 5,
+            "title": "Long easy run",
+            "descriptiveGuide": "Your long run, at 5 km, which is still below your earlier 6 km. Run at an easy, chatty effort and walk when needed. If the week felt hard, keep it to 4 km.",
+            "targets": {
+              "durationMinutes": 44,
+              "effort": "easy, can talk",
+              "pace": {
+                "minSecondsPerKm": 420,
+                "maxSecondsPerKm": 444,
+                "basis": "USER_REPORTED_EASY_PACE",
+                "evidence": "easy 5 km in 35–37 min"
+              },
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "loadKg": null,
+              "restSeconds": null,
+              "progressMeasure": "Complete 5 km easy, able to talk in sentences"
+            },
+            "activityId": "running"
+          }
+        ],
+        "phases": [
+          {
+            "title": "Find your rhythm",
+            "startWeek": 1,
+            "endWeek": 4,
+            "progressCheck": "Run 5 km easy twice in a week, flu recovery allowing"
+          },
+          {
+            "title": "Build endurance",
+            "startWeek": 5,
+            "endWeek": 14,
+            "progressCheck": "Long run reaches 15 km at easy pace"
+          },
+          {
+            "title": "Sharpen and taper",
+            "startWeek": 15,
+            "endWeek": 18,
+            "progressCheck": "Last long run 18 km, then two lighter weeks"
+          }
+        ],
+        "summary": "You've been ill with the flu this past week, so these two weeks ease you back in with shorter easy runs and don't make up the missed sessions. If week 3 feels comfortable, week 4 builds gently back toward your earlier 6 km long run.",
+        "designedThrough": "2026-11-01",
+        "usage": {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4294,
+          "outputTokens": 2207,
+          "reasoningTokens": 402,
+          "costUsd": 0.061316
+        },
+        "calls": [
+          {
+            "model": "anthropic/claude-opus-5.5",
+            "inputTokens": 4231,
+            "outputTokens": 1181,
+            "reasoningTokens": 607,
+            "costUsd": 0.040544
+          },
+          {
+            "model": "anthropic/claude-opus-5.5",
+            "inputTokens": 4294,
+            "outputTokens": 2207,
+            "reasoningTokens": 402,
+            "costUsd": 0.061316
+          }
+        ]
+      },
+      "usage": [
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4231,
+          "outputTokens": 1181,
+          "reasoningTokens": 607,
+          "costUsd": 0.040544
+        },
+        {
+          "model": "anthropic/claude-opus-5.5",
+          "inputTokens": 4294,
+          "outputTokens": 2207,
+          "reasoningTokens": 402,
+          "costUsd": 0.061316
+        }
+      ],
+      "costUsd": 0.10186,
+      "seconds": 34.7
     }
-  ]
+  ],
+  "finishedAt": "2026-10-01T12:14:17.842Z",
+  "totalCostUsd": 0.5765165999999999
 }
