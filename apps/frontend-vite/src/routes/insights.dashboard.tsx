@@ -1,16 +1,12 @@
 import AINotification from "@/components/AINotification";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
-import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { DayOfWeekInsights } from "@/components/metrics/DayOfWeekInsights";
 import { MetricCard } from "@/components/metrics/MetricCard";
 import { MetricHeatmap } from "@/components/metrics/MetricHeatmap";
-import { MetricInsightsCard, type Correlation } from "@/components/metrics/MetricInsightsCard";
+import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
 import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
-import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useContextEvents } from "@/contexts/context-events";
@@ -20,11 +16,11 @@ import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useFeedback } from "@/hooks/useFeedback";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { validRatings, type ActivityFinding } from "@/lib/metricFindings";
 import { defaultMetrics, MINIMUM_ENTRIES } from "@/lib/metrics";
-import { getThemeVariants } from "@/utils/theme";
+import { toMidnightUTCDate } from "@/lib/utils";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type Metric, type MetricEntry } from "@tsw/prisma";
+import { type MetricEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, Loader2, Plus } from "lucide-react";
@@ -34,6 +30,64 @@ import Divider from "@/components/Divider";
 export const Route = createFileRoute("/insights/dashboard")({
   component: InsightsDashboardPage,
 });
+
+// Made-up numbers for the preview shown before someone tracks any metric.
+const exampleMetric = { id: "demo", title: "Happiness", emoji: "😊" };
+// [days ago, rating]. A check-in is saved as its calendar date at UTC midnight.
+const exampleCheckIns = [
+  [1, 5],
+  [2, 4],
+  [3, 4],
+  [5, 3],
+  [6, 4],
+  [8, 3],
+  [10, 2],
+  [11, 4],
+  [13, 3],
+].map(
+  ([daysAgo, rating]) =>
+    ({
+      id: `example-${daysAgo}`,
+      metricId: exampleMetric.id,
+      rating,
+      skipped: false,
+      createdAt: toMidnightUTCDate(subDays(new Date(), daysAgo)),
+    }) as MetricEntry
+);
+const exampleFindings: ActivityFinding[] = [
+  {
+    activity: { id: "gym", title: "Gym", emoji: "🏋️‍♂️" },
+    average: 3.0,
+    otherAverage: 3.8,
+    difference: -0.21,
+    days: 16,
+    otherDays: 40,
+  },
+  {
+    activity: { id: "exercise", title: "Exercise", emoji: "🏃‍♂️" },
+    average: 4.0,
+    otherAverage: 3.4,
+    difference: 0.18,
+    days: 35,
+    otherDays: 31,
+  },
+  {
+    activity: { id: "reading", title: "Reading", emoji: "📚" },
+    average: 3.6,
+    otherAverage: 3.5,
+    difference: 0.03,
+    days: 8,
+    otherDays: 50,
+  },
+  {
+    activity: { id: "piano", title: "Piano", emoji: "🎹" },
+    average: 4.0,
+    otherAverage: 3.5,
+    difference: null,
+    days: 2,
+    otherDays: 56,
+  },
+];
 
 function InsightsDashboardPage() {
   const {
@@ -49,12 +103,6 @@ function InsightsDashboardPage() {
   const { currentUser } = useCurrentUser();
 
   const navigate = useNavigate();
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
-  const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
-  const [trendHelpMetricId, setTrendHelpMetricId] = useState<string | null>(
-    null
-  );
   const [aiMessage, setAIMessage] = useState<string | null>(null);
   const { setShowUpgradePopover } = useUpgrade();
   const { isUserFree } = usePaidPlan();
@@ -79,6 +127,8 @@ function InsightsDashboardPage() {
   const selectedMetricEntries = entries?.filter(
     (e) => e.metricId === selectedMetricId
   ) || [];
+  // Skipped check-ins carry no rating, so they are left out of every card.
+  const selectedCheckIns = validRatings(selectedMetricEntries);
   const selectedMetricEventImpacts = useMemo(() => {
     if (!selectedMetricId) return [];
 
@@ -159,130 +209,12 @@ function InsightsDashboardPage() {
 
           {/* Demo Metrics Preview */}
           <div className="space-y-4">
-            <MetricTrendCard
-              metric={{ id: "demo", title: "Happiness", emoji: "😊" }}
-              trend={15}
-              thisWeekAvg={4.0}
-              lastWeekAvg={3.2}
-              thisWeekEntries={
-                [
-                  {
-                    id: "demo1",
-                    metricId: "demo",
-                    rating: 5,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
-                  },
-                  {
-                    id: "demo2",
-                    metricId: "demo",
-                    rating: 4,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
-                  },
-                  {
-                    id: "demo3",
-                    metricId: "demo",
-                    rating: 4,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 3)),
-                  },
-                  {
-                    id: "demo4",
-                    metricId: "demo",
-                    rating: 3,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 5)),
-                  },
-                  {
-                    id: "demo5",
-                    metricId: "demo",
-                    rating: 4,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 6)),
-                  },
-                ] as MetricEntry[]
-              }
-              lastWeekEntries={
-                [
-                  {
-                    id: "demo6",
-                    metricId: "demo",
-                    rating: 3,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 8)),
-                  },
-                  {
-                    id: "demo7",
-                    metricId: "demo",
-                    rating: 2,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 10)),
-                  },
-                  {
-                    id: "demo8",
-                    metricId: "demo",
-                    rating: 4,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 11)),
-                  },
-                  {
-                    id: "demo9",
-                    metricId: "demo",
-                    rating: 3,
-                    createdAt: new Date(new Date().setDate(new Date().getDate() - 13)),
-                  },
-                ] as MetricEntry[]
-              }
-              onHelpClick={() => setTrendHelpMetricId("demo")}
-            />
-
             <MetricInsightsCard
-              metric={{ id: "demo", title: "Happiness", emoji: "😊" }}
-              hardcodedCorrelations={[
-                {
-                  activity: {
-                    id: "exercise",
-                    title: "Exercise",
-                    emoji: "🏃‍♂️",
-                  } as any,
-                  correlation: 0.75,
-                  sampleSize: 35,
-                },
-                {
-                  activity: {
-                    id: "meditation",
-                    title: "Meditation",
-                    emoji: "🧘‍♂️",
-                  } as any,
-                  correlation: 0.65,
-                  sampleSize: 20,
-                },
-                {
-                  activity: {
-                    id: "gym",
-                    title: "Gym",
-                    emoji: "🏋️‍♂️",
-                  } as any,
-                  correlation: -0.35,
-                  sampleSize: 12,
-                },
-                {
-                  activity: {
-                    id: "reading",
-                    title: "Reading",
-                    emoji: "📚",
-                  } as any,
-                  correlation: -0.05,
-                  sampleSize: 8,
-                },
-              ] as Correlation[]}
-              onHelpClick={() => setHelpMetricId("demo")}
+              metric={exampleMetric}
+              exampleFindings={exampleFindings}
             />
 
-            <TrendHelpPopover
-              isOpen={trendHelpMetricId === "demo"}
-              onClose={() => setTrendHelpMetricId(null)}
-              metricTitle="Happiness"
-            />
-
-            <CorrelationHelpPopover
-              isOpen={helpMetricId === "demo"}
-              onClose={() => setHelpMetricId(null)}
-              metricTitle="Happiness"
-            />
+            <MetricTrendCard metric={exampleMetric} entries={exampleCheckIns} />
           </div>
         </div>
         <div className="px-4 pb-10">
@@ -310,67 +242,6 @@ function InsightsDashboardPage() {
     );
   }
 
-  // Find the metric with the most entries
-  const metricEntryCounts = userMetrics?.map((metric) => ({
-    metric,
-    count: entries?.filter((entry) => entry.metricId === metric.id).length,
-  }));
-
-  const renderProgressUI = (targetEntries: number, specificMetric?: Metric) => {
-    const metricsToShow = specificMetric
-      ? [
-          {
-            metric: specificMetric,
-            count: entries?.filter((e) => e.metricId === specificMetric.id)
-              .length,
-          },
-        ]
-      : metricEntryCounts;
-
-    return (
-      <Card className="p-8">
-        <div className="space-y-6">
-          <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold">
-              {specificMetric?.emoji} {specificMetric?.title}
-            </h2>
-            <p className="text-muted-foreground">
-              {targetEntries === MINIMUM_ENTRIES
-                ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
-                : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            {metricsToShow?.map(({ metric, count }) => {
-              const progressPercent = ((count || 0) / targetEntries) * 100;
-              return (
-                <div key={metric.id} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>
-                      {metric.emoji} {metric.title}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {count} / {targetEntries} entries
-                    </span>
-                  </div>
-                  <Progress
-                    value={progressPercent}
-                    className="h-2"
-                    indicatorColor={variants.indicator.active}
-                  />
-                </div>
-              );
-            })}
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Rate {targetEntries} entries to generate meaningful insights.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
   if (isLoadingMetrics || isLoadingEntries) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -380,53 +251,6 @@ function InsightsDashboardPage() {
     );
   }
 
-
-  // Calculate next milestone based on current entries
-  const getNextMilestone = (entries: number) => {
-    const milestones = [MINIMUM_ENTRIES, 10, 15, 30, 45, 60, 90, 120];
-    return (
-      milestones.find((m) => entries < m) || milestones[milestones.length - 1]
-    );
-  };
-
-  const calculateMetricTrend = (metricEntries: MetricEntry[]) => {
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
-    // Get entries from the last 14 days and sort them
-    const recentEntries = metricEntries
-      .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-    if (recentEntries.length < 2) return 0;
-
-    // Split entries into this week and last week
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const thisWeekEntries = recentEntries.filter(
-      (entry) => new Date(entry.createdAt) >= oneWeekAgo
-    );
-    const lastWeekEntries = recentEntries.filter(
-      (entry) => new Date(entry.createdAt) < oneWeekAgo
-    );
-
-    // Calculate averages
-    const thisWeekAvg =
-      thisWeekEntries.length > 0
-        ? thisWeekEntries.reduce((sum, entry) => sum + entry.rating, 0) /
-          thisWeekEntries.length
-        : 0;
-    const lastWeekAvg =
-      lastWeekEntries.length > 0
-        ? lastWeekEntries.reduce((sum, entry) => sum + entry.rating, 0) /
-          lastWeekEntries.length
-        : 0;
-
-    // Calculate trend percentage
-    if (lastWeekAvg === 0) return 0;
-    return ((thisWeekAvg - lastWeekAvg) / lastWeekAvg) * 100;
-  };
 
   // Handle metric selection toggle
   const handleMetricSelect = (metricId: string) => {
@@ -560,103 +384,31 @@ function InsightsDashboardPage() {
                 <h2 className="text-2xl font-bold">{selectedMetric.title}</h2>
               </div>
 
-              {/* Check if we have enough data */}
-              {(() => {
-                const count = selectedMetricEntries.length;
-                const hasEnoughData = count >= MINIMUM_ENTRIES;
+              {/* Under seven rated check-ins this card only counts up. */}
+              <MetricInsightsCard
+                metric={selectedMetric}
+                activities={activities}
+                activityEntries={activityEntries}
+                metricEntries={entries || []}
+              />
 
-                if (!hasEnoughData) {
-                  const nextMilestone = getNextMilestone(count);
-                  return renderProgressUI(nextMilestone, selectedMetric);
-                }
+              {selectedCheckIns.length >= MINIMUM_ENTRIES && (
+                <>
+                  <MetricTrendCard
+                    metric={selectedMetric}
+                    entries={selectedCheckIns}
+                  />
 
-                // Calculate trend and weekly data
-                const trend = calculateMetricTrend(selectedMetricEntries);
-                const twoWeeksAgo = new Date();
-                twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                  <MetricHeatmap
+                    entries={selectedMetricEntries}
+                    metricEmoji={selectedMetric.emoji}
+                    metricTitle={selectedMetric.title}
+                    eventImpacts={selectedMetricEventImpacts}
+                  />
 
-                const recentEntries = selectedMetricEntries
-                  .filter((entry) => new Date(entry.createdAt) >= twoWeeksAgo)
-                  .sort(
-                    (a, b) =>
-                      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                  );
-
-                const thisWeekEntries = recentEntries.filter(
-                  (entry) => new Date(entry.createdAt) >= oneWeekAgo
-                );
-                const lastWeekEntries = recentEntries.filter(
-                  (entry) => new Date(entry.createdAt) < oneWeekAgo
-                );
-
-                const thisWeekAvg =
-                  thisWeekEntries.length > 0
-                    ? thisWeekEntries.reduce(
-                        (sum, entry) => sum + entry.rating,
-                        0
-                      ) / thisWeekEntries.length
-                    : 0;
-                const lastWeekAvg =
-                  lastWeekEntries.length > 0
-                    ? lastWeekEntries.reduce(
-                        (sum, entry) => sum + entry.rating,
-                        0
-                      ) / lastWeekEntries.length
-                    : 0;
-
-                return (
-                  <>
-                    {/* Heatmap */}
-                    <MetricHeatmap
-                      entries={selectedMetricEntries}
-                      metricEmoji={selectedMetric.emoji}
-                      metricTitle={selectedMetric.title}
-                      eventImpacts={selectedMetricEventImpacts}
-                    />
-
-                    {/* Day of Week Insights */}
-                    <DayOfWeekInsights
-                      entries={selectedMetricEntries}
-                      metricTitle={selectedMetric.title}
-                      metricEmoji={selectedMetric.emoji}
-                    />
-
-                    {/* Trend Card */}
-                    <MetricTrendCard
-                      metric={selectedMetric}
-                      trend={trend}
-                      thisWeekAvg={thisWeekAvg}
-                      lastWeekAvg={lastWeekAvg}
-                      thisWeekEntries={thisWeekEntries}
-                      lastWeekEntries={lastWeekEntries}
-                      onHelpClick={() => setTrendHelpMetricId(selectedMetric.id)}
-                    />
-
-                    {/* Activity Correlations */}
-                    <MetricInsightsCard
-                      metric={selectedMetric}
-                      activities={activities}
-                      activityEntries={activityEntries}
-                      metricEntries={entries || []}
-                      onHelpClick={() => setHelpMetricId(selectedMetric.id)}
-                    />
-
-                    <TrendHelpPopover
-                      isOpen={trendHelpMetricId === selectedMetric.id}
-                      onClose={() => setTrendHelpMetricId(null)}
-                      metricTitle={selectedMetric.title}
-                    />
-
-                    <CorrelationHelpPopover
-                      isOpen={helpMetricId === selectedMetric.id}
-                      onClose={() => setHelpMetricId(null)}
-                      metricTitle={selectedMetric.title}
-                    />
-                  </>
-                );
-              })()}
+                  <DayOfWeekInsights entries={selectedCheckIns} />
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

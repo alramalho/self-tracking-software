@@ -1,17 +1,28 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { FindingRow } from "@/components/metrics/FindingRow";
 import { Button } from "@/components/ui/button";
-import { HelpCircle } from "lucide-react";
-import { CorrelationEntry } from "@/components/metrics/CorrelationEntry";
-import { ReliabilityHelpPopover } from "@/components/metrics/ReliabilityHelpPopover";
-import { ACTIVITY_WINDOW_DAYS } from "@/lib/metrics";
+import { Card } from "@/components/ui/card";
+import { useCurrentUser } from "@/contexts/users";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import {
+  activityFindings,
+  signalStrength,
+  validRatings,
+  type ActivityFinding,
+} from "@/lib/metricFindings";
+import { MINIMUM_ENTRIES } from "@/lib/metrics";
+import {
+  CAVEAT,
+  activityDetail,
+  countUp,
+  headline,
+  signalLine,
+  waitingForActivity,
+} from "@/lib/metricWords";
 import type { Activity, ActivityEntry, MetricEntry } from "@tsw/prisma";
-
-export interface Correlation {
-  activity: Activity;
-  correlation: number;
-  sampleSize: number;
-}
+import { HelpCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface MetricInsightsCardProps {
   metric: {
@@ -22,195 +33,171 @@ interface MetricInsightsCardProps {
   activities?: Activity[];
   activityEntries?: ActivityEntry[];
   metricEntries?: MetricEntry[];
-  onHelpClick: () => void;
-  hardcodedCorrelations?: Correlation[];
+  // Made-up rows for the preview shown before someone tracks any metric.
+  exampleFindings?: ActivityFinding[];
 }
 
-// Calculate Pearson correlation between two arrays
-const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
-  const n = x.length;
-  if (n !== y.length || n === 0) return 0;
+// What the detail popover is showing.
+type FindingDetail =
+  | { kind: "activity"; finding: ActivityFinding }
+  | { kind: "help" };
 
-  const sum1 = x.reduce((a, b) => a + b, 0);
-  const sum2 = y.reduce((a, b) => a + b, 0);
-  const sum1Sq = x.reduce((a, b) => a + b * b, 0);
-  const sum2Sq = y.reduce((a, b) => a + b * b, 0);
-  const pSum = x.reduce((a, b, i) => a + b * y[i], 0);
-
-  const num = pSum - (sum1 * sum2) / n;
-  const den = Math.sqrt(
-    (sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n)
-  );
-
-  return den === 0 ? 0 : num / den;
-};
-
-// Metric entries created after this date will only count activities logged before them
-const TIMESTAMP_FILTERING_CUTOFF = new Date('2025-11-06T00:00:00Z');
-
-// Check if an activity happened within the configured window before a date
-// If metricCreatedAt is provided and after the cutoff date, only count activities
-// that were logged before the metric entry
-const activityHappenedWithinWindow = (
-  activityId: string,
-  targetDate: Date,
-  activityEntries: ActivityEntry[],
-  metricCreatedAt?: Date
-): boolean => {
-  const windowStart = new Date(targetDate);
-  windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
-
-  return activityEntries.some((entry) => {
-    const entryDate = new Date(entry.datetime);
-    const activityCreatedAt = new Date(entry.createdAt);
-
-    // Check date window
-    const inDateWindow =
-      entry.activityId === activityId &&
-      entryDate >= windowStart &&
-      entryDate <= targetDate;
-
-    if (!inDateWindow) return false;
-
-    // If metric was created after cutoff date, enforce timestamp filtering
-    if (metricCreatedAt && metricCreatedAt >= TIMESTAMP_FILTERING_CUTOFF) {
-      return activityCreatedAt < metricCreatedAt;
-    }
-
-    // For historical data (before cutoff), don't enforce timestamp filtering
-    return true;
-  });
-};
+const activityLabel = (finding: ActivityFinding) =>
+  `${finding.activity.emoji || "📊"} ${finding.activity.title}`;
 
 export function MetricInsightsCard({
   metric,
   activities = [],
   activityEntries = [],
   metricEntries = [],
-  onHelpClick,
-  hardcodedCorrelations,
+  exampleFindings,
 }: MetricInsightsCardProps) {
-  const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
-  const [selectedSampleSize, setSelectedSampleSize] = useState<number | undefined>(undefined);
+  const { currentUser } = useCurrentUser();
+  const coach = getCoachPersonalityConfig(currentUser?.coachPersonality);
+  const themeColors = useThemeColors();
+  const [detail, setDetail] = useState<FindingDetail>({ kind: "help" });
+  const [showDetail, setShowDetail] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to detect when card enters viewport
+  // The bars grow when the card scrolls into view.
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
+        if (entry.isIntersecting) setIsVisible(true);
       },
-      { threshold: 0.1 } // Trigger when 10% of the card is visible
+      { threshold: 0.1 }
     );
-
     const currentRef = cardRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
+    if (currentRef) observer.observe(currentRef);
     return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
+      if (currentRef) observer.unobserve(currentRef);
     };
   }, []);
 
-  // Calculate correlations for the metric
-  const calculatedCorrelations = useMemo(() => {
-    const filteredMetricEntries = metricEntries
-      .filter((entry) => entry.metricId === metric.id)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const entries = useMemo(
+    () => metricEntries.filter((entry) => entry.metricId === metric.id),
+    [metricEntries, metric.id]
+  );
+  const findings = useMemo(
+    () =>
+      exampleFindings ?? activityFindings(entries, activities, activityEntries),
+    [exampleFindings, entries, activities, activityEntries]
+  );
+  // Under seven rated check-ins the card only counts up.
+  const checkIns = validRatings(entries).length;
+  const counting = !exampleFindings && checkIns < MINIMUM_ENTRIES;
 
-    const calculatedCorrelations = activities
-      .map((activity) => {
-        const binaryActivityArray = filteredMetricEntries.map((entry) => {
-          const didActivity = activityHappenedWithinWindow(
-            activity.id,
-            new Date(entry.createdAt),
-            activityEntries,
-            new Date(entry.createdAt) // Pass metric entry's creation timestamp
-          );
-          return didActivity ? 1 : 0;
-        });
-
-        // Count how many times this activity actually occurred (sample size for this specific activity)
-        const activitySampleSize = binaryActivityArray.filter((v) => v === 1).length;
-
-        // Only calculate correlation if the activity has some occurrences
-        if (activitySampleSize > 0) {
-          const ratings = filteredMetricEntries.map((e) => e.rating);
-
-          const correlation = calculatePearsonCorrelation(
-            ratings,
-            binaryActivityArray
-          );
-
-          return {
-            activity,
-            correlation,
-            sampleSize: activitySampleSize,
-          };
-        }
-        return null;
-      })
-      .filter((c): c is Correlation => c !== null);
-
-    // Sort by absolute correlation value
-    return calculatedCorrelations.sort(
-      (a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)
-    );
-  }, [metric.id, activities, activityEntries, metricEntries]);
-
-  // Use hardcoded correlations if provided, otherwise use calculated
-  const correlations = hardcodedCorrelations || calculatedCorrelations;
+  const open = (next: FindingDetail) => {
+    setDetail(next);
+    setShowDetail(true);
+  };
+  const heading =
+    detail.kind === "activity"
+      ? activityLabel(detail.finding)
+      : "How to read this";
 
   return (
-    <Card ref={cardRef} className="p-6 rounded-2xl">
-      <div className="space-y-6">
-        <div className="flex justify-between items-start">
-          <div className="flex flex-row items-center gap-2">
-            <span className="text-4xl">{metric.emoji}</span>
-            <h2 className="text-lg font-bold">{metric.title} Insights</h2>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={onHelpClick}
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
+    <Card ref={cardRef} className="p-5 rounded-2xl">
+      <div className="space-y-4">
+        {/* Anything that helps someone stay consistent comes from the coach. */}
+        <div className="flex items-center gap-2">
+          <img
+            src={coach.avatar}
+            alt=""
+            className="w-9 h-9 flex-shrink-0 object-contain"
+          />
+          <span className="flex-1 font-semibold">{coach.name}</span>
+          {exampleFindings ? (
+            <span className="text-xs text-muted-foreground">Example</span>
+          ) : (
+            !counting && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="How to read this"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => open({ kind: "help" })}
+              >
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            )
+          )}
         </div>
 
-        <div className="space-y-4">
-          {correlations.map((correlation, index) => (
-            <CorrelationEntry
-              key={correlation.activity.id}
-              title={`${correlation.activity.emoji || "📊"} ${correlation.activity.title}`}
-              pearsonValue={correlation.correlation}
-              sampleSize={correlation.sampleSize}
-              onReliabilityClick={() => {
-                setSelectedSampleSize(correlation.sampleSize);
-                setShowReliabilityHelp(true);
-              }}
-              isVisible={isVisible}
-              animationDelay={index * 100} // Stagger animation by 100ms per bar
+        <h2 className="text-xl font-bold leading-snug">
+          {counting ? countUp(checkIns) : headline(metric.title, findings)}
+        </h2>
+
+        {counting ? (
+          <div className="h-2 rounded-full bg-muted">
+            <div
+              className={`h-2 rounded-full ${themeColors.bg}`}
+              style={{ width: `${(checkIns / MINIMUM_ENTRIES) * 100}%` }}
             />
-          ))}
-        </div>
+          </div>
+        ) : (
+          findings.length > 0 && (
+            <div className="space-y-4">
+              {findings.map((finding, index) => (
+                <FindingRow
+                  key={finding.activity.id}
+                  label={activityLabel(finding)}
+                  difference={finding.difference}
+                  signal={signalStrength(
+                    Math.min(finding.days, finding.otherDays)
+                  )}
+                  waiting={waitingForActivity(finding)}
+                  onClick={() => open({ kind: "activity", finding })}
+                  isVisible={isVisible}
+                  animationDelay={index * 100}
+                />
+              ))}
+            </div>
+          )
+        )}
       </div>
 
-      <ReliabilityHelpPopover
-        isOpen={showReliabilityHelp}
-        onClose={() => {
-          setShowReliabilityHelp(false);
-          setSelectedSampleSize(undefined);
-        }}
-        sampleSize={selectedSampleSize}
-      />
+      <AppleLikePopover
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        title={heading}
+      >
+        <div className="pt-8 pb-2 space-y-3">
+          <h3 className="text-xl font-bold pr-9">{heading}</h3>
+          {detail.kind === "activity" && (
+            <>
+              {activityDetail(metric.title, detail.finding).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              {detail.finding.difference !== null && (
+                <p className="text-muted-foreground">
+                  {signalLine(
+                    Math.min(detail.finding.days, detail.finding.otherDays)
+                  )}
+                </p>
+              )}
+            </>
+          )}
+          {detail.kind === "help" && (
+            <>
+              <p>
+                I compare how you rate your {metric.title.toLowerCase()} on the
+                days you logged an activity with the days you didn&apos;t.
+              </p>
+              <p>
+                The number is how much higher or lower it averages on those
+                days. A longer bar is a bigger difference.
+              </p>
+              <p>
+                The three small bars are how much there is to go on: one from 5
+                days, two from 15, three from 30.
+              </p>
+            </>
+          )}
+          <p className="text-muted-foreground">{CAVEAT}</p>
+        </div>
+      </AppleLikePopover>
     </Card>
   );
 }

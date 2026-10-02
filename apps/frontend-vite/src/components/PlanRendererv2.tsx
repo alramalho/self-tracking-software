@@ -4,6 +4,7 @@ import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useMetrics } from "@/contexts/metrics";
 import { getPeriodLabel } from "@/utils/coachingTime";
+import { validRatings } from "@/lib/metricFindings";
 import { MINIMUM_ENTRIES } from "@/lib/metrics";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -57,7 +58,6 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { PlanCalendarView } from "./PlanCalendarView";
 import { CirclePlanSection } from "./circles/CirclePlanSection";
 import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
-import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
 import { FireAnimation } from "./FireBadge";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -368,7 +368,6 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
   const [pauseReason, setPauseReason] = useState("");
   const [showCoachingTimeSelector, setShowCoachingTimeSelector] =
     useState(false);
-  const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
@@ -740,8 +739,9 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
   const metricsWithEnoughData = useMemo(() => {
     return (
       metrics?.filter((metric) => {
-        const count =
-          metricEntries?.filter((e) => e.metricId === metric.id).length || 0;
+        const count = validRatings(
+          metricEntries?.filter((e) => e.metricId === metric.id) || []
+        ).length;
         return count >= MINIMUM_ENTRIES;
       }) || []
     );
@@ -1092,24 +1092,17 @@ export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) 
           <div className="mb-12">
           <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            See how this plan's activities correlate with your tracked metrics
+            How your check-ins compare on the days you do this plan's activities
           </p>
           <div className="space-y-4">
             {metricsWithEnoughData.map((metric) => (
-              <div key={metric.id}>
-                <MetricInsightsCard
-                  metric={metric}
-                  activities={planActivities}
-                  activityEntries={activityEntries}
-                  metricEntries={metricEntries || []}
-                  onHelpClick={() => setHelpMetricId(metric.id)}
-                />
-                <CorrelationHelpPopover
-                  isOpen={helpMetricId === metric.id}
-                  onClose={() => setHelpMetricId(null)}
-                  metricTitle={metric.title}
-                />
-              </div>
+              <MetricInsightsCard
+                key={metric.id}
+                metric={metric}
+                activities={planActivities}
+                activityEntries={activityEntries}
+                metricEntries={metricEntries || []}
+              />
             ))}
           </div>
           <Link to="/insights/dashboard">

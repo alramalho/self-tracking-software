@@ -36,6 +36,10 @@ export function DayPatterns({ entries }: MetricVisualProps) {
   const worst = significant[0],
     best = significant[significant.length - 1];
   if (!best || !worst || best.percent - worst.percent <= 5) return null;
+  const named = [
+    ...(best.percent > 5 ? [best] : []),
+    ...(worst.percent < -5 ? [worst] : []),
+  ];
   return (
     <Panel style={{ padding: 20, borderRadius: 16, gap: 12 }}>
       <Text style={{ fontSize: 13, color: c.muted }}>By weekday</Text>
@@ -62,6 +66,8 @@ export function DayPatterns({ entries }: MetricVisualProps) {
                 style={{
                   height: stat.count ? (stat.average / 5) * BAR_HEIGHT : 2,
                   backgroundColor: c.accent,
+                  // The days the sentence names stand out; the rest recede.
+                  opacity: named.includes(stat) ? 1 : 0.3,
                   borderRadius: 3,
                 }}
               />
