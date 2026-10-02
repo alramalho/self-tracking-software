@@ -143,7 +143,9 @@ The hosted-byte checker GETs the exact installer, follows its manifest, checks b
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 198, October 2, 2026
+## TestFlight build 198 — superseded the same day, October 2, 2026
+
+- **Do not treat this as the current release.** It was built from `voice-feedback` before main gained the smooth heart-rate chart (build 197), so it draws the old straight segments with circles. Build 199 replaces it.
 
 - Dictation feedback, languages and the missed-week sheet: the same app changes as Safari-install build 196 (the "Did we get that right?" banner, "What went wrong?", "Which languages do you speak?", Settings → Languages, the sheet's server count and "one short twice" explanation, clay coach figures, shared streak wording). Built locally from branch `voice-feedback` at `34ae881b` (main `539cbb44` plus this work). Needs the `voice-languages-20261002` backend (live, see [deployment](../../hetzner/MIGRATION.md)).
 - IPA: `.release/testflight-voice-feedback/tracking.so.ipa` in the `tracking-voice-feedback` worktree (SHA-256 `db89a6ded9b50c43f2362e4309b661cd59986b7b6396a2b0581758adfdea38f3`), version 1.0.0 (198), iPhone and Watch. Embedded config: production API, live Clerk key, `fixtureMode: false`. App Store profile; `codesign --verify --deep --strict` passed; the new screen text is in the Hermes bundle and `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap and ExpoIap. Apple validation: no errors. Delivery `797d64e4-5d38-46ed-9be4-f8f5bbe3c3da`; App Store Connect `build-status: VALID`.
@@ -157,6 +159,13 @@ env -u SDKROOT PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applicat
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts validate .release/testflight-voice-feedback/tracking.so.ipa
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts submit .release/testflight-voice-feedback/tracking.so.ipa
 ```
+
+## Previous TestFlight release — build 197, October 2, 2026
+
+- Build 195 plus the smooth heart-rate chart: one monotone curve per run of readings, coloured by a zone gradient, zone shading under the curve, no circle per reading; readings up to two minutes apart are joined and longer gaps still break the line. Built locally from main `82993d66`. App-only; no backend change.
+- Why it was needed: the smoothing first shipped in build 162 from an isolated release source and was never committed, so builds made from git (177, 192, 195, Safari 188 and 194) drew the old straight segments with circles. It is on main now. Safari-install build 196 (branch `voice-feedback`) predates this commit and does not have it.
+- IPA: `.release/testflight-heart-rate-smoothing/tracking.so.ipa` in the `tracking-heart-rate` worktree (SHA-256 `1b6cca1f128321317fc5e7d8535a5a4c888274286642d1eb2c1cdc73695d0769`), version 1.0.0 (197), iPhone and Watch, `build.log` and `submit.log` beside it. Embedded config: production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed; `Podfile.lock` and the binary contain TrackingWatch, TrackingHealth, TrackingMap and ExpoIap; the Hermes bundle contains `heart-rate-line` and no longer `heart-rate-segment-`. Apple validation: `VERIFY SUCCEEDED with no errors`. Delivery `2060dffc-2504-4a79-8b3f-faaaa9063430`; App Store Connect `build-status: VALID`.
+- Checks: Expo typecheck, 7 chart unit tests, and the 5 browser cases in `e2e/heart-rate-zones.spec.ts` (light and dark screenshots inspected). Installation on a physical device has not been observed. No cloud build, OTA or App Store submission.
 
 ## Previous TestFlight release — build 195, October 2, 2026
 

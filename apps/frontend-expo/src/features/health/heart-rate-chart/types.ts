@@ -22,8 +22,18 @@ export interface HeartRateChartSegment {
   zone: HeartRateZone | null;
 }
 
+export interface HeartRateColoredSegment extends HeartRateChartSegment {
+  zone: HeartRateZone;
+}
+
+export interface HeartRateGradientStop {
+  offset: number;
+  zone: HeartRateZone;
+}
+
 export interface HeartRateChartModel {
   points: HeartRateChartPoint[];
+  runs: HeartRateChartPoint[][];
   segments: HeartRateChartSegment[];
   minimumBpm: number;
   maximumBpm: number;
