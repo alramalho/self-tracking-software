@@ -284,6 +284,10 @@ const server = http.createServer(async (req, res) => {
       { title: "Running", emoji: "🏃", on: (i: number) => i % 3 === 0 && i < 60 },
       { title: "Chess", emoji: "♟️", on: (i: number) => i % 5 === 1 && i < 40 },
       { title: "Sauna", emoji: "🧖", on: (i: number) => i === 5 || i === 21 },
+      // One day each: with Sauna these make four too-early rows, more than the card shows at once.
+      { title: "Yoga", emoji: "🧘", on: (i: number) => i === 9 },
+      { title: "Hike", emoji: "🥾", on: (i: number) => i === 17 },
+      { title: "Reading", emoji: "📖", on: (i: number) => i === 30 },
     ];
     const today = new Date();
     const daysAgo = (i: number, hour: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - i, hour);
@@ -305,6 +309,19 @@ const server = http.createServer(async (req, res) => {
       })),
     );
     send({ok:true}); return;
+  }
+  // A person's own check-ins and activities from a private local export, so the Metrics page can be captured with
+  // real findings. The file stays outside the repository; set E2E_METRICS_FILE to its absolute path.
+  if (path === "/__metrics-file") {
+    const file = process.env.E2E_METRICS_FILE;
+    if (!file || !file.startsWith("/")) { send({ ok: false, error: "Set E2E_METRICS_FILE to an absolute path." }, 400); return; }
+    const data = JSON.parse(readFileSync(file, "utf8"));
+    Object.assign(state.user, { themeMode: body.theme ?? "LIGHT", ...(data.user?.coachPersonality ? { coachPersonality: data.user.coachPersonality } : {}) });
+    state.metrics = data.metrics;
+    state.metricEntries = data.metricEntries;
+    state.activities = data.activities.filter((activity: any) => !activity.deletedAt).map((activity: any) => ({ ...state.activities[0], ...activity }));
+    state.entries = data.entries.map((entry: any) => ({ ...state.entries[0], ...entry }));
+    send({ ok: true }); return;
   }
   if (path === "/__background.png") {
     res.writeHead(200, { "Content-Type": "image/png" });

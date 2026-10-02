@@ -70,6 +70,7 @@ test("the web app and the iPhone app find the same things in the same days", () 
 test("the web app and the iPhone app use the same sentences", () => {
   assert.equal(webWords.CAVEAT, words.CAVEAT);
   assert.equal(webWords.countUp(4), words.countUp(4));
+  assert.equal(webWords.moreWaiting(3), words.moreWaiting(3));
   for (const value of [0.184, -0.21, 0.004])
     assert.equal(webWords.percent(value), words.percent(value));
   for (const trend of [-12, -3.6, 1, 4, 25, null])

@@ -63,6 +63,10 @@ export function headline(metricTitle: string, findings: ActivityFinding[]) {
   return `Log what you do on the days you check in and I'll tell you which habits go with higher ${metric}.`;
 }
 
+// The line that stands in for the too-early rows the card does not show yet.
+export const moreWaiting = (count: number) =>
+  `${count} more ${count === 1 ? "needs" : "need"} more days`;
+
 export const countUp = (checkIns: number) =>
   `${checkIns} of 7 check-ins. ${7 - checkIns} more and I can start looking for patterns.`;
 

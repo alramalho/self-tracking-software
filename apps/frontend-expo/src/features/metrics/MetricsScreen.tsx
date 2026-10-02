@@ -2,7 +2,7 @@ import { Reveal } from "@/components/reveal/Reveal";
 import { MetricInsights } from "./MetricInsights";
 import { useRefresh } from "@/data/useRefresh";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Text } from "@/components/typography/Text";
 import { Check, Plus, HeartPulse } from "lucide-react-native";
@@ -179,7 +179,6 @@ export default function MetricsScreen() {
       {view === "health" ? <HealthOverview /> : (
         <>
       <Reveal id="metrics-checkins" style={{ gap: 16 }}>
-        <Heading>Check-ins</Heading>
         <View
           style={{
             flexDirection: "row",
@@ -244,11 +243,13 @@ export default function MetricsScreen() {
           <Status error={start.error} />
         </Panel>
       )}
-      <Reveal
-        id="metrics-selector"
-        delay={50}
-        style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-      >
+      <Reveal id="metrics-selector" delay={50}>
+        {/* One row that scrolls sideways: three metric names do not fit a phone. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8 }}
+        >
         {metrics.data?.map((m) => (
           <Pressable
             key={m.id}
@@ -283,6 +284,7 @@ export default function MetricsScreen() {
             <Plus size={18} color={c.muted} />
           </Pressable>
         )}
+        </ScrollView>
       </Reveal>
       {metric && (
         <View key={metric.id} style={{ gap: 16 }}>

@@ -44,6 +44,11 @@ for (const theme of ["DARK", "LIGHT"])
       "🧖 Sauna: 3 more days, signal 0 of 3",
     ])
       await expect(insights.getByRole("button", { name: label })).toBeVisible();
+    // Four activities are too early. One shows, and the rest fold into one line
+    // until it is tapped, so findings are not buried under one-off activities.
+    await expect(insights.getByRole("button", { name: /Yoga/ })).toHaveCount(0);
+    await expect(insights.getByRole("button", { name: /Hike/ })).toHaveCount(0);
+    await expect(insights.getByRole("button", { name: /Reading/ })).toHaveCount(0);
     // No statistics vocabulary and no tier labels on the screen itself.
     for (const word of [
       "Confident",
@@ -55,6 +60,9 @@ for (const theme of ["DARK", "LIGHT"])
     ])
       await expect(insights.getByText(word)).toHaveCount(0);
     // Too few days: the row is faded and its bar stays empty.
+    await expect(page.getByTestId("findings-more")).toHaveText(
+      "3 more need more days",
+    );
     const sauna = page.getByTestId("finding-polish-3");
     await expect(sauna).toHaveCSS("opacity", "0.45");
     await expect(sauna.getByRole("progressbar")).toHaveAttribute(
@@ -91,6 +99,11 @@ for (const theme of ["DARK", "LIGHT"])
       path: `test-results/metrics-page-polish-${theme}.png`,
       fullPage: true,
     });
+    await page.getByTestId("findings-more").click();
+    await expect(page.getByTestId("findings-more")).toHaveCount(0);
+    await expect(insights.getByRole("button", { name: /Yoga: 4 more days/ })).toBeVisible();
+    await expect(insights.getByRole("button", { name: /Hike: 4 more days/ })).toBeVisible();
+    await expect(insights.getByRole("button", { name: /Reading: 4 more days/ })).toBeVisible();
     await sauna.click();
     await expect(
       page.getByText("2 Sauna days with a check-in so far."),

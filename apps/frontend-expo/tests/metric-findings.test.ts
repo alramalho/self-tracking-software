@@ -8,6 +8,7 @@ import {
   activityDetail,
   countUp,
   headline,
+  moreWaiting,
   percent,
   signalLine,
   trendLine,
@@ -216,6 +217,8 @@ test("numbers and details read as plain words", () => {
     "1 Gym day with a check-in so far.",
     "4 more days and this row gets a number.",
   ]);
+  assert.equal(moreWaiting(1), "1 more needs more days");
+  assert.equal(moreWaiting(5), "5 more need more days");
   assert.equal(
     countUp(4),
     "4 of 7 check-ins. 3 more and I can start looking for patterns.",

@@ -17,11 +17,12 @@ import {
   activityDetail,
   countUp,
   headline,
+  moreWaiting,
   signalLine,
   waitingForActivity,
 } from "@/lib/metricWords";
 import type { Activity, ActivityEntry, MetricEntry } from "@tsw/prisma";
-import { HelpCircle } from "lucide-react";
+import { ChevronDown, HelpCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface MetricInsightsCardProps {
@@ -41,6 +42,10 @@ interface MetricInsightsCardProps {
 type FindingDetail =
   | { kind: "activity"; finding: ActivityFinding }
   | { kind: "help" };
+
+// Too-early rows shown before the rest fold into one line. An account with
+// many one-off activities would otherwise bury its findings under them.
+const WAITING_SHOWN = 1;
 
 const activityLabel = (finding: ActivityFinding) =>
   `${finding.activity.emoji || "📊"} ${finding.activity.title}`;
@@ -84,6 +89,13 @@ export function MetricInsightsCard({
       exampleFindings ?? activityFindings(entries, activities, activityEntries),
     [exampleFindings, entries, activities, activityEntries]
   );
+  const [allWaiting, setAllWaiting] = useState(false);
+  // Findings arrive with the too-early rows last.
+  const measured = findings.filter((row) => row.difference !== null).length;
+  const folded = allWaiting
+    ? 0
+    : Math.max(0, findings.length - measured - WAITING_SHOWN);
+  const shown = findings.slice(0, findings.length - folded);
   // Under seven rated check-ins the card only counts up.
   const checkIns = validRatings(entries).length;
   const counting = !exampleFindings && checkIns < MINIMUM_ENTRIES;
@@ -139,7 +151,7 @@ export function MetricInsightsCard({
         ) : (
           findings.length > 0 && (
             <div className="space-y-4">
-              {findings.map((finding, index) => (
+              {shown.map((finding, index) => (
                 <FindingRow
                   key={finding.activity.id}
                   label={activityLabel(finding)}
@@ -153,6 +165,16 @@ export function MetricInsightsCard({
                   animationDelay={index * 100}
                 />
               ))}
+              {folded > 0 && (
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-[13px] text-muted-foreground"
+                  onClick={() => setAllWaiting(true)}
+                >
+                  {moreWaiting(folded)}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )
         )}

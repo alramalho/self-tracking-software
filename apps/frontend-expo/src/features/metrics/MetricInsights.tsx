@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import { Image } from "expo-image";
-import { CircleHelp } from "lucide-react-native";
+import { ChevronDown, CircleHelp } from "lucide-react-native";
 import { Reveal } from "@/components/reveal/Reveal";
 import { Copy, IconButton, Panel, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
@@ -20,6 +20,7 @@ import {
   activityDetail,
   countUp,
   headline,
+  moreWaiting,
   percent,
   signalLine,
   waitingForActivity,
@@ -32,6 +33,9 @@ import type {
   SleepDetailProps,
 } from "./types";
 
+// Too-early rows shown before the rest fold into one line. An account with
+// many one-off activities would otherwise bury its findings under them.
+const WAITING_SHOWN = 1;
 // A bar is full at a 50% difference; larger ones are rare on a 1-5 scale.
 const FULL_BAR = 0.5;
 // Ratings run 1-5, so each sleep band is drawn against that fixed scale.
@@ -242,7 +246,14 @@ export function MetricInsights({
   const personality = useCurrentUser().data?.coachPersonality;
   const coach = coachIdentity(personality);
   const [detail, setDetail] = useState<FindingDetail>();
+  const [allWaiting, setAllWaiting] = useState(false);
   const counting = checkIns < 7;
+  // Findings arrive with the too-early rows last.
+  const measured = findings.filter((row) => row.difference !== null).length;
+  const folded = allWaiting
+    ? 0
+    : Math.max(0, findings.length - measured - WAITING_SHOWN);
+  const shown = findings.slice(0, findings.length - folded);
   const heading =
     detail?.kind === "activity"
       ? `${detail.finding.activity.emoji || "📊"} ${detail.finding.activity.title}`
@@ -309,7 +320,7 @@ export function MetricInsights({
                 onPress={() => setDetail({ kind: "sleep" })}
               />
             )}
-            {findings.map((finding) => (
+            {shown.map((finding) => (
               <FindingRow
                 key={`${metric.id}-${finding.activity.id}`}
                 testID={`finding-${finding.activity.id}`}
@@ -322,6 +333,26 @@ export function MetricInsights({
                 onPress={() => setDetail({ kind: "activity", finding })}
               />
             ))}
+            {folded > 0 && (
+              <Pressable
+                testID="findings-more"
+                accessibilityRole="button"
+                accessibilityLabel={moreWaiting(folded)}
+                onPress={() => setAllWaiting(true)}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Text style={{ fontSize: 13, color: c.muted }}>
+                  {moreWaiting(folded)}
+                </Text>
+                <ChevronDown size={14} color={c.muted} />
+              </Pressable>
+            )}
           </View>
         )
       )}
