@@ -487,7 +487,7 @@ Scope: `routes/auth.ts` gains `POST /auth/switch-tokens` (signed-in), `POST /aut
 
 Server context: `/root/workspace/tracking.so/deployment/tracking-account-switch-20261001/` with `context/`, `source-hashes.json`, `activate.py`, `rollback.sh`, `verified.json` and `backup/` (the pre-migration dump of `tracking_cutover`, the previous `.env` and compose file). Activation confirmed exactly one pending migration, applied it, switched the image and verified: container healthy with zero restarts, public `/health` 200, `POST /auth/switch-tokens` without sign-in 401, `POST /auth/switch` with an unknown token 401 and without one 400, revoke without a token 400. A pre-flight in the built image loaded the routes module offline.
 
-Not verified: a real switch. No token has been issued or redeemed yet; that needs a signed-in device on a build with the switcher (Safari build 191, TestFlight build 198 onward).
+Not verified: a real switch. No token has been issued or redeemed yet; that needs a signed-in device on a build with the switcher (Safari build 191, TestFlight build 200).
 
 Rollback: `tracking-account-switch-20261001/rollback.sh` refuses while a later release is live. The table can stay; older images ignore it.
 
