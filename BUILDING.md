@@ -14,11 +14,19 @@ This preference also applies to `~/workspace/verycheapaudiobooks`, with that pro
 
 The selected `tracking-circles` onboarding uses the original 3D artwork without colored backplates and the original target Lottie on Welcome and Goal. “I’m ready!” fades the Welcome body into a second part asking for age with the weekly-frequency number control. Continue saves age before Goal, so matching can reuse it. The requested introduction, overview cards, commitment and **I'm ready!** CTA remain. The target loops gently on both screens; Reduce Motion shows its static target. Every screen change uses quick progressive fades from top to bottom. The [real-screenshot HTML walkthrough](docs/reviews/onboarding-2d/index.html) compares all 16 steps in light/dark (62 captures; the new age step has no original equivalent), plus actual light/dark motion recordings, with the earlier emoji/Lucide report preserved beside it. Local build 184 failed at archive signing because the app's phone/Watch profiles do not include the selected certificate. No new IPA or installer exists for this source update. See the frontend build document for checks and signing recovery.
 
-## Latest Safari-install release — build 188, September 30, 2026
+## Latest Safari-install release — build 205, October 2, 2026
+
+Build 205 from main `d3bf7bf9` has everything on main: the streak explainer, dictation feedback and languages, the missed-week sheet, the smooth heart-rate chart, account switching and the Metrics redesign. Verified and hosted; the link expires October 9. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-205--everything-on-main-plus-the-streak-explainer-october-2-2026).
+
+## Earlier Safari-install release — build 188, September 30, 2026
 
 Circle encouragement is deployed on the web and backend, and local signed iPhone/Watch build 188 is verified and hosted. Source `9cce3691` combines the approved encouragement change `0022291e` with existing main `eda9fab9`; opening the member hand opens a personal composer, and sending explicitly delivers a private message. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-188--circle-encouragement-september-30-2026) for exact commands, artifacts and verification. This is a Safari test release; the recorded TestFlight release remains 177.
 
-## Latest TestFlight release — build 203, October 2, 2026
+## Latest TestFlight release — build 204, October 2, 2026
+
+Build 204 from main `d3bf7bf9` is build 203 plus the streak explainer: tapping a flame under a plan's grid opens a short visual drawer on how a week moves the streak, with the plan's own last weeks. The same commit is hosted as Safari-install build 205. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-204-october-2-2026).
+
+## Previous TestFlight release — build 203, October 2, 2026
 
 Build 203 from main `eb879929` is the first build with all of October 2's work together: the smooth heart-rate chart, account switching, the Metrics redesign and the dictation feedback from the merged `voice-feedback` branch. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-203-october-2-2026). Builds 198 to 202 each lacked something and are superseded.
 

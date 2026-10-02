@@ -79,6 +79,12 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 205 — everything on main plus the streak explainer, October 2, 2026
+
+- Local production release from main `d3bf7bf9`, the same commit as TestFlight build 204: the streak explainer drawer, dictation feedback and languages, the explained missed-week sheet and clay coach figures, the smooth heart-rate chart, account switching and the Metrics redesign. All the backend it needs is live (`voice-languages-20261002`).
+- Verified IPA: `tracking-voice-feedback/apps/frontend-expo/.release/2026-10-02T15-47-05-333Z-c3718796/tracking.so.ipa`, SHA-256 `dfb41f0ac4d538afb38fea44e069d7f815ca40bb95f094bafb6dac4f6892fed1`; version 1.0.0, iPhone and Watch build 205. The wrapper's production-config, bundled-JavaScript, signing and device-provisioning checks passed; the bundle contains the explainer, the dictation banner, `heart-rate-line` and the account switch route; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap.
+- Hosted: `.release/2026-10-02T15-56-49-121Z-26942cb2/distribution.json` in the same worktree; the link expires October 9, 2026. `scripts/iphone/verify-hosted.cjs` verified the installer, manifest and all 27,161,323 IPA bytes against the local hash (its first attempt ended in `fetch failed`; the retry passed). Build 196 is superseded. Installation on a physical device has not been observed. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 196 — dictation feedback, languages and the missed-week sheet, October 2, 2026
 
 - Local production release from branch `voice-feedback` (`c71631f0`, on main `539cbb44`). After every dictation a banner asks "Did we get that right?"; thumbs down opens "What went wrong?", and "Wrong language" leads to "Which languages do you speak?" (also Settings → Languages). The "missed last week" sheet shows the server's own count and explains a second one-short week; it, the coach chat header, the inbox row and coach settings use the clay coach figures. The badge explainer prints the shared streak rule.
@@ -143,7 +149,23 @@ The hosted-byte checker GETs the exact installer, follows its manifest, checks b
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 203, October 2, 2026
+## Current TestFlight release — build 204, October 2, 2026
+
+- Build 203 plus the streak explainer: tapping a flame under a plan's grid opens a drawer titled with the plan's streak, with one example week per outcome drawn as dots for the plan's own weekly target (completed +1, one session short holds, missed −1), then "Your last weeks" with the server's counts. The wording comes from `packages/prisma/follow-through/streak.ts`. Built locally from main `d3bf7bf9`. App-only; needs no backend beyond the live `voice-languages-20261002`.
+- IPA: `.release/testflight-streak-explainer/tracking.so.ipa` in the `tracking-voice-feedback` worktree (SHA-256 `b10f69ca8a6e4344c9624c9b4ddef54aa2ce24c6173b5fe03f3aa57a5ee09a08`), version 1.0.0 (204), iPhone and Watch. Embedded config: production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed; `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap and ExpoIap; the Hermes bundle contains the explainer, the dictation banner, `heart-rate-line` and the account switch route. Apple validation: `VERIFY SUCCEEDED with no errors`. Delivery `981f1c68-f9f3-479e-bb41-a9039bd998c0`; App Store Connect `build-status: VALID`.
+- Checks: Expo typecheck clean; 5 explainer unit cases; 12 browser cases in light and dark (`e2e/streak-explainer.spec.ts`, `e2e/voice-feedback.spec.ts`, `e2e/miss-reason.spec.ts`), screens in `docs/reviews/streak-explainer/`. 133 of 135 unit cases pass; the two `workout-effort` failures are in code this work did not touch. The flame is a 20-point-wide tap target with extra vertical slop; how it feels on a real iPhone, and installation, have not been observed. Which tester groups received the build was not checked. No cloud build, OTA or App Store submission.
+- The same commit is hosted as Safari-install build 205 (see below).
+
+```sh
+cd apps/frontend-expo
+env -u SDKROOT PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-streak-explainer-testflight-build \
+  node --import tsx scripts/iphone/testflight.ts build .release/testflight-streak-explainer/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts validate .release/testflight-streak-explainer/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts submit .release/testflight-streak-explainer/tracking.so.ipa
+```
+
+## Previous TestFlight release — build 203, October 2, 2026
 
 - The first build with everything that was finished on October 2 in one place: the smooth heart-rate chart (build 197), account switching (build 200), the Metrics redesign (no earlier IPA had it) and the dictation feedback, languages and explained missed-week sheet from build 199. Built locally from main `eb879929`, where the `voice-feedback` branch was merged. Backends it needs are live: `account-switch-20261001` and `voice-languages-20261002` (see [deployment](../../hetzner/MIGRATION.md)).
 - IPA: `.release/testflight-everything-20261002/tracking.so.ipa` in the `tracking-heart-rate` worktree (SHA-256 `c0a247612e1265c9782d325abbf9a18faf1091bb97ecceb8f1c33544aed685f4`), version 1.0.0 (203), iPhone and Watch, `build.log` and `submit.log` beside it. Embedded config: production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed; `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap, ExpoIap and ExpoSecureStore. The Hermes bundle contains `heart-rate-line` (and no `heart-rate-segment-`), `/auth/switch-tokens`, "Add account", "Did we get that right?", "Which languages do you speak?" and the Metrics wording "About the same as last week". Apple validation: `VERIFY SUCCEEDED with no errors`. Delivery `0fd9919e-e024-4674-9d31-00c0465e4138`; App Store Connect `build-status: VALID`.
