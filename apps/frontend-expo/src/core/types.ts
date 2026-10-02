@@ -46,6 +46,7 @@ export interface ActivityEntry {
   durationSeconds?: number | null;
   healthWorkout?: {
     id: string;
+    provider?: string;
     displayName: string;
     startAt: DateValue;
     endAt: DateValue;

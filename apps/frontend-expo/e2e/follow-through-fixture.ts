@@ -23,6 +23,51 @@ export function followThroughFixture(
   body: any,
   state: any,
 ): unknown | undefined {
+  if (path === "/__coaching-monitoring") {
+    followThroughFixture("/__follow-through", "POST", {}, state);
+    Object.assign(state.plans[0], { goal: "Run my first half marathon", timesPerWeek: 3 });
+    Object.assign(state.plans[1], { goal: "Meditate consistently", emoji: "🧘" });
+    const planId = state.plans[0].id;
+    support.supports[planId].coaching = { role: "training", followUps: true, dataAccess: { workouts: false, sleep: false } };
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [{
+      id: "review-test", planIds: [planId], kind: "review", messageId: "coach-plan-review", chatId: "coach-main", createdAt: new Date().toISOString(), requiresReply: true,
+    }] };
+    state.messages = [
+      { id: "coach-meditation", chatId: "coach-main", planId: state.plans[1].id, role: "COACH", status: "SENT", content: "You logged two meditations this week. Keep the same goal.", createdAt: new Date(Date.now() - 60000).toISOString() },
+      { id: "coach-plan-review", chatId: "coach-main", planId, planIds: [planId], role: "COACH", status: "SENT", requiresReply: true, content: "You said the hills felt too hard. Review a lighter week with two runs.", createdAt: new Date().toISOString(),
+        planProposals: [{ planId, planGoal: state.plans[0].goal, planEmoji: "🏃", description: "A lighter week", patch: { plan: { timesPerWeek: 2 } }, status: null }] },
+    ];
+    if (body?.messages) state.messages = body.messages;
+    if (body?.monitoring) Object.assign(support.monitoring, body.monitoring);
+    for (const update of body?.planOverrides ?? []) {
+      const plan = state.plans.find((p: any) => p.id === update.id);
+      if (plan) Object.assign(plan, update);
+    }
+    return { ok: true };
+  }
+  if (path === "/follow-through/coaching/presence") return { ok: true };
+  if (path === "/follow-through/coaching/resume") {
+    if (support.monitoring) support.monitoring.pausedPlanIds = support.monitoring.pausedPlanIds.filter(id => id !== body.planId);
+    return { ok: true };
+  }
+  const planMessages = path.match(/^\/plans\/([^/]+)\/coach-action-messages$/);
+  if (planMessages) return { messages: state.messages.filter((m: any) => m.planProposals?.some((p: any) => p.planId === planMessages[1] && !p.status)) };
+  const decision = path.match(/^\/ai\/messages\/([^/]+)\/(accept|reject)-proposal$/);
+  if (decision) {
+    const proposal = state.messages.find((m: any) => m.id === decision[1])?.planProposals?.[body.proposalIndex];
+    if (proposal && !proposal.status) {
+      proposal.status = decision[2] === "accept" ? "accepted" : "rejected";
+      if (decision[2] === "accept") {
+        const plan = state.plans.find((p: any) => p.id === proposal.planId);
+        Object.assign(plan, proposal.patch?.plan);
+        for (const session of proposal.patch?.sessions?.upsert ?? []) {
+          plan.sessions.push({ ...session, id: session.id ?? randomUUID(), planId: plan.id, isCoachSuggested: true, createdAt: new Date().toISOString(), imageUrls: [] });
+        }
+      }
+      support.monitoring?.requests.filter(r => r.messageId === decision[1]).forEach(r => { r.resolvedAt = new Date().toISOString(); });
+    }
+    return { success: true };
+  }
   if (path === "/__follow-through") {
     const plan = state.plans[0],
       today = new Date().toLocaleDateString("en-CA", {
@@ -163,43 +208,18 @@ export function followThroughFixture(
     return body;
   }
   if (path === "/follow-through/onboarding/goal-guidance") {
-    const rejected = /asdf|ignore.*instructions|bullshit|be better/i.test(
-      body.answer,
-    );
-    const hasMotivation = /because|express|matters|enjoy|love|feel/i.test(
-      body.answer,
-    );
+    const step = body.step || "goal";
+    const rejected = /asdf|ignore.*instructions|bullshit|be better/i.test(body.answer);
+    const passed = !rejected && (step === "goal" ? /run|write|learn|meditat|exercise|walk|study|read/i.test(body.answer) : step === "baseline" ? /start|begin|currently|now|run|practice|know|never|week/i.test(body.answer) : /because|express|matters|enjoy|love|feel|friend|calm/i.test(body.answer));
     return {
-      requirements: [
-        {
-          key: "goal",
-          label: "A clear target",
-          phrase: "What do you want to achieve?",
-          required: true,
-          passed: !rejected,
-          detail: rejected
-            ? "Name one concrete outcome."
-            : "Clear enough to continue.",
-        },
-        {
-          key: "starting-point",
-          label: "Where you are now",
-          phrase: "Your current starting point",
-          required: false,
-          passed: false,
-          detail: "We can ask about this next.",
-        },
-        {
-          key: "motivation",
-          label: "Why it matters",
-          phrase: "What makes it worth doing?",
-          required: false,
-          passed: hasMotivation,
-          detail: hasMotivation
-            ? "Useful context included."
-            : "Helpful, but optional.",
-        },
-      ],
+      requirements: [{
+        key: step,
+        label: step === "goal" ? "A clear target" : step === "baseline" ? "Starting point" : "Personal reason",
+        phrase: "",
+        required: step === "goal",
+        passed,
+        detail: passed ? "This helps shape your plan." : step === "goal" ? "Name one concrete outcome." : "Add a relevant detail, or skip for now.",
+      }],
     };
   }
   if (path === "/follow-through/onboarding/interview")
@@ -267,6 +287,7 @@ export function followThroughFixture(
         progress: { weeks: [] },
       });
       support.supports[d.id] = {
+        coaching: d.coaching,
         planId: d.id,
         mode: d.commitment,
         weekdays: d.weekdays,

@@ -7,6 +7,7 @@ import type {
   SessionOutcome,
 } from "@tsw/prisma/follow-through";
 import { changeState, ownedPlans, recentEntries } from "./store";
+import { monitoringState } from "../coach/monitoring/model";
 import {
   dueForSession,
   instant,
@@ -70,7 +71,7 @@ export async function configure(user: User, support: PlanSupport) {
       },
     });
     if (!plan) throw new FollowThroughInputError("Plan not found");
-    if (support.preferences.coaching && !canCoach(user))
+    if ((support.preferences.coaching || (support.coaching && support.coaching.role !== "tracking")) && !canCoach(user))
       throw new FollowThroughInputError(
         "Coaching requires an active subscription or trial",
       );
@@ -85,6 +86,23 @@ export async function configure(user: User, support: PlanSupport) {
     const today = localDate(new Date(), support.timezone);
     if (support.effectiveDate < today) support.effectiveDate = today;
     const old = state.supports[plan.id];
+    // Older clients must not erase access preferences they cannot display.
+    support.coaching ??= old?.coaching;
+    if (support.coaching?.role !== "tracking" && support.coaching && !canCoach(user))
+      throw new FollowThroughInputError("Coaching requires an active subscription or trial");
+    if (support.coaching?.role === "tracking") {
+      support.preferences = { ...support.preferences, coaching: false, weeklyReview: false, checkIn: false };
+    } else if (support.coaching) {
+      support.preferences.coaching = true;
+    }
+    if (support.coaching?.role !== "training" && state.monitoring)
+      state.monitoring.setupPlanIds = state.monitoring.setupPlanIds?.filter(id => id !== plan.id);
+    if (support.coaching?.role === "training" && old?.coaching?.role !== "training" &&
+      !await tx.planSession.count({ where: { planId: plan.id } })) {
+      state.monitoring ??= monitoringState();
+      if (!state.monitoring.requests.some(r => r.kind === "setup" && r.planIds.includes(plan.id)))
+        state.monitoring.setupPlanIds = [...new Set([...(state.monitoring.setupPlanIds ?? []), plan.id])];
+    }
     const changedSchedule =
       old &&
       (old.mode !== support.mode ||

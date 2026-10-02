@@ -42,6 +42,36 @@ export function verifyArtifact(ipa: string): Artifact {
     assert.equal(entitlements["application-identifier"], "7P4CMS849D.so.tracking.app");
     assert.equal(entitlements["com.apple.developer.healthkit"], true);
     assert.ok(entitlements["com.apple.security.application-groups"]?.includes("group.so.tracking.app"));
+    let widgets: Artifact["widgets"];
+    const expectsWidgets = config.extra?.eas?.build?.experimental?.ios?.appExtensions
+      ?.some((target: { bundleIdentifier: string }) => target.bundleIdentifier === "so.tracking.app.widgets");
+    const widgetApp = path.join(app, "PlugIns/TrackingWidgets.appex");
+    if (expectsWidgets || fs.existsSync(widgetApp)) {
+      assert.ok(fs.existsSync(widgetApp), "Release must embed the declared widget extension");
+      const widgetInfo = plist(path.join(widgetApp, "Info.plist"));
+      assert.equal(widgetInfo.CFBundleIdentifier, "so.tracking.app.widgets");
+      assert.equal(widgetInfo.CFBundleVersion, info.CFBundleVersion, "Widget/iPhone build numbers must match");
+      assert.equal(widgetInfo.CFBundleShortVersionString, info.CFBundleShortVersionString);
+      assert.equal(widgetInfo.DTPlatformName, "iphoneos");
+      assert.equal(widgetInfo.NSExtension?.NSExtensionPointIdentifier, "com.apple.widgetkit-extension");
+      assert.ok(fs.statSync(path.join(widgetApp, widgetInfo.CFBundleExecutable)).size > 0);
+      run("codesign", ["--verify", "--strict", widgetApp]);
+      const widgetProfileFile = path.join(directory, "widgets-profile.plist");
+      run("openssl", ["cms", "-verify", "-inform", "DER", "-noverify", "-in", path.join(widgetApp, "embedded.mobileprovision"), "-out", widgetProfileFile]);
+      const widgetProfile = JSON.parse(run("python3", ["-c", "import plistlib,json,sys,datetime; p=plistlib.load(open(sys.argv[1],'rb')); print(json.dumps(p,default=lambda x: x.replace(tzinfo=datetime.timezone.utc).isoformat() if isinstance(x,datetime.datetime) else None))", widgetProfileFile]));
+      assert.ok(widgetProfile.ProvisionedDevices?.includes("00008140-000148693CC0801C"));
+      assert.ok(new Date(widgetProfile.ExpirationDate).getTime() > Date.now());
+      assert.equal(widgetProfile.Entitlements["application-identifier"], "7P4CMS849D.so.tracking.app.widgets");
+      assert.equal(widgetProfile.Entitlements["get-task-allow"], false);
+      assert.ok(widgetProfile.Entitlements["com.apple.security.application-groups"]?.includes("group.so.tracking.app"));
+      const widgetEntitlementsFile = path.join(directory, "widgets-entitlements.plist");
+      fs.writeFileSync(widgetEntitlementsFile, run("codesign", ["-d", "--entitlements", ":-", widgetApp]));
+      const widgetEntitlements = plist(widgetEntitlementsFile);
+      assert.equal(widgetEntitlements["application-identifier"], "7P4CMS849D.so.tracking.app.widgets");
+      assert.equal(widgetEntitlements["get-task-allow"] ?? false, false);
+      assert.ok(widgetEntitlements["com.apple.security.application-groups"]?.includes("group.so.tracking.app"));
+      widgets = { bundleIdentifier: widgetInfo.CFBundleIdentifier, buildNumber: widgetInfo.CFBundleVersion, profileExpiresAt: widgetProfile.ExpirationDate };
+    }
     let watch: Artifact["watch"];
     const expectsWatch = config.extra?.eas?.build?.experimental?.ios?.appExtensions
       ?.some((target: { bundleIdentifier: string }) => target.bundleIdentifier === "so.tracking.app.watchkitapp");
@@ -83,6 +113,7 @@ export function verifyArtifact(ipa: string): Artifact {
       bundleIdentifier: info.CFBundleIdentifier, version: info.CFBundleShortVersionString,
       buildNumber: info.CFBundleVersion, profileExpiresAt: profile.ExpirationDate, verifiedAt: new Date().toISOString(),
       ...(watch ? { watch } : {}),
+      ...(widgets ? { widgets } : {}),
     };
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });

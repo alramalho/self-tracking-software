@@ -2,34 +2,53 @@ import type {
   InterviewResult,
   InterviewState,
 } from "@tsw/prisma/follow-through";
+
+function weeklyFrequency(answer: string): number | null {
+  const digit = answer.match(/\b([1-7])\b/);
+  if (digit) return Number(digit[1]);
+  const words = ["one", "two", "three", "four", "five", "six", "seven"];
+  const index = words.findIndex((word) =>
+    new RegExp(`\\b${word}\\b`, "i").test(answer),
+  );
+  return index < 0 ? null : index + 1;
+}
+
 export function interviewFixture(
   state: InterviewState,
   answer: string,
 ): InterviewResult {
   const facts = { ...state.facts };
+  const running = /half marathon/i.test(facts.goal);
+  const chosenFrequency =
+    state.stage === "rhythm" ? weeklyFrequency(answer) : null;
   const rejected =
-    /asdf|ignore.*instructions|bullshit|be better|seven days/i.test(answer);
+    /asdf|ignore.*instructions|bullshit|be better|seven days/i.test(answer) ||
+    (state.stage === "rhythm" && chosenFrequency === null);
   const needsImprovement =
     !rejected &&
     state.stage === "goal" &&
     !/because|express|matters|enjoy|love|feel/i.test(answer);
   const questions = {
     goal: {
-      title: "Where are you starting with guitar?",
-      purpose:
-        "Your current practice will shape a first step you can actually use.",
-      options: ["Complete beginner", "I know a few chords"],
+      title: "Where are you starting?",
+      purpose: "Tell us where you are now.",
+      options: [],
     },
     baseline: {
-      title: "What practice fits your week?",
+      title: "Why does this matter to you?",
+      purpose: "A reason helps the coach respond to difficulties.",
+      options: [],
+    },
+    motivation: {
+      title: "How many times per week should this plan support?",
       purpose: "Choose a weekly rhythm you can make room for.",
       options: [],
     },
     rhythm: {
-      title: "Would guidance help with those chord changes?",
+      title: "Would you like coaching for this plan?",
       purpose:
-        "Coaching could help you narrow down practice. You can also follow your own routine and simply track it.",
-      options: ["Help me shape a plan", "I know my plan — just tracking"],
+        "Coaching can help you shape your practice. You can review it before starting a trial, or simply track this plan for free.",
+      options: ["Yes, coach this plan", "No, just track it"],
     },
     support: {
       title: "Does this feel like your plan?",
@@ -46,22 +65,48 @@ export function interviewFixture(
   if (!rejected) {
     if (state.stage === "goal")
       Object.assign(facts, {
-        goal: "Write my own guitar songs",
         emoji: "🎸",
-        goalReason: "Express myself through music",
       });
     if (state.stage === "baseline") facts.baseline = answer;
-    if (state.stage === "rhythm") Object.assign(facts, { frequency: 3 });
+    if (state.stage === "motivation") facts.goalReason = answer;
+    if (chosenFrequency !== null) facts.frequency = chosenFrequency;
     if (state.stage === "support")
       Object.assign(facts, {
-        wantsCoaching: !answer.includes("just tracking"),
+        wantsCoaching: answer.trim() !== "No, just track it",
         recommendation: "coaching",
         recommendationReason: "You want help turning chord changes into songs.",
         activityTitle: "Guitar practice",
         measure: "minutes",
-        nextStep:
-          "Practise the chord change from your chosen exercise for 20 minutes.",
+        nextStep: answer.trim() === "No, just track it"
+          ? "Log your next guitar practice session."
+          : "Log your next guitar practice and note what you want help with.",
       });
+  }
+  // Prepared running example for visual review. This is fixture copy, not a model evaluation.
+  if (running && !rejected) {
+    Object.assign(facts, {
+      emoji: "🏃",
+      targetDate: "2027-03-28",
+      activityTitle: "Running",
+      measure: "kilometers",
+      frequency: facts.frequency,
+      commitment: "WEEKLY",
+      weekdays: [],
+      time: null,
+      coachingRole: "training",
+      recommendation: "coaching",
+      recommendationReason:
+        "Build from your current running and review how each week feels.",
+      nextStep: facts.wantsCoaching
+        ? "Agree a first week with your coach before increasing your running."
+        : "Log your next run.",
+    });
+    questions.rhythm = {
+      title: "Would you like coaching for this plan?",
+      purpose:
+        "Coaching can shape your running schedule and propose adjustments. You can review it before starting a trial, or track this plan for free.",
+      options: ["Yes, coach this plan", "No, just track it"],
+    };
   }
   const question = rejected
     ? {

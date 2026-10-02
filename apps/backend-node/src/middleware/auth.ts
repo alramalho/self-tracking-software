@@ -4,6 +4,7 @@ import { User } from "@tsw/prisma";
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import { userService } from "../services/userService";
 import { verifyWatchAccessToken } from "../services/auth/watchTokenService";
+import { reportWatchUse } from "../services/analytics/watchUsage";
 import { logger } from "../utils/logger";
 import { setRequestContext } from "../utils/requestContext";
 
@@ -64,7 +65,9 @@ async function verifyAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    const user = (await tryWatchAuth(req)) ?? (await tryClerkAuth(req));
+    const watchUser = await tryWatchAuth(req);
+    if (watchUser) reportWatchUse(watchUser.id);
+    const user = watchUser ?? (await tryClerkAuth(req));
 
     // If auth fails, return 401
     if (!user) {

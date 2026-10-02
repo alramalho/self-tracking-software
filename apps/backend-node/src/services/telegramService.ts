@@ -6,6 +6,7 @@ import type {
   TelegramDeliveryReport,
   TelegramDestinationCheck,
   TelegramErrorNotificationData,
+  RepeatedFailure,
 } from "./telegram/types";
 
 const TELEGRAM_API_TIMEOUT_MS = 6000;
@@ -84,6 +85,17 @@ export class TelegramService {
     }
 
     return this.sendToChannel(this.alertMessage(message), "alerts", "Markdown");
+  }
+
+  async sendRepeatedFailureSummary(
+    summary: RepeatedFailure,
+  ): Promise<TelegramDeliveryReport> {
+    const times = summary.count === 1 ? "1 more time" : `${summary.count} more times`;
+    const message =
+      `🔁 HTTP ${summary.statusCode} on ${summary.endpoint} happened ${times} in the last ${summary.windowMinutes} min\n` +
+      `Users: ${summary.usernames.join(", ")}`;
+
+    return this.sendToChannel(this.alertMessage(message), "alerts");
   }
 
   async sendMessage(message: string): Promise<TelegramDeliveryReport> {

@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { api } from "@/data/api";
+import { track } from "@/analytics/client";
 import type {
   VoiceLogCommitRequest,
   VoiceLogCommitResponse,
@@ -49,6 +50,13 @@ export async function previewVoiceLog(
 export async function commitVoiceLog(
   payload: VoiceLogCommitRequest,
 ): Promise<VoiceLogCommitResponse> {
-  return (await api.post<VoiceLogCommitResponse>("/voice-logs/commit", payload))
-    .data;
+  const result = (
+    await api.post<VoiceLogCommitResponse>("/voice-logs/commit", payload)
+  ).data;
+  if (!result.duplicate && result.activityEntryIds.length)
+    track("activity-logged", {
+      source: "voice",
+      count: result.activityEntryIds.length,
+    });
+  return result;
 }

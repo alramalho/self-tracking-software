@@ -84,7 +84,8 @@ function hasPendingPlanProposalForPlan(metadata: unknown, planId: string): boole
 function isCoachActionMessageForPlan(metadata: unknown, planId: string): boolean {
   const data = metadata as any;
   return (
-    data?.source === AUTONOMOUS_COACH_PROMPT_TAG &&
+    data?.planProposals?.some((p: any) => p.planId === planId) ||
+    (data?.source === AUTONOMOUS_COACH_PROMPT_TAG || data?.source === "plan_monitoring") &&
     Array.isArray(data?.planIds) &&
     data.planIds.includes(planId)
   );
@@ -713,10 +714,6 @@ router.get(
     try {
       const { planId } = req.params;
       const userId = req.user!.id;
-
-      if (req.user!.proactiveCoachingEnabled === false) {
-        return res.json([]);
-      }
 
       const plan = await prisma.plan.findFirst({
         where: { id: planId, userId, deletedAt: null },

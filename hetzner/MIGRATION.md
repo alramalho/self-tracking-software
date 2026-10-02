@@ -44,6 +44,51 @@ python3 tracking-interview-clarification-20260918/verify.py
 
 Rollback by restoring `.env.before-interview-clarification-20260918` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`. The activation script refuses a second activation when its rollback backup already exists.
 
+## Native onboarding and AI SDK 7 update — September 18, 2026
+
+Production now runs `local/tracking-so-backend:ai-sdk7-20260918`, rebased on the live `local/tracking-so-backend:sleep-history-20260918` image. The backend is fully on AI SDK 7 (`ai@7.0.106`, Gateway `4.0.86`, OpenAI `4.0.70`, FAL `3.0.45`, OpenRouter provider `3.0.0`, and Zod `4.6.5`). The coach uses native SDK 7 tool/agent types, while Braintrust tracing remains around the generation functions. SDK 7 option names are used throughout (`instructions` and `onStepEnd`), and Node 22.23.2 satisfies the SDK requirement, so no Node upgrade was needed.
+
+The onboarding interview still uses DeepSeek V4.1 Flash by default. Its first-screen validator calls Jev (`typesafe-ai/jev`) through `experimental_evaluate`, keeping the evaluator separate from plan/session generation and preserving required versus optional guidance. No database migration was required. ZDR is intentionally not requested because the current Vercel plan does not support it.
+
+Prepared server context: `/root/workspace/tracking.so/deployment/tracking-ai-sdk7-migration-20260918/`. Verification confirmed the container is running, public `/health` returns HTTP 200, unauthenticated onboarding routes return HTTP 401, native SDK 7 exports load, and a synthetic non-user Jev evaluation passed. The pre-activation environment backup is `/root/workspace/tracking.so/deployment/.env.before-ai-sdk7-20260918`.
+
+Repeatable build, activation and verification:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+docker build \
+  --build-arg BASE_IMAGE=local/tracking-so-backend:sleep-history-20260918 \
+  -t local/tracking-so-backend:ai-sdk7-20260918 \
+  tracking-ai-sdk7-migration-20260918
+python3 tracking-ai-sdk7-migration-20260918/activate.py
+docker inspect tsw-backend --format '{{.Config.Image}} {{.State.Status}}'
+curl --fail --silent https://api.tracking.so/health
+```
+
+Rollback by restoring `.env.before-ai-sdk7-20260918` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`.
+
+## Jev-only onboarding gate — September 18, 2026
+
+Production now runs `local/tracking-so-backend:onboarding-jev-only-goal-1500-20260918`, based on `follow-through-source-20260918`. The first onboarding screen uses Jev (`typesafe-ai/jev`) to validate whether the goal is sufficiently defined; the coach interview no longer repeats that validation or asks a redundant baseline question. The active flow is now goal → weekly cadence → support → review. Goal input accepts up to 1,500 characters so natural dictation is not rejected by the old 300-character draft limit. The existing save-retry behavior and AI SDK 7 overlay are retained. No database migration was required.
+
+Prepared server context: `/root/workspace/tracking.so/deployment/tracking-onboarding-jev-only-20260918/`. The live process loads TypeScript through `tsx`, so the context replaces only the onboarding interview service and onboarding schemas while retaining the existing source overlay. Verification confirmed the service hash, healthy container state and the rollback environment backup at `/root/workspace/tracking.so/deployment/.env.before-onboarding-goal-1500-20260918`.
+
+Repeatable build and activation:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+docker build \
+  -t local/tracking-so-backend:onboarding-jev-only-goal-1500-20260918 \
+  tracking-onboarding-jev-only-20260918
+cp -p .env .env.before-onboarding-goal-1500-20260918
+sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=local/tracking-so-backend:onboarding-jev-only-goal-1500-20260918|' .env
+docker compose up -d --no-deps --force-recreate backend
+docker inspect --format '{{.Config.Image}} {{.State.Health.Status}}' tsw-backend
+curl --fail --silent https://api.tracking.so/health
+```
+
+Rollback by restoring `.env.before-onboarding-jev-only-20260918` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`.
+
 ### Inventory captured (for teardown)
 - **Flightcontrol-managed** (former prod): ECS cluster + service `fc-web-server-dvrpa1-6ba11x8`, ALB with same name, VPC `fc-self-tracking-software-0nb10m`. Must be torn down **via Flightcontrol dashboard**, not AWS console.
 - **CDK-managed remnants**: `TrackingSoftwareInfrastructureStackproductionApiStack070335E4` (WAF only — Fargate code already commented out), parent stack, plus sandbox/dev stacks.
@@ -218,3 +263,15 @@ curl --fail --silent https://api.tracking.so/health
 ```
 
 Rollback by restoring `.env.before-health-vitals-20260916d` to `.env`, preserving mode 600, recreating only `backend`, and checking `/health`.
+
+## Account switching overlay — October 1, 2026
+
+Production runs `local/tracking-so-backend:account-switch-20261001`, derived from `plan-design-20261001`. It lets the native app (build 191 onward) switch accounts without Clerk multi-session: a device holds a switch token per remembered account and trades it for a 60-second Clerk sign-in ticket.
+
+Scope: `routes/auth.ts` gains `POST /auth/switch-tokens` (signed-in), `POST /auth/switch` and `POST /auth/switch-tokens/revoke`; new `services/auth/switchTokenService.ts`; one type in `services/auth/types.ts`; additive migration `20261001160000_add_account_switch_tokens` (new table `account_switch_tokens`, no changes to existing tables). The overlay is `hetzner/account-switch-overlay.Dockerfile`. It patches the schema already inside the production image with `hetzner/account-switch/add-schema-model.cjs` instead of copying the working-tree schema, which is not the production lineage. Before the build, the two replaced files in the live container matched their committed hashes.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-account-switch-20261001/` with `context/`, `source-hashes.json`, `activate.py`, `rollback.sh`, `verified.json` and `backup/` (the pre-migration dump of `tracking_cutover`, the previous `.env` and compose file). Activation at 15:34 UTC confirmed exactly one pending migration, applied it, switched the image and verified: container healthy with zero restarts, public `/health` 200, `POST /auth/switch-tokens` without sign-in 401, `POST /auth/switch` with an unknown token 401 and without one 400, revoke without a token 400. A pre-flight in the built image loaded the routes module offline.
+
+Not verified: a real switch. No token has been issued or redeemed yet; that needs a signed-in device on build 191.
+
+Rollback: run `tracking-account-switch-20261001/rollback.sh` on the server. It refuses if a later release is live, restores the previous `.env`, recreates only `backend` and checks `/health`. The new table can stay; the previous image ignores it.

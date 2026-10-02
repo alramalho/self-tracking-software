@@ -30,17 +30,40 @@ appId: so.tracking.app
     centerElement: true
 - takeScreenshot: workout-vitals-zones
 - assertVisible: Heart-rate zones
-- assertVisible: Private Watch data
-- takeScreenshot: workout-vitals-details
 - scrollUntilVisible:
-    element: Create share card
+    element:
+      id: workout-privacy-card
     direction: DOWN
     centerElement: true
+- assertVisible:
+    id: workout-privacy-card
+- takeScreenshot: workout-vitals-details
+- swipe:
+    start: 50%, 82%
+    end: 50%, 28%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 28%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 28%
+    duration: 500
+- assertVisible: Create share card
 - tapOn: Create share card
 - extendedWaitUntil:
     visible: Preview
     timeout: 10000
+- scrollUntilVisible:
+    element: "6 stats"
+    direction: DOWN
+    centerElement: true
 - tapOn: "6 stats"
+- scrollUntilVisible:
+    element: Landscape
+    direction: DOWN
+    centerElement: true
 - tapOn: Landscape
 - assertVisible: Distance
 - assertVisible: Time
@@ -48,4 +71,16 @@ appId: so.tracking.app
 - assertVisible: Elevation
 - assertVisible: Avg heart rate
 - assertVisible: Calories
+- assertVisible: tracking.so
 - takeScreenshot: workout-share-landscape
+- scrollUntilVisible:
+    element:
+      id: share-export-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-export-button
+- extendedWaitUntil:
+    visible: Save Image
+    timeout: 10000
+- takeScreenshot: workout-share-export-sheet

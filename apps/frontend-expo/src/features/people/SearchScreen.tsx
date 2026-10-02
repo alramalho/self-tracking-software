@@ -12,6 +12,7 @@ import { useAction } from "@/data/queries";
 import { api } from "@/data/api";
 import type { Person } from "@/core/types";
 import type { SearchPerson } from "./types";
+import { track } from "@/analytics/client";
 
 export default function SearchScreen() {
   const c = useColors();
@@ -31,7 +32,10 @@ export default function SearchScreen() {
     enabled: !value,
     queryFn: async ({ signal }) => (await api.get<Person[]>("/users/recommended-users", { signal })).data,
   });
-  const connect = useAction(async (id: string) => api.post(`/users/send-connection-request/${id}`));
+  const connect = useAction(async (id: string) => {
+    await api.post(`/users/send-connection-request/${id}`);
+    track("friend-request-sent");
+  });
   const loading = value !== search || people.isPending;
   const matches = loading ? [] : people.data ?? [];
   const leave = () => { Keyboard.dismiss(); goBack(); };

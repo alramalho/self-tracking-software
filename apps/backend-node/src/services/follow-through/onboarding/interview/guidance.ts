@@ -1,53 +1,117 @@
-import { aiService } from "../../../aiService";
-import {
-  onboardingProvider,
-  onboardingValidationModel,
-  onboardingValidationProviderOptions,
-} from "../../../aiModelIds";
+import { experimental_evaluate as evaluate } from "ai";
 import type { GoalGuidanceResult } from "@tsw/prisma/follow-through";
 import { z } from "zod/v4";
 
-const guidanceSchema = z.object({
-  requirements: z
-    .array(
-      z.object({
-        key: z.string().min(1).max(32),
-        label: z.string().min(1).max(48),
-        phrase: z.string().min(1).max(80),
-        required: z.boolean(),
-        passed: z.boolean(),
-        detail: z.string().max(160),
-      }),
-    )
-    .min(2)
-    .max(4),
-});
-
-export const goalGuidancePrompt =
-  "You are a fast first-pass goal validator for tracking.so. The user is still composing the answer on the first onboarding screen. Return 2–4 tiny guidance cards that tell them what useful information to include.\n\n" +
-  "The first card must always be a concrete, actionable goal and must be required. Mark motivation or personal meaning as helpful, not required: a user can continue without explaining why. A current starting point is important when it materially affects a safe or realistic plan, but do not ask for session durations, dated sessions, or a full training plan here. The next onboarding screen can ask for deeper baseline details. Do not reject sincere, informal, short, or beginner answers. Only mark a requirement passed when the answer actually contains it. Keep each card label and phrase short enough for one compact card; phrase should be one short sentence fragment. Detail should be a kind, concrete hint, not a paragraph.";
-
 export const goalGuidanceRequestSchema = z.object({
+  step: z.enum(["goal", "baseline", "motivation"]).optional(),
   answer: z.string().trim().min(1).max(1500),
+  goal: z.string().max(1500).optional(),
   activityTitle: z.string().max(100).optional(),
 });
+
+const JEV_MODEL = "typesafe-ai/jev";
+const PASS_THRESHOLD = 0.65;
+
+function passed(probability: number) {
+  return probability >= PASS_THRESHOLD;
+}
+
+const checks = {
+  goal: {
+    label: "A clear target",
+    phrase: "Say what you want to achieve.",
+    required: true,
+    instructions:
+      "Does the answer state a concrete, actionable outcome the user wants to achieve? Accept sincere beginner or informal goals; reject empty, keyboard-noise, purely emotional, or non-actionable answers. Do not require the person to also state a baseline or motivation here.",
+    passedDetail: "Your goal is clear.",
+    failedDetail: "Add the outcome you want to achieve.",
+  },
+  baseline: {
+    label: "Where you are now",
+    phrase: "Mention your current starting point.",
+    required: false,
+    instructions:
+      "Does the answer give a useful current starting point toward the stated goal, such as present ability, experience, routine, resources, or a relevant constraint? 'I'm starting from scratch' is valid. Do not demand numbers, a training history, or personal details. A future goal alone is not a starting point.",
+    passedDetail: "Useful starting-point context included.",
+    failedDetail: "Mention where you are now, or skip this step.",
+  },
+  motivation: {
+    label: "Why it matters",
+    phrase: "Share what makes this worth doing.",
+    required: false,
+    instructions:
+      "Does the answer explain why the stated goal matters to this person, such as a personal reason, value, event, enjoyment, or motivation? Accept ordinary reasons without demanding sensitive disclosure. A description of the goal or current routine alone is not a reason.",
+    passedDetail: "Personal meaning included.",
+    failedDetail: "Share a reason, or skip this step.",
+  },
+} as const;
+
+const allSteps = ["goal", "baseline", "motivation"] as const;
 
 export async function goalGuidance(
   input: z.infer<typeof goalGuidanceRequestSchema>,
 ): Promise<GoalGuidanceResult> {
-  const result = await aiService.generateStructuredResponse({
-    schema: guidanceSchema,
-    options: {
-      model: onboardingValidationModel(),
-      temperature: 0.1,
-      providerOptions: onboardingValidationProviderOptions(),
-      provider: onboardingProvider(),
-    },
-    systemPrompt: goalGuidancePrompt,
-    prompt: JSON.stringify({
+  const result = await evaluate({
+    model: JEV_MODEL,
+    state: JSON.stringify({
       answer: input.answer,
+      goal: input.goal || null,
       activityTitle: input.activityTitle || null,
     }),
+    questions: Object.fromEntries(
+      (input.step ? [input.step] : allSteps).map((step) => [
+        step,
+        { type: "boolean", instructions: checks[step].instructions },
+      ]),
+    ),
+    maxRetries: 1,
   });
-  return guidanceSchema.parse(result);
+
+  return {
+    requirements: (input.step ? [input.step] : allSteps).map((step) => {
+      const check = checks[step];
+      const answer = result.answers[step];
+      const didPass = answer.type === "boolean" && passed(answer.probability);
+      return {
+        key: step,
+        label: check.label,
+        phrase: check.phrase,
+        required: check.required,
+        passed: didPass,
+        detail: didPass ? check.passedDetail : check.failedDetail,
+      };
+    }),
+  };
+}
+
+/**
+ * Expectation alignment: is this target achievable by this date, from this starting point?
+ * Only a clear "no" blocks, so ordinary ambitious goals pass untouched.
+ */
+export async function goalLooksRealistic(input: {
+  goal: string;
+  baseline: string;
+  frequency: number;
+  targetDate: string;
+  today: string;
+}): Promise<boolean> {
+  // Do the date arithmetic here; the evaluator judges plausibility, not calendars.
+  const weeksAvailable = Math.max(
+    0,
+    Math.round((Date.parse(input.targetDate) - Date.parse(input.today)) / (7 * 86400000)),
+  );
+  const result = await evaluate({
+    model: JEV_MODEL,
+    state: JSON.stringify({ ...input, weeksAvailable }),
+    questions: {
+      realistic: {
+        type: "boolean",
+        instructions:
+          "Could a typical person with this starting point reach this goal by the target date, training this many times per week, safely? Answer no only for goals that are clearly unsafe or implausible in that time (for example a first marathon in three weeks from no running, or losing 20 kg in a month). If the starting point is unknown, assume an ordinary beginner.",
+      },
+    },
+    maxRetries: 1,
+  });
+  const answer = result.answers.realistic;
+  return answer.type !== "boolean" || answer.probability >= 0.3;
 }

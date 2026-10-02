@@ -11,6 +11,11 @@ export type Artifact = {
   buildNumber: string;
   profileExpiresAt: string;
   verifiedAt: string;
+  widgets?: {
+    bundleIdentifier: string;
+    buildNumber: string;
+    profileExpiresAt: string;
+  };
   watch?: {
     bundleIdentifier: string;
     buildNumber: string;

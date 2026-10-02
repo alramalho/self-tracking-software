@@ -110,6 +110,7 @@ export function healthFixture(
                   endAt: "2026-09-15T07:30:00Z",
                   durationSeconds: 1800,
                   distanceMeters: 5100,
+                  activeEnergyKcal: 439,
                   effortScore: 6,
                   effortSource: "apple_estimated",
                   difficulty: "moderate",

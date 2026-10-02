@@ -8,10 +8,12 @@ const root = path.resolve(__dirname, "../..");
 const ios = process.argv.includes("--ios");
 const activityEditorFlow = process.argv.includes("--activity-editor");
 const healthFlow = process.argv.includes("--health");
-const healthVitalsFlow = process.argv.includes("--health-vitals");
+const workoutShareFlow = process.argv.includes("--workout-share");
+const healthVitalsFlow = process.argv.includes("--health-vitals") || workoutShareFlow;
 const assistanceFlow = process.argv.includes("--assistance");
 const flexibleFlow = process.argv.includes("--flexible");
 const profileGridFlow = process.argv.includes("--profile-grid");
+const widgetsFlow = process.argv.includes("--widgets");
 const sessionsFlow = process.argv.includes("--sessions");
 const onboardingKeyboardFlow = process.argv.includes("--onboarding-keyboard");
 const onboardingFlow = process.argv.includes("--onboarding") || onboardingKeyboardFlow;
@@ -48,7 +50,9 @@ const apk =
 const iosApp = process.env.E2E_IOS_APP;
 const servers = [];
 let testProcess;
+let workoutExports;
 function cleanup() {
+  workoutExports?.stop();
   if (testProcess && testProcess.exitCode === null) testProcess.kill("SIGTERM");
   for (const server of servers) {
     try {
@@ -188,7 +192,7 @@ async function run() {
       assert.equal(response.status,200);
     }
   }
-  if (sessionsFlow) {
+  if (sessionsFlow || widgetsFlow) {
     const response = await fetch("http://127.0.0.1:4319/__follow-through", {method:"POST",headers:{Authorization:"Bearer local-e2e-token"}});
     assert.equal(response.status, 200);
   }
@@ -206,7 +210,7 @@ async function run() {
   if (followUpsFlow) {
     await fetch("http://127.0.0.1:4319/metrics", {method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer local-e2e-token"},body:JSON.stringify({title:"Productivity",emoji:"📈"})});
   }
-  if (loggerFlow || voiceNoteFlow || onboardingFlow || sessionsFlow || assistanceFlow || activityEditorFlow) {
+  if (loggerFlow || voiceNoteFlow || onboardingFlow || sessionsFlow || widgetsFlow || assistanceFlow || activityEditorFlow) {
     const seeded = await fetch("http://127.0.0.1:4319/users/user", {method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer local-e2e-token"},body:JSON.stringify({themeMode:process.env.E2E_THEME ?? "DARK",themeBaseColor:"AMBER"})});
     assert.equal(seeded.status,200);
   }
@@ -288,6 +292,12 @@ async function run() {
       { stdio: "inherit" },
     );
   }
+  if (workoutShareFlow && ios) {
+    const container = execFileSync("xcrun", ["simctl", "get_app_container", device, "so.tracking.app", "data"], { env, encoding: "utf8" }).trim();
+    const captureOutput = path.join(output, `workout-exports-${process.env.E2E_THEME ?? "DARK"}-${Date.now()}`);
+    workoutExports = require("./capture-workout-exports.cjs").captureWorkoutExports(container, captureOutput);
+    console.log(`Capturing actual native share PNGs: ${captureOutput}`);
+  }
   await new Promise((resolve, reject) => {
     const test = spawn(
       maestro,
@@ -297,10 +307,14 @@ async function run() {
         "test",
         "--test-output-dir",
         output,
-        onboardingKeyboardFlow && ios
+        widgetsFlow && ios
+          ? "e2e/native/widgets-ios.yaml"
+          : onboardingKeyboardFlow && ios
           ? "e2e/native/onboarding-keyboard-ios.yaml"
           : activityEditorFlow && ios
           ? "e2e/native/activity-editor-ios.yaml"
+          : workoutShareFlow && ios
+          ? "e2e/native/workout-share-ios.yaml"
           : healthVitalsFlow && ios
           ? "e2e/native/health-vitals-ios.yaml"
           : healthFlow && ios
@@ -365,7 +379,21 @@ async function run() {
         : reject(new Error(`Native E2E failed (${code}). See ${output}`)),
     );
   });
+  if (workoutExports) {
+    workoutExports.stop();
+    assert.equal(workoutExports.files.size, 4, "All four native share PNGs must be captured");
+    const layouts = [["portrait", "3"], ["portrait", "6"], ["landscape", "3"], ["landscape", "6"]];
+    [...workoutExports.files.values()].forEach((file, index) => {
+      execFileSync("swift", ["-module-cache-path", "/private/tmp/tracking-share-swift-cache", "e2e/native/verify-workout-share.swift", file, ...layouts[index]], { cwd: root, env, stdio: "inherit" });
+    });
+  }
   const state = await (await fetch("http://127.0.0.1:4319/__state")).json();
+  if (widgetsFlow) {
+    assert.equal(state.user.themeMode, process.env.E2E_THEME ?? "DARK");
+    assert.ok(state.requests.some(request => request.path === "/follow-through/checks/check" && request.body.action === "DISMISS"));
+    console.log(`Native original homepage, coach, check-in and upcoming-session checks passed in ${state.user.themeMode}. Screenshots: ${output}`);
+    return;
+  }
   if (activityEditorFlow) {
     const saves = state.requests.filter(r => r.method === "POST" && r.path === "/activities/upsert");
     assert.equal(saves.length, 1);
@@ -396,7 +424,7 @@ async function run() {
     return;
   }
   if (healthVitalsFlow) {
-    console.log(`Native Apple Watch workout-vitals details passed in ${state.user.themeMode}. Screenshots: ${output}`);
+    console.log(`Native ${workoutShareFlow ? "workout PNG export" : "Apple Watch workout-vitals details"} passed in ${state.user.themeMode}. Screenshots: ${output}`);
     return;
   }
   if (notificationsFlow) {
@@ -429,7 +457,7 @@ async function run() {
     console.log(`Native profile glimmer, compact grid, fire markers and legend passed in ${state.user.themeMode}. Captures: ${output}`);
     return;
   }
-  if (sessionsFlow) {
+  if (sessionsFlow || widgetsFlow) {
     assert.ok(state.requests.some(r=>r.path.endsWith("/timer") && r.body.action === "START"));
     assert.ok(state.requests.some(r=>r.path.endsWith("/timer") && r.body.action === "FINISH"));
     assert.equal(state.requests.filter(r=>r.path==="/activities/log-activity").length,0);

@@ -66,6 +66,7 @@ const app: ExpoConfig = {
   web: { bundler: "metro", output: "single", name: "tracking.so" },
   plugins: [
     "./plugins/with-watch.cjs",
+    "./plugins/with-widgets.cjs",
     ["expo-build-properties", { ios: { deploymentTarget: "17.0" } }],
     "expo-apple-authentication",
     "expo-router",
@@ -116,6 +117,9 @@ const app: ExpoConfig = {
   extra: {
     backendUrl,
     clerkPublishableKey: publicValue("CLERK_PUBLISHABLE_KEY"),
+    // Public project key shared with the web app's posthog-js setup.
+    posthogKey: publicValue("POSTHOG_KEY"),
+    posthogHost: publicValue("POSTHOG_HOST"),
     fixtureMode,
     ...(projectId ? { eas: { projectId } } : {}),
   },

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { planCoachingSchema } from "../coach/monitoring/schema";
 
 export const dateKey = z
   .string()
@@ -41,6 +42,7 @@ export const preferencesSchema = z.object({
 export const supportSchema = z
   .object({
     planId: z.string().min(1).max(200),
+    coaching: planCoachingSchema.optional(),
     mode: z.enum(["WEEKLY", "DAYS", "TIMED"]),
     weekdays: z.array(z.number().int().min(0).max(6)).max(7),
     time: time.nullable(),

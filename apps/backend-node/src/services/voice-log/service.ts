@@ -6,6 +6,8 @@ import { DEFAULT_AI_GATEWAY_MODEL } from "../aiModelIds";
 import { gateway } from "@ai-sdk/gateway";
 import type { ActivityEntry, MetricEntry } from "@tsw/prisma";
 import { logger } from "../../utils/logger";
+import { supermemoryService } from "../supermemoryService";
+import { matchVoiceLogToPlans } from "./planMatcher";
 import {
   voiceLogCommitSchema,
   voiceLogExtractionSchema,
@@ -139,6 +141,24 @@ function refinementPrompt(
   });
 }
 
+function appendPlanContext(
+  notes: string | null,
+  contextText: string,
+  date: string,
+) {
+  const current = notes?.trim() || "";
+  const normalizedContext = contextText
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase();
+  if (current.toLocaleLowerCase().includes(normalizedContext)) return current;
+
+  const entry = `- ${date}: ${contextText.trim()}`;
+  return current
+    ? `${current}\n\n## Coach context\n${entry}`
+    : `## Coach context\n${entry}`;
+}
+
 function normalizeExtraction(
   extraction: VoiceLogExtraction,
   transcript: string,
@@ -146,8 +166,12 @@ function normalizeExtraction(
   activities: VoiceLogContext[],
   metrics: MetricContext[],
 ): VoiceLogExtraction {
-  const activityById = new Map(activities.map((activity) => [activity.activityId, activity]));
-  const metricById = new Map(metrics.map((metric) => [metric.metricId, metric]));
+  const activityById = new Map(
+    activities.map((activity) => [activity.activityId, activity]),
+  );
+  const metricById = new Map(
+    metrics.map((metric) => [metric.metricId, metric]),
+  );
   const unresolved = [...extraction.unresolved];
 
   const validActivities = extraction.activities.filter((activity) => {
@@ -215,16 +239,15 @@ export async function previewVoiceLog(input: {
   const timezone = resolveTimezone(input.timezone, user?.timezone || "UTC");
 
   const sttStartedAt = Date.now();
-  const transcript = (await sttService.speechToText(
-    input.audioBytes,
-    input.audioFormat,
-  ))
+  const transcript = (
+    await sttService.speechToText(input.audioBytes, input.audioFormat)
+  )
     .trim()
     .slice(0, MAX_TRANSCRIPT_LENGTH);
   const sttDurationMs = Date.now() - sttStartedAt;
   if (!transcript) throw new Error("The recording did not contain speech.");
 
-  const [activities, metrics] = await Promise.all([
+  const [activities, metrics, plans] = await Promise.all([
     prisma.activity.findMany({
       where: { userId: input.userId, deletedAt: null },
       select: { id: true, title: true, emoji: true, measure: true },
@@ -234,6 +257,28 @@ export async function previewVoiceLog(input: {
       where: { userId: input.userId },
       select: { id: true, title: true, emoji: true },
       orderBy: { title: "asc" },
+    }),
+    prisma.plan.findMany({
+      where: {
+        userId: input.userId,
+        deletedAt: null,
+        archivedAt: null,
+        isPaused: false,
+        outlineType: "SPECIFIC",
+        OR: [{ finishingDate: null }, { finishingDate: { gt: now } }],
+      },
+      select: {
+        id: true,
+        goal: true,
+        emoji: true,
+        outlineType: true,
+        notes: true,
+        activities: {
+          where: { deletedAt: null },
+          select: { id: true, title: true, measure: true },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
     }),
   ]);
 
@@ -259,7 +304,9 @@ export async function previewVoiceLog(input: {
     providerOptions: {
       openai: { reasoningEffort },
     },
-    system: input.refinement ? VOICE_LOG_REFINEMENT_PROMPT : VOICE_LOG_PROMPT,
+    instructions: input.refinement
+      ? VOICE_LOG_REFINEMENT_PROMPT
+      : VOICE_LOG_PROMPT,
     prompt: input.refinement
       ? refinementPrompt(
           input.refinement,
@@ -287,8 +334,12 @@ export async function previewVoiceLog(input: {
     metricContext,
   );
 
-  const activityById = new Map(activityContext.map((activity) => [activity.activityId, activity]));
-  const metricById = new Map(metricContext.map((metric) => [metric.metricId, metric]));
+  const activityById = new Map(
+    activityContext.map((activity) => [activity.activityId, activity]),
+  );
+  const metricById = new Map(
+    metricContext.map((metric) => [metric.metricId, metric]),
+  );
 
   const responseTranscript = input.refinement
     ? `${input.refinement.originalTranscript}\n\nFollow-up correction: ${transcript}`.slice(
@@ -296,6 +347,20 @@ export async function previewVoiceLog(input: {
         MAX_TRANSCRIPT_LENGTH,
       )
     : transcript;
+
+  const previewActivities = extraction.activities.map((activity) => ({
+    ...activity,
+    title: activityById.get(activity.activityId)!.title,
+    emoji: activityById.get(activity.activityId)!.emoji,
+    measure: activityById.get(activity.activityId)!.measure,
+  }));
+  const planMatches = await matchVoiceLogToPlans({
+    transcript: responseTranscript,
+    activities: previewActivities,
+    note: extraction.note!,
+    unresolved: extraction.unresolved,
+    plans,
+  });
 
   logger.info(
     `Voice log preview for ${input.userId}: ${extraction.activities.length} activities, ${extraction.metrics.length} metrics, ${extraction.unresolved.length} unresolved`,
@@ -316,12 +381,7 @@ export async function previewVoiceLog(input: {
   return {
     clientRequestId: input.clientRequestId,
     transcript: responseTranscript,
-    activities: extraction.activities.map((activity) => ({
-      ...activity,
-      title: activityById.get(activity.activityId)!.title,
-      emoji: activityById.get(activity.activityId)!.emoji,
-      measure: activityById.get(activity.activityId)!.measure,
-    })),
+    activities: previewActivities,
     metrics: extraction.metrics.map((metric) => ({
       ...metric,
       title: metricById.get(metric.metricId)!.title,
@@ -329,6 +389,7 @@ export async function previewVoiceLog(input: {
     })),
     note: extraction.note!,
     unresolved: extraction.unresolved,
+    planMatches,
   };
 }
 
@@ -352,7 +413,13 @@ export async function commitVoiceLog(input: {
       },
       select: { id: true },
     });
-    if (existingMarker) return { duplicate: true, activityEntries: [], metricEntries: [], note: existingMarker };
+    if (existingMarker)
+      return {
+        duplicate: true,
+        activityEntries: [],
+        metricEntries: [],
+        note: existingMarker,
+      };
 
     const [activities, metrics] = await Promise.all([
       tx.activity.findMany({
@@ -373,7 +440,11 @@ export async function commitVoiceLog(input: {
     ]);
     const activityIds = new Set(activities.map((activity) => activity.id));
     const metricIds = new Set(metrics.map((metric) => metric.id));
-    if (commit.activities.some((activity) => !activityIds.has(activity.activityId))) {
+    if (
+      commit.activities.some(
+        (activity) => !activityIds.has(activity.activityId),
+      )
+    ) {
       throw new Error("One or more activities are no longer available.");
     }
     if (commit.metrics.some((metric) => !metricIds.has(metric.metricId))) {
@@ -452,6 +523,50 @@ export async function commitVoiceLog(input: {
       },
     });
 
+    if (commit.planContextPlanId && commit.planContextText) {
+      const plan = await tx.plan.findFirst({
+        where: {
+          id: commit.planContextPlanId,
+          userId: input.userId,
+          deletedAt: null,
+          archivedAt: null,
+          isPaused: false,
+        },
+        select: {
+          notes: true,
+          outlineType: true,
+          activities: {
+            where: { deletedAt: null },
+            select: { id: true },
+          },
+        },
+      });
+      if (!plan || plan.outlineType !== "SPECIFIC") {
+        throw new Error(
+          "The selected plan is no longer available for coach context.",
+        );
+      }
+      if (
+        commit.planContextActivityId &&
+        !plan.activities.some(
+          (activity) => activity.id === commit.planContextActivityId,
+        )
+      ) {
+        throw new Error("The selected activity is not part of this plan.");
+      }
+
+      await tx.plan.update({
+        where: { id: commit.planContextPlanId },
+        data: {
+          notes: appendPlanContext(
+            plan.notes,
+            commit.planContextText,
+            commit.note.date,
+          ),
+        },
+      });
+    }
+
     const affectedActivityIds = Array.from(
       new Set(commit.activities.map((activity) => activity.activityId)),
     );
@@ -472,6 +587,27 @@ export async function commitVoiceLog(input: {
 
     return { duplicate: false, activityEntries, metricEntries, note };
   });
+
+  if (!result.duplicate) {
+    const transcript = commit.transcript.trim();
+    const privateNote = commit.note.text.trim();
+    const memory = [
+      "User-shared voice note for future coaching context.",
+      "Structured activity and metric entries are the source of truth for completed logs; use this note for reflections, intentions, constraints, and next-step cues.",
+      `Voice note (${commit.note.date}): ${transcript}`,
+      privateNote !== transcript ? `Coach note: ${privateNote}` : "",
+      commit.planContextPlanId && commit.planContextText
+        ? `Plan context selected (${commit.planContextPlanId}): ${commit.planContextText}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    void supermemoryService.addMemory(
+      input.userId,
+      memory,
+      commit.clientRequestId,
+    );
+  }
 
   return {
     success: true,

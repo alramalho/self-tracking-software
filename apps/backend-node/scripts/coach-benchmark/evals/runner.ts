@@ -393,7 +393,7 @@ function estimateCostUsd(params: {
   const cacheWriteTokens = Number(usage.cacheWriteTokens || 0);
   const inputTokens = Number(usage.inputTokens || 0);
   const outputTokens = Number(usage.outputTokens || 0);
-  const reasoningTokens = Number(usage.reasoningTokens || 0);
+  const reasoningTokens = Number(usage.outputTokenDetails.reasoningTokens || 0);
   const uncachedInputTokens = Math.max(0, inputTokens - cacheReadTokens - cacheWriteTokens);
 
   return (

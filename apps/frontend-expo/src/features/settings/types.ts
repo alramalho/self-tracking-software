@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react-native";
 export type SettingsView =
   | "main"
   | "profile"
+  | "accounts"
   | "palette"
   | "theme"
   | "integrations"

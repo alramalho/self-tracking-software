@@ -3,6 +3,7 @@ import { dateKey, time } from "../../schema";
 export const stageSchema = z.enum([
   "goal",
   "baseline",
+  "motivation",
   "rhythm",
   "support",
   "review",
@@ -13,7 +14,9 @@ export const questionSchema = z.object({
   options: z.array(z.string().max(180)).max(4),
 });
 export const factsSchema = z.object({
-  goal: z.string().max(300),
+  // The first answer can be a natural spoken response, not just a short plan
+  // label. Keep it aligned with the interview answer limit.
+  goal: z.string().max(1500),
   goalReason: z.string().max(600),
   baseline: z.string().max(1000),
   emoji: z.string().max(24),
@@ -28,6 +31,7 @@ export const factsSchema = z.object({
   resourceUrl: z.string().max(2048),
   nextStep: z.string().max(600),
   recommendation: z.enum(["coaching", "tracking"]),
+  coachingRole: z.enum(["consistency", "training"]).optional(),
   recommendationReason: z.string().max(500),
   wantsCoaching: z.boolean(),
 });

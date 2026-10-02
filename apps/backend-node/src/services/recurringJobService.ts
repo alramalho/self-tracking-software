@@ -334,7 +334,7 @@ export class RecurringJobService {
           const title = "daily social summary 👋";
 
           try {
-            await notificationService.sendPushNotification(userId, title, body);
+            await notificationService.sendPushNotification(userId, title, body, "/notifications");
           } catch (error) {
             logger.error(`Failed to send batched push to ${user.username}:`, error);
           }

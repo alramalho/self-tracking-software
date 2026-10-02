@@ -44,10 +44,13 @@ router.post(
         try {
           parsedJson = JSON.parse(req.body.refinement_context);
         } catch {
-          res.status(400).json({ error: "refinement_context must be valid JSON" });
+          res
+            .status(400)
+            .json({ error: "refinement_context must be valid JSON" });
           return;
         }
-        const parsedRefinement = voiceLogRefinementContextSchema.safeParse(parsedJson);
+        const parsedRefinement =
+          voiceLogRefinementContextSchema.safeParse(parsedJson);
         if (!parsedRefinement.success) {
           res.status(400).json({ error: parsedRefinement.error.flatten() });
           return;
@@ -89,10 +92,12 @@ router.post(
       res.json(result);
     } catch (error) {
       logger.error("Error committing voice log:", error);
-      const message = error instanceof Error ? error.message : "Voice log commit failed";
+      const message =
+        error instanceof Error ? error.message : "Voice log commit failed";
       if (
         message.includes("no longer available") ||
-        message.includes("Invalid")
+        message.includes("Invalid") ||
+        message.includes("not part of this plan")
       ) {
         res.status(400).json({ error: message });
         return;

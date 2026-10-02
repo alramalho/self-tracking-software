@@ -107,7 +107,7 @@ async function generateCoachImagePrompts(
   const result = await generateObject({
     model: gateway.languageModel(COACH_MODEL),
     schema,
-    system: dedent`
+    instructions: dedent`
       You are a personal coach. For each session below, decide whether accompanying
       illustrations would help the user and, if so, write image generation prompts.
 

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/data/api";
 import { useHealth } from "./HealthProvider";
-import type { WorkoutReconciliationPreview } from "./workout-types";
+import type { WorkoutDetail, WorkoutReconciliationPreview } from "./workout-types";
 import {
   SLEEP_RANGE_DAYS,
   type SleepRange,
@@ -57,6 +57,15 @@ export function useHealthWorkouts() {
           "/health/apple/workouts/reconciliation-preview",
         )
       ).data,
+  });
+}
+
+export function useWorkoutDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: ["health", "workouts", id],
+    enabled: Boolean(id),
+    queryFn: async () =>
+      (await api.get<WorkoutDetail>(`/health/apple/workouts/${encodeURIComponent(id!)}`)).data,
   });
 }
 export function useSleepScores(range: SleepRange = "7D") {

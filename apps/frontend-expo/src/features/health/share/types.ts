@@ -16,6 +16,7 @@ export interface WorkoutShareCardProps {
   workout: HealthWorkoutPreview;
   options: WorkoutShareOptions;
   captureRef?: RefObject<View | null>;
+  width: number;
 }
 
 export interface ShareWorkoutCardInput {
@@ -40,4 +41,9 @@ export interface ControlRowProps {
   title: string;
   icon: ComponentType<{ size?: number; color?: string }>;
   children: ReactNode;
+}
+
+export interface ShareWatermarkProps {
+  mapOverlay?: boolean;
+  scale: number;
 }

@@ -74,6 +74,7 @@ for (const theme of ["DARK", "LIGHT"]) {
     headers: { Authorization: "Bearer local-e2e-token" },
     data: { themeMode: theme, themeBaseColor: "BLUE" },
   });
+  await request.post(`${API}/__voice-plan-context`);
   await page.goto("/add");
 
   await page.getByTestId("log-voice-note-card").click();
@@ -84,7 +85,17 @@ for (const theme of ["DARK", "LIGHT"]) {
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
   await expect(drawer.getByText("What I heard", { exact: true })).toBeVisible();
   await expect(drawer.getByText("Today was a bit of a mess, honestly.", { exact: false }).first()).toBeVisible();
-  await expect(drawer.getByText("Not included", { exact: true })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Show more", exact: true })).toBeVisible();
+  await drawer.getByRole("button", { name: "Show more", exact: true }).click();
+  await expect(drawer.getByRole("button", { name: "Show less", exact: true })).toBeVisible();
+  await drawer.getByRole("button", { name: "Show less", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-plan-context")).toBeVisible();
+  await expect(drawer.getByText("Coach context", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("Try a longer route next time", { exact: false })).toBeVisible();
+  await expect(
+    drawer.getByRole("button", { name: "Save coach context to Running plan", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(drawer.getByText("The full note above will be kept privately for your coach.", { exact: true })).toBeVisible();
   await expect(drawer.getByTestId("voice-log-already-logged")).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Running already logged", exact: true })).toBeDisabled();
   await expect(drawer.getByRole("button", { name: "Remove Guitar", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -104,6 +115,8 @@ for (const theme of ["DARK", "LIGHT"]) {
   expect(commit.body.activities).toHaveLength(0);
   expect(commit.body.metrics).toHaveLength(1);
   expect(commit.body.note.text).toContain("I want to play guitar more regularly");
+  expect(commit.body.planContextPlanId).toBe("fitness");
+  expect(commit.body.planContextText).toBe("Try a longer route next time");
   });
 }
 

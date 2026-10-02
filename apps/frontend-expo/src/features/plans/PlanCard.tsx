@@ -1,12 +1,23 @@
+import { PlanCoachingRow } from "./coaching/PlanCoachingRow";
+import { usePlanCoachRequest } from "./coaching/PlanCoachRequest";
 import { SupportEditor } from "../follow-through/SupportEditor";
 import { AchievementGlow } from "./AchievementGlow";
-import { CoachOverview } from "./CoachOverview";
 import { PlanProgressStrip } from "./PlanProgressStrip";
 import { Reveal } from "@/components/reveal/Reveal";
 import { useState } from "react";
 import { Image, Pressable, View, Switch } from "react-native";
 import { Text } from "@/components/typography/Text";
-import { Medal, Sprout, Pencil, PlusSquare } from "lucide-react-native";
+import {
+  Archive,
+  ArchiveRestore,
+  Medal,
+  Pause,
+  Pencil,
+  Play,
+  PlusSquare,
+  Sprout,
+  Trash2,
+} from "lucide-react-native";
 import Svg, { Defs, LinearGradient, Stop, Rect } from "react-native-svg";
 import { router } from "expo-router";
 import {
@@ -31,6 +42,7 @@ import { CurrentWeek } from "./WeekProgress";
 import { WeekCalendar } from "./WeekCalendar";
 import { EntryEditor } from "../activities/EntryEditor";
 import { ActivityEditor } from "../activities/ActivityEditor";
+import { SettingsCard } from "../settings/SettingsCard";
 interface Props {
   plan: Plan;
   entries: ActivityEntry[];
@@ -38,6 +50,7 @@ interface Props {
   premium?: boolean;
   detail?: boolean;
 }
+type ManageView = "actions" | "pause" | "delete";
 export function PlanCard({
   plan,
   entries,
@@ -50,9 +63,10 @@ export function PlanCard({
   const [editing, setEditing] = useState<ActivityEntry>();
   const [editingActivity, setEditingActivity] = useState<Activity>();
   const [settings, setSettings] = useState(false);
+  const [manageView, setManageView] = useState<ManageView>("actions");
   const [reason, setReason] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [showFuture, setShowFuture] = useState(false);
+  const coachRequest = usePlanCoachRequest(plan, own);
   const scheduledEntries: ActivityEntry[] = (plan.sessions ?? []).map(
     (session) => ({
       id: session.id,
@@ -75,6 +89,16 @@ export function PlanCard({
       operation === "pause" ? { reason } : {},
     );
   });
+  const closeSettings = () => {
+    setSettings(false);
+    setManageView("actions");
+    setReason("");
+  };
+  const showSettings = () => {
+    setManageView("actions");
+    setReason("");
+    setSettings(true);
+  };
   return (
     <Panel
       testID="plan-card"
@@ -154,7 +178,7 @@ export function PlanCard({
                 testID="plan-settings-button"
                 onPress={() =>
                   detail
-                    ? setSettings(true)
+                    ? showSettings()
                     : router.push(`/edit-plan/${plan.id}`)
                 }
               />
@@ -310,7 +334,10 @@ export function PlanCard({
           {own && (
             <>
               <SupportEditor plan={plan} />
-              <CoachOverview plans={[plan]} entries={entries} />
+              <PlanCoachingRow
+                plan={plan}
+                leadingRows={coachRequest ? [coachRequest] : []}
+              />
             </>
           )}
           {plan.planGroup && (
@@ -369,60 +396,133 @@ export function PlanCard({
       )}
       <Sheet
         visible={settings}
-        title="Manage Plan"
-        onClose={() => setSettings(false)}
+        title={
+          manageView === "pause"
+            ? "Pause Plan"
+            : manageView === "delete"
+              ? "Delete Plan"
+              : "Manage Plan"
+        }
+        onClose={closeSettings}
       >
-        <Button
-          onPress={() => {
-            setSettings(false);
-            router.push(`/edit-plan/${plan.id}`);
-          }}
-        >
-          Edit Plan
-        </Button>
-        {!plan.isPaused && (
-          <Field
-            label="Pause reason (optional)"
-            value={reason}
-            onChangeText={setReason}
-          />
+        {manageView === "actions" ? (
+          <View style={{ gap: 10 }}>
+            <SettingsCard
+              icon={Pencil}
+              title="Edit Plan"
+              description="Change this plan's goal, schedule, or appearance"
+              onPress={() => {
+                closeSettings();
+                router.push(`/edit-plan/${plan.id}`);
+              }}
+            />
+            <SettingsCard
+              icon={plan.isPaused ? Play : Pause}
+              title={plan.isPaused ? "Resume Plan" : "Pause Plan"}
+              description={
+                plan.isPaused
+                  ? "Continue tracking this plan"
+                  : "Streaks continue to count down while paused"
+              }
+              color={plan.isPaused ? c.accent : "#d97706"}
+              onPress={() => {
+                if (plan.isPaused) {
+                  action.mutate("resume", { onSuccess: closeSettings });
+                } else {
+                  setReason("");
+                  setManageView("pause");
+                }
+              }}
+              disabled={action.isPending}
+            />
+            <SettingsCard
+              icon={plan.archivedAt ? ArchiveRestore : Archive}
+              title={plan.archivedAt ? "Restore Plan" : "Archive Plan"}
+              description={
+                plan.archivedAt
+                  ? "Return this plan to your active plans"
+                  : "Hide this plan from your active plans"
+              }
+              onPress={() =>
+                action.mutate(plan.archivedAt ? "unarchive" : "archive", {
+                  onSuccess: closeSettings,
+                })
+              }
+              disabled={action.isPending}
+            />
+            <SettingsCard
+              icon={Trash2}
+              title="Delete Plan"
+              description="Permanently delete this plan; activity logs remain"
+              color="#dc2626"
+              onPress={() => {
+                setManageView("delete");
+              }}
+            />
+          </View>
+        ) : manageView === "pause" ? (
+          <View style={{ gap: 16 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: "#f59e0b18",
+              }}
+            >
+              <Pause size={20} color="#d97706" />
+              <Copy>
+                Streaks will continue to count down while your plan is paused.
+              </Copy>
+            </View>
+            <Field
+              label="Reason for pausing (optional)"
+              value={reason}
+              onChangeText={setReason}
+              placeholder="e.g. Taking a short break"
+            />
+            <Button
+              busy={action.isPending}
+              onPress={() =>
+                action.mutate("pause", { onSuccess: closeSettings })
+              }
+            >
+              Pause Plan
+            </Button>
+            <Button
+              secondary
+              disabled={action.isPending}
+              onPress={() => setManageView("actions")}
+            >
+              Cancel
+            </Button>
+          </View>
+        ) : (
+          <View style={{ gap: 16 }}>
+            <Copy>Delete this plan? Your activity logs will remain.</Copy>
+            <Copy muted>This action cannot be undone.</Copy>
+            <Button
+              danger
+              busy={action.isPending}
+              onPress={() =>
+                action.mutate("delete", { onSuccess: closeSettings })
+              }
+            >
+              Confirm Delete
+            </Button>
+            <Button
+              secondary
+              disabled={action.isPending}
+              onPress={() => {
+                setManageView("actions");
+              }}
+            >
+              Cancel
+            </Button>
+          </View>
         )}
-        <Button
-          secondary
-          busy={action.isPending}
-          onPress={() =>
-            action.mutate(plan.isPaused ? "resume" : "pause", {
-              onSuccess: () => setSettings(false),
-            })
-          }
-        >
-          {plan.isPaused ? "Resume Plan" : "Pause Plan"}
-        </Button>
-        <Button
-          secondary
-          busy={action.isPending}
-          onPress={() =>
-            action.mutate(plan.archivedAt ? "unarchive" : "archive", {
-              onSuccess: () => setSettings(false),
-            })
-          }
-        >
-          {plan.archivedAt ? "Restore Plan" : "Archive Plan"}
-        </Button>
-        {confirmDelete && (
-          <Copy>Delete this plan? Your activity logs will remain.</Copy>
-        )}
-        <Button
-          danger
-          busy={action.isPending}
-          onPress={() =>
-            confirmDelete
-              ? action.mutate("delete", { onSuccess: () => setSettings(false) })
-              : setConfirmDelete(true)
-          }
-        >
-          {confirmDelete ? "Confirm Delete" : "Delete Plan"}
-        </Button>
         <Status error={action.error} />
       </Sheet>
     </Panel>

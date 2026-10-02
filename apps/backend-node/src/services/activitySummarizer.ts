@@ -139,7 +139,7 @@ class ActivitySummarizer {
     try {
       const result = await generateText({
         model: gateway("google/gemini-3-flash-preview"),
-        system: `You are a data summarizer. Given raw user activity tracking data for a date range, produce a concise plain text summary covering:
+        instructions: `You are a data summarizer. Given raw user activity tracking data for a date range, produce a concise plain text summary covering:
 1. Activities completed vs planned (per activity, grouped by day)
 2. Difficulty reports (explicitly state "no difficulty reported" if none)
 3. Private reflections/postmortems (explicitly state "no private reflections recorded" if none)

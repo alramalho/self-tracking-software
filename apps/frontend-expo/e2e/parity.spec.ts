@@ -242,14 +242,38 @@ test("creates weekly plan and edits existing plan", async ({
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: "Edit Plan", exact: true }).click();
+  await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page
     .getByLabel("Great, now what exactly do you want to do?")
     .fill("Read every week");
-  await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans.some((p: any) => p.goal === "Read every week")).toBe(true);
+});
+test("plan management uses settings rows and focused confirmations", async ({
+  page,
+}) => {
+  await page.goto("/plan/fitness");
+  await expect(page.getByText("Exercise regularly", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Manage Plan", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit Plan", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause Plan", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Archive Plan", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Plan", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Reason for pausing (optional)")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Pause Plan", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Pause Plan", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Reason for pausing (optional)")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Manage Plan", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete Plan", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Delete Plan", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm Delete", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Manage Plan", exact: true })).toBeVisible();
 });
 
 test("all five main screens render in light and dark mode", async ({
@@ -322,8 +346,10 @@ test("milestone progress survives unrelated plan edits", async ({
     .click();
   await expect(milestone).toContainText("30%");
   await page.getByRole("button", { name: "Edit milestones" }).click();
+  await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page.getByLabel("Why is this important to you?").fill("Feel stronger");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans[0].milestones[0].progress).toBe(30);
@@ -336,19 +362,27 @@ test("scheduled plan dates tolerate incomplete typing and validate before save",
   request,
 }) => {
   await page.goto("/edit-plan/scheduled");
+  await page.getByRole("button", { name: "Edit plan type", exact: true }).click();
   const date = page.getByLabel("Session 1 date", { exact: true });
   await date.fill("2026-");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveText("Enter a valid date.");
+  await page.getByRole("button", { name: "Edit plan type", exact: true }).click();
   await date.fill("2026-09-15");
   await page.getByLabel("Session 1 quantity").fill("0");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText(
     "quantity greater than zero",
   );
+  await page.getByRole("button", { name: "Edit plan type", exact: true }).click();
   await page.getByLabel("Session 1 quantity").fill("15");
-  await page.getByRole("button", { name: "Friends", exact: true }).click();
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Edit visibility", exact: true }).click();
+  await page.getByRole("button", { name: "Friends only", exact: true }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans.find((p: any) => p.id === "scheduled").visibility).toBe(
@@ -575,6 +609,9 @@ test("plan background uses multipart image upload and supports removal", async (
   request,
 }) => {
   await page.goto("/edit-plan/fitness");
+  await page
+    .getByRole("button", { name: "Edit cover image", exact: true })
+    .click();
   const chooser = page.waitForEvent("filechooser");
   await page
     .getByRole("button", { name: "Add background image", exact: true })
@@ -583,9 +620,8 @@ test("plan background uses multipart image upload and supports removal", async (
   await expect(
     page.getByRole("button", { name: "Remove background image", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   let state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.plans.find((plan: any) => plan.id === "fitness").backgroundImageUrl,
@@ -597,11 +633,13 @@ test("plan background uses multipart image upload and supports removal", async (
   expect(upload.body.image.size).toBeGreaterThan(0);
   await page.goto("/edit-plan/fitness");
   await page
-    .getByRole("button", { name: "Remove background image", exact: true })
+    .getByRole("button", { name: "Edit cover image", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
+    .getByRole("button", { name: "Remove background image", exact: true })
     .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.plans.find((plan: any) => plan.id === "fitness").backgroundImageUrl,

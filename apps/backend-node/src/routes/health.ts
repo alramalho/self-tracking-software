@@ -5,9 +5,14 @@ import { appleHealthSyncBatchSchema } from "@/services/health/apple/schemas";
 import {
   applyWorkoutReconciliations,
   getWorkoutReconciliationPreview,
+  updateWorkoutPrivacy,
   WorkoutReconciliationError,
 } from "@/services/health/apple/reconciliation/service";
-import { workoutReconciliationRequestSchema } from "@/services/health/apple/reconciliation/schemas";
+import {
+  workoutPrivacyUpdateSchema,
+  workoutReconciliationRequestSchema,
+} from "@/services/health/apple/reconciliation/schemas";
+import { getWorkoutDetail } from "@/services/health/apple/reconciliation/detail";
 import {
   disconnectAppleHealth,
   getAppleHealthStatus,
@@ -134,6 +139,28 @@ router.get(
   },
 );
 
+router.get(
+  "/apple/workouts/:id",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const detail = await getWorkoutDetail(req.user!.id, req.params.id);
+      if (!detail) {
+        res.status(404).json({ error: "Workout not available" });
+        return;
+      }
+      res.json(detail);
+    } catch (error) {
+      logger.error("Failed to load workout details", {
+        userId: req.user!.id,
+        workoutId: req.params.id,
+        error,
+      });
+      res.status(500).json({ error: "Failed to load workout details" });
+    }
+  },
+);
+
 router.post(
   "/apple/workouts/reconcile",
   requireAuth,
@@ -160,6 +187,32 @@ router.post(
       res.status(500).json({
         error: "Failed to reconcile Apple Health workouts",
       });
+    }
+  },
+);
+
+router.patch(
+  "/apple/workouts/privacy",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const parsed = workoutPrivacyUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    try {
+      res.json(await updateWorkoutPrivacy(req.user!.id, parsed.data));
+    } catch (error) {
+      if (error instanceof WorkoutReconciliationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      logger.error("Failed to update workout privacy", {
+        userId: req.user!.id,
+        error,
+      });
+      res.status(500).json({ error: "Failed to update Watch data privacy" });
     }
   },
 );

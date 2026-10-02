@@ -3,8 +3,40 @@ import type {
   PlanWeekScheduledSession,
 } from "@tsw/prisma/plan-week";
 import type { ActivityEntry, Milestone, Plan } from "@/core/types";
+import type { LucideIcon } from "lucide-react-native";
 export interface PlanEditorProps {
   plan?: Plan;
+}
+export type PlanEditorSection =
+  | "overview"
+  | "goal"
+  | "emoji"
+  | "frequency"
+  | "structure"
+  | "visibility"
+  | "duration"
+  | "activities"
+  | "milestones"
+  | "background";
+export interface PlanEditorOverviewItem {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  onPress: () => void;
+}
+export interface PlanEditorOverviewProps {
+  emoji: string;
+  items: PlanEditorOverviewItem[];
+  canSave: boolean;
+  saving: boolean;
+  onSave: () => void;
+}
+export interface PlanEditorChoiceProps {
+  label: string;
+  description?: string;
+  icon?: LucideIcon;
+  selected: boolean;
+  onPress: () => void;
 }
 export interface MilestoneOverviewProps {
   milestones: Milestone[];

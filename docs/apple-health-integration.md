@@ -185,10 +185,16 @@ The first useful product slice is likely:
 
 ## Privacy and App Store boundary
 
-Health data is excluded from AI coach prompts, model traces, analytics payloads,
-and general application logs. Adding health data to any AI context requires a
-separate, explicit consent design and a review of every processor that could
-receive it. This implementation only logs batch counts and user IDs.
+Imported health data remains excluded from general activity queries used by AI.
+The native plan coaching settings now provide a separate, explicit opt-in for
+workout summaries and sleep summaries, off by default for each plan. Only those
+selected summaries enter that plan’s coach context. They are excluded from
+unscoped coach memory, title generation and response-content traces; tagged
+conversation history is filtered when the plan or permission changes. Earlier
+messages remain visible. See [plan coaching](plan-coaching-monitoring.md) for
+the implemented scope and verification limits. Import logging still contains
+batch counts and user IDs only. Processor and release disclosure review below
+is still required before releasing this new opt-in path.
 
 Before release:
 

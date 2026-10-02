@@ -2,6 +2,7 @@ import * as cron from "node-cron";
 import { logger } from "../utils/logger";
 import { recurringJobService } from "./recurringJobService";
 import { deliverFollowThrough } from "./follow-through/delivery";
+import { deliverPlanMonitoring } from "./coach/monitoring/service";
 import { syncAllGarminIntegrations } from "./health/garmin/service";
 
 interface CronConfig {
@@ -33,6 +34,9 @@ export class CronScheduler {
     }
 
     logger.info("Starting cron scheduler...");
+    this.tasks.push(cron.schedule("7 * * * *", async () => {
+      await deliverPlanMonitoring();
+    }, { noOverlap: true }));
     this.tasks.push(
       cron.schedule(
         "*/2 * * * *",

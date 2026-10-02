@@ -293,7 +293,7 @@ export class PlanGenerationPipeline {
     const result = await generateObject({
       model: gateway(activityModel),
       schema: ActivitiesSchema,
-      system: activitySystem,
+      instructions: activitySystem,
       prompt: activityPrompt,
       temperature: 0.3,
     });
@@ -427,7 +427,7 @@ export class PlanGenerationPipeline {
     const result = await generateObject({
       model: gateway(sessionModel),
       schema: SessionsSchema,
-      system: sessionSystem,
+      instructions: sessionSystem,
       prompt: sessionPrompt,
       temperature: 0.3,
     });

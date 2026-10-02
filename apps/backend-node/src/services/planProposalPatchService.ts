@@ -7,6 +7,7 @@ import {
 } from "@tsw/prisma";
 import { z } from "zod/v4";
 import { prisma } from "../utils/prisma";
+import { planProposalBasis, StaleCoachProposalError } from "./coach/monitoring/proposal-basis";
 
 const PlanScalarPatchSchema = z
   .object({
@@ -39,9 +40,19 @@ const MilestonePatchSchema = z
   })
   .strict();
 
+/** A measurement the coach needs that the plan's activities don't capture (e.g. body weight). */
+const TrackPatchSchema = z
+  .object({
+    title: z.string().min(1).max(60),
+    measure: z.string().min(1).max(24),
+    emoji: z.string().min(1).max(8),
+  })
+  .strict();
+
 export const PlanProposalPatchSchema = z
   .object({
     archive: z.literal(true).optional(),
+    track: z.array(TrackPatchSchema).max(2).optional(),
     plan: PlanScalarPatchSchema.optional(),
     sessions: z
       .object({
@@ -78,6 +89,7 @@ export type PlanProposalPatchChange = {
 
 function hasRelationChanges(patch: PlanProposalPatch): boolean {
   return !!(
+    patch.track?.length ||
     patch.sessions?.upsert?.length ||
     patch.sessions?.deleteIds?.length ||
     patch.milestones?.upsert?.length ||
@@ -214,12 +226,14 @@ export async function executePlanProposalPatch(params: {
   planId: string;
   patch: PlanProposalPatch;
   userId?: string;
+  expectedBasis?: string;
 }): Promise<{ changes: PlanProposalPatchChange[]; plan: PlanForPatch }> {
   const { planId, patch, userId } = params;
 
   assertArchiveIsStandalone(patch);
 
   return prisma.$transaction(async (tx) => {
+    if (params.expectedBasis) await tx.$queryRaw`SELECT "id" FROM "plans" WHERE "id" = ${planId} FOR UPDATE`;
     const plan = await tx.plan.findFirst({
       where: {
         id: planId,
@@ -232,6 +246,7 @@ export async function executePlanProposalPatch(params: {
     if (!plan) {
       throw new Error("Plan not found");
     }
+    if (params.expectedBasis && params.expectedBasis !== planProposalBasis(plan)) throw new StaleCoachProposalError();
 
     const changes: PlanProposalPatchChange[] = [];
 
@@ -288,6 +303,30 @@ export async function executePlanProposalPatch(params: {
           success: true,
         });
       }
+    }
+
+    // Reuse the person's existing activity with the same name, so weight stays one history.
+    for (const track of patch.track || []) {
+      const existing = await tx.activity.findFirst({
+        where: {
+          userId: plan.userId,
+          deletedAt: null,
+          title: { equals: track.title, mode: "insensitive" },
+        },
+      });
+      const activity =
+        existing ??
+        (await tx.activity.create({ data: { userId: plan.userId, ...track } }));
+      await tx.plan.update({
+        where: { id: planId },
+        data: { activities: { connect: { id: activity.id } } },
+      });
+      changes.push({
+        operation: "track",
+        entity: "plan",
+        id: activity.id,
+        success: true,
+      });
     }
 
     for (const sessionId of patch.sessions?.deleteIds || []) {

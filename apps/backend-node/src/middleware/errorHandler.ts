@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { FailureCoalescer } from "../services/telegram/failureCoalescer";
 import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
 import { AuthenticatedRequest } from "./auth";
@@ -27,6 +28,16 @@ const shouldSendTelegramNotification = (req: Request, res: Response) => {
   return process.env.BACKEND_5XX_TELEGRAM_ENABLED !== "false";
 };
 
+// A user retrying a broken request should produce one alert, not one per tap.
+const failureCoalescer = new FailureCoalescer((summary) => {
+  new TelegramService().sendRepeatedFailureSummary(summary).catch((error) => {
+    logger.error("Failed to send Telegram repeated-failure summary:", error);
+  });
+});
+
+const endpointOf = (req: Request) =>
+  `${req.method} ${req.route?.path ? `${req.baseUrl}${req.route.path}` : req.originalUrl.split("?")[0]}`;
+
 export const responseMonitor = (
   req: Request,
   res: Response,
@@ -37,12 +48,16 @@ export const responseMonitor = (
       return;
     }
 
+    const authenticatedReq = req as AuthenticatedRequest;
+    const userUsername = authenticatedReq.user?.username || "anonymous";
+    const userId = authenticatedReq.user?.id || "unknown";
+
+    if (!failureCoalescer.shouldAlert(endpointOf(req), res.statusCode, userUsername)) {
+      return;
+    }
+
     try {
       const telegramService = new TelegramService();
-      const authenticatedReq = req as AuthenticatedRequest;
-      const userUsername = authenticatedReq.user?.username || "anonymous";
-      const userId = authenticatedReq.user?.id || "unknown";
-
       await telegramService.sendErrorNotification({
         errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${req.originalUrl || req.url}`,
         userUsername,

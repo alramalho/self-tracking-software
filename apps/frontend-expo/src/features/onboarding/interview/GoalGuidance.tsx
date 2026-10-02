@@ -1,119 +1,45 @@
-import {
-  Check,
-  Circle,
-  CircleAlert,
-  Heart,
-  Route,
-  Target,
-} from "lucide-react-native";
+import { CheckCircle2, CircleAlert } from "lucide-react-native";
 import { View } from "react-native";
-import type { GoalGuidanceResult } from "@tsw/prisma/follow-through";
+import type { GoalGuidanceResult, InterviewStage } from "@tsw/prisma/follow-through";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 
-export const initialGoalGuidance: GoalGuidanceResult = {
-  requirements: [
-    {
-      key: "goal",
-      label: "A clear target",
-      phrase: "What do you want to achieve?",
-      required: true,
-      passed: false,
-      detail: "Name the outcome you want to work towards.",
-    },
-    {
-      key: "starting-point",
-      label: "Where you are now",
-      phrase: "Your current starting point",
-      required: false,
-      passed: false,
-      detail: "A useful detail for the next step, not a session prescription.",
-    },
-    {
-      key: "motivation",
-      label: "Why it matters",
-      phrase: "What makes it worth doing?",
-      required: false,
-      passed: false,
-      detail: "Helpful context, but you can continue without it.",
-    },
-  ],
-};
+export const guidanceStep = (stage: InterviewStage) =>
+  stage === "baseline" || stage === "motivation" ? stage : "goal";
 
-function iconFor(key: string) {
-  if (key.includes("motivat")) return Heart;
-  if (key.includes("start") || key.includes("baseline")) return Route;
-  return Target;
+export function initialGoalGuidance(stage: InterviewStage): GoalGuidanceResult {
+  const step = guidanceStep(stage);
+  return {
+    requirements: [{
+      key: step,
+      label: step === "goal" ? "A clear target" : step === "baseline" ? "Starting point" : "Personal reason",
+      phrase: step === "goal" ? "Say what you want to achieve." : step === "baseline" ? "Say where you are now." : "Say why this matters to you.",
+      required: step === "goal",
+      passed: false,
+      detail: step === "goal" ? "Name the outcome you want to work towards." : "You can skip this step.",
+    }],
+  };
 }
 
-export function GoalGuidance({
-  result,
-  loading,
-}: {
-  result: GoalGuidanceResult;
-  loading: boolean;
-}) {
-  const colors = useColors();
+export function guidanceForStage(result: GoalGuidanceResult, stage: InterviewStage): GoalGuidanceResult {
+  const step = guidanceStep(stage);
+  const matched = result.requirements.find((item) => item.key === step || (step === "baseline" && item.key === "starting-point"));
+  return matched
+    ? { requirements: [{ ...matched, key: step }] }
+    : initialGoalGuidance(stage);
+}
+
+export function GoalGuidance({ result, loading }: { result: GoalGuidanceResult; loading: boolean }) {
+  const c = useColors();
+  const check = result.requirements[0];
+  if (!check) return null;
+  const Icon = check.passed ? CheckCircle2 : CircleAlert;
   return (
-    <View
-      accessible
-      accessibilityLabel="What to include in your goal"
-      testID="goal-guidance"
-      style={{ gap: 8 }}
-    >
-      {result.requirements.map((requirement) => {
-        const Icon = iconFor(requirement.key);
-        const StatusIcon = requirement.passed
-          ? Check
-          : requirement.required
-            ? CircleAlert
-            : Circle;
-        const statusColor = requirement.passed
-          ? "#10b981"
-          : requirement.required
-            ? colors.accent
-            : colors.muted;
-        return (
-          <View
-            key={requirement.key}
-            style={{
-              minHeight: 48,
-              paddingHorizontal: 12,
-              paddingVertical: 9,
-              borderRadius: 13,
-              borderWidth: 1,
-              borderColor: requirement.passed
-                ? "#10b98155"
-                : colors.inputBorder,
-              backgroundColor: colors.card,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-              opacity: loading && !requirement.passed ? 0.7 : 1,
-            }}
-          >
-            <Icon size={17} color={colors.accent} strokeWidth={2} />
-            <View style={{ flex: 1, gap: 1 }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 13,
-                  lineHeight: 17,
-                  fontWeight: "700",
-                }}
-              >
-                {requirement.label}
-              </Text>
-              <Text
-                style={{ color: colors.muted, fontSize: 12, lineHeight: 16 }}
-              >
-                {requirement.phrase}
-              </Text>
-            </View>
-            <StatusIcon size={16} color={statusColor} strokeWidth={2} />
-          </View>
-        );
-      })}
+    <View accessible accessibilityLabel="Answer check" testID="goal-guidance" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Icon size={17} color={check.passed ? "#10b981" : c.muted} />
+      <Text style={{ color: check.passed ? c.text : c.muted, fontSize: 13, lineHeight: 19, flex: 1 }}>
+        {loading ? "Checking your answer…" : check.detail}
+      </Text>
     </View>
   );
 }

@@ -20,6 +20,7 @@ import type { SleepScoresResponse } from "./sleep-types";
 import type { WorkoutReconciliationPreview } from "./workout-types";
 import { uploadHealth } from "./upload";
 import { isTransientHealthError, nextHealthSyncRetryDelay } from "./sync-retry";
+import { track } from "@/analytics/client";
 
 const Context = createContext<HealthContextValue | null>(null);
 export function useHealth() {
@@ -128,6 +129,7 @@ export function HealthProvider({ children }: ChildrenProps) {
       if (connecting) {
         await AsyncStorage.setItem(key, "true");
         setEnabled(true);
+        track("health-connected", { provider: "apple-health" });
         await healthBridge
           .setWorkoutDetectionEnabled(true)
           .catch(() => undefined);
@@ -266,8 +268,11 @@ export function HealthProvider({ children }: ChildrenProps) {
           params: { returnUrl },
         })
       ).data.authorizationUrl;
+      const wasConnected = !!garminStatus.data?.connected;
       await WebBrowser.openAuthSessionAsync(authorizationUrl, returnUrl);
-      await garminStatus.refetch();
+      const status = await garminStatus.refetch();
+      if (!wasConnected && status.data?.connected)
+        track("health-connected", { provider: "garmin" });
     } catch (failure) {
       setGarminError(failure);
     } finally {

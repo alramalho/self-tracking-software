@@ -37,6 +37,16 @@ export const voiceLogUnresolvedSchema = z.object({
   reason: z.string().trim().min(1).max(300),
 });
 
+export const voiceLogPlanMatchSchema = z.object({
+  planId: z.string().min(1),
+  planGoal: z.string().trim().min(1).max(200),
+  planEmoji: z.string().trim().max(8).nullable().optional(),
+  activityId: z.string().min(1),
+  activityTitle: z.string().trim().min(1).max(120),
+  contextText: z.string().trim().min(1).max(500),
+  confidence: z.number().min(0).max(1),
+});
+
 export const voiceLogExtractionSchema = z.object({
   activities: z.array(voiceLogActivitySchema).max(10),
   metrics: z.array(voiceLogMetricSchema).max(10),
@@ -44,14 +54,31 @@ export const voiceLogExtractionSchema = z.object({
   unresolved: z.array(voiceLogUnresolvedSchema).max(10),
 });
 
-export const voiceLogCommitSchema = z.object({
-  clientRequestId: z.string().uuid(),
-  transcript: z.string().trim().min(1).max(4_000),
-  timezone: z.string().trim().min(1).max(100),
-  activities: z.array(voiceLogActivitySchema.omit({ confidence: true })).max(10),
-  metrics: z.array(voiceLogMetricSchema.omit({ confidence: true })).max(10),
-  note: voiceLogNoteSchema,
-});
+export const voiceLogCommitSchema = z
+  .object({
+    clientRequestId: z.string().uuid(),
+    transcript: z.string().trim().min(1).max(4_000),
+    timezone: z.string().trim().min(1).max(100),
+    activities: z
+      .array(voiceLogActivitySchema.omit({ confidence: true }))
+      .max(10),
+    metrics: z.array(voiceLogMetricSchema.omit({ confidence: true })).max(10),
+    note: voiceLogNoteSchema,
+    planContextPlanId: z.string().trim().min(1).nullable().optional(),
+    planContextActivityId: z.string().trim().min(1).nullable().optional(),
+    planContextText: z.string().trim().min(1).max(500).nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    const hasPlan = !!value.planContextPlanId;
+    const hasContext = !!value.planContextText;
+    if (hasPlan !== hasContext) {
+      context.addIssue({
+        code: "custom",
+        path: [hasPlan ? "planContextText" : "planContextPlanId"],
+        message: "Plan context requires both a plan and context text.",
+      });
+    }
+  });
 
 export const voiceLogRefinementContextSchema = z.object({
   originalTranscript: z.string().trim().min(1).max(4_000),
@@ -61,9 +88,13 @@ export const voiceLogRefinementContextSchema = z.object({
 export type VoiceLogActivity = z.infer<typeof voiceLogActivitySchema>;
 export type VoiceLogMetric = z.infer<typeof voiceLogMetricSchema>;
 export type VoiceLogNote = z.infer<typeof voiceLogNoteSchema>;
+export type VoiceLogUnresolved = z.infer<typeof voiceLogUnresolvedSchema>;
+export type VoiceLogPlanMatch = z.infer<typeof voiceLogPlanMatchSchema>;
 export type VoiceLogExtraction = z.infer<typeof voiceLogExtractionSchema>;
 export type VoiceLogCommit = z.infer<typeof voiceLogCommitSchema>;
-export type VoiceLogRefinementContext = z.infer<typeof voiceLogRefinementContextSchema>;
+export type VoiceLogRefinementContext = z.infer<
+  typeof voiceLogRefinementContextSchema
+>;
 
 export type VoiceLogActivityPreview = VoiceLogActivity & {
   title: string;
@@ -83,4 +114,5 @@ export type VoiceLogPreview = {
   metrics: VoiceLogMetricPreview[];
   note: VoiceLogNote;
   unresolved: z.infer<typeof voiceLogUnresolvedSchema>[];
+  planMatches: VoiceLogPlanMatch[];
 };

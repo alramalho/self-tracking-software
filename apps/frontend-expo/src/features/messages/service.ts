@@ -50,6 +50,7 @@ export async function sendMessage(
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          planId: input.planId,
           message: input.message,
           imageAttachments: input.imageAttachments,
           coachStarterId: input.coachStarterId,

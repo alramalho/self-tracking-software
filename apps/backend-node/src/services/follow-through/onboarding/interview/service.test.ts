@@ -7,6 +7,8 @@ const generate = vi.hoisted(() => vi.fn());
 vi.mock("../../../aiService", () => ({
   aiService: { generateStructuredResponse: generate },
 }));
+const realistic = vi.hoisted(() => vi.fn());
+vi.mock("./guidance", () => ({ goalLooksRealistic: realistic }));
 import { interview, enforceInterviewResult } from "./service";
 import { interviewRequestSchema } from "./schema";
 import type { InterviewContext } from "./types";
@@ -54,6 +56,8 @@ function result(): InterviewResult {
 }
 beforeEach(() => {
   generate.mockReset();
+  realistic.mockReset();
+  realistic.mockResolvedValue(true);
 });
 describe("onboarding interview gate", () => {
   it("uses the full conversation and does not advance a rejected answer after repeated attempts", async () => {
@@ -154,10 +158,13 @@ describe("onboarding interview gate", () => {
       "I need one more concrete detail before this fits your plan.",
     );
   });
-  it("requires a baseline after the goal stage", () =>
+  it("does not require a baseline before continuing", () => {
+    const value = result();
+    value.facts.baseline = "";
     expect(() =>
-      enforceInterviewResult({ ...state, stage: "baseline" }, result()),
-    ).toThrow("fully understood"));
+      enforceInterviewResult({ ...state, stage: "rhythm" }, value),
+    ).not.toThrow();
+  });
   it("rejects malformed structured output", async () => {
     generate.mockResolvedValue({ accepted: true });
     await expect(
@@ -175,6 +182,86 @@ describe("onboarding interview gate", () => {
     expect(() =>
       enforceInterviewResult({ ...state, stage: "support" }, value),
     ).toThrow("activity is incomplete");
+  });
+  it("asks for an explicit plan coaching choice after the weekly target", () => {
+    const value = result();
+    const checked = enforceInterviewResult(
+      { ...state, stage: "rhythm" },
+      value,
+    );
+    expect(checked.nextQuestion).toEqual({
+      title: "Would you like coaching for this plan?",
+      purpose:
+        "A coach can help shape sessions and suggest adjustments. Or you can track your own plan for free.",
+      options: ["Yes, coach this plan", "No, just track it"],
+    });
+  });
+  it.each([
+    ["Yes, coach this plan", true],
+    ["No, just track it", false],
+    ["Help me shape a plan", true],
+    ["I know my plan — just tracking", false],
+  ])("keeps the selected support branch for %s", (answer, wantsCoaching) => {
+    const value = result();
+    Object.assign(value.facts, {
+      activityTitle: "Reading",
+      measure: "pages",
+      nextStep: "Read a chapter",
+      wantsCoaching: !wantsCoaching,
+    });
+    const checked = enforceInterviewResult(
+      { ...state, stage: "support" },
+      value,
+      answer,
+    );
+    expect(checked.facts.wantsCoaching).toBe(wantsCoaching);
+  });
+  it("gives free tracking an action that does not depend on a coach", () => {
+    const value = result();
+    Object.assign(value.facts, {
+      activityTitle: "Running",
+      measure: "kilometers",
+      nextStep:
+        "Agree a first week with your coach before increasing your running.",
+      wantsCoaching: true,
+    });
+    const checked = enforceInterviewResult(
+      { ...state, stage: "support" },
+      value,
+      "No, just track it",
+    );
+    expect(checked.facts.wantsCoaching).toBe(false);
+    expect(checked.facts.nextStep).toBe("Log your next running session.");
+  });
+  it("preserves a free plan's independent first step through review", () => {
+    const value = result();
+    Object.assign(value.facts, {
+      activityTitle: "Running",
+      measure: "kilometers",
+      nextStep: "Log your next easy run.",
+      wantsCoaching: false,
+    });
+    const checked = enforceInterviewResult(
+      { ...state, stage: "review" },
+      value,
+      "This feels right",
+    );
+    expect(checked.facts.nextStep).toBe("Log your next easy run.");
+  });
+  it("repairs a coach-dependent first step repeated at free-plan review", () => {
+    const value = result();
+    Object.assign(value.facts, {
+      activityTitle: "Running",
+      measure: "kilometers",
+      nextStep: "Ask your coach to set the first week.",
+      wantsCoaching: false,
+    });
+    const checked = enforceInterviewResult(
+      { ...state, stage: "review" },
+      value,
+      "This feels right",
+    );
+    expect(checked.facts.nextStep).toBe("Log your next running session.");
   });
   it("rejects days that exceed the weekly target", () => {
     const value = result();
@@ -194,7 +281,7 @@ describe("onboarding interview gate", () => {
       }).success,
     ).toBe(false);
   });
-  it("uses existing activity context to ask for a plan target instead of current frequency", async () => {
+  it("passes existing activity context without replacing the model question", async () => {
     generate.mockResolvedValue(result());
     const activityContext: InterviewContext = {
       existingActivities: [
@@ -217,14 +304,13 @@ describe("onboarding interview gate", () => {
 
     const response = await interview(input, activityContext);
 
-    expect(response.nextQuestion.title).toBe(
-      "What would help this running plan fit your current starting point?",
-    );
+    expect(response.nextQuestion.title).toBe("What are you reading now?");
+    expect(response.nextQuestion.options).toEqual([]);
     expect(JSON.parse(generate.mock.calls[0][0].prompt).appContext).toEqual(
       activityContext,
     );
   });
-  it("keeps the rhythm clarification about cadence, not uniform session duration", async () => {
+  it("moves from weekly target to coaching choice without imposing session duration", async () => {
     generate.mockResolvedValue({
       ...result(),
       facts: {
@@ -236,15 +322,15 @@ describe("onboarding interview gate", () => {
 
     const response = await interview(
       {
-        state: { ...state, stage: "baseline" },
-        answer: "I can run 10 km comfortably",
+        state: { ...state, stage: "rhythm" },
+        answer: "Three times a week, with flexible session structure",
         timezone: "Europe/Lisbon",
       },
       { existingActivities: [] },
     );
 
     expect(response.nextQuestion.title).toBe(
-      "What weekly target should we set for your activity plan?",
+      "Would you like coaching for this plan?",
     );
     expect(
       response.nextQuestion.options.every((option) => !/minute/i.test(option)),
@@ -264,47 +350,39 @@ describe("onboarding interview gate", () => {
 
     expect("durationMinutes" in response.facts).toBe(false);
   });
-  it("removes an AI claim that known activity history cannot be inspected", async () => {
-    generate.mockResolvedValue({
+  it("pushes back once on a clearly unrealistic deadline, then respects the person's choice", async () => {
+    const lose20kg = {
       ...result(),
-      accepted: false,
-      summary: "I can't access or inspect your running activities.",
-      question: {
-        title: "How often do you run?",
-        purpose: "I need more detail.",
-        options: [],
-      },
       facts: {
         ...state.facts,
-        activityTitle: "Running",
-        baseline: "I run occasionally",
+        goal: "Lose 20 kg",
+        baseline: "95 kg, no training",
+        targetDate: "2026-10-24",
       },
+    };
+    generate.mockResolvedValue(lose20kg);
+    realistic.mockResolvedValue(false);
+    const rhythm = { ...state, stage: "rhythm" as const };
+
+    const first = await interview({ state: rhythm, answer: "4 times a week", timezone: "UTC" });
+    expect(first.accepted).toBe(false);
+    expect(first.question.title).toMatch(/unrealistic/);
+    expect(first.question.options).toContain("Keep it as it is");
+
+    const insisted = await interview({
+      state: {
+        ...rhythm,
+        turns: [{ stage: "rhythm", question: first.question.title, answer: "4 times a week", feedback: first.summary, accepted: false }],
+      },
+      answer: "Keep it as it is",
+      timezone: "UTC",
     });
-
-    const response = await interview(
-      {
-        state: {
-          ...state,
-          stage: "baseline",
-          facts: { ...state.facts, activityTitle: "Running" },
-        },
-        answer: "I run occasionally",
-        timezone: "Europe/Lisbon",
-      },
-      {
-        existingActivities: [
-          {
-            title: "Running",
-            measure: "kilometers",
-            entryCount: 18,
-            lastLoggedAt: "2026-09-15",
-          },
-        ],
-      },
-    );
-
-    expect(response.summary).not.toMatch(/can't access|inspect/i);
-    expect(response.question.title).not.toMatch(/how often do you run/i);
-    expect(response.question.title).toMatch(/starting point/i);
+    expect(insisted.accepted).toBe(true);
+    expect(realistic).toHaveBeenCalledTimes(1);
+  });
+  it("does not run the realism check without a target date", async () => {
+    generate.mockResolvedValue(result());
+    await interview({ state: { ...state, stage: "rhythm" }, answer: "3 times a week", timezone: "UTC" });
+    expect(realistic).not.toHaveBeenCalled();
   });
 });

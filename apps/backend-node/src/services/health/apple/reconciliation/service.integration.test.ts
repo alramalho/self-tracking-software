@@ -6,6 +6,7 @@ import { disconnectAppleHealth } from "../syncService";
 import {
   applyWorkoutReconciliations,
   getWorkoutReconciliationPreview,
+  updateWorkoutPrivacy,
 } from "./service";
 
 const TEST_USER_ID = "test-health-reconciliation-user";
@@ -105,6 +106,24 @@ describe("Apple Health workout reconciliation persistence", () => {
     expect(linkedEntry.distanceMeters).toBeCloseTo(5884.797, 3);
     expect(linkedEntry.durationSeconds).toBe(1769);
 
+    const privacy = await updateWorkoutPrivacy(TEST_USER_ID, {
+      healthWorkoutId: workout.id,
+      shareHealthData: true,
+      makeDefault: true,
+    });
+    expect(privacy).toEqual({
+      healthDataIsPublic: true,
+      shareHealthDataByDefault: true,
+    });
+    expect(
+      (await getWorkoutReconciliationPreview(TEST_USER_ID)).items[0].resolved
+        ?.healthDataIsPublic,
+    ).toBe(true);
+    expect(
+      (await prisma.user.findUniqueOrThrow({ where: { id: TEST_USER_ID } }))
+        .healthWorkoutDataIsPublicByDefault,
+    ).toBe(true);
+
     const retry = await applyWorkoutReconciliations(TEST_USER_ID, [
       {
         healthWorkoutId: workout.id,
@@ -172,7 +191,9 @@ describe("Apple Health workout reconciliation persistence", () => {
     await disconnectAppleHealth(TEST_USER_ID, true);
 
     expect(
-      await prisma.activityEntry.findUnique({ where: { id: importedEntry.id } }),
+      await prisma.activityEntry.findUnique({
+        where: { id: importedEntry.id },
+      }),
     ).toBeNull();
     expect(
       await prisma.activityEntry.findUnique({ where: { id: manualEntry.id } }),

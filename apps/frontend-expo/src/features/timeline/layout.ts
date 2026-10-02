@@ -36,19 +36,31 @@ export function containsEntry(item: FeedItem, entryId?: string) {
   );
 }
 
+export function containsNotificationTarget(
+  item: FeedItem,
+  entryId?: string,
+  achievementPostId?: string,
+) {
+  return (
+    containsEntry(item, entryId) ||
+    (!!achievementPostId && item.achievement?.id === achievementPostId)
+  );
+}
+
 // Pair only adjacent compact cards. Photos, expanded cards and the seen divider
 // occupy a full row without changing chronological order or splitting shared logs.
 export function timelineRows(
   rows: TimelineRow[],
   expanded: ReadonlySet<string>,
   highlightedEntryId?: string,
+  highlightedAchievementPostId?: string,
 ): TimelineRow[] {
   const result: TimelineRow[] = [];
   for (const row of rows) {
     const compact =
       !!row.item?.entry &&
       !expanded.has(row.id) &&
-      !containsEntry(row.item, highlightedEntryId) &&
+      !containsNotificationTarget(row.item, highlightedEntryId, highlightedAchievementPostId) &&
       feedPhotos(row.item).length === 0;
     const previous = result.at(-1);
     if (compact && previous?.compact && !previous.secondary)

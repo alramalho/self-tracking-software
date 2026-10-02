@@ -106,6 +106,7 @@ const healthWorkoutReconciliationInclude = {
     healthWorkout: {
       select: {
         id: true,
+        provider: true,
         activityTypeName: true,
         startAt: true,
         endAt: true,
@@ -141,6 +142,7 @@ function attachOwnHealthWorkout(entry: any): any {
     ...rest,
     healthWorkout: {
       id: healthLink.healthWorkout.id,
+      provider: healthLink.healthWorkout.provider,
       displayName: healthLink.healthWorkout.activityTypeName,
       startAt: healthLink.healthWorkout.startAt,
       endAt: healthLink.healthWorkout.endAt,

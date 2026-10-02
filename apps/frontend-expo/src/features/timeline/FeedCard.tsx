@@ -72,6 +72,7 @@ export function FeedCard({
     (plan) => plan.progress?.habitAchievement?.isAchieved,
   );
   const own = (entry?.userId ?? user?.id) === me.data?.id;
+  const workoutProvider = entry?.healthWorkout?.provider === "garmin_connect" ? "Garmin Connect" : "Apple Watch";
   const reactions = entry?.reactions ?? post?.reactions ?? [];
 
   const base = entry
@@ -259,10 +260,9 @@ export function FeedCard({
           <ActivitySummary item={item} />
           {entry.healthWorkout && (
             <Pressable
-              accessibilityRole={own ? "button" : undefined}
-              accessibilityLabel="Apple Watch details"
-              disabled={!own}
-              onPress={() => own && router.push(`/health-workout/${entry.healthWorkout!.id}` as never)}
+              accessibilityRole="button"
+              accessibilityLabel={`${workoutProvider} details`}
+              onPress={() => router.push(`/health-workout/${entry.healthWorkout!.id}` as never)}
               style={({ pressed }) => ({
                 marginTop: 12,
                 minHeight: 48,
@@ -278,7 +278,7 @@ export function FeedCard({
             >
               <HeartPulse size={18} color={c.muted} strokeWidth={1.8} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>Apple Watch</Text>
+                <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>{workoutProvider}</Text>
                 <Text style={{ color: c.muted, fontSize: 12 }} numberOfLines={1}>
                   {[
                     entry.healthWorkout.averageHeartRateBpm == null ? null : `${Math.round(entry.healthWorkout.averageHeartRateBpm)} bpm avg`,
@@ -287,7 +287,7 @@ export function FeedCard({
                   ].filter(Boolean).join(" · ")}
                 </Text>
               </View>
-              {own && <ChevronRight size={17} color={c.muted} />}
+              <ChevronRight size={17} color={c.muted} />
             </Pressable>
           )}
         </>

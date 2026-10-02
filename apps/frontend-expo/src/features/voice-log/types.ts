@@ -36,6 +36,16 @@ export interface VoiceLogUnresolved {
   reason: string;
 }
 
+export interface VoiceLogPlanMatch {
+  planId: string;
+  planGoal: string;
+  planEmoji?: string | null;
+  activityId: string;
+  activityTitle: string;
+  contextText: string;
+  confidence: number;
+}
+
 export interface VoiceLogAlreadyLogged extends VoiceLogActivity {
   existingQuantity: number;
   existingEntryId?: string;
@@ -57,6 +67,7 @@ export interface VoiceLogPreview {
   metrics: VoiceLogMetric[];
   note: VoiceLogNote;
   unresolved: VoiceLogUnresolved[];
+  planMatches: VoiceLogPlanMatch[];
   alreadyLogged?: VoiceLogAlreadyLogged[];
   planSuggestions?: VoiceLogPlanSuggestion[];
 }
@@ -65,6 +76,7 @@ export interface VoiceLogDraft {
   preview: VoiceLogPreview;
   selectedActivityKeys: string[];
   selectedMetricKeys: string[];
+  selectedPlanId?: string | null;
   savedAt: string;
 }
 
@@ -111,6 +123,9 @@ export interface VoiceLogCommitRequest {
   activities: VoiceLogCommitActivity[];
   metrics: VoiceLogCommitMetric[];
   note: VoiceLogNote;
+  planContextPlanId?: string | null;
+  planContextActivityId?: string | null;
+  planContextText?: string | null;
 }
 
 export interface VoiceLogCommitResponse {

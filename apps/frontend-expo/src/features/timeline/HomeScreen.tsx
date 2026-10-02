@@ -42,7 +42,7 @@ import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { MetricLogger } from "../metrics/MetricLogger";
 import { useTimelineSeen } from "./useTimelineSeen";
 import type { TimelineRow } from "./types";
-import { containsEntry, timelineRows } from "./layout";
+import { containsNotificationTarget, timelineRows } from "./layout";
 import { ProfileGlow } from "@/components/ProfileGlow";
 import { PendingVoiceLogCard } from "@/features/voice-log/PendingVoiceLogCard";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
@@ -83,21 +83,34 @@ export default function HomeScreen() {
     user.data,
     items,
   );
-  const { activityEntryId } = useLocalSearchParams<{
+  const { activityEntryId, achievementPostId } = useLocalSearchParams<{
     activityEntryId?: string;
+    achievementPostId?: string;
   }>();
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const rows = timelineRows(seenRows, expanded, activityEntryId);
+  const rows = timelineRows(
+    seenRows,
+    expanded,
+    activityEntryId,
+    achievementPostId,
+  );
   const list = useRef<FlatList<TimelineRow>>(null);
   useScrollToTop(list);
   const target = rows.findIndex(
     (row) =>
-      (row.item && containsEntry(row.item, activityEntryId)) ||
-      (row.secondary && containsEntry(row.secondary, activityEntryId)),
+      (row.item &&
+        containsNotificationTarget(row.item, activityEntryId, achievementPostId)) ||
+      (row.secondary &&
+        containsNotificationTarget(
+          row.secondary,
+          activityEntryId,
+          achievementPostId,
+        )),
   );
   const scrolledTo = useRef<string | undefined>(undefined);
+  const targetId = activityEntryId ?? achievementPostId;
   useEffect(() => {
-    if (!activityEntryId || scrolledTo.current === activityEntryId) return;
+    if (!targetId || scrolledTo.current === targetId) return;
     if (target >= 0) {
       const timer = setTimeout(() => {
         list.current?.scrollToIndex({
@@ -105,7 +118,7 @@ export default function HomeScreen() {
           viewPosition: 0.25,
           animated: true,
         });
-        scrolledTo.current = activityEntryId;
+        scrolledTo.current = targetId;
       }, 250);
       return () => clearTimeout(timer);
     }
@@ -116,7 +129,7 @@ export default function HomeScreen() {
     )
       void timeline.fetchNextPage();
   }, [
-    activityEntryId,
+    targetId,
     target,
     timeline.hasNextPage,
     timeline.isFetching,
@@ -169,7 +182,11 @@ export default function HomeScreen() {
                               return next;
                             })
                           }
-                          highlighted={containsEntry(card, activityEntryId)}
+                          highlighted={containsNotificationTarget(
+                            card,
+                            activityEntryId,
+                            achievementPostId,
+                          )}
                         />
                       </Reveal>
                     ),

@@ -9,6 +9,9 @@ export async function shareWorkoutCard({ view, title }: ShareWorkoutCardInput) {
   const uri = await captureRef(view, {
     format: "png",
     quality: 1,
+    // Render the full layer tree at its native bounds. UIKit hierarchy snapshots
+    // can omit text inside a clipped/scrolled preview on iOS.
+    useRenderInContext: Platform.OS === "ios",
     result: "tmpfile",
   });
   try {

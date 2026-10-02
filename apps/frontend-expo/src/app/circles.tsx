@@ -8,14 +8,15 @@ import { goBack } from "@/core/navigation";
 import { useAction, usePlans } from "@/data/queries";
 import { api } from "@/data/api";
 import type { CircleList } from "@/features/circles/types";
+import { track } from "@/analytics/client";
 export default function Circles() {
   const plans = usePlans();
   const [search, setSearch] = useState(""), [name, setName] = useState(""), [topic, setTopic] = useState(""), [planId, setPlanId] = useState(""), [code, setCode] = useState("");
   const [creating, setCreating] = useState(false), [discoverable, setDiscoverable] = useState(false);
   const [joinId, setJoinId] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["circles", search], queryFn: async () => (await api.get<CircleList>("/circles", { params: { search } })).data });
-  const join = useAction(async () => { const { data } = await api.post<{ id: string }>("/circles/join", { planId, ...(code.trim() ? { inviteCode: code.trim() } : { id: joinId }) }); router.push(`/circle/${data.id}` as never); setJoinId(null); });
-  const create = useAction(async () => { const { data } = await api.post<{ id: string }>("/circles", { name, topic, planId, discoverable }); setCreating(false); router.push(`/circle/${data.id}` as never); });
+  const join = useAction(async () => { const { data } = await api.post<{ id: string }>("/circles/join", { planId, ...(code.trim() ? { inviteCode: code.trim() } : { id: joinId }) }); track("circle-joined", { method: code.trim() ? "invite-code" : "discover" }); router.push(`/circle/${data.id}` as never); setJoinId(null); });
+  const create = useAction(async () => { const { data } = await api.post<{ id: string }>("/circles", { name, topic, planId, discoverable }); track("circle-joined", { method: "created" }); setCreating(false); router.push(`/circle/${data.id}` as never); });
   const chooser = <>{plans.data?.filter(p => !p.archivedAt && !p.deletedAt).map(plan => <Button key={plan.id} secondary={planId !== plan.id} onPress={() => setPlanId(plan.id)}>{`${plan.emoji} ${plan.goal}`}</Button>)}<Copy muted>Members see your name and this plan’s title. Share individual activity logs when you choose. No automatic sharing, missed-session scores or private notes.</Copy></>;
   return <Screen title="Circles" leading={<IconButton label="Back" icon={ArrowLeft} onPress={goBack} />}>
     <Copy muted>A small group of people making room for similar things. Everyone keeps their own plan.</Copy>

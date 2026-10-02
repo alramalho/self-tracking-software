@@ -1,0 +1,27 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Open Exercise regularly
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: widgets-home
+- tapOn: Log
+- assertVisible: Log Your Metrics
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: widgets-metrics
+- tapOn: Skip
+- tapOn: Coach quick check
+- assertVisible: Did your running session happen\?
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: widgets-coach
+- tapOn: Not now
+- tapOn: Up next
+- assertVisible: Exercise regularly, 18:00
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: widgets-next

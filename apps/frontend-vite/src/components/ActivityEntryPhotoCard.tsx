@@ -8,7 +8,6 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { extractFirstUrl } from "@/lib/linkUtils";
 import { getThemeVariants } from "@/utils/theme";
-import { ReactionBarSelector } from "@charkour/react-reactions";
 import {
   type Activity,
   type ActivityEntry,
@@ -22,7 +21,7 @@ import {
   isToday,
   isYesterday,
 } from "date-fns";
-import { Edit, Maximize2, Rocket, Smile, Sprout } from "lucide-react";
+import { Edit, Maximize2, Rocket, Sprout } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -37,6 +36,7 @@ import CommentSection from "./CommentSection";
 import ImageZoomDialog from "./ImageZoomDialog";
 import LinkifiedText from "./LinkifiedText";
 import LinkPreview from "./LinkPreview";
+import ReactionPicker from "./ReactionPicker";
 import { ProgressRing } from "./ProgressRing";
 import { Separator } from "./ui/separator";
 
@@ -315,16 +315,6 @@ interface ActivityEntryPhotoCardProps {
 interface ReactionCount {
   [key: string]: string[];
 }
-
-const REACTION_EMOJI_MAPPING = {
-  fire: "🔥",
-  rocket: "🚀",
-  love: "♥️",
-  laugh: "😂",
-  oof: "😮‍💨",
-  peach: "🍑",
-  surprise: "😮",
-};
 
 const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   editable,
@@ -837,40 +827,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 <div
                   className={`absolute bottom-0 right-2 z-30 ${activityEntry.description ? "mb-8" : "mb-2"}`}
                 >
-                  {showEmojiPicker ? (
-                    <ReactionBarSelector
-                      iconSize={24}
-                      style={{
-                        border: `1px solid rgba(255, 255, 255, 0.2)`,
-                        backgroundColor: "rgba(255, 255, 255, 0.5)",
-                        zIndex: 40,
-                      }}
-                      reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
-                        ([key, value]) => ({
-                          label: key,
-                          node: <div>{value}</div>,
-                          key,
-                        })
-                      )}
-                      onSelect={(key: any) =>
-                        handleReactionClick(
-                          REACTION_EMOJI_MAPPING[
-                            key as keyof typeof REACTION_EMOJI_MAPPING
-                          ]
-                        )
-                      }
-                    />
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowEmojiPicker(!showEmojiPicker);
-                      }}
-                      className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
-                    >
-                      <Smile className={`h-6 w-6 text-foreground`} />
-                    </button>
-                  )}
+                  <ReactionPicker
+                    show={showEmojiPicker}
+                    onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
+                    onSelect={(emoji) => void handleReactionClick(emoji)}
+                    variant="overlay"
+                  />
                 </div>
               </>
             )}

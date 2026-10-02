@@ -1,3 +1,5 @@
+import { resolveCoachConversation } from "../services/coach/monitoring/requests";
+import { StaleCoachProposalError } from "../services/coach/monitoring/proposal-basis";
 import { Response, Router } from "express";
 import multer from "multer";
 import { subDays } from "date-fns";
@@ -1432,6 +1434,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -1504,6 +1507,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -1582,6 +1586,7 @@ router.post(
         planId: proposal.planId,
         userId: user.id,
         patch,
+        expectedBasis: metadata.planBasis?.[proposal.planId],
       });
 
       // Update proposal status in metadata
@@ -1590,6 +1595,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -1598,7 +1604,7 @@ router.post(
 
       const successCount = changes.filter((c) => c.success).length;
       logger.info(
-        `User ${user.username} accepted proposal: "${proposal.description}" (${successCount} changes successful)`,
+        `User ${user.id} accepted proposal for ${proposal.planId} (${successCount} changes successful)`,
       );
 
       // Conclude week_recap notification if all proposals are now resolved
@@ -1629,6 +1635,10 @@ router.post(
       res.json({ success: true, changes });
     } catch (error) {
       logger.error("Error accepting plan proposal:", error);
+      if (error instanceof StaleCoachProposalError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
       res.status(500).json({ error: "Failed to accept plan proposal" });
     }
   },
@@ -1682,6 +1692,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -1965,6 +1976,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -2036,6 +2048,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -2645,6 +2658,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,
@@ -2720,6 +2734,7 @@ router.post(
         where: { id: messageId },
         data: { metadata },
       });
+      await resolveCoachConversation(user.id, undefined, messageId);
       await concludeResolvedAutonomousCoachNotifications(
         user.id,
         message.chatId,

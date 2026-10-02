@@ -37,5 +37,6 @@
 !/packages/prisma/package.json
 !/packages/prisma/plan-week
 !/packages/prisma/coach-conversation-starters.ts
+!/packages/prisma/reactions.ts
 
 !/packages/prisma/follow-through

@@ -625,7 +625,7 @@ export class AIService {
       };
 
       if (systemPrompt) {
-        generateParams.system = systemPrompt;
+        generateParams.instructions = systemPrompt;
       }
 
       if (messages) {
@@ -690,7 +690,7 @@ export class AIService {
       }
 
       if (systemPrompt) {
-        generateParams.system = systemPrompt;
+        generateParams.instructions = systemPrompt;
       }
 
       if (messages) {

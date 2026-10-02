@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { workoutReconciliationRequestSchema } from "./schemas";
+import {
+  workoutPrivacyUpdateSchema,
+  workoutReconciliationRequestSchema,
+} from "./schemas";
 
 describe("workout reconciliation request schema", () => {
   it("requires an activity entry for link actions", () => {
@@ -36,5 +39,18 @@ describe("workout reconciliation request schema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("defaults privacy updates to activity-only changes", () => {
+    const result = workoutPrivacyUpdateSchema.parse({
+      healthWorkoutId: "health-workout",
+      shareHealthData: true,
+    });
+
+    expect(result).toEqual({
+      healthWorkoutId: "health-workout",
+      shareHealthData: true,
+      makeDefault: false,
+    });
   });
 });

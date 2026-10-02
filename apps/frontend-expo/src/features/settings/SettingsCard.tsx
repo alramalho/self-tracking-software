@@ -7,7 +7,7 @@ export function SettingsCard({
   title,
   description,
   icon: Icon,
-  iconBackground = true,
+  iconBackground = false,
   color,
   onPress,
   trailing,
@@ -24,17 +24,21 @@ export function SettingsCard({
       onPress={onPress}
       style={({ pressed }) => ({
         borderRadius: Icon ? 16 : 8,
-        padding: Icon ? 16 : 12,
+        padding: Icon ? 18 : 12,
         backgroundColor: c.soft + "80",
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        gap: Icon ? 16 : 12,
         opacity: disabled ? 0.5 : pressed ? 0.65 : 1,
       })}
     >
       {Icon && (
         <View
           style={{
+            minWidth: iconBackground ? undefined : 48,
+            minHeight: iconBackground ? undefined : 48,
+            alignItems: "center",
+            justifyContent: "center",
             ...(iconBackground
               ? {
                   padding: 10,
@@ -44,7 +48,7 @@ export function SettingsCard({
               : {}),
           }}
         >
-          <Icon size={24} color={color || c.accent} />
+          <Icon size={30} color={color || c.accent} strokeWidth={1.8} />
         </View>
       )}
       {children}

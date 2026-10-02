@@ -33,3 +33,11 @@ export interface TelegramErrorNotificationData {
   method?: string;
   statusCode?: string;
 }
+
+export interface RepeatedFailure {
+  endpoint: string;
+  statusCode: number;
+  count: number;
+  usernames: string[];
+  windowMinutes: number;
+}

@@ -82,6 +82,7 @@ function seed() {
       ],
       goal: "Exercise regularly",
       emoji: "💪",
+      notes: null as string | null,
       activities,
       sessions: [],
       outlineType: "TIMES_PER_WEEK",
@@ -106,6 +107,7 @@ function seed() {
       milestones: [],
       goal: "Read every day",
       emoji: "📖",
+      notes: null as string | null,
       activities: [activities[1]],
       sessions: [
         { id: "session-read", activityId: "read", date: now(), quantity: 10 },
@@ -245,6 +247,15 @@ const server = http.createServer(async (req, res) => {
     wrappedFriendEntries = [];
     requests.length = 0;
     failNext = undefined;
+    send({ ok: true });
+    return;
+  }
+  if (path === "/__voice-plan-context") {
+    Object.assign(state.plans[0], {
+      goal: "Running plan",
+      outlineType: "SPECIFIC",
+      notes: null,
+    });
     send({ ok: true });
     return;
   }
@@ -483,10 +494,30 @@ const server = http.createServer(async (req, res) => {
           reason: "This sounds like a future intention, not a completed log.",
         },
       ],
+      planMatches:
+        state.plans[0]?.outlineType === "SPECIFIC"
+          ? [
+              {
+                planId: state.plans[0].id,
+                planGoal: state.plans[0].goal,
+                planEmoji: state.plans[0].emoji,
+                activityId: "run",
+                activityTitle: "Running",
+                contextText: "Try a longer route next time",
+                confidence: 0.94,
+              },
+            ]
+          : [],
     });
     return;
   }
   if (path === "/voice-logs/commit" && req.method === "POST") {
+    if (body.planContextPlanId && body.planContextText) {
+      const plan = state.plans.find((item) => item.id === body.planContextPlanId);
+      if (plan) {
+        plan.notes = `## Coach context\n- ${body.note?.date}: ${body.planContextText}`;
+      }
+    }
     send({
       success: true,
       duplicate: false,

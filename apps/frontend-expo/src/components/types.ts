@@ -1,5 +1,19 @@
 import type { ReactNode } from "react";
 import type { TextInputProps, ViewStyle, StyleProp } from "react-native";
+export interface GroupedRow {
+  id: string;
+  icon: string;
+  title: string;
+  value: string;
+  /** Needs the person's attention: accent dot and value. */
+  attention?: boolean;
+  disabled?: boolean;
+  onPress?: () => void;
+}
+export interface GroupedRowsProps {
+  rows: GroupedRow[];
+  testID?: string;
+}
 export interface PanelProps {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;

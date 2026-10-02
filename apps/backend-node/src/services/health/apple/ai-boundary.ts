@@ -1,6 +1,7 @@
 import type { Prisma } from "@tsw/prisma";
 
-// Health-derived data stays available to the user but out of external AI context.
+// Generic activity context excludes health-derived records. Explicit per-plan
+// consent uses the separate, field-limited coach/monitoring/context.ts path.
 export const healthSafeActivityFilter = {
   source: {
     notIn: [

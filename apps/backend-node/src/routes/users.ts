@@ -120,6 +120,7 @@ function redactActivityEntryPrivateNotes(entry: any, viewerUserId: string): any 
   redacted.healthWorkout = healthLink.healthWorkout
     ? {
         id: healthLink.healthWorkout.id,
+        provider: healthLink.healthWorkout.provider,
         displayName: healthLink.healthWorkout.activityTypeName,
         startAt: healthLink.healthWorkout.startAt,
         endAt: healthLink.healthWorkout.endAt,
@@ -811,6 +812,7 @@ usersRouter.post(
                   healthWorkout: {
                     select: {
                       id: true,
+                      provider: true,
                       activityTypeName: true,
                       startAt: true,
                       endAt: true,
@@ -871,7 +873,7 @@ usersRouter.post(
                                 take: 1,
                                 select: {
                                   matchReasons: true,
-                                  healthWorkout: { select: { id: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
+                                  healthWorkout: { select: { id: true, provider: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
                                 },
                               },
                             },
@@ -1151,6 +1153,7 @@ usersRouter.get(
                 healthWorkout: {
                   select: {
                     id: true,
+                    provider: true,
                     activityTypeName: true,
                     startAt: true,
                     endAt: true,
@@ -1208,7 +1211,7 @@ usersRouter.get(
                               take: 1,
                               select: {
                                 matchReasons: true,
-                                healthWorkout: { select: { id: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
+                                healthWorkout: { select: { id: true, provider: true, activityTypeName: true, startAt: true, endAt: true, durationSeconds: true, distanceMeters: true, activeEnergyKcal: true, metadata: true } },
                               },
                             },
                           },

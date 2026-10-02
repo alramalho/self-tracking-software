@@ -19,6 +19,7 @@ import {
   Smartphone,
   Sun,
   UserPen,
+  Users,
 } from "lucide-react-native";
 import { router, useIsFocused } from "expo-router";
 import { goBack } from "@/core/navigation";
@@ -38,6 +39,7 @@ import { ApiKeys } from "@/features/settings/ApiKeys";
 import { ColorPalettes, ThemeModes } from "@/features/settings/Appearance";
 import { SettingsCard } from "@/features/settings/SettingsCard";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
+import { Accounts } from "@/features/settings/Accounts";
 import { useHealth } from "@/features/health/HealthProvider";
 import {
   AppleLogoIcon,
@@ -50,6 +52,7 @@ import type { SettingsView } from "@/features/settings/types";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
   profile: "User Settings",
+  accounts: "Accounts",
   palette: "Color Themes",
   theme: "Theme Mode",
   integrations: "Integrations",
@@ -215,6 +218,11 @@ export default function Settings() {
               onPress={() => setView("profile")}
             />
             <SettingsRow
+              icon={Users}
+              title="Accounts"
+              onPress={() => setView("accounts")}
+            />
+            <SettingsRow
               icon={GraduationCap}
               title="Coach Profile"
               onPress={() => setView("coach")}
@@ -263,6 +271,7 @@ export default function Settings() {
         {view === "profile" && (
           <ProfileSettings onBusyChange={setProfileBusy} />
         )}
+        {view === "accounts" && <Accounts />}
         {view === "theme" && (
           <ThemeModes
             selected={user.data?.themeMode}

@@ -69,5 +69,5 @@ export function shareCanvasSize(statsCount: WorkoutShareStatsCount, orientation:
   const base = statsCount === 6 ? 430 : 360;
   return orientation === "portrait"
     ? { width: 360, height: base }
-    : { width: 520, height: Math.max(300, base - 90) };
+    : { width: 520, height: statsCount === 6 ? 260 : 210 };
 }

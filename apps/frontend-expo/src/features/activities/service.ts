@@ -1,5 +1,6 @@
 import { api } from "@/data/api";
 import { appendPhotos } from "@/native/photos";
+import { track } from "@/analytics/client";
 import type { LogActivityInput, LogActivityResult } from "@/core/types";
 export async function logActivity(input: LogActivityInput) {
   if (!Number.isInteger(input.quantity) || input.quantity <= 0)
@@ -20,7 +21,7 @@ export async function logActivity(input: LogActivityInput) {
     form.append("longitude", String(input.longitude));
   }
   await appendPhotos(form, input.photos ?? []);
-  return (
+  const result = (
     await api.post<LogActivityResult>("/activities/log-activity", form, {
       onUploadProgress: (event) => {
         if (event.total)
@@ -30,4 +31,11 @@ export async function logActivity(input: LogActivityInput) {
       },
     })
   ).data;
+  track("activity-logged", {
+    source: "manual",
+    count: 1,
+    has_photos: !!input.photos?.length,
+    with_friend: !!input.withUserId,
+  });
+  return result;
 }

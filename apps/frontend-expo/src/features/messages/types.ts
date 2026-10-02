@@ -51,6 +51,9 @@ export interface ImageAttachment {
 }
 
 export interface Message {
+  planId?: string | null;
+  planIds?: string[];
+  requiresReply?: boolean;
   id: string;
   chatId?: string;
   role: "USER" | "COACH" | "SYSTEM";
@@ -249,6 +252,7 @@ export interface ResponseState {
   errorMessage?: string;
 }
 export interface SendPayload {
+  planId?: string;
   chatId: string;
   message: string;
   imageAttachments?: ImageAttachment[];
@@ -301,9 +305,15 @@ export interface ProposalOperation {
 }
 export interface ProposalPatch {
   archive?: boolean;
+  track?: { title: string; measure: string; emoji: string }[];
   plan?: Partial<ProposalOperation>;
   sessions?: { upsert?: Partial<ProposalOperation>[]; deleteIds?: string[] };
   milestones?: { upsert?: Partial<ProposalOperation>[]; deleteIds?: string[] };
+}
+export interface SessionCardProps {
+  op: ProposalOperation;
+  activity?: { title: string; emoji?: string | null; measure: string };
+  removed?: boolean;
 }
 export interface PlanProposalDetailsProps {
   compact?: boolean;

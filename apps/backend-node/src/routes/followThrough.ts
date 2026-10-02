@@ -34,6 +34,8 @@ import {
 } from "../services/follow-through/schema";
 import { changeState } from "../services/follow-through/store";
 import { logger } from "../utils/logger";
+import { startPlanMonitoring } from "../services/coach/monitoring/service";
+import { monitoringState } from "../services/coach/monitoring/model";
 
 const router = Router();
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
@@ -59,6 +61,21 @@ const handle =
     }
   };
 router.use(requireAuth);
+router.post("/coaching/presence", handle(async (req, res) => {
+  await changeState(req.user!.id, async state => {
+    state.monitoring ??= monitoringState();
+    state.monitoring.viewingUntil = new Date(Date.now() + 90000).toISOString();
+  });
+  res.json({ ok: true });
+}));
+router.post("/coaching/resume", handle(async (req, res) => {
+  const { planId } = z.object({ planId: z.string().max(200) }).parse(req.body);
+  await changeState(req.user!.id, async state => {
+    if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
+    if (state.monitoring) state.monitoring.pausedPlanIds = state.monitoring.pausedPlanIds.filter(id => id !== planId);
+  });
+  res.json({ ok: true });
+}));
 router.get(
   "/calendar",
   handle(async (req, res) => res.json(await calendarSessions(req.user!))),
@@ -120,9 +137,9 @@ router.post(
     const body = z
       .object({ draft: draftSchema, preferences: preferencesSchema })
       .parse(req.body);
-    return res.json(
-      await finishOnboarding(req.user!, body.draft, body.preferences),
-    );
+    const result = await finishOnboarding(req.user!, body.draft, body.preferences);
+    res.json(result);
+    startPlanMonitoring(req.user!);
   }),
 );
 router.get(
@@ -133,7 +150,9 @@ router.put(
   "/plans/:id",
   handle(async (req, res) => {
     const support = supportSchema.parse({ ...req.body, planId: req.params.id });
-    return res.json(await configure(req.user!, support));
+    const result = await configure(req.user!, support);
+    res.json(result);
+    startPlanMonitoring(req.user!);
   }),
 );
 router.post(
@@ -202,6 +221,9 @@ router.post(
     const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
     await changeState(req.user!.id, async (state) => {
       state.pausedAt = enabled ? null : new Date().toISOString();
+      state.monitoring ??= monitoringState();
+      state.monitoring.outreachPaused = !enabled;
+      if (enabled) state.monitoring.pausedPlanIds = [];
       if (enabled)
         for (const check of Object.values(state.checks))
           if (!check.answeredAt) check.answeredAt = new Date().toISOString();

@@ -30,6 +30,7 @@ import { friendsOf, profileStats } from "./model";
 import type { ProfileDetail, ProfileHeaderProps } from "./types";
 import { useRankings } from "./rankings";
 import { ProgressSheet } from "./ProgressSheet";
+import { track } from "@/analytics/client";
 
 export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
   const c = useColors();
@@ -64,9 +65,11 @@ export function ProfileHeader({ user, own, current }: ProfileHeaderProps) {
       Platinum: Star,
       Diamond: Gem,
     }[stats.level.name] ?? Target;
-  const connection = useAction((operation: string) =>
-    api.post(`/users/${operation}-connection-request/${user.id}`),
-  );
+  const connection = useAction(async (operation: string) => {
+    await api.post(`/users/${operation}-connection-request/${user.id}`);
+    if (operation === "send") track("friend-request-sent");
+    if (operation === "accept") track("friend-added");
+  });
   const chat = useMutation({
     mutationFn: async () =>
       (

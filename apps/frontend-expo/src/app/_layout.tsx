@@ -1,6 +1,8 @@
 import { NotificationNavigation } from "@/native/NotificationNavigation";
 import { NotificationRegistration } from "@/native/notifications/NotificationRegistration";
 import { WatchSync } from "@/native/watch/WatchSync";
+import { WidgetSync } from "@/native/widgets/WidgetSync";
+import { AnalyticsSession } from "@/analytics/AnalyticsSession";
 import { HealthProvider } from "@/features/health/HealthProvider";
 import { OnboardingGate } from "@/features/onboarding/OnboardingGate";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -28,6 +30,8 @@ function Routes() {
         <NotificationNavigation />
         <NotificationRegistration />
         <WatchSync />
+        <WidgetSync />
+        <AnalyticsSession />
         <OnboardingGate />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={session.isSignedIn}>

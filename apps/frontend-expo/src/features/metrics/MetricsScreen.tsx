@@ -3,7 +3,7 @@ import { MetricInsights } from "./MetricInsights";
 import { useRefresh } from "@/data/useRefresh";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Text } from "@/components/typography/Text";
 import { Check, Plus, CircleHelp, HeartPulse } from "lucide-react-native";
 import { format, subDays } from "date-fns";
@@ -68,6 +68,11 @@ export default function MetricsScreen() {
   const columns = width >= 1024 ? 6 : width >= 768 ? 5 : 4;
   const [selected, setSelected] = useState<string>();
   const [checkin, setCheckin] = useState(false);
+  const { checkin: widgetCheckin } = useLocalSearchParams<{ checkin?: string }>();
+  useEffect(() => {
+    if (widgetCheckin !== "1") return;
+    setCheckin(true);
+  }, [widgetCheckin]);
   const [request, setRequest] = useState(false);
   const [requestText, setRequestText] = useState("");
   const [help, setHelp] = useState(false);
@@ -354,7 +359,10 @@ export default function MetricsScreen() {
           )}
         </View>
       )}
-      {checkin && <MetricLogger onClose={() => setCheckin(false)} />}
+      {checkin && <MetricLogger onClose={() => {
+        setCheckin(false);
+        if (widgetCheckin === "1") router.setParams({ checkin: undefined });
+      }} />}
       <Sheet
         visible={request}
         title="Request a Metric"

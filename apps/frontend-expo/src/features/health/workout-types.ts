@@ -74,6 +74,13 @@ export interface HealthWorkoutPreview {
   timezone: string | null;
 }
 
+export interface WorkoutDetail {
+  healthWorkout: HealthWorkoutPreview;
+  resolved: ResolvedWorkoutReconciliation | null;
+  isOwner: boolean;
+  canEditPrivacy: boolean;
+}
+
 export interface WorkoutMeasurementComparison {
   compatible: boolean;
   healthValue: number | null;
@@ -129,6 +136,12 @@ export interface WorkoutReconciliationPreviewItem {
   suggestedActivity: SuggestedActivity | null;
   recommendedAction: WorkoutReconciliationAction | null;
   resolved: ResolvedWorkoutReconciliation | null;
+  shareHealthDataByDefault?: boolean;
+}
+
+export interface WorkoutPrivacyUpdateResult {
+  healthDataIsPublic: boolean;
+  shareHealthDataByDefault: boolean;
 }
 
 export interface WorkoutReconciliationPreviewSummary {

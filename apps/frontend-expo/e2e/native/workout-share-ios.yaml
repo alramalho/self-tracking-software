@@ -1,0 +1,121 @@
+appId: so.tracking.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: Home
+    timeout: 120000
+- openLink: trackingso://health-workout/health-run
+- extendedWaitUntil:
+    visible: Workout details
+    timeout: 20000
+# Scroll along the screen edge so the interactive map does not consume swipes.
+- repeat:
+    times: 5
+    commands:
+      - swipe:
+          start: 97%, 82%
+          end: 97%, 25%
+          duration: 350
+- scrollUntilVisible:
+    element:
+      id: share-workout-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-workout-button
+- extendedWaitUntil:
+    visible: Preview
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: share-orientation-portrait
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-orientation-portrait
+- tapOn:
+    id: share-stats-count-3
+- takeScreenshot: workout-share-portrait-3
+- scrollUntilVisible:
+    element:
+      id: share-export-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-export-button
+- extendedWaitUntil:
+    visible: Save Image
+    timeout: 10000
+- takeScreenshot: workout-share-portrait-3-export
+- tapOn: Save Image
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: share-orientation-portrait
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-orientation-portrait
+- tapOn:
+    id: share-stats-count-6
+- takeScreenshot: workout-share-portrait-6
+- scrollUntilVisible:
+    element:
+      id: share-export-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-export-button
+- extendedWaitUntil:
+    visible: Save Image
+    timeout: 10000
+- takeScreenshot: workout-share-portrait-6-export
+- tapOn: Save Image
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: share-orientation-landscape
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-orientation-landscape
+- tapOn:
+    id: share-stats-count-3
+- takeScreenshot: workout-share-landscape-3
+- scrollUntilVisible:
+    element:
+      id: share-export-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-export-button
+- extendedWaitUntil:
+    visible: Save Image
+    timeout: 10000
+- takeScreenshot: workout-share-landscape-3-export
+- tapOn: Save Image
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: share-orientation-landscape
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-orientation-landscape
+- tapOn:
+    id: share-stats-count-6
+- takeScreenshot: workout-share-landscape-6
+- scrollUntilVisible:
+    element:
+      id: share-export-button
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: share-export-button
+- extendedWaitUntil:
+    visible: Save Image
+    timeout: 10000
+- takeScreenshot: workout-share-landscape-6-export
+- tapOn: Save Image
+- waitForAnimationToEnd
