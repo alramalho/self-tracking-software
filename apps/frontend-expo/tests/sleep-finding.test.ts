@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   estimatedSleepQuality,
-  sleepCorrelation,
+  sleepFinding,
 } from "../src/features/metrics/model";
 import type { SleepScore } from "../src/features/health/sleep-types";
 import type { MetricEntry } from "../src/core/types";
@@ -29,10 +29,10 @@ test("sleep pairs each check-in with the night ending that morning", () => {
     checkIn("2026-09-14", 3),
     checkIn("2026-09-13", 1),
   ];
-  const result = sleepCorrelation(scores, entries);
+  const result = sleepFinding(scores, entries);
   assert.equal(result?.sampleSize, 3);
-  // Pearson([90,60,30],[5,3,1]) === 1.
-  assert.ok(Math.abs((result?.correlation ?? 0) - 1) < 1e-12);
+  // 5 after the one night scoring 80+, against an average of 2 after the rest.
+  assert.equal(result?.difference, 1.5);
 });
 
 test("nights without a total never count as zero and are skipped", () => {
@@ -48,43 +48,44 @@ test("nights without a total never count as zero and are skipped", () => {
     checkIn("2026-09-13", 2),
     checkIn("2026-09-12", 4),
   ];
-  const result = sleepCorrelation(scores, entries);
+  const result = sleepFinding(scores, entries);
   assert.equal(result?.sampleSize, 3);
   assert.equal(result?.higherAverage, 5);
   assert.equal(result?.lowerAverage, 3);
+  assert.ok(Math.abs((result?.difference ?? 0) - 2 / 3) < 1e-12);
 });
 
-test("fewer than three paired nights show the row without a correlation", () => {
-  const result = sleepCorrelation(
+test("fewer than three paired nights show the row without a number", () => {
+  const result = sleepFinding(
     [night("2026-09-15", 90)],
     [checkIn("2026-09-15", 4)],
   );
-  assert.equal(result?.correlation, null);
+  assert.equal(result?.difference, null);
   assert.equal(result?.comparable, false);
   assert.equal(result?.sampleSize, 1);
 });
 
 test("no nights or no check-ins leave sleep out of the list", () => {
-  assert.equal(sleepCorrelation([], [checkIn("2026-09-15", 4)]), null);
-  assert.equal(sleepCorrelation([night("2026-09-15", 90)], []), null);
+  assert.equal(sleepFinding([], [checkIn("2026-09-15", 4)]), null);
+  assert.equal(sleepFinding([night("2026-09-15", 90)], []), null);
 });
 
 test("out-of-range check-ins are excluded from the 1-5 band averages", () => {
-  // A historical or imported rating of 8 stays in the activity correlation
-  // history but would draw a band bar past the end of its 1-5 track.
+  // A historical or imported rating of 8 would draw a band bar past the end
+  // of its 1-5 track.
   const scores = [
     night("2026-09-17", 90),
     night("2026-09-15", 60),
     night("2026-09-13", 30),
   ];
-  const result = sleepCorrelation(scores, [
+  const result = sleepFinding(scores, [
     checkIn("2026-09-17", 8),
     checkIn("2026-09-15", 3),
     checkIn("2026-09-13", 1),
   ]);
   assert.equal(result?.sampleSize, 2);
   assert.equal(result?.comparable, false);
-  assert.equal(result?.correlation, null);
+  assert.equal(result?.difference, null);
   assert.ok((result?.bands ?? []).every((band) => (band.average ?? 0) <= 5));
 });
 
@@ -103,7 +104,7 @@ test("a learning night is estimated from the components it measured", () => {
   assert.equal(estimatedSleepQuality(night("2026-09-15", null)), null);
 });
 
-test("learning nights correlate through their estimate and are labeled", () => {
+test("learning nights compare through their estimate and are labeled", () => {
   const scores = [
     {
       date: "2026-09-15",
@@ -132,10 +133,11 @@ test("learning nights correlate through their estimate and are labeled", () => {
     checkIn("2026-09-14", 2),
     checkIn("2026-09-13", 1),
   ];
-  const result = sleepCorrelation(scores, entries);
+  const result = sleepFinding(scores, entries);
   assert.equal(result?.comparable, true);
   assert.equal(result?.estimatedNights, 3);
-  assert.ok((result?.correlation ?? 0) > 0.9);
+  // One estimated night reaches 80+ (rated 5); the other two average 1.5.
+  assert.ok(Math.abs((result?.difference ?? 0) - 3.5 / 1.5) < 1e-12);
 });
 
 test("sleep bands report a count so empty bands stay labeled", () => {
@@ -149,7 +151,7 @@ test("sleep bands report a count so empty bands stay labeled", () => {
     checkIn("2026-09-14", 4),
     checkIn("2026-09-13", 2),
   ];
-  const result = sleepCorrelation(scores, entries);
+  const result = sleepFinding(scores, entries);
   assert.deepEqual(
     result?.bands.map((band) => [band.label, band.count]),
     [
@@ -158,4 +160,17 @@ test("sleep bands report a count so empty bands stay labeled", () => {
       ["Poor nights", 1],
     ],
   );
+});
+
+test("nights all on one side of 80 give bands but no number", () => {
+  const result = sleepFinding(
+    [night("2026-09-15", 90), night("2026-09-14", 88), night("2026-09-13", 85)],
+    [
+      checkIn("2026-09-15", 5),
+      checkIn("2026-09-14", 4),
+      checkIn("2026-09-13", 4),
+    ],
+  );
+  assert.equal(result?.comparable, true);
+  assert.equal(result?.difference, null);
 });

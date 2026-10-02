@@ -31,34 +31,47 @@ export interface MetricHeatmapProps extends MetricVisualProps {
   eventImpacts?: MetricEventImpact[];
 }
 
-export interface MetricCorrelation {
+export interface ActivityFinding {
   activity: import("@/core/types").Activity;
-  correlation: number;
-  sampleSize: number;
-  // Sleep is surfaced through the same row as an activity, but its copy and
-  // reliability wording differ because nights are synced rather than logged.
-  kind?: "activity" | "sleep";
+  // Average rating on days with the activity, and on all other rated days.
+  average: number;
+  otherAverage: number | null;
+  // Share by which the two averages differ, e.g. -0.21 for 21% lower. Null
+  // while either kind of day has fewer than five ratings.
+  difference: number | null;
+  days: number;
+  otherDays: number;
 }
+
+// One line of the insights card, whether it came from an activity or sleep.
+export interface FindingRowProps {
+  testID: string;
+  label: string;
+  difference: number | null;
+  // Zero to three bars.
+  signal: number;
+  // Shown in place of the number while there is too little to go on.
+  waiting: string;
+  onPress: () => void;
+}
+
+// What the detail sheet is showing.
+export type FindingDetail =
+  | { kind: "activity"; finding: ActivityFinding }
+  | { kind: "sleep" }
+  | { kind: "help" };
+
 export interface MetricInsightsProps {
   metric: import("@/core/types").Metric;
-  correlations: MetricCorrelation[];
+  // Rated check-ins for this metric. Under seven, the card only counts up.
+  checkIns: number;
+  findings: ActivityFinding[];
   // Present from the first synced night that pairs with a check-in, even while
   // every night is still learning.
-  sleep?: import("./model").SleepCorrelation | null;
-  onHelp: () => void;
-}
-export interface CorrelationRowProps {
-  row: MetricCorrelation;
-  onReliability: () => void;
+  sleep?: import("./model").SleepFinding | null;
 }
 
-export interface SleepRowProps {
-  sleep: import("./model").SleepCorrelation;
+export interface SleepDetailProps {
+  sleep: import("./model").SleepFinding;
   metric: import("@/core/types").Metric;
-  onReliability: () => void;
-}
-
-export interface ReliabilitySample {
-  count: number;
-  kind: "activity" | "sleep";
 }

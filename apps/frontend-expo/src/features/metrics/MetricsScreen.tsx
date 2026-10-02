@@ -2,10 +2,10 @@ import { Reveal } from "@/components/reveal/Reveal";
 import { MetricInsights } from "./MetricInsights";
 import { useRefresh } from "@/data/useRefresh";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, View, useWindowDimensions } from "react-native";
+import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { Text } from "@/components/typography/Text";
-import { Check, Plus, CircleHelp, HeartPulse } from "lucide-react-native";
+import { Check, Plus, HeartPulse } from "lucide-react-native";
 import { format, subDays } from "date-fns";
 import {
   Button,
@@ -17,7 +17,6 @@ import {
   Screen,
   Sheet,
   Status,
-  s,
   useColors,
 } from "@/components/ui";
 import {
@@ -32,9 +31,9 @@ import {
 import { api } from "@/data/api";
 import { dayKey } from "@/core/dates";
 import {
-  correlations,
+  activityFindings,
   metricDayKey,
-  sleepCorrelation,
+  sleepFinding,
   validRatings,
 } from "./model";
 import { getMetricEventImpacts } from "./analysis";
@@ -46,6 +45,15 @@ import { HealthOverview } from "@/features/health/HealthOverview";
 import { useSleepScores } from "@/features/health/queries";
 
 type MetricsView = "health" | "checkins";
+
+const pill = {
+  minHeight: 40,
+  paddingHorizontal: 14,
+  borderRadius: 20,
+  borderWidth: 1,
+  alignItems: "center",
+  justifyContent: "center",
+} as const;
 
 export default function MetricsScreen() {
   const metrics = useMetrics();
@@ -64,13 +72,10 @@ export default function MetricsScreen() {
     "activity-entries",
     "context-events",
   );
-  const { width } = useWindowDimensions();
-  const columns = width >= 1024 ? 6 : width >= 768 ? 5 : 4;
   const [selected, setSelected] = useState<string>();
   const [checkin, setCheckin] = useState(false);
   const [request, setRequest] = useState(false);
   const [requestText, setRequestText] = useState("");
-  const [help, setHelp] = useState(false);
   const [view, setView] = useState<MetricsView>("checkins");
   useEffect(() => {
     if (!selected && metrics.data?.length) setSelected(metrics.data[0].id);
@@ -88,9 +93,9 @@ export default function MetricsScreen() {
         : [],
     [selected, selectedEntries, events.data],
   );
-  const relationship = useMemo(
+  const findings = useMemo(
     () =>
-      correlations(
+      activityFindings(
         entries.data?.filter((entry) => entry.metricId === selected) ?? [],
         activities.data ?? [],
         activityEntries.data ?? [],
@@ -99,7 +104,7 @@ export default function MetricsScreen() {
   );
   const sleep = useMemo(
     () =>
-      sleepCorrelation(
+      sleepFinding(
         sleepScores.data?.scores ?? [],
         entries.data?.filter((entry) => entry.metricId === selected) ?? [],
       ),
@@ -218,7 +223,6 @@ export default function MetricsScreen() {
           Log Check-in
         </Button>
       </Reveal>
-      <Heading>Metrics</Heading>
       <Status
         loading={metrics.isPending || entries.isPending}
         error={metrics.error ?? entries.error}
@@ -229,9 +233,10 @@ export default function MetricsScreen() {
       />
       {metrics.data?.length === 0 && (
         <Panel>
-          <Heading>Welcome to your insights page.</Heading>
+          <Heading>See which habits go with your best days</Heading>
           <Copy>
-            Track how your activities affect happiness, energy and productivity.
+            Check in on your happiness, energy and productivity, and the
+            patterns show up here.
           </Copy>
           <Button busy={start.isPending} onPress={() => start.mutate()}>
             Add default metrics
@@ -242,7 +247,7 @@ export default function MetricsScreen() {
       <Reveal
         id="metrics-selector"
         delay={50}
-        style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+        style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
       >
         {metrics.data?.map((m) => (
           <Pressable
@@ -250,82 +255,53 @@ export default function MetricsScreen() {
             accessibilityRole="button"
             accessibilityLabel={m.title}
             accessibilityState={{ selected: selected === m.id }}
-            onPress={() => setSelected(selected === m.id ? undefined : m.id)}
+            onPress={() => setSelected(m.id)}
             style={{
-              width: `${100 / columns - 3}%`,
-              height: 80,
-              borderRadius: 8,
-              borderWidth: 2,
+              ...pill,
               borderColor: selected === m.id ? c.selectedBorder : c.border,
               backgroundColor: selected === m.id ? c.selectedBg : c.card,
-              alignItems: "center",
-              justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 48 }}>{m.emoji}</Text>
             <Text
               style={{
-                position: "absolute",
-                bottom: 4,
-                right: 4,
-                fontSize: 10,
-                color: c.muted,
-                backgroundColor: c.soft,
-                borderRadius: 10,
-                paddingHorizontal: 6,
+                fontSize: 15,
+                color: selected === m.id ? c.text : c.muted,
+                fontWeight: selected === m.id ? "600" : "500",
               }}
             >
-              {entries.data?.filter((entry) => entry.metricId === m.id)
-                .length ?? 0}
+              {m.emoji} {m.title}
             </Text>
           </Pressable>
         ))}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add Metric"
-          onPress={() => setRequest(true)}
-          style={{
-            width: `${100 / columns - 3}%`,
-            height: 80,
-            borderRadius: 8,
-            borderWidth: 2,
-            borderStyle: "dashed",
-            borderColor: c.border,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Plus size={32} color={c.muted} />
-        </Pressable>
+        {!!metrics.data?.length && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add Metric"
+            onPress={() => setRequest(true)}
+            style={{ ...pill, borderStyle: "dashed", borderColor: c.border }}
+          >
+            <Plus size={18} color={c.muted} />
+          </Pressable>
+        )}
       </Reveal>
       {metric && (
         <View key={metric.id} style={{ gap: 16 }}>
-          <Reveal id={`metrics-title-${metric.id}`} style={s.row}>
-            <Text style={{ fontSize: 36 }}>{metric.emoji}</Text>
-            <Heading>{metric.title}</Heading>
+          <Reveal
+            key={`insights-${metric.id}`}
+            id={`metrics-insights-${metric.id}`}
+          >
+            <MetricInsights
+              metric={metric}
+              checkIns={selectedEntries.length}
+              findings={findings}
+              sleep={sleep}
+            />
           </Reveal>
-          {selectedEntries.length < 7 ? (
-            <Panel>
-              <Heading>Discover your patterns</Heading>
-              <Copy>
-                {selectedEntries.length} of 7 check-ins. Keep logging to unlock
-                insights into your {metric.title.toLowerCase()}.
-              </Copy>
-              <View
-                style={{ height: 8, borderRadius: 4, backgroundColor: c.soft }}
-              >
-                <View
-                  style={{
-                    height: 8,
-                    borderRadius: 4,
-                    width: `${(selectedEntries.length / 7) * 100}%`,
-                    backgroundColor: c.accent,
-                  }}
-                />
-              </View>
-            </Panel>
-          ) : (
+          {selectedEntries.length >= 7 && (
             <>
+              <Reveal id={`metrics-trend-${metric.id}`}>
+                <MetricTrend metric={metric} entries={selectedEntries} />
+              </Reveal>
               <Reveal id={`metrics-grid-${metric.id}`}>
                 <MetricHeatmap
                   metric={metric}
@@ -335,20 +311,6 @@ export default function MetricsScreen() {
               </Reveal>
               <Reveal id={`metrics-days-${metric.id}`}>
                 <DayPatterns metric={metric} entries={selectedEntries} />
-              </Reveal>
-              <Reveal id={`metrics-trend-${metric.id}`}>
-                <MetricTrend metric={metric} entries={selectedEntries} />
-              </Reveal>
-              <Reveal
-                key={`insights-${metric.id}`}
-                id={`metrics-insights-${metric.id}`}
-              >
-                <MetricInsights
-                  metric={metric}
-                  correlations={relationship}
-                  sleep={sleep}
-                  onHelp={() => setHelp(true)}
-                />
               </Reveal>
             </>
           )}
@@ -387,18 +349,6 @@ export default function MetricsScreen() {
         >
           Send Request
         </Button>
-      </Sheet>
-      <Sheet
-        visible={help}
-        title="Understanding correlations"
-        onClose={() => setHelp(false)}
-      >
-        <Copy>
-          Correlations compare ratings with activities in the preceding day.
-          Positive values mean an activity tends to accompany higher ratings;
-          negative values mean lower ratings. Correlation does not establish
-          cause. More observations make patterns more reliable.
-        </Copy>
       </Sheet>
         </>
       )}

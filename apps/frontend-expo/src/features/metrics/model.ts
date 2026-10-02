@@ -1,7 +1,8 @@
-import { startOfDay, subDays } from "date-fns";
+import { subDays } from "date-fns";
 import { dayKey } from "@/core/dates";
 import type { Activity, ActivityEntry, MetricEntry } from "@/core/types";
 import type { SleepScore } from "@/features/health/sleep-types";
+import type { ActivityFinding } from "./types";
 // Metric timestamps encode a calendar date at UTC midnight, unlike activity timestamps.
 export const metricDayKey = (date: import("@/core/types").DateValue) =>
   new Date(date).toISOString().slice(0, 10);
@@ -43,50 +44,66 @@ export function dailyRatings(entries: MetricEntry[]) {
   }
   return new Map([...groups].map(([key, rows]) => [key, average(rows)!]));
 }
-export function correlations(
+const mean = (values: number[]) =>
+  values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+
+// Under this many days there is no finding to show, only what is still needed.
+export const MIN_FINDING_DAYS = 5;
+// A smaller difference than this reads as "about the same", not as a finding.
+export const CLEAR_DIFFERENCE = 0.05;
+
+// How much there is to go on, as zero to three bars. Zero means too early.
+export const signalStrength = (days: number, first = MIN_FINDING_DAYS) =>
+  days < first ? 0 : days < 15 ? 1 : days < 30 ? 2 : 3;
+
+// Compares the days someone logged an activity with the days they did not.
+// A check-in is saved as a calendar date, so the join is the day itself: the
+// activity counts for the check-in given on the same day.
+export function activityFindings(
   metrics: MetricEntry[],
   activities: Activity[],
   entries: ActivityEntry[],
-) {
-  // The PWA correlates the complete numeric history, including historical
-  // scales. Do not apply the current 1–5 heatmap filter to this dataset.
-  const valid = metrics.filter((entry) => Number.isFinite(entry.rating));
-  if (valid.length < 7) return [];
+): ActivityFinding[] {
+  if (validRatings(metrics).length < 7) return [];
+  const ratings = [...dailyRatings(metrics)];
+  const evidence = (row: ActivityFinding) => Math.min(row.days, row.otherDays);
   return activities
-    .map((activity) => {
-      const x: number[] = valid.map((metric) =>
-        entries.some(
-          (entry) =>
-            !entry.deletedAt &&
-            entry.activityId === activity.id &&
-            new Date(entry.datetime) >=
-              subDays(new Date(metric.createdAt), 1) &&
-            new Date(entry.datetime) <= new Date(metric.createdAt) &&
-            (new Date(metric.createdAt) < new Date("2025-11-06T00:00:00Z") ||
-              new Date(entry.createdAt) < new Date(metric.createdAt)),
-        )
-          ? 1
-          : 0,
+    .flatMap((activity) => {
+      const logged = new Set(
+        entries
+          .filter((entry) => !entry.deletedAt && entry.activityId === activity.id)
+          .map((entry) => dayKey(entry.datetime)),
       );
-      const y = valid.map((e) => e.rating);
-      const n = x.length;
-      const sx = x.reduce((a, b) => a + b, 0),
-        sy = y.reduce((a, b) => a + b, 0);
-      const denominator = Math.sqrt(
-        (n * x.reduce((a, b) => a + b * b, 0) - sx * sx) *
-          (n * y.reduce((a, b) => a + b * b, 0) - sy * sy),
-      );
-      const correlation = denominator
-        ? (n * x.reduce((a, b, i) => a + b * y[i], 0) - sx * sy) / denominator
-        : 0;
-      return {
-        activity,
-        correlation,
-        sampleSize: x.filter((value) => value === 1).length,
-      };
+      const on = ratings.filter(([day]) => logged.has(day)).map((r) => r[1]);
+      const off = ratings.filter(([day]) => !logged.has(day)).map((r) => r[1]);
+      if (!on.length) return [];
+      const average = mean(on)!;
+      const otherAverage = mean(off);
+      return [
+        {
+          activity,
+          average,
+          otherAverage,
+          // Both kinds of day need enough ratings before a number is fair.
+          difference:
+            otherAverage !== null &&
+            Math.min(on.length, off.length) >= MIN_FINDING_DAYS
+              ? (average - otherAverage) / otherAverage
+              : null,
+          days: on.length,
+          otherDays: off.length,
+        },
+      ];
     })
-    .filter((c) => c.sampleSize > 0)
-    .sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+    .sort((a, b) =>
+      a.difference !== null && b.difference !== null
+        ? Math.abs(b.difference) - Math.abs(a.difference)
+        : a.difference !== null
+          ? -1
+          : b.difference !== null
+            ? 1
+            : evidence(b) - evidence(a),
+    );
 }
 
 // Sleep reaches the insights island through the activity row shape so it reads
@@ -104,9 +121,10 @@ export interface SleepBand {
   count: number;
 }
 
-export interface SleepCorrelation {
-  // Null until enough paired nights exist to support a correlation.
-  correlation: number | null;
+export interface SleepFinding {
+  // Share by which ratings differ after nights scoring 80+, against all other
+  // nights. Null until three paired nights exist and both kinds have a rating.
+  difference: number | null;
   sampleSize: number;
   // Averages make a 0-100 estimate comparable with 1-5 ratings even at the
   // small sample sizes early users have.
@@ -116,7 +134,7 @@ export interface SleepCorrelation {
   // Nights whose score is still being learned, so their quality is an estimate
   // from the components that were computed instead of a settled total.
   estimatedNights: number;
-  // Three paired nights is the minimum that can support a correlation or band.
+  // Three paired nights is the minimum that can support a comparison or band.
   comparable: boolean;
 }
 
@@ -124,22 +142,6 @@ export const MIN_SLEEP_PAIRS = 3;
 
 const bandFor = (quality: number) =>
   quality >= 80 ? "Good nights" : quality >= 60 ? "Fair nights" : "Poor nights";
-
-const mean = (values: number[]) =>
-  values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-
-const pearson = (x: number[], y: number[]) => {
-  const n = x.length;
-  const sx = x.reduce((a, b) => a + b, 0),
-    sy = y.reduce((a, b) => a + b, 0);
-  const denominator = Math.sqrt(
-    (n * x.reduce((a, b) => a + b * b, 0) - sx * sx) *
-      (n * y.reduce((a, b) => a + b * b, 0) - sy * sy),
-  );
-  return denominator
-    ? (n * x.reduce((a, b, i) => a + b * y[i], 0) - sx * sy) / denominator
-    : 0;
-};
 
 // A night whose total is withheld is not scored zero: while the score is still
 // learning, the components that were computed describe how the night actually
@@ -167,10 +169,10 @@ export function estimatedSleepQuality(score: SleepScore): number | null {
 // Each check-in is paired with the night that ended that morning: the rating
 // someone records for a day reflects how they slept into it. Unlike activities
 // there is no event to log after the fact, so the day key is the join.
-export function sleepCorrelation(
+export function sleepFinding(
   scores: SleepScore[],
   metrics: MetricEntry[],
-): SleepCorrelation | null {
+): SleepFinding | null {
   const nights = new Map(
     scores.flatMap((score) => {
       const quality = estimatedSleepQuality(score);
@@ -197,48 +199,24 @@ export function sleepCorrelation(
       .map((pair) => pair.rating);
     return { label, average: mean(ratings), count: ratings.length };
   });
-  // Fewer than three paired nights cannot support a correlation, but the row
+  // Fewer than three paired nights cannot support a comparison, but the row
   // and its bands still render so sleep reads as a contributor as soon as there
   // is any paired night to show.
   const comparable = pairs.length >= MIN_SLEEP_PAIRS;
   const good = pairs.filter((pair) => pair.quality >= 80).map((p) => p.rating);
   const rest = pairs.filter((pair) => pair.quality < 80).map((p) => p.rating);
+  const higherAverage = comparable ? mean(good) : null;
+  const lowerAverage = comparable ? mean(rest) : null;
   return {
-    correlation: comparable
-      ? pearson(
-          pairs.map((pair) => pair.quality),
-          pairs.map((pair) => pair.rating),
-        )
-      : null,
+    difference:
+      higherAverage !== null && lowerAverage !== null
+        ? (higherAverage - lowerAverage) / lowerAverage
+        : null,
     sampleSize: pairs.length,
-    higherAverage: comparable ? mean(good) : null,
-    lowerAverage: comparable ? mean(rest) : null,
+    higherAverage,
+    lowerAverage,
     bands,
     estimatedNights: pairs.filter((pair) => pair.total == null).length,
     comparable,
-  };
-}
-
-export function correlationAppearance(
-  value: number | null,
-  count: number,
-) {
-  const reliability =
-    count < 5
-      ? { label: "Insufficient", dot: "#d1d5db", darkLabel: "#e5e7eb" }
-      : count < 15
-        ? { label: "Weak", dot: "#fb923c", darkLabel: "#ea580c" }
-        : count < 30
-          ? { label: "Medium", dot: "#60a5fa", darkLabel: "#2563eb" }
-          : { label: "Confident", dot: "#a855f7", darkLabel: "#9333ea" };
-  return {
-    ...reliability,
-    insufficient: count < 5,
-    color:
-      value === null || Math.abs(value) < 0.1
-        ? "#9ca3af"
-        : value >= 0
-          ? "#22c55e"
-          : "#ef4444",
   };
 }

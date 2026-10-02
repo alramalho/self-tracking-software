@@ -101,7 +101,7 @@ appId: so.tracking.app
 - hideKeyboard
 - takeScreenshot: dark-checkin
 - tapOn: Save Check-in
-- assertVisible: Energy Trend
+- assertVisible: This week
 - scrollUntilVisible:
     element: Last week
     direction: DOWN

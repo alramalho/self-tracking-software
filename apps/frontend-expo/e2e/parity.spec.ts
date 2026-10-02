@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 let runtimeErrors: string[] = [];
 test.afterEach(() => {
   expect(runtimeErrors).toEqual([]);
@@ -169,7 +169,7 @@ test("metric check-ins update chart and day detail", async ({
   await expect(page.getByText("Log Your Metrics", { exact: true })).toHaveCount(
     0,
   );
-  await expect(page.getByText("Energy Trend", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("metric-trend")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.metricEntries.some(

@@ -1,9 +1,13 @@
 import { View } from "react-native";
 import { Text } from "@/components/typography/Text";
-import { Copy, Heading, Panel, useColors } from "@/components/ui";
+import { Panel, useColors } from "@/components/ui";
 import { average } from "./model";
+import { weekdayLine } from "./words";
 import type { MetricVisualProps } from "./types";
-export function DayPatterns({ metric, entries }: MetricVisualProps) {
+
+const BAR_HEIGHT = 44;
+
+export function DayPatterns({ entries }: MetricVisualProps) {
   const c = useColors();
   const overall = average(entries) ?? 0;
   const stats = [
@@ -33,19 +37,14 @@ export function DayPatterns({ metric, entries }: MetricVisualProps) {
     best = significant[significant.length - 1];
   if (!best || !worst || best.percent - worst.percent <= 5) return null;
   return (
-    <Panel style={{ padding: 16, borderRadius: 16 }}>
-      <Heading>{metric.emoji} Day of Week Patterns</Heading>
-      {best.percent > 5 && (
-        <Copy>
-          {metric.title} is {best.percent.toFixed(0)}% higher on {best.day}s
-        </Copy>
-      )}
-      {worst.percent < -5 && (
-        <Copy>
-          {metric.title} is {Math.abs(worst.percent).toFixed(0)}% lower on{" "}
-          {worst.day}s
-        </Copy>
-      )}
+    <Panel style={{ padding: 20, borderRadius: 16, gap: 12 }}>
+      <Text style={{ fontSize: 13, color: c.muted }}>By weekday</Text>
+      <Text style={{ fontSize: 17, fontWeight: "600", color: c.text }}>
+        {weekdayLine(
+          best.percent > 5 ? best.day : undefined,
+          worst.percent < -5 ? worst.day : undefined,
+        )}
+      </Text>
       <View style={{ flexDirection: "row", gap: 4 }}>
         {stats.map((stat) => (
           <View
@@ -53,29 +52,22 @@ export function DayPatterns({ metric, entries }: MetricVisualProps) {
             style={{ flex: 1, alignItems: "center", gap: 4 }}
           >
             <View
-              style={{ height: 64, width: "100%", justifyContent: "flex-end" }}
+              style={{
+                height: BAR_HEIGHT,
+                width: "100%",
+                justifyContent: "flex-end",
+              }}
             >
               <View
                 style={{
-                  height: stat.count
-                    ? Math.max((stat.average / 10) * 64, 6.4)
-                    : 1,
-                  backgroundColor:
-                    stat === best
-                      ? "#22c55e"
-                      : stat === worst
-                        ? "#f87171"
-                        : c.muted,
-                  borderTopLeftRadius: 3,
-                  borderTopRightRadius: 3,
+                  height: stat.count ? (stat.average / 5) * BAR_HEIGHT : 2,
+                  backgroundColor: c.accent,
+                  borderRadius: 3,
                 }}
               />
             </View>
             <Text style={{ fontSize: 10, color: c.muted }}>
               {stat.day.slice(0, 3)}
-            </Text>
-            <Text style={{ fontSize: 10, color: c.muted }}>
-              {stat.count ? stat.average.toFixed(1) : "—"}
             </Text>
           </View>
         ))}

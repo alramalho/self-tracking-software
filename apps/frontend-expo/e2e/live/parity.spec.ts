@@ -131,7 +131,7 @@ test("real Clerk session logs, edits, renders grids and saves metrics through th
     .toBe(2);
   await page.screenshot({ path: info.outputPath("metrics-real-api.png") });
   await page.reload();
-  await expect(page.getByText("Energy Trend", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("metric-trend")).toBeVisible();
   await page.goto("/settings");
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect

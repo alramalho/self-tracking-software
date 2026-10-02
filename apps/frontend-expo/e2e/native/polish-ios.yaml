@@ -36,23 +36,21 @@ appId: so.tracking.app
     text: Metrics
     waitToSettleTimeoutMs: 500
 - scrollUntilVisible:
-    element: Energy Insights
+    element: ".*Sauna: 3 more days, signal 0 of 3"
     direction: DOWN
-- scrollUntilVisible:
-    element: "Sauna reliability: Insufficient"
-    direction: DOWN
-- assertVisible: "Gym reliability: Confident"
-- assertVisible: "Running reliability: Medium"
-- assertVisible: "Chess reliability: Weak"
+- assertVisible: "Your energy tends to be higher on Chess days and lower on Gym days."
+- assertVisible: ".*Gym: −23%, signal 3 of 3"
+- assertVisible: ".*Running: \\+3%, signal 2 of 3"
+- assertVisible: ".*Chess: \\+21%, signal 1 of 3"
 - takeScreenshot: metric-insights-polish-${output.theme}
 - waitForAnimationToEnd:
     timeout: 3000
 - tapOn:
-    text: "Sauna reliability: Insufficient"
+    text: ".*Sauna: 3 more days, signal 0 of 3"
     waitToSettleTimeoutMs: 500
-- assertVisible: "Current Data Points: 2"
+- assertVisible: "2 Sauna days with a check-in so far."
 - tapOn:
-    text: Close
+    text: "Close .*Sauna"
     waitToSettleTimeoutMs: 500
 - tapOn:
     text: Metrics

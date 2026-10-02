@@ -100,7 +100,7 @@ appId: so.tracking.app
     element: Save Check-in
     direction: DOWN
 - tapOn: Save Check-in
-- assertVisible: Energy Trend
+- assertVisible: This week
 - scrollUntilVisible:
     element: Last week
     direction: DOWN

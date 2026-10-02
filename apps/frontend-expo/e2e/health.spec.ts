@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 for (const theme of ["DARK", "LIGHT"]) {
   test(`workout review and sleep breakdown in ${theme}`, async ({
     page,
@@ -254,26 +254,22 @@ test("sleep appears as a contributor on the metric insights island", async ({
   await page.getByRole("button", { name: "Check-ins", exact: true }).click();
   const insights = page.getByTestId("metric-insights-island");
   await insights.scrollIntoViewIfNeeded();
-  const row = insights.getByTestId("correlation-sleep-score");
+  const row = insights.getByTestId("finding-sleep-score");
   await expect(row).toBeVisible();
   await expect(row.getByText(/Sleep score/)).toBeVisible();
-  // The row stays one bar like the activity rows; the bands live behind the
-  // expander so the island does not read as a wall of sleep copy.
-  await expect(row.getByRole("progressbar").first()).toBeVisible();
-  await expect(row.getByText("Good nights", { exact: true })).toBeHidden();
-  await row.getByRole("button", { name: "Sleep score details" }).click();
-  await expect(row.getByText("Good nights", { exact: true })).toBeVisible();
-  await expect(row.getByText(/avg rating/).first()).toBeVisible();
-  await row
-    .getByRole("button", { name: /Sleep score reliability:/ })
-    .click();
-  await expect(page.getByText(/Nights compared: \d+/)).toBeVisible();
+  // The row is one bar like the activity rows; the bands live behind a tap
+  // so the card does not read as a wall of sleep copy.
+  await expect(row.getByRole("progressbar")).toBeVisible();
+  await expect(page.getByText("Good nights", { exact: true })).toBeHidden();
+  await row.click();
+  await expect(page.getByText("Good nights", { exact: true })).toBeVisible();
+  await expect(page.getByText(/\d\.\d average/).first()).toBeVisible();
+  await expect(page.getByText(/Signal \d of 3/)).toBeVisible();
   await expect(
-    page.getByText(/Sleep pairs each check-in with the night/),
+    page.getByText(/paired with the night that ended that morning/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  await row.getByRole("button", { name: "Sleep score details" }).click();
-  await expect(row.getByText("Good nights", { exact: true })).toBeHidden();
+  await page.getByRole("button", { name: "Close 🛌 Sleep score" }).click();
+  await expect(page.getByText("Good nights", { exact: true })).toBeHidden();
 });
 
 test("sleep stays a contributor while every night is still learning", async ({
@@ -287,16 +283,18 @@ test("sleep stays a contributor while every night is still learning", async ({
   await page.getByRole("button", { name: "Check-ins", exact: true }).click();
   const insights = page.getByTestId("metric-insights-island");
   await insights.scrollIntoViewIfNeeded();
-  const row = insights.getByTestId("correlation-sleep-score");
+  const row = insights.getByTestId("finding-sleep-score");
   await expect(row).toBeVisible();
-  // The row, its correlation and its bars are present before any total
-  // exists: quality is estimated from the measured components, and the copy
-  // says so instead of pretending the score was settled.
-  await expect(row.getByText(/[+\u2013-]\s?\d+%/)).toBeVisible();
-  await expect(row.getByRole("progressbar").first()).toBeVisible();
-  await row.getByRole("button", { name: "Sleep score details" }).click();
-  await expect(row.getByText("Good nights", { exact: true })).toBeVisible();
-  await expect(row.getByText(/estimated from their measured components/)).toBeVisible();
+  // The row, its number and its bar are present before any total exists:
+  // quality is estimated from the measured components, and the copy says so
+  // instead of pretending the score was settled.
+  await expect(row.getByText(/[+−]\d+%/)).toBeVisible();
+  await expect(row.getByRole("progressbar")).toBeVisible();
+  await row.click();
+  await expect(page.getByText("Good nights", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/estimated from their measured components/),
+  ).toBeVisible();
 });
 
 test("Home reviews pending workouts as one continuous batch", async ({

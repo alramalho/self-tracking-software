@@ -277,10 +277,33 @@ const server = http.createServer(async (req, res) => {
     Object.assign(state.plans[0], { notes: "## Training roadmap\nBuild **consistency** first.\n- Three sessions each week\n- Keep a `steady` pace\n[Training guide](https://example.com/guide)" });
     state.user.themeMode = body.theme ?? "DARK";
     Object.assign(state.plans[0], {progress: {weeks:[{startDate:new Date().toISOString(),isCompleted:true,plannedActivities:1,completedActivities:[state.entries[0]]}],achievement:{streak:4},habitAchievement:{isAchieved:true,progressValue:4,maxValue:4},lifestyleAchievement:{isAchieved:false,progressValue:4,maxValue:9}}});
-    const counts = [35, 20, 8, 2];
-    state.activities = counts.map((count, i) => ({ ...state.activities[0], id: `polish-${i}`, title: ["Gym", "Running", "Chess", "Sauna"][i], emoji: ["🏋️", "🏃", "♟️", "🧖"][i] }));
-    state.metricEntries = Array.from({length:45},(_,i)=>({id:`polish-metric-${i}`,metricId:"energy",rating:i%3+1+(i<20?2:0),createdAt:new Date(Date.UTC(2026,8,14-i,12)).toISOString()}));
-    state.entries = counts.flatMap((count,index)=>Array.from({length:count},(_,i)=>({ ...state.entries[0],id:`polish-entry-${index}-${i}`,activityId:`polish-${index}`,datetime:new Date(Date.UTC(2026,8,14-i,8)).toISOString(),createdAt:new Date(Date.UTC(2026,8,14-i,8)).toISOString() })));
+    // 75 days of energy check-ins ending today. Gym days rate lower and Chess days higher, Running makes no clear
+    // difference and Sauna has too few days, so the insights card shows every kind of row and signal strength.
+    const habits = [
+      { title: "Gym", emoji: "🏋️", on: (i: number) => i % 2 === 0 },
+      { title: "Running", emoji: "🏃", on: (i: number) => i % 3 === 0 && i < 60 },
+      { title: "Chess", emoji: "♟️", on: (i: number) => i % 5 === 1 && i < 40 },
+      { title: "Sauna", emoji: "🧖", on: (i: number) => i === 5 || i === 21 },
+    ];
+    const today = new Date();
+    const daysAgo = (i: number, hour: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - i, hour);
+    state.activities = habits.map((habit, index) => ({ ...state.activities[0], id: `polish-${index}`, title: habit.title, emoji: habit.emoji }));
+    state.metricEntries = Array.from({ length: 75 }, (_, i) => ({
+      id: `polish-metric-${i}`,
+      metricId: "energy",
+      rating: Math.min(5, (habits[0].on(i) ? 3 : 4) + (habits[2].on(i) ? 1 : 0) + (i % 7 === 3 ? 1 : 0) - (i === 1 || i === 5 ? 1 : 0)),
+      // Check-ins are saved as their calendar date at UTC midnight.
+      createdAt: new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate() - i)).toISOString(),
+    }));
+    state.entries = habits.flatMap((habit, index) =>
+      Array.from({ length: 75 }, (_, i) => i).filter(habit.on).map((i) => ({
+        ...state.entries[0],
+        id: `polish-entry-${index}-${i}`,
+        activityId: `polish-${index}`,
+        datetime: daysAgo(i, 12).toISOString(),
+        createdAt: daysAgo(i, 12).toISOString(),
+      })),
+    );
     send({ok:true}); return;
   }
   if (path === "/__background.png") {

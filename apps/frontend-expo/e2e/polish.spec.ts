@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 for (const theme of ["DARK", "LIGHT"])
   test(`plan islands and metrics fidelity in ${theme}`, async ({
     page,
@@ -29,29 +29,92 @@ for (const theme of ["DARK", "LIGHT"])
       "opacity",
       "1",
     );
-    await expect(insights.getByText("Energy Insights")).toBeVisible();
-    for (const label of ["Confident", "Medium", "Weak", "Insufficient"])
-      await expect(insights.getByText(label, { exact: true })).toBeVisible();
-    await expect(page.getByTestId("correlation-polish-3")).toHaveCSS(
-      "opacity",
-      "0.4",
+    // The coach states the finding before any row.
+    await expect(insights.getByText("Helly", { exact: true })).toBeVisible();
+    await expect(
+      insights.getByText(
+        "Your energy tends to be higher on Chess days and lower on Gym days.",
+      ),
+    ).toBeVisible();
+    // Each row: a real difference, and signal strength as zero to three bars.
+    for (const label of [
+      "🏋️ Gym: −23%, signal 3 of 3",
+      "♟️ Chess: +21%, signal 1 of 3",
+      "🏃 Running: +3%, signal 2 of 3",
+      "🧖 Sauna: 3 more days, signal 0 of 3",
+    ])
+      await expect(insights.getByRole("button", { name: label })).toBeVisible();
+    // No statistics vocabulary and no tier labels on the screen itself.
+    for (const word of [
+      "Confident",
+      "Medium",
+      "Weak",
+      "Insufficient",
+      /correlation/i,
+      /data points/i,
+    ])
+      await expect(insights.getByText(word)).toHaveCount(0);
+    // Too few days: the row is faded and its bar stays empty.
+    const sauna = page.getByTestId("finding-polish-3");
+    await expect(sauna).toHaveCSS("opacity", "0.45");
+    await expect(sauna.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "0",
     );
-    await expect(insights.getByRole("progressbar").first()).toHaveCSS(
-      "height",
-      "12px",
+    // One colour per row: the bar. Red for lower, green for higher, grey when
+    // there is no clear difference. The number stays in the text colour.
+    const bar = (id: string) =>
+      page.getByTestId(id).getByRole("progressbar").locator("div");
+    await expect(bar("finding-polish-0")).toHaveCSS(
+      "background-color",
+      "rgb(239, 68, 68)",
+    );
+    await expect(bar("finding-polish-2")).toHaveCSS(
+      "background-color",
+      "rgb(34, 197, 94)",
+    );
+    await expect(bar("finding-polish-1")).toHaveCSS(
+      "background-color",
+      "rgb(156, 163, 175)",
     );
     await expect(insights).toHaveCSS("border-radius", "16px");
+    // The trend is one line; the averages wait behind a tap.
+    const trend = page.getByTestId("metric-trend");
+    await expect(
+      trend.getByText("A little lower than last week"),
+    ).toBeVisible();
+    await expect(page.getByText(/avg/i)).toHaveCount(0);
     await page.screenshot({
       path: `test-results/metric-insights-polish-${theme}.png`,
     });
-    await insights
-      .getByRole("button", { name: "Sauna reliability: Insufficient" })
-      .click();
-    await expect(page.getByText("Current Data Points: 2")).toBeVisible();
+    await page.screenshot({
+      path: `test-results/metrics-page-polish-${theme}.png`,
+      fullPage: true,
+    });
+    await sauna.click();
     await expect(
-      page.getByText("Log 3 more times to reach Weak reliability"),
+      page.getByText("2 Sauna days with a check-in so far."),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(
+      page.getByText("3 more days and this row gets a number."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close 🧖 Sauna" }).click();
+    await page.getByTestId("finding-polish-0").click();
+    await expect(
+      page.getByText("Energy averages 3.2 on Gym days and 4.2 on other days."),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Based on 38 Gym days and 37 other days."),
+    ).toBeVisible();
+    await expect(page.getByText("Signal 3 of 3.")).toBeVisible();
+    await expect(page.getByText(/It's a pattern, not proof/)).toBeVisible();
+    await page.getByRole("button", { name: "Close 🏋️ Gym" }).click();
+    await trend.click();
+    await expect(page.getByText("This week: 3.6")).toBeVisible();
+    await expect(page.getByText("Last week: 3.9")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Close Energy this week" })
+      .click();
     expect(errors).toEqual([]);
   });
 test("viewport reveal happens once and reduced motion shows content immediately", async ({
@@ -62,7 +125,8 @@ test("viewport reveal happens once and reduced motion shows content immediately"
   await request.post(`${API}/__polish`);
   await page.goto("/metrics");
   await page.getByRole("button", { name: "Check-ins", exact: true }).click();
-  const reveal = page.getByTestId("reveal-metrics-insights-energy");
+  // The trend card starts below the fold, under the insights card.
+  const reveal = page.getByTestId("reveal-metrics-trend-energy");
   await expect(reveal).toHaveCSS("opacity", "0");
   const frames = await reveal.evaluate(
     (element) =>
