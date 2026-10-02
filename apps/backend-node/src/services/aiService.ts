@@ -10,6 +10,10 @@ import { getCoachPersonalityConfig } from "./coachPersonalityService";
 import type { PlansService } from "./plansService";
 import { planGenerationPipeline } from "./planGenerationPipeline";
 import { DEFAULT_AI_GATEWAY_MODEL } from "./aiModelIds";
+import {
+  describeStreak,
+  STREAK_RULES_FOR_COACH,
+} from "@tsw/prisma/follow-through/streak";
 const DEFAULT_WEEKS = 8;
 
 export class AIService {
@@ -1021,12 +1025,9 @@ export class AIService {
       }
     }
 
-    if (achievement && achievement.streak > 0) {
-      context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
-    }
-    const missed = achievement?.missedLastWeek;
-    if (missed) {
-      context += `\n- Missed last week (${missed.inARow} in a row): streak went ${missed.streakBefore} → ${missed.streakAfter}`;
+    if (achievement && (achievement.streak > 0 || achievement.missedLastWeek)) {
+      context += `\n- Current streak: ${describeStreak(achievement)}`;
+      context += `\n- How streaks work: ${STREAK_RULES_FOR_COACH.join(". ")}.`;
     }
 
     return context;

@@ -210,15 +210,18 @@ export async function previewVoiceLog(input: {
   const now = input.now || new Date();
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
-    select: { timezone: true },
+    select: { timezone: true, spokenLanguages: true },
   });
   const timezone = resolveTimezone(input.timezone, user?.timezone || "UTC");
 
   const sttStartedAt = Date.now();
-  const transcript = (await sttService.speechToText(
-    input.audioBytes,
-    input.audioFormat,
-  ))
+  const transcript = (
+    await sttService.transcribe(
+      input.audioBytes,
+      input.audioFormat,
+      user?.spokenLanguages,
+    )
+  ).text
     .trim()
     .slice(0, MAX_TRANSCRIPT_LENGTH);
   const sttDurationMs = Date.now() - sttStartedAt;

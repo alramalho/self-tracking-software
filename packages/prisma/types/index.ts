@@ -4,6 +4,7 @@ import {
   type Plan as PrismaPlan,
   type PlanMilestone as PrismaPlanMilestone,
 } from "../generated/prisma";
+import type { MissedWeek, WeekOutcome } from "../follow-through/streak";
 
 export type MilestoneCriteria = {
   junction: "AND" | "OR";
@@ -24,11 +25,7 @@ export type PlanAchievement = {
   incompleteWeeks: number;
   totalWeeks: number;
   /** Set when last week was missed: what it cost, shown all this week. */
-  missedLastWeek?: {
-    streakBefore: number;
-    streakAfter: number;
-    inARow: number;
-  } | null;
+  missedLastWeek?: MissedWeek | null;
 };
 
 export type PlanProgressState = {
@@ -70,7 +67,7 @@ export type PlanProgressState = {
     doneCount?: number;
     targetCount?: number;
     /** Past weeks: complete (+1), held (one short, streak unchanged) or missed (-1). */
-    outcome?: "complete" | "held" | "missed";
+    outcome?: WeekOutcome;
   }>;
   currentWeekState: PlanState | undefined | null;
 } | null;

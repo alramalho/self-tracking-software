@@ -39,7 +39,8 @@ export function CoachSettings({ visible, onClose }: CoachSettingsProps) {
           <Panel key={personality}>
             <View style={s.row}>
               <Image
-                source={{ uri: identity.avatar }}
+                source={identity.avatar}
+                resizeMode="contain"
                 style={{ width: 48, height: 48 }}
               />
               <View style={{ flex: 1 }}>

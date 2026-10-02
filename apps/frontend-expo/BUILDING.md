@@ -79,6 +79,24 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 196 — dictation feedback, languages and the missed-week sheet, October 2, 2026
+
+- Local production release from branch `voice-feedback` (`c71631f0`, on main `539cbb44`). After every dictation a banner asks "Did we get that right?"; thumbs down opens "What went wrong?", and "Wrong language" leads to "Which languages do you speak?" (also Settings → Languages). The "missed last week" sheet shows the server's own count and explains a second one-short week; it, the coach chat header, the inbox row and coach settings use the clay coach figures. The badge explainer prints the shared streak rule.
+- Needs the `voice-languages-20261002` backend, which went live at 11:26 UTC the same day (see [deployment and rollback](../../hetzner/MIGRATION.md)); the build was hosted about half an hour before that.
+- Verified IPA: `tracking-voice-feedback/apps/frontend-expo/.release/2026-10-02T10-48-34-753Z-b85a0228/tracking.so.ipa`, SHA-256 `e2a6fffe44fd94b1accd533374de1c175124cdcb53c625f6b065ca41bf226dc4`; version 1.0.0, iPhone and Watch build 196; profiles expire September 10, 2027. The wrapper's production-config, bundled-JavaScript, signing and device-provisioning checks passed; the bundle contains the new screen text and both clay figures; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap.
+- Hosted: `.release/2026-10-02T10-53-32-338Z-e8176002/distribution.json` in the same worktree; the link expires October 9, 2026. The publisher's own fetch check failed with `fetch failed` after uploading (as with build 190); `scripts/iphone/verify-hosted.cjs` then verified the installer, manifest and all 27,150,637 IPA bytes against the local hash.
+- Checks: Expo typecheck clean; 4 dictation unit cases; 10 browser cases in light and dark (`e2e/voice-feedback.spec.ts`, `e2e/miss-reason.spec.ts`), screens in `docs/reviews/voice-feedback/`. These are Expo mobile-web renders; nothing was run on a simulator or phone, so recording, the banner and the drawers on a real iPhone are not confirmed. `comments`, `messages`, `inline-coach` and `settings-drawers` browser suites fail the same 15 cases on untouched main. Two `workout-effort` unit cases fail and were not checked against main. It predates the smooth heart-rate chart on main and does not have it; TestFlight build 199 has both. No Expo cloud build, OTA or store submission.
+
+```sh
+cp -p ../tracking-circle-momentum/apps/frontend-expo/.release/{production.env.json,watch-device.json} apps/frontend-expo/.release/
+env -u SDKROOT PATH=/private/tmp/tracking-pnpm-bin:$PATH \
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default \
+  EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-voice-feedback-device-build \
+  pnpm --filter frontend-expo build:iphone:local
+AWS_PROFILE=default pnpm --filter frontend-expo build:iphone:publish "$PWD/apps/frontend-expo/.release/2026-10-02T10-48-34-753Z-b85a0228/tracking.so.ipa"
+(cd apps/frontend-expo && node scripts/iphone/verify-hosted.cjs .release/2026-10-02T10-53-32-338Z-e8176002/distribution.json)
+```
+
 ## Safari-install build 194 — circle momentum, in-app invites and native-feeling drawers, October 1, 2026
 
 - Local production release from commit `ee86cd2f`, now on main. On the circle screen: the orbit header, the "Past weeks" row and sheet, the week chip on circle logs, "Turn off Helly's posts" / "Mute notifications", and "Invite to circle" (friends with an Invite button, plus "Share a link"; open spots open it too). The shared drawer (`LoggingDrawer`, used by Settings and about 15 other sheets) now fades its dim in place and slides only the sheet, which follows a downward drag.
@@ -125,7 +143,31 @@ The hosted-byte checker GETs the exact installer, follows its manifest, checks b
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 197, October 2, 2026
+## Current TestFlight release — build 199, October 2, 2026
+
+- Build 197 (smooth heart-rate chart) plus dictation feedback, languages and the missed-week sheet: the "Did we get that right?" banner after every dictation, "What went wrong?", "Which languages do you speak?", Settings → Languages, the sheet's server count and "one short twice" explanation, the clay coach figures and the shared streak wording. Built locally from `cead058d` (main `f64f0e68` merged into `voice-feedback`). Needs the `voice-languages-20261002` backend (live, see [deployment](../../hetzner/MIGRATION.md)).
+- IPA: `.release/testflight-voice-feedback-b199/tracking.so.ipa` in the `tracking-voice-feedback` worktree (SHA-256 `8c140bb0007dc90b90f96fb04bb732fdc8591a5c76284432de2682909d669272`), version 1.0.0 (199), iPhone and Watch. Embedded config: production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed; `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap and ExpoIap; the Hermes bundle contains the new screen text and `heart-rate-line`, and no `heart-rate-segment-`. Apple validation: `VERIFY SUCCEEDED with no errors`. Delivery `810c0209-c8c4-429c-a856-56e0d96f9b01`; App Store Connect `build-status: VALID`.
+- Checks on the merged source: Expo typecheck clean; 15 browser cases in light and dark (`e2e/voice-feedback.spec.ts`, `e2e/miss-reason.spec.ts`, `e2e/heart-rate-zones.spec.ts`); 110 of 112 unit cases (the two `workout-effort` failures are in code identical to main). Which tester groups received the build was not checked. Installation on a physical device, and a real dictation against the live backend, have not been observed. No cloud build, OTA or App Store submission.
+- Same commands as build 198 below, with `.release/testflight-voice-feedback-b199/tracking.so.ipa` and build directory `/private/tmp/tracking-voice-feedback-testflight-build-2`.
+
+## TestFlight build 198 — superseded the same day, October 2, 2026
+
+- **Do not treat this as the current release.** It was built from `voice-feedback` before main gained the smooth heart-rate chart (build 197), so it draws the old straight segments with circles. Build 199 replaces it.
+
+- Dictation feedback, languages and the missed-week sheet: the same app changes as Safari-install build 196 (the "Did we get that right?" banner, "What went wrong?", "Which languages do you speak?", Settings → Languages, the sheet's server count and "one short twice" explanation, clay coach figures, shared streak wording). Built locally from branch `voice-feedback` at `34ae881b` (main `539cbb44` plus this work). Needs the `voice-languages-20261002` backend (live, see [deployment](../../hetzner/MIGRATION.md)).
+- IPA: `.release/testflight-voice-feedback/tracking.so.ipa` in the `tracking-voice-feedback` worktree (SHA-256 `db89a6ded9b50c43f2362e4309b661cd59986b7b6396a2b0581758adfdea38f3`), version 1.0.0 (198), iPhone and Watch. Embedded config: production API, live Clerk key, `fixtureMode: false`. App Store profile; `codesign --verify --deep --strict` passed; the new screen text is in the Hermes bundle and `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap and ExpoIap. Apple validation: no errors. Delivery `797d64e4-5d38-46ed-9be4-f8f5bbe3c3da`; App Store Connect `build-status: VALID`.
+- Checks on this source are the ones listed for build 196. Which tester groups received it was not checked. Installation on a physical device has not been observed. No cloud build, OTA or App Store submission.
+
+```sh
+cd apps/frontend-expo
+env -u SDKROOT PATH=/private/tmp/tracking-pnpm-bin:$PATH DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-voice-feedback-testflight-build \
+  node --import tsx scripts/iphone/testflight.ts build .release/testflight-voice-feedback/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts validate .release/testflight-voice-feedback/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts submit .release/testflight-voice-feedback/tracking.so.ipa
+```
+
+## Previous TestFlight release — build 197, October 2, 2026
 
 - Build 195 plus the smooth heart-rate chart: one monotone curve per run of readings, coloured by a zone gradient, zone shading under the curve, no circle per reading; readings up to two minutes apart are joined and longer gaps still break the line. Built locally from main `82993d66`. App-only; no backend change.
 - Why it was needed: the smoothing first shipped in build 162 from an isolated release source and was never committed, so builds made from git (177, 192, 195, Safari 188 and 194) drew the old straight segments with circles. It is on main now. Safari-install build 196 (branch `voice-feedback`) predates this commit and does not have it.

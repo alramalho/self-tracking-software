@@ -15,11 +15,11 @@ if (
 
 const external = vi.hoisted(() => ({
   runMonitoring: vi.fn(async () => "quiet"),
-  speechToText: vi.fn(async () => "hello"),
+  transcribe: vi.fn(async () => ({ text: "hello", model: "test" })),
 }));
 vi.mock("../../services/coach/monitoring/run", () => ({ runMonitoring: external.runMonitoring }));
 vi.mock("../../services/sttService", () => ({
-  sttService: { speechToText: external.speechToText },
+  sttService: { transcribe: external.transcribe },
 }));
 vi.mock("../../services/notificationService", () => ({
   notificationService: { sendPushNotification: vi.fn(), createAndProcessNotification: vi.fn() },
@@ -109,7 +109,7 @@ describe("AI consent", () => {
         code: "AI_CONSENT_REQUIRED",
       });
     }
-    expect(external.speechToText).not.toHaveBeenCalled();
+    expect(external.transcribe).not.toHaveBeenCalled();
   });
 
   it("PUT /users/ai-consent turns AI on and off", async () => {
@@ -119,7 +119,7 @@ describe("AI consent", () => {
     expect(granted.status).toBe(200);
     expect((await granted.json()).aiConsentGrantedAt).toBeTruthy();
     expect((await transcribe()).status).toBe(200);
-    expect(external.speechToText).toHaveBeenCalledTimes(1);
+    expect(external.transcribe).toHaveBeenCalledTimes(1);
     // Past the gate: these now fail on their own validation, not on consent.
     expect((await post("/follow-through/onboarding/interview")).status).toBe(400);
     expect((await post("/chats/missing-chat/messages/stream", { message: "hi", coachVersion: "v2" })).status).toBe(404);

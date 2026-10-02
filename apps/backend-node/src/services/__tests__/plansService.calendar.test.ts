@@ -60,7 +60,7 @@ describe("plan owner's local calendar", () => {
     expect(progress.weeks[0].startDate.toISOString()).toBe("2026-09-13T00:00:00.000Z");
     expect(progress.currentWeekStats.daysCompletedThisWeek).toBe(2);
     expect(db.plan.update.mock.calls[0][0].data.progressState).toMatchObject({
-      calculationVersion: 2, calculationTimezone: "Europe/Lisbon",
+      calculationVersion: 3, calculationTimezone: "Europe/Lisbon",
     });
   });
 
@@ -122,14 +122,17 @@ describe("plan owner's local calendar", () => {
     const progress = await service.computePlanProgress(weekly, user);
     expect(progress.achievement.streak).toBe(0);
     expect(progress.weeks.slice(0, 3).map(w => w.outcome)).toEqual(["complete", "held", "missed"]);
-    expect(progress.achievement.missedLastWeek).toEqual({ streakBefore: 1, streakAfter: 0, inARow: 1 });
+    // Two of three again: one short would hold, but the week before already did.
+    expect(progress.achievement.missedLastWeek).toEqual({
+      streakBefore: 1, streakAfter: 0, inARow: 1, done: 2, target: 3, oneShortAgain: true,
+    });
   });
 });
 
 describe("progress cache calendar", () => {
   it.each([undefined, "UTC"])("recomputes an obsolete or differently zoned cache (%s) before returning it", async timezone => {
     const cached = { ...plan, progressCalculatedAt: new Date(), progressState: {
-      calculationVersion: timezone ? 2 : undefined, calculationTimezone: timezone,
+      calculationVersion: timezone ? 3 : undefined, calculationTimezone: timezone,
       achievement: { streak: 1 },
     } } as unknown as typeof plan;
     db.plan.findMany.mockResolvedValue([{ ...cached, user }]);
@@ -145,7 +148,7 @@ describe("progress cache calendar", () => {
     vi.setSystemTime(new Date(now));
     const owner = { ...user, timezone };
     const cached = { ...plan, progressCalculatedAt: new Date(new Date(now).getTime() - 2 * 3600000),
-      progressState: { calculationVersion: 2, calculationTimezone: timezone } } as unknown as typeof plan;
+      progressState: { calculationVersion: 3, calculationTimezone: timezone } } as unknown as typeof plan;
     const compute = vi.spyOn(service, "computePlanProgress").mockResolvedValue({} as never);
     await service.getPlanProgress(cached, owner);
     expect(compute).toHaveBeenCalledOnce();

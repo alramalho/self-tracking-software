@@ -8,6 +8,7 @@ describe("userSelfUpdate", () => {
       timezone: "Europe/Lisbon",
       iosDeviceToken: null,
       reactionEmojis: ["🔥", "👏"],
+      spokenLanguages: ["pt", "en"],
       onboardingProgress: { step: 2 },
     };
     expect(userSelfUpdate(body)).toEqual(body);

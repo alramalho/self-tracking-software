@@ -508,3 +508,25 @@ Rollback, only while this release is active (the migrations are additive and can
 cd /root/workspace/tracking.so/deployment
 ./tracking-circle-momentum-20261001/rollback.sh
 ```
+
+## Dictation languages, Whisper and the shared streak rule — active since October 2, 2026 11:26 UTC
+
+Image `local/tracking-so-backend:voice-languages-20261002`, built with [voice-languages-overlay.Dockerfile](./voice-languages-overlay.Dockerfile) on `circle-momentum-20261001`. Source: branch `voice-feedback` (`c71631f0`, on main `539cbb44`). The overlay replaces 12 existing backend and shared files, all of which matched main `539cbb44` in the live container, and adds 2 new ones plus the migration. The live `schema.prisma` differed from main (it still carries the account switch model), so the overlay patches the image's own schema and `packages/prisma/package.json` in place instead of replacing them.
+
+- Migration `20261002120000_spoken_languages` (additive): `users.spokenLanguages` (text array, default empty) and the enum value `TRANSCRIPTION_FEEDBACK` on `FeedbackCategory`. It was the only pending migration and was applied with `prisma migrate deploy` from the new image before the switch.
+- Speech to text is now `openai/whisper-large-v3` through OpenRouter (it was `nvidia/parakeet-tdt-0.6b-v3`, which takes no language and misheard a short Portuguese clip as Russian). `STT_MODEL` is not set in the live `.env`, so the code default applies; set it there to override. Startup logs `Speech-to-text configured with OpenRouter (openai/whisper-large-v3)`.
+- `POST /ai/transcribe` also returns `language` and `model`, and grounds the model in the person's languages: one language is passed to the model; with several the model detects, and a clip heard in a language the person doesn't speak is transcribed again in their main one. `POST /voice-logs/preview` uses the same languages.
+- `POST /ai/transcribe/feedback` stores a thumbs up or down in the shared `feedback` table (the transcript only for a thumbs down). `PATCH /users/user` accepts `spokenLanguages` (up to 5 known ISO 639-1 codes).
+- The streak rule lives in `packages/prisma/follow-through/streak.ts`. `missedLastWeek` gains `done`, `target` and `oneShortAgain`; progress cache version is 3, so every plan recomputes on first read. The coach's instructions now state the rule and each plan's streak.
+- Older app builds keep working: every response only gains fields.
+- Before activation, in the exact candidate image: typecheck reported the same 30 existing errors as the previous image (none in the changed files), and 30 unit cases (streak rule, calendar scoring, languages and feedback parsing, speech-to-text config) passed with networking off. With the production environment, Whisper transcribed a synthetic short Portuguese M4A correctly with no saved language, with `["pt"]` and with `["pt", "en"]`, a longer Portuguese clip and a short English one; with `["en", "es"]` it logged that it heard `pt` and transcribed again in `en`. Requests took 0.3 to 4.9 seconds.
+- After activation: healthy container with zero restarts, public `/health` 200, the startup log line above, `/ai/transcribe`, `/ai/transcribe/feedback`, `PATCH /users/user`, `/plans` and `/circles/none` return 401 unauthenticated, and `POST /auth/switch` still answers 400. No signed-in request was made, so a real dictation from the app is not confirmed.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-voice-languages-20261002/` (`source-hashes.txt`, `activate.py`, `verified.json`, `rollback.sh`). `backup/` holds the environment, compose file and a 3.9 MB database dump taken before the migration.
+
+Rollback, only while this release is active (the migration is additive and can stay; it returns to Parakeet):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-voice-languages-20261002/rollback.sh
+```

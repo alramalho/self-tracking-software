@@ -1,3 +1,4 @@
+import type { MissedWeek as SharedMissedWeek } from "@tsw/prisma/follow-through/streak";
 export type DateValue = Date | string;
 export interface Person {
   id: string;
@@ -179,11 +180,8 @@ export interface Plan {
     }[];
   } | null;
 }
-export interface MissedWeek {
-  streakBefore: number;
-  streakAfter: number;
-  inARow: number;
-}
+// The streak rule and what a missed week carries live in the shared module.
+export type MissedWeek = SharedMissedWeek;
 export interface Metric {
   id: string;
   title: string;
@@ -256,6 +254,8 @@ export interface User extends Person {
   // AI data sharing consent: allowed when granted is newer than declined.
   aiConsentGrantedAt?: DateValue | null;
   aiConsentDeclinedAt?: DateValue | null;
+  /** Languages the person speaks (ISO 639-1, main one first), for speech to text. */
+  spokenLanguages?: string[];
   theme?: string;
   themeMode?: string;
   themeBaseColor?: string;

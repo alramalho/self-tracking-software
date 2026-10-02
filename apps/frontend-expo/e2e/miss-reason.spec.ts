@@ -59,3 +59,36 @@ test("a coach note keeps its own button and the plan stays one tap away", async 
   await expect(page.getByRole("button", { name: "Open plan", exact: true })).toBeVisible();
   await expect(page.getByText("What got in the way?", { exact: true })).toHaveCount(0);
 });
+
+// Three of four, right after a week that already held the streak: the sheet shows the
+// server's count and says why this one cost a week, with the clay coach.
+for (const theme of ["DARK", "LIGHT"])
+  test(`one short twice in a row is explained, with the server's count, in ${theme}`, async ({ page, request }) => {
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, coachPersonality: "STRATEGIST" } });
+    await request.post(`${API}/__plan-nudges`, { headers, data: {} });
+    await page.route(/\/plans\/?(\?.*)?$/, async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      const plans = await (await route.fetch()).json();
+      const plan = plans.find((p: any) => p.id === "stretch");
+      plan.goal = "train 4 times a week";
+      plan.timesPerWeek = 4;
+      plan.progress.achievement = {
+        streak: 7,
+        missedLastWeek: { streakBefore: 8, streakAfter: 7, inARow: 1, done: 3, target: 4, oneShortAgain: true },
+      };
+      // The client's own tally of the week disagrees on purpose: the server's count wins.
+      plan.progress.weeks[0].plannedActivities = 4;
+      await route.fulfill({ json: plans });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: /^train 4 times a week, .*missed last week/ }).click();
+    await expect(page.getByText("3/4", { exact: true })).toBeVisible();
+    await expect(page.getByText("8 → 7", { exact: true })).toBeVisible();
+    await expect(page.getByText(/One session short, two weeks running/)).toBeVisible();
+    await expect(page.getByText("Oli", { exact: true })).toBeVisible();
+    const avatar = page.locator('img[src*="oli-3d"]');
+    await expect(avatar.first()).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `../../docs/reviews/voice-feedback/missed-week-${theme}.png` });
+  });

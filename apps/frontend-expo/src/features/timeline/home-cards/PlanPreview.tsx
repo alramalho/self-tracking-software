@@ -197,7 +197,11 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
   const lastWeek = plan.progress?.weeks?.find((w) =>
     isSameWeek(new Date(w.startDate), subWeeks(now, 1)),
   );
-  const lastWeekTally = lastWeek
+  // The server's own count of last week when it sends one, so the sheet and the streak agree.
+  const lastWeekTally =
+    missed?.done !== undefined && missed.target !== undefined
+      ? { done: missed.done, target: missed.target }
+      : lastWeek
     ? {
         done: new Set((lastWeek.completedActivities ?? []).map((e) => dayKey(e.datetime))).size,
         target:
@@ -434,6 +438,8 @@ function WarningSheet({
         : needed === daysLeft
           ? "Every remaining day counts now. One today keeps the week alive."
           : "Still doable. Getting one in today keeps it comfortable."
+      : missed?.oneShortAgain && lostStreak
+        ? "One session short, two weeks running. Your streak held the first time, but it can't hold twice in a row, so this one cost a week. You're close: let's finish this one."
       : missed && missed.inARow > 1
         ? `That's ${missed.inARow} weeks in a row now, and each one costs a week of streak. One good week turns it around.`
         : lostStreak
@@ -468,7 +474,7 @@ function WarningSheet({
     // The app's native bottom sheet: sized to content, drag down or tap outside to close.
     <PreviewSheet visible={visible} title={title} onClose={onClose}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 36 }}>
-        <Image source={{ uri: coach.avatar }} style={{ width: 40, height: 40 }} />
+        <Image source={coach.avatar} resizeMode="contain" style={{ width: 44, height: 44 }} />
         <View>
           <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>{coach.name}</Text>
           <Text style={{ color: c.muted, fontSize: 12 }}>AI Coach</Text>
