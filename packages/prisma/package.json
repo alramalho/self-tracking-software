@@ -5,6 +5,7 @@
   "exports": {
     "./follow-through": "./follow-through/types.ts",
     "./follow-through/pace": "./follow-through/pace.ts",
+    "./follow-through/streak": "./follow-through/streak.ts",
     ".": {
       "browser": "./client.ts",
       "default": "./index.ts"

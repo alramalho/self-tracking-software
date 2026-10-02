@@ -4,6 +4,7 @@ import { type PlanProgressData } from "@/contexts/plans-progress";
 import useConfetti from "@/hooks/useConfetti";
 import { Flame, Medal, Sprout } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
+import { STREAK_RULES } from "@tsw/prisma/follow-through/streak";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface BadgeExplainerPopoverProps {
@@ -212,22 +213,9 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
             <Flame className="text-red-500 dark:text-red-400 inline-block" size={24} /> Streaks:
           </h4>
           <ul className="text-sm text-muted-foreground space-y-2">
-            <li>
-              • Each completed week adds <span className="font-bold">+1</span>{" "}
-              to your streak
-            </li>
-            <li>
-              • Each incomplete week subtracts{" "}
-              <span className="font-bold">-1</span> from your streak
-            </li>
-            <li>
-              • You have a <span className="font-bold">1 week buffer</span>{" "}
-              before it starts subtracting
-            </li>
-            <li>
-              • Streak score cannot go below{" "}
-              <span className="font-bold">0</span>
-            </li>
+            {STREAK_RULES.map((rule) => (
+              <li key={rule}>• {rule}</li>
+            ))}
           </ul>
         </div>
 

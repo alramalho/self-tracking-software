@@ -396,7 +396,8 @@ export function Conversation({ id }: ConversationProps) {
           >
             {coach && (
               <Image
-                source={{ uri: identity.avatar }}
+                source={identity.avatar}
+                resizeMode="contain"
                 style={{ width: 40, height: 40 }}
               />
             )}
