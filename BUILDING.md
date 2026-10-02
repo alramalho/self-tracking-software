@@ -18,9 +18,9 @@ The selected `tracking-circles` onboarding uses the original 3D artwork without 
 
 Circle encouragement is deployed on the web and backend, and local signed iPhone/Watch build 188 is verified and hosted. Source `9cce3691` combines the approved encouragement change `0022291e` with existing main `eda9fab9`; opening the member hand opens a personal composer, and sending explicitly delivers a private message. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-188--circle-encouragement-september-30-2026) for exact commands, artifacts and verification. This is a Safari test release; the recorded TestFlight release remains 177.
 
-## Latest TestFlight release — build 197, October 2, 2026
+## Latest TestFlight release — build 199, October 2, 2026
 
-Build 197 from main `82993d66` restores the smooth heart-rate chart (no circle per reading), which had only ever shipped from an uncommitted source. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-197-october-2-2026). Build 195 (circle momentum, in-app invites, drawers) came before it.
+Build 199 from `cead058d` (main `f64f0e68` merged with branch `voice-feedback`) adds the dictation feedback banner, the languages people speak, the explained missed-week sheet and the clay coach figures, and keeps build 197's smooth heart-rate chart. It needs the `voice-languages-20261002` backend, which is live. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-199-october-2-2026). Build 198 was uploaded an hour earlier without the heart-rate chart and is superseded; build 197 (smooth heart-rate chart) and 195 (circle momentum, in-app invites, drawers) came before.
 
 ## Earlier TestFlight release — build 192, October 1, 2026
 
