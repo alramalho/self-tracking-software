@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildHeartRateChart, workoutElapsedSpan, zoneForBpm, zoneReference } from "../src/features/health/heart-rate-chart/model";
+import { zoneStrokeStops } from "../src/features/health/heart-rate-chart/gradient";
+import { smoothAreaPath, smoothRunPath } from "../src/features/health/heart-rate-chart/path";
 import type { HeartRateZones } from "../src/features/health/workout-types";
 
 const ageBasedZones: HeartRateZones = {
@@ -48,6 +50,9 @@ test("a crossing is split at each actual percentage boundary", () => {
   assert.equal(model.points.at(-1)?.elapsedSeconds, 80);
   assert.ok(model.points[0].x > 20, "start is placed at its real elapsed time");
   assert.ok(model.points.at(-1)!.x < 300, "end is placed before workout finish");
+  const strokeStops = zoneStrokeStops(model.segments);
+  assert.deepEqual(strokeStops.map((stop) => stop.zone), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  assert.equal(strokeStops[1].offset, strokeStops[2].offset, "the line changes color at the zone boundary");
 });
 
 test("long missing intervals break the line, including Garmin detail gaps", () => {
@@ -61,6 +66,24 @@ test("long missing intervals break the line, including Garmin detail gaps", () =
   assert.equal(model.hasGaps, true);
   assert.ok(model.segments.every((segment) => segment.to.elapsedSeconds - segment.from.elapsedSeconds <= 30));
   assert.equal(model.maximumForZones, 190);
+});
+
+test("a short missing interval is interpolated, while a long one still breaks", () => {
+  const model = buildHeartRateChart([
+    { elapsedSeconds: 10, bpm: 140 },
+    { elapsedSeconds: 16, bpm: 142 },
+    { elapsedSeconds: 110, bpm: 160 },
+    { elapsedSeconds: 116, bpm: 162 },
+    { elapsedSeconds: 400, bpm: 150 },
+    { elapsedSeconds: 406, bpm: 152 },
+  ], 500, ageBasedZones);
+  assert.ok(model);
+  assert.deepEqual(model.runs.map((run) => run.length), [4, 2]);
+  assert.equal(model.hasGaps, true);
+  assert.equal(model.runs[0][1].elapsedSeconds, 16);
+  assert.equal(model.runs[0][2].elapsedSeconds, 110);
+  assert.match(smoothRunPath(model.runs[0]), /^M .* C /);
+  assert.match(smoothAreaPath(model.runs[0], 140), / L .* Z$/);
 });
 
 test("paused workouts retain post-pause readings on the wall-elapsed axis", () => {
@@ -94,4 +117,5 @@ test("missing or invalid samples never invent a graph or thresholds", () => {
   assert.ok(model);
   assert.equal(model.maximumForZones, null);
   assert.deepEqual(model.segments.map((segment) => segment.zone), [null]);
+  assert.deepEqual(zoneStrokeStops(model.segments), []);
 });

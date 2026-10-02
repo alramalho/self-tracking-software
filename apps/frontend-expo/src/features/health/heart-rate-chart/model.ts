@@ -84,8 +84,9 @@ export function buildHeartRateChart(
   const sortedIntervals = [...intervals].sort((a, b) => a - b);
   const medianInterval = sortedIntervals[Math.floor(sortedIntervals.length / 2)];
   // Sparse or missing periods should remain visible rather than forming a long slope.
-  const maximumConnectedGap = Math.min(180, Math.max(90, medianInterval * 3));
+  const maximumConnectedGap = Math.min(180, Math.max(120, medianInterval * 3));
   const segments: HeartRateChartSegment[] = [];
+  const runs: HeartRateChartPoint[][] = [[points[0]]];
   let hasGaps = false;
 
   for (let index = 1; index < points.length; index++) {
@@ -93,8 +94,10 @@ export function buildHeartRateChart(
     const to = points[index];
     if (to.elapsedSeconds - from.elapsedSeconds > maximumConnectedGap) {
       hasGaps = true;
+      runs.push([to]);
       continue;
     }
+    runs[runs.length - 1].push(to);
     if (maximumForZones == null || from.bpm === to.bpm) {
       segments.push({ from, to, zone: maximumForZones == null ? null : zoneForBpm(from.bpm, maximumForZones) });
       continue;
@@ -121,6 +124,7 @@ export function buildHeartRateChart(
   }
   return {
     points,
+    runs,
     segments,
     minimumBpm,
     maximumBpm: chartMaximum,
