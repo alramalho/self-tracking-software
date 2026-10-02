@@ -5,6 +5,7 @@ import type {
   PausePeriod,
   Plan,
 } from "@/core/types";
+import type { WeekOutcome } from "@tsw/prisma/follow-through/streak";
 export interface GridSegment {
   activity: Activity;
   intensity: number;
@@ -40,6 +41,27 @@ export interface HeatmapModel {
   historyLimited: boolean;
   startDate: Date;
   endDate: Date;
+}
+/** A past week in the streak explainer's "Your last weeks" strip. */
+export interface StreakWeek {
+  key: string;
+  label: string;
+  done: number;
+  target: number;
+  outcome: WeekOutcome;
+}
+/** One example week in the streak explainer: its dots and what the streak does. */
+export interface StreakExample {
+  outcome: WeekOutcome;
+  change: string;
+  title: string;
+  detail: string;
+  done: number;
+  target: number;
+}
+export interface StreakExplainerProps {
+  plan: Plan;
+  onClose: () => void;
 }
 export interface HeatmapProps extends HeatmapInput {
   compact?: boolean;

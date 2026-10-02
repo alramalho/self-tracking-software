@@ -120,6 +120,9 @@ export interface ProgressWeek {
   isCompleted: boolean;
   /** Past weeks: complete (+1), held (one short, streak unchanged) or missed (-1). */
   outcome?: "complete" | "held" | "missed";
+  /** Days with a session that week and the target, as the server counted them. */
+  doneCount?: number;
+  targetCount?: number;
   completedActivities?: ActivityEntry[];
   target?: number;
   plannedActivities?: number | PlanSession[];

@@ -26,6 +26,34 @@ export const STREAK_RULES_FOR_COACH = [
   `${HABIT_WEEKS} weeks of streak earn the Habit badge, ${LIFESTYLE_WEEKS} the Lifestyle badge`,
 ];
 
+/** The three outcomes as the app's streak explainer shows them: what the streak does, and why. */
+export const STREAK_OUTCOMES: {
+  outcome: WeekOutcome;
+  change: string;
+  title: string;
+  detail: string;
+}[] = [
+  { outcome: "complete", change: "+1", title: "Week completed", detail: "You hit your weekly target." },
+  {
+    outcome: "held",
+    change: "Holds",
+    title: "One session short",
+    detail: "Your streak stays where it is, but not two weeks in a row.",
+  },
+  {
+    outcome: "missed",
+    change: "−1",
+    title: "Week missed",
+    detail: "One week off your streak. It never drops to zero in one go.",
+  },
+];
+
+/** Sessions done in an example week with that outcome, for a weekly target. */
+export function exampleDone(outcome: WeekOutcome, target: number): number {
+  if (outcome === "complete") return target;
+  return Math.max(0, target - (outcome === "held" ? 1 : 2));
+}
+
 export type FinishedWeek = { completed: boolean; done: number; target: number };
 
 export const isOneShort = (week: FinishedWeek) =>

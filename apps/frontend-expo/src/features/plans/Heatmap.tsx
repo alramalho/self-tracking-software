@@ -7,6 +7,7 @@ import { dayKey, dateLabel } from "@/core/dates";
 import { Button, Copy, Heading, s, useColors } from "@/components/ui";
 import { activityColor, buildHeatmap } from "./grid-model";
 import type { GridWeek, HeatmapProps } from "./grid-types";
+import { StreakExplainer } from "./StreakExplainer";
 const CELL = 20;
 export const Heatmap = memo(function Heatmap(props: HeatmapProps) {
   const c = useColors();
@@ -25,6 +26,7 @@ export const Heatmap = memo(function Heatmap(props: HeatmapProps) {
   );
   const [legendExpanded, setLegendExpanded] = useState(false);
   const [selected, setSelected] = useState<string>();
+  const [explaining, setExplaining] = useState(false);
   const list = useRef<FlatList<GridWeek>>(null);
   const todayIndex = Math.max(
     0,
@@ -190,26 +192,34 @@ export const Heatmap = memo(function Heatmap(props: HeatmapProps) {
                   )}
                 </Pressable>
               ))}
-              {/* Full week: 🔥. One session short: a small faded flame, the streak held. */}
-              <Text
-                accessibilityLabel={
+              {/* Full week: 🔥. One session short: a small faded flame, the streak held.
+                  Tapping it explains the streak. */}
+              <Pressable
+                accessibilityRole={props.plan ? "button" : undefined}
+                accessibilityLabel={`${
                   week.completed
                     ? "Week completed"
                     : week.held
                       ? "One session short, streak held"
                       : "Week incomplete"
-                }
-                style={{
-                  width: CELL,
-                  height: 24,
-                  fontSize: week.held ? 12 : 18,
-                  lineHeight: 24,
-                  textAlign: "center",
-                  opacity: week.held ? 0.45 : 1,
-                }}
+                }${props.plan ? ". How streaks work" : ""}`}
+                disabled={!props.plan || !(week.completed || week.held)}
+                hitSlop={{ top: 6, bottom: 14 }}
+                onPress={() => setExplaining(true)}
               >
-                {week.completed || week.held ? "🔥" : ""}
-              </Text>
+                <Text
+                  style={{
+                    width: CELL,
+                    height: 24,
+                    fontSize: week.held ? 12 : 18,
+                    lineHeight: 24,
+                    textAlign: "center",
+                    opacity: week.held ? 0.45 : 1,
+                  }}
+                >
+                  {week.completed || week.held ? "🔥" : ""}
+                </Text>
+              </Pressable>
             </View>
           )}
         />
@@ -242,6 +252,9 @@ export const Heatmap = memo(function Heatmap(props: HeatmapProps) {
           </Pressable>
         )}
       </View>
+      {explaining && props.plan && (
+        <StreakExplainer plan={props.plan} onClose={() => setExplaining(false)} />
+      )}
       {model.historyLimited && (
         <Copy muted>
           Showing the last 180 days. Full history is available with Plus.
