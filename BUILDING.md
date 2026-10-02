@@ -28,7 +28,7 @@ Build 204 from main `d3bf7bf9` is build 203 plus the streak explainer: tapping a
 
 ## Previous TestFlight release — build 203, October 2, 2026
 
-Build 203 from main `eb879929` is the first build with all of October 2's work together: the smooth heart-rate chart, account switching, the Metrics redesign and the dictation feedback from the merged `voice-feedback` branch. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-203-october-2-2026). Builds 198 to 202 each lacked something and are superseded.
+Build 203 from main `eb879929` is the first build with all of October 2's work together: the smooth heart-rate chart, account switching, the Metrics redesign and the dictation feedback from the merged `voice-feedback` branch. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#previous-testflight-release--build-203-october-2-2026). Builds 198 to 202 each lacked something and are superseded.
 
 ## Metrics redesign — on main, on the web and in TestFlight build 203, October 2, 2026
 
