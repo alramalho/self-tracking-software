@@ -22,9 +22,13 @@ Build 205 from main `d3bf7bf9` has everything on main: the streak explainer, dic
 
 Circle encouragement is deployed on the web and backend, and local signed iPhone/Watch build 188 is verified and hosted. Source `9cce3691` combines the approved encouragement change `0022291e` with existing main `eda9fab9`; opening the member hand opens a personal composer, and sending explicitly delivers a private message. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-188--circle-encouragement-september-30-2026) for exact commands, artifacts and verification. This is a Safari test release; the recorded TestFlight release remains 177.
 
-## Latest TestFlight release — build 204, October 2, 2026
+## Latest TestFlight release — build 206, October 2, 2026
 
-Build 204 from main `d3bf7bf9` is build 203 plus the streak explainer: tapping a flame under a plan's grid opens a short visual drawer on how a week moves the streak, with the plan's own last weeks. The same commit is hosted as Safari-install build 205. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-204-october-2-2026).
+Build 206 from main `6e0fb61b` matches main: build 204 plus the Metrics refinement (folded too-early rows, one row of metric pills). See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-206-october-2-2026).
+
+## Previous TestFlight release — build 204, October 2, 2026
+
+Build 204 from main `d3bf7bf9` is build 203 plus the streak explainer: tapping a flame under a plan's grid opens a short visual drawer on how a week moves the streak, with the plan's own last weeks. The same commit is hosted as Safari-install build 205. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#previous-testflight-release--build-204-october-2-2026).
 
 ## Previous TestFlight release — build 203, October 2, 2026
 
