@@ -164,3 +164,32 @@ for (const theme of ["LIGHT", "DARK"]) {
     expect(errors).toEqual([]);
   });
 }
+
+// The chat composer asks too, in a row above the message field, under the clay coach.
+for (const theme of ["LIGHT", "DARK"]) {
+  test(`dictating to the coach asks if it was right in ${theme}`, async ({ page, request }) => {
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, { headers: auth, data: { themeMode: theme } });
+    await request.post(`${API}/__plan-nudges`, { headers: auth, data: {} });
+    await page.route("**/ai/transcribe", async (route) => {
+      await route.fulfill({
+        json: { text: "I was travelling all week.", language: "en", model: "openai/whisper-large-v3", success: true },
+      });
+    });
+    await page.goto("/");
+    await page
+      .getByRole("button", { name: /^Read before bed, (this week is at risk|missed last week)/ })
+      .click();
+    await page.getByRole("button", { name: "Something else", exact: true }).click();
+    await expect(page).toHaveURL(/\/chat\//);
+    await expect(page.locator('img[src*="helly-3d"]').first()).toBeVisible();
+    await page.getByRole("button", { name: "Start voice input" }).click();
+    await page.getByRole("button", { name: /^Stop dictation/ }).click();
+    await expect(page.getByTestId("transcription-feedback")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start voice input" })).toBeVisible();
+    await expect(page.getByTestId("chat-message-input")).toHaveValue(
+      'I missed "Read before bed" last week because I was travelling all week.',
+    );
+    await page.screenshot({ path: path.join(output, `chat-${theme}.png`) });
+  });
+}
