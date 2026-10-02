@@ -496,3 +496,24 @@ Rollback, only while this release is active (the migrations are additive and can
 cd /root/workspace/tracking.so/deployment
 ./tracking-circle-momentum-20261001/rollback.sh
 ```
+
+## Dictation languages, Whisper and the shared streak rule — prepared October 2, 2026, NOT deployed
+
+Nothing in this section is live. The server was not reachable from the session that wrote it (production access was not permitted), so the live image, the live `.env` and the disk space were not checked. Production still runs `circle-momentum-20261001` with Parakeet, as far as this document knows.
+
+Source: branch `voice-feedback` (`c71631f0`, on top of main `539cbb44`). Overlay: [voice-languages-overlay.Dockerfile](./voice-languages-overlay.Dockerfile) on `circle-momentum-20261001`, 14 source files plus one migration. It patches the image's own `schema.prisma` and `packages/prisma/package.json` in place instead of replacing them.
+
+What it changes:
+
+- Migration `20261002120000_spoken_languages` (additive): `users.spokenLanguages` (text array, default empty) and the enum value `TRANSCRIPTION_FEEDBACK` on `FeedbackCategory`.
+- `POST /ai/transcribe` also returns `language` and `model`, and grounds the model in the person's languages: one language is passed to the model; with several the model detects, and a clip heard in a language the person doesn't speak is transcribed again in their main one. `POST /voice-logs/preview` uses the same languages.
+- `POST /ai/transcribe/feedback` stores a thumbs up or down in the shared `feedback` table; the transcript is kept only for a thumbs down. `PATCH /users/user` accepts `spokenLanguages` (up to 5 known ISO 639-1 codes).
+- The default speech-to-text model is `openai/whisper-large-v3` through OpenRouter. **`hetzner/.env.example` used to set `STT_MODEL=nvidia/parakeet-tdt-0.6b-v3`; if the live `.env` has that line, change it to `openai/whisper-large-v3` (or remove it), otherwise Parakeet stays.** Startup logs `Speech-to-text configured with OpenRouter (<model>)`.
+- The streak rule lives in `packages/prisma/follow-through/streak.ts`. `missedLastWeek` gains `done`, `target` and `oneShortAgain`; progress cache version is 3, so every plan recomputes on first read (no manual cache invalidation). The coach's instructions now state the rule and each plan's streak.
+- Older app builds keep working: every response only gains fields.
+
+Not verified anywhere: Whisper through OpenRouter with the OpenAI SDK's multipart upload, `verbose_json` and `language`. OpenRouter documents all three, but no real request was made (no key was used locally). Check it in the candidate image before the switch: transcribe a short Portuguese M4A with `spokenLanguages = ["pt"]` and with `["pt", "en"]`.
+
+To deploy, copy the newest context's `activate.py` and `rollback.sh` (`tracking-circle-momentum-20261001/`) into `tracking-voice-languages-20261002/`, with: expected live image `circle-momentum-20261001`, new image `voice-languages-20261002`, exactly one pending migration, a database dump of `tracking_cutover` first, and the `STT_MODEL` change above. Before building, confirm each file the overlay replaces matches main `539cbb44` in the live container.
+
+Local checks on this source: backend typecheck clean; 40 unit cases (streak rule, calendar scoring, languages, feedback parsing, speech-to-text config, self-update guard, circle board); Expo typecheck clean; 10 browser cases in light and dark (`e2e/voice-feedback.spec.ts`, `e2e/miss-reason.spec.ts`), screenshots in `docs/reviews/voice-feedback/`.

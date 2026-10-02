@@ -79,6 +79,24 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 196 — dictation feedback, languages and the missed-week sheet, October 2, 2026
+
+- Local production release from branch `voice-feedback` (`c71631f0`, on main `539cbb44`). After every dictation a banner asks "Did we get that right?"; thumbs down opens "What went wrong?", and "Wrong language" leads to "Which languages do you speak?" (also Settings → Languages). The "missed last week" sheet shows the server's own count and explains a second one-short week; it, the coach chat header, the inbox row and coach settings use the clay coach figures. The badge explainer prints the shared streak rule.
+- **The backend it needs is not deployed** (see "prepared, NOT deployed" in [the runbook](../../hetzner/MIGRATION.md)). Until it is: the banner shows, but a thumbs up is dropped, a thumbs down fails on Send, chosen languages don't save, transcription is still Parakeet, and the sheet falls back to the phone's own count without the "one short twice" explanation. The clay figures and the badge wording work without it.
+- Verified IPA: `tracking-voice-feedback/apps/frontend-expo/.release/2026-10-02T10-48-34-753Z-b85a0228/tracking.so.ipa`, SHA-256 `e2a6fffe44fd94b1accd533374de1c175124cdcb53c625f6b065ca41bf226dc4`; version 1.0.0, iPhone and Watch build 196; profiles expire September 10, 2027. The wrapper's production-config, bundled-JavaScript, signing and device-provisioning checks passed; the bundle contains the new screen text and both clay figures; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap.
+- Hosted: `.release/2026-10-02T10-53-32-338Z-e8176002/distribution.json` in the same worktree; the link expires October 9, 2026. The publisher's own fetch check failed with `fetch failed` after uploading (as with build 190); `scripts/iphone/verify-hosted.cjs` then verified the installer, manifest and all 27,150,637 IPA bytes against the local hash.
+- Checks: Expo typecheck clean; 4 dictation unit cases; 10 browser cases in light and dark (`e2e/voice-feedback.spec.ts`, `e2e/miss-reason.spec.ts`), screens in `docs/reviews/voice-feedback/`. These are Expo mobile-web renders; nothing was run on a simulator or phone, so recording, the banner and the drawers on a real iPhone are not confirmed. `comments`, `messages`, `inline-coach` and `settings-drawers` browser suites fail the same 15 cases on untouched main. Two `workout-effort` unit cases fail and were not checked against main. Not a TestFlight upload; build 195 stays the current TestFlight release. No Expo cloud build, OTA or store submission.
+
+```sh
+cp -p ../tracking-circle-momentum/apps/frontend-expo/.release/{production.env.json,watch-device.json} apps/frontend-expo/.release/
+env -u SDKROOT PATH=/private/tmp/tracking-pnpm-bin:$PATH \
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default \
+  EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-voice-feedback-device-build \
+  pnpm --filter frontend-expo build:iphone:local
+AWS_PROFILE=default pnpm --filter frontend-expo build:iphone:publish "$PWD/apps/frontend-expo/.release/2026-10-02T10-48-34-753Z-b85a0228/tracking.so.ipa"
+(cd apps/frontend-expo && node scripts/iphone/verify-hosted.cjs .release/2026-10-02T10-53-32-338Z-e8176002/distribution.json)
+```
+
 ## Safari-install build 194 — circle momentum, in-app invites and native-feeling drawers, October 1, 2026
 
 - Local production release from commit `ee86cd2f`, now on main. On the circle screen: the orbit header, the "Past weeks" row and sheet, the week chip on circle logs, "Turn off Helly's posts" / "Mute notifications", and "Invite to circle" (friends with an Invite button, plus "Share a link"; open spots open it too). The shared drawer (`LoggingDrawer`, used by Settings and about 15 other sheets) now fades its dim in place and slides only the sheet, which follows a downward drag.
