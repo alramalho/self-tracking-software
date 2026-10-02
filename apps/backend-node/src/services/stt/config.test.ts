@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { resolveSTTConfig } from "./config";
 
 describe("resolveSTTConfig", () => {
-  it("uses NVIDIA Parakeet through OpenRouter when its key is available", () => {
+  it("uses Whisper through OpenRouter when its key is available", () => {
     expect(resolveSTTConfig({ OPENROUTER_API_KEY: "configured" })).toEqual({
       apiKey: "configured",
       baseURL: "https://openrouter.ai/api/v1",
-      model: "nvidia/parakeet-tdt-0.6b-v3",
+      model: "openai/whisper-large-v3",
       provider: "OpenRouter",
     });
   });
@@ -23,8 +23,8 @@ describe("resolveSTTConfig", () => {
     expect(
       resolveSTTConfig({
         OPENROUTER_API_KEY: "configured",
-        STT_MODEL: "openai/whisper-large-v3",
+        STT_MODEL: "nvidia/parakeet-tdt-0.6b-v3",
       }).model,
-    ).toBe("openai/whisper-large-v3");
+    ).toBe("nvidia/parakeet-tdt-0.6b-v3");
   });
 });

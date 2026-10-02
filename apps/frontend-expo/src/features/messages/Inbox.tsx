@@ -225,7 +225,8 @@ export function Inbox() {
               ]}
             >
               <Image
-                source={{ uri: identity.avatar }}
+                source={identity.avatar}
+                resizeMode="contain"
                 style={{ width: 48, height: 48 }}
               />
               <View style={{ flex: 1, gap: 4 }}>

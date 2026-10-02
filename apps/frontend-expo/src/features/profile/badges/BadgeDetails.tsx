@@ -4,6 +4,7 @@ import { Flame, Medal, Sprout, X, ChevronRight } from "lucide-react-native";
 import { router } from "expo-router";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/theme";
+import { STREAK_RULES } from "@tsw/prisma/follow-through/streak";
 import type { BadgeDetailsProps } from "./types";
 const Touch = Pressable;
 export function BadgeDetails({ user, kind, onClose }: BadgeDetailsProps) {
@@ -232,12 +233,7 @@ export function BadgeDetails({ user, kind, onClose }: BadgeDetailsProps) {
             title: "Streaks:",
             Icon: Flame,
             color: "#ef4444",
-            rules: [
-              "Each completed week adds +1 to your streak",
-              "Each missed week subtracts -1 from your streak, starting with the first",
-              "One session short (3+ per week): your streak holds, but not two weeks in a row",
-              "Streak score cannot go below 0",
-            ],
+            rules: STREAK_RULES,
           },
           {
             title: "Habit badge:",

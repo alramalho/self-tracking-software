@@ -24,6 +24,13 @@ import {
   startOfWeek,
 } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import {
+  HABIT_WEEKS,
+  isOneShort,
+  LIFESTYLE_WEEKS,
+  streakAfter,
+  weekOutcome,
+} from "@tsw/prisma/follow-through/streak";
 import { hasAiConsent } from "../utils/aiConsent";
 import { toMidnightUTCDate } from "../utils/date";
 import { withErrorHandling } from "../utils/errorHandling";
@@ -55,7 +62,8 @@ export async function getNextPlanSortOrder(
   return (maxPlanSortOrder._max.sortOrder ?? -1) + 1;
 }
 
-const PROGRESS_CALCULATION_VERSION = 2;
+// 3: a missed last week also says what was done, the target, and whether it was one short again.
+const PROGRESS_CALCULATION_VERSION = 3;
 
 function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -557,8 +565,8 @@ export class PlansService {
   }
 
   // Streak and achievement calculation methods moved from frontend
-  private readonly HABIT_WEEKS = 4;
-  private readonly LIFESTYLE_WEEKS = 9;
+  private readonly HABIT_WEEKS = HABIT_WEEKS;
+  private readonly LIFESTYLE_WEEKS = LIFESTYLE_WEEKS;
 
   async calculatePlanAchievement(
     planId: string,
@@ -594,12 +602,9 @@ export class PlansService {
     return this.scoreWeeks(weeks, new Date(), user.timezone || "UTC");
   }
 
-  // Walks the weeks up to this one and scores the streak, marking each past week's outcome:
-  // - complete: +1
-  // - held: one session short of a target of 3 or more; the streak stays the same, but never
-  //   two weeks in a row (the second one counts as missed)
-  // - missed: -1 (no grace week), never below 0
-  // The current week only counts once it's complete.
+  // Walks the weeks up to this one and scores the streak, marking each past week's outcome.
+  // The rule itself (complete +1, one short holds once, missed -1) lives in
+  // @tsw/prisma/follow-through/streak. The current week only counts once it's complete.
   scoreWeeks(weeks: PlanWeek[], now = new Date(), timezone = "UTC"): PlanAchievement {
     const currentWeekStart = toMidnightUTCDate(localWeekStart(now, timezone));
     const lastWeekStart = toMidnightUTCDate(addWeeks(new TZDate(currentWeekStart, "UTC"), -1));
@@ -617,32 +622,42 @@ export class PlansService {
       if (!isCurrentWeek && !isBefore(weekStart, currentWeekStart)) break;
       totalWeeks += 1;
 
-      if (week.isCompleted) {
-        streak += 1;
-        completedWeeks += 1;
-        if (!isCurrentWeek) {
-          incompleteWeeks = 0;
-          week.outcome = previousOutcome = "complete";
+      if (isCurrentWeek) {
+        if (week.isCompleted) {
+          streak += 1;
+          completedWeeks += 1;
         }
         continue;
       }
-      if (isCurrentWeek) continue;
       // A scheduled plan with nothing scheduled that week had nothing to miss.
-      if (Array.isArray(week.plannedActivities) && week.plannedActivities.length === 0) continue;
-
-      const oneShort = week.targetCount >= 3 && week.doneCount === week.targetCount - 1;
-      if (oneShort && previousOutcome !== "held") {
-        week.outcome = previousOutcome = "held";
+      if (
+        !week.isCompleted &&
+        Array.isArray(week.plannedActivities) &&
+        week.plannedActivities.length === 0
+      )
         continue;
-      }
 
+      const tally = { completed: week.isCompleted, done: week.doneCount, target: week.targetCount };
+      const outcome = weekOutcome(tally, previousOutcome);
       const streakBefore = streak;
-      streak = Math.max(0, streak - 1);
-      incompleteWeeks += 1;
-      week.outcome = previousOutcome = "missed";
-      if (isSameDay(weekStart, lastWeekStart)) {
-        missedLastWeek = { streakBefore, streakAfter: streak, inARow: incompleteWeeks };
+      streak = streakAfter(streak, outcome);
+      if (outcome === "complete") {
+        completedWeeks += 1;
+        incompleteWeeks = 0;
+      } else if (outcome === "missed") {
+        incompleteWeeks += 1;
+        if (isSameDay(weekStart, lastWeekStart)) {
+          missedLastWeek = {
+            streakBefore,
+            streakAfter: streak,
+            inARow: incompleteWeeks,
+            done: week.doneCount,
+            target: week.targetCount,
+            oneShortAgain: isOneShort(tally),
+          };
+        }
       }
+      week.outcome = previousOutcome = outcome;
     }
 
     return {

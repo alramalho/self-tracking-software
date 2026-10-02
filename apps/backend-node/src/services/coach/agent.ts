@@ -14,6 +14,7 @@ import {
 import { z } from "zod/v4";
 import { goalSpecSchema, targetsSchema } from "../plan-design/schema";
 import type { Plan, User } from "@tsw/prisma";
+import type { PlanProgressState } from "@tsw/prisma/types";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { prisma } from "../../utils/prisma";
 import { differenceInCalendarDays, format, endOfWeek, startOfWeek, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
@@ -27,6 +28,10 @@ import { getCurriculumFileCounts } from "../planCurriculumService";
 import { PlanProposalPatchSchema } from "../planProposalPatchService";
 import { webSearchService } from "../webSearchService";
 import { browserAgentService } from "../browserAgentService";
+import {
+  describeStreak,
+  STREAK_RULES_FOR_COACH,
+} from "@tsw/prisma/follow-through/streak";
 import {
   buildCoachAgentProviderOptions,
   resolveCoachAgentTemperature,
@@ -437,6 +442,8 @@ export class CoachAgentService {
           .join("\n");
 
         const isTimesPerWeek = plan.outlineType === "TIMES_PER_WEEK";
+        // The plan's cached progress; the streak rule itself is explained once, below.
+        const streak = (plan.progressState as PlanProgressState)?.achievement;
         return dedent`
           Plan: ${plan.goal} [planId: ${plan.id}]
           Emoji: ${plan.emoji || "none"}
@@ -445,6 +452,7 @@ export class CoachAgentService {
           ${(curriculumFileCountByPlanId?.get(plan.id) || 0) > 0 ? `Curriculum: ${curriculumFileCountByPlanId!.get(plan.id)} user-authored files attached. They are the source of truth over the notes below; read them with listCurriculumFiles/readCurriculumFile before proposing sessions or schedule changes for this plan.` : ""}
           ${notes ? `Roadmap / user notes:\n    ${notes.replace(/\n/g, "\n    ")}` : ""}
           Type: ${isTimesPerWeek ? `${plan.timesPerWeek}x per week (frequency-based, no scheduled sessions)` : "Specific scheduled sessions"}
+          ${streak ? `Streak: ${describeStreak(streak)}` : ""}
           Activities: ${activities}
           ${isTimesPerWeek ? "" : `Sessions:\n          ${sessionsStr || "    No sessions scheduled"}`}
           Milestones:
@@ -524,6 +532,7 @@ export class CoachAgentService {
         Current week ends: ${format(thisWeekEnd, "yyyy-MM-dd")} (Saturday)
 
         ${plansContext ? `TRACKING.SO PLAN CONTEXT (optional, use only when relevant):\n${plansContext}` : "No active plans."}
+        ${plansContext ? `HOW STREAKS WORK IN THE APP (explain them exactly like this, never invent other rules):\n${STREAK_RULES_FOR_COACH.map((rule) => `- ${rule}`).join("\n")}` : ""}
         ${activityTitlesContext ? `EXACT ACTIVITY TITLES FOR LOGGING: ${activityTitlesContext}` : ""}
         ${linkedEntityContext ? `LINKED ENTITY MENTION IDS (use this DSL whenever mentioning saved plans or activities):\n${linkedEntityContext}` : ""}
 

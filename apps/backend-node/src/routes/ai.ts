@@ -33,6 +33,7 @@ import {
 } from "../services/planProposalPatchService";
 import { getNextPlanSortOrder, plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
+import { parseTranscriptionFeedback } from "../services/stt/feedback";
 import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
 import { logger } from "../utils/logger";
@@ -1180,19 +1181,50 @@ router.post(
         `Audio transcription requested for user ${req.user!.id}, format: ${audioFormat || "auto-detect"}`,
       );
 
-      // Use the STT service to transcribe the audio
-      const transcribedText = await sttService.speechToText(
+      // Use the STT service to transcribe the audio, in the languages this person speaks
+      const transcript = await sttService.transcribe(
         audioFile.buffer,
         audioFormat,
+        req.user!.spokenLanguages,
       );
 
       res.json({
-        text: transcribedText,
+        text: transcript.text,
+        language: transcript.language,
+        model: transcript.model,
         success: true,
       });
     } catch (error) {
       logger.error("Error in audio transcription:", error);
       res.status(500).json({ error: "Audio transcription failed" });
+    }
+  },
+);
+
+// Thumbs up or down on a dictation result. The transcript is kept only for a thumbs down.
+router.post(
+  "/transcribe/feedback",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const feedback = parseTranscriptionFeedback(req.body);
+    if (!feedback) {
+      res.status(400).json({ error: "helpful must be true or false" });
+      return;
+    }
+    try {
+      const { comment, ...details } = feedback;
+      await prisma.feedback.create({
+        data: {
+          userId: req.user!.id,
+          category: "TRANSCRIPTION_FEEDBACK",
+          content: comment || null,
+          metadata: { ...details, spokenLanguages: req.user!.spokenLanguages },
+        },
+      });
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error saving transcription feedback:", error);
+      res.status(500).json({ error: "Failed to submit feedback" });
     }
   },
 );

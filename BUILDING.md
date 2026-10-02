@@ -26,9 +26,9 @@ The Metrics page now states what it found in one sentence from the coach, with s
 
 Build 200 from main `dfaa222b` adds account switching (Settings → Accounts) to build 197. It lacks the dictation features of build 199, which was built from the unmerged `voice-feedback` branch; build 201 combines both and is validated but not uploaded. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#testflight-builds-200-and-201--account-switching-october-2-2026).
 
-## Earlier TestFlight release — build 197, October 2, 2026
+## TestFlight build 199 — dictation feedback, October 2, 2026
 
-Build 197 from main `82993d66` restores the smooth heart-rate chart (no circle per reading), which had only ever shipped from an uncommitted source. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-197-october-2-2026). Build 195 (circle momentum, in-app invites, drawers) came before it.
+Build 199 from `cead058d` (main `f64f0e68` merged with branch `voice-feedback`) adds the dictation feedback banner, the languages people speak, the explained missed-week sheet and the clay coach figures, and keeps build 197's smooth heart-rate chart. It needs the `voice-languages-20261002` backend, which is live. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-199-october-2-2026). Build 198 was uploaded an hour earlier without the heart-rate chart and is superseded; build 197 (smooth heart-rate chart) and 195 (circle momentum, in-app invites, drawers) came before.
 
 ## Earlier TestFlight release — build 192, October 1, 2026
 

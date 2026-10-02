@@ -10,6 +10,7 @@ import {
 import { forwardRef, useEffect, useRef } from "react";
 import { errorMessage } from "@/data/api";
 import { DictationButton } from "./DictationButton";
+import { useTranscriptionFeedback } from "./TranscriptionFeedback";
 
 export function appendDictationText(current: string, transcript: string) {
   const text = transcript.trim();
@@ -43,47 +44,52 @@ export const VoiceTextArea = forwardRef<TextInput, VoiceTextAreaProps>(
     ref,
   ) {
     const canEdit = !disabled && editable !== false;
+    const feedback = useTranscriptionFeedback();
     const valueRef = useRef(String(value ?? ""));
     useEffect(() => {
       valueRef.current = String(value ?? "");
     }, [value]);
     return (
-      <View style={[{ position: "relative" }, wrapperStyle]}>
-        <TextInput
-          {...props}
-          ref={ref}
-          value={value}
-          editable={canEdit}
-          multiline
-          onChangeText={onChangeText}
-          style={[
-            style,
-            {
-              paddingRight: 62,
-              paddingBottom: 54,
-              textAlignVertical: "top",
-            } satisfies TextStyle,
-          ]}
-        />
-        <View style={{ position: "absolute", right: 10, bottom: 10 }}>
-          <DictationButton
-            accessibilityLabel="Start voice input"
-            disabled={!canEdit}
-            label={dictationLabel}
-            onBusyChange={onDictationBusyChange}
-            onError={(error) => {
-              onDictationError?.(error);
-              if (!onDictationError)
-                Alert.alert("Voice input", errorMessage(error));
-            }}
-            onTranscript={(transcript) => {
-              const next = appendDictationText(valueRef.current, transcript);
-              valueRef.current = next;
-              onChangeText?.(next);
-            }}
+      <>
+        <View style={[{ position: "relative" }, wrapperStyle]}>
+          <TextInput
+            {...props}
+            ref={ref}
+            value={value}
+            editable={canEdit}
+            multiline
+            onChangeText={onChangeText}
+            style={[
+              style,
+              {
+                paddingRight: 62,
+                paddingBottom: 54,
+                textAlignVertical: "top",
+              } satisfies TextStyle,
+            ]}
           />
+          <View style={{ position: "absolute", right: 10, bottom: 10 }}>
+            <DictationButton
+              accessibilityLabel="Start voice input"
+              disabled={!canEdit}
+              label={dictationLabel}
+              onBusyChange={onDictationBusyChange}
+              onError={(error) => {
+                onDictationError?.(error);
+                if (!onDictationError)
+                  Alert.alert("Voice input", errorMessage(error));
+              }}
+              onTranscript={(transcript) => {
+                const next = appendDictationText(valueRef.current, transcript);
+                valueRef.current = next;
+                onChangeText?.(next);
+              }}
+              onTranscription={feedback.ask}
+            />
+          </View>
         </View>
-      </View>
+        {feedback.banner}
+      </>
     );
   },
 );

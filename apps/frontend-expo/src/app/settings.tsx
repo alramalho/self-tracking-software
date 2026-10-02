@@ -13,6 +13,7 @@ import {
   FileText,
   GraduationCap,
   KeyRound,
+  Languages,
   LifeBuoy,
   LogOut,
   Moon,
@@ -56,6 +57,8 @@ import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
 import { BlockedPeople, SUPPORT_EMAIL } from "@/features/safety/Safety";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
+import { LanguagesDrawer } from "@/features/dictation/LanguagesDrawer";
+import { languagesSummary } from "@/features/dictation/languages";
 import { APPLE_SUBSCRIPTIONS_URL, hasAppleSubscription } from "@/features/billing/apple";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
@@ -80,6 +83,7 @@ export default function Settings() {
   const health = useHealth();
   const [view, setView] = useState<SettingsView>("main");
   const [confirm, setConfirm] = useState<"logout" | null>(null);
+  const [languagesOpen, setLanguagesOpen] = useState(false);
   const [error, setError] = useState<unknown>();
   const [profileBusy, setProfileBusy] = useState(false);
   const theme = useAction(
@@ -253,6 +257,14 @@ export default function Settings() {
               title="Integrations & API Keys"
               onPress={() => setView("integrations")}
             />
+            <SettingsRow
+              icon={Languages}
+              title={`Languages · ${languagesSummary(user.data?.spokenLanguages)}`}
+              onPress={() => setLanguagesOpen(true)}
+            />
+            {languagesOpen && (
+              <LanguagesDrawer onClose={() => setLanguagesOpen(false)} />
+            )}
             <SettingsRow
               icon={Paintbrush}
               title="Color Palette"

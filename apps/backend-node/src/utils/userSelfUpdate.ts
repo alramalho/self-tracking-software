@@ -28,7 +28,7 @@ const PROTECTED_FIELDS = new Set([
 ]);
 
 // The only fields whose values are legitimately arrays or objects.
-const ARRAY_FIELDS = new Set(["reactionEmojis"]);
+const ARRAY_FIELDS = new Set(["reactionEmojis", "spokenLanguages"]);
 const JSON_FIELDS = new Set(["onboardingProgress"]);
 
 export function userSelfUpdate(body: unknown): Record<string, unknown> {

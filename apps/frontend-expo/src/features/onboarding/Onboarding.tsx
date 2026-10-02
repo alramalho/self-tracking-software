@@ -31,6 +31,7 @@ import type { User } from "@/core/types";
 import { goBack } from "@/core/navigation";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
+import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
@@ -101,6 +102,7 @@ export default function Onboarding({
     user = useCurrentUser(),
     saved = useFollowThrough(!preview);
   const aiConsent = useAiConsent();
+  const transcriptionFeedback = useTranscriptionFeedback();
   const [draft, setDraft] = useState(() => ({
     ...newDraft(randomUUID()),
     ...(initialGoal?.trim() ? { goal: initialGoal.trim() } : {}),
@@ -1455,9 +1457,11 @@ export default function Onboarding({
                                     `${current.trimEnd()}${current.trim() ? " " : ""}${transcript}`,
                                 )
                               }
+                              onTranscription={transcriptionFeedback.ask}
                             />
                           </View>
                         </View>
+                        {transcriptionFeedback.banner}
                         {checkingContext && answer.trim().length >= 3 && (
                           <GoalGuidance result={goalGuidance} loading={goalGuidanceBusy} />
                         )}

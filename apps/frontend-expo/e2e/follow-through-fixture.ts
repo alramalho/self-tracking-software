@@ -69,13 +69,13 @@ export function followThroughFixture(
       plan("reading", "Read before bed", "📚", read, 2),
       { ...plan("stretch", "Stretch every morning", "🧘", stretch, 3), timesPerWeek: 1 },
     ];
-    // Missed last week (no grace week): reading is also at risk now, stretch already made up for it.
+    // Missed last week (a miss costs one week of streak): reading is also at risk now, stretch already made up for it.
     const lastSunday = new Date(Date.now() - 7 * day);
     lastSunday.setDate(lastSunday.getDate() - lastSunday.getDay());
     const missedWeek = (planId: string, streak: number, before: number, done: string[], target: number) => {
       const p = state.plans.find((x: any) => x.id === planId);
       p.progress = {
-        achievement: { streak, missedLastWeek: { streakBefore: before, streakAfter: before - 1, inARow: 1 } },
+        achievement: { streak, missedLastWeek: { streakBefore: before, streakAfter: before - 1, inARow: 1, done: done.length, target, oneShortAgain: false } },
         habitAchievement: { isAchieved: false, maxValue: 4 },
         lifestyleAchievement: { isAchieved: false, maxValue: 9 },
         weeks: [{ startDate: lastSunday.toISOString(), isCompleted: false, plannedActivities: target,
