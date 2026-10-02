@@ -18,11 +18,15 @@ The selected `tracking-circles` onboarding uses the original 3D artwork without 
 
 Circle encouragement is deployed on the web and backend, and local signed iPhone/Watch build 188 is verified and hosted. Source `9cce3691` combines the approved encouragement change `0022291e` with existing main `eda9fab9`; opening the member hand opens a personal composer, and sending explicitly delivers a private message. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-188--circle-encouragement-september-30-2026) for exact commands, artifacts and verification. This is a Safari test release; the recorded TestFlight release remains 177.
 
-## Metrics redesign — on main and on the web, not in any iPhone build, October 2, 2026
+## Latest TestFlight release — build 203, October 2, 2026
 
-The Metrics page now states what it found in one sentence from the coach, with same-day findings, real percentage differences and signal strength. It is on main and live on the web app; no IPA contains it yet. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#metrics-redesign--on-main-and-on-the-web-no-iphone-build-yet-october-2-2026).
+Build 203 from main `eb879929` is the first build with all of October 2's work together: the smooth heart-rate chart, account switching, the Metrics redesign and the dictation feedback from the merged `voice-feedback` branch. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#current-testflight-release--build-203-october-2-2026). Builds 198 to 202 each lacked something and are superseded.
 
-## Latest TestFlight release from main — build 200, October 2, 2026
+## Metrics redesign — on main, on the web and in TestFlight build 203, October 2, 2026
+
+The Metrics page now states what it found in one sentence from the coach, with same-day findings, real percentage differences and signal strength. It is on main, live on the web app, and in TestFlight from build 203. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#metrics-redesign--on-main-and-on-the-web-in-testflight-from-build-203-october-2-2026).
+
+## TestFlight build 200 — account switching, October 2, 2026
 
 Build 200 from main `dfaa222b` adds account switching (Settings → Accounts) to build 197. It lacks the dictation features of build 199, which was built from the unmerged `voice-feedback` branch; build 201 combines both and is validated but not uploaded. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#testflight-builds-200-and-201--account-switching-october-2-2026).
 
