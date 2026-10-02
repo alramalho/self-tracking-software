@@ -479,6 +479,18 @@ cd /root/workspace/tracking.so/deployment
 ./tracking-plan-design-20261001/rollback.sh
 ```
 
+## Account switching — active since October 1, 2026 15:34 UTC
+
+Image `local/tracking-so-backend:account-switch-20261001`, derived from `plan-design-20261001`; the later `circle-momentum-20261001` image is built on it, so it is still live. It lets the native app switch accounts without Clerk multi-session: a device holds a switch token per remembered account and trades it for a 60-second Clerk sign-in ticket. The source reached main on October 2, 2026.
+
+Scope: `routes/auth.ts` gains `POST /auth/switch-tokens` (signed-in), `POST /auth/switch` and `POST /auth/switch-tokens/revoke`; new `services/auth/switchTokenService.ts`; one type in `services/auth/types.ts`; additive migration `20261001160000_add_account_switch_tokens` (new table `account_switch_tokens`, no changes to existing tables). The overlay is [account-switch-overlay.Dockerfile](./account-switch-overlay.Dockerfile). It patches the schema already inside the production image with `account-switch/add-schema-model.cjs` instead of copying a working-tree schema. Before the build, the two replaced files in the live container matched their committed hashes.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-account-switch-20261001/` with `context/`, `source-hashes.json`, `activate.py`, `rollback.sh`, `verified.json` and `backup/` (the pre-migration dump of `tracking_cutover`, the previous `.env` and compose file). Activation confirmed exactly one pending migration, applied it, switched the image and verified: container healthy with zero restarts, public `/health` 200, `POST /auth/switch-tokens` without sign-in 401, `POST /auth/switch` with an unknown token 401 and without one 400, revoke without a token 400. A pre-flight in the built image loaded the routes module offline.
+
+Not verified: a real switch. No token has been issued or redeemed yet; that needs a signed-in device on a build with the switcher (Safari build 191, TestFlight build 198 onward).
+
+Rollback: `tracking-account-switch-20261001/rollback.sh` refuses while a later release is live. The table can stay; older images ignore it.
+
 ## Circle momentum and in-app invites — active since October 1, 2026 20:04 UTC
 
 Image `local/tracking-so-backend:circle-momentum-20261001`, built with [circle-momentum-overlay.Dockerfile](./circle-momentum-overlay.Dockerfile) on `account-switch-20261001` (the account switch release was live but not yet on main, so the overlay keeps it: the image's schema is the live one plus this release's two fields and one enum value). Source: branch `circle-momentum`. The 14 existing files the overlay replaces matched `origin/main` in the live container; `package.json` is not copied (the live copy predates main). New dependency `satori@0.33.5`, installed into the image the same way as sharp.

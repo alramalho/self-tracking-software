@@ -5,6 +5,11 @@ import { Router as createRouter } from "express";
 import { OAuth2Client } from "google-auth-library";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import {
+  issueSwitchToken,
+  redeemSwitchToken,
+  revokeSwitchToken,
+} from "../services/auth/switchTokenService";
+import {
   issueWatchAuthTokens,
   verifyWatchRefreshToken,
 } from "../services/auth/watchTokenService";
@@ -19,6 +24,15 @@ interface NativeAuthProfile {
   email: string;
   name?: string;
   picture?: string;
+}
+
+/** A one-minute ticket the app exchanges with Clerk for a session. */
+async function createSignInTicket(clerkUserId: string) {
+  const signInToken = await clerkClient.signInTokens.createSignInToken({
+    userId: clerkUserId,
+    expiresInSeconds: 60,
+  });
+  return signInToken.token;
 }
 
 async function createNativeSession(profile: NativeAuthProfile) {
@@ -54,12 +68,7 @@ async function createNativeSession(profile: NativeAuthProfile) {
     void telegramService.sendMessage(`🎉 New user! (${databaseUser.email})`);
   }
 
-  const signInToken = await clerkClient.signInTokens.createSignInToken({
-    userId: clerkUser.id,
-    expiresInSeconds: 60,
-  });
-
-  return { ticket: signInToken.token, databaseUser };
+  return { ticket: await createSignInTicket(clerkUser.id), databaseUser };
 }
 
 router.post("/ios-google-signin", async (req: Request, res: Response) => {
@@ -147,6 +156,55 @@ router.post("/watch-refresh", async (req: Request, res: Response) => {
     return res.json(issueWatchAuthTokens(user.id));
   } catch {
     return res.status(401).json({ error: "Invalid refresh token" });
+  }
+});
+
+// Remembers the signed-in account on this device so it can be switched back to.
+router.post(
+  "/switch-tokens",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      return res.json({ switchToken: await issueSwitchToken(req.user!.id) });
+    } catch (error) {
+      console.error("Switch token issue error:", error);
+      return res.status(500).json({ error: "Could not remember this account" });
+    }
+  }
+);
+
+// Logging an account out of a device forgets it there.
+router.post("/switch-tokens/revoke", async (req: Request, res: Response) => {
+  try {
+    const switchToken = req.body?.switchToken;
+    if (typeof switchToken !== "string") {
+      return res.status(400).json({ error: "switchToken is required" });
+    }
+    await revokeSwitchToken(switchToken);
+    return res.json({ revoked: true });
+  } catch (error) {
+    console.error("Switch token revoke error:", error);
+    return res.status(500).json({ error: "Could not forget this account" });
+  }
+});
+
+// Switching accounts: the device proves it remembers the account and gets a sign-in ticket.
+router.post("/switch", async (req: Request, res: Response) => {
+  try {
+    const switchToken = req.body?.switchToken;
+    if (typeof switchToken !== "string") {
+      return res.status(400).json({ error: "switchToken is required" });
+    }
+
+    const user = await redeemSwitchToken(switchToken);
+    if (!user?.clerkId) {
+      return res.status(401).json({ error: "Sign in to this account again" });
+    }
+
+    return res.json({ ticket: await createSignInTicket(user.clerkId) });
+  } catch (error) {
+    console.error("Account switch error:", error);
+    return res.status(500).json({ error: "Could not switch accounts" });
   }
 });
 

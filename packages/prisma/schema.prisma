@@ -131,6 +131,7 @@ model User {
 
   // Personal API keys (MCP / external integrations)
   apiKeys                      ApiKey[]
+  accountSwitchTokens          AccountSwitchToken[]
   healthIntegrations           HealthIntegration[]
   healthDailyMetrics           HealthDailyMetric[]
   healthWorkouts               HealthWorkout[]
@@ -175,6 +176,21 @@ model ApiKey {
 
   @@index([userId])
   @@map("api_keys")
+  @@schema("public")
+}
+
+// Lets a device sign back into an account it remembers, without Clerk multi-session.
+model AccountSwitchToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account_switch_tokens")
   @@schema("public")
 }
 

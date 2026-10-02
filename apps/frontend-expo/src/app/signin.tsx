@@ -1,14 +1,33 @@
 import { AuthView } from "@clerk/expo/native";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useSession } from "@/auth/provider";
 import { Welcome } from "@/auth/Welcome";
-import { useColors } from "@/components/ui";
+import { Status, useColors } from "@/components/ui";
 
 export default function SignIn() {
   const c = useColors();
+  const session = useSession();
+  // After "Add account", closing sign-in returns to the account that was active.
+  const [previous] = session.accounts;
+  const [error, setError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
+  const returnToPrevious = () =>
+    session.switchAccount(previous.userId).catch((failure) => {
+      setError(failure);
+      setAttempt((count) => count + 1);
+    });
   return (
     <View style={[styles.screen, { backgroundColor: c.bg }]}>
       <View style={styles.form}>
-        <AuthView mode="signInOrUp" isDismissible={false} logo={<Welcome />} />
+        <AuthView
+          key={attempt}
+          mode="signInOrUp"
+          isDismissible={!!previous}
+          onDismiss={previous ? returnToPrevious : undefined}
+          logo={<Welcome />}
+        />
+        <Status error={error} />
       </View>
     </View>
   );
