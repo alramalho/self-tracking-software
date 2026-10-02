@@ -34,6 +34,7 @@ import { Status, useColors } from "@/components/ui";
 import { useAction, useCurrentUser } from "@/data/queries";
 import { api, errorMessage } from "@/data/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
+import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import type { Comment } from "@/core/types";
 import { ReportSheet } from "@/features/safety/Safety";
@@ -98,6 +99,7 @@ function Composer(props: BottomSheetFooterProps) {
   const state = useContext(ComposerContext)!;
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const transcriptionFeedback = useTranscriptionFeedback();
   return (
     <BottomSheetFooter {...props} bottomInset={insets.bottom}>
       <View
@@ -142,6 +144,7 @@ function Composer(props: BottomSheetFooterProps) {
             Couldn't post. Your comment is saved here — tap send to retry.
           </Text>
         )}
+        {transcriptionFeedback.banner}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Avatar person={state.user} />
           <View
@@ -187,6 +190,7 @@ function Composer(props: BottomSheetFooterProps) {
               onTranscript={(transcript) =>
                 state.setText(appendDictationText(state.text, transcript))
               }
+              onTranscription={transcriptionFeedback.ask}
             />
             <TouchTarget
               accessibilityRole="button"

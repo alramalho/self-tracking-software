@@ -71,6 +71,9 @@ model User {
   aiConsentGrantedAt  DateTime?
   aiConsentDeclinedAt DateTime?
 
+  // Languages the person speaks (ISO 639-1 codes, main one first). Speech to text listens for these.
+  spokenLanguages String[] @default([])
+
   // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
   preferredCoachingHour      Int?             @default(6) // Default to 6-8am
   coachPersonality           CoachPersonality @default(CHAMPION)
@@ -1392,6 +1395,8 @@ enum FeedbackCategory {
   AI_MESSAGE_FEEDBACK
   AI_OVERALL_FEEDBACK
   TESTIMONIAL
+  // Thumbs up or down on a dictation result.
+  TRANSCRIPTION_FEEDBACK
 
   @@schema("public")
 }

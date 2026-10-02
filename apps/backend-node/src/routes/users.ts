@@ -17,6 +17,10 @@ import { linearService } from "../services/linearService";
 import { notificationService } from "../services/notificationService";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
 import { plansService } from "../services/plansService";
+import {
+  MAX_SPOKEN_LANGUAGES,
+  parseSpokenLanguages,
+} from "../services/stt/languages";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
@@ -360,6 +364,16 @@ usersRouter.patch(
         }
 
         updates.reactionEmojis = normalizedEmojis;
+      }
+      if ("spokenLanguages" in updates) {
+        const languages = parseSpokenLanguages(updates.spokenLanguages);
+        if (!languages) {
+          res.status(400).json({
+            error: `Choose up to ${MAX_SPOKEN_LANGUAGES} languages.`,
+          });
+          return;
+        }
+        updates.spokenLanguages = languages;
       }
 
       const shouldNotifyOnboardingCompleted =

@@ -3,7 +3,12 @@ import { fileTypeFromBuffer } from "file-type";
 import { assertAiConsent } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 import { resolveSTTConfig } from "./stt/config";
-import type { TimestampedTranscript } from "./stt/types";
+import {
+  languageCode,
+  languageToRequest,
+  languageToRetry,
+} from "./stt/languages";
+import type { TimestampedTranscript, Transcript } from "./stt/types";
 
 export class STTService {
   private openai: OpenAI;
@@ -16,7 +21,9 @@ export class STTService {
       baseURL: config.baseURL,
     });
     this.model = config.model;
-    logger.info(`Speech-to-text configured with ${config.provider}`);
+    logger.info(
+      `Speech-to-text configured with ${config.provider} (${config.model})`,
+    );
   }
 
   private async detectAudioType(audioBytes: Buffer): Promise<string | null> {
@@ -56,10 +63,12 @@ export class STTService {
     return mimeTypes[audioType] || `audio/${audioType}`;
   }
 
-  async speechToText(
+  // `spoken` is the person's languages (ISO 639-1, main one first); see stt/languages.ts.
+  async transcribe(
     audioBytes: Buffer,
     receivedAudioFormat?: string,
-  ): Promise<string> {
+    spoken: string[] = [],
+  ): Promise<Transcript> {
     assertAiConsent();
     try {
       const detectedAudioType = await this.detectAudioType(audioBytes);
@@ -88,19 +97,37 @@ export class STTService {
         type: mimeType,
       });
 
-      const transcription = await this.openai.audio.transcriptions.create({
-        file: audioFile,
-        model: this.model,
-      });
+      let heard = await this.listen(audioFile, languageToRequest(spoken));
+      const retry = languageToRetry(spoken, heard.language);
+      if (retry) {
+        logger.info(
+          `Heard "${heard.language}", which this person doesn't speak. Transcribing again in "${retry}"`,
+        );
+        heard = await this.listen(audioFile, retry);
+      }
 
       logger.info(
-        `Successfully transcribed ${transcription.text.length} characters`,
+        `Successfully transcribed ${heard.text.length} characters (language: ${heard.language || "unknown"})`,
       );
-      return transcription.text;
+      return { ...heard, model: this.model };
     } catch (error) {
       logger.error("Error in speech-to-text:", error);
       throw new Error(`Speech-to-text failed: ${error}`);
     }
+  }
+
+  // One request to the model. verbose_json is the format that reports the language heard.
+  private async listen(audioFile: File, language?: string) {
+    const transcription = await this.openai.audio.transcriptions.create({
+      file: audioFile,
+      model: this.model,
+      response_format: "verbose_json",
+      ...(language ? { language } : {}),
+    });
+    return {
+      text: transcription.text,
+      language: language ?? languageCode(transcription.language),
+    };
   }
 
   async speechToTextWithTimestamps(

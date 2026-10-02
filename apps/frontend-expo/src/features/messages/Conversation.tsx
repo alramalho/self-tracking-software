@@ -40,6 +40,7 @@ import { Button, Copy, Sheet, Status, s, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { api } from "@/data/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
+import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import {
@@ -77,6 +78,7 @@ export function Conversation({ id }: ConversationProps) {
   const client = useQueryClient();
   const user = useCurrentUser();
   const aiConsent = useAiConsent();
+  const transcriptionFeedback = useTranscriptionFeedback();
   const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string; send?: string }>();
   const [selectedPlan, setSelectedPlan] = useState(params.planId ?? "");
   const pillStrip = useRef<ScrollView>(null);
@@ -685,6 +687,7 @@ export function Conversation({ id }: ConversationProps) {
               ))}
             </View>
           )}
+          {transcriptionFeedback.banner}
           <View
             style={[
               s.row,
@@ -741,6 +744,7 @@ export function Conversation({ id }: ConversationProps) {
               onTranscript={(transcript) =>
                 setText((current) => appendDictationText(current, transcript))
               }
+              onTranscription={transcriptionFeedback.ask}
             />
             <Pressable
               accessibilityRole="button"

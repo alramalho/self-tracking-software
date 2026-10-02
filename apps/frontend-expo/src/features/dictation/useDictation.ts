@@ -13,6 +13,7 @@ export function useDictation({
   onBusyChange,
   onError,
   onTranscript,
+  onTranscription,
 }: DictationButtonProps) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 200);
@@ -62,7 +63,9 @@ export function useDictation({
       const uri = recorder.uri ?? recorder.getStatus().url;
       if (!uri)
         throw new Error("The recording couldn’t be saved. Please try again.");
-      onTranscript(await transcribeRecording(uri));
+      const transcription = await transcribeRecording(uri);
+      onTranscript(transcription.text);
+      onTranscription?.(transcription);
     } catch (error) {
       onError(error);
     } finally {

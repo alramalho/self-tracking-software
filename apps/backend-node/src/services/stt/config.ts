@@ -1,7 +1,9 @@
 import type { STTConfig } from "./types";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-const OPENROUTER_DEFAULT_MODEL = "nvidia/parakeet-tdt-0.6b-v3";
+// Whisper accepts the language to listen for and reports the one it heard.
+// Parakeet (the previous default) only guesses, and misheard short clips.
+const OPENROUTER_DEFAULT_MODEL = "openai/whisper-large-v3";
 const OPENAI_DEFAULT_MODEL = "whisper-1";
 
 export function resolveSTTConfig(

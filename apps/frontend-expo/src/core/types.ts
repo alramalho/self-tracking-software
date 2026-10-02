@@ -256,6 +256,8 @@ export interface User extends Person {
   // AI data sharing consent: allowed when granted is newer than declined.
   aiConsentGrantedAt?: DateValue | null;
   aiConsentDeclinedAt?: DateValue | null;
+  /** Languages the person speaks (ISO 639-1, main one first), for speech to text. */
+  spokenLanguages?: string[];
   theme?: string;
   themeMode?: string;
   themeBaseColor?: string;
