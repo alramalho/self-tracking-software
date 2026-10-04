@@ -163,7 +163,7 @@ for (const theme of ["DARK", "LIGHT"]) {
       drawer.getByText("Watch estimate · Moderate", { exact: true }),
     ).toBeVisible();
     await expect(
-      drawer.getByText("Apple Health · 151 bpm average", { exact: true }),
+      drawer.getByText("Apple Watch · 151 bpm average", { exact: true }),
     ).toBeVisible();
     await expect(drawer.getByText("Watch data stays private", { exact: true })).toBeVisible();
     await page.waitForTimeout(600);
@@ -193,14 +193,12 @@ for (const theme of ["DARK", "LIGHT"]) {
       },
     ]);
     await page.goto("/metrics");
-    await expect(
-      page.getByRole("heading", { name: "Check-ins", exact: true }),
-    ).toBeVisible();
+    await expect(page.getByTestId("reveal-metrics-checkins")).toBeVisible();
     await page.getByRole("button", { name: "Health", exact: true }).click();
     await expect(page.getByTestId("metrics-health-view")).toBeVisible();
     await expect(page.getByTestId("health-vitals").getByText("Resting heart rate", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Check-ins", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Check-ins", exact: true })).toBeVisible();
+    await expect(page.getByTestId("reveal-metrics-checkins")).toBeVisible();
     await page.getByRole("button", { name: "Health", exact: true }).click();
     const sleep = page.getByTestId("sleep-metric");
     await expect(sleep.getByText("91", { exact: true }).first()).toBeVisible();
@@ -572,7 +570,8 @@ test("removing imported history clears the already viewed sleep score", async ({
     page.getByTestId("sleep-metric").getByText("out of 100"),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Manage Apple Health", exact: true })
+    .getByTestId("sleep-metric")
+    .getByRole("button", { name: "Manage health data", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Disconnect Apple Health", exact: true })

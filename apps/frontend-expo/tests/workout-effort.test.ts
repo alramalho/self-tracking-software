@@ -41,7 +41,7 @@ test("shows Apple's estimate with the average heart rate", () => {
         averageHeartRateBpm: 151.4,
       }),
     ),
-    "Watch estimate · Moderate · Apple Health · 151 bpm average",
+    "Watch estimate · Moderate · Apple Watch · 151 bpm average",
   );
   assert.equal(
     workoutEffortLabel(
@@ -51,7 +51,7 @@ test("shows Apple's estimate with the average heart rate", () => {
   );
   assert.equal(
     workoutHeartRateSummary(workout({ averageHeartRateBpm: 151.4 })),
-    "Apple Health · 151 bpm average",
+    "Apple Watch · 151 bpm average",
   );
 });
 
@@ -67,7 +67,26 @@ test("identifies an effort the person recorded", () => {
 test("shows heart rate without inventing an effort level", () => {
   assert.equal(
     workoutEffortSummary(workout({ averageHeartRateBpm: 142 })),
+    "Apple Watch · 142 bpm average",
+  );
+});
+
+test("names the provider when the recording device is unknown", () => {
+  assert.equal(
+    workoutHeartRateSummary(
+      workout({ sourceName: undefined, averageHeartRateBpm: 142 }),
+    ),
     "Apple Health · 142 bpm average",
+  );
+  assert.equal(
+    workoutHeartRateSummary(
+      workout({
+        sourceName: undefined,
+        provider: "garmin_connect",
+        averageHeartRateBpm: 142,
+      }),
+    ),
+    "Garmin Connect · 142 bpm average",
   );
 });
 

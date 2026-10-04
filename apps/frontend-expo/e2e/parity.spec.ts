@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 let runtimeErrors: string[] = [];
 test.afterEach(() => {
@@ -20,6 +20,16 @@ test.beforeEach(async ({ request, page }) => {
     page.getByText("Friends & circles", { exact: true }),
   ).toBeVisible();
 });
+async function chooseDarkTheme(page: Page) {
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Theme Mode", exact: true }).click();
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Theme Mode", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByTestId("settings-drawer")).toHaveCount(0);
+}
 test("logs activity and updates timeline and profile history", async ({
   page,
   request,
@@ -203,7 +213,9 @@ test("failed log keeps inputs and supports retry without a duplicate", async ({
     .getByRole("button", { name: "Log without photo", exact: true })
     .click();
   await expect(
-    page.getByText("How did it feel?", { exact: true }),
+    page
+      .getByTestId("difficulty-follow-up")
+      .getByRole("heading", { name: "How hard was Reading?" }),
   ).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.entries.filter((e: any) => e.quantity === 12)).toHaveLength(1);
@@ -216,6 +228,10 @@ test("creates weekly plan and edits existing plan", async ({
   await page
     .getByRole("button", { name: "Create New Plan", exact: true })
     .click();
+  // Create New Plan opens the coach interview (onboarding-flow.spec.ts); the
+  // by-hand editor stays at /create-plan-advanced.
+  await expect(page).toHaveURL(/\/create-plan$/);
+  await page.goto("/create-plan-advanced");
   await page.getByRole("button", { name: "Lifestyle", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
@@ -242,12 +258,13 @@ test("creates weekly plan and edits existing plan", async ({
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: "Edit Plan", exact: true }).click();
+  await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page
     .getByLabel("Great, now what exactly do you want to do?")
     .fill("Read every week");
-  await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans.some((p: any) => p.goal === "Read every week")).toBe(true);
 });
@@ -257,9 +274,7 @@ test("all five main screens render in light and dark mode", async ({
 }, testInfo) => {
   for (const theme of ["LIGHT", "DARK"]) {
     if (theme === "DARK") {
-      await page.goto("/settings");
-      await page.getByRole("button", { name: "Dark", exact: true }).click();
-      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await chooseDarkTheme(page);
     }
     for (const name of ["home", "add", "plans", "profile", "metrics"]) {
       await page.getByTestId(`nav-${name}`).click();
@@ -322,8 +337,10 @@ test("milestone progress survives unrelated plan edits", async ({
     .click();
   await expect(milestone).toContainText("30%");
   await page.getByRole("button", { name: "Edit milestones" }).click();
+  await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page.getByLabel("Why is this important to you?").fill("Feel stronger");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans[0].milestones[0].progress).toBe(30);
@@ -336,19 +353,31 @@ test("scheduled plan dates tolerate incomplete typing and validate before save",
   request,
 }) => {
   await page.goto("/edit-plan/scheduled");
+  const editSessions = async () => {
+    await page.getByRole("button", { name: "Edit plan type", exact: true }).click();
+  };
+  const save = async () => {
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  };
   const date = page.getByLabel("Session 1 date", { exact: true });
+  await editSessions();
   await date.fill("2026-");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await save();
   await expect(page.getByRole("alert")).toHaveText("Enter a valid date.");
+  await editSessions();
   await date.fill("2026-09-15");
   await page.getByLabel("Session 1 quantity").fill("0");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await save();
   await expect(page.getByRole("alert")).toContainText(
     "quantity greater than zero",
   );
+  await editSessions();
   await page.getByLabel("Session 1 quantity").fill("15");
-  await page.getByRole("button", { name: "Friends", exact: true }).click();
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Edit visibility", exact: true }).click();
+  await page.getByRole("button", { name: "Friends only", exact: true }).click();
+  await save();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans.find((p: any) => p.id === "scheduled").visibility).toBe(
@@ -405,6 +434,24 @@ test("long-press dragging reorders plan tiles and refresh preserves the order", 
       const state = await (await request.get(`${API}/__state`)).json();
       return state.plans.find((p: any) => p.id === "scheduled").sortOrder;
     })
+    .toBe(0);
+  // The app saves its query cache about a second after a change and treats the
+  // restored copy as fresh for 30 seconds, so a sooner reload shows the old order.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) =>
+          k.startsWith("trackingso:queries:"),
+        );
+        const plans = key
+          ? JSON.parse(localStorage.getItem(key)!).clientState.queries.find(
+              (q: any) => q.queryKey[0] === "plans",
+            )
+          : undefined;
+        return plans?.state.data.find((p: any) => p.id === "scheduled")
+          ?.sortOrder;
+      }),
+    )
     .toBe(0);
   await page.reload();
   await expect(second).toBeVisible();
@@ -468,9 +515,7 @@ test("shared activity links open the referenced card", async ({ page }) => {
 test("dark logging and metric sheets preserve contrast and surface errors", async ({
   page,
 }, info) => {
-  await page.goto("/settings");
-  await page.getByRole("button", { name: "Dark", exact: true }).click();
-  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await chooseDarkTheme(page);
   await page.getByTestId("nav-add").click();
   await page.getByRole("button", { name: "Log Running", exact: true }).click();
   await page.getByLabel("Quantity", { exact: true }).fill("7.5");
@@ -575,6 +620,7 @@ test("plan background uses multipart image upload and supports removal", async (
   request,
 }) => {
   await page.goto("/edit-plan/fitness");
+  await page.getByRole("button", { name: "Edit cover image", exact: true }).click();
   const chooser = page.waitForEvent("filechooser");
   await page
     .getByRole("button", { name: "Add background image", exact: true })
@@ -583,9 +629,9 @@ test("plan background uses multipart image upload and supports removal", async (
   await expect(
     page.getByRole("button", { name: "Remove background image", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(page.getByTestId("plans-screen")).toBeVisible();
   let state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.plans.find((plan: any) => plan.id === "fitness").backgroundImageUrl,
@@ -596,12 +642,13 @@ test("plan background uses multipart image upload and supports removal", async (
   expect(upload.body.image.type).toBe("image/png");
   expect(upload.body.image.size).toBeGreaterThan(0);
   await page.goto("/edit-plan/fitness");
+  await page.getByRole("button", { name: "Edit cover image", exact: true }).click();
   await page
     .getByRole("button", { name: "Remove background image", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Confirm Update", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(page.getByTestId("plans-screen")).toBeVisible();
   state = await (await request.get(`${API}/__state`)).json();
   expect(
     state.plans.find((plan: any) => plan.id === "fitness").backgroundImageUrl,
