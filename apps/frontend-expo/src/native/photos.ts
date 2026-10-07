@@ -2,15 +2,10 @@ import * as ImagePicker from "expo-image-picker";
 import { Platform } from "react-native";
 import type { Photo } from "@/core/types";
 export async function pickPhotos(camera = false, selectionLimit = 5): Promise<Photo[]> {
-  const permission = camera
-    ? await ImagePicker.requestCameraPermissionsAsync()
-    : await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted)
-    throw new Error(
-      camera
-        ? "Allow camera access in Settings to take a photo."
-        : "Allow photo access in Settings to attach photos.",
-    );
+  // The iOS photo picker runs outside the app and needs no library access;
+  // only the camera asks.
+  if (camera && !(await ImagePicker.requestCameraPermissionsAsync()).granted)
+    throw new Error("Allow camera access in Settings to take a photo.");
   const result = camera
     ? await ImagePicker.launchCameraAsync({
         mediaTypes: ["images"],

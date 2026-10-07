@@ -3,6 +3,11 @@ import { Activity, CalendarClock, Check, Dumbbell, ListChecks, MessageCircle, Mo
 import { Text } from "@/components/typography/Text";
 import { Copy, useColors } from "@/components/ui";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests, coachNeedsAppleHealth } from "@/features/access/model";
+import { useHealth } from "@/features/health/HealthProvider";
+import { coachIdentity } from "@/features/messages/coach";
+import { useCurrentUser } from "@/data/queries";
 import {
   DaysInput,
   TimeInput,
@@ -94,6 +99,15 @@ export function CoachingFields({
 }: CoachingFieldsProps) {
   const c = useColors();
   const aiConsent = useAiConsent();
+  const access = useAccessChecklist();
+  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const garminConnected = !!useHealth().garmin.status?.connected;
+  // The coach reaches people through notifications and sees watch data they choose.
+  const askCoachAccess = (dataAccess: PlanCoaching["dataAccess"], afterSheet = false) =>
+    void access.ask({
+      ...accessRequests.coach(coach.name, coachNeedsAppleHealth(dataAccess, garminConnected)),
+      afterSheet,
+    });
   return (
     <View style={{ gap: 10 }}>
       <SectionLabel>Coaching style</SectionLabel>
@@ -108,6 +122,7 @@ export function CoachingFields({
           disabled={role !== "tracking" && !canCoach}
           onPress={async () => {
             // Coaching is done by AI, so ask before turning it on.
+            const askedAi = !aiConsent.allowed;
             if (role !== "tracking" && !(await aiConsent.ask())) return;
             onChange({ ...value, role });
             onPreferences({
@@ -115,6 +130,8 @@ export function CoachingFields({
               coaching: role !== "tracking",
               weeklyReview: role !== "tracking" && preferences.weeklyReview,
             });
+            if (role !== "tracking" && value.role === "tracking")
+              askCoachAccess(value.dataAccess, askedAi);
           }}
         />
       ))}
@@ -175,30 +192,28 @@ export function CoachingFields({
               icon={Activity}
               detail="Apple Health or Garmin: distance, duration and heart rate."
               selected={value.dataAccess.workouts}
-              onPress={() =>
-                onChange({
-                  ...value,
-                  dataAccess: {
-                    ...value.dataAccess,
-                    workouts: !value.dataAccess.workouts,
-                  },
-                })
-              }
+              onPress={() => {
+                const dataAccess = {
+                  ...value.dataAccess,
+                  workouts: !value.dataAccess.workouts,
+                };
+                onChange({ ...value, dataAccess });
+                if (dataAccess.workouts) askCoachAccess(dataAccess);
+              }}
             />
             <CoachingChoice
               label="Sleep summaries"
               icon={Moon}
               detail="Sleep duration and score, when available."
               selected={value.dataAccess.sleep}
-              onPress={() =>
-                onChange({
-                  ...value,
-                  dataAccess: {
-                    ...value.dataAccess,
-                    sleep: !value.dataAccess.sleep,
-                  },
-                })
-              }
+              onPress={() => {
+                const dataAccess = {
+                  ...value.dataAccess,
+                  sleep: !value.dataAccess.sleep,
+                };
+                onChange({ ...value, dataAccess });
+                if (dataAccess.sleep) askCoachAccess(dataAccess);
+              }}
             />
           </ChoiceGroup>
           <Copy muted>
@@ -208,6 +223,7 @@ export function CoachingFields({
         </>
       )}
       {aiConsent.sheet}
+      {access.sheet}
     </View>
   );
 }

@@ -33,6 +33,10 @@ import { useFollowThrough } from "@/features/follow-through/api";
 import { DictationButton } from "@/features/dictation/DictationButton";
 import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests, coachNeedsAppleHealth } from "@/features/access/model";
+import { useHealth } from "@/features/health/HealthProvider";
+import { coachIdentity } from "@/features/messages/coach";
 import { newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
 import { OnboardingArt } from "./interview/OnboardingArt";
@@ -102,6 +106,8 @@ export default function Onboarding({
     user = useCurrentUser(),
     saved = useFollowThrough(!preview);
   const aiConsent = useAiConsent();
+  const access = useAccessChecklist();
+  const garminConnected = !!useHealth().garmin.status?.connected;
   const transcriptionFeedback = useTranscriptionFeedback();
   const [draft, setDraft] = useState(() => ({
     ...newDraft(randomUUID()),
@@ -340,6 +346,9 @@ export default function Onboarding({
     setState(next);
     setTourStep(0);
   }
+  async function askCircleAccess() {
+    if (!preview) await access.ask(accessRequests.circle());
+  }
   async function chooseCircle(circle: OnboardingCircleChoice) {
     if (circle.choice === "find" && circle.wantsAge && pendingAge.current && pendingAge.current !== user.data?.age && !preview)
       await api.patch("/users/user", { age: pendingAge.current });
@@ -359,6 +368,7 @@ export default function Onboarding({
     if (!next.wantsNearby || circlePrefs?.wantsNearby || circleLocation.current || preview) return;
     setLocating(true);
     try {
+      await access.ask(accessRequests.nearbyCircle());
       const location = await approximateLocation();
       circleLocation.current = location;
       setLocationDenied(!location);
@@ -485,6 +495,12 @@ export default function Onboarding({
   });
   async function advanceTour() {
     if (tourStep === null) return;
+    // Leaving "You choose what it can see": ask for what the coach needs to reach you.
+    if (tourStep === 2 && !preview) {
+      const coaching = draft.coaching ?? initialCoaching();
+      const coach = coachIdentity(user.data?.coachPersonality).name;
+      await access.ask(accessRequests.coach(coach, coachNeedsAppleHealth(coaching.dataAccess, garminConnected)));
+    }
     const next = tourStep + 1;
     await persist({ ...draft, step: next < 3 ? `coaching-tour-${next}` : "interview" });
     setTourStep(next < 3 ? next : null);
@@ -1241,12 +1257,14 @@ export default function Onboarding({
         ) : (
           <CircleAsk
             busy={busy}
-            onFind={() => setCirclePrefs({ ...defaultPreferences })}
-            onInvite={() => void chooseCircle({ choice: "invite", ...defaultPreferences }).catch(setError)}
+            // A circle reaches people through notifications, so ask when they choose one.
+            onFind={() => void askCircleAccess().then(() => setCirclePrefs({ ...defaultPreferences }))}
+            onInvite={() => void askCircleAccess().then(() => chooseCircle({ choice: "invite", ...defaultPreferences })).catch(setError)}
             onSolo={() => void chooseCircle({ choice: "solo", ...defaultPreferences }).catch(setError)}
           />
         )}
         <Status error={statusError} retry={retryStatus} />
+        {access.sheet}
       </InterviewFrame>
     );
   const canSkip =
@@ -1526,6 +1544,7 @@ export default function Onboarding({
         error={statusError}
         retry={retryStatus}
       />
+      {access.sheet}
     </InterviewFrame>
   );
 }

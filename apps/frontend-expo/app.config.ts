@@ -50,9 +50,11 @@ const app: ExpoConfig = {
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSHealthShareUsageDescription:
-        "Import workouts, effort and heart-rate summaries, and sleep from Apple Health to simplify activity logging and show your trends.",
+        "tracking.so reads your workouts with their routes, distance, heart rate and effort, and your sleep, to log your activities for you and show your trends.",
+      // tracking.so only reads (toShare is empty), so iOS never shows this; the
+      // HealthKit entitlement still requires the key.
       NSHealthUpdateUsageDescription:
-        "Update your tracking.so activity record and keep the health trends you choose synchronized with Apple Health.",
+        "tracking.so does not save anything to Apple Health. It only reads the data you allow.",
     },
     privacyManifests: {
       NSPrivacyAccessedAPITypes: [
@@ -67,6 +69,7 @@ const app: ExpoConfig = {
   web: { bundler: "metro", output: "single", name: "tracking.so" },
   plugins: [
     "./plugins/with-watch.cjs",
+    "./plugins/with-release-privacy.cjs",
     ["expo-build-properties", { ios: { deploymentTarget: "17.0" } }],
     "expo-apple-authentication",
     "expo-router",
@@ -81,31 +84,40 @@ const app: ExpoConfig = {
       },
     ],
     ["@clerk/expo", { theme: "./src/auth/native-theme.json" }],
-    "expo-secure-store",
+    // No biometric unlock: drop the plugin's generic Face ID purpose string.
+    ["expo-secure-store", { faceIDPermission: false }],
     [
       "expo-audio",
       {
         microphonePermission:
-          "Record your answer so tracking.so can turn it into text.",
+          "Record a voice note or dictate an answer, which tracking.so turns into text.",
+        // Recording happens only on screen and nothing plays in the background,
+        // so no background audio mode (App Review checks UIBackgroundModes).
+        enableBackgroundPlayback: false,
+        enableBackgroundRecording: false,
       },
     ],
     [
       "expo-image-picker",
       {
-        photosPermission: "Add photos to your activity logs.",
-        cameraPermission: "Take photos for your activity logs.",
+        // The photo picker needs no library access; the key stays because the
+        // library's code references it (ITMS-90683).
+        photosPermission: "Choose photos to add to your activity logs and messages.",
+        cameraPermission: "Take a photo for an activity log or a message.",
       },
     ],
     [
       "expo-location",
       {
-        locationWhenInUsePermission: "Record your activity location and route, and find circles near you.",
+        locationWhenInUsePermission:
+          "Add where you trained to an activity log, and find circles near you. Only while you use the app.",
         // The app never asks for Always location; `false` keeps the plugin's generic
         // descriptions out of Info.plist. Motion stays: the library's code references
         // the motion API, and Apple rejects uploads without a purpose string (ITMS-90683).
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
-        motionUsagePermission: "Motion data can improve route recording while you log an activity.",
+        motionUsagePermission:
+          "tracking.so doesn't ask for motion data. iOS requires this text because the location library supports it.",
       },
     ],
     [

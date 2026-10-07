@@ -22,6 +22,8 @@ import type { FeedItem } from "@/features/timeline/types";
 import { ReportSheet, personLabel, showActions, useBlockUser } from "@/features/safety/Safety";
 import type { ReportTarget } from "@/features/safety/types";
 import type { BoardMember, OrbitPerson } from "@/features/circles/types";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests } from "@/features/access/model";
 
 export default function Circle() {
   const c = useColors();
@@ -68,6 +70,15 @@ export default function Circle() {
       shareInvite();
     }
   });
+
+  // Right after joining: the circle reaches people through notifications.
+  const access = useAccessChecklist();
+  const askedAccess = useRef(false);
+  useEffect(() => {
+    if (!proof || askedAccess.current) return;
+    askedAccess.current = true;
+    void access.ask({ ...accessRequests.circle(), afterSheet: true });
+  }, [proof, access.ask]);
 
   // Right after joining, leaving without logging counts as "Later", so the coach can remind them.
   const pending = !!data?.me.pending;
@@ -283,6 +294,7 @@ export default function Circle() {
       <InviteSheet circleId={id} visible={inviting} onClose={() => setInviting(false)} onShareLink={shareInvite} />
       {motivating && <MotivateDrawer circleId={id} member={motivating} onClose={() => setMotivating(undefined)} />}
       <ReportSheet target={report} onClose={() => setReport(undefined)} />
+      {access.sheet}
     </Screen>
   );
 }

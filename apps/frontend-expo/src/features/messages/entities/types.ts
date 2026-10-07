@@ -22,6 +22,8 @@ export interface PreviewSheetProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  // False hides the close button and stops swipe or backdrop dismissal.
+  dismissible?: boolean;
 }
 export interface PreviewButtonProps {
   label: string;
