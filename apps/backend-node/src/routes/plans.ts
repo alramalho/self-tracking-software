@@ -1119,7 +1119,7 @@ router.post(
         return;
       }
 
-      logger.info(`Generating sessions for plan goal: ${goal}`);
+      logger.info(`Generating sessions for a plan goal (${String(goal).length} chars)`);
 
       // Fetch user age for the research-based pipeline
       const user = await prisma.user.findUnique({

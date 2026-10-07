@@ -22,6 +22,8 @@ import {
   parseSpokenLanguages,
 } from "../services/stt/languages";
 import { s3Service } from "../services/s3Service";
+import { supermemoryService } from "../services/supermemoryService";
+import { loopsService } from "../services/loopsService";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
 import { userService } from "../services/userService";
@@ -522,12 +524,20 @@ usersRouter.delete(
     try {
       const count =
         (await s3Service.deletePrefix(`users/${userId}/`)) +
-        (await s3Service.deletePrefix(`profile-images/${userId}-`));
+        (await s3Service.deletePrefix(`profile-images/${userId}-`)) +
+        (await s3Service.deletePrefix(`plan-generations/${userId}/`));
       mediaStatus = `✅ ${count} files removed`;
     } catch (error) {
       mediaStatus = `❌ ${error instanceof Error ? error.message : "failed"}`;
       logger.error(`Failed to delete media for user ${userId}:`, error);
     }
+
+    // 5. Copies held by providers: coach memory and the email contact.
+    await supermemoryService.deleteAllMemories(userId);
+    const contact = await loopsService
+      .deleteContact(userEmail, userId)
+      .catch((error) => ({ success: false, message: String(error) }));
+    const providersStatus = contact.success ? "✅ removed" : `❌ Loops: ${contact.message}`;
 
     telegramService.sendAlert(
       `😵🗑️ *User Account Deleted*\n\n` +
@@ -535,6 +545,7 @@ usersRouter.delete(
         `User ID: ${userId}\n` +
         `Stripe: ${stripeSubscriptionId ? "cancelled" : "no subscription"}\n` +
         `Media: ${mediaStatus}\n` +
+        `Coach memory and email contact: ${providersStatus}\n` +
         `UTC Time: ${new Date().toISOString()}`
     );
     logger.info(`User account permanently deleted: ${userId}`);

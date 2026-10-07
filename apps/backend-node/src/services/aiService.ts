@@ -527,7 +527,7 @@ export class AIService {
       - Be curious, not therapist
     `;
 
-    logger.info(`System prompt: ${systemPrompt.toString()}`);
+    logger.info(`Coach system prompt built (${systemPrompt.length} chars)`);
 
     // 5. Generate AI response with unified schema using messages format
     const aiResponse = (await this.generateStructuredResponse({
@@ -617,10 +617,10 @@ export class AIService {
     } = params;
 
     try {
-      console.log("Generating text with model:", options.model);
-      console.log("Prompt:", prompt);
-      console.log("Messages:", messages);
-      console.log("System prompt:", systemPrompt);
+      // Logs reach Better Stack: sizes only, never what people wrote.
+      logger.info(
+        `Generating text with ${options.model} (${messages?.length ?? 0} messages, prompt ${prompt?.length ?? 0} chars)`,
+      );
 
       // Use either messages or prompt (messages takes precedence)
       const generateParams: any = {
@@ -2257,7 +2257,7 @@ export class AIService {
         temperature: 1,
       });
 
-      logger.info(`Generated coach notes: ${result.text}`);
+      logger.info(`Generated coach notes (${result.text.length} chars)`);
       return result.text;
     } catch (error) {
       logger.error("Error generating coach notes:", error);

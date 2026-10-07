@@ -9,11 +9,13 @@ const database = new URL(process.env.DATABASE_URL || "http://not-configured");
 if (database.hostname !== "127.0.0.1" || database.port !== "55432")
   throw new Error("Account deletion tests require the isolated local database on port 55432.");
 
-const { deleteUser, deletePrefix, cancel, retrieve } = vi.hoisted(() => ({
+const { deleteUser, deletePrefix, cancel, retrieve, deleteAllMemories, deleteContact } = vi.hoisted(() => ({
   deleteUser: vi.fn(),
   deletePrefix: vi.fn(async () => 0),
   cancel: vi.fn(),
   retrieve: vi.fn(),
+  deleteAllMemories: vi.fn(async () => undefined),
+  deleteContact: vi.fn(async () => ({ success: true })),
 }));
 vi.mock("@clerk/express", async (original) => ({
   ...(await original<object>()),
@@ -23,6 +25,8 @@ vi.mock("stripe", () => ({
   default: vi.fn(() => ({ subscriptions: { retrieve, cancel } })),
 }));
 vi.mock("../../services/s3Service", () => ({ s3Service: { deletePrefix } }));
+vi.mock("../../services/supermemoryService", () => ({ supermemoryService: { deleteAllMemories } }));
+vi.mock("../../services/loopsService", () => ({ loopsService: { deleteContact } }));
 vi.mock("../../services/telegramService", () => ({
   TelegramService: vi.fn(() => ({ sendAlert: vi.fn(), sendMessage: vi.fn() })),
 }));
@@ -70,6 +74,9 @@ describe("DELETE /users/user", () => {
     expect(cancel).toHaveBeenCalledWith("sub_test");
     expect(deleteUser).toHaveBeenCalledWith(current.clerkId);
     expect(deletePrefix).toHaveBeenCalledWith(`users/${current.id}/`);
+    expect(deletePrefix).toHaveBeenCalledWith(`plan-generations/${current.id}/`);
+    expect(deleteAllMemories).toHaveBeenCalledWith(current.id);
+    expect(deleteContact).toHaveBeenCalledWith(current.email, current.id);
     expect(await stillThere()).toBe(false);
   });
 

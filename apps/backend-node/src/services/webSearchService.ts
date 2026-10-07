@@ -95,7 +95,7 @@ class WebSearchService {
       }));
 
       logger.info(
-        `Perplexity web search for "${queries.join(" | ")}" returned ${results.length} results`,
+        `Perplexity web search (${queries.length} queries) returned ${results.length} results`,
       );
 
       return {
