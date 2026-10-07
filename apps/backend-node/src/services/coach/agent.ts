@@ -718,7 +718,7 @@ export class CoachAgentService {
               logger.error(`Web search failed: ${searchResult.error}`);
               collector.recordTool("webSearch", "failed");
               self.telegram.sendMessage(
-                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQuery: ${searchQueries.join(" | ")}\nError: ${searchResult.error}`
+                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQueries: ${searchQueries.length}\nError: ${searchResult.error}`
               );
               return {
                 success: false as const,

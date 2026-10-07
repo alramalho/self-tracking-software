@@ -1238,13 +1238,11 @@ router.post(
     res: Response,
   ): Promise<Response | void> => {
     try {
-      const { question_checks, attempts, id, extracted_data } = req.body;
+      const { attempts, id, extracted_data } = req.body;
 
       logger.info(
         `Dynamic UI attempt error logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
       );
-      logger.debug("Question checks:", question_checks);
-      logger.debug("Extracted data:", extracted_data);
 
       // Send to Telegram notification service for significant errors
       if (attempts >= 3) {
@@ -1252,7 +1250,7 @@ router.post(
           `⚠️ User struggling to accept the AI extraction in step ${id}\n\n` +
             `User: ${req.user!.username}\n` +
             `Attempts: ${attempts}\n` +
-            `Extracted data: ${JSON.stringify(extracted_data, null, 2)}\n` +
+            `Extracted fields: ${Object.keys(extracted_data ?? {}).join(", ") || "none"}\n` +
             `UTC Time: ${new Date().toISOString()}`,
         );
       }
@@ -1278,8 +1276,6 @@ router.post(
       logger.info(
         `Dynamic UI skip logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
       );
-      logger.debug("Question checks:", question_checks);
-      logger.debug("Extracted data:", extracted_data);
 
       // Send to Telegram notification service for pattern analysis
       telegramService.sendMessage(
