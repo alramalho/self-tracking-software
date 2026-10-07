@@ -16,7 +16,6 @@ module.exports = function withWatch(config) {
       bundleIdentifier: bundle,
       entitlements: {
         'com.apple.developer.applesignin': ['Default'],
-        'com.apple.security.application-groups': ['group.so.tracking.app'],
       },
     }] } },
   };

@@ -24,7 +24,9 @@ export function publicEnvironment(file = process.env.IPHONE_ENV_FILE ?? path.joi
 }
 
 export function buildEnvironment(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...publicEnvironment(), EXPO_NO_DOTENV: "1", EXPO_NO_TELEMETRY: "1", NODE_ENV: "production" };
+  // EXPO_NO_CAPABILITY_SYNC: builds sign with the existing profiles and never change
+  // the App ID's capabilities (it keeps the App Group the app no longer claims).
+  const env: NodeJS.ProcessEnv = { ...process.env, ...publicEnvironment(), EXPO_NO_DOTENV: "1", EXPO_NO_TELEMETRY: "1", EXPO_NO_CAPABILITY_SYNC: "1", NODE_ENV: "production" };
   delete env.EXPO_PUBLIC_E2E;
   const selected = process.env.DEVELOPER_DIR;
   const developerDir = !selected || selected.endsWith("/CommandLineTools") ? "/Applications/Xcode.app/Contents/Developer" : selected;

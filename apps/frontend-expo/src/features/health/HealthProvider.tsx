@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/auth/provider";
 import { api, backendUrl, getAuthToken } from "@/data/api";
 import { useCurrentUser } from "@/data/queries";
+import * as Notifications from "expo-notifications";
 import { healthBridge } from "@/native/health/bridge";
 import type { AppleHealthStatus } from "@/native/health/types";
 import type { ChildrenProps } from "@/core/types";
@@ -70,11 +71,7 @@ export function HealthProvider({ children }: ChildrenProps) {
       await healthBridge.setAccount(userId);
       const device = await healthBridge.isAvailable();
       const optedIn = await AsyncStorage.getItem(key);
-      if (optedIn === "true") {
-        await healthBridge
-          .setWorkoutDetectionEnabled(true)
-          .catch(() => undefined);
-      }
+      if (optedIn === "true") await syncWorkoutAlerts();
       if (alive.current) {
         setAvailable(device.available);
         setEnabled(optedIn === "true");
@@ -88,6 +85,13 @@ export function HealthProvider({ children }: ChildrenProps) {
       retryTimer.current = undefined;
     };
   }, [key, userId, isSignedIn]);
+
+  // Background delivery exists only to say a workout ended, so it follows the
+  // notification permission: off in iOS Settings means no background wake-ups.
+  async function syncWorkoutAlerts() {
+    const allowed = (await Notifications.getPermissionsAsync()).granted;
+    await healthBridge?.setWorkoutDetectionEnabled(allowed).catch(() => undefined);
+  }
 
   async function runSync(connecting = false, automaticRetry = false) {
     if (running.current) return;
@@ -120,18 +124,15 @@ export function HealthProvider({ children }: ChildrenProps) {
         timeout: 120000,
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Re-run authorization for existing connections too. HealthKit does not
-      // automatically add read access for newly introduced types such as
-      // workout routes after an app update.
-      await healthBridge.requestAuthorization();
-      check();
+      // Apple's sheet only from the tap that connects: at launch it would have no
+      // context. A later version that reads a new type must ask from a tap too.
       if (connecting) {
+        await healthBridge.requestAuthorization();
+        check();
         await AsyncStorage.setItem(key, "true");
         setEnabled(true);
-        await healthBridge
-          .setWorkoutDetectionEnabled(true)
-          .catch(() => undefined);
       }
+      await syncWorkoutAlerts();
       const prepared = await healthBridge.prepareSync({
         initialLookbackDays: 30,
         refreshLookbackDays: 30,

@@ -27,6 +27,36 @@ if (
 const projectId =
   process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
   "45c5e480-d33f-4c91-b692-520122979596";
+// What the app collects, all linked to the account, none used for tracking.
+const functionality = "NSPrivacyCollectedDataTypePurposeAppFunctionality";
+const personalization = "NSPrivacyCollectedDataTypePurposeProductPersonalization";
+const analytics = "NSPrivacyCollectedDataTypePurposeAnalytics";
+const collectedDataTypes = (
+  [
+    ["Name", [functionality, personalization]],
+    ["EmailAddress", [functionality]],
+    ["Health", [functionality, personalization]],
+    ["Fitness", [functionality, personalization]],
+    ["PreciseLocation", [functionality]],
+    ["CoarseLocation", [functionality]],
+    ["EmailsOrTextMessages", [functionality, personalization]],
+    ["PhotosorVideos", [functionality, personalization]],
+    ["AudioData", [functionality]],
+    ["CustomerSupport", [functionality]],
+    ["OtherUserContent", [functionality, personalization]],
+    ["UserID", [functionality]],
+    ["DeviceID", [functionality]],
+    ["PurchaseHistory", [functionality]],
+    ["ProductInteraction", [functionality, analytics]],
+    ["OtherDiagnosticData", [functionality]],
+    ["OtherDataTypes", [functionality, personalization]],
+  ] as const
+).map(([type, purposes]) => ({
+  NSPrivacyCollectedDataType: `NSPrivacyCollectedDataType${type}`,
+  NSPrivacyCollectedDataTypeLinked: true,
+  NSPrivacyCollectedDataTypeTracking: false,
+  NSPrivacyCollectedDataTypePurposes: [...purposes],
+}));
 const app: ExpoConfig = {
   name: "tracking.so",
   icon: "./assets/icon.png",
@@ -41,11 +71,11 @@ const app: ExpoConfig = {
     // iPhone only for the App Store launch (no iPad layout review or iPad screenshots).
     supportsTablet: false,
     usesAppleSignIn: true,
-    // Preserve capabilities on the bundle identifier shared with Capacitor.
+    // Only what the app uses. The App Group stays on the App ID (EXPO_NO_CAPABILITY_SYNC
+    // in scripts/iphone) but nothing reads it, so the app no longer claims it.
     entitlements: {
       "com.apple.developer.healthkit": true,
       "com.apple.developer.healthkit.background-delivery": true,
-      "com.apple.security.application-groups": ["group.so.tracking.app"],
     },
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -54,13 +84,32 @@ const app: ExpoConfig = {
       // tracking.so only reads (toShare is empty), so iOS never shows this; the
       // HealthKit entitlement still requires the key.
       NSHealthUpdateUsageDescription:
-        "tracking.so does not save anything to Apple Health. It only reads the data you allow.",
+        "Apple Health stays read-only for tracking.so: it reads the workouts and sleep you allow.",
+      // Log locations only set the time zone and suggest friends who trained nearby,
+      // and circles round to the city, so iOS offers approximate location by default.
+      NSLocationDefaultAccuracyReduced: true,
     },
     privacyManifests: {
+      NSPrivacyTracking: false,
+      // Must match App Store Connect's App Privacy answers (and the privacy policy).
+      NSPrivacyCollectedDataTypes: collectedDataTypes,
+      // Includes the reasons of SDKs whose own manifests the prebuilt frameworks drop.
       NSPrivacyAccessedAPITypes: [
         {
           NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
           NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+        },
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryFileTimestamp",
+          NSPrivacyAccessedAPITypeReasons: ["C617.1", "0A2A.1"],
+        },
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace",
+          NSPrivacyAccessedAPITypeReasons: ["E174.1"],
+        },
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategorySystemBootTime",
+          NSPrivacyAccessedAPITypeReasons: ["35F9.1"],
         },
       ],
     },
@@ -90,7 +139,7 @@ const app: ExpoConfig = {
       "expo-audio",
       {
         microphonePermission:
-          "Record a voice note or dictate an answer, which tracking.so turns into text.",
+          "Record a voice note or dictate an answer. The recording is sent to our speech-to-text provider to turn it into text.",
         // Recording happens only on screen and nothing plays in the background,
         // so no background audio mode (App Review checks UIBackgroundModes).
         enableBackgroundPlayback: false,
@@ -110,21 +159,21 @@ const app: ExpoConfig = {
       "expo-location",
       {
         locationWhenInUsePermission:
-          "Add where you trained to an activity log, and find circles near you. Only while you use the app.",
+          "Add where you trained to an activity log, which sets its time zone and suggests friends who trained with you, and find circles near you. Only while you use the app.",
         // The app never asks for Always location; `false` keeps the plugin's generic
         // descriptions out of Info.plist. Motion stays: the library's code references
         // the motion API, and Apple rejects uploads without a purpose string (ITMS-90683).
         locationAlwaysAndWhenInUsePermission: false,
         locationAlwaysPermission: false,
         motionUsagePermission:
-          "tracking.so doesn't ask for motion data. iOS requires this text because the location library supports it.",
+          "Motion data isn't part of tracking.so; the location tools it uses include motion support.",
       },
     ],
     [
       "expo-calendar",
       {
         calendarPermission:
-          "Sync the sessions you choose with your calendar. Only tracking.so events are updated.",
+          "Reads only the calendar you pick, to find and update the sessions tracking.so added there. Nothing from your calendar leaves your phone.",
         remindersPermission: false,
       },
     ],

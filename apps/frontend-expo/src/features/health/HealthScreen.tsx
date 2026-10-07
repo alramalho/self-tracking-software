@@ -397,8 +397,8 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
           )}
         </View>
         <Copy muted>
-          Workouts sync when you open the app and whenever iOS gives tracking.so
-          background time.
+          Workouts sync when you open the app. With notifications on, you hear
+          when a workout ends.
         </Copy>
         {!health.enabled ? (
           <Button

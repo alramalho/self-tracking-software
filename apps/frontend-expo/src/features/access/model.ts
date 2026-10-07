@@ -82,7 +82,7 @@ export const accessRequests = {
         ? [
             {
               kind: "health" as const,
-              detail: "Workouts, heart rate and sleep from your Apple Watch",
+              detail: "Workouts, heart rate and sleep from Apple Health",
             },
           ]
         : []),
@@ -107,7 +107,7 @@ export const accessRequests = {
   }),
   appleHealth: (): AccessRequest => ({
     title: "tracking.so needs access",
-    subtitle: "to log your Apple Watch workouts for you",
+    subtitle: "to log your workouts for you",
     items: [
       {
         kind: "health",
