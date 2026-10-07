@@ -634,6 +634,8 @@ export class AIService {
 
       if (messages) {
         generateParams.messages = messages;
+        // Coach history carries trusted app state (proposal outcomes) as system turns.
+        generateParams.allowSystemInMessages = true;
       } else if (prompt) {
         generateParams.prompt = prompt;
       } else {
@@ -699,6 +701,8 @@ export class AIService {
 
       if (messages) {
         generateParams.messages = messages;
+        // Coach history carries trusted app state (proposal outcomes) as system turns.
+        generateParams.allowSystemInMessages = true;
       } else if (prompt) {
         generateParams.prompt = prompt;
       } else {
@@ -1891,7 +1895,7 @@ export class AIService {
       `- COMPLETED: MUST celebrate success, do NOT mention adjustments`;
 
     let messages: Array<{
-      role: "system" | "user" | "assistant";
+      role: "user" | "assistant";
       content: string;
     }>;
 
@@ -1931,7 +1935,6 @@ export class AIService {
       };
 
       messages = [
-        { role: "system", content: system },
         {
           role: "user",
           content: generateMessageStr(
@@ -2079,7 +2082,6 @@ export class AIService {
           const performance = performanceMap[newPlanState];
 
           messages = [
-            { role: "system", content: system },
             {
               role: "user",
               content: `This week I had ${performance} performance on my plan: '${plan.goal}'. No adjustments were made to the plan.`,
@@ -2148,7 +2150,6 @@ export class AIService {
         };
 
         messages = [
-          { role: "system", content: system },
           {
             role: "user",
             content: generateMessageStr(
@@ -2251,6 +2252,7 @@ export class AIService {
     try {
       const result = await generateText({
         model: gateway(DEFAULT_AI_GATEWAY_MODEL),
+        instructions: system,
         messages,
         temperature: 1,
       });
