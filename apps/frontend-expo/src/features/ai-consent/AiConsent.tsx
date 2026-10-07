@@ -26,7 +26,8 @@ const sent = [
 ];
 const receivers = [
   "OpenAI, DeepSeek, Google, Anthropic and Moonshot, through Vercel AI Gateway",
-  "Speech to text: OpenAI or OpenRouter",
+  "Similar-plan matching: OpenAI",
+  "Speech to text: OpenRouter or OpenAI",
   "Web search and browsing for the coach: Perplexity and Browserbase",
   "Coach memory: Supermemory",
 ];
