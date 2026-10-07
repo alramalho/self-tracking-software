@@ -129,8 +129,12 @@ class AuthManager: ObservableObject {
         }
     }
 
-    func handleAppleSignIn(identityToken: String) async -> Bool {
-        guard let url = URL(string: "\(backendUrl)/auth/ios-apple-signin") else { return false }
+    enum AppleSignInResult { case signedIn, noAccount, failed }
+
+    // The Watch signs in to existing accounts only: accounts are created (and can be
+    // deleted, with AI consent asked) in the iPhone app.
+    func handleAppleSignIn(identityToken: String) async -> AppleSignInResult {
+        guard let url = URL(string: "\(backendUrl)/auth/ios-apple-signin") else { return .failed }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -141,16 +145,17 @@ class AuthManager: ObservableObject {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else { return false }
+            guard let httpResponse = response as? HTTPURLResponse else { return .failed }
+            if httpResponse.statusCode == 404 { return .noAccount }
+            guard httpResponse.statusCode == 200 else { return .failed }
 
             let tokenResponse = try JSONDecoder().decode(WatchTokenResponse.self, from: data)
             // An older change from the iPhone must not undo this sign-in.
             UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastChangeKey)
             setTokens(access: tokenResponse.accessToken, refresh: tokenResponse.refreshToken)
-            return true
+            return .signedIn
         } catch {
-            return false
+            return .failed
         }
     }
 
