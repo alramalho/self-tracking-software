@@ -1,5 +1,6 @@
 import Supermemory from "supermemory";
 import { logger } from "../utils/logger";
+import { currentUserAllowsAi } from "../utils/aiConsent";
 
 class SupermemoryService {
   private client: Supermemory | null = null;
@@ -12,8 +13,9 @@ class SupermemoryService {
     }
   }
 
+  // Memory is an AI provider: without consent nothing is stored or read.
   async addMemory(userId: string, content: string, customId?: string) {
-    if (!this.client) return;
+    if (!this.client || !currentUserAllowsAi()) return;
 
     try {
       await this.client.add({
@@ -27,21 +29,24 @@ class SupermemoryService {
     }
   }
 
-  async deleteAllMemories(userId: string) {
-    if (!this.client) return;
+  // True when nothing is left (or memory isn't configured).
+  async deleteAllMemories(userId: string): Promise<boolean> {
+    if (!this.client) return true;
 
     try {
       await this.client.documents.deleteBulk({
         containerTags: [`user_${userId}`],
       });
       logger.info(`Supermemory: deleted all memories for user ${userId}`);
+      return true;
     } catch (error) {
       logger.error("Supermemory deleteBulk failed:", error);
+      return false;
     }
   }
 
   async getProfile(userId: string, query: string): Promise<string | null> {
-    if (!this.client) return null;
+    if (!this.client || !currentUserAllowsAi()) return null;
 
     try {
       const result = await this.client.profile({

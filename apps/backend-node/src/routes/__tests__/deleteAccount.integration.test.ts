@@ -9,20 +9,21 @@ const database = new URL(process.env.DATABASE_URL || "http://not-configured");
 if (database.hostname !== "127.0.0.1" || database.port !== "55432")
   throw new Error("Account deletion tests require the isolated local database on port 55432.");
 
-const { deleteUser, deletePrefix, cancel, retrieve, deleteAllMemories, deleteContact } = vi.hoisted(() => ({
+const { deleteUser, deletePrefix, cancel, retrieve, deleteAllMemories, deleteContact, deleteCustomer } = vi.hoisted(() => ({
   deleteUser: vi.fn(),
   deletePrefix: vi.fn(async () => 0),
   cancel: vi.fn(),
   retrieve: vi.fn(),
   deleteAllMemories: vi.fn(async () => undefined),
   deleteContact: vi.fn(async () => ({ success: true })),
+  deleteCustomer: vi.fn(async () => ({ deleted: true })),
 }));
 vi.mock("@clerk/express", async (original) => ({
   ...(await original<object>()),
   clerkClient: { users: { deleteUser } },
 }));
 vi.mock("stripe", () => ({
-  default: vi.fn(() => ({ subscriptions: { retrieve, cancel } })),
+  default: vi.fn(() => ({ subscriptions: { retrieve, cancel }, customers: { del: deleteCustomer } })),
 }));
 vi.mock("../../services/s3Service", () => ({ s3Service: { deletePrefix } }));
 vi.mock("../../services/supermemoryService", () => ({ supermemoryService: { deleteAllMemories } }));
@@ -59,6 +60,7 @@ beforeEach(async () => {
       email: `${randomUUID()}@example.invalid`,
       clerkId: `clerk_${randomUUID()}`,
       stripeSubscriptionId: "sub_test",
+      stripeCustomerId: `cus_${randomUUID()}`,
     },
   });
   retrieve.mockResolvedValue({ status: "active" });
@@ -77,7 +79,18 @@ describe("DELETE /users/user", () => {
     expect(deletePrefix).toHaveBeenCalledWith(`plan-generations/${current.id}/`);
     expect(deleteAllMemories).toHaveBeenCalledWith(current.id);
     expect(deleteContact).toHaveBeenCalledWith(current.email, current.id);
+    expect(deleteCustomer).toHaveBeenCalledWith(current.stripeCustomerId);
     expect(await stillThere()).toBe(false);
+  });
+
+  it("deletes someone who is in a plan group", async () => {
+    const group = await prisma.planGroup.create({ data: {} });
+    await prisma.planGroupMember.create({ data: { planGroupId: group.id, userId: current.id } });
+    const response = await deleteAccount();
+    expect(response.status).toBe(200);
+    expect(await stillThere()).toBe(false);
+    expect(await prisma.planGroupMember.count({ where: { planGroupId: group.id } })).toBe(0);
+    await prisma.planGroup.delete({ where: { id: group.id } });
   });
 
   it("deletes nothing when the subscription can't be cancelled", async () => {

@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
+import { assertAiConsent } from "../utils/aiConsent";
 
 const extractionSchema = z.object({
   status: z.enum(["sufficient", "insufficient"]),
@@ -101,6 +102,8 @@ async function importStagehand(): Promise<any> {
 
 class BrowserAgentService {
   async browse(input: BrowserAgentInput): Promise<BrowserAgentOutput> {
+    // Browserbase and its model see the task, so it needs AI consent like any provider.
+    assertAiConsent();
     const apiKey = process.env.BROWSERBASE_API_KEY;
     if (!apiKey) {
       return {

@@ -1,7 +1,7 @@
 // AI data sharing consent (App Store Guideline 5.1.2(i)).
 // People choose in the app whether their data may be sent to third-party AI
-// providers. The rule is enforced only when AI_CONSENT_ENFORCED=true, so older
-// app builds that never ask keep working until the flag is flipped.
+// providers, and the server always holds them to it. AI_CONSENT_ENFORCED=false
+// is an emergency switch only; every iPhone, Watch and web build now asks.
 import type { User } from "@tsw/prisma";
 import type { NextFunction, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/auth";
@@ -15,7 +15,7 @@ export const AI_CONSENT_REQUIRED = {
 };
 
 export function hasAiConsent(user: ConsentFields | null | undefined): boolean {
-  if (process.env.AI_CONSENT_ENFORCED !== "true") return true;
+  if (process.env.AI_CONSENT_ENFORCED === "false") return true;
   const granted = user?.aiConsentGrantedAt;
   const declined = user?.aiConsentDeclinedAt;
   if (!granted) return false;

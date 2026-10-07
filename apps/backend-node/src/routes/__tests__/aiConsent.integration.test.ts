@@ -68,7 +68,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   vi.clearAllMocks();
-  process.env.AI_CONSENT_ENFORCED = "true";
+  delete process.env.AI_CONSENT_ENFORCED;
   currentId = (
     await prisma.user.create({
       data: { id: `${prefix}-${randomUUID()}`, email: `${randomUUID()}@example.invalid` },
@@ -128,8 +128,8 @@ describe("AI consent", () => {
     expect((await transcribe()).status).toBe(403);
   });
 
-  it("changes nothing while the flag is off", async () => {
-    delete process.env.AI_CONSENT_ENFORCED;
+  it("changes nothing when the emergency switch turns enforcement off", async () => {
+    process.env.AI_CONSENT_ENFORCED = "false";
     expect((await transcribe()).status).toBe(200);
   });
 
