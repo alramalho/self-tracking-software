@@ -26,6 +26,7 @@ class PerplexityAiService {
     if (process.env.PERPLEXITY_API_KEY) {
       this.perplexity = new Perplexity({
         apiKey: process.env.PERPLEXITY_API_KEY,
+        defaultHeaders: { "X-Pplx-Integration": "self-tracking-software" },
       });
     } else {
       logger.warn("PERPLEXITY_API_KEY not set - research will use fallback");
