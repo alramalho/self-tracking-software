@@ -13,16 +13,19 @@ export interface AuthenticatedRequest extends Request {
 }
 
 async function tryWatchAuth(req: Request): Promise<User | null> {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return null;
-    }
-    const claims = verifyWatchAccessToken(authHeader.substring(7));
-    return await userService.getUserById(claims.sub);
-  } catch (error) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return null;
   }
+  let userId: string;
+  try {
+    userId = verifyWatchAccessToken(authHeader.substring(7)).sub;
+  } catch {
+    // Not a watch token (e.g. a Clerk session token).
+    return null;
+  }
+  // A database failure must surface as a 500: a 401 signs the watch out.
+  return userService.getUserById(userId);
 }
 
 async function tryClerkAuth(req: Request): Promise<User | null> {

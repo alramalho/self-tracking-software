@@ -147,15 +147,22 @@ router.post("/watch-refresh", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "refreshToken is required" });
     }
 
-    const claims = verifyWatchRefreshToken(refreshToken);
-    const user = await userService.getUserById(claims.sub);
+    let userId: string;
+    try {
+      userId = verifyWatchRefreshToken(refreshToken).sub;
+    } catch {
+      return res.status(401).json({ error: "Invalid refresh token" });
+    }
+    const user = await userService.getUserById(userId);
     if (!user || user.deletedAt) {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
     return res.json(issueWatchAuthTokens(user.id));
-  } catch {
-    return res.status(401).json({ error: "Invalid refresh token" });
+  } catch (error) {
+    // The watch keeps its login on a 5xx and signs out only on a 401.
+    console.error("Watch token refresh error:", error);
+    return res.status(500).json({ error: "Could not refresh watch login" });
   }
 });
 

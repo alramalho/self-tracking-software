@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -9,27 +8,31 @@ class AuthManager: ObservableObject {
     @Published var accessToken: String?
     @Published private(set) var accountID: String?
 
-    private let keychainServiceAccess = "so.tracking.app.watch.access"
-    private let keychainServiceRefresh = "so.tracking.app.watch.refresh"
+    private let accessKeychain = TokenKeychain(service: "so.tracking.app.watch.access")
+    private let refreshKeychain = TokenKeychain(service: "so.tracking.app.watch.refresh")
+    private let lastChangeKey = "lastPhoneAuthUpdate"
     private let backendUrl = "https://api.tracking.so"
     private var revision = 0
+    private var refreshTask: Task<String?, Never>?
 
     private init() {
         loadTokens()
     }
 
+    /// Restores the saved login. Safe to call again once the watch is unlocked.
     func loadTokens() {
-        if let token = readKeychain(service: keychainServiceAccess) {
-            accessToken = token
-            accountID = tokenPayload(token)?["sub"] as? String
-            isAuthenticated = true
-        }
+        guard !isAuthenticated, case .found(let token) = accessKeychain.read() else { return }
+        accessKeychain.relaxAccessibility()
+        refreshKeychain.relaxAccessibility()
+        accessToken = token
+        accountID = tokenPayload(token)?["sub"] as? String
+        isAuthenticated = true
     }
 
     func setTokens(access: String, refresh: String) {
         revision += 1
-        saveKeychain(service: keychainServiceAccess, value: access)
-        saveKeychain(service: keychainServiceRefresh, value: refresh)
+        accessKeychain.save(access)
+        refreshKeychain.save(refresh)
         accessToken = access
         accountID = tokenPayload(access)?["sub"] as? String
         isAuthenticated = true
@@ -37,26 +40,65 @@ class AuthManager: ObservableObject {
 
     func clearTokens() {
         revision += 1
-        deleteKeychain(service: keychainServiceAccess)
-        deleteKeychain(service: keychainServiceRefresh)
+        accessKeychain.delete()
+        refreshKeychain.delete()
         accessToken = nil
         accountID = nil
         isAuthenticated = false
     }
 
+    /// Applies a login change sent by the iPhone, unless the watch already has a newer one.
+    func applyPhoneChange(_ payload: [String: Any]) {
+        let changedAt = payload["auth_updated_at"] as? Double ?? 0
+        // The latest application context is replayed on every launch; apply it only once.
+        guard changedAt > UserDefaults.standard.double(forKey: lastChangeKey) else { return }
+        if payload["clear_tokens"] as? Bool == true {
+            UserDefaults.standard.set(changedAt, forKey: lastChangeKey)
+            clearTokens()
+        } else if let access = payload["access_token"] as? String,
+                  let refresh = payload["refresh_token"] as? String {
+            UserDefaults.standard.set(changedAt, forKey: lastChangeKey)
+            setTokens(access: access, refresh: refresh)
+        }
+    }
+
     func getValidToken() async -> String? {
+        loadTokens()
         guard let token = accessToken else { return nil }
         if isTokenExpired(token) {
-            return await refreshTokenIfNeeded()
+            return await refreshTokens()
         }
         return token
     }
 
-    @discardableResult
-    func refreshTokenIfNeeded() async -> String? {
+    /// The server rejected `token`; returns a newer one if the login is still valid.
+    func tokenAfterRejection(of token: String) async -> String? {
+        if let current = accessToken, current != token, !isTokenExpired(current) {
+            return current
+        }
+        return await refreshTokens()
+    }
+
+    /// Concurrent callers share one refresh, so they never race each other's token rotation.
+    private func refreshTokens() async -> String? {
+        if let refreshTask { return await refreshTask.value }
+        let task = Task { () -> String? in
+            defer { refreshTask = nil }
+            return await performRefresh()
+        }
+        refreshTask = task
+        return await task.value
+    }
+
+    private func performRefresh() async -> String? {
         let requestRevision = revision
-        guard let refreshToken = readKeychain(service: keychainServiceRefresh) else {
+        let refreshToken: String
+        switch refreshKeychain.read() {
+        case .found(let token): refreshToken = token
+        case .missing:
             clearTokens()
+            return nil
+        case .unavailable:
             return nil
         }
 
@@ -71,9 +113,10 @@ class AuthManager: ObservableObject {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard requestRevision == revision else { return nil }
+            guard requestRevision == revision else { return accessToken }
             guard let httpResponse = response as? HTTPURLResponse else { return nil }
             guard httpResponse.statusCode == 200 else {
+                // Only the refresh endpoint can say the login itself is no longer valid.
                 if httpResponse.statusCode == 401 { clearTokens() }
                 return nil
             }
@@ -102,6 +145,8 @@ class AuthManager: ObservableObject {
                   httpResponse.statusCode == 200 else { return false }
 
             let tokenResponse = try JSONDecoder().decode(WatchTokenResponse.self, from: data)
+            // An older change from the iPhone must not undo this sign-in.
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastChangeKey)
             setTokens(access: tokenResponse.accessToken, refresh: tokenResponse.refreshToken)
             return true
         } catch {
@@ -125,45 +170,5 @@ class AuthManager: ObservableObject {
 
         guard let data = Data(base64Encoded: base64) else { return nil }
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    }
-
-    // MARK: - Keychain Helpers
-
-    private func saveKeychain(service: String, value: String) {
-        guard let data = value.data(using: .utf8) else { return }
-        deleteKeychain(service: service)
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: "token",
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-        ]
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    private func readKeychain(service: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: "token",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    private func deleteKeychain(service: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: "token",
-        ]
-        SecItemDelete(query as CFDictionary)
     }
 }

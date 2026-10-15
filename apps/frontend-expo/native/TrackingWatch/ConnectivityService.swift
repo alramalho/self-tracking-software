@@ -46,18 +46,6 @@ class ConnectivityService: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func handleAuthPayload(_ payload: [String: Any]) {
-        Task { @MainActor in
-            let timestamp = payload["auth_updated_at"] as? Double ?? 0
-            let last = UserDefaults.standard.double(forKey: "lastPhoneAuthUpdate")
-            guard timestamp >= last else { return }
-            if payload["clear_tokens"] as? Bool == true {
-                UserDefaults.standard.set(timestamp, forKey: "lastPhoneAuthUpdate")
-                AuthManager.shared.clearTokens()
-            } else if let access = payload["access_token"] as? String,
-                      let refresh = payload["refresh_token"] as? String {
-                UserDefaults.standard.set(timestamp, forKey: "lastPhoneAuthUpdate")
-                AuthManager.shared.setTokens(access: access, refresh: refresh)
-            }
-        }
+        Task { @MainActor in AuthManager.shared.applyPhoneChange(payload) }
     }
 }

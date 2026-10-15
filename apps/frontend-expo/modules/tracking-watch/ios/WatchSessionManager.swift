@@ -27,10 +27,12 @@ final class WatchSessionManager: NSObject, WCSessionDelegate {
     }
 
     func setAccount(_ next: String?) {
-        if account != next || next == nil {
-            account = next
+        // nil is an explicit logout. A different account replaces the previous one's
+        // login; the first account after a logout keeps the watch as it is until its tokens arrive.
+        if next == nil || (account != nil && account != next) {
             save(["clear_tokens": true])
         }
+        account = next
         deliver()
     }
 

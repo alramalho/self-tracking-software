@@ -6,14 +6,17 @@ import { watchBridge } from "./bridge";
 import type { WatchTokens } from "./types";
 
 export function WatchSync() {
-  const { isSignedIn, userId } = useSession();
+  const { isLoaded, isSignedIn, userId } = useSession();
   useEffect(() => {
-    if (Platform.OS !== "ios") return;
-    const account = isSignedIn ? userId : null;
+    // Signing out detaches the watch explicitly (see leaveActiveAccount). Until the
+    // session has loaded, "not signed in" only means "not known yet", and must not
+    // sign the watch out on every app launch.
+    if (Platform.OS !== "ios" || !isLoaded || !isSignedIn || !userId) return;
+    const account = userId;
     let cancelled = false;
     let pending = false;
     const sync = async () => {
-      if (!account || cancelled || pending) return;
+      if (cancelled || pending) return;
       pending = true;
       try {
         const { data } = await api.post<WatchTokens>("/auth/watch-tokens");
@@ -28,6 +31,6 @@ export function WatchSync() {
     });
     const timer = setInterval(() => void sync(), 30 * 60 * 1000);
     return () => { cancelled = true; foreground.remove(); clearInterval(timer); };
-  }, [isSignedIn, userId]);
+  }, [isLoaded, isSignedIn, userId]);
   return null;
 }
