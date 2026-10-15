@@ -79,6 +79,13 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 208 — Apple Watch stays signed in, October 15, 2026
+
+- Local production release from branch `watch-session-consistency` (`ae9ff5ff`, on main `e7aae2d3`), so it has everything in TestFlight build 206 plus the watch login fix. The watch had kept returning to the Sign in with Apple screen because: the iPhone told it to sign out on every app launch while Clerk was still loading; the watch saved its login readable only while unlocked, so a background launch off the wrist found nothing; any 401 from an API call signed it out instead of refreshing; and the replayed application context could undo a sign-in made on the watch.
+- The backend half (database errors during watch auth answer 500 instead of 401) is committed but **not deployed**; the app fix does not need it.
+- Verified IPA: `tracking-watch-session/apps/frontend-expo/.release/2026-10-15T14-08-17-757Z-c507d72d/tracking.so.ipa`, SHA-256 `246414b56c5ff096a9fe2b7d7c91eff2ba1fb90281dc80b2ec75baa814ee3eb3`; iPhone and Watch build 208. The wrapper's checks passed; the Watch binary contains the new keychain and refresh code; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap.
+- Hosted: `.release/2026-10-15T14-12-45-783Z-205fc72b/distribution.json` in the same worktree; the link expires October 22, 2026. `verify-hosted.cjs` verified the installer, manifest and all 27,172,074 IPA bytes. Checks: Swift typecheck for watchOS and the phone module, Expo and backend typecheck. Not run on a simulator or a real watch. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 205 — everything on main plus the streak explainer, October 2, 2026
 
 - Local production release from main `d3bf7bf9`, the same commit as TestFlight build 204: the streak explainer drawer, dictation feedback and languages, the explained missed-week sheet and clay coach figures, the smooth heart-rate chart, account switching and the Metrics redesign. All the backend it needs is live (`voice-languages-20261002`).
