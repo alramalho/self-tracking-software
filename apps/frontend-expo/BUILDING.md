@@ -79,6 +79,12 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 211 — cleaner activity cards, October 15, 2026
+
+- Local production release from main `324b93ad`: build 210 plus activity cards (home, profile, circle feed) without the circle tag ("💪 train 4 times a week") and the week chip ("2 of 4 this week"); the circle board still shows weekly progress as dots. The web app drops them too. No backend change.
+- Verified IPA: `tracking-clean-feed-card/apps/frontend-expo/.release/2026-10-15T17-00-44-659Z-3fe40595/tracking.so.ipa`, SHA-256 `a3a585b9340f89c88ae00cc74a97fd408480ecc0e00d636fb45126941c4e3d1f`; iPhone and Watch build 211. The wrapper's checks passed; the build installed TrackingWatch, TrackingHealth and TrackingMap.
+- Hosted: the newest `.release/2026-10-15T17-0*/distribution.json` in the same worktree; the link expires October 22, 2026. `verify-hosted.cjs` verified the installer, manifest and all 27,183,615 IPA bytes. Checked as Expo web renders (`e2e/circle-momentum.spec.ts`, light and dark); not run on a simulator or phone. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 210 — "how sure are you?" before the plan starts, October 15, 2026
 
 - Local production release from branch `plan-confidence` (`67a5bc65` + docs, on main `02315ff3`), so it has everything in build 208 plus the confidence step: after the coach and circle steps and right before the paywall, an animated 1–10 dial about the exact plan, a lighter plan below 7 (Helly's route instead of Oli's, or one time fewer a week for a habit), then "why an 8, and not a 5?" / "what would make it a 7?" typed or dictated. "Plan this with my coach" asks it after the preview.
