@@ -1,13 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { circleStatusLine, pastWeeksLine, weekBars, weekChipLabel } from "../src/features/circles/model";
+import { circleStatusLine, pastWeeksLine, weekBars } from "../src/features/circles/model";
 import { notificationRoute } from "../src/native/notification-routing";
-
-test("a circle log's chip says how far into the week it was", () => {
-  assert.deepEqual(weekChipLabel({ done: 1, target: 4 }), { text: "1 of 4 this week", done: false });
-  assert.deepEqual(weekChipLabel({ done: 4, target: 4 }), { text: "Week done ✅ 4 of 4", done: true });
-  assert.deepEqual(weekChipLabel({ done: 6, target: 4 }), { text: "Week done ✅ +2", done: true });
-});
 
 test("past weeks row says the streak together and where you stand", () => {
   assert.equal(pastWeeksLine(2, 100), "2 🔥 weeks together · you're at 100%");

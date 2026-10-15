@@ -10,11 +10,9 @@ import {
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { useProfile } from "@/data/queries";
-import { WeekChipPill } from "../circles/components";
 import { profileStats } from "../profile/model";
 import type {
   ActivitySummaryProps,
-  CircleTagProps,
   ParticipantAvatarProps,
 } from "./types";
 import {
@@ -111,32 +109,6 @@ function ParticipantName({ user }: ParticipantAvatarProps) {
     >
       @{user?.username ?? user?.name ?? "user"}
     </Text>
-  );
-}
-/** Where a stranger's post came from: the circle you share with them. */
-function CircleTag({ circle }: CircleTagProps) {
-  const c = useColors();
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={`Open circle ${circle.name}`}
-      hitSlop={6}
-      onPress={(event) => {
-        event.stopPropagation();
-        router.push(`/circle/${circle.id}`);
-      }}
-      style={({ pressed }) => ({
-        borderRadius: 999,
-        backgroundColor: c.soft,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        opacity: pressed ? 0.6 : 1,
-      })}
-    >
-      <Text numberOfLines={1} style={{ color: c.text, fontSize: 11 }}>
-        {`${circle.emoji} ${circle.name}`}
-      </Text>
-    </Pressable>
   );
 }
 function activityDate(date: number) {
@@ -263,19 +235,14 @@ export function ActivitySummary({
         </View>
       </View>
     );
-  const circle = item.entry?.circle;
   const date = (
-    <View style={[styles.row, { gap: 6, flexWrap: "wrap" }]}>
-      <Text style={{ color: c.muted, fontSize: 12 }}>
-        {activityDate(item.date)}
-        {appleHealthDuration(item.entry, item.activity?.measure)
-          ? ` · ${appleHealthDuration(item.entry, item.activity?.measure)}`
-          : ""}
-        {item.entry?.timezone ? ` - 📍 ${item.entry.timezone}` : ""}
-      </Text>
-      {circle && <CircleTag circle={circle} />}
-      {item.entry?.weekChip && <WeekChipPill chip={item.entry.weekChip} />}
-    </View>
+    <Text style={{ color: c.muted, fontSize: 12 }}>
+      {activityDate(item.date)}
+      {appleHealthDuration(item.entry, item.activity?.measure)
+        ? ` · ${appleHealthDuration(item.entry, item.activity?.measure)}`
+        : ""}
+      {item.entry?.timezone ? ` - 📍 ${item.entry.timezone}` : ""}
+    </Text>
   );
   if (joint)
     return (

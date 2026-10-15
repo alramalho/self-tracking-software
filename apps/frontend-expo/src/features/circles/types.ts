@@ -191,10 +191,6 @@ export interface PastWeeksChartProps {
   highlight: string | undefined;
 }
 
-export interface WeekChipPillProps {
-  chip: WeekChip;
-}
-
 export interface WeekDotsProps {
   target: number;
   done: number;

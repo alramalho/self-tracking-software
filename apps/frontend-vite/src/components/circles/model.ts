@@ -1,4 +1,4 @@
-import type { BoardMember, MyCircle, PastWeeks, WeekBar, WeekChip } from "./types";
+import type { BoardMember, MyCircle, PastWeeks, WeekBar } from "./types";
 
 // Matching keeps adding people with a similar goal until a circle has this many.
 export const MATCHING_TARGET = 5;
@@ -8,13 +8,6 @@ const PERSON_COLORS = ["#e0527d", "#d97706", "#7c5cff", "#3b82f6", "#0f9f6e", "#
 
 export function personColors(members: BoardMember[]): Record<string, string> {
   return Object.fromEntries(members.map((m, i) => [m.user.id, PERSON_COLORS[i % PERSON_COLORS.length]]));
-}
-
-// The chip on a circle log. `done` marks the session that completes the week (or goes past it).
-export function weekChipLabel(chip: WeekChip): { text: string; done: boolean } {
-  if (chip.done < chip.target) return { text: `${chip.done} of ${chip.target} this week`, done: false };
-  if (chip.done === chip.target) return { text: `Week done ✅ ${chip.done} of ${chip.target}`, done: true };
-  return { text: `Week done ✅ +${chip.done - chip.target}`, done: true };
 }
 
 // Under "Past weeks" on the circle page: the streak together, and where you stand.

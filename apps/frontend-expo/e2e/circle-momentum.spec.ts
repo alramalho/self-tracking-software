@@ -128,12 +128,11 @@ for (const theme of ["LIGHT", "DARK"]) {
     await expect(page.getByRole("button", { name: "Past weeks" })).toContainText("you're at 100%");
     // The streak and "Last week" cards are gone: one row leads to the chart instead.
     await expect(page.getByText("Last week", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Week done ✅ 4 of 4", { exact: true })).toBeVisible();
-    await expect(page.getByText("1 of 4 this week", { exact: true })).toBeVisible();
+    // Activity cards no longer carry the circle tag or the week chip.
+    await expect(page.getByText("Week done ✅ 4 of 4", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("1 of 4 this week", { exact: true })).toHaveCount(0);
     mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, `circle-${theme}.png`) });
-    await page.getByText("Week done ✅ 4 of 4", { exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: path.join(output, `chips-${theme}.png`) });
 
     await page.getByRole("button", { name: "Past weeks" }).click();
     await expect(page.getByText("Most consistent", { exact: true })).toBeVisible();
