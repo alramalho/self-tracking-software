@@ -387,9 +387,9 @@ export class NotificationService {
         logger.error("WebPush error:", error);
 
         // Handle specific web-push errors
-        if (error.statusCode === 410) {
+        if (isDeadWebPushSubscription(error)) {
           logger.warn(
-            `Subscription expired for user ${userId}, clearing subscription`
+            `Subscription expired or made with an old server key for user ${userId}, clearing subscription`
           );
           await prisma.user.update({
             where: { id: userId },
@@ -434,6 +434,16 @@ export class NotificationService {
       type: "INFO",
     });
   }
+}
+
+// Gone (404/410), or created with a different VAPID key: the browser must subscribe again.
+function isDeadWebPushSubscription(error: any): boolean {
+  if (error.statusCode === 404 || error.statusCode === 410) return true;
+  const body = String(error.body ?? "");
+  return (
+    body.includes("VapidPkHashMismatch") ||
+    body.includes("VAPID credentials in the authorization header do not correspond")
+  );
 }
 
 export const notificationService = new NotificationService();

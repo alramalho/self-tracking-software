@@ -16,6 +16,19 @@ import React, {
 } from "react";
 import { getSerwist } from "virtual:serwist";
 
+const VAPID_PUBLIC_KEY: string = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+// A subscription made with an older server key can never receive pushes again.
+function isSubscribedWithCurrentKey(subscription: PushSubscription): boolean {
+  const key = subscription.options.applicationServerKey;
+  if (!key) return false;
+  const subscribed = btoa(String.fromCharCode(...new Uint8Array(key)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return subscribed === VAPID_PUBLIC_KEY.replace(/=+$/, "");
+}
+
 interface NotificationsWebContextType {
   notificationCount: number;
   addToNotificationCount: (count: number, type?: 'profile' | 'general') => void;
@@ -206,10 +219,13 @@ export const NotificationsWebProvider = ({
             if (pm === "granted") {
               console.log("Permission state is granted");
               try {
+                const existing = await reg.pushManager.getSubscription();
+                if (existing && !isSubscribedWithCurrentKey(existing)) {
+                  await existing.unsubscribe();
+                }
                 const subscription = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
-                  applicationServerKey:
-                    import.meta.env.VITE_VAPID_PUBLIC_KEY,
+                  applicationServerKey: VAPID_PUBLIC_KEY,
                 });
                 setSubscription(subscription);
                 console.log("Subscription set");
@@ -257,10 +273,15 @@ export const NotificationsWebProvider = ({
       const response = await api.get("/notifications/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
-      // Request new permission if:
+      // Subscribe again if:
       // 1. We have no current subscription but push is granted
-      // 2. Current subscription endpoint differs from stored one
-      if (!currentSubscription || (storedEndpoint && currentSubscription.endpoint !== storedEndpoint)) {
+      // 2. The backend has no subscription, or a different one
+      // 3. The subscription was made with an older server key
+      if (
+        !currentSubscription ||
+        currentSubscription.endpoint !== storedEndpoint ||
+        !isSubscribedWithCurrentKey(currentSubscription)
+      ) {
         await requestPermission();
       }
     } catch (error) {
