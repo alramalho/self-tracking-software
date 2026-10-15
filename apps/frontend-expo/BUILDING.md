@@ -79,10 +79,17 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## TestFlight build 209 — Apple Watch stays signed in, October 15, 2026: built, NOT uploaded
+
+- Built locally from main `2bb803e8`: TestFlight build 206 plus the watch login fix (see build 208 below). The web-push commit on top touches only the backend and the web app.
+- IPA: `.release/testflight-watch-session/tracking.so.ipa` in the `tracking-watch-session` worktree (SHA-256 `7049016725f3dc1848d8e08b2dcb25da6aa38aa0b1978f5ead4b7da581717089`), version 1.0.0 (209), iPhone and Watch, `build.log` beside it. `codesign --verify --deep --strict` passed; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap; the Watch binary contains the new keychain and refresh code.
+- **Not validated or uploaded:** App Store Connect answers every request with `FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED` (altool reports "Cannot determine the Apple ID from Bundle ID"). Once the owner accepts the agreement in App Store Connect, run `testflight.ts validate` and `submit` on this IPA. TestFlight build 206 remains the current release.
+- The backend half is live as `watch-auth-20261015` (see [deployment and rollback](../../hetzner/watch-auth-overlay.Dockerfile)).
+
 ## Safari-install build 208 — Apple Watch stays signed in, October 15, 2026
 
 - Local production release from branch `watch-session-consistency` (`ae9ff5ff`, on main `e7aae2d3`), so it has everything in TestFlight build 206 plus the watch login fix. The watch had kept returning to the Sign in with Apple screen because: the iPhone told it to sign out on every app launch while Clerk was still loading; the watch saved its login readable only while unlocked, so a background launch off the wrist found nothing; any 401 from an API call signed it out instead of refreshing; and the replayed application context could undo a sign-in made on the watch.
-- The backend half (database errors during watch auth answer 500 instead of 401) is committed but **not deployed**; the app fix does not need it.
+- The backend half (database errors during watch auth answer 500 instead of 401) went live on October 15 as overlay `watch-auth-20261015`; the app fix does not need it.
 - Verified IPA: `tracking-watch-session/apps/frontend-expo/.release/2026-10-15T14-08-17-757Z-c507d72d/tracking.so.ipa`, SHA-256 `246414b56c5ff096a9fe2b7d7c91eff2ba1fb90281dc80b2ec75baa814ee3eb3`; iPhone and Watch build 208. The wrapper's checks passed; the Watch binary contains the new keychain and refresh code; `Podfile.lock` lists TrackingWatch, TrackingHealth and TrackingMap.
 - Hosted: `.release/2026-10-15T14-12-45-783Z-205fc72b/distribution.json` in the same worktree; the link expires October 22, 2026. `verify-hosted.cjs` verified the installer, manifest and all 27,172,074 IPA bytes. Checks: Swift typecheck for watchOS and the phone module, Expo and backend typecheck. Not run on a simulator or a real watch. No Expo cloud build, OTA or store submission.
 
