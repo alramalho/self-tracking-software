@@ -11,8 +11,10 @@ import { prisma } from "../../utils/prisma";
 import type { ActivityWithCount, DuplicateMatch, MergeSuggestion } from "./types";
 
 const JEV_MODEL = "typesafe-ai/jev";
-const MIN_MATCH_SCORE = 0.86;
-const MIN_MATCH_MARGIN = 0.08;
+// Measured 15 Oct 2026 on synthetic lists: real duplicates scored 0.40–0.97 (one at 0.22),
+// different activities at most 0.09, and the right activity always ranked first.
+const MIN_MATCH_SCORE = 0.35;
+const MIN_MATCH_MARGIN = 0.2;
 // The question appears right after saving, so a slow answer is no answer.
 const JEV_TIMEOUT_MS = 2500;
 const MAX_JEV_CANDIDATES = 8;
