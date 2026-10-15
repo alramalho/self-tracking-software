@@ -1,22 +1,32 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { findNameTwin } from "@tsw/prisma/activity-duplicates";
 import { Keyboard, View } from "react-native";
 import { Trash2 } from "lucide-react-native";
 import { Copy, Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
-import { useAction } from "@/data/queries";
+import { useAction, useActivities } from "@/data/queries";
 import { api } from "@/data/api";
 import { LoggingDrawer } from "./logging/LoggingDrawer";
 import { ColorPicker } from "./editor/ColorPicker";
+import { DuplicateHint } from "./editor/DuplicateHint";
+import { MergeStep } from "./editor/MergeStep";
 import { EditorButton, EditorInput } from "./editor/controls";
 import { formatPreviewMeasure, isOneEmoji } from "./editor/model";
+import type { Activity } from "@/core/types";
 import type {
   ActivityEditorProps,
   ConversionOperator,
   EditorAction,
   EditorStep,
+  MergeSuggestion,
 } from "./editor/types";
 
-export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
+export function ActivityEditor({
+  activity,
+  onClose,
+  onUseExisting,
+}: ActivityEditorProps) {
   const c = useColors();
   const [title, setTitle] = useState(activity?.title ?? "");
   const [emoji, setEmoji] = useState(activity?.emoji ?? "");
@@ -26,6 +36,24 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
   const [operation, setOperation] = useState<ConversionOperator>("divide");
   const [step, setStep] = useState<EditorStep>("edit");
   const [validation, setValidation] = useState<Error>();
+  const [suggestion, setSuggestion] = useState<MergeSuggestion>();
+  const [createdId, setCreatedId] = useState<string>();
+  const activities = useActivities();
+  // While creating: the same name already exists ("Hiking" when "Hike" is there).
+  const existingTwin = activity
+    ? undefined
+    : findNameTwin(title, activities.data ?? [], createdId);
+  // While editing: an older duplicate that can be merged now.
+  const editingDuplicate = useQuery({
+    enabled: !!activity,
+    queryKey: ["activity-duplicate", activity?.id],
+    queryFn: async () =>
+      (
+        await api.get<{ duplicate: MergeSuggestion | null }>(
+          `/activities/${activity!.id}/duplicate`,
+        )
+      ).data.duplicate,
+  });
   const oldMeasure = activity?.measure.trim() ?? "",
     newMeasure = measure.trim();
   const validFactor = Number.isInteger(Number(factor)) && Number(factor) > 0;
@@ -33,7 +61,11 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
     operation === "divide" ? 60 / Number(factor) : 60 * Number(factor);
   const action = useAction(async ({ kind, convert }: EditorAction) => {
     if (kind === "delete") return api.delete(`/activities/${activity!.id}`);
-    return api.post("/activities/upsert", {
+    if (kind === "merge")
+      return api.post(`/activities/${suggestion!.remove.id}/merge`, {
+        intoActivityId: suggestion!.keep.id,
+      });
+    return api.post<Activity>("/activities/upsert", {
       ...(activity ? { id: activity.id } : {}),
       title: title.trim(),
       emoji,
@@ -58,18 +90,41 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
       setStep("measure");
       return;
     }
-    action.mutate({ kind: "save" }, { onSuccess: onClose });
+    action.mutate(
+      { kind: "save" },
+      {
+        onSuccess: async (response) => {
+          // The person already saw (and passed on) the name match; only ask Jev otherwise.
+          if (activity || existingTwin) return onClose();
+          const created = (response as { data: Activity }).data;
+          setCreatedId(created.id);
+          const duplicate = await api
+            .get<{ duplicate: MergeSuggestion | null }>(
+              `/activities/${created.id}/duplicate`,
+              { params: { byMeaning: true }, timeout: 4000 },
+            )
+            .then((r) => r.data.duplicate)
+            .catch(() => null);
+          if (!duplicate) return onClose();
+          setSuggestion(duplicate);
+          setStep("merge");
+        },
+      },
+    );
   }
   function back() {
     if (action.isPending) return;
     Keyboard.dismiss();
     action.reset();
     setValidation(undefined);
-    if (step === "edit") onClose();
+    // Once a new activity is saved, there is no form to go back to.
+    if (step === "edit" || createdId) onClose();
     else setStep("edit");
   }
   const heading =
-    step === "delete"
+    step === "merge"
+      ? "Same Activity?"
+      : step === "delete"
       ? "Delete Activity"
       : step === "measure"
         ? "Change Activity Measure"
@@ -106,6 +161,37 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
             editable={!action.isPending}
             onChangeText={setTitle}
           />
+          {existingTwin && (
+            <DuplicateHint
+              activity={existingTwin}
+              label="You already have"
+              action="Use"
+              disabled={action.isPending}
+              onPress={() => {
+                Keyboard.dismiss();
+                if (onUseExisting) onUseExisting(existingTwin);
+                else onClose();
+              }}
+            />
+          )}
+          {editingDuplicate.data && (
+            <DuplicateHint
+              activity={
+                editingDuplicate.data.keep.id === activity?.id
+                  ? editingDuplicate.data.remove
+                  : editingDuplicate.data.keep
+              }
+              label="Same as"
+              action="Merge"
+              disabled={action.isPending}
+              onPress={() => {
+                Keyboard.dismiss();
+                action.reset();
+                setSuggestion(editingDuplicate.data!);
+                setStep("merge");
+              }}
+            />
+          )}
           <EditorInput
             label="Measure"
             placeholder="Measure (e.g., minutes, times)"
@@ -149,7 +235,9 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
         </View>
       ) : (
         <View style={{ gap: 16 }}>
-          {step === "delete" ? (
+          {step === "merge" ? (
+            <MergeStep suggestion={suggestion!} />
+          ) : step === "delete" ? (
             <>
               <Copy>Are you sure you want to delete this activity?</Copy>
               <Text
@@ -225,13 +313,19 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
           )}
           <Status error={action.error} />
           <EditorButton
-            label="Cancel"
+            label={step === "merge" ? "Keep Both" : "Cancel"}
             secondary
             disabled={action.isPending}
             onPress={back}
           />
           <EditorButton
-            label={step === "delete" ? "Delete" : "Change Measure"}
+            label={
+              step === "merge"
+                ? `Merge into ${suggestion!.keep.title}`
+                : step === "delete"
+                  ? "Delete"
+                  : "Change Measure"
+            }
             destructive={step === "delete"}
             busy={action.isPending}
             disabled={step === "measure" && !validFactor}
@@ -239,10 +333,21 @@ export function ActivityEditor({ activity, onClose }: ActivityEditorProps) {
               Keyboard.dismiss();
               action.mutate(
                 {
-                  kind: step === "delete" ? "delete" : "save",
+                  kind:
+                    step === "merge"
+                      ? "merge"
+                      : step === "delete"
+                        ? "delete"
+                        : "save",
                   convert: step === "measure",
                 },
-                { onSuccess: onClose },
+                {
+                  onSuccess: () => {
+                    if (step === "merge" && !activity && onUseExisting)
+                      onUseExisting(suggestion!.keep);
+                    else onClose();
+                  },
+                },
               );
             }}
           />

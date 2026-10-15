@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 for (const theme of ["DARK", "LIGHT"]) {
   test(`compact activity editor and color palette in ${theme}`, async ({
     page,

@@ -1,6 +1,8 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 import { requireAiConsent } from "../utils/aiConsent";
 import { listActivitiesByUsage } from "@/services/activities/list";
+import { findDuplicateActivity } from "@/services/activities/duplicates";
+import { ActivityMergeError, mergeActivities } from "@/services/activities/merge";
 import { plansService } from "@/services/plansService";
 import { TZDate } from "@date-fns/tz";
 import { ActivityEntry } from "@tsw/prisma";
@@ -1661,6 +1663,53 @@ router.get(
 );
 
 // Delete activity
+// Another activity that is the same habit ("Hike" / "Hiking"), with what a merge would move.
+// ?byMeaning=true also asks Jev, for the check right after an activity is created.
+router.get(
+  "/:activityId/duplicate",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const duplicate = await findDuplicateActivity(
+        req.user!.id,
+        req.params.activityId,
+        { byMeaning: req.query.byMeaning === "true" }
+      );
+      res.json({ duplicate });
+    } catch (error) {
+      logger.error("Error finding duplicate activity:", error);
+      res.status(500).json({ error: "Failed to check for duplicates" });
+    }
+  }
+);
+
+// Folds this activity into `intoActivityId`: logs, planned sessions and plans move over.
+router.post(
+  "/:activityId/merge",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const result = await mergeActivities(
+        req.user!.id,
+        req.params.activityId,
+        String(req.body?.intoActivityId ?? "")
+      );
+      res.json(result);
+    } catch (error) {
+      if (error instanceof ActivityMergeError)
+        return res.status(error.statusCode).json({ error: error.message });
+      logger.error("Error merging activities:", error);
+      res.status(500).json({ error: "Failed to merge activities" });
+    }
+  }
+);
+
 router.delete(
   "/:activityId",
   requireAuth,
