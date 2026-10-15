@@ -414,7 +414,7 @@ async function runCoachV2MessagePipeline(params: {
         });
 
         logger.info(
-          `Generated title for chat ${chatId}: "${generatedTitle}"`
+          `Generated title for chat ${chatId} (${generatedTitle.trim().length} chars)`
         );
       } catch (error) {
         logger.error("Error generating chat title:", error);
@@ -1521,7 +1521,7 @@ router.post(
         );
 
         logger.info(
-          `Coach chat - User: ${user.username}, Message: "${(messageText || "Image").substring(0, 50)}..."`
+          `Coach chat - User: ${user.username}, Message: ${messageText ? `${messageText.length} chars` : "image"}, Response: ${aiResponse.messageContent.length} chars`
         );
 
         // Generate chat title if this is the first exchange
@@ -1544,7 +1544,7 @@ router.post(
               });
 
               logger.info(
-                `Generated title for chat ${chatId}: "${generatedTitle}"`
+                `Generated title for chat ${chatId} (${generatedTitle.trim().length} chars)`
               );
             } catch (error) {
               logger.error("Error generating chat title:", error);

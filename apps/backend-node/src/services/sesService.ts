@@ -70,7 +70,7 @@ export class SESService {
 
       const result = await this.sesClient.send(command);
       logger.info(
-        `Successfully sent email to ${recipients.join(", ")} with MessageId: ${result.MessageId}`
+        `Successfully sent email to ${recipients.length} recipient(s) with MessageId: ${result.MessageId}`
       );
 
       return result.MessageId || "unknown";
@@ -88,7 +88,7 @@ export class SESService {
         const messageId = await this.sendEmail(email);
         messageIds.push(messageId);
       } catch (error) {
-        logger.error(`Failed to send bulk email to ${email.to}:`, error);
+        logger.error(`Failed to send bulk email ${messageIds.length + 1}/${emails.length}:`, error);
         // Continue with other emails even if one fails
         messageIds.push("failed");
       }
@@ -139,7 +139,7 @@ export class SESService {
     try {
       // In production, you might want to implement email verification
       // For now, just log the intent
-      logger.info(`Would verify email address: ${email}`);
+      logger.info("Would verify an email address");
     } catch (error) {
       logger.error("Failed to verify email address:", error);
       throw error;

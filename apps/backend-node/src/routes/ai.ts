@@ -864,7 +864,7 @@ router.patch(
       });
 
       logger.info(
-        `Updated chat ${chatId} title to "${title}" for user ${user.username}`,
+        `Updated chat ${chatId} title for user ${user.username}`,
       );
 
       res.json({ chat: updatedChat });
@@ -1042,7 +1042,7 @@ router.post(
       });
 
       logger.info(
-        `Coach chat - User: ${user.username}, Message: "${message.substring(0, 50)}...", Response: "${aiResponse.messageContent.substring(0, 50)}..."`,
+        `Coach chat - User: ${user.username}, Message: ${message.length} chars, Response: ${aiResponse.messageContent.length} chars`,
       );
 
       // Generate chat title if this is the first exchange (title is null)
@@ -1067,7 +1067,7 @@ router.post(
             });
 
             logger.info(
-              `Generated title for chat ${chatId}: "${generatedTitle}"`,
+              `Generated title for chat ${chatId} (${generatedTitle.trim().length} chars)`,
             );
           } catch (error) {
             logger.error("Error generating chat title:", error);
@@ -1087,7 +1087,7 @@ router.post(
             );
 
             if (!plan) {
-              logger.warn(`Plan not found for goal: ${replacement.planGoal}`);
+              logger.warn(`Plan not found for an AI plan replacement (user ${user.username})`);
               return null;
             }
 
@@ -1135,7 +1135,7 @@ router.post(
           };
         } else {
           logger.warn(
-            `Metric not found for title: ${aiResponse.metricReplacement.metricTitle} (stripped: ${aiMetricTitle})`,
+            `Metric not found for an AI metric replacement (user ${user.username})`,
           );
         }
       }
@@ -1478,7 +1478,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} accepted metric suggestion: ${metric.title} with rating ${rating}/5`,
+        `User ${user.username} accepted metric suggestion: ${metric.id} with rating ${rating}/5`,
       );
 
       res.json({ success: true });
@@ -1551,7 +1551,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} rejected metric suggestion: ${metadata.metricReplacement.metricTitle}`,
+        `User ${user.username} rejected metric suggestion on message ${messageId}`,
       );
 
       res.json({ success: true });
@@ -1737,7 +1737,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} rejected proposal: "${metadata.planProposals[proposalIndex].description}"`,
+        `User ${user.username} rejected proposal ${proposalIndex} on message ${messageId}`,
       );
 
       // Conclude week_recap notification if all proposals are now resolved
@@ -2032,7 +2032,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} accepted plan creation proposal: "${proposal.goal}"`,
+        `User ${user.username} accepted plan creation proposal: plan ${plan.id}`,
       );
 
       res.json({ success: true, plan });
@@ -2104,7 +2104,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} rejected plan creation proposal: "${metadata.planCreationProposals[proposalIndex].goal}"`,
+        `User ${user.username} rejected plan creation proposal ${proposalIndex} on message ${messageId}`,
       );
 
       res.json({ success: true });
@@ -2378,7 +2378,7 @@ router.post(
       };
 
       logger.info(
-        `User ${user.username} proposed changes to plan creation proposal: "${proposal.goal}"`,
+        `User ${user.username} proposed changes to plan creation proposal in chat ${userActionMessage.chatId}`,
       );
 
       res.json({
@@ -2555,7 +2555,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} accepted activity log proposal: ${proposal.activityEmoji} ${proposal.activityName} x${proposal.quantity} on ${proposal.date} (entry ${activityEntry.id})`,
+        `User ${user.username} accepted activity log proposal: x${proposal.quantity} on ${proposal.date} (entry ${activityEntry.id})`,
       );
 
       res.json({ success: true });
@@ -2619,7 +2619,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} rejected activity log proposal: ${metadata.activityLogProposals[proposalIndex].activityEmoji} ${metadata.activityLogProposals[proposalIndex].activityName}`,
+        `User ${user.username} rejected activity log proposal ${proposalIndex} on message ${messageId}`,
       );
 
       res.json({ success: true });
@@ -2717,7 +2717,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} accepted activity edit proposal: ${proposal.activityName}`,
+        `User ${user.username} accepted activity edit proposal: activity ${proposal.activityId}`,
       );
 
       res.json({ success: true, activity: updatedActivity });
@@ -2793,7 +2793,7 @@ router.post(
       );
 
       logger.info(
-        `User ${user.username} rejected activity edit proposal: ${metadata.activityEditProposals[proposalIndex].activityName}`,
+        `User ${user.username} rejected activity edit proposal ${proposalIndex} on message ${messageId}`,
       );
 
       res.json({ success: true });
@@ -2891,7 +2891,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} accepted user context event proposal: ${event.title}`,
+        `User ${user.username} accepted user context event proposal: event ${event.id}`,
       );
 
       res.json({ success: true, event });
@@ -2957,7 +2957,7 @@ router.post(
       });
 
       logger.info(
-        `User ${user.username} rejected user context event proposal: ${metadata.userContextEventProposals[proposalIndex].title}`,
+        `User ${user.username} rejected user context event proposal ${proposalIndex} on message ${messageId}`,
       );
 
       res.json({ success: true });
@@ -3061,7 +3061,7 @@ router.post(
       const result = await aiService.recommendActivities(planGoal, activities);
 
       logger.info(
-        `Recommended ${result.recommendedActivityIds.length} activities for goal "${planGoal.substring(0, 50)}..."`,
+        `Recommended ${result.recommendedActivityIds.length} activities for a plan goal (${planGoal.length} chars)`,
       );
 
       res.json(result);

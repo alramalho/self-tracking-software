@@ -249,7 +249,7 @@ export class PlansService {
     if (!currentWeek) {
       // Fallback if current week not found in weeks data
       logger.warn(
-        `Current week not found in weeks data for plan ${planWithActivities.goal}`
+        `Current week not found in weeks data for plan ${planWithActivities.id}`
       );
       return {
         numActiveDaysInTheWeek: 0,
@@ -307,10 +307,10 @@ export class PlansService {
       `User ${user.username} has completed ${daysCompletedThisWeek} days this week`
     );
     logger.debug(
-      `Plan ${planWithActivities.goal} (${planWithActivities.outlineType}) has ${numActiveDaysInTheWeek} planned active days this week`
+      `Plan ${planWithActivities.id} (${planWithActivities.outlineType}) has ${numActiveDaysInTheWeek} planned active days this week`
     );
     logger.debug(
-      `Plan ${planWithActivities.goal} (${planWithActivities.outlineType}) has ${numActiveDaysLeftInTheWeek} active days left this week`
+      `Plan ${planWithActivities.id} (${planWithActivities.outlineType}) has ${numActiveDaysLeftInTheWeek} active days left this week`
     );
 
     return {
@@ -359,7 +359,7 @@ export class PlansService {
   ): Promise<Plan & { activities: Activity[] }> {
     try {
       logger.info(
-        `Recalculating current week state for plan '${plan.goal}' of user '${user.username}'`
+        `Recalculating current week state for plan ${plan.id} of user '${user.username}'`
       );
       const planWithRelations = await prisma.plan.findUnique({
         where: { id: plan.id },
@@ -391,7 +391,7 @@ export class PlansService {
 
       if (oldState !== newState) {
         logger.info(
-          `Plan '${plan.goal}' of user '${user.username}' state transition: ${oldState} -> ${newState}`
+          `Plan ${plan.id} of user '${user.username}' state transition: ${oldState} -> ${newState}`
         );
 
         // Await state transition to ensure coach notes are generated before returning
@@ -399,7 +399,7 @@ export class PlansService {
       }
 
       logger.info(
-        `Updated plan '${plan.goal}' of user '${user.username}' current week state from ${oldState} to ${newState}`
+        `Updated plan ${plan.id} of user '${user.username}' current week state from ${oldState} to ${newState}`
       );
 
       // Fetch the updated plan with coach notes
@@ -424,7 +424,7 @@ export class PlansService {
   ): Promise<void> {
     try {
       logger.info(
-        `Processing state transition for plan '${plan.goal}' to state '${newState}'`
+        `Processing state transition for plan ${plan.id} to state '${newState}'`
       );
 
       // Get plan activities for processing
@@ -553,7 +553,7 @@ export class PlansService {
       });
 
       logger.info(
-        `State transition processing completed for plan '${plan.goal}'`
+        `State transition processing completed for plan ${plan.id}`
       );
     } catch (error) {
       logger.error(
@@ -1520,7 +1520,7 @@ export class PlansService {
   ): Promise<any | null> {
     try {
       logger.info(
-        `Processing post-activity coaching for user '${user.username}' on plan '${plan.goal}'`
+        `Processing post-activity coaching for user '${user.username}' on plan ${plan.id}`
       );
 
       // Skip if activity entry has no activity (orphaned entry)
@@ -1638,7 +1638,7 @@ export class PlansService {
         );
 
       logger.info(
-        `Post-activity celebration notification sent to user '${user.username}' for plan '${plan.goal}'`
+        `Post-activity celebration notification sent to user '${user.username}' for plan ${plan.id}`
       );
 
       return notification;
@@ -1663,7 +1663,7 @@ export class PlansService {
   ): Promise<any | null> {
     try {
       logger.info(
-        `Processing plan coaching for user '${user.username}' on plan '${plan.goal}'`
+        `Processing plan coaching for user '${user.username}' on plan ${plan.id}`
       );
 
       // Check if user has plans
@@ -1717,7 +1717,7 @@ export class PlansService {
       // If state didn't change, no notification needed
       // if (updatedPlan.currentWeekState === oldState) {
       //   logger.info(
-      //     `No state transition for plan '${plan.goal}' of user '${user.username}' - skipping notification`
+      //     `No state transition for plan ${plan.id} of user '${user.username}' - skipping notification`
       //   );
       //   return null;
       // }
@@ -1813,7 +1813,7 @@ export class PlansService {
         );
 
       logger.info(
-        `Plan coaching notification and message sent to user '${user.username}' for plan '${plan.goal}'`
+        `Plan coaching notification and message sent to user '${user.username}' for plan ${plan.id}`
       );
 
       return notification;

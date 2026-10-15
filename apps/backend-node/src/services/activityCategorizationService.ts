@@ -105,8 +105,7 @@ export async function classifyActivityKind(
   } catch (error) {
     logger.warn("Activity kind classification failed, using fallback", {
       error,
-      title: input.title,
-      measure: input.measure,
+      titleLength: input.title.length,
     });
     return fallback;
   }

@@ -84,7 +84,7 @@ export class PineconeService {
 
       if (!result.result?.hits || result.result.hits.length === 0) {
         logger.info(
-          `No results found for query "${queryText}" in namespace ${this.namespace} index ${this.config.indexHost}`
+          `No results found for a ${queryText.length}-char query in namespace ${this.namespace} index ${this.config.indexHost}`
         );
         return [];
       }
@@ -95,7 +95,7 @@ export class PineconeService {
         fields: hit.fields,
       }));
     } catch (error) {
-      logger.error(`Failed to query Pinecone for "${queryText}":`, error);
+      logger.error(`Failed to query Pinecone (${queryText.length}-char query):`, error);
       throw error;
     }
   }

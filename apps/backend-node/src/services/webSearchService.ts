@@ -2,6 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import Perplexity from "@perplexity-ai/perplexity_ai";
 import { createGateway, generateText } from "../utils/aiSdk";
 import { logger } from "../utils/logger";
+import { assertAiConsent } from "../utils/aiConsent";
 
 export interface WebSearchInput {
   query?: string;
@@ -62,6 +63,7 @@ class WebSearchService {
   }
 
   async searchWithPerplexity(input: WebSearchInput): Promise<WebSearchOutput> {
+    assertAiConsent(); // the search provider sees the queries
     const queries = this.normalizeQueries(input);
     if (queries.length === 0) {
       return {
@@ -117,6 +119,7 @@ class WebSearchService {
   }
 
   async searchWithOpenAI(input: WebSearchInput): Promise<WebSearchOutput> {
+    assertAiConsent(); // the search provider sees the queries
     const queries = this.normalizeQueries(input);
     if (queries.length === 0) {
       return {
@@ -223,7 +226,7 @@ class WebSearchService {
             ];
 
       logger.info(
-        `OpenAI web search for "${queries.join(" | ")}" returned ${results.length} normalized results`,
+        `OpenAI web search for ${queries.length} queries returned ${results.length} normalized results`,
       );
 
       return {

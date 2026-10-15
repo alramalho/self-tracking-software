@@ -91,7 +91,7 @@ export class UserService {
 
       if (user) {
         logger.info(
-          `Linking user ${user.id} (${email}) to Clerk user ${clerkId}`
+          `Linking user ${user.id} to Clerk user ${clerkId} by email`
         );
         user = await this.updateUser(user.id, { clerkId });
       }

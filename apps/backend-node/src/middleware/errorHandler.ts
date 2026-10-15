@@ -43,8 +43,11 @@ export const responseMonitor = (
       const userUsername = authenticatedReq.user?.username || "anonymous";
       const userId = authenticatedReq.user?.id || "unknown";
 
+      // Path only: query strings can carry search terms, emails or tokens.
+      const path = (req.originalUrl || req.url).split("?")[0];
+
       await telegramService.sendErrorNotification({
-        errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${req.originalUrl || req.url}`,
+        errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${path}`,
         userUsername,
         userId,
       });
@@ -73,7 +76,7 @@ export const errorHandler = async (
   logger.error({
     error: error.message,
     stack: error.stack,
-    url: req.url,
+    url: (req.originalUrl || req.url).split("?")[0],
     method: req.method,
     statusCode,
     userAgent: req.get("User-Agent"),

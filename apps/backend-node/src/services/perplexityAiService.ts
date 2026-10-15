@@ -5,6 +5,7 @@ import dedent from "dedent";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { DEFAULT_AI_GATEWAY_MODEL } from "./aiModelIds";
+import { assertAiConsent } from "../utils/aiConsent";
 
 export interface ResearchParams {
   goal: string;
@@ -75,6 +76,8 @@ class PerplexityAiService {
    * Returns both raw findings and synthesized guidelines
    */
   async researchPlan(params: ResearchParams): Promise<ResearchResult> {
+    // Perplexity receives the goal, so it needs AI consent like any provider.
+    assertAiConsent();
     const { goal, experience, timesPerWeek, userAge } = params;
     const experienceLevel = this.categorizeExperience(experience);
     const ageContext = userAge ? `${userAge} year old` : "";
@@ -279,7 +282,7 @@ class PerplexityAiService {
       });
 
       logger.info(
-        `Duration estimate for "${goal}": ${object.estimatedWeeks} weeks (${object.reasoning})`,
+        `Duration estimate: ${object.estimatedWeeks} weeks (goal ${goal.length} chars)`,
       );
       return object.estimatedWeeks;
     } catch (error) {

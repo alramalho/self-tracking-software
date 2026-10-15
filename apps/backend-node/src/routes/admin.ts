@@ -335,8 +335,9 @@ router.post(
         user_username: user?.username || "unknown",
         error_message: errorData.error_message,
         error_digest: errorData.error_digest,
-        url: errorData.url,
-        referrer: errorData.referrer,
+        // Paths only: query strings can carry search terms, emails or tokens.
+        url: errorData.url?.split("?")[0],
+        referrer: errorData.referrer?.split("?")[0],
         user_agent: errorData.user_agent,
         timestamp: errorData.timestamp,
         ip: clientIp,
@@ -646,7 +647,7 @@ router.get(
       // Test each of user's plans using pgvector
       for (const userPlan of user.plans as CompletePlan[]) {
         logger.info(
-          `\n=== Testing plan: "${userPlan.goal}" (${userPlan.id}) ===`
+          `\n=== Testing plan ${userPlan.id} ===`
         );
 
         const userIds = otherUsers.map((u) => u.id);
@@ -718,7 +719,7 @@ router.get(
           for (const result of planSearchResults.slice(0, 5)) {
             const matchedUser = otherUsers.find((u) => u.id === result.user_id);
             logger.info(
-              `  - ${matchedUser?.username || result.user_id}: ${result.similarity} - Plans: ${matchedUser?.plans.map((p) => p.goal).join(", ")}`
+              `  - ${matchedUser?.username || result.user_id}: ${result.similarity} - plan ${result.plan_id} (${matchedUser?.plans.length ?? 0} plans)`
             );
           }
         } catch (error) {

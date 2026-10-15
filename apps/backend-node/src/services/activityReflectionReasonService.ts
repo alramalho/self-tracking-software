@@ -118,7 +118,6 @@ export async function generateActivityReflectionReasons(
       "Activity reflection reason generation failed, using fallback",
       {
         error,
-        activityTitle: input.activity.title,
         difficulty: input.difficulty,
       },
     );

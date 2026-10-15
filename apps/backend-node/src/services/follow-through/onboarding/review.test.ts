@@ -11,9 +11,10 @@ const draft = {
 } as OnboardingDraft;
 
 describe("onboarding review history", () => {
-  it("keeps the submitted wording and interpretation together, without repeating an unchanged save", () => {
+  it("records the outcome and sizes without the wording or facts, and does not repeat an unchanged save", () => {
     const events = onboardingReviewEvents("user-1", draft);
-    expect(events[0]).toMatchObject({ draftId: "example-draft", answer: "idk 2 or 3? work changes lol", accepted: true, facts: { goal: "Run a half marathon" } });
+    expect(events[0]).toMatchObject({ draftId: "example-draft", stage: "baseline", answerLength: 28, accepted: true, factsFilled: 1 });
+    expect(JSON.stringify(events[0])).not.toMatch(/idk|Where are you|Starting point|half marathon/);
     expect(onboardingReviewEvents("user-1", structuredClone(draft), draft)).toEqual([]);
     expect(onboardingReviewEvents("user-1", draft)[0].eventId).toBe(events[0].eventId);
   });
@@ -21,7 +22,7 @@ describe("onboarding review history", () => {
     const corrected = structuredClone(draft);
     corrected.interview!.turns[0] = { ...corrected.interview!.turns[0], answer: "actually just saturday", accepted: false, feedback: "Change the three-day target?" };
     const [event] = onboardingReviewEvents("user-1", corrected, draft);
-    expect(event).toMatchObject({ answer: "actually just saturday", accepted: false, turnIndex: 0 });
+    expect(event).toMatchObject({ answerLength: 22, accepted: false, turnIndex: 0 });
     expect(event.eventId).not.toBe(onboardingReviewEvents("user-1", draft)[0].eventId);
   });
   it("keeps separate attempts separate even when someone reuses the same wording", () => {

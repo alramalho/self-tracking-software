@@ -502,7 +502,7 @@ async function generatePlan(params: {
           });
           activityIdMap[activity.id] = newActivity.id;
           finalActivities.push(newActivity);
-          logger.info(`Created activity from pipeline: ${activity.title}`);
+          logger.info(`Created activity ${newActivity.id} from pipeline`);
         }
       } else {
         // Existing activity - map to itself
@@ -766,7 +766,9 @@ router.post(
         systemPrompt,
       });
 
-      logger.info(`Frequency validation result: ${JSON.stringify(result)}`);
+      logger.info(
+        `Frequency validation result: should_reduce=${result.should_reduce}, suggested=${result.suggested_times_per_week}`
+      );
 
       res.json({
         suggested_times_per_week: result.should_reduce

@@ -1017,7 +1017,7 @@ export class CoachAssessmentService {
           if (coachDefersWeekContent(plan, now)) {
             proposals[i].autoAcceptNote = AGENT_MANAGED_AUTO_ACCEPT_NOTE;
             logger.info(
-              `Skipped auto-accept for agent-managed plan "${plan.goal}"`,
+              `Skipped auto-accept for agent-managed plan ${plan.id}`,
             );
             continue;
           }
@@ -1026,7 +1026,7 @@ export class CoachAssessmentService {
           if (patchContainsMilestoneChanges(patch)) {
             proposals[i].autoAcceptNote = MILESTONE_AUTO_ACCEPT_NOTE;
             logger.info(
-              `Skipped auto-accept for milestone proposal "${proposal.description}" on plan "${plan.goal}"`,
+              `Skipped auto-accept for milestone proposal ${i} of message ${message.id} on plan ${plan.id}`,
             );
             continue;
           }
@@ -1040,7 +1040,7 @@ export class CoachAssessmentService {
           accepted++;
 
           logger.info(
-            `Auto-accepted proposal "${proposal.description}" for plan "${plan.goal}" after ${AUTO_ACCEPT_HOURS}h`,
+            `Auto-accepted proposal ${i} of message ${message.id} for plan ${plan.id} after ${AUTO_ACCEPT_HOURS}h`,
           );
         } catch (error) {
           logger.error(`Failed to auto-accept proposal:`, error);

@@ -89,46 +89,47 @@ export class LoopsService {
     if (email) params.email = email;
     if (userId) params.userId = userId;
 
-    logger.debug(`Finding contact with params:`, params);
+    logger.debug(`Finding contact by ${email ? 'email' : `userId ${userId}`}`);
     const response = await this.makeRequest('GET', 'contacts/find', undefined, params);
     const contacts = Array.isArray(response) ? response : [];
     return contacts.length > 0 ? contacts[0] : null;
   }
 
   async createContact(contactData: LoopsContact): Promise<LoopsContactResponse> {
-    logger.debug(`Creating contact ${contactData.email}`);
+    logger.debug(`Creating contact for user ${contactData.userId ?? 'unknown'}`);
     return this.makeRequest('POST', 'contacts/create', contactData);
   }
 
   async updateContact(contactData: LoopsContact): Promise<LoopsContactResponse> {
-    logger.debug(`Updating contact ${contactData.email}`);
+    logger.debug(`Updating contact for user ${contactData.userId ?? 'unknown'}`);
     return this.makeRequest('PUT', 'contacts/update', contactData);
   }
 
   async upsertContact(contactData: LoopsContact): Promise<LoopsContactResponse> {
-    logger.debug(`Upserting contact ${contactData.email}`);
+    // Logs reach Better Stack: user IDs, never email addresses.
+    logger.debug(`Upserting contact for user ${contactData.userId ?? 'unknown'}`);
     
     const existingContact = await this.findContact(contactData.email);
     
     if (existingContact) {
-      logger.debug(`Contact ${contactData.email} exists, updating`);
+      logger.debug(`Contact for user ${contactData.userId ?? 'unknown'} exists, updating`);
       return this.updateContact(contactData);
     }
     
-    logger.debug(`Contact ${contactData.email} not found, creating`);
+    logger.debug(`Contact for user ${contactData.userId ?? 'unknown'} not found, creating`);
     return this.createContact(contactData);
   }
 
   async deleteContact(email: string, userId?: string): Promise<LoopsContactResponse> {
-    logger.debug(`Attempting to delete contact ${email}`);
+    logger.debug(`Attempting to delete contact for user ${userId ?? 'unknown'}`);
     
     const existingContact = await this.findContact(email);
     if (!existingContact) {
-      logger.debug(`Contact ${email} not found, skipping delete`);
+      logger.debug(`Contact for user ${userId ?? 'unknown'} not found, skipping delete`);
       return { success: true, message: 'Contact not found' };
     }
 
-    logger.debug(`Deleting contact ${email}`);
+    logger.debug(`Deleting contact for user ${userId ?? 'unknown'}`);
     const payload: any = { email };
     if (userId) payload.userId = userId;
     
@@ -142,9 +143,9 @@ export class LoopsService {
     eventProperties?: LoopsEventProperties,
     mailingLists?: Record<string, boolean>
   ): Promise<LoopsContactResponse> {
-    logger.debug(`Sending event ${eventName} for ${email}`);
+    logger.debug(`Sending event ${eventName} for user ${userId ?? 'unknown'}`);
     if (eventProperties) {
-      logger.debug(`With properties:`, eventProperties);
+      logger.debug(`With properties: ${Object.keys(eventProperties).join(', ')}`);
     }
 
     const payload: any = {

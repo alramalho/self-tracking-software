@@ -549,8 +549,6 @@ export class AIService {
       userRecommendations?: string[];
     };
 
-    logger.info(`AI response: ${JSON.stringify(aiResponse, null, 2)}`);
-
     // 6. Resolve user IDs to full recommendation objects (if provided)
     let resolvedUserRecommendations:
       | Array<{
@@ -584,12 +582,12 @@ export class AIService {
         .filter((rec) => rec !== null) as any;
     }
 
+    // Logs reach Better Stack: sizes only, never the reply or its reasoning.
     logger.info(
-      `Generated coach response for ${user.username}: ${aiResponse.messageContent.substring(0, 50)}... ` +
-        `(plans: ${aiResponse.planReplacements?.length || 0}, ` +
+      `Generated coach response for ${user.username} (${aiResponse.messageContent.length} chars, ` +
+        `plans: ${aiResponse.planReplacements?.length || 0}, ` +
         `metrics: ${aiResponse.metricReplacement ? 1 : 0}, ` +
-        `recommendations: ${resolvedUserRecommendations?.length || 0})` +
-        `\nReasoning: ${aiResponse.reasoning}`,
+        `recommendations: ${resolvedUserRecommendations?.length || 0})`,
     );
 
     return {
@@ -1751,7 +1749,7 @@ export class AIService {
         systemPrompt,
       });
 
-      logger.info("Generated sessions:", response);
+      logger.info(`Generated sessions for ${response.weeks.length} weeks`);
 
       // Convert generated sessions to the expected format
       const sessions: Array<{

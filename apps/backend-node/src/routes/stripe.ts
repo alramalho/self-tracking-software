@@ -146,7 +146,7 @@ async function handleSubscriptionEvent(
   }
 
   logger.info(
-    `Subscription ${event.type} processed for user ${updatedUser.email}: plan=${planType}, status=${subscription.status}`
+    `Subscription ${event.type} processed for user ${updatedUser.username || "unknown"} (${updatedUser.id}): plan=${planType}, status=${subscription.status}`
   );
 
   // Handle new subscription creation
@@ -156,14 +156,15 @@ async function handleSubscriptionEvent(
         updatedUser.email,
         updatedUser.id
       );
-      logger.info(`Sent plus_upgrade event to Loops for ${updatedUser.email}`);
+      logger.info(`Sent plus_upgrade event to Loops for user ${updatedUser.id}`);
     } catch (loopsError) {
       logger.error("Failed to send Loops event:", loopsError);
     }
 
+    // Telegram reaches the operator: username and ID, never the email.
     telegramService.sendAlert(
       `🎉 *New PLUS subscription*!\n\n` +
-        `User: ${updatedUser.email}\n` +
+        `User: ${updatedUser.username || "unknown"} (${updatedUser.id})\n` +
         `Plan: ${planType}\n` +
         `UTC Time: ${new Date().toISOString()}`
     );
@@ -210,7 +211,7 @@ async function handleCheckoutSessionCompleted(
   });
 
   logger.info(
-    `Linked Stripe customer ${customerId} to user ${user.email} (${user.id})`
+    `Linked Stripe customer ${customerId} to user ${user.username || "unknown"} (${user.id})`
   );
 }
 
@@ -231,18 +232,16 @@ async function handlePaymentIntent(
     return;
   }
 
-  const amount = paymentIntent.amount / 100;
-  const currency = paymentIntent.currency.toUpperCase();
-
+  // Username, ID and plan only: no email or payment amount leaves the server.
   telegramService.sendAlert(
     `🎉💰 Payment received!\n\n` +
-      `User: ${user.email}\n` +
-      `Amount: ${amount} ${currency}\n` +
+      `User: ${user.username || "unknown"} (${user.id})\n` +
+      `Plan: ${user.planType}\n` +
       `UTC Time: ${new Date().toISOString()}`
   );
 
   logger.info(
-    `Payment intent succeeded: ${user.email} paid ${amount} ${currency}`
+    `Payment intent succeeded for user ${user.username || "unknown"} (${user.id})`
   );
 }
 

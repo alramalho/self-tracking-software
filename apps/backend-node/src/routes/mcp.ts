@@ -515,7 +515,7 @@ function buildMcpServer(user: User): McpServer {
       });
 
       logger.info(
-        `[mcp] user=${user.username} created plan "${plan.goal}" (${plan.id})`
+        `[mcp] user=${user.username} created plan ${plan.id}`
       );
       return textResult({
         success: true,
@@ -898,7 +898,7 @@ function buildMcpServer(user: User): McpServer {
       await stampExternalAgentSync(affectedPlans.map((p) => p.id));
 
       logger.info(
-        `[mcp] user=${user.username} logged ${input.quantity} ${activity.measure} of "${activity.title}" on ${input.date}${existingEntry ? " (merged)" : ""}`
+        `[mcp] user=${user.username} logged ${input.quantity} of activity ${activity.id} on ${input.date}${existingEntry ? " (merged)" : ""}`
       );
       return textResult({
         success: true,

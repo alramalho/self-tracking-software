@@ -106,15 +106,13 @@ router.post("/webhook", async (req: Request, res: Response) => {
           where: { id: existingUser.id },
           data: userData,
         });
-        logger.info(`User with email '${emailAddress}' updated.`);
+        logger.info(`User ${existingUser.id} (clerk ${userClerkId}) updated.`);
       } else {
-        logger.info(
-          `User with email '${emailAddress}' not found. Creating new user.`
-        );
-        await prisma.user.create({
+        logger.info(`Creating new user for clerk ${userClerkId}.`);
+        const created = await prisma.user.create({
           data: userData,
         });
-        telegramService.sendMessage(`🎉 New user! (${emailAddress})`);
+        telegramService.sendMessage(`🎉 New user! (${created.username || created.id})`);
       }
       return res.json({
         status: "success",
