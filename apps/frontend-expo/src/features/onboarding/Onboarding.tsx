@@ -42,6 +42,7 @@ import { OnboardingButton } from "./interview/OnboardingButton";
 import type { OnboardingArtName } from "./interview/types";
 import { CircleAsk, CirclePrefs } from "./CircleSteps";
 import { DesignSection } from "./design/DesignSection";
+import { ConfidenceSection } from "./design/ConfidenceSection";
 import { classifyGoal, suggestBaseline } from "./design/api";
 import { designedFacts, initialDesign } from "./design/model";
 import { Welcome } from "./Welcome";
@@ -122,6 +123,8 @@ export default function Onboarding({
   const [paywall, setPaywall] = useState(false),
     [finished, setFinished] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  // "How sure are you?" for a designed plan: after the coach and circle steps, right before the paywall.
+  const [rating, setRating] = useState(false);
   // Creating a plan inside the app skips the welcome and the age: the person is already here.
   const [welcome, setWelcome] = useState(flow !== "create");
   // A starting point measured from their own logs, when they have some (in-app creation only).
@@ -181,6 +184,7 @@ export default function Onboarding({
     setCandidate(undefined);
     setValidation(undefined);
     setPaywall(value.step === "interview-finish");
+    setRating(value.step === "confidence");
     const savedTour = /^coaching-tour-([0-2])$/.exec(value.step);
     setTourStep(savedTour ? Number(savedTour[1]) : null);
     setAwaitingUpgrade(!!value.awaitingUpgrade);
@@ -340,14 +344,23 @@ export default function Onboarding({
     setState(next);
     setTourStep(0);
   }
+  // A lighter plan taken here changes the weekly target (and, for a route, the finish date and first step).
+  async function completeConfidence(design: PlanDesign) {
+    const facts = { ...state.facts, ...designedFacts(design), baseline: design.baseline.text };
+    const interview: InterviewState = { ...state, facts };
+    await persist({ ...applyFacts(draft, facts), design, interview, step: "interview-finish" });
+    setState(interview);
+    setRating(false);
+    setPaywall(true);
+  }
   async function chooseCircle(circle: OnboardingCircleChoice) {
     if (circle.choice === "find" && circle.wantsAge && pendingAge.current && pendingAge.current !== user.data?.age && !preview)
       await api.patch("/users/user", { age: pendingAge.current });
     // A designed plan was already reviewed day by day, so the circle choice leads straight to the start.
     if (draft.design) {
-      await persist({ ...draft, circle, step: "interview-finish" });
+      await persist({ ...draft, circle, step: "confidence" });
       setCirclePrefs(null);
-      setPaywall(true);
+      setRating(true);
       return;
     }
     await persist({ ...draft, circle });
@@ -732,6 +745,7 @@ export default function Onboarding({
     setGoalGuidance(initialGoalGuidance("goal"));
     setHistory([]);
     setPaywall(false);
+    setRating(false);
     setTourStep(null);
     setCirclePrefs(null);
     setFinished(false);
@@ -765,11 +779,17 @@ export default function Onboarding({
     setValidationReady(false);
     gate.reset();
     accept.reset();
+    if (rating) {
+      await persist({ ...draft, circle: undefined, step: "interview" });
+      setRating(false);
+      return;
+    }
     if (paywall && draft.design) {
-      await persist({ ...draft, circle: undefined, step: "interview", awaitingUpgrade: false });
+      await persist({ ...draft, step: "confidence", awaitingUpgrade: false });
       upgradeIntent.current = false;
       setAwaitingUpgrade(false);
       setPaywall(false);
+      setRating(true);
       return;
     }
     if (paywall) {
@@ -1180,6 +1200,18 @@ export default function Onboarding({
         onBack={() => void back().catch(setError)}
         onClose={goBack}
         onDone={(design) => void completeDesign(design).catch(setError)}
+      />
+    );
+  if (rating && draft.design && !paywall && !finished)
+    return (
+      <ConfidenceSection
+        design={draft.design}
+        progress={{ current: 11.5, total: 12, label: "Your plan" }}
+        preview={preview}
+        busy={busy}
+        onBack={() => void back().catch(setError)}
+        onClose={goBack}
+        onDone={(design) => void completeConfidence(design).catch(setError)}
       />
     );
   if (askingCircle)

@@ -20,6 +20,7 @@ export function scheduledCoachSnapshot(
       goal: p.goal,
       role: input.supports[p.id]?.coaching?.role,
       goalReason: p.goalReason,
+      confidence: p.confidence,
       notes: p.notes,
       coachNotes: p.coachNotes,
       finishingDate: p.finishingDate?.toISOString().slice(0, 10),

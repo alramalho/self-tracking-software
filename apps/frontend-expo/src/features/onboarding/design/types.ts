@@ -50,3 +50,30 @@ export interface OptionsResponse {
   options: DesignOption[];
   startDate: string;
 }
+
+/** The smaller plan offered when the person isn't sure of the one they picked. */
+export type LighterPlan =
+  | { kind: "other-route"; route: DesignOption["id"]; daysMin: number; daysMax: number }
+  | { kind: "fewer-days"; days: number };
+
+export interface ConfidenceSectionProps {
+  design: PlanDesign;
+  progress: { current: number; total: number; label: string };
+  preview: boolean;
+  busy: boolean;
+  onBack: () => void;
+  onClose: () => void;
+  /** The design with `confidence` set, and the lighter plan applied when the person took it. */
+  onDone: (design: PlanDesign) => void;
+}
+
+export type ConfidenceStepName = "rate" | "lighter" | "why";
+
+export interface ConfidenceDialProps {
+  score: number;
+  onChange?: (score: number) => void;
+  /** Smaller and read-only, shown above the "why" question. */
+  compact?: boolean;
+  /** 0–1 while the person is speaking; the dial glows with their voice. */
+  voice?: number;
+}

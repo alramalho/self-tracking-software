@@ -840,6 +840,8 @@ model Plan {
   outline     Json?
   // Sessions exist up to this date. The weekly review extends the window from here.
   designedThrough DateTime? @db.Date
+  // PlanConfidence: how sure the person was of this plan (1–10) and, in their words, why it wasn't lower.
+  confidence      Json?
 
   // Who plans the content of this plan's weeks. EXTERNAL_AGENT means a
   // connected agent (over MCP) owns week content; the coach stays on

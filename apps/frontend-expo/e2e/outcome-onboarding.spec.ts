@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { enterWelcomeAge } from "./onboarding-welcome";
+import { commit } from "./plan-confidence";
 
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
@@ -105,6 +106,7 @@ for (const theme of ["LIGHT", "DARK"])
     await expect(page.getByLabel(/people in this circle/)).toBeVisible();
     await capture(page, `half-marathon-12b-circle-${theme}`);
     await page.getByRole("button", { name: "Just me" }).click();
+    await commit(page);
     await expect(page.getByTestId("coaching-paywall")).toBeVisible();
     await capture(page, `half-marathon-13-paywall-${theme}`);
 

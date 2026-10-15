@@ -112,6 +112,22 @@ export interface PlanDesign {
   options: DesignOption[];
   selected: RouteId | null;
   startDate: string;
+  /** How sure the person was of the plan they ended up with, asked as the last design step. */
+  confidence?: PlanConfidence | null;
+}
+
+/**
+ * Stored on Plan.confidence. Asked about the concrete plan, not motivation in general, and followed by
+ * "why not lower?" so the person argues for their own commitment. The coach quotes `why` back when they slip.
+ */
+export interface PlanConfidence {
+  /** 1–10. */
+  score: number;
+  /** In their own words (typed or dictated). Empty when they skipped it. */
+  why: string;
+  /** The question `why` answers, e.g. "Why a 7 and not a 4?". */
+  question: string;
+  askedAt: string;
 }
 
 /** Stored on Plan.outline: the whole road, with only the near part dated. */

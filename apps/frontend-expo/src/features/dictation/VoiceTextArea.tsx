@@ -24,6 +24,8 @@ export interface VoiceTextAreaProps extends TextInputProps {
   dictationLabel?: string;
   onDictationBusyChange?: (busy: boolean) => void;
   onDictationError?: (error: unknown) => void;
+  /** Microphone level in decibels while dictating. */
+  onDictationLevel?: (decibels: number | undefined) => void;
   wrapperStyle?: StyleProp<ViewStyle>;
 }
 
@@ -36,6 +38,7 @@ export const VoiceTextArea = forwardRef<TextInput, VoiceTextAreaProps>(
       onChangeText,
       onDictationBusyChange,
       onDictationError,
+      onDictationLevel,
       style,
       value,
       wrapperStyle,
@@ -74,6 +77,7 @@ export const VoiceTextArea = forwardRef<TextInput, VoiceTextAreaProps>(
               disabled={!canEdit}
               label={dictationLabel}
               onBusyChange={onDictationBusyChange}
+              onLevel={onDictationLevel}
               onError={(error) => {
                 onDictationError?.(error);
                 if (!onDictationError)

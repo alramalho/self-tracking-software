@@ -7,6 +7,8 @@ export interface DictationButtonProps {
   onTranscript: (transcript: string) => void;
   /** Called with every result, so the screen can ask whether it was right. */
   onTranscription?: (transcription: Transcription) => void;
+  /** The microphone level in decibels while recording (undefined when stopped), for a screen that reacts to the voice. */
+  onLevel?: (decibels: number | undefined) => void;
 }
 
 export interface Transcription {

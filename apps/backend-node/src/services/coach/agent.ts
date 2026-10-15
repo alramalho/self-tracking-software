@@ -52,6 +52,7 @@ import {
   getVisibleToolCalls,
 } from "./toolCalls";
 import { createDraftMessagesTool } from "./tools/draftMessages/tool";
+import { describeConfidence } from "./confidence";
 import type {
   ActiveCoachPlan,
   CoachAgentContext,
@@ -448,6 +449,7 @@ export class CoachAgentService {
           Plan: ${plan.goal} [planId: ${plan.id}]
           Emoji: ${plan.emoji || "none"}
           ${plan.goalReason ? `Why: ${plan.goalReason}` : ""}
+          ${describeConfidence(plan.confidence)}
           Finishing date: ${plan.finishingDate ? format(new Date(plan.finishingDate), "yyyy-MM-dd") : "none"}
           ${(curriculumFileCountByPlanId?.get(plan.id) || 0) > 0 ? `Curriculum: ${curriculumFileCountByPlanId!.get(plan.id)} user-authored files attached. They are the source of truth over the notes below; read them with listCurriculumFiles/readCurriculumFile before proposing sessions or schedule changes for this plan.` : ""}
           ${notes ? `Roadmap / user notes:\n    ${notes.replace(/\n/g, "\n    ")}` : ""}

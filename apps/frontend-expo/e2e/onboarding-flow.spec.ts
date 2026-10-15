@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { enterWelcomeAge } from "./onboarding-welcome";
+import { commit } from "./plan-confidence";
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
 const next = (page: Page, name = "Continue") => page.getByRole("button", { name, exact: true }).click();
@@ -35,6 +36,8 @@ async function toPaywall(page: Page) {
   await next(page);
   for (let i = 0; i < 3; i++) await next(page);
   await page.getByRole("button", { name: "Just me" }).click();
+  // The last question before the paywall, once the plan, coach and circle are settled.
+  await commit(page);
 }
 // One decision on one screen: the link under the table creates the plan directly, with no second sheet.
 const trackForFree = async (page: Page) => {
@@ -52,6 +55,7 @@ test("a paid member meets the coach straight after choosing a route, with no coa
   const finish = state.requests.filter((r: any) => r.path.endsWith("/finish")).at(-1);
   expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: true, checkIn: true });
   expect(finish.body.draft.design).toMatchObject({ orientation: "OUTCOME", selected: "focused" });
+  expect(finish.body.draft.design.confidence).toMatchObject({ score: 8, why: "I already run twice a week and my friends are in", question: "Why an 8, and not a 5?" });
   expect(finish.body.draft.coaching.role).toBe("training");
   // The two reviewed weeks become the plan's sessions.
   const plan = state.plans.at(-1);
@@ -165,14 +169,33 @@ test("free tracking keeps the designed plan, without a trial or checkout", async
   expect(finish.body.draft.design.selected).toBe("focused");
 });
 
-test("back from the paywall returns to the circle question", async ({ page, request }) => {
+test("back from the paywall returns to how sure they are, then to the circle question", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
   await request.patch(`${API}/users/user`, { headers, data: { planType: "FREE" } });
   await openOnboarding(page, "/onboarding");
   await toPaywall(page);
   await expect(page.getByTestId("coaching-paywall")).toBeVisible();
   await page.getByRole("button", { name: "Previous question" }).click();
+  await expect(page.getByRole("heading", { name: "How sure are you that you’ll stick to this?" })).toBeVisible();
+  // Their earlier answer is kept.
+  await expect(page.getByTestId("confidence-score")).toHaveText("8");
+  await page.getByRole("button", { name: "Previous question" }).click();
   await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
+});
+
+test("reopening on the confidence question returns to it", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await openOnboarding(page, "/onboarding");
+  await throughMotivation(page);
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await next(page, "Ask my coach");
+  await page.getByTestId("route-focused").click();
+  await next(page);
+  for (let i = 0; i < 3; i++) await next(page);
+  await page.getByRole("button", { name: "Just me" }).click();
+  await expect(page.getByRole("heading", { name: "How sure are you that you’ll stick to this?" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "How sure are you that you’ll stick to this?" })).toBeVisible();
 });
 
 test("creating a plan inside the app skips the welcome and starts the baseline from the person's logs", async ({ page, request }) => {
@@ -211,10 +234,12 @@ test("an existing plan can be designed with the coach: logs baseline, days check
   await page.getByTestId("route-steady").click();
   await expect(page.getByTestId("two-weeks")).toBeVisible();
   await next(page);
+  await commit(page, 9, "I've kept this plan going for a month already");
   await expect(page).toHaveURL(new RegExp(`/plan/${plan.id}`));
   const state = await (await request.get(`${API}/__state`)).json();
   const applied = state.requests.find((r: any) => r.path === `/follow-through/plans/${plan.id}/redesign`);
   expect(applied.body.design).toMatchObject({ orientation: "OUTCOME", selected: "steady" });
+  expect(applied.body.design.confidence).toMatchObject({ score: 9, why: "I've kept this plan going for a month already" });
   expect(applied.body.design.baseline.text).toContain("9 sessions in the last 4 weeks");
   expect(applied.body.design.baseline.measurements.length).toBeGreaterThan(0);
 });

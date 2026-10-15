@@ -50,6 +50,7 @@ export async function redesignPlan(user: User, planId: string, design: PlanDesig
             daysMin: chosen.daysMin, daysMax: chosen.daysMax, startDate: design.startDate, estimatedWeeks: chosen.estimatedWeeks,
           }),
           designedThrough: last ? noon(last) : null,
+          ...(design.confidence && { confidence: json(design.confidence) }),
           outlineType: "SPECIFIC",
           timesPerWeek: chosen.daysMin,
           estimatedWeeks: chosen.estimatedWeeks,
@@ -77,6 +78,7 @@ export async function redesignPlan(user: User, planId: string, design: PlanDesig
           baseline: json(design.baseline),
           outlineType: "TIMES_PER_WEEK",
           timesPerWeek: design.preferredDays,
+          ...(design.confidence && { confidence: json(design.confidence) }),
         },
       });
     }

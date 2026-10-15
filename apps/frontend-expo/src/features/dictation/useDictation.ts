@@ -14,9 +14,10 @@ export function useDictation({
   onError,
   onTranscript,
   onTranscription,
+  onLevel,
 }: DictationButtonProps) {
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder, 200);
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: !!onLevel });
+  const recorderState = useAudioRecorderState(recorder, onLevel ? 100 : 200);
   const [isStarting, setIsStarting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
@@ -74,6 +75,11 @@ export function useDictation({
       await setAudioModeAsync({ allowsRecording: false });
     }
   }
+
+  const level = recorderState.isRecording ? recorderState.metering : undefined;
+  useEffect(() => {
+    onLevel?.(level);
+  }, [level, onLevel]);
 
   return {
     durationMillis: recorderState.durationMillis,

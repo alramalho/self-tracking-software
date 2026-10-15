@@ -42,4 +42,13 @@ export const planDesignDraftSchema = z.object({
     .max(2),
   selected: z.enum(["steady", "focused"]).nullable(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  confidence: z
+    .object({
+      score: z.number().int().min(1).max(10),
+      why: z.string().max(600),
+      question: z.string().max(120),
+      askedAt: z.string().max(40),
+    })
+    .nullable()
+    .optional(),
 });

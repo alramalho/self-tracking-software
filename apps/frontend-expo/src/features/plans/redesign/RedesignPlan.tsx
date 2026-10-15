@@ -13,17 +13,19 @@ import { OnboardingArt } from "@/features/onboarding/interview/OnboardingArt";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { StepSequence } from "@/features/onboarding/interview/StepReveal";
 import { DesignSection } from "@/features/onboarding/design/DesignSection";
+import { ConfidenceSection } from "@/features/onboarding/design/ConfidenceSection";
 import { classifyGoal, suggestBaseline } from "@/features/onboarding/design/api";
 import { initialDesign } from "@/features/onboarding/design/model";
 import type { RedesignPlanProps } from "./types";
 
 // "Plan this with my coach", for a plan that already exists. The same designer as onboarding:
-// a starting point (from their own logs when there are some), the coach checking their days, two routes.
+// a starting point (from their own logs when there are some), the coach checking their days, two routes,
+// then how sure they are of it.
 export function RedesignPlan({ planId }: RedesignPlanProps) {
   const c = useColors();
   const client = useQueryClient();
   const plan = usePlan(planId);
-  const [phase, setPhase] = useState<"reading" | "baseline" | "design">("reading");
+  const [phase, setPhase] = useState<"reading" | "baseline" | "design" | "confidence">("reading");
   const [design, setDesign] = useState<PlanDesign>();
   const [question, setQuestion] = useState("Where are you now?");
   const [answer, setAnswer] = useState("");
@@ -75,6 +77,21 @@ export function RedesignPlan({ planId }: RedesignPlanProps) {
     }
   }
 
+  if (phase === "confidence" && design)
+    return (
+      <>
+        <ConfidenceSection
+          design={design}
+          progress={{ current: 11.5, total: 12, label: "Your plan" }}
+          preview={false}
+          busy={saving}
+          onBack={() => setPhase("design")}
+          onClose={goBack}
+          onDone={(d) => void apply(d)}
+        />
+        <Status error={error ? new Error(errorMessage(error)) : undefined} retry={() => setError(undefined)} />
+      </>
+    );
   if (phase === "design" && design)
     return (
       <>
@@ -88,7 +105,10 @@ export function RedesignPlan({ planId }: RedesignPlanProps) {
           onChange={setDesign}
           onBack={() => setPhase("baseline")}
           onClose={goBack}
-          onDone={(d) => void apply(d)}
+          onDone={(d) => {
+            setDesign(d);
+            setPhase("confidence");
+          }}
         />
       </>
     );
