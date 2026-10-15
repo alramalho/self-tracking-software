@@ -530,3 +530,22 @@ Rollback, only while this release is active (the migration is additive and can s
 cd /root/workspace/tracking.so/deployment
 ./tracking-voice-languages-20261002/rollback.sh
 ```
+
+## Plan confidence ("how sure are you?") — active since October 15, 2026 16:30 UTC
+
+Image `local/tracking-so-backend:plan-confidence-20261015`, built with [plan-confidence-overlay.Dockerfile](./plan-confidence-overlay.Dockerfile) on `watch-auth-20261015`. Source: branch `plan-confidence` (`67a5bc65`, on main `02315ff3`). The overlay replaces 7 existing backend and shared files, all of which matched main `02315ff3` in the live container, and adds `services/coach/confidence.ts` plus the migration. The live `schema.prisma` differs from main, so the overlay patches the image's own schema (one field on `Plan`, after `designedThrough`) and regenerates the Prisma client.
+
+- Migration `20261015120000_plan_confidence` (additive): `plans.confidence` (JSONB, nullable). It was the only pending migration and was applied with `prisma migrate deploy` from the new image before the switch. (`user_context_events.confidence` is an unrelated, older column.)
+- The onboarding and redesign drafts accept an optional `design.confidence` (`score` 1–10, `why`, `question`, `askedAt`) and store it on the plan. The coach's plan context and the scheduled-message snapshot include it; the lapse and nudge messages quote the person's own `why`.
+- Older app builds keep working: the field is optional and nothing else changed shape.
+- Before activation, in the exact candidate image: file hashes matched the reviewed source, the schema patch landed inside `model Plan`, the generated client includes `confidence`, and the new modules loaded with networking off.
+- After activation: healthy container with zero restarts, public `/health` 200, `POST /follow-through/onboarding/finish`, `POST /follow-through/plans/none/redesign` and `/plans` 401 unauthenticated, forged watch refresh 401, `POST /auth/switch` 400. No errors in the logs. No signed-in request was made.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-plan-confidence-20261015/` (`source-hashes.txt`, `activate.py`, `verified.json`, `rollback.sh`). `backup/` holds the environment, compose file and a 4.1 MB database dump taken before the migration.
+
+Rollback, only while this release is active (the column is nullable and can stay):
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-plan-confidence-20261015/rollback.sh
+```
