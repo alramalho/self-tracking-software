@@ -36,7 +36,7 @@ import { useColors } from "@/components/theme";
 import { useAction, useActivities } from "@/data/queries";
 import { api } from "@/data/api";
 import { dateLabel, dayKey, parseLocalDate } from "@/core/dates";
-import type { PlanSession } from "@/core/types";
+import type { Activity, PlanSession } from "@/core/types";
 import { ActivityEditor } from "../activities/ActivityEditor";
 import { DateField } from "@/components/DateField";
 import { MilestoneFields } from "./MilestoneFields";
@@ -155,6 +155,11 @@ export function PlanEditor({ plan }: PlanEditorProps) {
   );
   const [milestonesChanged, setMilestonesChanged] = useState(false);
   const [adding, setAdding] = useState(false);
+  // "You already have Hike": pick it for this plan instead of creating a duplicate.
+  function pickExistingActivity(activity: Activity) {
+    setAdding(false);
+    setSelected((ids) => (ids.includes(activity.id) ? ids : [...ids, activity.id]));
+  }
   const [editSection, setEditSection] = useState<PlanEditorSection>(
     "overview",
   );
@@ -814,7 +819,12 @@ export function PlanEditor({ plan }: PlanEditorProps) {
           renderEditSection()
         )}
         <Status error={action.error} />
-        {adding && <ActivityEditor onClose={() => setAdding(false)} />}
+        {adding && (
+        <ActivityEditor
+          onClose={() => setAdding(false)}
+          onUseExisting={pickExistingActivity}
+        />
+      )}
       </Screen>
     );
   }
@@ -862,7 +872,12 @@ export function PlanEditor({ plan }: PlanEditorProps) {
           </Button>
         )}
       </View>
-      {adding && <ActivityEditor onClose={() => setAdding(false)} />}
+      {adding && (
+        <ActivityEditor
+          onClose={() => setAdding(false)}
+          onUseExisting={pickExistingActivity}
+        />
+      )}
     </Screen>
   );
 }

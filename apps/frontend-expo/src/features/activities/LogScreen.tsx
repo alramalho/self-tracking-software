@@ -190,6 +190,10 @@ export default function LogScreen() {
           key={editing?.id ?? "new"}
           activity={editing ?? undefined}
           onClose={() => setEditing(undefined)}
+          onUseExisting={(activity) => {
+            setEditing(undefined);
+            setSelected(activity);
+          }}
         />
       )}
       {voiceLogOpen && (

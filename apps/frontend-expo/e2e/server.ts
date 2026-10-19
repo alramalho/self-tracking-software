@@ -4,6 +4,7 @@ import { yearPlanStats, inYear } from "../../backend-node/src/services/wrapped/m
 import { rankPeople } from "../../backend-node/src/services/people/rank";
 import type { SearchablePerson } from "../../backend-node/src/services/people/types";
 import { seedChats } from "./chat-fixtures";
+import { canCombine, chooseActivityToKeep, findNameTwin, mergeConversion } from "@tsw/prisma/activity-duplicates";
 import http from "node:http";
 import { readFileSync } from "node:fs";
 interface SearchCandidate extends SearchablePerson {
@@ -619,14 +620,77 @@ const server = http.createServer(async (req, res) => {
   }
   if (path === "/activities/upsert") {
     const existing = state.activities.find((a) => a.id === body.id);
-    if (existing) Object.assign(existing, body);
-    else
-      state.activities.push({
-        ...body,
-        id: `activity-${Date.now()}`,
-        userId: "test-user",
-      });
-    send(body);
+    if (existing) {
+      Object.assign(existing, body);
+      send(body);
+      return;
+    }
+    const created = { ...body, id: `activity-${Date.now()}`, userId: "test-user" };
+    state.activities.push(created);
+    send(created);
+    return;
+  }
+  // Hike and Hiking already exist side by side, like after months of real use.
+  if (path === "/__duplicate-activities") {
+    const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
+    state.activities.push(
+      { id: "hike", title: "Hike", emoji: "🥾", measure: "minutes", colorHex: null, userId: "test-user", createdAt: day(200) } as any,
+      // body.hikingMeasure: "hours" when the merge should also convert units.
+      { id: "hiking", title: "Hiking", emoji: "🚶", measure: body.hikingMeasure ?? "minutes", colorHex: null, userId: "test-user", createdAt: day(30) } as any,
+    );
+    // Hiking sits in one plan; activities created later are in none.
+    state.plans[0].activities = state.plans[0].activities.filter((a: any) => a.id === "hiking");
+    for (const [activityId, n] of [["hike", 3], ["hike", 10], ["hike", 17], ["hike", 24], ["hiking", 5], ["hiking", 12]] as const)
+      state.entries.push({ ...state.entries[0], id: `entry-${activityId}-${n}`, activityId, datetime: day(n), createdAt: day(n), description: "", quantity: activityId === "hiking" && body.hikingMeasure === "hours" ? 2 : 90 });
+    send({ ok: true });
+    return;
+  }
+  const duplicateMatch = path.match(/^\/activities\/([^/]+)\/(duplicate|merge)$/);
+  if (duplicateMatch) {
+    const [, id, kind] = duplicateMatch;
+    const withCount = (a: any) => ({ ...a, createdAt: a.createdAt ?? now(), entryCount: state.entries.filter((e) => e.activityId === a.id).length });
+    const activity = state.activities.find((a) => a.id === id);
+    if (!activity) {
+      send({ error: "Activity not found" }, 404);
+      return;
+    }
+    if (kind === "merge") {
+      const keep = state.activities.find((a) => a.id === body.intoActivityId)!;
+      const conversion = mergeConversion(keep, activity);
+      if (conversion) {
+        for (const entry of state.entries)
+          if (entry.activityId === conversion.activity.id) entry.quantity *= conversion.factor;
+        keep.measure = conversion.to;
+      }
+      for (const entry of state.entries) if (entry.activityId === id) entry.activityId = body.intoActivityId;
+      state.activities = state.activities.filter((a) => a.id !== id);
+      send({ activity: state.activities.find((a) => a.id === body.intoActivityId) });
+      return;
+    }
+    const candidates = state.activities.filter((a) => a.id !== id && canCombine(a, activity));
+    // Stands in for Jev: one pair only it would recognise.
+    const meaningTwin = url.searchParams.get("byMeaning") === "true" && /trail walk/i.test(activity.title)
+      ? candidates.find((a) => a.title === "Hike")
+      : undefined;
+    const twin = findNameTwin(activity.title, candidates) ?? meaningTwin;
+    if (!twin) {
+      send({ duplicate: null });
+      return;
+    }
+    const [keep, remove] = chooseActivityToKeep(withCount(activity), withCount(twin));
+    const conversion = mergeConversion(keep, remove);
+    send({
+      duplicate: {
+        match: twin === meaningTwin ? "meaning" : "name",
+        keep,
+        remove,
+        entriesToMove: remove.entryCount,
+        plansToUpdate: state.plans.filter((p: any) => p.activities?.some((a: any) => a.id === remove.id)).length,
+        conversion: conversion
+          ? { activityId: conversion.activity.id, from: conversion.from, to: conversion.to, factor: conversion.factor }
+          : null,
+      },
+    });
     return;
   }
   if (path === "/activities/log-activity") {
