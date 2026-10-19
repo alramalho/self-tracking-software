@@ -531,6 +531,26 @@ cd /root/workspace/tracking.so/deployment
 ./tracking-voice-languages-20261002/rollback.sh
 ```
 
+## October 19 release — active since October 19, 2026 13:25 UTC
+
+Image `local/tracking-so-backend:release-20261019`, built with [release-20261019-overlay.Dockerfile](./release-20261019-overlay.Dockerfile) on `plan-confidence-20261015`. Source: main `adad6b93`. The overlay replaces 47 backend and shared files, which all matched source `67a5bc65` in the live container byte for byte, and adds 11 new ones. It patches the image's own `packages/prisma/package.json` with three new exports instead of replacing it. Dependencies are unchanged. **No schema change and no migration.**
+
+- App Store consent: AI consent is enforced by default. Account deletion also removes coach memory, the email contact and plan images. What people write stays out of logs, Better Stack and Telegram.
+- Duplicate activities: `GET /activities/:id/duplicate` and `POST /activities/:id/merge`.
+- The coach says hi first: proactive messages are a one-line opener, with a private agenda for the reply. The coach goes quiet after two unanswered outreaches, and silent nudges count toward that.
+- **Why by hand:** the `deploy hetzner` GitHub Action can no longer reach the server. Its SSH key is refused (`Permission denied (publickey)`) on October 15 and on October 19 at `f3ca1bfe`, so the image it built and pushed to GHCR was never deployed. Fix the action's key before relying on it. This deploy used `~/.ssh/hetzner_ed25519`; the `~/.ssh/hetzner` named above does not exist on the Mac.
+- **Before activation, in the candidate image:** all 58 file hashes matched the source, the exports patch landed, and the changed route and coach modules loaded with networking off.
+- **After activation:** healthy, zero restarts, public `/health` 200. The unauthenticated checks answer as before, and the duplicate and merge routes moved from 404 to 401. The first minutes of logs show no errors. No signed-in request was made.
+
+Server context: `/root/workspace/tracking.so/deployment/tracking-release-20261019/` (`source-hashes.txt`, `activate.py`, `verified.json`, `rollback.sh`). `backup/` holds the environment, the compose file and a 4.1 MB database dump.
+
+Rollback, only while this release is active:
+
+```sh
+cd /root/workspace/tracking.so/deployment
+./tracking-release-20261019/rollback.sh
+```
+
 ## Plan confidence ("how sure are you?") — active since October 15, 2026 16:30 UTC
 
 Image `local/tracking-so-backend:plan-confidence-20261015`, built with [plan-confidence-overlay.Dockerfile](./plan-confidence-overlay.Dockerfile) on `watch-auth-20261015`. Source: branch `plan-confidence` (`67a5bc65`, on main `02315ff3`). The overlay replaces 7 existing backend and shared files, all of which matched main `02315ff3` in the live container, and adds `services/coach/confidence.ts` plus the migration. The live `schema.prisma` differs from main, so the overlay patches the image's own schema (one field on `Plan`, after `designedThrough`) and regenerates the Prisma client.

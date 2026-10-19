@@ -79,6 +79,21 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 218 — the October 19 release, October 19, 2026
+
+- **Source:** main `adad6b93`. That is `f3ca1bfe` (the merge of `home-one-card-per-plan`, `web-native-onboarding`, `app-store-consent`, `activity-merge`, `coach-say-hi-first`, `coach-chat-ui` and `coach-tab`) plus the `.easignore` line for `packages/prisma/activity-duplicates.ts`. Without that line, build 216 failed to bundle JavaScript.
+- **Signing by hand.** Builds 214, 215 and 217 failed at the archive step. Xcode claimed phone profile `4ba4af8e…` lacks Push Notifications and Sign In with Apple, and Watch profile `e0c20787…` lacks Sign In with Apple, although both profiles contain them. It is the account-side check (`areFeaturesUpToDate: 0`) that already broke build 212's export, and refreshing Xcode → Settings → Accounts did not help (an Apple support case is open). Build 218 was therefore made without Xcode signing:
+  1. `expo prebuild --platform ios --clean` with the wrapper's environment (`.release/production.env.json` values, `NODE_ENV=production`, `EXPO_NO_DOTENV=1`, `EXPO_NO_CAPABILITY_SYNC=1`) **and `EAS_BUILD_PROFILE=device-production`**. Without the profile, `with-release-privacy` keeps the dev launcher's `NSLocalNetworkUsageDescription`, and the wrapper rejects the IPA.
+  2. Set `CFBundleVersion` to 218, run `LANG=en_US.UTF-8 pod install` (CocoaPods fails under a non-UTF-8 locale), then `xcodebuild archive` (workspace, scheme `trackingso`, Release, `generic/platform=iOS`) with `CODE_SIGNING_ALLOWED=NO CURRENT_PROJECT_VERSION=218 MARKETING_VERSION=1.0.0`.
+  3. Embed the installed profiles `4ba4af8e…` (phone) and `e0c20787…` (Watch). Sign each framework, then `Watch/TrackingWatch.app`, then the app, with the existing `iPhone Distribution … (7P4CMS849D)` identity. Entitlements are build 212's minus the App Group (`app-store-consent` dropped it): the phone gets `aps-environment=production`, Sign In with Apple, HealthKit and background delivery; the Watch gets Sign In with Apple.
+  4. Zip `Payload/` into the IPA and run `build:iphone:publish <ipa>`. The wrapper's checks are unchanged.
+- Bundle layout, `Info.plist` and app config match build 212, apart from this release's intended changes: the permission strings, approximate location, no Face ID string, no App Group.
+- **Verified IPA:** `tracking-release-213/apps/frontend-expo/.release/b218-adad6b93/tracking.so.ipa`, SHA-256 `0d764a2ded83648af62fab83712113cc848b2919c23584754f262ba21c69a9da`. iPhone and Watch are 1.0.0 (218), with TrackingWatch, TrackingHealth and TrackingMap.
+- **Hosted:** `.release/2026-10-19T13-20-24-184Z-58e3ff9e/distribution.json`; the link expires October 26, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,329,463 IPA bytes.
+- **Not checked:** it was not run on a simulator or a phone. Every test that fails on `release-213` also fails on clean main; the Coach tab tests were updated in `fccb002b`.
+- **EAS build counter:** the remote iOS counter is at 217, but 218 was used locally. Before the next EAS build, run `eas build:version:set -p ios -e device-production` (interactive) and set it to 218, or the next build will also be 218.
+- No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 212 — one home card per plan, October 19, 2026
 
 - Local production release from branch `home-one-card-per-plan` (`6a6105be`, on main `6e4f090c`): build 211 plus the home grid showing one card per plan. A plan's circle no longer gets a second card; its members appear as faces in the plan card's corner (green ring = on track, a dashed spot while the circle is forming), and tapping the faces opens the circle. A circle whose plan has no home card keeps its own card. The web app does the same. No backend change.
