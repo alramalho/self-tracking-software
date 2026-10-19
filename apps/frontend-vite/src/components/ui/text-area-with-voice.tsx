@@ -17,6 +17,8 @@ interface TextAreaWithVoiceProps {
   className?: string;
   onRecordingStarted?: () => void;
   onRecordingStopped?: () => void;
+  /** The pointing hand that draws attention to the microphone. */
+  showHint?: boolean;
 }
 
 export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
@@ -29,9 +31,10 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   className,
   onRecordingStarted,
   onRecordingStopped,
+  showHint = true,
 }) => {
   const [isTranscribing, setIsTranscribing] = React.useState(false);
-  const [showPointer, setShowPointer] = React.useState(true);
+  const [showPointer, setShowPointer] = React.useState(showHint);
   const { isRecording, toggleRecording } = useMicrophone();
   const api = useApiWithAuth();
 
