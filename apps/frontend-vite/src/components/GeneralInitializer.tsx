@@ -51,17 +51,19 @@ export default function GeneralInitializer({
   const email = currentUser?.email || "";
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
+  // Onboarding and the coach-designed "Create plan" are full-screen flows with their own header and buttons.
+  const isFullScreenFlow = isOnboardingPage || pathname === "/create-plan";
   const isDownloadPage = pathname.startsWith("/download");
   const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/") || pathname.startsWith("/chat/");
   const isProfilePage = pathname.startsWith("/profile");
   const isHomePage = pathname == "/";
 
   // Keep the app shell navigation mounted while users move between profiles
-  // and the rest of the signed-in app. Only onboarding and the download page
-  // intentionally use a navigation-free shell.
+  // and the rest of the signed-in app. Only the full-screen flows and the
+  // download page intentionally use a navigation-free shell.
   const showsBottomNav = isSignedIn
     && !isDownloadPage
-    && !isOnboardingPage;
+    && !isFullScreenFlow;
 
   const friends = useMemo(() => {
     return [
@@ -231,7 +233,7 @@ export default function GeneralInitializer({
 
   return (
     <>
-      {isOnboardingPage ? (
+      {isFullScreenFlow ? (
         children
       ) : (
         <>

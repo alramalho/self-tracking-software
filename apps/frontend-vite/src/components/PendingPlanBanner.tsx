@@ -7,7 +7,6 @@ import {
   removePendingPlanGoal,
   type PendingPlanGoal,
 } from "@/lib/pendingPlanGoal";
-import { v4 as uuidv4 } from "uuid";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 
@@ -36,30 +35,9 @@ export function PendingPlanBanner() {
   };
 
   const handleResume = (goal: PendingPlanGoal) => {
-    // Clear onboarding state and set the pending goal directly in localStorage
-    // This avoids needing the OnboardingProvider context
-    const newOnboardingState = {
-      currentStep: "plan-goal-setter",
-      completedSteps: [],
-      plans: null,
-      selectedPlan: null,
-      planGoal: goal.goal,
-      planEmoji: goal.emoji,
-      planActivities: [],
-      planProgress: null,
-      planType: null,
-      planId: uuidv4(),
-      partnerType: null,
-      planTimesPerWeek: 3,
-      isPushGranted: false,
-    };
-    localStorage.setItem("onboarding-state", JSON.stringify(newOnboardingState));
-
-    // Remove from pending since we're resuming it
+    // Start the onboarding flow from this goal; it skips the welcome.
     removePendingPlanGoal(goal.goal);
-
-    // Navigate to onboarding
-    navigate({ to: "/onboarding" });
+    navigate({ to: "/onboarding", search: { goal: goal.goal } });
   };
 
   return (

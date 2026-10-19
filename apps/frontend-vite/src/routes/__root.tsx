@@ -101,7 +101,8 @@ function ThemedLayout() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const location = useLocation();
   const isDownloadPage = location.pathname.startsWith("/download");
-  const isOnboardingPage = location.pathname.startsWith("/onboarding");
+  // Full-screen flows (onboarding, the coach-designed "Create plan") have no sidebar.
+  const isOnboardingPage = location.pathname.startsWith("/onboarding") || location.pathname === "/create-plan";
 
   return (
     <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} isOnboardingPage={isOnboardingPage} />
