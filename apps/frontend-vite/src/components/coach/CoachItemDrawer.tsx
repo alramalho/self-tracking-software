@@ -7,7 +7,7 @@ import type { DrawerOption } from "@/components/drawer/types";
 import { startCoachAttentionAction } from "@/contexts/ai/service";
 import { useCurrentUser } from "@/contexts/users";
 import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
-import { MISS_REASONS, missMessage, missMessageStart, rememberMissAnswered } from "./missReasons";
+import { MISS_REASONS, answeredMissedWeek, missMessage, missMessageStart, rememberMissAnswered } from "./missReasons";
 import type { CoachItem, CoachItemDrawerProps } from "./types";
 
 const OUTCOMES = [
@@ -46,6 +46,10 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
     onClose();
     navigate({ to: "/message-ai", search: coachPrompt ? { coachPrompt } : {} });
   };
+  const openPlan = (planId: string) => {
+    onClose();
+    navigate({ to: "/plans", search: { selectedPlan: planId } });
+  };
   const logActivity = (activityId?: string) => {
     onClose();
     navigate({ to: "/add", search: activityId ? { activityId } : {} });
@@ -67,7 +71,8 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
         const plan = alert.plan;
         const activity = plan.activities[0];
         const nudgeId = alert.nudge?.messageId;
-        const askReason = alert.status === "missed" || (!!alert.missed && !nudgeId);
+        // A missed week is asked about once: after an answer, the drawer offers the conversation instead.
+        const askReason = !!alert.missed && !answeredMissedWeek(plan.id) && !nudgeId;
         const reasons: DrawerOption[] = [
           ...MISS_REASONS.map((reason) => ({
             label: reason.label,
@@ -88,17 +93,26 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
           <>
             <DrawerHeader emoji={activity?.emoji ?? plan.emoji} title={it.title} subtitle={alertFact(alert)} />
             {nudgeId ? (
+              // The coach's own note leads; its two answers and the plan stay one tap away.
               <DrawerOptions
                 options={[
+                  { label: "Open coach message", onClick: () => talk() },
                   { label: "Remind me tomorrow", disabled: busy, onClick: () => post.mutate({ path: `/follow-through/nudges/${nudgeId}`, body: { action: "remind" } }) },
                   { label: "Let it go", disabled: busy, onClick: () => post.mutate({ path: `/follow-through/nudges/${nudgeId}`, body: { action: "archive" } }) },
+                  { label: "Open plan", onClick: () => openPlan(plan.id) },
                 ]}
               />
             ) : askReason ? (
               <DrawerOptions label="What got in the way?" options={reasons} />
             ) : (
               <DrawerOptions
-                options={[{ label: `Talk to ${coach.name}`, onClick: () => talk(`Help me fit the sessions left for "${plan.goal}" this week.`) }]}
+                options={[
+                  {
+                    label: `Talk to ${coach.name}`,
+                    onClick: () => talk(alert.status === "at_risk" ? `Help me fit the sessions left for "${plan.goal}" this week.` : undefined),
+                  },
+                  { label: "Open plan", onClick: () => openPlan(plan.id) },
+                ]}
               />
             )}
             <DrawerButton
