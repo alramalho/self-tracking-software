@@ -27,7 +27,7 @@ import type {
   StatusProps,
 } from "./types";
 import { useColors } from "./theme";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, X } from "lucide-react-native";
 import { VoiceTextArea } from "@/features/dictation/VoiceTextArea";
 export { useColors } from "./theme";
 export function Screen({
@@ -393,9 +393,7 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
               <View style={{ flex: 1 }}>
                 <Heading>{title}</Heading>
               </View>
-              <Button secondary onPress={onClose}>
-                Close
-              </Button>
+              <IconButton label={`Close ${title}`} icon={X} onPress={onClose} />
             </View>
             {children}
           </ScrollView>

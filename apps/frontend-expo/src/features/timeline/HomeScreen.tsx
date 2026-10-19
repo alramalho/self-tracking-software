@@ -19,8 +19,6 @@ import { router, useLocalSearchParams, useScrollToTop } from "expo-router";
 import {
   useCurrentUser,
   useEntries,
-  useMetrics,
-  useMetricEntries,
   usePlans,
   useTimeline,
 } from "@/data/queries";
@@ -37,11 +35,9 @@ import { startOfDay } from "date-fns";
 import { mergeTimeline } from "./model";
 import { FeedCard } from "./FeedCard";
 import { PlanPreview } from "./home-cards/PlanPreview";
-import { MetricPreview } from "./home-cards/MetricPreview";
 import { CirclePreview } from "./home-cards/CirclePreview";
 import { useMyCircles } from "@/features/circles/api";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
-import { MetricLogger } from "../metrics/MetricLogger";
 import { useTimelineSeen } from "./useTimelineSeen";
 import type { TimelineRow } from "./types";
 import { containsNotificationTarget, timelineRows } from "./layout";
@@ -56,10 +52,7 @@ export default function HomeScreen() {
   const plans = usePlans();
   const entries = useEntries();
   const user = useCurrentUser();
-  const metrics = useMetrics();
-  const metricEntries = useMetricEntries();
   const circles = useMyCircles();
-  const [checkin, setCheckin] = useState(false);
   const [voiceLogOpen, setVoiceLogOpen] = useState(false);
   const pendingVoice = usePendingVoiceLog();
   const { refresh, refreshing } = useRefresh(
@@ -304,15 +297,6 @@ export default function HomeScreen() {
               </View>
               <Status error={user.error} retry={() => void user.refetch()} />
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {!!metrics.data?.length && user.data?.planType !== "FREE" && (
-                  <Reveal id="home-metrics" style={{ width: "48%" }}>
-                    <MetricPreview
-                      metrics={metrics.data}
-                      entries={metricEntries.data ?? []}
-                      onLog={() => setCheckin(true)}
-                    />
-                  </Reveal>
-                )}
                 {active
                   .filter(
                     (p) =>
@@ -377,7 +361,6 @@ export default function HomeScreen() {
           }
         />
         <ProfileGlow />
-        {checkin && <MetricLogger onClose={() => setCheckin(false)} />}
         {voiceLogOpen && (
           <VoiceLogDrawer
             initialDraft={pendingVoice.draft}

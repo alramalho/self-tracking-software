@@ -10,24 +10,15 @@ import { useEffect, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, Copy, Screen, Status, useColors } from "@/components/ui";
+import { Copy, Screen, Status, useColors } from "@/components/ui";
 import { useCurrentUser, usePlans, useEntries } from "@/data/queries";
 import { PlanCard } from "./PlanCard";
-import { WeekOverview } from "@/features/follow-through/WeekOverview";
 export default function PlansScreen() {
   const plans = usePlans();
   const client = useQueryClient();
   const entries = useEntries();
   const user = useCurrentUser();
-  const { selectedPlan, view: initialView } = useLocalSearchParams<{
-    selectedPlan?: string;
-    view?: string;
-  }>();
-  const [view, setView] = useState(initialView === "week" ? "week" : "plans");
-  useEffect(() => {
-    if (initialView) setView(initialView);
-    if (selectedPlan) setView("plans");
-  }, [initialView, selectedPlan]);
+  const { selectedPlan } = useLocalSearchParams<{ selectedPlan?: string }>();
   const [selected, setSelected] = useState<string | undefined>(selectedPlan);
   useEffect(() => {
     if (selectedPlan) setSelected(selectedPlan);
@@ -93,45 +84,7 @@ export default function PlansScreen() {
         error={plans.error}
         retry={() => void plans.refetch()}
       />
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: c.soft,
-          borderRadius: 24,
-          padding: 4,
-          gap: 4,
-        }}
-      >
-        {["week", "plans"].map((tab) => (
-          <Pressable
-            key={tab}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: view === tab }}
-            onPress={() => setView(tab)}
-            style={{
-              flex: 1,
-              minHeight: 44,
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 22,
-              backgroundColor: view === tab ? c.card : "transparent",
-            }}
-          >
-            <Text
-              style={{
-                color: view === tab ? c.text : c.muted,
-                fontWeight: "600",
-              }}
-            >
-              {tab === "week" ? "This week" : "Plans"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      {view === "week" ? (
-        <WeekOverview plans={plans.data ?? []} entries={entries.data ?? []} />
-      ) : (
-        <>
+      <>
           <Reveal
             id="plans-selector"
             delay={50}
@@ -178,9 +131,15 @@ export default function PlansScreen() {
               p.archivedAt ||
               (p.finishingDate && new Date(p.finishingDate) < new Date()),
           ) && (
-            <Button secondary onPress={() => setOld(!old)}>
-              {old ? "Hide old & archived plans" : "Show old & archived plans"}
-            </Button>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setOld(!old)}
+              style={{ alignSelf: "center", minHeight: 44, justifyContent: "center", paddingHorizontal: 12 }}
+            >
+              <Text style={{ color: c.muted, fontSize: 14, fontWeight: "500" }}>
+                {old ? "Hide old & archived plans" : "Show old & archived plans"}
+              </Text>
+            </Pressable>
           )}
           {plan && (
             <PlanCard
@@ -192,8 +151,7 @@ export default function PlansScreen() {
               detail
             />
           )}
-        </>
-      )}
+      </>
     </Screen>
   );
 }

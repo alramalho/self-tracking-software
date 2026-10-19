@@ -39,7 +39,7 @@ import { PlanCard } from "../plans/PlanCard";
 import { Heatmap } from "../plans/Heatmap";
 import { FeedCard } from "../timeline/FeedCard";
 import { EntryEditor } from "../activities/EntryEditor";
-import { WrappedCard } from "../wrapped/WrappedCard";
+import { CheckinsCard, HealthCard } from "./PrivateCards";
 import { ProfileHeader } from "./ProfileHeader";
 import type { ActivityEntry, User } from "@/core/types";
 import type { ProfileRow, ProfileScreenProps } from "./types";
@@ -152,6 +152,9 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
     ];
   }, [user, entries, gridEntries, tab]);
   const { refresh, refreshing } = useRefresh(
+    "metrics",
+    "metric-entries",
+    "health",
     ...(own
       ? [
           "current-user",
@@ -219,8 +222,10 @@ export default function ProfileScreen({ username }: ProfileScreenProps) {
                     />
                   </Reveal>
                   {own && (
-                    <Reveal id="profile-wrapped" delay={50}>
-                      <WrappedCard />
+                    // Only on your own profile: what you report and what your watch syncs.
+                    <Reveal id="profile-private" delay={50} style={{ gap: 12 }}>
+                      <CheckinsCard />
+                      <HealthCard />
                     </Reveal>
                   )}
                   <View style={[s.row, { gap: 0, marginTop: 12 }]}>

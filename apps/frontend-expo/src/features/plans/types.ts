@@ -38,11 +38,6 @@ export interface PlanEditorChoiceProps {
   selected: boolean;
   onPress: () => void;
 }
-export interface MilestoneOverviewProps {
-  milestones: Milestone[];
-  own: boolean;
-  onEdit: () => void;
-}
 export interface MilestoneChange {
   id: string;
   delta: number;
@@ -69,10 +64,6 @@ export interface PlanOrderChange {
   id: string;
   targetIndex: number;
 }
-export interface CoachOverviewProps {
-  plans: Plan[];
-  entries: ActivityEntry[];
-}
 export type WeekCalendarSelection =
   | { kind: "scheduled"; session: PlanWeekScheduledSession }
   | {
@@ -88,12 +79,6 @@ export interface WeekCalendarProps {
   rolling?: boolean;
   weekCount?: 1 | 2;
   selectionDisplay?: WeekCalendarSelectionDisplay;
-}
-export interface WeekProgressProps {
-  plan: Plan;
-  entries: import("@/core/types").ActivityEntry[];
-  date?: Date;
-  own?: boolean;
 }
 export interface PlanBackgroundProps {
   value: string | null;
@@ -114,4 +99,10 @@ export interface SteppedProgressProps {
 
 export interface AchievementGlowProps {
   color: string;
+}
+export type PlanDrawerView = "settings" | "pause" | "delete";
+export interface PlanDrawerProps {
+  plan: Plan;
+  visible: boolean;
+  onClose: () => void;
 }
