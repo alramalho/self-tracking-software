@@ -138,6 +138,13 @@ jobs:
           backend_image="$4"
           run_label="$5"
 
+          # Postgres shares this disk; on October 19, 2026 a backend pull filled it and crashed the database.
+          free_gb="$(df --output=avail -BG / | tail -n 1 | tr -dc '0-9')"
+          if [ "$free_gb" -lt 6 ]; then
+            echo "only ${free_gb}G free on /; need 6G for the backup and image pull. Remove unused images first." >&2
+            exit 1
+          fi
+
           cd "$remote_dir"
           backup="gha-backups/$(date -u +%Y%m%dT%H%M%SZ)-$run_label"
           mkdir -p -m 700 gha-backups "$backup"
