@@ -364,6 +364,10 @@ export interface CirclePreviewCardProps {
   circle: MyCircle;
 }
 
+export interface PlanCircleFacesProps {
+  circle: MyCircle;
+}
+
 export interface ReasonChipsProps {
   reasons: MatchReason[];
 }

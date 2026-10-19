@@ -4,8 +4,13 @@ import type { MyCircle } from "@/features/circles/types";
 export interface PlanPreviewProps {
   plan: Plan;
   entries: ActivityEntry[];
+  /** The circle this plan is shared in, shown as faces on the card instead of a card of its own. */
+  circle?: MyCircle;
 }
 export interface CirclePreviewProps {
+  circle: MyCircle;
+}
+export interface PlanCircleFacesProps {
   circle: MyCircle;
 }
 export interface MetricPreviewProps {

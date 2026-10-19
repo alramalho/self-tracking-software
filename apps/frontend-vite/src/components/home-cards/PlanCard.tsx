@@ -10,7 +10,9 @@ import {
 import type { ActivityEntry } from "@tsw/prisma";
 import type { PlanProgressData } from "@tsw/prisma/types";
 import { CalendarDays, Flame, Sprout, Rocket } from "lucide-react";
+import type { MyCircle } from "@/components/circles/types";
 import { HomeCardShell } from "./HomeCardShell";
+import { PlanCircleFaces } from "./PlanCircleFaces";
 
 const HABIT_WEEKS = 4;
 const LIFESTYLE_WEEKS = 9;
@@ -18,6 +20,8 @@ const LIFESTYLE_WEEKS = 9;
 interface PlanCardProps {
   plan: CompletePlan & { progress: PlanProgressData };
   activityEntries?: ActivityEntry[];
+  // The circle this plan is shared in, shown as faces on the card instead of a card of its own.
+  circle?: MyCircle;
 }
 
 const getPlannedActivityCount = (
@@ -31,7 +35,7 @@ const getPlannedActivityCount = (
   return Array.isArray(plannedActivities) ? plannedActivities.length : 0;
 };
 
-export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
+export const PlanCard = ({ plan, activityEntries, circle }: PlanCardProps) => {
   const navigate = useNavigate();
 
   const { weeks, achievement } = plan.progress;
@@ -96,7 +100,10 @@ export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
       <div>
         <div className="flex items-start justify-between gap-2">
           <span className="text-2xl">{emoji}</span>
-          {statusLabel && (
+          {circle ? (
+            // The amber ring and the note below already say what needs doing; the faces take the corner.
+            <PlanCircleFaces circle={circle} />
+          ) : statusLabel && (
             <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-500">
               {statusLabel}
             </span>

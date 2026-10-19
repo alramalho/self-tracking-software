@@ -17,6 +17,7 @@ import type { Plan, ActivityEntry } from "@/core/types";
 import type { CoachOpening, PlanPreviewProps, ReasonChipProps, StepsProps, WarningSheetProps } from "./types";
 import { MISS_REASONS, answeredMissedWeek, missMessage, missMessageStart, rememberMissAnswered } from "./miss-reasons";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
+import { PlanCircleFaces } from "./PlanCircleFaces";
 
 function Steps({ value, max, color, iconColor = color, icon: Icon, label, atRisk, lost }: StepsProps) {
   const c = useColors();
@@ -161,7 +162,7 @@ function StateRing({ color, pulse }: { color: string; pulse: boolean }) {
   );
 }
 
-export function PlanPreview({ plan, entries }: PlanPreviewProps) {
+export function PlanPreview({ plan, entries, circle }: PlanPreviewProps) {
   const c = useColors();
   const coach = useCoachState(plan, entries);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -247,16 +248,19 @@ export function PlanPreview({ plan, entries }: PlanPreviewProps) {
     >
       {coach.pace === "on_track" && <StateRing color={GREEN} pulse={false} />}
       {coach.pace === "slipping" && <StateRing color={AMBER} pulse />}
-      {/* Slipping gets the ring too; an at-risk week gets only the icon, next to its dashed dots. */}
-      {(coach.pace === "slipping" || weekIsAtRisk) && (
-        <View style={{ position: "absolute", top: 14, right: 14 }}>
-          <TriangleAlert size={16} color={AMBER} />
-        </View>
-      )}
       <View style={{ gap: 4 }}>
-        <Text style={{ fontSize: 24 }}>
-          {plan.activities[0]?.emoji ?? plan.emoji}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <Text style={{ fontSize: 24 }}>
+            {plan.activities[0]?.emoji ?? plan.emoji}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {circle && <PlanCircleFaces circle={circle} />}
+            {/* Slipping gets the ring too; an at-risk week gets only the icon, next to its dashed dots. */}
+            {(coach.pace === "slipping" || weekIsAtRisk) && (
+              <TriangleAlert size={16} color={AMBER} />
+            )}
+          </View>
+        </View>
         <Text
           numberOfLines={2}
           style={{ fontSize: 14, fontWeight: "500", color: c.text }}

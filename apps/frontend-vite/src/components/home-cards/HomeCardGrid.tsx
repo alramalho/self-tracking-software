@@ -121,30 +121,33 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
     });
   }
 
-  orderedActivePlans
-    ?.filter(
-      (plan) =>
-        plan.outlineType === "TIMES_PER_WEEK" || planNeedsAttention(plan)
-    )
-    .forEach((plan) => {
-      cards.push({
-        node: (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            activityEntries={activityEntries}
-          />
-        ),
-        span: 1,
-      });
-    });
-
-  circles?.forEach((circle) => {
+  const planCards = (orderedActivePlans ?? []).filter(
+    (plan) => plan.outlineType === "TIMES_PER_WEEK" || planNeedsAttention(plan)
+  );
+  planCards.forEach((plan) => {
     cards.push({
-      node: <CirclePreviewCard key={`circle-${circle.id}`} circle={circle} />,
+      node: (
+        <PlanCard
+          key={plan.id}
+          plan={plan}
+          activityEntries={activityEntries}
+          circle={circles?.find((circle) => circle.planId === plan.id)}
+        />
+      ),
       span: 1,
     });
   });
+
+  // One card per plan: a circle lives on its plan's card, and only gets its own when that plan has none here.
+  const planCardIds = new Set(planCards.map((plan) => plan.id));
+  circles
+    ?.filter((circle) => !planCardIds.has(circle.planId))
+    .forEach((circle) => {
+    cards.push({
+        node: <CirclePreviewCard key={`circle-${circle.id}`} circle={circle} />,
+        span: 1,
+      });
+    });
 
   const occupiedColumns = cards.reduce((total, card) => total + card.span, 0);
 
