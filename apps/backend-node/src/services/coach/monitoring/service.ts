@@ -16,6 +16,7 @@ import { runMonitoring } from "./run";
 import type { MonitoringDecision } from "./types";
 import { planProposalBasis } from "./proposal-basis";
 import { fingerprintValue } from "./fingerprint";
+import { unansweredOutreaches } from "./silence";
 
 async function readInput(
   tx: Prisma.TransactionClient,
@@ -141,7 +142,7 @@ export async function monitorUser(user: User, now = new Date()) {
         return {
           draftMessages: [
             {
-              content: `Did your planned session for “${active[0].goal}” happen? There is no matching log yet. You can log it, tell me it changed, or leave it unconfirmed.`,
+              content: `Did your “${active[0].goal}” session happen?`,
               requiresReply: true,
             },
           ],
@@ -159,6 +160,7 @@ export async function monitorUser(user: User, now = new Date()) {
         assumedMissedSessionIds: initial.sessions
           .filter((s) => s.assumedMissed && s.id.startsWith("existing:"))
           .map((s) => s.id.slice("existing:".length)),
+        unansweredOutreaches: unansweredOutreaches(initial.messages),
       });
     },
     commit: async (decision, result) => {
@@ -186,7 +188,7 @@ export async function monitorUser(user: User, now = new Date()) {
             request.messageId,
             now,
             m.viewingUntil,
-            "Your coach has one unanswered question. Reply when it suits you; this is the only reminder.",
+            "Still around? No rush, I'm here when you are.",
           );
         }
         if (result.draftMessages.some((d) => d.error))
@@ -284,6 +286,7 @@ export async function monitorUser(user: User, now = new Date()) {
           requiresReply,
           chatId: chat.id,
           messageId,
+          ...(result.agenda ? { agenda: result.agenda } : {}),
         });
         // Retain unresolved work; bound old completed review history.
         m.requests = m.requests.filter(
@@ -304,9 +307,8 @@ export async function monitorUser(user: User, now = new Date()) {
           messageId,
           now,
           m.viewingUntil,
-          requiresReply
-            ? "Your coach has a question or change for you to review."
-            : "Your coach review is ready.",
+          // The push reads like the text itself, not "your review is ready".
+          pushBody(result.draftMessages[0].content),
         );
       });
       if (!delivery) return false;
@@ -338,6 +340,10 @@ export function startPlanMonitoring(user: User) {
   void monitorUser(user).catch((error) =>
     logger.error("Plan setup failed", { userId: user.id, error }),
   );
+}
+function pushBody(content: string) {
+  const plain = content.replace(/\{\{(?:plan|activity):[^|}]+\|([^}]+)\}\}/g, "$1");
+  return plain.length > 180 ? `${plain.slice(0, 177).trimEnd()}...` : plain;
 }
 async function saveNotification(
   tx: Prisma.TransactionClient,

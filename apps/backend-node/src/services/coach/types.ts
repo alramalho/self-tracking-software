@@ -1,3 +1,4 @@
+import type { OpenAgenda } from "./agenda/types";
 import type {
   Activity,
   Plan,
@@ -44,6 +45,8 @@ export interface CoachAgentContext {
   recentActivityContext?: string | null;
   activityRecencyById?: Map<string, string>;
   curriculumFileCountByPlanId?: Map<string, number>;
+  /** The last proactive opener's held-back notes, when the person is replying. */
+  openAgenda?: OpenAgenda | null;
   onStatus?: (status: CoachStatus) => void | Promise<void>;
 }
 
@@ -94,6 +97,8 @@ export type CoachDraftMessage = {
     description: string;
     patch: unknown;
     operations?: unknown[];
+    /** Set when the coach attached a change it had held back from a proactive review. */
+    heldFrom?: string;
     status: null;
   }>;
   planCreationProposals?: Array<{

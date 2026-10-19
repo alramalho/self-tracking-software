@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ActiveCoachPlan } from "../../types";
 import { getProposalPatch } from "../../../planProposalPatchService";
-import { followUpMessage, setupMessage } from "./proposals";
+import { followUpOpening, setupMessage } from "./proposals";
 
 const plan = {
   id: "running-plan",
@@ -62,21 +62,24 @@ describe("scheduled coach proposal boundary", () => {
     ]);
   });
 
-  it("keeps a follow-up to existing plan modifications, including archive", () => {
-    const draft = followUpMessage([plan], {
-      message: "You said you want to put this aside. Archive it?",
-      requiresReply: false,
+  it("knocks first: posts only the opener and holds plan changes, including archive", () => {
+    const opening = followUpOpening([plan], {
+      opener: "Hey, sounds like running is on hold. Still want it?",
+      agenda: "Said last week they want to put running aside.",
       modifications: [],
       archives: [{ planId: plan.id, description: "Archive running" }],
     });
-    expect(draft?.planCreationProposals).toBeUndefined();
-    expect(getProposalPatch(draft?.planProposals?.[0])).toEqual({
-      archive: true,
+    expect(opening?.draft).toEqual({
+      content: "Hey, sounds like running is on hold. Still want it?",
+      requiresReply: true,
     });
+    expect(opening?.agenda.briefing).toBe("Said last week they want to put running aside.");
+    expect(opening?.agenda.proposals[0].patch).toEqual({ archive: true });
+    expect(opening?.agenda.proposals[0]).not.toHaveProperty("status");
     expect(() =>
-      followUpMessage([plan], {
-        message: "Change another plan",
-        requiresReply: false,
+      followUpOpening([plan], {
+        opener: "Change another plan",
+        agenda: null,
         modifications: [
           {
             planId: "other-plan",
@@ -93,9 +96,9 @@ describe("scheduled coach proposal boundary", () => {
   });
 
   it("keeps a temporary lighter week out of the ongoing target", () => {
-    const draft = followUpMessage([{ ...plan, outlineType: "SPECIFIC" }], {
-      message: "Two easy runs next week to recover.",
-      requiresReply: false,
+    const opening = followUpOpening([{ ...plan, outlineType: "SPECIFIC" }], {
+      opener: "That last run sounded rough. How are the legs?",
+      agenda: "Hard run Tuesday; suggest two easy runs next week.",
       modifications: [
         {
           planId: plan.id,
@@ -115,7 +118,7 @@ describe("scheduled coach proposal boundary", () => {
       ],
       archives: [],
     });
-    expect(getProposalPatch(draft?.planProposals?.[0])).toEqual({
+    expect(opening?.agenda.proposals[0].patch).toEqual({
       sessions: {
         upsert: [
           {
@@ -127,5 +130,11 @@ describe("scheduled coach proposal boundary", () => {
         ],
       },
     });
+  });
+
+  it("stays quiet when there is nothing worth opening a conversation about", () => {
+    expect(
+      followUpOpening([plan], { opener: null, agenda: null, modifications: [], archives: [] }),
+    ).toBeNull();
   });
 });

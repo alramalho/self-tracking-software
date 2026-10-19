@@ -80,6 +80,7 @@ export function scheduledCoachSnapshot(
     recentConversation: input.conversationHistory
       .slice(-12)
       .map((m) => ({ role: m.role, content: m.content })),
+    unansweredOutreaches: input.unansweredOutreaches,
     selectedFeedback: input.entries.find((e) => e.id === input.decision.entryId)
       ? {
           entryId: input.decision.entryId,

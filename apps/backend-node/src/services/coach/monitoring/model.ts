@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import { dueForSession } from "../../follow-through/model";
 import { planPace } from "@tsw/prisma/follow-through/pace";
+import { MAX_UNANSWERED_OUTREACHES, unansweredOutreaches } from "./silence";
 
 const DAY = 86400000;
 export const monitoringState = (): CoachMonitoringState => ({
@@ -115,11 +116,37 @@ export function resolveRequests(input: MonitoringInput) {
   }
 }
 
+/** Writing to the coach or logging the plan again after contact paused reopens the conversation. */
+export function resumeReturningPlans(input: MonitoringInput) {
+  const { state } = input;
+  state.pausedPlanIds = state.pausedPlanIds.filter((planId) => {
+    const pausedAt = Math.max(
+      0,
+      ...state.requests
+        .filter((r) => r.closedAt && r.planIds.includes(planId))
+        .map((r) => Date.parse(r.closedAt!)),
+    );
+    if (!pausedAt) return true;
+    const plan = input.plans.find((p) => p.id === planId);
+    const wrote = input.messages.some(
+      (m) => m.role === "USER" && m.createdAt.getTime() > pausedAt,
+    );
+    const logged = input.entries.some(
+      (e) =>
+        e.datetime.getTime() > pausedAt &&
+        e.datetime <= input.now &&
+        !!plan?.activityIds.includes(e.activityId ?? ""),
+    );
+    return !wrote && !logged;
+  });
+}
+
 /** Contact eligibility is deterministic. The generator decides what is useful inside these limits. */
 export function decideMonitoring(
   input: MonitoringInput,
 ): MonitoringDecision | null {
   resolveRequests(input);
+  resumeReturningPlans(input);
   const { now, state, supports } = input;
   if (
     !input.entitled ||
@@ -160,6 +187,8 @@ export function decideMonitoring(
       planIds: [setup.id],
     };
   if (state.outreachPaused) return null;
+  // Never talk into silence: after an opener and one last nudge, wait for the person.
+  if (unansweredOutreaches(input.messages) >= MAX_UNANSWERED_OUTREACHES) return null;
   // Allow an in-flight/user-initiated conversation to finish before a proactive review.
   if (recentConversation) return null;
 

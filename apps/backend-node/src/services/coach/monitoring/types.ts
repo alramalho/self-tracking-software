@@ -1,4 +1,5 @@
 import type {
+  CoachAgenda,
   PlanSupport,
   CoachMonitoringState,
   PracticeSession,
@@ -59,6 +60,8 @@ export interface MonitoringDecision {
 }
 export interface MonitoringGenerated {
   draftMessages: CoachDraftMessage[];
+  /** Held back from the opener; the chat coach shares it once the person replies. */
+  agenda?: CoachAgenda;
   healthDataAccess?: CoachHealthAccess[];
   skipped?: boolean;
   usage?: { model: string; inputTokens: number; outputTokens: number; costUsd?: number };

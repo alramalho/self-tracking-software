@@ -45,7 +45,7 @@ describe("coach model defaults", () => {
 });
 
 describe("recurrent coach assessment prompt", () => {
-  it("makes the weekly outreach a combined recap and plan", () => {
+  it("makes the weekly outreach a short opener, holding the recap for the reply", () => {
     const prompt = buildRecurrentCoachAssessmentPrompt({
       interventionType: "WEEK_RECAP",
       reason: "Weekly review is due.",
@@ -53,10 +53,10 @@ describe("recurrent coach assessment prompt", () => {
     });
     const normalizedPrompt = prompt.replace(/\s+/g, " ");
 
-    expect(normalizedPrompt).toContain("one proactive coach message for the week");
-    expect(normalizedPrompt).toContain("A factual recap of last week's result");
-    expect(normalizedPrompt).toContain("A concise plan for this week");
-    expect(normalizedPrompt).toContain("Always produce exactly one message");
+    expect(normalizedPrompt).toContain("Send exactly one opener");
+    expect(normalizedPrompt).toContain("Do not recap each plan, list sessions, give numbers");
+    expect(normalizedPrompt).toContain("once the user replies");
+    expect(normalizedPrompt).toContain("ending with a question");
   });
 
   it("makes routine logs silent and forbids generic retrospective questions", () => {

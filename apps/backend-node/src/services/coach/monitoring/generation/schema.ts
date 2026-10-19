@@ -15,7 +15,7 @@ export const newSessionSchema = z.object({
 });
 
 export const setupOutputSchema = z.object({
-  message: z.string().min(1).max(1200),
+  message: z.string().min(1).max(600),
   requiresReply: z.boolean(),
   sessions: z.array(newSessionSchema).max(7),
   alsoTrack: z
@@ -32,9 +32,26 @@ export const setupOutputSchema = z.object({
     ),
 });
 
+// A text from a person, not a report: one line that asks whether they're around.
+export const OPENER_MAX = 180;
+const opener = z
+  .string()
+  .min(1)
+  .max(OPENER_MAX)
+  .describe(
+    "One short line (max ~15 words) that opens a conversation and ends with a question. No stats, no plan list, no advice.",
+  );
+
 export const followUpOutputSchema = z.object({
-  message: z.string().min(1).max(1200).nullable(),
-  requiresReply: z.boolean(),
+  opener: opener.nullable(),
+  agenda: z
+    .string()
+    .min(1)
+    .max(2000)
+    .nullable()
+    .describe(
+      "Private notes for yourself, never shown as-is: what happened per plan, what you suspect, what you want to ask, and what you'd change. You'll share it one step at a time once they reply.",
+    ),
   modifications: z
     .array(
       z.object({
@@ -78,7 +95,7 @@ export const followUpOutputSchema = z.object({
 });
 
 export const lapseOutputSchema = z.object({
-  message: z.string().min(1).max(800),
+  message: z.string().min(1).max(220),
 });
 export type SetupOutput = z.infer<typeof setupOutputSchema>;
 export type FollowUpOutput = z.infer<typeof followUpOutputSchema>;

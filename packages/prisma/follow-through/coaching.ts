@@ -4,6 +4,19 @@ export interface PlanCoaching {
   followUps: boolean;
   dataAccess: { workouts: boolean; sleep: boolean };
 }
+/** A plan change the coach prepared but holds back until the person is in the conversation. */
+export interface HeldPlanProposal {
+  planId: string;
+  planGoal: string;
+  planEmoji: string | null;
+  description: string;
+  patch: unknown;
+}
+/** What a proactive opener is about. Shared progressively once the person replies; never posted as-is. */
+export interface CoachAgenda {
+  briefing: string;
+  proposals: HeldPlanProposal[];
+}
 export interface CoachRequest {
   id: string;
   planIds: string[];
@@ -17,6 +30,7 @@ export interface CoachRequest {
   closedAt?: string;
   entryId?: string;
   sessionId?: string;
+  agenda?: CoachAgenda;
 }
 export interface CoachMonitoringState {
   requests: CoachRequest[];

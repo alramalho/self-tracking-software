@@ -1,3 +1,4 @@
+import type { CoachAgenda } from "@tsw/prisma/follow-through";
 import type { ActiveCoachPlan, CoachDraftMessage } from "../../types";
 import {
   PlanProposalPatchSchema,
@@ -80,18 +81,20 @@ export function setupMessage(
   };
 }
 
-export function followUpMessage(
+/**
+ * A review knocks first: only the opener is posted. What happened and any plan
+ * changes stay on the agenda until the person replies.
+ */
+export function followUpOpening(
   plans: ActiveCoachPlan[],
   output: FollowUpOutput,
-): CoachDraftMessage | null {
+): { draft: CoachDraftMessage; agenda: CoachAgenda } | null {
   if (
-    output.message === null &&
-    (output.modifications.length ||
-      output.archives.length ||
-      output.requiresReply)
+    output.opener === null &&
+    (output.modifications.length || output.archives.length)
   )
-    throw new Error("A plan change or question needs a message");
-  if (output.message === null) return null;
+    throw new Error("A plan change needs an opener");
+  if (output.opener === null) return null;
   const seen = new Set<string>();
   const modifications = output.modifications.map((change) => {
     const plan = plans.find((item) => item.id === change.planId);
@@ -155,11 +158,14 @@ export function followUpMessage(
     seen.add(change.planId);
     return proposal(plan, change.description, { archive: true });
   });
-  const planProposals = [...modifications, ...archives];
   return {
-    content: output.message,
-    requiresReply: output.requiresReply,
-    ...(planProposals.length ? { planProposals } : {}),
+    draft: { content: output.opener, requiresReply: true },
+    agenda: {
+      briefing: output.agenda ?? output.opener,
+      proposals: [...modifications, ...archives].map(
+        ({ status: _status, ...held }) => held,
+      ),
+    },
   };
 }
 

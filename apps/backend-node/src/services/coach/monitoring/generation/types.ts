@@ -13,6 +13,8 @@ export interface ScheduledCoachInput {
   conversationHistory: CoachConversationMessage[];
   /** Plan session ids the coach asked about and got no reply (training plans only). */
   assumedMissedSessionIds: string[];
+  /** Coach outreaches since the person last wrote. */
+  unansweredOutreaches: number;
 }
 
 export interface ScheduledCoachGenerator {

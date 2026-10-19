@@ -12,13 +12,17 @@ The worker wakes hourly at minute 7. Reviews use the saved local weekday/time wi
 
 The worker combines reviews due together, allows at most one unsolicited contact per day, and waits after recent conversation. Extra contact after explicit difficult activity feedback is limited to once a week and the chosen review hour. Scheduled session checks require both the existing check-in setting and follow-up permission; flexible plans have no invented missed weekdays.
 
+Proactive reviews knock first, like a coach texting. The generator returns a one-line opener (about 15 words, ending in a question) and a private agenda: what happened, what it suspects, and any plan changes. Only the opener is posted, and the push shows that same line. The agenda and its prepared changes are stored on the request (`CoachRequest.agenda`). Once the person replies, the chat coach unfolds them one step at a time: what it noticed, then what's going on, then the change (`shareHeldProposal`, refused if the plan has moved since). The legacy Monday recap in `coach/assessment` follows the same opener-only rule.
+
+The coach never talks into silence. After two unanswered outreaches (from either system), unsolicited contact stops until the person writes; the legacy assessment waits after one (`coach/monitoring/silence.ts`). Writing or logging the plan again also reopens contact that paused after silence.
+
 An unanswered question can get one notification reminder after three days, at the chosen hour. It opens the original message. Reading a message never counts as replying. A reply in the plan's thread, or in the unfiltered "All" thread, resolves the open request.
 
 What silence means depends on the plan's role (`resolveRequests` in `coach/monitoring/model.ts`):
 
 - **Training:** an after-session check (on by default for training plans) with no reply and no log for a day marks that session `SKIPPED` with `assumedMissed`. The next review adapts instead of stacking load. A late log still turns it into `DONE`.
 - **Consistency, with follow-ups on:** seven days after the reminder, the plan goes on `lapsePlanIds`. At the next review hour the coach sends one short message that uses the person's own `goalReason` and attaches an archive proposal. Logging the habit again cancels or resolves it. If that message is ignored for seven days, contact pauses.
-- **Everything else:** seven days after the reminder (or after the question, with reminders off), contact pauses for those plans. Nothing is archived without the person accepting a proposal. Resuming contact is explicit.
+- **Everything else:** seven days after the reminder (or after the question, with reminders off), contact pauses for those plans. Nothing is archived without the person accepting a proposal. Writing to the coach or logging the plan resumes contact.
 
 Concurrent workers claim a lease. Before saving a generated response, the service rereads plans, logs, agreements, conversation and account access. Changed information discards the response. Message/notification records are durable before a push is attempted. Push failure does not generate a duplicate message. A visible conversation suppresses its push.
 
