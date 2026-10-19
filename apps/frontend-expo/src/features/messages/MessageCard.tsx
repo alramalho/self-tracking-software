@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react-native";
 import { format } from "date-fns";
 import { IconButton } from "./IconButton";
 import { useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Flag, Pencil, ThumbsUp, ThumbsDown } from "lucide-react-native";
@@ -43,6 +43,8 @@ export function MessageCard({
 }: MessageProps) {
   const c = useColors();
   const client = useQueryClient();
+  // Coach replies read as the page itself; only people's messages get bubbles.
+  const unboxed = coach && !own;
   const [review, setReview] = useState<string>();
   const [actions, setActions] = useState(false);
   const [feedback, setFeedback] = useState(false);
@@ -120,8 +122,8 @@ export function MessageCard({
   return (
     <View
       style={{
-        alignSelf: own ? "flex-end" : "flex-start",
-        maxWidth: "100%",
+        alignSelf: unboxed ? "stretch" : own ? "flex-end" : "flex-start",
+        maxWidth: unboxed ? "100%" : "85%",
         minWidth: 80,
         gap: 6,
       }}
@@ -130,20 +132,26 @@ export function MessageCard({
         accessible={false}
         onPress={() => setActions((v) => !v)}
         onLongPress={onReport}
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderRadius: 24,
-          borderBottomRightRadius: own ? 0 : 24,
-          borderBottomLeftRadius: own ? 24 : 0,
-          backgroundColor: own
-            ? c.dark
-              ? "#383838"
-              : "#d8d8da"
-            : c.dark
-              ? "#232323"
-              : "#f3f4f5",
-        }}
+        style={
+          unboxed
+            ? { paddingHorizontal: 2 }
+            : {
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 20,
+                borderBottomRightRadius: own ? 6 : 20,
+                borderBottomLeftRadius: own ? 20 : 6,
+                borderWidth: c.dark ? 0 : StyleSheet.hairlineWidth,
+                borderColor: c.inputBorder,
+                backgroundColor: own
+                  ? c.dark
+                    ? "#323236"
+                    : "#ffffff"
+                  : c.dark
+                    ? "#26262a"
+                    : "#e9e9ec",
+              }
+        }
       >
         {!own && m.senderName && <Copy muted>{m.senderName}</Copy>}
         <Markdown message={coach && !own ? m : undefined}>
@@ -187,9 +195,9 @@ export function MessageCard({
         <Text
           style={{
             color: c.muted,
-            fontSize: 10,
-            textAlign: "right",
-            marginTop: 6,
+            fontSize: 11,
+            textAlign: unboxed ? "left" : "right",
+            marginTop: unboxed ? 4 : 2,
           }}
         >
           {new Date(m.createdAt).toLocaleTimeString([], {
