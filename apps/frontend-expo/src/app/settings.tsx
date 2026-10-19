@@ -41,7 +41,6 @@ import { api } from "@/data/api";
 import { pickPhotos, appendPhotos } from "@/native/photos";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { SettingsRow } from "@/features/settings/SettingsRow";
-import { ApiKeys } from "@/features/settings/ApiKeys";
 import { ColorPalettes, ThemeModes } from "@/features/settings/Appearance";
 import { SettingsCard } from "@/features/settings/SettingsCard";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
@@ -69,7 +68,6 @@ const titles: Record<SettingsView, string> = {
   integrations: "Integrations",
   coach: "Coach Profile",
   experience: "Preview onboarding",
-  apiKeys: "Bring your own teacher",
   appleHealth: "Apple Health",
   garmin: "Garmin Connect",
   blocked: "Blocked people",
@@ -127,14 +125,14 @@ export default function Settings() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
-              view === "apiKeys" || view === "appleHealth" || view === "garmin"
+              view === "appleHealth" || view === "garmin"
                 ? "Back to Integrations"
                 : "Back to Settings"
             }
             disabled={profileBusy || theme.isPending}
             onPress={() => {
               setView(
-                view === "apiKeys" || view === "appleHealth" || view === "garmin"
+                view === "appleHealth" || view === "garmin"
                   ? "integrations"
                   : "main",
               );
@@ -151,7 +149,7 @@ export default function Settings() {
           >
             <ChevronLeft size={18} color={c.muted} />
             <Text style={{ fontSize: 14, color: c.muted }}>
-              {view === "apiKeys" || view === "appleHealth" || view === "garmin"
+              {view === "appleHealth" || view === "garmin"
                 ? "Back to Integrations"
                 : "Back to Settings"}
             </Text>
@@ -254,7 +252,7 @@ export default function Settings() {
             />
             <SettingsRow
               icon={KeyRound}
-              title="Integrations & API Keys"
+              title="Integrations"
               onPress={() => setView("integrations")}
             />
             <SettingsRow
@@ -424,15 +422,8 @@ export default function Settings() {
               onPress={() => setView("garmin")}
             />
             )}
-            <SettingsCard
-              icon={KeyRound}
-              title="API keys"
-              description="Connect Codex, Claude, or another MCP client."
-              onPress={() => setView("apiKeys")}
-            />
           </>
         )}
-        {view === "apiKeys" && <ApiKeys />}
         {view === "appleHealth" && <HealthContent showGarmin={false} />}
         {view === "garmin" && <GarminContent />}
         {view === "coach" && <CoachProfile />}

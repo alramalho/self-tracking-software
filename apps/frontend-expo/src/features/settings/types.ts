@@ -9,7 +9,6 @@ export type SettingsView =
   | "integrations"
   | "coach"
   | "experience"
-  | "apiKeys"
   | "appleHealth"
   | "garmin"
   | "blocked";
@@ -18,15 +17,6 @@ export interface SettingsRowProps {
   title: string;
   onPress: () => void;
   selected?: boolean;
-}
-export interface ApiKeySummary {
-  id: string;
-  label: string | null;
-  createdAt: string;
-  lastUsedAt: string | null;
-}
-export interface CreatedApiKey extends ApiKeySummary {
-  key: string;
 }
 export interface CoachDetails {
   title: string;

@@ -124,6 +124,13 @@ export function followThroughFixture(
     for (const r of support.monitoring?.requests ?? []) if (r.messageId === message.id) r.resolvedAt = new Date().toISOString();
     return message.nudge;
   }
+  // The Coach tab's master switch: pause or resume every coach reach-out.
+  if (path === "/follow-through/reach-outs" && method === "POST") {
+    support.pausedAt = body.enabled ? null : new Date().toISOString();
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring, outreachPaused: !body.enabled } as typeof support.monitoring;
+    if (body.enabled && support.monitoring) support.monitoring.pausedPlanIds = [];
+    return { ok: true };
+  }
   if (path === "/follow-through/coaching/presence") return { ok: true };
   if (path === "/follow-through/coaching/resume") {
     if (support.monitoring) support.monitoring.pausedPlanIds = support.monitoring.pausedPlanIds.filter(id => id !== body.planId);

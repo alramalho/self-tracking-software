@@ -3,12 +3,15 @@ import {
   Home,
   Target,
   Plus,
-  ChartNoAxesCombined,
   UserRound,
 } from "lucide-react-native";
+import { Image } from "react-native";
 import { useColors } from "@/components/ui";
+import { useCurrentUser } from "@/data/queries";
+import { coachTabIcon } from "@/features/coach/avatar";
 export default function WebTabs() {
   const c = useColors();
+  const strategist = useCurrentUser().data?.coachPersonality === "STRATEGIST";
   return (
     <Tabs
       screenOptions={{
@@ -28,7 +31,7 @@ export default function WebTabs() {
           ["index", "Home", Home],
           ["plans", "Plans", Target],
           ["add", "Add", Plus],
-          ["metrics", "Metrics", ChartNoAxesCombined],
+          ["coach", "Coach", null],
           ["profile", "Profile", UserRound],
         ] as const
       ).map(([name, title, Icon]) => (
@@ -38,9 +41,16 @@ export default function WebTabs() {
           options={{
             title,
             tabBarButtonTestID: `nav-${name === "index" ? "home" : name}`,
-            tabBarIcon: ({ color }) => (
-              <Icon color={color} size={24} strokeWidth={1.8} />
-            ),
+            tabBarIcon: ({ color, focused }) =>
+              Icon ? (
+                <Icon color={color} size={24} strokeWidth={1.8} />
+              ) : (
+                // The coach's own face, as on iPhone.
+                <Image
+                  source={coachTabIcon(strategist)}
+                  style={{ width: 26, height: 26, opacity: focused ? 1 : 0.7 }}
+                />
+              ),
           }}
         />
       ))}

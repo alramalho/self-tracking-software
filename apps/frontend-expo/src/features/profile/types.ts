@@ -41,3 +41,15 @@ export interface RankingsResponse {
     bestStreak: number;
   };
 }
+
+export interface PrivateCardProps {
+  emoji: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  children?: import("react").ReactNode;
+  testID?: string;
+}
+export interface SparklineProps {
+  values: number[];
+}

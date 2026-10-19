@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Text } from "@/components/typography/Text";
-import { Check, Plus, HeartPulse } from "lucide-react-native";
+import { Check, ChevronLeft, Plus, HeartPulse } from "lucide-react-native";
+import { goBack } from "@/core/navigation";
 import { format, subDays } from "date-fns";
 import {
   Button,
@@ -131,6 +132,7 @@ export default function MetricsScreen() {
     <Screen
       testID="metrics-screen"
       title="Metrics"
+      leading={<IconButton label="Back" icon={ChevronLeft} onPress={goBack} />}
       actions={
         <IconButton
           label="Manage health data"

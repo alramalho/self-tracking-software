@@ -442,7 +442,7 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
 
       {showGarmin && <GarminContent />}
 
-      <Button secondary onPress={() => router.push("/(tabs)/metrics")}>
+      <Button secondary onPress={() => router.push("/metrics")}>
         View sleep score
       </Button>
       {(health.enabled ||

@@ -1,21 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, Image, Pressable, View } from "react-native";
+import { AccessibilityInfo, Animated, Easing, Pressable, View } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { Flame, Sprout, Rocket, TriangleAlert } from "lucide-react-native";
 import { planPace, weekAtRisk } from "@tsw/prisma/follow-through/pace";
 import { useFollowThrough } from "@/features/follow-through/api";
-import { useCurrentUser } from "@/data/queries";
-import { coachIdentity } from "@/features/messages/coach";
 import { router } from "expo-router";
-import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format, subWeeks } from "date-fns";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Status, useColors } from "@/components/ui";
-import { PreviewButton, PreviewSheet, PreviewTouch } from "@/features/messages/entities/PreviewSheet";
-import { latestCoachChat } from "@/features/messages/service";
+import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format } from "date-fns";
+import { useColors } from "@/components/ui";
 import { dayKey } from "@/core/dates";
 import type { Plan, ActivityEntry } from "@/core/types";
-import type { CoachOpening, PlanPreviewProps, ReasonChipProps, StepsProps, WarningSheetProps } from "./types";
-import { MISS_REASONS, answeredMissedWeek, missMessage, missMessageStart, rememberMissAnswered } from "./miss-reasons";
+import type { PlanPreviewProps, StepsProps } from "./types";
+import { CoachItemDrawer } from "@/features/coach/inbox/CoachItemDrawer";
+import { alertItem, planAlert } from "@/features/coach/model";
 import { progressCircles, streakProgress } from "@/features/plans/streak-progress";
 import { PlanCircleFaces } from "./PlanCircleFaces";
 
@@ -165,6 +161,8 @@ function StateRing({ color, pulse }: { color: string; pulse: boolean }) {
 export function PlanPreview({ plan, entries, circle }: PlanPreviewProps) {
   const c = useColors();
   const coach = useCoachState(plan, entries);
+  const followThrough = useFollowThrough();
+  const alert = planAlert({ plan, entries, state: followThrough.data?.state });
   const [sheetOpen, setSheetOpen] = useState(false);
   const now = new Date();
   const week = plan.progress?.weeks?.find((week) =>
@@ -195,22 +193,6 @@ export function PlanPreview({ plan, entries, circle }: PlanPreviewProps) {
   const warning = coach.pace === "slipping" || weekIsAtRisk;
   // Last week was missed: the lost streak dot stays on the card all week (the sheet explains it).
   const missed = plan.progress?.achievement?.missedLastWeek ?? null;
-  const lastWeek = plan.progress?.weeks?.find((w) =>
-    isSameWeek(new Date(w.startDate), subWeeks(now, 1)),
-  );
-  // The server's own count of last week when it sends one, so the sheet and the streak agree.
-  const lastWeekTally =
-    missed?.done !== undefined && missed.target !== undefined
-      ? { done: missed.done, target: missed.target }
-      : lastWeek
-    ? {
-        done: new Set((lastWeek.completedActivities ?? []).map((e) => dayKey(e.datetime))).size,
-        target:
-          typeof lastWeek.plannedActivities === "number"
-            ? lastWeek.plannedActivities
-            : (lastWeek.plannedActivities?.length ?? 0),
-      }
-    : null;
   const lostStreak = !!missed && missed.streakBefore > missed.streakAfter;
   const openPlan = () =>
     router.push({ pathname: "/(tabs)/plans", params: { selectedPlan: plan.id } });
@@ -324,225 +306,9 @@ export function PlanPreview({ plan, entries, circle }: PlanPreviewProps) {
         </View>
       )}
     </Pressable>
-    {(warning || missed) && (
-      <WarningSheet
-        visible={sheetOpen}
-        plan={plan}
-        entries={entries}
-        slipping={coach.pace === "slipping"}
-        atRisk={weekIsAtRisk}
-        missed={missed}
-        lastWeek={lastWeekTally}
-        nudge={coach.nudge}
-        needed={weekTarget - count}
-        daysLeft={differenceInCalendarDays(endOfWeek(now), now) + 1}
-        onOpenPlan={() => {
-          setSheetOpen(false);
-          openPlan();
-        }}
-        onClose={() => setSheetOpen(false)}
-      />
+    {sheetOpen && alert && (
+      <CoachItemDrawer item={alertItem(alert)} onClose={() => setSheetOpen(false)} />
     )}
     </>
-  );
-}
-
-/** A one-tap answer to the coach's question. */
-function ReasonChip({ label, disabled, onPress }: ReasonChipProps) {
-  const c = useColors();
-  return (
-    <PreviewTouch
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={onPress}
-      style={{
-        minHeight: 40,
-        justifyContent: "center",
-        paddingHorizontal: 14,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: c.border,
-        backgroundColor: c.card,
-        opacity: disabled ? 0.45 : 1,
-      }}
-    >
-      <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>{label}</Text>
-    </PreviewTouch>
-  );
-}
-
-/** Explains a warning card, offers the one action that fixes it, and brings the coach in. */
-function WarningSheet({
-  visible,
-  plan,
-  entries,
-  slipping,
-  atRisk,
-  missed,
-  lastWeek,
-  nudge,
-  needed,
-  daysLeft,
-  onOpenPlan,
-  onClose,
-}: WarningSheetProps) {
-  const activity = plan.activities[0];
-  const logs = entries
-    .filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId))
-    .map((e) => new Date(e.datetime));
-  const last = logs.reduce((latest, d) => (d > latest ? d : latest), new Date(plan.createdAt));
-  const quietDays = differenceInCalendarDays(new Date(), last);
-  const logIt = () => {
-    onClose();
-    router.push({ pathname: "/(tabs)/add", params: activity ? { activityId: activity.id } : {} });
-  };
-  const openMessage = () => {
-    onClose();
-    router.push({
-      pathname: "/chat/[id]",
-      params: { id: nudge!.chatId!, planId: plan.id, messageId: nudge!.messageId!, type: "COACH" },
-    });
-  };
-  const hasMessage = !!(nudge?.chatId && nudge.messageId);
-  const c = useColors();
-  const client = useQueryClient();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
-  // Opens the coach conversation about this plan; a picked reason is sent straight away.
-  const talk = useMutation({
-    mutationFn: async ({ prompt, send }: CoachOpening) => {
-      const chat = await latestCoachChat();
-      await client.invalidateQueries({ queryKey: ["chats"] });
-      onClose();
-      router.push({
-        pathname: "/chat/[id]",
-        params: { id: chat.id, type: "COACH", planId: plan.id, ...(prompt ? { prompt } : {}), ...(send ? { send: "1" } : {}) },
-      });
-    },
-  });
-  const [answered, setAnswered] = useState(false);
-  useEffect(() => {
-    if (visible && missed) void answeredMissedWeek(plan.id).then(setAnswered);
-  }, [visible, missed, plan.id]);
-  const answer = (prompt: string, send: boolean) =>
-    talk.mutate({ prompt, send }, { onSuccess: () => void rememberMissAnswered(plan.id) });
-  // Only a missed last week, nothing to rescue yet this week: the sheet is the reckoning.
-  const onlyMissed = !slipping && !atRisk && !!missed;
-  const status = slipping ? "has gone quiet" : atRisk ? "is at risk this week" : "missed last week";
-  const title = `${activity?.emoji ?? plan.emoji ?? ""} ${plan.goal} ${status}`.trim();
-  const lostStreak = !!missed && missed.streakBefore > missed.streakAfter;
-  // The coach's one line: framed as the coach stepping in, not the app warning you.
-  const line = slipping
-    ? hasMessage
-      ? "I wrote you a short note about it."
-      : "One session is all it takes to get it moving again."
-    : atRisk
-      ? missed
-        ? "Last week got away from you. Let's not let this one go too, you've got this."
-        : needed === daysLeft
-          ? "Every remaining day counts now. One today keeps the week alive."
-          : "Still doable. Getting one in today keeps it comfortable."
-      : missed?.oneShortAgain && lostStreak
-        ? "One session short, two weeks running. Your streak held the first time, but it can't hold twice in a row, so this one cost a week. You're close: let's finish this one."
-      : missed && missed.inARow > 1
-        ? `That's ${missed.inARow} weeks in a row now, and each one costs a week of streak. One good week turns it around.`
-        : lostStreak
-          ? "Last week slipped by and cost you a week of streak. It happens. A fresh week just started, so let's make this one count."
-          : "Last week slipped by. It happens. Fresh week, fresh start: let's make this one count.";
-  const stats: [string, string][] = slipping
-    ? [[`${quietDays}`, quietDays === 1 ? "day without a log" : "days without a log"]]
-    : atRisk
-      ? [
-          [`${needed}`, needed === 1 ? "session left" : "sessions left"],
-          [`${daysLeft}`, daysLeft === 1 ? "day to go" : "days to go"],
-        ]
-      : [
-          ...(lastWeek && lastWeek.target > 0
-            ? [[`${lastWeek.done}/${lastWeek.target}`, "done last week"] as [string, string]]
-            : []),
-          // Coached, scheduled plans are judged by their sessions; the streak is for weekly habits.
-          ...(lostStreak && plan.outlineType === "TIMES_PER_WEEK"
-            ? [[`${missed!.streakBefore} → ${missed!.streakAfter}`, "streak after last week"] as [string, string]]
-            : missed && missed.inARow > 1
-              ? [[`${missed.inARow}`, "weeks missed in a row"] as [string, string]]
-              : []),
-        ];
-  const tone = onlyMissed ? RED : AMBER;
-  // A missed week gets one question, once; if the coach already wrote about it, that note answers first.
-  const askReason = !!missed && !answered && !(slipping && hasMessage);
-  // Otherwise the conversation opens with a forward-looking message, left for the user to send.
-  const opener = atRisk
-    ? `Help me fit the ${needed} ${needed === 1 ? "session" : "sessions"} left for "${plan.goal}" this week.`
-    : `I've gone quiet on "${plan.goal}". Help me get going again.`;
-  return (
-    // The app's native bottom sheet: sized to content, drag down or tap outside to close.
-    <PreviewSheet visible={visible} title={title} onClose={onClose}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 36 }}>
-        <Image source={coach.avatar} resizeMode="contain" style={{ width: 44, height: 44 }} />
-        <View>
-          <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>{coach.name}</Text>
-          <Text style={{ color: c.muted, fontSize: 12 }}>AI Coach</Text>
-        </View>
-      </View>
-      <Text style={{ color: c.text, fontSize: 20, fontWeight: "700" }}>{title}</Text>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        {stats.map(([number, label]) => (
-          <View
-            key={label}
-            style={{ flex: 1, backgroundColor: c.soft, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14 }}
-          >
-            <Text style={{ color: tone, fontSize: 30, fontWeight: "800", lineHeight: 34 }}>{number}</Text>
-            <Text style={{ color: c.muted, fontSize: 13 }}>{label}</Text>
-          </View>
-        ))}
-      </View>
-      {missed && !onlyMissed && (
-        <Text style={{ color: RED, fontSize: 13, fontWeight: "600" }}>
-          💔 Missed last week
-          {lostStreak && plan.outlineType === "TIMES_PER_WEEK"
-            ? ` · streak ${missed.streakBefore} → ${missed.streakAfter}`
-            : ""}
-        </Text>
-      )}
-      <Copy>{line}</Copy>
-      {askReason && (
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>What got in the way?</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {MISS_REASONS.map((reason) => (
-              <ReasonChip
-                key={reason.label}
-                label={reason.label}
-                disabled={talk.isPending}
-                onPress={() => answer(missMessage(plan.goal, reason.says), true)}
-              />
-            ))}
-            <ReasonChip
-              label="Something else"
-              disabled={talk.isPending}
-              onPress={() => answer(missMessageStart(plan.goal), false)}
-            />
-          </View>
-        </View>
-      )}
-      <Status error={talk.error} />
-      {slipping && hasMessage ? (
-        <PreviewButton label="Open coach message" onPress={openMessage} />
-      ) : (
-        <PreviewButton label={`Log ${activity?.title.toLowerCase() ?? "a session"}`} onPress={logIt} />
-      )}
-      {slipping && hasMessage ? (
-        <PreviewButton secondary label="Open plan" onPress={onOpenPlan} />
-      ) : (
-        !askReason && (
-          <PreviewButton
-            secondary
-            label={`Talk to ${coach.name}`}
-            disabled={talk.isPending}
-            onPress={() => talk.mutate({ prompt: missed ? undefined : opener })}
-          />
-        )
-      )}
-    </PreviewSheet>
   );
 }
