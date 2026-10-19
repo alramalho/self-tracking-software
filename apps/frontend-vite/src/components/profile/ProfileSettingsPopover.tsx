@@ -1,7 +1,6 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 import { IntegrationsSettings } from "@/components/profile/IntegrationsSettings";
-import { ApiKeysSettings } from "@/components/profile/integrations/ApiKeysSettings";
 import { AppleHealthIntegrationCard } from "@/health/apple/AppleHealthIntegrationCard";
 import { GarminIntegrationCard } from "@/health/garmin/GarminIntegrationCard";
 import { Button } from "@/components/ui/button";
@@ -76,7 +75,6 @@ export type ActiveView =
   | "integrations"
   | "appleHealth"
   | "garmin"
-  | "apiKeys"
   | "admin";
 
 // Define view depths for animation direction
@@ -89,7 +87,6 @@ const viewLevels: Record<ActiveView, number> = {
   integrations: 1,
   appleHealth: 2,
   garmin: 2,
-  apiKeys: 2,
   admin: 1,
 };
 
@@ -509,7 +506,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <IntegrationsSettings
                       onOpenAppleHealth={() => navigateTo("appleHealth")}
                       onOpenGarmin={() => navigateTo("garmin")}
-                      onOpenApiKeys={() => navigateTo("apiKeys")}
                     />
                   </div>
                 );
@@ -537,19 +533,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <ChevronLeft size={18} /> Back to Integrations
                     </Button>
                     <GarminIntegrationCard />
-                  </div>
-                );
-              case "apiKeys":
-                return (
-                  <div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => navigateTo("integrations")}
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      <ChevronLeft size={18} /> Back to Integrations
-                    </Button>
-                    <ApiKeysSettings />
                   </div>
                 );
               case "admin":
@@ -989,7 +972,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         onClick={() => navigateTo("integrations")}
                       >
                         <KeyRound size={28} />
-                        <span>Integrations & API Keys</span>
+                        <span>Integrations</span>
                       </Button>
 
                       <Button

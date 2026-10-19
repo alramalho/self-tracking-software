@@ -6,14 +6,14 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { type BaseLoweredThemeColor } from "@/utils/theme";
 import { Link, useLocation } from "@tanstack/react-router";
+import { coachFace } from "@/components/coach/face";
+import { useCoachInbox } from "@/components/coach/useCoachInbox";
 import {
-  Activity,
   Home,
   Loader2,
   Plus,
   Target,
-  User,
-  Users
+  User
 } from "lucide-react";
 import { type CSSProperties, useEffect, useState } from "react";
 
@@ -40,7 +40,8 @@ const BottomNav = () => {
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
-  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [isLoadingCoach, setIsLoadingCoach] = useState(false);
+  const coachPending = useCoachInbox().pendingCount;
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const { currentUser } = useCurrentUser();
   const userUsername = currentUser?.username;
@@ -59,7 +60,7 @@ const BottomNav = () => {
     setIsLoadingFeed(false);
     setIsLoadingPlans(false);
     setIsLoadingLog(false);
-    setIsLoadingInsights(false);
+    setIsLoadingCoach(false);
     setIsLoadingProfile(false);
   }, [pathname]);
 
@@ -244,15 +245,15 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            to="/insights/dashboard"
+            to="/coach"
             preload="intent"
-            data-testid="nav-metrics"
+            data-testid="nav-coach"
             className={cn(
-              "transition-all duration-200",
+              "relative transition-all duration-200",
               isDesktop
                 ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
-              isActiveRoute("/insights")
+              isActiveRoute("/coach")
                 ? cn(
                     activeThemeClass,
                     isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
@@ -260,19 +261,32 @@ const BottomNav = () => {
                 : "text-muted-foreground hover:text-foreground"
             )}
             onClick={(e) => {
-              if (pathname.startsWith("/insights")) {
+              if (pathname.startsWith("/coach")) {
                 e.preventDefault();
                 scrollToTop();
               } else {
-                setIsLoadingInsights(true);
+                setIsLoadingCoach(true);
               }
             }}
           >
-            <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingInsights ? (
+            <div className={cn("relative", isDesktop ? "mr-3" : "")}>
+              {isLoadingCoach ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <Activity size={24} strokeWidth={2.5} />
+                // The coach's own face, as on iPhone.
+                <img
+                  src={coachFace(currentUser?.coachPersonality)}
+                  alt=""
+                  className={cn("h-7 w-7", !isActiveRoute("/coach") && "opacity-80")}
+                />
+              )}
+              {coachPending > 0 && (
+                <span
+                  data-testid="nav-coach-count"
+                  className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+                >
+                  {coachPending}
+                </span>
               )}
             </div>
             <span className={cn(
@@ -280,9 +294,9 @@ const BottomNav = () => {
               isDesktop
                 ? "text-sm"
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/insights") ? "hidden" : ""
+              !isDesktop && !isActiveRoute("/coach") ? "hidden" : ""
             )}>
-              Metrics
+              Coach
             </span>
           </Link>
 

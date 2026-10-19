@@ -10,6 +10,13 @@ import {
 import type { ActivityEntry } from "@tsw/prisma";
 import type { PlanProgressData } from "@tsw/prisma/types";
 import { CalendarDays, Flame, Sprout, Rocket } from "lucide-react";
+import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
+import { alertItem, planAlert } from "@tsw/prisma/follow-through/coach-inbox";
+import type { Metric } from "@tsw/prisma";
+import { CoachItemDrawer } from "@/components/coach/CoachItemDrawer";
+import { useFollowThrough } from "@/components/coach/useCoaching";
+import type { CoachAttentionItem } from "@/contexts/ai/types";
 import { HomeCardShell } from "./HomeCardShell";
 
 const HABIT_WEEKS = 4;
@@ -33,6 +40,10 @@ const getPlannedActivityCount = (
 
 export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
   const navigate = useNavigate();
+  const followThrough = useFollowThrough();
+  const [drawer, setDrawer] = useState(false);
+  // Gone quiet, at risk or missed last week: the same rules and drawer as the Coach tab.
+  const alert = planAlert({ plan, entries: activityEntries ?? [], state: followThrough.data?.state });
 
   const { weeks, achievement } = plan.progress;
 
@@ -89,13 +100,17 @@ export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
       : null;
 
   return (
+    <>
     <HomeCardShell
-      onClick={() => navigate({ to: `/plans?selectedPlan=${plan.id}` })}
-      className={statusLabel ? "ring-1 ring-amber-500/40" : "ring-0"}
+      onClick={() => (alert ? setDrawer(true) : navigate({ to: `/plans?selectedPlan=${plan.id}` }))}
+      className={statusLabel || alert ? "ring-1 ring-amber-500/40" : "ring-0"}
     >
       <div>
         <div className="flex items-start justify-between gap-2">
           <span className="text-2xl">{emoji}</span>
+          {alert && !statusLabel && (
+            <TriangleAlert aria-label="Needs you" className="h-4 w-4 text-amber-500" />
+          )}
           {statusLabel && (
             <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-500">
               {statusLabel}
@@ -190,5 +205,9 @@ export const PlanCard = ({ plan, activityEntries }: PlanCardProps) => {
         </div>
       )}
     </HomeCardShell>
+    {drawer && alert && (
+      <CoachItemDrawer item={alertItem<typeof plan, CoachAttentionItem, Metric>(alert)} onClose={() => setDrawer(false)} />
+    )}
+    </>
   );
 };

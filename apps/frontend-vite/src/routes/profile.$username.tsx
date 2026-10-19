@@ -12,6 +12,7 @@ import { SendMessagePopover } from "@/components/SendMessagePopover";
 import Divider from "@/components/Divider";
 import { FireAnimation, RocketAnimation, SeedAnimation } from "@/components/FireBadge";
 import MedalExplainerPopover from "@/components/MedalExplainerPopover";
+import { CheckinsCard } from "@/components/profile/CheckinsCard";
 import ProfileSettingsPopover, {
   type ActiveView,
 } from "@/components/profile/ProfileSettingsPopover";
@@ -28,7 +29,6 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useCurrentUser } from "@/contexts/users";
 import { getCoachAvatar } from "@/lib/coachPersonality";
-import { ShineBorder } from "@/components/ui/shine-border";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { type ActivityEntry } from "@tsw/prisma";
@@ -46,7 +46,6 @@ import {
   MessageCircle,
   Pencil,
   Rocket,
-  Sparkles,
   Sprout,
   UserPlus,
   UserX,
@@ -916,34 +915,8 @@ function ProfilePage() {
               </div>
             )}
 
-            {/* Year Wrapped Card - only for admins */}
-            {isOwnProfile && (
-              <Link to="/wrapped" className="block w-full mt-3">
-                <div className="relative rounded-2xl overflow-hidden">
-                  <ShineBorder
-                    shineColor={["#f97316", "#ec4899", "#8b5cf6", "#06b6d4"]}
-                    borderWidth={2}
-                    duration={4}
-                    className="rounded-2xl"
-                  />
-                  <div className="relative bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-amber-500" />
-                      <span
-                        className="text-xl tracking-wide"
-                        style={{
-                          fontFamily: 'var(--font-zalando-expanded-black)',
-                          fontStyle: 'italic'
-                        }}
-                      >
-                        Your 2025 wrapped
-                      </span>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                </div>
-              </Link>
-            )}
+            {/* Only on your own profile: what you report. Replaces the wrapped card, as on iPhone. */}
+            {isOwnProfile && <CheckinsCard />}
           </div>
         </AnimatedSection>
 

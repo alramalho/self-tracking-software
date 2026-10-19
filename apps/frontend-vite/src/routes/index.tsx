@@ -11,7 +11,6 @@ import { CoachOnboardingPopover } from "@/components/CoachOnboardingPopover";
 import { HomeCardGrid } from "@/components/home-cards/HomeCardGrid";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
-import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import Notifications from "@/components/Notifications";
 import { PendingPlanBanner } from "@/components/PendingPlanBanner";
 import TimelineRenderer from "@/components/TimelineRenderer";
@@ -123,7 +122,6 @@ function HomePage() {
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [isMetricsPopoverOpen, setIsMetricsPopoverOpen] = useState(false);
   const [isClientsCollapsed, setIsClientsCollapsed] = useLocalStorage<boolean>(
     "clients-section-collapsed",
     false
@@ -444,7 +442,7 @@ function HomePage() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.075}>
-            <HomeCardGrid onOpenMetricsLog={() => setIsMetricsPopoverOpen(true)} />
+            <HomeCardGrid />
           </AnimatedSection>
 
           {/* My Clients Section - Only shown for coaches */}
@@ -547,12 +545,6 @@ function HomePage() {
       >
         <Notifications onClose={handleNotificationsClose} />
       </AppleLikePopover>
-
-      {/* Metrics Log Popover */}
-      <MetricsLogPopover
-        open={isMetricsPopoverOpen}
-        onClose={() => setIsMetricsPopoverOpen(false)}
-      />
 
       <CoachOnboardingPopover
         open={shouldShowCoachOnboarding}

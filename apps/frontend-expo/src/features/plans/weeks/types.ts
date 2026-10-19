@@ -3,18 +3,14 @@ import type {
   PlanWeekFlexibleCell,
   PlanWeekScheduledSession,
 } from "@tsw/prisma/plan-week";
+import type { PlanDayCells } from "@tsw/prisma/follow-through/coach-inbox";
 import type { ActivityEntry, Plan, PlanSession } from "@/core/types";
 
-export interface PlanDay {
-  key: string;
-  isToday: boolean;
-  isPast: boolean;
-  /** Any of the plan's activities was logged that day. */
-  logged: boolean;
-  done: PlanWeekCompletedCell[];
-  scheduled: (PlanWeekScheduledSession & Pick<PlanSession, "title" | "targets">)[];
-  flexible: PlanWeekFlexibleCell[];
-}
+export type PlanDay = PlanDayCells<
+  PlanWeekScheduledSession & Pick<PlanSession, "title" | "targets">,
+  PlanWeekFlexibleCell,
+  PlanWeekCompletedCell
+>;
 
 export interface PlanWeeksProps {
   plan: Plan;
