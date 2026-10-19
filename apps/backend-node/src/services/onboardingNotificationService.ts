@@ -5,16 +5,13 @@ import { prisma } from "../utils/prisma";
 import { TelegramService } from "./telegramService";
 import type {
   OnboardingCompletionPlan,
-  OnboardingProgressActivity,
   OnboardingProgressPlan,
   OnboardingProgressSnapshot,
 } from "./onboardingNotificationTypes";
 
+// Telegram reaches the operator: usernames, IDs, steps and counts only, never
+// emails or what people wrote (goals, reasons, notes, activity names).
 const TELEGRAM_MESSAGE_LIMIT = 3900;
-const PLAN_NOTES_SUMMARY_LIMIT = 450;
-const ACTIVITY_LIST_LIMIT = 12;
-const SESSION_PREVIEW_LIMIT = 4;
-const SELECTION_TEXT_LIMIT = 220;
 
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
@@ -23,9 +20,14 @@ function truncate(value: string, maxLength: number) {
 
 function describeError(error: unknown) {
   if (error instanceof Error) {
+    // Stack frames only, so the message is not repeated.
+    const frames = error.stack
+      ?.split("\n")
+      .filter((line) => line.trim().startsWith("at "))
+      .join("\n");
     return {
       message: `${error.name}: ${error.message}`,
-      stack: error.stack || null,
+      stack: frames || null,
     };
   }
 
@@ -35,9 +37,9 @@ function describeError(error: unknown) {
   };
 }
 
-function formatUser(user: Pick<User, "id" | "username" | "email" | "createdAt" | "lastActiveAt">) {
+function formatUser(user: Pick<User, "id" | "username" | "createdAt" | "lastActiveAt">) {
   return [
-    `User: ${user.username || "unknown"} (${user.email})`,
+    `User: ${user.username || "unknown"}`,
     `User ID: ${user.id}`,
     `Created: ${user.createdAt.toISOString()}`,
     `Last active: ${user.lastActiveAt?.toISOString() || "unknown"}`,
@@ -48,19 +50,15 @@ function formatDate(value: Date | null) {
   return value?.toISOString().slice(0, 10) || "not set";
 }
 
-function compactText(value: string | null | undefined, maxLength: number) {
-  if (!value) return null;
-
-  const compacted = value.replace(/\s+/g, " ").trim();
-  if (!compacted) return null;
-
-  return truncate(compacted, maxLength);
-}
-
 function formatNullable(value: string | number | boolean | null | undefined) {
   if (value === null || value === undefined || value === "") return "not selected";
   if (typeof value === "boolean") return value ? "yes" : "no";
   return String(value);
+}
+
+// Whether a free-text field was filled in, without its wording.
+function formatEntered(value: string | null | undefined) {
+  return value?.trim() ? "entered" : "not selected";
 }
 
 function formatStepLabel(stepId: string | null | undefined) {
@@ -83,52 +81,19 @@ function parseOnboardingProgressSnapshot(
   return value as OnboardingProgressSnapshot;
 }
 
-function formatOnboardingProgressActivity(activity: OnboardingProgressActivity) {
-  const label = compactText(
-    `${activity.emoji || ""} ${activity.title || "Untitled activity"}`.trim(),
-    90
-  );
-  const measure = compactText(activity.measure, 60);
-  return measure ? `${label} (${measure})` : label || "Untitled activity";
-}
-
-function formatOnboardingProgressActivities(
-  activities: OnboardingProgressActivity[] | null | undefined
-) {
-  if (!activities || activities.length === 0) return ["- none selected"];
-
-  const lines = activities
-    .slice(0, ACTIVITY_LIST_LIMIT)
-    .map((activity) => `- ${formatOnboardingProgressActivity(activity)}`);
-
-  const remainingCount = activities.length - lines.length;
-  if (remainingCount > 0) {
-    lines.push(`- +${remainingCount} more`);
-  }
-
-  return lines;
-}
-
 function formatOnboardingProgressPlan(
   label: string,
   plan: OnboardingProgressPlan | null | undefined
 ) {
   if (!plan) return [`${label}: not selected`];
 
-  const goal = compactText(
-    `${plan.emoji || ""} ${plan.goal || "Untitled plan"}`.trim(),
-    SELECTION_TEXT_LIMIT
-  );
-
   return [
-    `${label}: ${goal}`,
-    plan.goalReason
-      ? `  Reason: ${compactText(plan.goalReason, SELECTION_TEXT_LIMIT)}`
-      : null,
+    `${label}: ${plan.id || "not saved"}`,
     plan.outlineType ? `  Type: ${plan.outlineType}` : null,
     plan.timesPerWeek ? `  Frequency: ${plan.timesPerWeek}x/week` : null,
     plan.estimatedWeeks ? `  Estimated weeks: ${plan.estimatedWeeks}` : null,
     plan.coachId ? `  Coach ID: ${plan.coachId}` : null,
+    `  Activities: ${plan.activities?.length || 0}`,
     typeof plan.sessionsCount === "number"
       ? `  Sessions generated: ${plan.sessionsCount}`
       : null,
@@ -139,12 +104,9 @@ function formatOnboardingCoachSelection(
   selections: NonNullable<OnboardingProgressSnapshot["selections"]>
 ) {
   if (selections.selectedCoach) {
-    return [
-      selections.selectedCoach.name || selections.selectedCoach.username,
-      selections.selectedCoach.title,
-    ]
-      .filter(Boolean)
-      .join(" - ");
+    return `coach ${
+      selections.selectedCoach.username || selections.selectedCoach.id || "unknown"
+    }`;
   }
 
   if (selections.wantsCoaching === true) {
@@ -204,32 +166,18 @@ function formatOnboardingProgress(
       : null,
     "",
     "Selections:",
-    `Goal: ${compactText(
-      `${selections.planEmoji || ""} ${selections.planGoal || ""}`.trim(),
-      SELECTION_TEXT_LIMIT
-    ) || "not selected"}`,
-    `Goal reason: ${
-      compactText(selections.planGoalReason, SELECTION_TEXT_LIMIT) ||
-      "not selected"
-    }`,
-    selections.planCoachNotes
-      ? `Reason notes: ${compactText(selections.planCoachNotes, SELECTION_TEXT_LIMIT)}`
-      : null,
+    `Goal: ${formatEntered(selections.planGoal)}`,
+    `Goal reason: ${formatEntered(selections.planGoalReason)}`,
+    `Starting level: ${formatEntered(selections.planProgress)}`,
     `Frequency: ${formatNullable(selections.planTimesPerWeek)}${
       selections.planTimesPerWeek ? "x/week" : ""
-    }`,
-    `Starting level: ${
-      compactText(selections.planProgress, SELECTION_TEXT_LIMIT) ||
-      "not selected"
     }`,
     `Plan type: ${formatNullable(selections.planType)}`,
     `Wants coaching: ${formatNullable(selections.wantsCoaching)}`,
     `Coach: ${formatOnboardingCoachSelection(selections)}`,
     `Push granted: ${formatNullable(selections.isPushGranted)}`,
     `Community partner: ${formatNullable(selections.partnerType)}`,
-    "",
-    `Selected activities (${selections.planActivities?.length || 0}):`,
-    ...formatOnboardingProgressActivities(selections.planActivities),
+    `Selected activities: ${selections.planActivities?.length || 0}`,
     "",
     ...generatedPlanLines,
     ...formatOnboardingProgressPlan("Selected plan", selections.selectedPlan),
@@ -251,63 +199,22 @@ function describePlanCadence(plan: OnboardingCompletionPlan) {
   return `${plan.sessions.length} scheduled sessions from ${formatDate(firstSession.date)} to ${formatDate(lastSession.date)}`;
 }
 
-function formatPlanActivities(plan: OnboardingCompletionPlan) {
-  const activityLines = plan.activities
-    .slice(0, ACTIVITY_LIST_LIMIT)
-    .map((activity) => {
-      const measure = compactText(activity.measure, 80);
-      const label = `${activity.emoji || ""} ${activity.title}`.trim();
-      return measure ? `- ${label} (${measure})` : `- ${label}`;
-    });
-
-  const remainingCount = plan.activities.length - activityLines.length;
-  if (remainingCount > 0) {
-    activityLines.push(`- +${remainingCount} more`);
-  }
-
-  return activityLines.length > 0 ? activityLines : ["- none found"];
-}
-
-function formatSessionPreview(plan: OnboardingCompletionPlan) {
-  if (plan.sessions.length === 0) return [];
-
-  return [
-    `First sessions: ${plan.sessions
-      .slice(0, SESSION_PREVIEW_LIMIT)
-      .map((session) => {
-        const label =
-          `${formatDate(session.date)} ${session.activity.emoji || ""} ${session.activity.title}`.trim();
-        return session.quantity
-          ? `${label} - ${session.quantity} ${session.activity.measure}`
-          : label;
-      })
-      .join("; ")}${plan.sessions.length > SESSION_PREVIEW_LIMIT ? "; ..." : ""}`,
-  ];
-}
-
 function formatPlanSummary(plan: OnboardingCompletionPlan | null) {
   if (!plan) {
     return ["", "Plan created:", "No non-deleted plan found for this user."];
   }
 
-  const goal = `${plan.emoji || ""} ${plan.goal}`.trim();
-  const goalReason = compactText(plan.goalReason, PLAN_NOTES_SUMMARY_LIMIT);
-  const notes = compactText(plan.notes, PLAN_NOTES_SUMMARY_LIMIT);
-
   return [
     "",
     "Plan created:",
-    `Goal: ${goal}`,
-    goalReason ? `Reason: ${goalReason}` : null,
+    `Plan ID: ${plan.id}`,
+    plan.orientation ? `Orientation: ${plan.orientation}` : null,
     `Cadence: ${describePlanCadence(plan)}`,
     `Finishing date: ${formatDate(plan.finishingDate)}`,
     plan.estimatedWeeks ? `Estimated weeks: ${plan.estimatedWeeks}` : null,
     plan.coachId ? `Coach ID: ${plan.coachId}` : null,
-    notes ? `Notes: ${notes}` : null,
-    ...formatSessionPreview(plan),
-    "",
-    `Included activities (${plan.activities.length}):`,
-    ...formatPlanActivities(plan),
+    `Activities: ${plan.activities.length}`,
+    `Sessions: ${plan.sessions.length}`,
   ].filter((line): line is string => line !== null);
 }
 
@@ -394,8 +301,9 @@ class OnboardingNotificationService {
 
     try {
       const { message, stack } = describeError(args.error);
-      const requestBody = args.requestBody
-        ? truncate(JSON.stringify(args.requestBody, null, 2), 1100)
+      // Field names only: the body holds goals, reasons and notes.
+      const requestFields = args.requestBody
+        ? Object.keys(args.requestBody).join(", ") || "none"
         : "not captured";
 
       const report = [
@@ -406,8 +314,7 @@ class OnboardingNotificationService {
         args.statusCode ? `Status: ${args.statusCode}` : null,
         `Time: ${new Date().toISOString()}`,
         "",
-        "Request:",
-        requestBody,
+        `Request fields: ${requestFields}`,
         "",
         "Error:",
         message,
@@ -477,7 +384,7 @@ class OnboardingNotificationService {
           )
         );
 
-        notified.push(user.username || user.email);
+        notified.push(user.username || user.id);
       } catch (error) {
         logger.error(`Failed to process inactive onboarding user ${user.id}:`, error);
       }

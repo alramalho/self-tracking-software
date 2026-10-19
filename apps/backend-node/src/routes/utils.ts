@@ -175,7 +175,7 @@ router.get(
         }
       }
 
-      logger.info(`Fetched OG data for ${url}`);
+      logger.info(`Fetched OG data for ${new URL(url).hostname}`);
 
       res.json(ogData);
     } catch (error) {

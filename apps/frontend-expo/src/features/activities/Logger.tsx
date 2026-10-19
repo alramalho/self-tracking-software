@@ -23,6 +23,8 @@ import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
 import { MetricLogger } from "../metrics/MetricLogger";
 import type { FriendResult, LoggerProps, LogStep } from "./types";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests } from "@/features/access/model";
 export function Logger({ activity, initialDate, initialQuantity, onLogged, onClose }: LoggerProps) {
   const client = useQueryClient();
   const offline = useOfflineLogs();
@@ -39,6 +41,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const [picking, setPicking] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>();
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const access = useAccessChecklist();
   const [error, setError] = useState<unknown>();
   const [result, setResult] = useState<LogActivityResult>();
   const [queuedError, setQueuedError] = useState<string>();
@@ -121,6 +124,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   }
   async function getLocation() {
     try {
+      await access.ask(accessRequests.logLocation());
       const p = await Location.requestForegroundPermissionsAsync();
       if (!p.granted)
         throw new Error(
@@ -227,6 +231,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           <Button secondary onPress={() => void getLocation()}>
             {location ? "Location added" : "Add location"}
           </Button>
+          {access.sheet}
         </PhotoStep>
       )}
       {step === "shared" && (

@@ -130,7 +130,7 @@ async function saveSubscription(
     }
     telegramService.sendAlert(
       `🎉 *New PLUS subscription (Apple)*!\n\n` +
-        `User: ${updated.email}\n` +
+        `User: ${updated.username || "unknown"} (${updated.id})\n` +
         `Product: ${transaction.productId}\n` +
         `Environment: ${transaction.environment}\n` +
         `UTC Time: ${new Date().toISOString()}`

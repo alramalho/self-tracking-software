@@ -14,7 +14,7 @@ struct LoginView: View {
                     .padding(.top, 8)
 
                 SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.email, .fullName]
+                    request.requestedScopes = [.email]
                 } onCompletion: { result in
                     handleAppleSignIn(result)
                 }
@@ -54,10 +54,12 @@ struct LoginView: View {
             errorMessage = nil
 
             Task {
-                let success = await authManager.handleAppleSignIn(identityToken: identityToken)
+                let result = await authManager.handleAppleSignIn(identityToken: identityToken)
                 isSigningIn = false
-                if !success {
-                    errorMessage = "Sign in failed. Try again."
+                switch result {
+                case .signedIn: break
+                case .noAccount: errorMessage = "Create your account in tracking.so on your iPhone first."
+                case .failed: errorMessage = "Sign in failed. Try again."
                 }
             }
 

@@ -4,7 +4,10 @@ import { router } from "expo-router";
 import { Text } from "@/components/typography/Text";
 import { Button, Copy, Field, Status, useColors } from "@/components/ui";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
-import { useAction } from "@/data/queries";
+import { useAction, useCurrentUser } from "@/data/queries";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests } from "@/features/access/model";
+import { coachIdentity } from "@/features/messages/coach";
 import { api } from "@/data/api";
 import { isFlexiblePlan } from "../model";
 import { Choice, DaysInput, TimeInput, days, validTime } from "./Inputs";
@@ -45,8 +48,15 @@ export function AssistanceSheet({
     save.reset();
     setStep(s);
   };
-  const updatePrefs = (patch: Partial<typeof prefs>) =>
+  const access = useAccessChecklist();
+  const coach = coachIdentity(useCurrentUser().data?.coachPersonality).name;
+  const updatePrefs = (patch: Partial<typeof prefs>) => {
     setDraft({ ...draft, preferences: { ...prefs, ...patch } });
+    // Reminders, reviews and check-ins arrive as notifications: ask as one turns on.
+    if (patch.reminder) void access.ask(accessRequests.reminders());
+    else if (patch.weeklyReview || patch.checkIn)
+      void access.ask(accessRequests.coach(coach, false));
+  };
   if (control === "schedule") {
     icon = "📅";
     if (prescribed) {
@@ -572,6 +582,7 @@ export function AssistanceSheet({
           Back
         </Button>
       )}
+      {access.sheet}
     </LoggingDrawer>
   );
 }

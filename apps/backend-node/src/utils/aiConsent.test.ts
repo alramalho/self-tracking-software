@@ -10,14 +10,14 @@ afterEach(() => {
 });
 
 describe("hasAiConsent", () => {
-  it("allows everyone while the flag is off, so older app builds keep working", () => {
+  it("allows everyone only when the emergency switch turns enforcement off", () => {
+    process.env.AI_CONSENT_ENFORCED = "false";
     expect(hasAiConsent({ aiConsentGrantedAt: null, aiConsentDeclinedAt: null })).toBe(true);
     expect(hasAiConsent({ aiConsentGrantedAt: null, aiConsentDeclinedAt: later })).toBe(true);
     expect(hasAiConsent(undefined)).toBe(true);
   });
 
-  it("with the flag on, allows only people whose latest choice was Allow", () => {
-    process.env.AI_CONSENT_ENFORCED = "true";
+  it("by default, allows only people whose latest choice was Allow", () => {
     expect(hasAiConsent({ aiConsentGrantedAt: null, aiConsentDeclinedAt: null })).toBe(false);
     expect(hasAiConsent(undefined)).toBe(false);
     expect(hasAiConsent({ aiConsentGrantedAt: earlier, aiConsentDeclinedAt: null })).toBe(true);
@@ -29,7 +29,6 @@ describe("hasAiConsent", () => {
   });
 
   it("stops AI calls made while serving someone who has not allowed AI", () => {
-    process.env.AI_CONSENT_ENFORCED = "true";
     const asUser = (user: any) => requestContext.run({ user }, assertAiConsent);
     expect(() => asUser({ aiConsentGrantedAt: null, aiConsentDeclinedAt: null })).toThrow(
       "Turn on AI features in Settings to use this.",

@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
-import { useApiWithAuth } from "@/lib/api";
+import { askAiConsent, useApiWithAuth } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { aiAllowed } from "@/components/ai-consent/AiConsentDialog";
+import type { AiConsentFields } from "@/components/ai-consent/types";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
@@ -32,6 +35,7 @@ import {
   Smile,
   SquareArrowUp,
   Trash2,
+  Sparkles,
   UserPen,
   UserPlus,
 } from "lucide-react";
@@ -129,6 +133,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const navigate = useNavigate();
   const { setDemoAchievementType } = useDemoAchievement();
   const api = useApiWithAuth();
+  const queryClient = useQueryClient();
   const [triggeringNotification, setTriggeringNotification] = useState<
     string | null
   >(null);
@@ -928,6 +933,28 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <Switch
                             checked={isPushGranted}
                             onCheckedChange={handleNotificationChange}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            AI features
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Coach, plan setup, voice logs and dictation
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Sparkles size={20} className="text-muted-foreground" />
+                          <Switch
+                            checked={aiAllowed(currentUser as AiConsentFields | undefined)}
+                            onCheckedChange={async (on) => {
+                              // Turning on shows what is shared and with whom first.
+                              if (on) return askAiConsent();
+                              await api.put("/users/ai-consent", { granted: false });
+                              await queryClient.refetchQueries({ queryKey: ["current-user"] });
+                            }}
                           />
                         </div>
                       </div>

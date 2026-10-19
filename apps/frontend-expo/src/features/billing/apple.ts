@@ -31,6 +31,11 @@ export const hasAppleSubscription = (user?: User) =>
   (user?.appleSubscriptionStatus === "active" || user?.appleSubscriptionStatus === "grace") &&
   !["active", "trialing"].includes(user?.stripeSubscriptionStatus ?? "");
 
+/** Apple can still charge (renewing, in grace or retrying a failed payment): deleting the account doesn't stop it. */
+export const appleMayStillBill = (user?: User) =>
+  appleBilling &&
+  ["active", "grace", "billing_retry"].includes(user?.appleSubscriptionStatus ?? "");
+
 // The "tracking.so Coaching" subscription group in App Store Connect, in paywall order.
 const PLAN_IDS: Record<string, CoachingPlan["id"]> = {
   "so.tracking.app.quarterly": "quarterly",

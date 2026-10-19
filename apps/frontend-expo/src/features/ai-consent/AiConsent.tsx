@@ -19,15 +19,17 @@ import type { AiConsent, AiConsentChoice, AiConsentSheetProps } from "./types";
 const PRIVACY_URL = "https://tracking.so/privacy";
 const sent = [
   "Your messages and voice recordings",
-  "Plan goals and notes",
+  "Your first name and age",
+  "Plan goals, notes and your answers when setting up a plan",
   "Activity logs, notes and metrics",
   "Photos you send to the coach",
   "Workouts and sleep, only for plans where you allow it",
 ];
 const receivers = [
-  "OpenAI, DeepSeek, Google, Anthropic and Moonshot, through Vercel AI Gateway",
-  "Speech to text: OpenAI or OpenRouter",
-  "Web search and browsing for the coach: Perplexity and Browserbase",
+  "OpenAI, DeepSeek, Google, Anthropic and Moonshot, through Vercel AI Gateway, and the companies that host their models",
+  "Similar-plan matching: OpenAI",
+  "Speech to text: OpenRouter or OpenAI",
+  "Plan research, web search and browsing: Perplexity, and Browserbase with the AI model it uses",
   "Coach memory: Supermemory",
 ];
 

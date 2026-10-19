@@ -14,6 +14,8 @@ import {
   Status,
   useColors,
 } from "@/components/ui";
+import { useAccessChecklist } from "@/features/access/AccessChecklist";
+import { accessRequests } from "@/features/access/model";
 import { useHealth } from "./HealthProvider";
 import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
@@ -295,6 +297,7 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
   const autoOpened = useRef(false);
   const [selected, setSelected] = useState<WorkoutReconciliationPreviewItem>();
   const [disconnecting, setDisconnecting] = useState(false);
+  const access = useAccessChecklist();
   const pending = workouts.data?.items.filter((item) => !item.resolved) ?? [];
   const history = (
     workouts.data?.items.filter((item) => !!item.resolved?.activityEntryId) ??
@@ -394,14 +397,18 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
           )}
         </View>
         <Copy muted>
-          Workouts sync when you open the app and whenever iOS gives tracking.so
-          background time.
+          Workouts sync when you open the app. With notifications on, you hear
+          when a workout ends.
         </Copy>
         {!health.enabled ? (
           <Button
             disabled={!health.available}
             busy={health.busy}
-            onPress={() => void health.connect()}
+            onPress={async () => {
+              // The checklist's Apple Health row starts the first sync itself.
+              const statuses = await access.ask(accessRequests.appleHealth());
+              if (statuses.health !== "allowed") void health.connect();
+            }}
           >
             Connect Apple Health
           </Button>
@@ -431,6 +438,7 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
         </View>
         <Status error={health.error} retry={() => void health.sync()} />
       </Panel>
+      {access.sheet}
 
       {showGarmin && <GarminContent />}
 

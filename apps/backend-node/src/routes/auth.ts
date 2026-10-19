@@ -35,13 +35,18 @@ async function createSignInTicket(clerkUserId: string) {
   return signInToken.token;
 }
 
-async function createNativeSession(profile: NativeAuthProfile) {
+// The Watch only signs in to existing accounts: accounts are created, and can be
+// deleted with AI consent asked, in the iPhone app.
+class NoAccountError extends Error {}
+
+async function createNativeSession(profile: NativeAuthProfile, client?: string) {
   const clerkUsers = await clerkClient.users.getUserList({
     emailAddress: [profile.email],
     limit: 1,
   });
 
   let clerkUser = clerkUsers.data[0];
+  if (!clerkUser && client === "watch") throw new NoAccountError();
   if (!clerkUser) {
     const [firstName, ...lastNameParts] = profile.name?.trim().split(/\s+/) ?? [];
     clerkUser = await clerkClient.users.createUser({
@@ -65,7 +70,7 @@ async function createNativeSession(profile: NativeAuthProfile) {
       picture: profile.picture,
     });
     const telegramService = new TelegramService();
-    void telegramService.sendMessage(`🎉 New user! (${databaseUser.email})`);
+    void telegramService.sendMessage(`🎉 New user! (${databaseUser.username || databaseUser.id})`);
   }
 
   return { ticket: await createSignInTicket(clerkUser.id), databaseUser };
@@ -85,17 +90,18 @@ router.post("/ios-google-signin", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid token payload" });
     }
 
-    const session = await createNativeSession({
-      email: payload.email,
-      name: payload.name,
-      picture: payload.picture,
-    });
+    const session = await createNativeSession(
+      { email: payload.email, name: payload.name, picture: payload.picture },
+      client,
+    );
 
     return res.json({
       ticket: session.ticket,
       ...(client === "watch" ? issueWatchAuthTokens(session.databaseUser.id) : {}),
     });
   } catch (error) {
+    if (error instanceof NoAccountError)
+      return res.status(404).json({ error: "Create your account in the iPhone app first." });
     console.error("iOS Google sign-in error:", error);
     return res.status(500).json({ error: "Authentication failed" });
   }
@@ -117,16 +123,18 @@ router.post("/ios-apple-signin", async (req: Request, res: Response) => {
     }
 
     const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
-    const session = await createNativeSession({
-      email: appleResponse.email,
-      name: fullName || undefined,
-    });
+    const session = await createNativeSession(
+      { email: appleResponse.email, name: fullName || undefined },
+      client,
+    );
 
     return res.json({
       ticket: session.ticket,
       ...(client === "watch" ? issueWatchAuthTokens(session.databaseUser.id) : {}),
     });
   } catch (error) {
+    if (error instanceof NoAccountError)
+      return res.status(404).json({ error: "Create your account in the iPhone app first." });
     console.error("iOS Apple sign-in error:", error);
     return res.status(500).json({ error: "Authentication failed" });
   }

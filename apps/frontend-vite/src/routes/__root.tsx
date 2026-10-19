@@ -19,6 +19,7 @@ import { Home, Squirrel } from "lucide-react";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
+import { AiConsentGate } from "@/components/ai-consent/AiConsentDialog";
 
 // Configure QueryClient with longer gcTime to support persistence
 const queryClient = new QueryClient({
@@ -125,6 +126,7 @@ function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage, isOnboarding
             <GeneralInitializer>
               <Outlet />
             </GeneralInitializer>
+            {isSignedIn && <AiConsentGate />}
           </main>
           <SonnerToaster
             position="top-center"

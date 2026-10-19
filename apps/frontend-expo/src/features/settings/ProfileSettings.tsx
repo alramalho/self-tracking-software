@@ -12,7 +12,7 @@ import { useSession } from "@/auth/provider";
 import { api } from "@/data/api";
 import { pickPhotos, appendPhotos } from "@/native/photos";
 import { SettingsCard } from "./SettingsCard";
-import { hasAppleSubscription } from "@/features/billing/apple";
+import { APPLE_SUBSCRIPTIONS_URL, appleMayStillBill } from "@/features/billing/apple";
 import type { ProfileField, ProfileSettingsProps } from "./types";
 import { ReactionEmojiEditor } from "@/features/timeline/reactions/ReactionEmojiEditor";
 import { normalizeReactionEmojis } from "@/features/timeline/reactions/types";
@@ -77,8 +77,19 @@ export function ProfileSettings({ onBusyChange }: ProfileSettingsProps) {
             <Text style={{ color: c.muted, lineHeight: 22 }}>
               Permanently delete your account and all its data? This cannot be
               undone.
-              {hasAppleSubscription(user.data) &&
-                " Apple keeps billing your subscription until you cancel it in your App Store subscriptions."}
+              {appleMayStillBill(user.data) && (
+                <>
+                  {" Apple keeps billing your subscription until you cancel it in "}
+                  <Text
+                    accessibilityRole="link"
+                    onPress={() => void Linking.openURL(APPLE_SUBSCRIPTIONS_URL).catch(() => {})}
+                    style={{ color: c.accent, fontWeight: "600" }}
+                  >
+                    App Store subscriptions
+                  </Text>
+                  .
+                </>
+              )}
             </Text>
           ) : (
             <>

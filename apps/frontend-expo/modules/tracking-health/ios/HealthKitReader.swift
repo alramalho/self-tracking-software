@@ -469,44 +469,12 @@ final class HealthKitReader {
         return created
     }
 
+    // Least privilege: daily recovery metrics (resting heart rate, HRV, breathing
+    // rate, blood oxygen) are not uploaded (upload.ts sends dailyMetrics: []), so
+    // the app doesn't ask Apple Health for them. Add a definition here only
+    // together with uploading and showing it.
     private var quantityDefinitions: [QuantityDefinition] {
-        let perMinute = HKUnit.count().unitDivided(by: HKUnit.minute())
-        let milliseconds = HKUnit.secondUnit(with: .milli)
-
-        return [
-            QuantityDefinition(
-                identifier: .restingHeartRate,
-                metric: "resting_heart_rate",
-                aggregation: .mostRecent,
-                unit: perMinute,
-                payloadUnit: "bpm",
-                multiplier: 1
-            ),
-            QuantityDefinition(
-                identifier: .heartRateVariabilitySDNN,
-                metric: "heart_rate_variability_sdnn",
-                aggregation: .average,
-                unit: milliseconds,
-                payloadUnit: "ms",
-                multiplier: 1
-            ),
-            QuantityDefinition(
-                identifier: .respiratoryRate,
-                metric: "respiratory_rate",
-                aggregation: .average,
-                unit: perMinute,
-                payloadUnit: "breaths/min",
-                multiplier: 1
-            ),
-            QuantityDefinition(
-                identifier: .oxygenSaturation,
-                metric: "oxygen_saturation",
-                aggregation: .average,
-                unit: HKUnit.percent(),
-                payloadUnit: "%",
-                multiplier: 100
-            ),
-        ]
+        []
     }
 
     private func requestedReadTypes() throws -> Set<HKObjectType> {

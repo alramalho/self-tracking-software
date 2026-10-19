@@ -527,7 +527,7 @@ export class AIService {
       - Be curious, not therapist
     `;
 
-    logger.info(`System prompt: ${systemPrompt.toString()}`);
+    logger.info(`Coach system prompt built (${systemPrompt.length} chars)`);
 
     // 5. Generate AI response with unified schema using messages format
     const aiResponse = (await this.generateStructuredResponse({
@@ -548,8 +548,6 @@ export class AIService {
       metricReplacement?: any;
       userRecommendations?: string[];
     };
-
-    logger.info(`AI response: ${JSON.stringify(aiResponse, null, 2)}`);
 
     // 6. Resolve user IDs to full recommendation objects (if provided)
     let resolvedUserRecommendations:
@@ -584,12 +582,12 @@ export class AIService {
         .filter((rec) => rec !== null) as any;
     }
 
+    // Logs reach Better Stack: sizes only, never the reply or its reasoning.
     logger.info(
-      `Generated coach response for ${user.username}: ${aiResponse.messageContent.substring(0, 50)}... ` +
-        `(plans: ${aiResponse.planReplacements?.length || 0}, ` +
+      `Generated coach response for ${user.username} (${aiResponse.messageContent.length} chars, ` +
+        `plans: ${aiResponse.planReplacements?.length || 0}, ` +
         `metrics: ${aiResponse.metricReplacement ? 1 : 0}, ` +
-        `recommendations: ${resolvedUserRecommendations?.length || 0})` +
-        `\nReasoning: ${aiResponse.reasoning}`,
+        `recommendations: ${resolvedUserRecommendations?.length || 0})`,
     );
 
     return {
@@ -617,10 +615,10 @@ export class AIService {
     } = params;
 
     try {
-      console.log("Generating text with model:", options.model);
-      console.log("Prompt:", prompt);
-      console.log("Messages:", messages);
-      console.log("System prompt:", systemPrompt);
+      // Logs reach Better Stack: sizes only, never what people wrote.
+      logger.info(
+        `Generating text with ${options.model} (${messages?.length ?? 0} messages, prompt ${prompt?.length ?? 0} chars)`,
+      );
 
       // Use either messages or prompt (messages takes precedence)
       const generateParams: any = {
@@ -1751,7 +1749,7 @@ export class AIService {
         systemPrompt,
       });
 
-      logger.info("Generated sessions:", response);
+      logger.info(`Generated sessions for ${response.weeks.length} weeks`);
 
       // Convert generated sessions to the expected format
       const sessions: Array<{
@@ -2257,7 +2255,7 @@ export class AIService {
         temperature: 1,
       });
 
-      logger.info(`Generated coach notes: ${result.text}`);
+      logger.info(`Generated coach notes (${result.text.length} chars)`);
       return result.text;
     } catch (error) {
       logger.error("Error generating coach notes:", error);

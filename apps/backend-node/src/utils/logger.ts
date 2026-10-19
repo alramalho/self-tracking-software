@@ -233,7 +233,8 @@ morgan.token("ip", function (req: any) {
 export const morganMiddleware = morgan((tokens, req, res) => {
   const status = parseInt(tokens.status?.(req, res) ?? "0");
   const method = tokens.method?.(req, res) ?? "UNKNOWN";
-  const url = tokens.url?.(req, res) ?? "";
+  // Path only: query strings can carry search terms, emails or tokens.
+  const url = (tokens.url?.(req, res) ?? "").split("?")[0];
   const responseTime = Number(tokens["response-time"]?.(req, res) ?? 0);
   const userId = tokens.userId?.(req, res);
   const ip = tokens.ip?.(req, res);

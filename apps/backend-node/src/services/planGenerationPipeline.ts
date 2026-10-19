@@ -81,7 +81,7 @@ export class PlanGenerationPipeline {
     const maxWeeks = params.maxWeeks ?? DEFAULT_MAX_WEEKS;
     const trace: PipelineTraceStep[] = [];
     logger.info(
-      `Starting plan generation pipeline for goal: "${params.goal}" (generating ${maxWeeks} weeks)`,
+      `Starting plan generation pipeline for a goal of ${params.goal.length} chars (generating ${maxWeeks} weeks)`,
     );
 
     // Use provided research findings or fall back to defaults
@@ -113,7 +113,7 @@ export class PlanGenerationPipeline {
           trace,
         );
         logger.info(
-          `Activity Generation completed: ${activities.length} (${activities.map((a) => `${a.title} (${a.measure})`).join(", ")}) activities`,
+          `Activity Generation completed: ${activities.length} activities`,
         );
       } catch (error) {
         logger.error("Activity Generation failed", error);
@@ -307,7 +307,7 @@ export class PlanGenerationPipeline {
     });
 
     logger.info(
-      `Generated ${result.object.activities.length} activities for goal: "${goal}"`,
+      `Generated ${result.object.activities.length} activities for a goal of ${goal.length} chars`,
     );
     return result.object.activities;
   }

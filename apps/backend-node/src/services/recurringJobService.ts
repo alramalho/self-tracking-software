@@ -409,7 +409,7 @@ export class RecurringJobService {
       }
 
       // TODO: Implement loops email service
-      logger.info(`Would send unactivated email to ${user.email}`);
+      logger.info(`Would send unactivated email to '${user.username}' (${user.id})`);
 
       await prisma.user.update({
         where: { id: user.id },

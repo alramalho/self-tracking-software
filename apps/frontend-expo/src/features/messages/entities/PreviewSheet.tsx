@@ -37,7 +37,23 @@ function Backdrop(props: BottomSheetBackdropProps) {
     />
   );
 }
-function Content({ title, onClose, children }: PreviewSheetProps) {
+function FixedBackdrop(props: BottomSheetBackdropProps) {
+  return (
+    <BottomSheetBackdrop
+      {...props}
+      appearsOnIndex={0}
+      disappearsOnIndex={-1}
+      pressBehavior="none"
+      opacity={0.4}
+    />
+  );
+}
+function Content({
+  title,
+  onClose,
+  children,
+  dismissible = true,
+}: PreviewSheetProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -45,11 +61,11 @@ function Content({ title, onClose, children }: PreviewSheetProps) {
     <BottomSheet
       index={0}
       enableDynamicSizing
-      enablePanDownToClose
+      enablePanDownToClose={dismissible}
       accessible={false}
       maxDynamicContentSize={height - insets.top - 20}
       onClose={onClose}
-      backdropComponent={Backdrop}
+      backdropComponent={dismissible ? Backdrop : FixedBackdrop}
       backgroundStyle={{ backgroundColor: c.bg, borderRadius: 28 }}
       handleIndicatorStyle={{ backgroundColor: c.muted, width: 36 }}
     >
@@ -62,7 +78,7 @@ function Content({ title, onClose, children }: PreviewSheetProps) {
           gap: 16,
         }}
       >
-        <View style={{ position: "absolute", right: 12, top: 0, zIndex: 10 }}>
+        {dismissible && <View style={{ position: "absolute", right: 12, top: 0, zIndex: 10 }}>
           <PreviewTouch
             accessibilityRole="button"
             accessibilityLabel={`Close ${title}`}
@@ -76,7 +92,7 @@ function Content({ title, onClose, children }: PreviewSheetProps) {
           >
             <X size={24} color={c.muted} />
           </PreviewTouch>
-        </View>
+        </View>}
         {children}
       </BottomSheetScrollView>
     </BottomSheet>
@@ -88,7 +104,7 @@ export function PreviewSheet(props: PreviewSheetProps) {
       visible={props.visible}
       transparent
       animationType="fade"
-      onRequestClose={props.onClose}
+      onRequestClose={props.dismissible === false ? () => {} : props.onClose}
     >
       {props.visible && (
         <GestureHandlerRootView style={{ flex: 1 }}>

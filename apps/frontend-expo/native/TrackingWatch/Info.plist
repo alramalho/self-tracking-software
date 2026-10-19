@@ -23,7 +23,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Record a short voice note to log your activities, metrics, and thoughts.</string>
+	<string>Record a short voice note to log your activities, metrics and thoughts. The recording is sent to our speech-to-text provider to turn it into text.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>

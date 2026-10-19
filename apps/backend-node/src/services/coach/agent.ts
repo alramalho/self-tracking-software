@@ -720,7 +720,7 @@ export class CoachAgentService {
               logger.error(`Web search failed: ${searchResult.error}`);
               collector.recordTool("webSearch", "failed");
               self.telegram.sendMessage(
-                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQuery: ${searchQueries.join(" | ")}\nError: ${searchResult.error}`
+                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQueries: ${searchQueries.length}\nError: ${searchResult.error}`
               );
               return {
                 success: false as const,
@@ -742,7 +742,7 @@ export class CoachAgentService {
             });
 
             logger.info(
-              `Web search (${searchResult.provider}) for "${searchQueries.join(" | ")}" returned ${results.length} results`
+              `Web search (${searchResult.provider}) for ${searchQueries.length} queries returned ${results.length} results`
             );
             collector.recordTool("webSearch", results.length > 0 ? "success" : "insufficient");
 
@@ -1177,7 +1177,7 @@ export class CoachAgentService {
             }
 
             logger.info(
-              `Plan creation proposed for ${user.id}: "${goal}" (${resolvedActivities.length} activities)`
+              `Plan creation proposed for ${user.id} (${resolvedActivities.length} activities)`
             );
             successfulPlanCreationProposals += 1;
 
@@ -1237,7 +1237,7 @@ export class CoachAgentService {
             const logTime = time || "00:00:00";
 
             logger.info(
-              `Activity log proposed: ${matchedActivity.emoji} ${matchedActivity.title} x${quantity} on ${logDate} at ${logTime}`
+              `Activity log proposed: activity ${matchedActivity.id} x${quantity} on ${logDate} at ${logTime}`
             );
 
             return {
@@ -1337,7 +1337,7 @@ export class CoachAgentService {
             }
 
             logger.info(
-              `Activity edit proposed: ${matchedActivity.emoji} ${matchedActivity.title} (${changes.map(([key]) => key).join(", ")})`
+              `Activity edit proposed: activity ${matchedActivity.id} (${changes.map(([key]) => key).join(", ")})`
             );
 
             return {

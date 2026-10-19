@@ -451,7 +451,7 @@ router.post(
       });
 
       logger.info(
-        `Coaching request sent from ${user.username} to ${coach.owner.username} for plan ${plan.goal}`
+        `Coaching request sent from ${user.username} to ${coach.owner.username} for plan ${plan.id}`
       );
 
       res.json({

@@ -20,6 +20,10 @@ export function verifyArtifact(ipa: string): Artifact {
     const config = JSON.parse(fs.readFileSync(path.join(app, "EXConstants.bundle/app.config"), "utf8"));
     assert.equal(info.CFBundleIdentifier, "so.tracking.app");
     assert.equal(info.DTPlatformName, "iphoneos", "Simulator apps cannot be installed on iPhone");
+    // Least privilege for App Review: no background audio, Face ID or dev-launcher network access.
+    assert.equal(info.UIBackgroundModes, undefined, "Release builds declare no background modes");
+    for (const key of ["NSFaceIDUsageDescription", "NSLocalNetworkUsageDescription"])
+      assert.equal(info[key], undefined, `${key} must not ship in a release build`);
     assert.equal(config.extra.backendUrl, expected.EXPO_PUBLIC_BACKEND_URL);
     assert.equal(config.extra.clerkPublishableKey, expected.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
     assert.equal(config.extra.fixtureMode, false);
@@ -41,7 +45,7 @@ export function verifyArtifact(ipa: string): Artifact {
     const entitlements = plist(entitlementsFile);
     assert.equal(entitlements["application-identifier"], "7P4CMS849D.so.tracking.app");
     assert.equal(entitlements["com.apple.developer.healthkit"], true);
-    assert.ok(entitlements["com.apple.security.application-groups"]?.includes("group.so.tracking.app"));
+    assert.equal(entitlements["com.apple.security.application-groups"], undefined, "Nothing uses an App Group");
     let watch: Artifact["watch"];
     const expectsWatch = config.extra?.eas?.build?.experimental?.ios?.appExtensions
       ?.some((target: { bundleIdentifier: string }) => target.bundleIdentifier === "so.tracking.app.watchkitapp");
@@ -72,7 +76,7 @@ export function verifyArtifact(ipa: string): Artifact {
       assert.equal(watchEntitlements["application-identifier"], "7P4CMS849D.so.tracking.app.watchkitapp");
       assert.equal(watchEntitlements["get-task-allow"] ?? false, false);
       assert.ok(watchEntitlements["com.apple.developer.applesignin"]?.includes("Default"));
-      assert.ok(watchEntitlements["com.apple.security.application-groups"]?.includes("group.so.tracking.app"));
+      assert.equal(watchEntitlements["com.apple.security.application-groups"], undefined, "Nothing uses an App Group");
       assert.ok(fs.statSync(path.join(watchApp, watchInfo.CFBundleExecutable)).size > 0);
       assert.ok(fs.statSync(path.join(watchApp, "Assets.car")).size > 0, "Watch icon asset catalog must be compiled");
       assert.ok(watchInfo.CFBundleIcons?.CFBundlePrimaryIcon?.CFBundleIconName, "Watch app icon metadata must be present");

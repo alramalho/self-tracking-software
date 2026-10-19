@@ -25,7 +25,9 @@ async function tryWatchAuth(req: Request): Promise<User | null> {
     return null;
   }
   // A database failure must surface as a 500: a 401 signs the watch out.
-  return userService.getUserById(userId);
+  const user = await userService.getUserById(userId);
+  // A deleted (or half-deleted) account never signs in from the Watch again.
+  return user && !user.deletedAt ? user : null;
 }
 
 async function tryClerkAuth(req: Request): Promise<User | null> {
@@ -54,7 +56,7 @@ async function tryClerkAuth(req: Request): Promise<User | null> {
       picture: clerkUser.imageUrl,
     });
     const telegramService = new TelegramService();
-    void telegramService.sendMessage(`🎉 New user! (${user.email})`);
+    void telegramService.sendMessage(`🎉 New user! (${user.username || user.id})`);
   }
 
   return user;

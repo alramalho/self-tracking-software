@@ -39,6 +39,22 @@ api.interceptors.request.use(
   }
 );
 
+// The server answers 403 AI_CONSENT_REQUIRED when AI features are off; the
+// consent dialog (components/ai-consent) listens and asks.
+const aiConsentListeners = new Set<() => void>();
+export function onAiConsentRequired(listener: () => void) {
+  aiConsentListeners.add(listener);
+  return () => void aiConsentListeners.delete(listener);
+}
+export function askAiConsent() {
+  aiConsentListeners.forEach((listener) => listener());
+}
+api.interceptors.response.use(undefined, (error) => {
+  if (error?.response?.status === 403 && error.response.data?.code === "AI_CONSENT_REQUIRED")
+    askAiConsent();
+  return Promise.reject(error);
+});
+
 // For backwards compatibility, keep the hook but just return the api instance
 export const useApiWithAuth = () => {
   return api;

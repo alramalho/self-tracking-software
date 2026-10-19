@@ -22,6 +22,9 @@ import {
   parseSpokenLanguages,
 } from "../services/stt/languages";
 import { s3Service } from "../services/s3Service";
+import { supermemoryService } from "../services/supermemoryService";
+import { loopsService } from "../services/loopsService";
+import { disconnectGarmin } from "../services/health/garmin/service";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
 import { userService } from "../services/userService";
@@ -450,6 +453,7 @@ usersRouter.delete(
     const userId = req.user!.id;
     const clerkId = req.user!.clerkId;
     const stripeSubscriptionId = req.user!.stripeSubscriptionId;
+    const stripeCustomerId = req.user!.stripeCustomerId;
     const userEmail = req.user!.email;
     const username = req.user!.username || "unknown";
 
@@ -492,12 +496,12 @@ usersRouter.delete(
       }
     }
 
-    // 3. Data: hard delete; related records cascade.
+    // 3. Data: hard delete; related records (plan group memberships included) cascade.
+    // Garmin first, while its token is still stored, so Garmin stops sending data.
+    await disconnectGarmin(userId, true).catch((error) =>
+      logger.error(`Failed to disconnect Garmin for user ${userId}:`, error)
+    );
     try {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { planGroupMemberships: { set: [] } },
-      });
       await prisma.user.updateMany({
         where: { referredById: userId },
         data: { referredById: null },
@@ -507,7 +511,7 @@ usersRouter.delete(
       // The sign-in is already gone, so the person can't retry: the owner finishes it by hand.
       logger.error(`Failed to delete data for user ${userId}:`, error);
       telegramService.sendAlert(
-        `🚨 *Account deletion needs finishing*\n\nUser ID: ${userId} (${userEmail})\n` +
+        `🚨 *Account deletion needs finishing*\n\nUser ID: ${userId}\n` +
           `Sign-in was deleted but the database delete failed: ${error instanceof Error ? error.message : error}`
       );
       res.status(500).json({
@@ -522,19 +526,36 @@ usersRouter.delete(
     try {
       const count =
         (await s3Service.deletePrefix(`users/${userId}/`)) +
-        (await s3Service.deletePrefix(`profile-images/${userId}-`));
+        (await s3Service.deletePrefix(`profile-images/${userId}-`)) +
+        (await s3Service.deletePrefix(`plan-generations/${userId}/`)) +
+        (await s3Service.deletePrefix(`feedback-images/${userId}/`));
       mediaStatus = `✅ ${count} files removed`;
     } catch (error) {
       mediaStatus = `❌ ${error instanceof Error ? error.message : "failed"}`;
       logger.error(`Failed to delete media for user ${userId}:`, error);
     }
 
+    // 5. Copies held by providers: coach memory, the email contact and the Stripe customer.
+    const failures: string[] = [];
+    if (!(await supermemoryService.deleteAllMemories(userId))) failures.push("Supermemory");
+    const contact = await loopsService
+      .deleteContact(userEmail, userId)
+      .catch((error) => ({ success: false, message: String(error) }));
+    if (!contact.success) failures.push(`Loops (${contact.message})`);
+    if (stripeCustomerId) {
+      await stripe.customers.del(stripeCustomerId).catch((error) => {
+        if (error?.code !== "resource_missing") failures.push(`Stripe customer (${error?.message})`);
+      });
+    }
+    const providersStatus = failures.length ? `❌ ${failures.join(", ")}` : "✅ removed";
+
     telegramService.sendAlert(
       `😵🗑️ *User Account Deleted*\n\n` +
-        `User: ${username} (${userEmail})\n` +
+        `User: ${username}\n` +
         `User ID: ${userId}\n` +
         `Stripe: ${stripeSubscriptionId ? "cancelled" : "no subscription"}\n` +
         `Media: ${mediaStatus}\n` +
+        `Coach memory, email contact, Stripe customer: ${providersStatus}\n` +
         `UTC Time: ${new Date().toISOString()}`
     );
     logger.info(`User account permanently deleted: ${userId}`);
@@ -1807,7 +1828,8 @@ usersRouter.post(
       if (files && files.length > 0) {
         for (const file of files) {
           const fileExtension = file.mimetype.split("/")[1];
-          const key = `feedback-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+          // Under the user's folder so account deletion removes them.
+          const key = `feedback-images/${user?.id ?? "anonymous"}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
           await s3Service.upload(file.buffer, key, file.mimetype);
           // Use public URL since bucket policy allows public read for feedback-images/*
@@ -2083,6 +2105,7 @@ Timestamp: ${new Date().toISOString()}</small></p>
 
 usersRouter.get(
   "/all-users",
+  requireAuth,
   async (_req: Request, res: Response): Promise<void> => {
     try {
       const users = await userService.getAllUsers();
@@ -2116,38 +2139,28 @@ usersRouter.get(
         }
       }
 
-      // Fetch user plans and recent activities
-      const [userPlans, userActivities] = await Promise.all([
-        prisma.plan.findMany({
-          where: {
-            userId: user.id,
-            deletedAt: null,
-          },
-          include: {
-            activities: {
-              select: {
-                id: true,
-                title: true,
-                emoji: true,
-                measure: true,
-              },
+      // Signed-out visitors see only public plans and their activities.
+      const userPlans = await prisma.plan.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          visibility: "PUBLIC",
+        },
+        include: {
+          activities: {
+            select: {
+              id: true,
+              title: true,
+              emoji: true,
+              measure: true,
             },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-        }),
-        prisma.activity.findMany({
-          where: {
-            userId: user.id,
-            deletedAt: null,
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 10, // Get latest 10 activities
-        }),
-      ]);
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        });
+      const userActivities = userPlans.flatMap((plan) => plan.activities).slice(0, 10);
 
       // Transform plans to include activity details
       const transformedPlans = userPlans.map((plan) => ({
@@ -2173,7 +2186,6 @@ usersRouter.get(
           title: activity.title,
           emoji: activity.emoji,
           measure: activity.measure,
-          createdAt: activity.createdAt,
         })),
       };
 

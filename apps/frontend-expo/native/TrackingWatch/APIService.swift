@@ -105,6 +105,12 @@ class APIService {
         request.httpBody = body
 
         let (data, httpResponse) = try await send(request)
+        // Voice notes are transcribed by AI providers; the server refuses
+        // until the person allows AI features in the iPhone app.
+        if httpResponse.statusCode == 403,
+           String(data: data, encoding: .utf8)?.contains("AI_CONSENT_REQUIRED") == true {
+            throw APIError.aiConsentRequired
+        }
         guard httpResponse.statusCode == 200 else {
             throw APIError.serverError(httpResponse.statusCode)
         }
@@ -163,6 +169,7 @@ enum APIError: LocalizedError {
     case invalidURL
     case invalidResponse
     case serverError(Int)
+    case aiConsentRequired
 
     var errorDescription: String? {
         switch self {
@@ -171,6 +178,7 @@ enum APIError: LocalizedError {
         case .invalidURL: return "Invalid URL"
         case .invalidResponse: return "Invalid response"
         case .serverError(let code): return "Server error (\(code))"
+        case .aiConsentRequired: return "Voice notes use AI. Allow AI features in tracking.so on your iPhone first."
         }
     }
 }
