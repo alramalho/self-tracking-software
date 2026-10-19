@@ -14,7 +14,15 @@ This preference also applies to `~/workspace/verycheapaudiobooks`, with that pro
 
 The selected `tracking-circles` onboarding uses the original 3D artwork without colored backplates and the original target Lottie on Welcome and Goal. “I’m ready!” fades the Welcome body into a second part asking for age with the weekly-frequency number control. Continue saves age before Goal, so matching can reuse it. The requested introduction, overview cards, commitment and **I'm ready!** CTA remain. The target loops gently on both screens; Reduce Motion shows its static target. Every screen change uses quick progressive fades from top to bottom. The [real-screenshot HTML walkthrough](docs/reviews/onboarding-2d/index.html) compares all 16 steps in light/dark (62 captures; the new age step has no original equivalent), plus actual light/dark motion recordings, with the earlier emoji/Lucide report preserved beside it. Local build 184 failed at archive signing because the app's phone/Watch profiles do not include the selected certificate. No new IPA or installer exists for this source update. See the frontend build document for checks and signing recovery.
 
-## Latest Safari-install release — build 210, October 15, 2026
+## Latest Safari-install release — build 212, October 19, 2026
+
+Build 211 plus one home card per plan: a plan's circle shows as faces on its plan card instead of a second card. From branch `home-one-card-per-plan` (`6a6105be`, on main `6e4f090c`). Xcode's export step wrongly rejected the ad hoc profiles, so the signed archive was packaged directly and verified by the wrapper. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-212--one-home-card-per-plan-october-19-2026). Link expires October 26, 2026.
+
+## Earlier Safari-install release — build 211, October 15, 2026
+
+Cleaner activity cards (no circle tag or week chip). See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-211--cleaner-activity-cards-october-15-2026).
+
+## Earlier Safari-install release — build 210, October 15, 2026
 
 Build 208 plus the plan confidence step ("how sure are you?" before the paywall), from branch `plan-confidence`. Needs backend `plan-confidence-20261015` (live). See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-210--how-sure-are-you-before-the-plan-starts-october-15-2026). Link expires October 22, 2026.
 
