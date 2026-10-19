@@ -288,6 +288,33 @@ export interface MessageIconProps {
   disabled?: boolean;
 }
 
+export interface ConversationHeaderProps {
+  title: string;
+  coach: boolean;
+  /** The coach's clay figure, bundled with the app. */
+  avatar?: import("react-native").ImageSourcePropType;
+  onBack: () => void;
+  onOpenSettings: () => void;
+  onOpenContext: () => void;
+  onOpenMenu: () => void;
+  /** Report / Block for the other person in a direct chat. */
+  onOpenPersonMenu?: () => void;
+}
+
+export interface AttentionIslandProps {
+  count: number;
+  top: number;
+  onPress: () => void;
+}
+
+export interface FadeProps {
+  color: string;
+  /** The edge that is fully opaque: "top" under the header, "bottom" above the composer. */
+  toward: "top" | "bottom";
+  height: number;
+  style?: import("react-native").StyleProp<import("react-native").ViewStyle>;
+}
+
 export interface CoachSettingsProps {
   visible: boolean;
   onClose: () => void;

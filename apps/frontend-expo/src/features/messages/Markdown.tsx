@@ -95,7 +95,7 @@ export function Markdown({ children, message }: MarkdownProps) {
                 style={{
                   color: c.text,
                   fontWeight: "500",
-                  fontSize: 16,
+                  fontSize: 15,
                   flexShrink: 1,
                   textDecorationLine: accepted ? "line-through" : "none",
                 }}
@@ -180,7 +180,7 @@ export function Markdown({ children, message }: MarkdownProps) {
                 accessible={accessible}
                 accessibilityLabel={accessible ? sentence : undefined}
                 style={[
-                  { color: c.text, fontSize: 16, lineHeight: 28 },
+                  { color: c.text, fontSize: 15, lineHeight: 22 },
                   inherited,
                 ]}
               >
@@ -236,6 +236,9 @@ export function Markdown({ children, message }: MarkdownProps) {
               }}
             />
           );
+        // A blank line is a paragraph break, not a full empty line of text.
+        if (!code && !line.trim())
+          return <View key={index} style={{ height: 6 }} />;
         const quote = !code && /^>\s?/.test(line);
         if (!code && line.includes("\uE000"))
           return (
@@ -255,9 +258,9 @@ export function Markdown({ children, message }: MarkdownProps) {
             key={index}
             style={{
               color: c.text,
-              fontSize: !code && line.startsWith("#") ? 18 : 16,
+              fontSize: !code && line.startsWith("#") ? 16 : 15,
               fontWeight: !code && line.startsWith("#") ? "600" : "400",
-              lineHeight: 28,
+              lineHeight: 22,
               ...(code
                 ? {
                     fontFamily: "monospace",

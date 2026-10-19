@@ -47,9 +47,13 @@ export function DictationButton(props: DictationButtonProps) {
           minWidth: dictation.isRecording ? 82 : 44,
           paddingHorizontal: dictation.isRecording ? 12 : 0,
           borderRadius: 22,
-          borderWidth: 1,
+          borderWidth: dictation.isRecording || !props.quiet ? 1 : 0,
           borderColor: dictation.isRecording ? "#ef4444" : colors.inputBorder,
-          backgroundColor: dictation.isRecording ? "#ef44441a" : colors.fadedBg,
+          backgroundColor: dictation.isRecording
+            ? "#ef44441a"
+            : props.quiet
+              ? "transparent"
+              : colors.fadedBg,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
