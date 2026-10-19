@@ -7,6 +7,8 @@
     "./follow-through/pace": "./follow-through/pace.ts",
     "./follow-through/streak": "./follow-through/streak.ts",
     "./activity-duplicates": "./activity-duplicates.ts",
+    "./follow-through/coach-inbox": "./follow-through/coach-inbox.ts",
+    "./follow-through/session-format": "./follow-through/session-format.ts",
     ".": {
       "browser": "./client.ts",
       "default": "./index.ts"

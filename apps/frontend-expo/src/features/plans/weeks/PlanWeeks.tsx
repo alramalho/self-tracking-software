@@ -7,7 +7,7 @@ import { useColors } from "@/components/ui";
 import { SessionTargetRows } from "@/features/plans/SessionTargetRows";
 import { dayNumber, longDate, unitLabel, weekRange, weekday } from "@/features/onboarding/design/format";
 import { dayKind, planDays } from "./model";
-import type { DayTileProps, PlanWeeksProps } from "./types";
+import type { DayTileProps, PlanDay, PlanWeeksProps } from "./types";
 
 function DayTile({ day, emoji, selected, onPress }: DayTileProps) {
   const c = useColors();
@@ -65,7 +65,8 @@ export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
     () => buildPlanWeekProjection({ plans: [plan], entries: planEntries, now: new Date(), weekCount: 2 }),
     [plan, planEntries],
   );
-  const weeks = planDays(projection, planEntries);
+  // Plan sessions carry the coach's title and targets; the projection keeps them.
+  const weeks = planDays(projection, planEntries) as PlanDay[][];
   const [selectedKey, setSelectedKey] = useState(projection.todayKey);
   const day = weeks.flat().find((d) => d.key === selectedKey) ?? weeks[0][0];
   // A times-per-week plan has no rest days, only days you haven't used yet.

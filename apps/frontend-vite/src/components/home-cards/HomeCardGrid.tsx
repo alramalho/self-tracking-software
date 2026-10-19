@@ -1,5 +1,4 @@
 import { usePlans } from "@/contexts/plans";
-import { useMetrics } from "@/contexts/metrics";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useAI } from "@/contexts/ai";
 import { useActivities } from "@/contexts/activities/useActivities";
@@ -10,15 +9,10 @@ import { CoachUpgradeCard } from "./CoachUpgradeCard";
 import { PlanCard } from "./PlanCard";
 import { CirclePreviewCard } from "./CirclePreviewCard";
 import { useMyCircles } from "@/components/circles/api";
-import { MetricsCard } from "./MetricsCard";
 import { GreetingCard } from "./GreetingCard";
 import { UpcomingSessionsCard } from "./UpcomingSessionsCard";
 import { useCurrentUser } from "@/contexts/users";
 import { useMessages } from "@/contexts/messages";
-
-interface HomeCardGridProps {
-  onOpenMetricsLog: () => void;
-}
 
 type HomeGridCard = {
   node: React.ReactNode;
@@ -27,10 +21,9 @@ type HomeGridCard = {
 
 const UNORDERED_PLAN_SORT = Number.MAX_SAFE_INTEGER;
 
-export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
+export const HomeCardGrid = () => {
   const { plans } = usePlans();
   const { activityEntries, isLoadingActivityEntries } = useActivities();
-  const { metrics } = useMetrics();
   const { userPlanType } = usePaidPlan();
   const { isUserAIWhitelisted } = useAI();
   const { currentUser } = useCurrentUser();
@@ -108,12 +101,6 @@ export const HomeCardGrid = ({ onOpenMetricsLog }: HomeCardGridProps) => {
   }
 
 
-  if (metrics && metrics.length > 0 && !isUserOnFreePlan) {
-    cards.push({
-      node: <MetricsCard key="metrics" onLogClick={onOpenMetricsLog} />,
-      span: 1,
-    });
-  }
   if (orderedActivePlans?.some((plan) => plan.outlineType === "SPECIFIC" && (plan.sessions || []).length > 0)) {
     cards.push({
       node: <UpcomingSessionsCard key="upcoming-sessions" plans={orderedActivePlans} />,

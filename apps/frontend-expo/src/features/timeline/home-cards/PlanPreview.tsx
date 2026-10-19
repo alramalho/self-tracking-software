@@ -8,7 +8,8 @@ import { router } from "expo-router";
 import { differenceInCalendarDays, endOfWeek, isSameWeek, startOfDay, format } from "date-fns";
 import { useColors } from "@/components/ui";
 import { dayKey } from "@/core/dates";
-import type { Plan, ActivityEntry } from "@/core/types";
+import type { Plan, ActivityEntry, Metric } from "@/core/types";
+import type { CoachAttentionItem } from "@/features/messages/types";
 import type { PlanPreviewProps, StepsProps } from "./types";
 import { CoachItemDrawer } from "@/features/coach/inbox/CoachItemDrawer";
 import { alertItem, planAlert } from "@/features/coach/model";
@@ -307,7 +308,7 @@ export function PlanPreview({ plan, entries, circle }: PlanPreviewProps) {
       )}
     </Pressable>
     {sheetOpen && alert && (
-      <CoachItemDrawer item={alertItem(alert)} onClose={() => setSheetOpen(false)} />
+      <CoachItemDrawer item={alertItem<Plan, CoachAttentionItem, Metric>(alert)} onClose={() => setSheetOpen(false)} />
     )}
     </>
   );
