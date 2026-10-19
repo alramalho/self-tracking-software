@@ -107,7 +107,8 @@ test("real Clerk session logs, edits, renders grids and saves metrics through th
   ).toBeVisible();
   await page.screenshot({ path: info.outputPath("profile-real-api.png") });
 
-  await page.getByTestId("nav-metrics").click();
+  // Already on your own profile: Metrics opens from the Check-ins card.
+  await page.getByTestId("profile-checkins").click();
   await page.getByRole("button", { name: "Log Check-in", exact: true }).click();
   await page
     .getByRole("button", { name: "Energy rating 5", exact: true })

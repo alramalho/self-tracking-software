@@ -148,7 +148,7 @@ for (const theme of ["LIGHT", "DARK"]) {
     await page.getByRole("button", { name: "Jonas, 63% of own target" }).click();
     await expect(page.getByRole("button", { name: "Jonas, 63% of own target" })).toHaveAttribute("aria-pressed", "true");
     await page.screenshot({ path: path.join(output, `past-weeks-jonas-${theme}.png`) });
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: /^Close / }).click(); // sheets close with an X
 
     // Inviting from inside the app: friends with an Invite button, and the link as a fallback.
     await page.getByRole("button", { name: "Invite friends" }).click();
@@ -163,7 +163,7 @@ for (const theme of ["LIGHT", "DARK"]) {
     await expect.poll(() => writes.at(-1)).toEqual({ url: `${API}/circles/momentum/invites`, body: { userId: "lia" } });
     await expect(page.getByTestId("invite-lia")).toHaveCount(0);
     await expect(page.getByText("Invited", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: /^Close / }).click(); // sheets close with an X
     writes.length = 0;
 
     // On the web the ⋯ menu asks about each action in turn.

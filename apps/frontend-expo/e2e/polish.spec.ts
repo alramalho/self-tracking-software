@@ -21,7 +21,9 @@ for (const theme of ["DARK", "LIGHT"])
     await page.screenshot({
       path: `test-results/plan-grid-polish-${theme}.png`,
     });
-    await page.getByTestId("nav-metrics").click();
+    // Metrics opens from the Check-ins card on your own profile.
+    await page.getByTestId("nav-profile").click();
+    await page.getByTestId("profile-checkins").click();
     await page.getByRole("button", { name: "Check-ins", exact: true }).click();
     const insights = page.getByTestId("metric-insights-island");
     await insights.scrollIntoViewIfNeeded();
@@ -91,7 +93,8 @@ for (const theme of ["DARK", "LIGHT"])
     await expect(
       trend.getByText("A little lower than last week"),
     ).toBeVisible();
-    await expect(page.getByText(/avg/i)).toHaveCount(0);
+    // The Profile Check-ins card ("… avg this week") stays mounted under the pushed Metrics screen.
+    await expect(page.getByTestId("metrics-screen").getByText(/avg/i)).toHaveCount(0);
     await page.screenshot({
       path: `test-results/metric-insights-polish-${theme}.png`,
     });

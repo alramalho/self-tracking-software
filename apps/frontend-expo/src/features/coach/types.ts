@@ -39,3 +39,6 @@ export interface CoachRowProps {
 export interface SectionLabelProps {
   children: string;
 }
+
+/** How a coach conversation opens from a drawer: an optional prompt (sent or left for the user), the plan, and whether it answers a missed week. */
+export type CoachChatOpening = { prompt?: string; send?: boolean; planId?: string; answersMiss?: boolean };

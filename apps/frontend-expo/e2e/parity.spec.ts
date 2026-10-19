@@ -20,6 +20,11 @@ test.beforeEach(async ({ request, page }) => {
     page.getByText("Friends & circles", { exact: true }),
   ).toBeVisible();
 });
+// Metrics moved off the tab bar: it opens from the Check-ins card on your own profile.
+const openMetrics = async (page: import("@playwright/test").Page) => {
+  await page.getByTestId("nav-profile").click();
+  await page.getByTestId("profile-checkins").click();
+};
 test("logs activity and updates timeline and profile history", async ({
   page,
   request,
@@ -77,7 +82,7 @@ test("grid selects a date with both activities and retains pause styling", async
     page
       .getByTestId("plans-screen")
       .getByTestId("plan-card")
-      .getByTestId("plan-week-progress")
+      .getByTestId("plan-weeks")
       .filter({ visible: true }),
   ).toBeVisible();
   await page.getByTestId("nav-profile").click();
@@ -154,7 +159,7 @@ test("metric check-ins update chart and day detail", async ({
   page,
   request,
 }) => {
-  await page.getByTestId("nav-metrics").click();
+  await openMetrics(page);
   await page.getByRole("button", { name: "Log Check-in", exact: true }).click();
   await page
     .getByRole("button", { name: "Energy rating 5", exact: true })
@@ -279,7 +284,7 @@ test("closing a partial check-in saves selected ratings only", async ({
   page,
   request,
 }) => {
-  await page.getByTestId("nav-metrics").click();
+  await openMetrics(page);
   await page.getByRole("button", { name: "Log Check-in", exact: true }).click();
   await page
     .getByRole("button", { name: "Mood rating 4", exact: true })
@@ -294,17 +299,16 @@ test("closing a partial check-in saves selected ratings only", async ({
   expect(writes[0].body).toMatchObject({ metricId: "mood", rating: 4 });
 });
 
-test("specific plan switches from completed history to scheduled sessions", async ({
+test("specific plan shows today's scheduled session in the two-week overview", async ({
   page,
 }) => {
   await page.getByTestId("nav-plans").click();
   await page
     .getByRole("button", { name: "Read every day", exact: true })
     .click();
-  const screen = page.getByTestId("plans-screen");
-  await screen.getByTestId("display-future-activities-switch").click();
-  await screen.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(screen.getByTestId("grid-day-details")).toContainText("10");
+  const detail = page.getByTestId("plans-screen").getByTestId("plan-day-detail");
+  await expect(detail).toContainText("Reading");
+  await expect(detail).toContainText("10 pages");
 });
 
 test("milestone progress survives unrelated plan edits", async ({
@@ -315,18 +319,15 @@ test("milestone progress survives unrelated plan edits", async ({
   await page
     .getByRole("button", { name: "Exercise regularly", exact: true })
     .click();
-  const milestone = page.getByTestId("milestone-milestone-run");
-  await expect(milestone).toContainText("20%");
-  await milestone
-    .getByRole("button", { name: "Increase milestone progress" })
-    .click();
-  await expect(milestone).toContainText("30%");
-  await page.getByRole("button", { name: "Edit milestones" }).click();
+  await page.getByRole("button", { name: "Plan settings" }).click();
+  await page.getByRole("button", { name: "Edit plan" }).click();
+  await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page.getByLabel("Why is this important to you?").fill("Feel stronger");
-  await page.getByRole("button", { name: "Confirm Update" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
-  expect(state.plans[0].milestones[0].progress).toBe(30);
+  expect(state.plans[0].milestones[0].progress).toBe(20);
   const edit = state.requests.findLast((r: any) => r.path === "/plans/upsert");
   expect(edit.body).not.toHaveProperty("milestones");
 });
@@ -487,7 +488,7 @@ test("dark logging and metric sheets preserve contrast and surface errors", asyn
     path: info.outputPath("logger-dark-validation.png"),
   });
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByTestId("nav-metrics").click();
+  await openMetrics(page);
   await page.getByRole("button", { name: "Log Check-in", exact: true }).click();
   await page
     .getByRole("button", { name: "Energy rating 5", exact: true })
@@ -548,26 +549,19 @@ test("timeline pairs compact cards and expands to full width without losing orde
   ).toHaveCount(2);
 });
 
-test("weekly summary counts distinct days, opens history and starts logging", async ({
+test("the two-week overview marks logged days and counts what is left", async ({
   page,
 }) => {
   await page.getByTestId("nav-plans").click();
   await page
     .getByRole("button", { name: "Exercise regularly", exact: true })
     .click();
-  const progress = page.getByTestId("plan-week-progress");
-  await expect(progress).toContainText("1/3");
-  await page
-    .getByRole("button", { name: "See all weeks", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "All weeks", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Log Running from plan", exact: true })
-    .click();
-  await expect(page.getByLabel("Quantity", { exact: true })).toBeVisible();
+  const weeks = page.getByTestId("plans-screen").getByTestId("plan-weeks");
+  // Today has a run and a reading logged: one distinct day, so two of three are left.
+  await expect(weeks.getByTestId("plan-day-detail")).toContainText("done");
+  const nextWeekFirstDay = weeks.getByRole("button").nth(7);
+  await nextWeekFirstDay.click();
+  await expect(weeks.getByTestId("plan-day-detail")).toContainText("Any day works · 3 left next week");
 });
 
 test("plan background uses multipart image upload and supports removal", async ({
