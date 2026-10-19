@@ -22,6 +22,7 @@ import { Route as MessageAiRouteImport } from './routes/message-ai'
 import { Route as ManageAiCoachRouteImport } from './routes/manage-ai-coach'
 import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as CreatePlanAdvancedRouteImport } from './routes/create-plan-advanced'
 import { Route as CreatePlanRouteImport } from './routes/create-plan'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
 import { Route as CircleMatchRouteImport } from './routes/circle-match'
@@ -103,6 +104,11 @@ const GetCoachedRoute = GetCoachedRouteImport.update({
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatePlanAdvancedRoute = CreatePlanAdvancedRouteImport.update({
+  id: '/create-plan-advanced',
+  path: '/create-plan-advanced',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreatePlanRoute = CreatePlanRouteImport.update({
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
+  '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/manage-ai-coach': typeof ManageAiCoachRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
+  '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/manage-ai-coach': typeof ManageAiCoachRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/circle-match': typeof CircleMatchRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
   '/create-plan': typeof CreatePlanRoute
+  '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
   '/manage-ai-coach': typeof ManageAiCoachRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
+    | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
     | '/manage-ai-coach'
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
+    | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
     | '/manage-ai-coach'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/circle-match'
     | '/create-coach-profile'
     | '/create-plan'
+    | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
     | '/manage-ai-coach'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   CircleMatchRoute: typeof CircleMatchRoute
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
   CreatePlanRoute: typeof CreatePlanRoute
+  CreatePlanAdvancedRoute: typeof CreatePlanAdvancedRoute
   DownloadRoute: typeof DownloadRoute
   GetCoachedRoute: typeof GetCoachedRoute
   ManageAiCoachRoute: typeof ManageAiCoachRoute
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       path: '/download'
       fullPath: '/download'
       preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-plan-advanced': {
+      id: '/create-plan-advanced'
+      path: '/create-plan-advanced'
+      fullPath: '/create-plan-advanced'
+      preLoaderRoute: typeof CreatePlanAdvancedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create-plan': {
@@ -642,6 +662,7 @@ const rootRouteChildren: RootRouteChildren = {
   CircleMatchRoute: CircleMatchRoute,
   CreateCoachProfileRoute: CreateCoachProfileRoute,
   CreatePlanRoute: CreatePlanRoute,
+  CreatePlanAdvancedRoute: CreatePlanAdvancedRoute,
   DownloadRoute: DownloadRoute,
   GetCoachedRoute: GetCoachedRoute,
   ManageAiCoachRoute: ManageAiCoachRoute,

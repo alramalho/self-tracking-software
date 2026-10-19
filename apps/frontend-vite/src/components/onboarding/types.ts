@@ -82,8 +82,12 @@ export interface OnboardingRouteSearch {
   goal?: string;
 }
 
+/** "create": a plan made inside the app. No welcome, and the starting point begins from their logs. */
+export type OnboardingFlowKind = "onboarding" | "create";
+
 export interface OnboardingFlowProps {
   initialGoal?: string;
+  flow?: OnboardingFlowKind;
 }
 
 export interface OnboardingFrameProps {

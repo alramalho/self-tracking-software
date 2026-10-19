@@ -10,7 +10,9 @@ import {
 import {
   acceptContext,
   acceptGoal,
+  baselineFrom,
   canSkipQuestion,
+  closeTarget,
   coachOf,
   designedFacts,
   finishRequest,
@@ -19,6 +21,7 @@ import {
   previousAnswer,
   reopenStage,
   screenFor,
+  showsWelcome,
   startInterview,
 } from "../src/components/onboarding/model.ts";
 import { paywallCta, savingVsWeekly } from "../src/components/onboarding/paywall/plans.ts";
@@ -172,4 +175,23 @@ test("the paywall shows the trial in the button and the saving against weekly", 
   assert.equal(paywallCta(weekly), "Start coaching");
   assert.equal(savingVsWeekly(quarterly, [quarterly, weekly]), 61);
   assert.equal(savingVsWeekly(weekly, [quarterly, weekly]), 0);
+});
+
+test("creating a plan in the app skips the welcome and closes back to the plans", () => {
+  assert.equal(showsWelcome("", "onboarding"), true);
+  assert.equal(showsWelcome("Run a half marathon", "onboarding"), false);
+  assert.equal(showsWelcome("", "create"), false);
+  assert.equal(closeTarget("create", true), "/plans");
+  assert.equal(closeTarget("onboarding", true), "/");
+  assert.equal(closeTarget("onboarding", false), null);
+});
+
+test("numbers from the logs stay with the starting point only while its text is unchanged", () => {
+  const logged = {
+    text: "Running: 9 sessions in the last 4 weeks, about 2.3 a week.",
+    measurements: [{ metric: "sessions_per_week", value: 2.3, unit: "per week", sourceQuote: "from your logs, last 4 weeks" }],
+  };
+  assert.deepEqual(baselineFrom(`${logged.text}  `, logged), { text: logged.text, measurements: logged.measurements });
+  assert.deepEqual(baselineFrom("I run twice a week", logged), { text: "I run twice a week", measurements: [] });
+  assert.deepEqual(baselineFrom("I run twice a week", null).measurements, []);
 });

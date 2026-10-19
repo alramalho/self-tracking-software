@@ -1,4 +1,4 @@
-import type { GoalGuidanceResult, OnboardingCircleChoice, OnboardingDraft, PlanDesign } from "@tsw/prisma/follow-through";
+import type { DesignBaseline, GoalGuidanceResult, OnboardingCircleChoice, OnboardingDraft, PlanDesign } from "@tsw/prisma/follow-through";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { usePostHog } from "posthog-js/react";
@@ -20,6 +20,7 @@ import {
   reportProgress,
   saveAiConsent,
   saveDraft,
+  suggestBaseline,
 } from "./api";
 import { CircleStep } from "./circle/CircleStep";
 import { CoachStep } from "./coach/CoachSteps";
@@ -32,6 +33,8 @@ import {
   acceptGoal,
   answersOf,
   applyFacts,
+  baselineFrom,
+  closeTarget,
   canSkipQuestion,
   coachOf,
   designedFacts,
@@ -48,6 +51,7 @@ import {
   progressFor,
   reopenStage,
   screenFor,
+  showsWelcome,
   startInterview,
   wantsCircle,
 } from "./model";
@@ -76,7 +80,8 @@ const screenLabels = {
 // The native app's onboarding on the web: welcome, three questions, the coach's design,
 // the coach, a circle, how sure you are, and the paywall. Each answer is saved as a
 // server draft, so closing the tab (or switching to the app) resumes the same screen.
-export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
+export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingFlowProps) {
+  const creating = flow === "create";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const posthog = usePostHog();
@@ -96,6 +101,8 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
   const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false);
   const finishing = useRef(false);
+  // A starting point measured from their logs (creating a plan in the app only).
+  const loggedBaseline = useRef<DesignBaseline | null>(null);
 
   const fail = (e: unknown) => setError(errorMessage(e));
   const run = async (work: () => Promise<void>) => {
@@ -134,12 +141,12 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
       const goal = initialGoal?.trim() || (saved && !saved.createdPlanId ? saved.goal : "");
       setDraft(fresh(goal));
       setAnswer(goal);
-      setWelcome(!goal);
+      setWelcome(showsWelcome(goal, flow));
     });
     return () => {
       cancelled = true;
     };
-  }, [initialGoal]);
+  }, [initialGoal, flow]);
 
   const screen = draft ? screenFor(draft) : null;
   const interview = draft?.interview;
@@ -150,8 +157,8 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
   useEffect(() => {
     if (!draft || !screen || !screenId || welcome) return;
     const progress = progressFor(screen);
-    posthog?.capture("onboarding-step-viewed", { step: screenId, platform: "web" });
-    void reportProgress(draft, screenId, screenLabels[screen.name], progress.current, progress.total);
+    posthog?.capture(creating ? "create-plan-step-viewed" : "onboarding-step-viewed", { step: screenId, platform: "web" });
+    if (!creating) void reportProgress(draft, screenId, screenLabels[screen.name], progress.current, progress.total);
     // Only when the screen changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenId, welcome]);
@@ -207,7 +214,7 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
     finishing.current = true;
     try {
       const { planId: createdPlanId } = await finishOnboarding(finishRequest(draft, coaching));
-      posthog?.capture("onboarding-completed", { coaching, platform: "web" });
+      posthog?.capture(creating ? "plan-created" : "onboarding-completed", { coaching, platform: "web", flow });
       await refetchCurrentUser(false);
       await queryClient.invalidateQueries();
       const circle = draft.circle;
@@ -262,7 +269,8 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
     );
 
   const onboarded = !!currentUser.onboardingCompletedAt;
-  const close = onboarded ? () => navigate({ to: "/" }) : undefined;
+  const closeTo = closeTarget(flow, onboarded);
+  const close = closeTo ? () => navigate({ to: closeTo }) : undefined;
 
   if (welcome)
     return (
@@ -295,7 +303,7 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
           void run(async () => {
             await saveAiConsent(false);
             if (!onboarded) await updateUser({ updates: { onboardingCompletedAt: new Date() }, muteNotifications: true });
-            navigate({ to: "/create-plan" });
+            navigate({ to: "/create-plan-advanced" });
           })
         }
       />
@@ -316,9 +324,10 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
         if (current === "goal") {
           // The coach reads the goal first: outcome or habit, the activity, and the right next question.
           const classified = await classifyGoal(text.trim());
+          loggedBaseline.current = creating ? await suggestBaseline(classified.activity).catch(() => null) : null;
           const next = acceptGoal(interview, text, classified.baselineQuestion);
           // The answer box changes with the screen, in the same render.
-          setAnswer(previousAnswer(next, "baseline"));
+          setAnswer(previousAnswer(next, "baseline") || loggedBaseline.current?.text || "");
           await save({
             ...draft,
             goal: text.trim(),
@@ -336,7 +345,7 @@ export function OnboardingFlow({ initialGoal }: OnboardingFlowProps) {
         setAnswer(current === "baseline" ? previousAnswer(next, "motivation") : "");
         await save({
           ...draft,
-          ...(current === "baseline" && draft.design ? { design: { ...draft.design, baseline: { text: text.trim(), measurements: [] } } } : {}),
+          ...(current === "baseline" && draft.design ? { design: { ...draft.design, baseline: baselineFrom(text, loggedBaseline.current) } } : {}),
           interview: next,
           step: "interview",
           answers: answersOf(next),

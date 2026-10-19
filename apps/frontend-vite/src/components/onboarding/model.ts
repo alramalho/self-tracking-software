@@ -1,4 +1,5 @@
 import type {
+  DesignBaseline,
   GoalGuidanceResult,
   InterviewStage,
   InterviewState,
@@ -8,7 +9,7 @@ import type {
   PlanDesign,
   SupportPreferences,
 } from "@tsw/prisma/follow-through";
-import type { ClassifyResponse, OnboardingProgress, OnboardingScreen, QuestionStage } from "./types";
+import type { ClassifyResponse, OnboardingFlowKind, OnboardingProgress, OnboardingScreen, QuestionStage } from "./types";
 
 // The same rules as the native app (apps/frontend-expo/src/features/onboarding), kept
 // in one place here. Drafts are shared through the server, so field names and step
@@ -61,6 +62,17 @@ export function onboardingPreferences(draft: OnboardingDraft): SupportPreference
       reviewTime: "18:00",
     }
   );
+}
+
+// ── Onboarding or creating a plan in the app ────────────────────────────────
+
+/** A fresh start opens on the welcome; a goal passed in, or creating a plan inside the app, skips it. */
+export const showsWelcome = (goal: string, flow: OnboardingFlowKind) => !goal && flow !== "create";
+
+/** Close returns to the plans when creating one; new members can't leave onboarding. */
+export function closeTarget(flow: OnboardingFlowKind, onboarded: boolean): "/plans" | "/" | null {
+  if (flow === "create") return "/plans";
+  return onboarded ? "/" : null;
 }
 
 // ── The three questions ─────────────────────────────────────────────────────
@@ -193,6 +205,12 @@ export function guidanceFor(result: GoalGuidanceResult, stage: QuestionStage): G
 
 export const guidancePassed = (result: GoalGuidanceResult, stage: QuestionStage) =>
   !!result.requirements[0]?.passed && result.requirements[0]?.key === stage;
+
+/** The numbers measured from their logs stay attached only while the text is still the one we suggested. */
+export const baselineFrom = (text: string, logged: DesignBaseline | null): DesignBaseline => ({
+  text: text.trim(),
+  measurements: logged && logged.text === text.trim() ? logged.measurements : [],
+});
 
 // ── The coach's design ──────────────────────────────────────────────────────
 
