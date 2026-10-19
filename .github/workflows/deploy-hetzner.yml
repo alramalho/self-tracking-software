@@ -17,7 +17,10 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/tracking-so-backend
-  REMOTE_DIR: /root/tracking-so-hetzner
+  # The live compose project; its .env and database-local.env are the runtime source of truth.
+  REMOTE_DIR: /root/workspace/tracking.so/deployment
+  # /etc/ssh/ssh_host_ed25519_key.pub on the server (SHA256:/Q2kn2IkM4ElzaCqxCfIgVkalEHilFvSQqBKZE9/UGg).
+  HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE6KV6EDKiDhrwkecNGPYpIDG0M3WqMOH7/78GQ2hnnb
 
 jobs:
   build-and-deploy:
@@ -55,12 +58,13 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+          # ~/.ssh/hetzner_ed25519. HETZNER_SSH_KEY holds the key revoked in August 2026.
+          ssh-private-key: ${{ secrets.HETZNER_DEPLOY_KEY }}
 
       - name: trust host key
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
+          echo "${{ secrets.HETZNER_HOST }} ${{ env.HOST_KEY }}" >> ~/.ssh/known_hosts
 
       - name: prune old backend images
         run: |
@@ -111,43 +115,54 @@ jobs:
           fi
           EOF
 
-      - name: sync compose + caddy
+      - name: upload compose + logging config
+        # The Caddyfile is not synced: the live one also serves sites outside this repo.
         run: |
-          ssh root@${{ secrets.HETZNER_HOST }} "mkdir -p ${{ env.REMOTE_DIR }}"
-          rsync -az hetzner/docker-compose.yml hetzner/Caddyfile hetzner/fluent-bit.conf hetzner/parsers.conf \
-            root@${{ secrets.HETZNER_HOST }}:${{ env.REMOTE_DIR }}/
-
-      - name: write env file
-        run: |
-          ssh root@${{ secrets.HETZNER_HOST }} "mkdir -p ${{ env.REMOTE_DIR }} && cp -f ${{ env.REMOTE_DIR }}/.env ${{ env.REMOTE_DIR }}/.env.previous 2>/dev/null || true"
-          ssh root@${{ secrets.HETZNER_HOST }} "umask 077 && cat > ${{ env.REMOTE_DIR }}/.env" <<'ENV'
-          ${{ secrets.HETZNER_ENV_FILE }}
-          ENV
-          ssh root@${{ secrets.HETZNER_HOST }} bash <<'EOF'
-          set -euo pipefail
-          cd "${{ env.REMOTE_DIR }}"
-          for key in BETTERSTACK_INGESTING_HOST BETTERSTACK_SOURCE_TOKEN AI_GATEWAY_API_KEY; do
-            if ! grep -q "^${key}=" .env && grep -q "^${key}=" .env.previous 2>/dev/null; then
-              grep -m1 "^${key}=" .env.previous >> .env
-            fi
-          done
-          EOF
+          ssh root@${{ secrets.HETZNER_HOST }} "mkdir -p ${{ env.REMOTE_DIR }}/.gha-incoming"
+          rsync -az hetzner/docker-compose.yml hetzner/fluent-bit.conf hetzner/parsers.conf \
+            root@${{ secrets.HETZNER_HOST }}:${{ env.REMOTE_DIR }}/.gha-incoming/
 
       - name: deploy
+        id: deploy
         run: |
           ssh root@${{ secrets.HETZNER_HOST }} bash -s -- \
             '${{ secrets.GITHUB_TOKEN }}' \
             '${{ github.actor }}' \
             '${{ env.REMOTE_DIR }}' \
-            '${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}' <<'EOF'
+            '${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}' \
+            'run${{ github.run_id }}-${{ github.run_attempt }}' <<'EOF'
           set -euo pipefail
           github_token="$1"
           github_actor="$2"
           remote_dir="$3"
           backend_image="$4"
+          run_label="$5"
+
+          # Postgres shares this disk; on October 19, 2026 a backend pull filled it and crashed the database.
+          free_gb="$(df --output=avail -BG / | tail -n 1 | tr -dc '0-9')"
+          if [ "$free_gb" -lt 6 ]; then
+            echo "only ${free_gb}G free on /; need 6G for the backup and image pull. Remove unused images first." >&2
+            exit 1
+          fi
+
+          cd "$remote_dir"
+          backup="gha-backups/$(date -u +%Y%m%dT%H%M%SZ)-$run_label"
+          mkdir -p -m 700 gha-backups "$backup"
+          cp -p .env "$backup/deployment.env"
+          cp -p docker-compose.yml fluent-bit.conf parsers.conf "$backup/"
+          docker inspect tsw-backend --format '{{.Config.Image}}' > "$backup/previous-image.txt"
+          docker exec platform-postgres pg_dump -U postgres -d tracking_cutover -Fc > "$backup/database-before.dump"
+          if [ "$(stat -c %s "$backup/database-before.dump")" -lt 1000000 ]; then
+            echo "database dump looks too small" >&2
+            exit 1
+          fi
+          echo "backup: $remote_dir/$backup (previous image $(cat "$backup/previous-image.txt"))"
+          ls -1d gha-backups/*/ | head -n -10 | xargs -r rm -rf
+
+          install -m 644 .gha-incoming/docker-compose.yml .gha-incoming/fluent-bit.conf .gha-incoming/parsers.conf .
+          rm -rf .gha-incoming
 
           echo "$github_token" | docker login ghcr.io -u "$github_actor" --password-stdin
-          cd "$remote_dir"
           export BACKEND_IMAGE="$backend_image"
           docker compose up -d --force-recreate fluent-bit < /dev/null
           docker compose up -d redis < /dev/null
@@ -164,13 +179,46 @@ jobs:
             sleep 1
           done
           docker compose pull backend < /dev/null
-          docker compose up -d --force-recreate backend < /dev/null
+
+          prisma() {
+            docker compose run --rm --no-deps -T -w /app/packages/prisma --entrypoint sh backend \
+              -c "pnpm exec prisma $1 2>&1" < /dev/null
+          }
+          prisma "migrate deploy"
+          migrate_status="$(prisma "migrate status")"
+          echo "$migrate_status"
+          if ! grep -q "Database schema is up to date" <<<"$migrate_status"; then
+            echo "migrations are still pending after migrate deploy" >&2
+            exit 1
+          fi
+
+          if grep -q '^BACKEND_IMAGE=' .env; then
+            sed -i "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE=$backend_image|" .env
+          else
+            echo "BACKEND_IMAGE=$backend_image" >> .env
+          fi
+          chmod 600 .env
+
+          docker compose up -d --no-deps --force-recreate backend < /dev/null
           running_image="$(docker inspect tsw-backend --format '{{.Config.Image}}')"
           if [ "$running_image" != "$backend_image" ]; then
             echo "backend image mismatch: expected $backend_image, got $running_image" >&2
             docker compose ps < /dev/null
             exit 1
           fi
+          for i in {1..36}; do
+            status="$(docker inspect tsw-backend --format '{{.State.Health.Status}}')"
+            if [ "$status" = "healthy" ]; then
+              echo "backend is healthy"
+              break
+            fi
+            if [ "$i" = "36" ]; then
+              echo "backend did not become healthy (last status: $status)" >&2
+              docker logs --tail 80 tsw-backend >&2
+              exit 1
+            fi
+            sleep 5
+          done
           docker image prune -f < /dev/null
           docker compose ps < /dev/null
           EOF
@@ -185,3 +233,31 @@ jobs:
           done
           echo "health check failed" >&2
           exit 1
+
+      - name: roll back to the previous image
+        # Restores this run's .env and config backups. Migrations are not reverted; the dump is in the same backup.
+        if: failure() && steps.deploy.outcome != 'skipped'
+        run: |
+          ssh root@${{ secrets.HETZNER_HOST }} bash -s -- \
+            '${{ env.REMOTE_DIR }}' \
+            'run${{ github.run_id }}-${{ github.run_attempt }}' <<'EOF'
+          set -euo pipefail
+          remote_dir="$1"
+          run_label="$2"
+
+          cd "$remote_dir"
+          backup="$(ls -1d gha-backups/*-"$run_label" 2>/dev/null | tail -n 1)"
+          if [ -z "$backup" ]; then
+            echo "no backup from this run; production was not touched"
+            exit 0
+          fi
+          previous_image="$(cat "$backup/previous-image.txt")"
+          cp -p "$backup/deployment.env" .env
+          cp -p "$backup/docker-compose.yml" "$backup/fluent-bit.conf" "$backup/parsers.conf" .
+          if [ "$(docker inspect tsw-backend --format '{{.Config.Image}}' 2>/dev/null)" != "$previous_image" ]; then
+            docker compose up -d --no-deps --force-recreate backend < /dev/null
+          fi
+          docker compose up -d --force-recreate fluent-bit < /dev/null
+          echo "rolled back to $previous_image from $backup"
+          docker compose ps < /dev/null
+          EOF

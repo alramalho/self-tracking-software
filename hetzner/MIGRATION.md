@@ -12,7 +12,7 @@ Run the `tracking.so` backend and PostgreSQL database on the Hetzner VM. Keep Pi
 - **Stack on box**: backend container + Caddy 2 TLS termination → Let's Encrypt ([docker-compose.yml](./docker-compose.yml), [Caddyfile](./Caddyfile)). Active remote deployment directory is `/root/workspace/tracking.so/deployment`.
 - **Database**: PostgreSQL 16 + pgvector runs in the shared `platform-postgres` container. Production uses the `tracking_cutover` database through the root-only `database-local.env` file.
 - **DNS**: `api-hetzner.tracking.so` and `api.tracking.so` A + AAAA resolve to Hetzner.
-- **Deploy**: currently GitHub Actions/GHCR-backed on the box; local manual deploy script exists but is not the active remote layout. Treat [hetzner/.env.prod](./.env.prod) as the local secret source of truth for the Hetzner runtime env.
+- **Deploy**: the `deploy hetzner` GitHub Action into `/root/workspace/tracking.so/deployment`. Since October 19, production runs a GHCR image built from main, and the hand-built `local/tracking-so-backend:*` overlays are retired. The action refuses to deploy with less than 6 GB free on `/`; see "Main image via the action" below. Treat [hetzner/.env.prod](./.env.prod) as the local secret source of truth for the Hetzner runtime env.
 - **Env**: active box env has `API_DOMAIN=api-hetzner.tracking.so, api.tracking.so`, so Caddy serves both hostnames.
 - **Error-notifier cleanup**: [errorHandler.ts](../apps/backend-node/src/middleware/errorHandler.ts) now pages only on 5xx; killed the `allowed-routes.txt` / WAF allow-list premise
 - **Telegram alert routing**: `@trackingso_bot` retains routine activity in the original private destination while `TELEGRAM_ALERT_CHAT_IDS` routes 5xx, Stripe, important bug/account and CI events to **Important App Alerts**. Production connection and a real group delivery passed September 15, 2026. Run `docker exec tsw-backend pnpm check-telegram -- --require-dedicated-alerts` after env or bot-membership changes.
@@ -531,6 +531,65 @@ cd /root/workspace/tracking.so/deployment
 ./tracking-voice-languages-20261002/rollback.sh
 ```
 
+## Main image via the action — active since October 19, 2026 13:54 UTC
+
+Image `ghcr.io/alramalho/tracking-so-backend:2c8fc42e0a3e`, deployed by the supervised `workflow_dispatch` run [39263570437](https://github.com/alramalho/self-tracking-software/actions/runs/39263570437) from branch `fix-deploy-hetzner-action`. That branch is main `987b464c` plus the workflow fix. This retires the overlay lineage. Compared with `release-20261019`, it adds the web-push VAPID re-subscribe fix and the sleep-history change. There were no pending migrations: 103 found, schema up to date.
+
+- **Verified:** container healthy with zero restarts, `BACKEND_IMAGE` written to `.env` (mode 600), public `/health` 200, and `/plans` and `/activities/x/duplicate` 401 without sign-in. The new `notificationService.ts` is in the container, and `Caddyfile` still serves the hibridum site. No signed-in request was made.
+- **Backup:** `deployment/gha-backups/20261019T135352Z-run39263570437-1/` holds the previous `.env`, the compose and Fluent Bit files, `previous-image.txt` (`release-20261019`) and a database dump.
+- **Incident: the disk filled up and Postgres went down for about 3 minutes.** The 1.56 GB image pull filled the 38 GB root disk. At 13:54:34, the shared `platform-postgres` checkpointer hit `No space left on device` and kept crashing during recovery until 13:57:17. During that window, the backend and the other projects on that Postgres had no database. Removing the Docker build cache (`docker builder prune -af`, 2.9 GB, nothing depends on it) let recovery finish: WAL replay completed cleanly with nothing lost after the last write, and the backend has logged no errors since 13:57:20. The workflow now refuses to deploy with less than 6 GB free.
+- **Overlay cleanup, October 19:** removed 81 retired `local/tracking-so-backend:*` tags; the list is in `deployment/gha-backups/removed-overlay-tags-20261019.txt`. Two were kept: `release-20261019`, the rollback target, and `0838c450`, which the running `tsw-backend-localdb` container uses. Because the overlays share layers with `release-20261019`'s chain, this freed only about 2.9 GB. **About 5.4 GB is free**, just enough for the 6 GB guard, which rounds up. Other large images unrelated to this backend: the images of two exited, unnamed containers (`suspicious_chatelet` 2.7 GB and `sharp_cohen` 2.3 GB), `ghcr.io/alramalho/ultron-api` (about 4.6 GB), `local/amigosdochapim-migrator` (about 4.1 GB), plus 1.5 GB of journald logs. Once the main image has run for a while, removing `release-20261019` frees about another 3 GB.
+
+Rollback: restore `.env` from the backup above (mode 600), then `docker compose up -d --no-deps --force-recreate backend` and check `/health`.
+
+## `deploy hetzner` action: why it fails and whether to re-enable it — diagnosed October 19, 2026
+
+**Status: the action has not deployed since July 29 (last success `a7e65608`).** Every main push from August 27 on built and pushed `ghcr.io/alramalho/tracking-so-backend:<sha>`, then stopped at the first SSH step. The only exception is September 17 (`35210889433`), which failed in the TypeScript build. Production has been on hand-built `local/tracking-so-backend:*` overlays since then.
+
+**Why the key is refused.** The workflow loads `secrets.HETZNER_SSH_KEY` (last set April 22) into `webfactory/ssh-agent`. The run log shows its key as `SHA256:LcpWVZd2wbdy0Ez7xtXYTxlsONl6FbEntrydCc/5IBw`, comment `alramalho@Mac`. That key was removed from the server on purpose:
+
+- `/root/.ssh/authorized_keys.pre-revocation-20260824` contains exactly that fingerprint. It is a backup taken on August 24.
+- `/root/.ssh/authorized_keys` was rewritten on August 26 at 23:28 UTC, about 90 minutes before the first failed run. It now holds only the `hetzner` key (`SHA256:HXG0c92D…`, the Mac's `~/.ssh/hetzner_ed25519`).
+- On October 19 at 12:47:38, sshd logged a failed publickey attempt followed by two `Failed password for root` attempts from the runner. `PermitRootLogin without-password` makes the password attempts irrelevant.
+- This was a planned rotation that missed CI. The replacement key is the Mac's `~/.ssh/hetzner_ed25519` (created August 26 at 13:02; it is the only key in `authorized_keys`, and `~/.ssh/config` uses it as `amigosdochapim-vps`). The `HETZNER_SSH_KEY` secret still holds the old key. **The fix puts `~/.ssh/hetzner_ed25519` into a new secret, `HETZNER_DEPLOY_KEY`** (see below). Do not reinstate the revoked key.
+
+**Fixing the secret alone is not enough.** The workflow no longer matches the server:
+
+1. `REMOTE_DIR=/root/tracking-so-hetzner` does not exist. Production runs from `/root/workspace/tracking.so/deployment`, compose project `tracking-so-hetzner`. A run would create the old directory, which gets the same project name from its basename, and run compose there against the live containers.
+2. The "write env file" step overwrites `.env` with `secrets.HETZNER_ENV_FILE`. That secret was last set June 9, before the Supabase cutover; the server's `.env` (71 lines, changed October 19) is the real one. Backend start would also fail, because that directory has no `database-local.env` (`required: true`).
+3. The "sync compose + caddy" step would copy over the live `Caddyfile`, which serves an extra `hibridum.89.167.84.67.sslip.io` site that the repo doesn't have. The live `docker-compose.yml`, `fluent-bit.conf` and `parsers.conf` match main.
+4. The workflow passes `BACKEND_IMAGE` as a shell variable but never writes it to `.env`, which still reads `release-20261019`. The next manual `docker compose up` would silently go back to the overlay.
+5. The workflow runs no `prisma migrate deploy` and has no check for pending migrations.
+6. `ssh-keyscan` trusts whatever host key is presented.
+
+**Would a GHCR image built from main lose anything live?** No. Compared on October 19 with `release-20261019` running and origin/main at `987b464c`:
+
+- `schema.prisma`: equivalent. Only the position of the `AccountSwitchToken` model and two comments differ.
+- `packages/prisma/migrations`: identical.
+- `apps/backend-node/src`, excluding tests:
+  - Main is ahead in two files: `services/notificationService.ts`, the web-push VAPID re-subscribe fix `2bb803e8`, and `services/health/apple/sleep/service.ts`, the unbounded sleep history from `bf17ad33`. Both commits are in `adad6b93`, but the `release-20261019` overlay didn't include them. **Production is therefore not exactly `adad6b93`.**
+  - Live has one extra file, `services/follow-through/circles/service.ts`. Nothing imports it.
+  - Live also has stray macOS `._*` files, which are harmless.
+- `package.json`: main declares `satori`, `sharp` and `@apple/app-store-server-library`. The live image already ships them in `apps/backend-node/node_modules`. A clean main build resolves from `pnpm-lock.yaml`, so versions may differ slightly.
+
+So the overlay lineage has effectively converged on main. A main image is a superset of production and needs no migration.
+
+**Fix (branch `fix-deploy-hetzner-action`).** The workflow now:
+
+- deploys into `/root/workspace/tracking.so/deployment` and never writes `.env` from a secret;
+- backs up `.env`, the compose and Fluent Bit files, the previous image tag and a `pg_dump` of `tracking_cutover` into `gha-backups/<time>-run<id>-<attempt>/`, keeping the last 10;
+- installs main's `docker-compose.yml`, `fluent-bit.conf` and `parsers.conf`, which matched production on October 19, but does not sync `Caddyfile`;
+- runs `prisma migrate deploy` and then `migrate status` from the new image via `docker compose run --no-deps` before the switch;
+- refuses to start with less than 6 GB free on `/`, before touching anything;
+- writes `BACKEND_IMAGE=` into `.env`, recreates only `backend`, and waits up to 3 minutes for its healthcheck before the public smoke test;
+- when the deploy or smoke test fails, restores this run's backups and recreates `backend` on the previous image. Migrations are not reverted; the dump is in the backup;
+- pins the server's ed25519 host key (`SHA256:/Q2kn2Ik…`) instead of trusting `ssh-keyscan`;
+- reads the key from a new secret, `HETZNER_DEPLOY_KEY` (`~/.ssh/hetzner_ed25519`). The old workflow on main reads `HETZNER_SSH_KEY`, so it keeps failing at SSH until this branch merges. It can't reach the old directory with the stale env. `HETZNER_SSH_KEY` and `HETZNER_ENV_FILE` are unused once this merges.
+
+Once this merges, every backend push to main deploys automatically; stop building overlays.
+
+Separately, `PasswordAuthentication yes` is still on and the log shows constant password brute-forcing. Root can't log in with a password, but turning it off is cheap.
+
 ## October 19 release — active since October 19, 2026 13:25 UTC
 
 Image `local/tracking-so-backend:release-20261019`, built with [release-20261019-overlay.Dockerfile](./release-20261019-overlay.Dockerfile) on `plan-confidence-20261015`. Source: main `adad6b93`. The overlay replaces 47 backend and shared files, which all matched source `67a5bc65` in the live container byte for byte, and adds 11 new ones. It patches the image's own `packages/prisma/package.json` with three new exports instead of replacing it. Dependencies are unchanged. **No schema change and no migration.**
@@ -538,7 +597,7 @@ Image `local/tracking-so-backend:release-20261019`, built with [release-20261019
 - App Store consent: AI consent is enforced by default. Account deletion also removes coach memory, the email contact and plan images. What people write stays out of logs, Better Stack and Telegram.
 - Duplicate activities: `GET /activities/:id/duplicate` and `POST /activities/:id/merge`.
 - The coach says hi first: proactive messages are a one-line opener, with a private agenda for the reply. The coach goes quiet after two unanswered outreaches, and silent nudges count toward that.
-- **Why by hand:** the `deploy hetzner` GitHub Action can no longer reach the server. Its SSH key is refused (`Permission denied (publickey)`) on October 15 and on October 19 at `f3ca1bfe`, so the image it built and pushed to GHCR was never deployed. Fix the action's key before relying on it. This deploy used `~/.ssh/hetzner_ed25519`; the `~/.ssh/hetzner` named above does not exist on the Mac.
+- **Why by hand:** the `deploy hetzner` GitHub Action can no longer reach the server. Its SSH key is refused (`Permission denied (publickey)`) on October 15 and on October 19 at `f3ca1bfe`, so the image it built and pushed to GHCR was never deployed. The key was deliberately revoked in August, and the workflow also targets the wrong directory; see the diagnosis above. This overlay also left out two files that are in `adad6b93` (`notificationService.ts` and `health/apple/sleep/service.ts`). This deploy used `~/.ssh/hetzner_ed25519`; the `~/.ssh/hetzner` named above does not exist on the Mac.
 - **Before activation, in the candidate image:** all 58 file hashes matched the source, the exports patch landed, and the changed route and coach modules loaded with networking off.
 - **After activation:** healthy, zero restarts, public `/health` 200. The unauthenticated checks answer as before, and the duplicate and merge routes moved from 404 to 401. The first minutes of logs show no errors. No signed-in request was made.
 
