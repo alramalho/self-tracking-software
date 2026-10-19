@@ -14,6 +14,7 @@ import { followUpOpening, lapseMessage, nudgeMessage, setupMessage } from "./pro
 import {
   followUpOutputSchema,
   lapseOutputSchema,
+  nudgeOutputSchema,
   setupOutputSchema,
 } from "./schema";
 import type { MonitoringGenerated } from "../types";
@@ -39,7 +40,8 @@ When a plan has slipped and has confidence.why, you may remind them once of thei
 const lapseInstructions = `${voice}
 The person set up these habit plans but has not logged them or answered the coach for weeks. Write at most 2 short sentences. Say plainly the plan has been sitting quiet and ask if it still fits, using a few of their own words: confidence.why (what they said when they set the plan up) when present, otherwise goalReason. An archive option is attached below the message, so do not explain it. Be honest, a little blunt, never cruel, and do not guess at reasons for the silence.`;
 
-const nudgeInstructions = `The person has not logged this plan for a while (compare today with recentEntries and the plan's timesPerWeek). Write one short message, at most 3 sentences, shown when they tap the plan. Say plainly how long it has been. Remind them why they started: quote confidence.why (their own words from when they set the plan up) when present, otherwise use their goalReason. End by asking whether they want to get back to it tomorrow or let it go; the app shows those two buttons. Warm but direct, no guilt-tripping, no guesses about why.`;
+const nudgeInstructions = `${voice}
+The person has not logged this plan for a while (compare today with recentEntries and the plan's timesPerWeek). Write one short message, at most 2 short sentences, shown when they tap the plan. Say plainly how long it has been. Remind them why they started: quote confidence.why (their own words from when they set the plan up) when present, otherwise use their goalReason. End by asking whether they want to get back to it tomorrow or let it go; the app shows those two buttons. Warm but direct, no guilt-tripping, no guesses about why.`;
 
 type Usage = NonNullable<MonitoringGenerated["usage"]>;
 
@@ -119,7 +121,7 @@ export async function generateFromSnapshot(
       return { draftMessages: [lapseMessage(input.plans, output)], usage };
     }
     case "nudge": {
-      const output = await generate(input, lapseOutputSchema, "coachNudge", nudgeInstructions, snapshot, usage);
+      const output = await generate(input, nudgeOutputSchema, "coachNudge", nudgeInstructions, snapshot, usage);
       return { draftMessages: [nudgeMessage(input.plans[0], output)], usage };
     }
     default:

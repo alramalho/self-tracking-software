@@ -712,7 +712,12 @@ describe("Silent nudges for a slipping plan", () => {
         },
       ],
     }));
-    // Created today with no logs: 3x/week allows a 4-day gap, so it slips after that.
+    // No logs since it started: 3x/week allows a 4-day gap, so five days in it is slipping.
+    // Pin the start to the test clock; the database default is the real date, which never slips here.
+    await prisma.plan.update({
+      where: { id: meditation },
+      data: { createdAt: new Date(sunday.getTime() - 2 * 86400000) },
+    });
     expect(await monitorUser(user, later(3))).toBe("delivered");
     const [nudge] = await messages();
     return nudge;

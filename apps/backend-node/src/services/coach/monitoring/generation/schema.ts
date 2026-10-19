@@ -97,6 +97,12 @@ export const followUpOutputSchema = z.object({
 export const lapseOutputSchema = z.object({
   message: z.string().min(1).max(220),
 });
+
+// A nudge quotes the person's own words back, so it gets a little more room than a lapse.
+export const nudgeOutputSchema = z.object({
+  message: z.string().min(1).max(320),
+});
 export type SetupOutput = z.infer<typeof setupOutputSchema>;
 export type FollowUpOutput = z.infer<typeof followUpOutputSchema>;
 export type LapseOutput = z.infer<typeof lapseOutputSchema>;
+export type NudgeOutput = z.infer<typeof nudgeOutputSchema>;

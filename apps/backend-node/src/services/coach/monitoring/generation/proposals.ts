@@ -4,7 +4,7 @@ import {
   PlanProposalPatchSchema,
   type PlanProposalPatch,
 } from "../../../planProposalPatchService";
-import type { FollowUpOutput, LapseOutput, SetupOutput } from "./schema";
+import type { FollowUpOutput, LapseOutput, NudgeOutput, SetupOutput } from "./schema";
 
 type SessionTargetsPatch = NonNullable<SetupOutput["sessions"][number]["targets"]>;
 
@@ -184,6 +184,6 @@ export function lapseMessage(
 }
 
 /** The coach writes the words; the two choices (remind tomorrow / let it go) are app buttons. */
-export function nudgeMessage(plan: ActiveCoachPlan, output: LapseOutput): CoachDraftMessage {
+export function nudgeMessage(plan: ActiveCoachPlan, output: NudgeOutput): CoachDraftMessage {
   return { content: output.message, requiresReply: true, nudge: { planId: plan.id } };
 }
