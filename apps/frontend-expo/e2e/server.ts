@@ -324,6 +324,22 @@ const server = http.createServer(async (req, res) => {
     state.entries = data.entries.map((entry: any) => ({ ...state.entries[0], ...entry }));
     send({ ok: true }); return;
   }
+  // Homepage two weeks: a weekly plan plus reading sessions spread over both weeks, and the coach
+  // waiting on a weekly review reply (the coach note). withoutCoachNote leaves the coach with nothing.
+  if (path === "/__home-todo") {
+    followThroughFixture("/__coaching-monitoring", "POST", {}, state);
+    if (body.withoutCoachNote) followThroughFixture("/__coaching-monitoring", "POST", { monitoring: { requests: [] } }, state);
+    state.user.themeMode = body.theme ?? state.user.themeMode;
+    const day = 86400000;
+    state.plans[1].sessions = [0, 2, 4, 7, 9, 11].map((offset) => ({
+      id: `session-read-${offset}`,
+      activityId: "read",
+      date: new Date(Date.now() + offset * day).toISOString(),
+      quantity: 10,
+    }));
+    send({ ok: true });
+    return;
+  }
   if (path === "/__background.png") {
     res.writeHead(200, { "Content-Type": "image/png" });
     res.end(readFileSync(new URL("../assets/icon.png", import.meta.url)));

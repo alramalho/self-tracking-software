@@ -16,6 +16,7 @@
     "./client": "./client.ts",
     "./server": "./server.ts",
     "./plan-week": "./plan-week/index.ts",
+    "./home-todo": "./home-todo/index.ts",
     "./coach-conversation-starters": "./coach-conversation-starters.ts",
     "./reactions": "./reactions.ts",
     "./types": "./types/index.ts",

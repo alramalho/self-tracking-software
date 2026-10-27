@@ -30,11 +30,9 @@ import {
   s,
   useColors,
 } from "@/components/ui";
-import { FollowThroughHome } from "@/features/follow-through/HomeCards";
-import { startOfDay } from "date-fns";
 import { mergeTimeline } from "./model";
 import { FeedCard } from "./FeedCard";
-import { PlanPreview } from "./home-cards/PlanPreview";
+import { HomeTodo } from "./home-todo/HomeTodo";
 import { CirclePreview } from "./home-cards/CirclePreview";
 import { useMyCircles } from "@/features/circles/api";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
@@ -64,6 +62,7 @@ export default function HomeScreen() {
     "metrics",
     "metric-entries",
     "circles",
+    "coach-attention",
   );
   const c = useColors();
   const reveal = useRevealViewport();
@@ -78,17 +77,6 @@ export default function HomeScreen() {
         (a.sortOrder ?? 999) - (b.sortOrder ?? 999) ||
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  // Weekly plans and plans that need attention get a card; scheduled ones live in the follow-through cards.
-  const planCards = active.filter(
-    (p) =>
-      p.outlineType === "TIMES_PER_WEEK" ||
-      (p.finishingDate && new Date(p.finishingDate) < startOfDay(new Date())) ||
-      !p.sessions?.some((session) => new Date(session.date) >= startOfDay(new Date())),
-  );
-  // One card per plan: a circle lives on its plan's card, and only gets its own when that plan has none here.
-  const loneCircles = (circles.data ?? []).filter(
-    (circle) => !planCards.some((plan) => plan.id === circle.planId),
-  );
   const { rows: seenRows, onViewableItemsChanged } = useTimelineSeen(
     user.data,
     items,
@@ -307,21 +295,9 @@ export default function HomeScreen() {
                 />
               </View>
               <Status error={user.error} retry={() => void user.refetch()} />
+              <HomeTodo plans={active} entries={entries.data ?? []} />
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {planCards.map((plan) => (
-                  <Reveal
-                    id={`home-plan-${plan.id}`}
-                    key={plan.id}
-                    style={{ width: "48%" }}
-                  >
-                    <PlanPreview
-                      plan={plan}
-                      entries={entries.data ?? []}
-                      circle={circles.data?.find((circle) => circle.planId === plan.id)}
-                    />
-                  </Reveal>
-                ))}
-                {loneCircles.map((circle) => (
+                {(circles.data ?? []).map((circle) => (
                   <Reveal
                     id={`home-circle-${circle.id}`}
                     key={circle.id}
@@ -330,7 +306,6 @@ export default function HomeScreen() {
                     <CirclePreview circle={circle} />
                   </Reveal>
                 ))}
-                <FollowThroughHome plans={active} entries={entries.data ?? []} />
               </View>
               <View style={s.row}>
                 <Heading>Friends & circles</Heading>

@@ -12,10 +12,10 @@ import {
 } from "@tanstack/react-router";
 import BottomNav from "../../src/components/BottomNav";
 import { PlanRendererv2 } from "../../src/components/PlanRendererv2";
-import { PlanCard } from "../../src/components/home-cards/PlanCard";
+import { HomeTodo } from "../../src/components/home-todo/HomeTodo";
 import { CheckinsCard } from "../../src/components/profile/CheckinsCard";
 import { Route as CoachRoute } from "../../src/routes/coach";
-import { plans, activityEntries } from "./data";
+import { plans } from "./data";
 import "../../src/index.css";
 
 const params = new URLSearchParams(location.search);
@@ -38,11 +38,7 @@ const Plan = () => (
 const Home = () => (
   <div className="flex flex-col gap-4 p-4">
     <h1 className="text-2xl font-bold">Alex</h1>
-    <div className="grid grid-cols-2 gap-3">
-      {plans.map((p) => (
-        <PlanCard key={p.id} plan={p as never} activityEntries={activityEntries as never} />
-      ))}
-    </div>
+    <HomeTodo />
   </div>
 );
 const Profile = () => (

@@ -9,6 +9,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import ClientOverviewPopover from "@/components/ClientOverviewPopover";
 import { CoachOnboardingPopover } from "@/components/CoachOnboardingPopover";
 import { HomeCardGrid } from "@/components/home-cards/HomeCardGrid";
+import { HomeTodo } from "@/components/home-todo/HomeTodo";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import Notifications from "@/components/Notifications";
@@ -442,7 +443,10 @@ function HomePage() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.075}>
-            <HomeCardGrid />
+            <div className="flex flex-col gap-3">
+              <HomeTodo />
+              <HomeCardGrid />
+            </div>
           </AnimatedSection>
 
           {/* My Clients Section - Only shown for coaches */}

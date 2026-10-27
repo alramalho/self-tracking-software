@@ -24,8 +24,7 @@ appId: so.tracking.app
     element: Back
     direction: UP
 - tapOn: Back
-- tapOn: Up next
-- tapOn: Exercise regularly, 18:00
+- tapOn: ".*18:00 · Exercise regularly.*"
 - scrollUntilVisible:
     element: Pause timer
     direction: DOWN
