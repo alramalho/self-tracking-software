@@ -79,6 +79,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 220 — clearer day tiles, October 28, 2026
+
+- **Source:** main `1104e462` (`home-tiles`, one commit on `25a71646`). Day tiles return to the first design: done is a green square with a tick, an open weekly slot a dashed box, a session shows its amount; "Next two weeks" titles the section. Circle cards leave the homepage on iPhone and web.
+- **Built and signed exactly as build 219**, from a detached worktree `tracking-release-220` at `1104e462` with the same profiles, identity and entitlements; `CFBundleVersion` 220.
+- **Verified IPA:** `.release/b220-1104e462/tracking.so.ipa` in that worktree, SHA-256 `99027ea50bcb9e36eab5ab4621d833a7d43760594bfbf66e873b422a8dbcfb24`; the wrapper's checks passed. iPhone and Watch are 1.0.0 (220).
+- **Hosted:** `.release/2026-10-28T11-13-22-640Z-d4c64d3f/distribution.json`; the link expires November 4, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,207,754 IPA bytes.
+- **Checked before the build:** both TypeScript projects, the 7 home-todo tests, and the homepage on the fixture simulator build and the web harness in light and dark. Not run on a phone.
+- **EAS build counter:** still 217 remotely; set it to 220 before the next EAS build.
+- No Expo cloud build, OTA, store submission or backend deploy (`[skip ci]`).
+
 ## Safari-install build 219 — two weeks on the homepage, October 27, 2026
 
 - **Source:** main `e948b278` (`home-two-weeks`, one commit on `e3b435e3`). Homepage: this week and next across every plan, a Today list with Log (and on iPhone the coach's session time, opening its timer), and one coach note picked from the Coach tab's list by `pickCoachNote`. Plan cards and "Up next" leave the homepage; circle cards stay.
@@ -86,7 +96,7 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - **Verified IPA:** `.release/b219-e948b278/tracking.so.ipa` in that worktree, SHA-256 `30e756855cbb86896ffa1cf86327ba84f3fdc5852494eed0a229e5f0e58e4f08`. The wrapper verified production API and live Clerk, fixture auth excluded, strict signatures and phone/Watch provisioning. iPhone and Watch are 1.0.0 (219).
 - **Hosted:** `.release/2026-10-27T11-31-54-764Z-a33c78c5/distribution.json`; the link expires November 3, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,209,583 IPA bytes.
 - **Checked before the build:** both TypeScript projects, 7 new home-todo tests (UTC and Lisbon), and the homepage on a fixture-backed iOS 26.5 simulator build of the same source plus the web component harness, light and dark. The edited `sessions-ios.yaml` Maestro flow was not run. The release IPA itself was not run on a phone.
-- **EAS build counter:** the remote iOS counter is still at 217, and 218 and 219 were used locally. Before the next EAS build, set it to 219 with `eas build:version:set -p ios -e device-production`.
+- **EAS build counter:** the remote iOS counter is still at 217, and 218 and 219 were used locally (see build 220 for the current number).
 - No Expo cloud build, OTA or store submission. No backend deploy: this push carries `[skip ci]`; Vercel deploys the web app from main regardless.
 
 ## Safari-install build 218 — the October 19 release, October 19, 2026

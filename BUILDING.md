@@ -14,7 +14,11 @@ This preference also applies to `~/workspace/verycheapaudiobooks`, with that pro
 
 The selected `tracking-circles` onboarding uses the original 3D artwork without colored backplates and the original target Lottie on Welcome and Goal. “I’m ready!” fades the Welcome body into a second part asking for age with the weekly-frequency number control. Continue saves age before Goal, so matching can reuse it. The requested introduction, overview cards, commitment and **I'm ready!** CTA remain. The target loops gently on both screens; Reduce Motion shows its static target. Every screen change uses quick progressive fades from top to bottom. The [real-screenshot HTML walkthrough](docs/reviews/onboarding-2d/index.html) compares all 16 steps in light/dark (62 captures; the new age step has no original equivalent), plus actual light/dark motion recordings, with the earlier emoji/Lucide report preserved beside it. Local build 184 failed at archive signing because the app's phone/Watch profiles do not include the selected certificate. No new IPA or installer exists for this source update. See the frontend build document for checks and signing recovery.
 
-## Latest Safari-install release — build 219, October 27, 2026
+## Latest Safari-install release — build 220, October 28, 2026
+
+Main `1104e462`: build 219's homepage with clearer day tiles (a done day is a green square with a tick, an open weekly slot a dashed box, a session shows its amount) and only the two weeks: circle cards leave the homepage on iPhone and web. Built and signed by hand like 219. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-220--clearer-day-tiles-october-28-2026). Link expires November 4, 2026.
+
+## Earlier Safari-install release — build 219, October 27, 2026
 
 Main `e948b278`: the homepage shows the next two weeks across every plan, a Today list with Log, and one coach note from the Coach tab only when it matters. Plan cards and "Up next" leave the homepage. Web and app share the rules in `packages/prisma/home-todo`; the web deploys from main on Vercel. No backend change. Signed by hand like build 218. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-219--two-weeks-on-the-homepage-october-27-2026). Link expires November 3, 2026.
 
