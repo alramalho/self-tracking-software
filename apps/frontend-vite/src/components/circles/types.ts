@@ -348,14 +348,6 @@ export interface JoinDialogProps {
   onJoined: (circleId: string) => void;
 }
 
-export interface CirclePickerProps {
-  onPick: (card: CircleCard) => void;
-}
-
-export interface CircleSearchResultsProps extends CirclePickerProps {
-  query: string;
-}
-
 export interface CirclePlanSectionProps {
   planId: string;
 }
@@ -436,10 +428,6 @@ export interface InviteFriendInput {
   userId: string;
 }
 
-export interface LoadErrorProps {
-  message: string;
-  retry: () => void;
-}
 
 export interface CircleFeedListProps {
   circleId: string;

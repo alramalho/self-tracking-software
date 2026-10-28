@@ -4,6 +4,7 @@ import { yearPlanStats, inYear } from "../../backend-node/src/services/wrapped/m
 import { rankPeople } from "../../backend-node/src/services/people/rank";
 import type { SearchablePerson } from "../../backend-node/src/services/people/types";
 import { seedChats } from "./chat-fixtures";
+import { circleSuggestionsFixture, recommendedUsersFixture, searchCirclesFixture } from "./explore-fixture";
 import { canCombine, chooseActivityToKeep, findNameTwin, mergeConversion } from "@tsw/prisma/activity-duplicates";
 import http from "node:http";
 import { readFileSync } from "node:fs";
@@ -1013,6 +1014,10 @@ const server = http.createServer(async (req, res) => {
     send({ chats: state.chats });
     return;
   }
+  if (path === "/users/recommended-users") { send(recommendedUsersFixture); return; }
+  if (path === "/circles/suggestions") { send(circleSuggestionsFixture); return; }
+  if (path === "/circles/search") { send(searchCirclesFixture(url.searchParams.get("q") ?? "")); return; }
+  if (path === "/circles/mine") { send([]); return; }
   if (path === "/users/rankings") {
     send({
       pointsRanking: [

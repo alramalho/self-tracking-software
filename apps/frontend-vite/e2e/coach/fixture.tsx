@@ -1,5 +1,5 @@
 // Renders the real web components for the Coach tab change with illustrative data, for screenshots.
-// Open /e2e/coach/?view=coach|plan|home|profile and add &theme=dark for dark mode.
+// Open /e2e/coach/?view=coach|plan|home|profile|search and add &theme=dark for dark mode.
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import { PlanRendererv2 } from "../../src/components/PlanRendererv2";
 import { HomeTodo } from "../../src/components/home-todo/HomeTodo";
 import { CheckinsCard } from "../../src/components/profile/CheckinsCard";
 import { Route as CoachRoute } from "../../src/routes/coach";
+import { ExplorePage } from "../../src/components/explore/ExplorePage";
 import { plans } from "./data";
 import "../../src/index.css";
 
@@ -58,13 +59,14 @@ const router = createRouter({
     route("/plans", Plan),
     route("/", Home),
     route("/profile/$username", Profile),
+    route("/search", ExplorePage),
     route("/message-ai"),
     route("/add"),
     route("/insights/dashboard"),
     route("/edit-plan/$planId"),
   ]),
   history: createMemoryHistory({
-    initialEntries: [view === "plan" ? "/plans" : view === "home" ? "/" : view === "profile" ? "/profile/alex" : "/coach"],
+    initialEntries: [view === "plan" ? "/plans" : view === "home" ? "/" : view === "profile" ? "/profile/alex" : view === "search" ? "/search" : "/coach"],
   }),
 });
 

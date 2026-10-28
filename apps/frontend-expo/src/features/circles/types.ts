@@ -223,14 +223,6 @@ export interface JoinSheetProps {
   onJoined: (circleId: string) => void;
 }
 
-export interface CirclePickerProps {
-  onPick: (card: CircleCard) => void;
-}
-
-export interface CircleSearchResultsProps extends CirclePickerProps {
-  query: string;
-}
-
 export interface CirclePlanSectionProps {
   planId: string;
 }

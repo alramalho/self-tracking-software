@@ -1,6 +1,7 @@
 // Stand-ins for the app's data contexts and API, so the real components render without signing in.
 import axios from "axios";
 import { activities, activityEntries, followThrough, metricEntries, metrics, plans } from "./data";
+import { circleSuggestionsFixture, recommendedUsersFixture, searchCirclesFixture } from "../../../frontend-expo/e2e/explore-fixture";
 
 export const requests: { method: string; url: string; body: unknown }[] = [];
 (window as unknown as { __requests: typeof requests }).__requests = requests;
@@ -21,6 +22,10 @@ api.defaults.adapter = async (config) => {
     for (const r of followThrough.state.monitoring.requests) if (r.messageId === url.split("/").at(-1)) r.resolvedAt = new Date().toISOString();
   } else if (url === "/ai/coach/attention") data = { attentionItems: [] };
   else if (url === "/circles/mine") data = [];
+  else if (url === "/users/recommended-users") data = recommendedUsersFixture;
+  else if (url === "/circles/suggestions") data = circleSuggestionsFixture;
+  else if (url === "/circles/search") data = searchCirclesFixture(String(config.params?.q ?? ""));
+  else if (url.startsWith("/users/search-users/")) data = [];
   return { data, status: 200, statusText: "OK", headers: {}, config };
 };
 export const useApiWithAuth = () => api;
