@@ -1,5 +1,9 @@
 import type { HomeDay, HomeDayItem } from "@tsw/prisma/home-todo";
 
+export interface HomeTileItemProps {
+  item: HomeDayItem;
+}
+
 export interface HomeDayTileProps {
   day: HomeDay;
   selected: boolean;

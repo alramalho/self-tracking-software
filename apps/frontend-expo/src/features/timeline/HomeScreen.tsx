@@ -33,8 +33,6 @@ import {
 import { mergeTimeline } from "./model";
 import { FeedCard } from "./FeedCard";
 import { HomeTodo } from "./home-todo/HomeTodo";
-import { CirclePreview } from "./home-cards/CirclePreview";
-import { useMyCircles } from "@/features/circles/api";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { useTimelineSeen } from "./useTimelineSeen";
 import type { TimelineRow } from "./types";
@@ -50,7 +48,6 @@ export default function HomeScreen() {
   const plans = usePlans();
   const entries = useEntries();
   const user = useCurrentUser();
-  const circles = useMyCircles();
   const [voiceLogOpen, setVoiceLogOpen] = useState(false);
   const pendingVoice = usePendingVoiceLog();
   const { refresh, refreshing } = useRefresh(
@@ -296,17 +293,6 @@ export default function HomeScreen() {
               </View>
               <Status error={user.error} retry={() => void user.refetch()} />
               <HomeTodo plans={active} entries={entries.data ?? []} />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {(circles.data ?? []).map((circle) => (
-                  <Reveal
-                    id={`home-circle-${circle.id}`}
-                    key={circle.id}
-                    style={{ width: "48%" }}
-                  >
-                    <CirclePreview circle={circle} />
-                  </Reveal>
-                ))}
-              </View>
               <View style={s.row}>
                 <Heading>Friends & circles</Heading>
                 <Copy muted>({items.length})</Copy>

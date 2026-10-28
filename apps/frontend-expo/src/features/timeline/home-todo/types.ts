@@ -4,6 +4,9 @@ export interface HomeTodoProps {
   plans: Plan[];
   entries: ActivityEntry[];
 }
+export interface HomeTileItemProps {
+  item: HomeDayItem;
+}
 export interface HomeDayTileProps {
   day: HomeDay;
   selected: boolean;

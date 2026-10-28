@@ -3,20 +3,44 @@ import { useNavigate } from "@tanstack/react-router";
 import { Check, ChevronRight } from "lucide-react";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { homeDays } from "@tsw/prisma/home-todo";
-import { dayNumber, longDate, unitLabel, weekRange, weekday } from "@tsw/prisma/follow-through/session-format";
+import { dayNumber, longDate, unitLabel, weekday } from "@tsw/prisma/follow-through/session-format";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { usePlans } from "@/contexts/plans";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { CoachNote } from "./CoachNote";
-import type { HomeDayDetailProps, HomeDayTileProps, HomeItemRowProps } from "./types";
+import type { HomeDayDetailProps, HomeDayTileProps, HomeItemRowProps, HomeTileItemProps } from "./types";
 
 /** A day tile has room for two emojis; the rest show as "+n". */
 const TILE_EMOJIS = 2;
 
+/** One thing on a day tile: done as a green square with a tick, planned with its amount, an open slot dashed. */
+function TileItem({ item }: HomeTileItemProps) {
+  if (item.kind === "done")
+    return (
+      <span className="relative rounded-md bg-green-100 p-1 text-base leading-none dark:bg-green-900">
+        {item.emoji}
+        <span className="absolute -right-1 -top-1.5 text-sm font-bold text-green-500">✓</span>
+      </span>
+    );
+  if (item.kind === "flexible")
+    return (
+      <span className="rounded-md border border-dashed border-muted-foreground p-[3px] text-[15px] leading-none">
+        {item.emoji}
+      </span>
+    );
+  return (
+    <span className="truncate text-[13px]">
+      {item.emoji}
+      {item.quantity ? ` ${item.quantity}` : ""}
+    </span>
+  );
+}
+
 function DayTile({ day, selected, onClick }: HomeDayTileProps) {
+  const theme = useThemeColors();
   const shown = day.items.slice(0, TILE_EMOJIS);
   const more = day.items.length - shown.length;
-  const allDone = day.items.length > 0 && day.items.every((item) => item.kind === "done");
   return (
     <button
       type="button"
@@ -25,27 +49,17 @@ function DayTile({ day, selected, onClick }: HomeDayTileProps) {
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "flex min-h-[84px] min-w-0 flex-1 flex-col items-center gap-[3px] rounded-xl bg-card py-2",
-        selected ? "border-2 border-primary" : "border border-border",
-        day.isPast && !allDone && "opacity-55",
+        "flex min-h-[84px] min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg border px-0.5 py-1.5",
+        selected ? cn(theme.brightBorder, theme.veryFadedBg) : "border-border bg-card",
+        day.isPast && "opacity-55",
       )}
     >
-      <span className={cn("text-[10px] font-semibold", day.isToday ? "text-primary" : "text-muted-foreground")}>
+      <span className={cn("text-[10px]", day.isToday ? theme.text : "text-muted-foreground")}>
         {weekday(day.key).toUpperCase()}
       </span>
-      <span className={cn("text-[15px] font-bold", day.isToday && "text-primary")}>{dayNumber(day.key)}</span>
+      <span className={cn("text-sm font-bold", day.isToday && theme.text)}>{dayNumber(day.key)}</span>
       {shown.map((item) => (
-        <span
-          key={item.id}
-          className={cn(
-            "text-[13px] font-bold",
-            item.kind === "flexible" && "opacity-45",
-            item.kind === "done" && "text-green-500",
-          )}
-        >
-          {item.emoji}
-          {item.kind === "done" ? "✓" : ""}
-        </span>
+        <TileItem key={item.id} item={item} />
       ))}
       {more > 0 && <span className="text-[11px] font-semibold text-muted-foreground">+{more}</span>}
     </button>
@@ -54,6 +68,7 @@ function DayTile({ day, selected, onClick }: HomeDayTileProps) {
 
 function ItemRow({ item, canLog }: HomeItemRowProps) {
   const navigate = useNavigate();
+  const theme = useThemeColors();
   const amount = item.quantity ? ` · ${item.quantity} ${unitLabel(item.measure ?? "", item.quantity)}` : "";
   const fact =
     item.kind === "done"
@@ -85,7 +100,7 @@ function ItemRow({ item, canLog }: HomeItemRowProps) {
       {item.kind === "done" ? (
         <Check className="h-5 w-5 shrink-0 text-green-500" strokeWidth={3} />
       ) : loggable ? (
-        <span className="shrink-0 rounded-full bg-primary px-3.5 py-[7px] text-sm font-bold text-primary-foreground">
+        <span className={cn("shrink-0 rounded-full px-3.5 py-[7px] text-sm font-bold text-white", theme.bg)}>
           Log
         </span>
       ) : (
@@ -135,11 +150,10 @@ export const HomeTodo = () => {
       <CoachNote />
       {visible.length > 0 && (
         <section className="flex flex-col gap-3.5 rounded-3xl bg-card p-4">
+          <h2 className="text-[19px] font-bold">Next two weeks</h2>
           {weeks.map((days, index) => (
             <div key={index} className="flex flex-col gap-2">
-              <p className="text-[13px] font-semibold text-muted-foreground">
-                {index ? "Next week" : "This week"} · {weekRange(days[0].key)}
-              </p>
+              <p className="text-sm text-muted-foreground">{index ? "Next week" : "This week"}</p>
               <div className="flex gap-[5px]">
                 {days.map((d) => (
                   <DayTile key={d.key} day={d} selected={d.key === day.key} onClick={() => setSelectedKey(d.key)} />

@@ -5,22 +5,45 @@ import { Check, ChevronRight } from "lucide-react-native";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { homeDays } from "@tsw/prisma/home-todo";
 import { Text } from "@/components/typography/Text";
-import { useColors } from "@/components/ui";
-import { dayNumber, longDate, unitLabel, weekRange, weekday } from "@/features/onboarding/design/format";
+import { Heading, useColors } from "@/components/ui";
+import { dayNumber, longDate, unitLabel, weekday } from "@/features/onboarding/design/format";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { visibleSessions } from "@/features/follow-through/model";
 import { CoachNote } from "./CoachNote";
-import type { HomeDayDetailProps, HomeDayTileProps, HomeItemRowProps, HomeTodoProps } from "./types";
+import type { HomeDayDetailProps, HomeDayTileProps, HomeItemRowProps, HomeTileItemProps, HomeTodoProps } from "./types";
 
 const GREEN = "#22c55e";
 /** A day tile has room for two emojis; the rest show as "+n". */
 const TILE_EMOJIS = 2;
 
+/** One thing on a day tile: done as a green square with a tick, planned with its amount, an open slot dashed. */
+function TileItem({ item }: HomeTileItemProps) {
+  const c = useColors();
+  if (item.kind === "done")
+    return (
+      <View style={{ backgroundColor: c.dark ? "#14532d" : "#dcfce7", borderRadius: 6, padding: 4 }}>
+        <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
+        <Text style={{ position: "absolute", top: -6, right: -3, color: GREEN, fontWeight: "700" }}>✓</Text>
+      </View>
+    );
+  if (item.kind === "flexible")
+    return (
+      <View style={{ borderWidth: 1, borderStyle: "dashed", borderColor: c.muted, borderRadius: 6, padding: 3 }}>
+        <Text style={{ fontSize: 15 }}>{item.emoji}</Text>
+      </View>
+    );
+  return (
+    <Text numberOfLines={1} style={{ color: c.text, fontSize: 13 }}>
+      {item.emoji}
+      {item.quantity ? ` ${item.quantity}` : ""}
+    </Text>
+  );
+}
+
 function DayTile({ day, selected, onPress }: HomeDayTileProps) {
   const c = useColors();
   const shown = day.items.slice(0, TILE_EMOJIS);
   const more = day.items.length - shown.length;
-  const allDone = day.items.length > 0 && day.items.every((item) => item.kind === "done");
   return (
     <Pressable
       testID={`home-day-${day.key}`}
@@ -33,35 +56,22 @@ function DayTile({ day, selected, onPress }: HomeDayTileProps) {
         minWidth: 0,
         minHeight: 84,
         alignItems: "center",
-        justifyContent: "flex-start",
-        paddingVertical: 8,
-        gap: 3,
-        borderRadius: 12,
-        borderWidth: selected ? 2 : 1,
-        borderColor: selected ? c.accent : c.inputBorder,
-        backgroundColor: c.card,
-        opacity: day.isPast && !allDone ? 0.55 : 1,
+        paddingVertical: 6,
+        paddingHorizontal: 2,
+        gap: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: selected ? c.selectedBorder : day.isToday ? `${c.accent}55` : c.border,
+        backgroundColor: selected ? c.selectedBg : c.card,
+        opacity: day.isPast ? 0.55 : 1,
       }}
     >
-      <Text style={{ color: day.isToday ? c.accent : c.muted, fontSize: 10, fontWeight: "600" }}>
-        {weekday(day.key).toUpperCase()}
-      </Text>
-      <Text style={{ color: day.isToday ? c.accent : c.text, fontSize: 15, fontWeight: "700" }}>
+      <Text style={{ color: day.isToday ? c.accent : c.muted, fontSize: 10 }}>{weekday(day.key).toUpperCase()}</Text>
+      <Text style={{ color: day.isToday ? c.accent : c.text, fontSize: 14, fontWeight: "700" }}>
         {dayNumber(day.key)}
       </Text>
       {shown.map((item) => (
-        <Text
-          key={item.id}
-          style={{
-            fontSize: 13,
-            opacity: item.kind === "flexible" ? 0.45 : 1,
-            color: item.kind === "done" ? GREEN : c.text,
-            fontWeight: "700",
-          }}
-        >
-          {item.emoji}
-          {item.kind === "done" ? "✓" : ""}
-        </Text>
+        <TileItem key={item.id} item={item} />
       ))}
       {more > 0 && <Text style={{ color: c.muted, fontSize: 11, fontWeight: "600" }}>+{more}</Text>}
     </Pressable>
@@ -166,11 +176,10 @@ export function HomeTodo({ plans, entries }: HomeTodoProps) {
       <CoachNote />
       {!!visible.length && (
         <View style={{ gap: 14, padding: 16, borderRadius: 24, backgroundColor: c.card }}>
+          <Heading>Next two weeks</Heading>
           {weeks.map((days, index) => (
             <View key={index} style={{ gap: 8 }}>
-              <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600" }}>
-                {index ? "Next week" : "This week"} · {weekRange(days[0].key)}
-              </Text>
+              <Text style={{ color: c.muted, fontSize: 14 }}>{index ? "Next week" : "This week"}</Text>
               <View style={{ flexDirection: "row", gap: 5 }}>
                 {days.map((d) => (
                   <DayTile key={d.key} day={d} selected={d.key === day.key} onPress={() => setSelectedKey(d.key)} />
