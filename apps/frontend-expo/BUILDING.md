@@ -48,6 +48,8 @@ The upload creates a unique directory containing the IPA, `manifest.plist` and `
 
 EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `apps/frontend-expo/.gitignore` used to ignore `ios/` everywhere, which also removed `modules/*/ios` (the TrackingWatch, TrackingHealth and TrackingMap Swift sources). A preserved release source without the root `.easignore` therefore built an app with none of our native modules, and it aborted 0.5 s after launch with `Cannot find native module 'TrackingWatch'`. Builds 162 and 164 were packaged this way; 165 is not. The ignore rule is now `/ios/`. Before uploading, check the build's `ios/Podfile.lock` lists `TrackingWatch`, `TrackingHealth` and `TrackingMap`.
 
+The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
+
 ## Standalone 3D onboarding — September 30, 2026, not distributed
 
 The selected onboarding uses the original target Lottie on Welcome and Goal, and the original clay assets without blue/tinted circular backplates elsewhere. The original 3D coaches remain. Welcome now has two parts: the requested introduction, cards and commitment end with **I'm ready!**; tapping it fades the body out over 160 ms and progressively reveals **What is your age?** beneath the same target and Welcome title. Age uses the same minus / number / plus control as weekly frequency, bounded to 13–120. It prefills an existing profile age or starts at 25 for the user to adjust and confirm. **Continue** saves the chosen age before advancing to Goal; **Try again** handles save failures. Back returns to the introduction and retains the chosen age. Matching reuses the saved age, and Preview keeps it local.
@@ -86,7 +88,7 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - **Verified IPA:** `.release/b220-1104e462/tracking.so.ipa` in that worktree, SHA-256 `99027ea50bcb9e36eab5ab4621d833a7d43760594bfbf66e873b422a8dbcfb24`; the wrapper's checks passed. iPhone and Watch are 1.0.0 (220).
 - **Hosted:** `.release/2026-10-28T11-13-22-640Z-d4c64d3f/distribution.json`; the link expires November 4, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,207,754 IPA bytes.
 - **Checked before the build:** both TypeScript projects, the 7 home-todo tests, and the homepage on the fixture simulator build and the web harness in light and dark. Not run on a phone.
-- **EAS build counter:** still 217 remotely; set it to 220 before the next EAS build.
+- **EAS build counter:** was 217 remotely at the time; TestFlight builds 220 and 221 have since moved it to 221 (see below).
 - No Expo cloud build, OTA, store submission or backend deploy (`[skip ci]`).
 
 ## Safari-install build 219 — two weeks on the homepage, October 27, 2026
@@ -219,7 +221,29 @@ The hosted-byte checker GETs the exact installer, follows its manifest, checks b
 - Contains: the welcome screen and redesigned onboarding (clay illustrations, header progress line, one accent button), the circle steps and match screen, circles with photo proof, Search → Circles, circle squares and pills, clay coaches, light default. The `main.jsbundle` strings and the new location purpose text were checked in the exact IPA.
 - Needs the `circle-proof-20260929` backend (live). Not a TestFlight upload; build 175 stays the current TestFlight release.
 
-## Current TestFlight release — build 206, October 2, 2026
+## TestFlight builds 220 and 221 — everything on main, October 28, 2026
+
+- **Build 221 is the current TestFlight release.** Source: main `1104e462` (Safari-install build 220's app: clearer day tiles, "Next two weeks", no circle cards on the homepage) plus `e524cb5f`, which adds `!/packages/prisma/home-todo` to the root `.easignore`. Since TestFlight build 206 it adds the Coach tab (Metrics moves to Profile → Check-ins), the floating coach chat and "coach says hi first", Plans trimmed to the week ahead, the two-week homepage with one coach note, the Apple Watch staying signed in, App Store consent and privacy, duplicate-activity merge and the native onboarding. No backend change.
+- **Build 220** is main `e948b278` (Safari-install build 219's app) plus the same `.easignore` line. `1104e462` landed while it was building, so it lacks the clearer day tiles. Safari-install build 220 is a different, hand-signed binary of `1104e462`; the two 220s share only the number.
+- **Why TestFlight lagged:** the Apple Developer membership expired on October 11 and the Paid Apps Agreement on October 10, so App Store Connect answered `FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED` and build 209 was never uploaded. Both were renewed on October 28. The lapsed membership is probably also why Xcode rejected the signing profiles for builds 212–220; builds 220 and 221 signed through EAS normally.
+- **Built** with the standard `testflight.ts build` (local EAS, `production` profile, EAS-managed App Store credentials) from a detached worktree `tracking-testflight-220`. Two attempts at 220 failed first: `expo doctor` timed out and EAS build-tools then crashed with `kill ESRCH` (avoid it with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`); then the JavaScript bundle could not resolve `@tsw/prisma/home-todo` (the `.easignore` line). Each failed attempt used up a remote build number, so the counter was set back to 219 before each retry.
+- **IPAs** in that worktree, with `build.log`, `validate.log` and `submit.log` beside each:
+  - 221: `.release/testflight-b221/tracking.so.ipa`, SHA-256 `3904113f232a6c6fca4044cb6065b22f0f23e46b201ab714640c362f839088fb`; delivery `61b155af-4692-4e72-b4b7-e246bebeca34`.
+  - 220: `.release/testflight-b220/tracking.so.ipa`, SHA-256 `0c9824c94d219d0b34bab131d4c8711e8a8875069b46d04123eaf1244ed127dc`; delivery `2fc5bf0b-00de-4b6f-aec5-feb145d28971`.
+- **Checks on both:** iPhone and Watch are 1.0.0 at the build number. Production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed with `iPhone Distribution … (7P4CMS849D)`; both App Store profiles expire September 10, 2027. `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap, ExpoIap and ExpoSecureStore. The Hermes bundle contains `home-todo`, "Open coach message" and `/auth/switch-tokens`; 221's also contains "Next two weeks". Apple validation `VERIFY SUCCEEDED with no errors`; `processingState: VALID`; internal state `IN_BETA_TESTING` (internal testers group); external state `READY_FOR_BETA_SUBMISSION`, not submitted for beta review.
+- Expo typecheck on each release source. No new unit or browser runs: the app source is Safari builds 219 and 220's, whose checks are recorded with them. Not run on a phone. No Expo cloud build, OTA or App Store submission.
+- **EAS build counter:** 221. The next EAS build gets 222. A hand-built release should take 222 or later, not reuse a TestFlight number.
+
+```sh
+cd apps/frontend-expo
+env -u SDKROOT EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+  EAS_LOCAL_BUILD_SKIP_CLEANUP=1 EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-testflight-221-build \
+  node --import tsx scripts/iphone/testflight.ts build .release/testflight-b221/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts validate .release/testflight-b221/tracking.so.ipa
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer node --import tsx scripts/iphone/testflight.ts submit .release/testflight-b221/tracking.so.ipa
+```
+
+## Previous TestFlight release — build 206, October 2, 2026
 
 - Build 204 plus the Metrics refinement from `5b70ccf0` (too-early rows folded into one line, metric pills on one scrolling row, no repeated "Check-ins" heading). Built locally from main `6e0fb61b`, so it matches main: smooth heart-rate chart, account switching, Metrics redesign, dictation feedback and languages, the explained missed-week sheet and the streak explainer. No backend change; `account-switch-20261001` and `voice-languages-20261002` are live.
 - IPA: `.release/testflight-main-6e0fb61b/tracking.so.ipa` in the `tracking-heart-rate` worktree (SHA-256 `72cc307dbaf89cbf6bf79d65ab9fde7139abb87b55139d1ec83178084db0baf6`), version 1.0.0 (206), iPhone and Watch, `build.log` and `submit.log` beside it. Embedded config: production API, live Clerk key, `fixtureMode: false`. `codesign --verify --deep --strict` passed; `Podfile.lock` lists TrackingWatch, TrackingHealth, TrackingMap, ExpoIap and ExpoSecureStore; the Hermes bundle contains `findings-more`, `streak-explainer`, `heart-rate-line`, `/auth/switch-tokens` and "Did we get that right?". Apple validation: `VERIFY SUCCEEDED with no errors`. Delivery `4ff71ee5-e887-4e4a-be44-b3551a1e370e`; App Store Connect `build-status: VALID`.
