@@ -39,5 +39,6 @@
 !/packages/prisma/coach-conversation-starters.ts
 !/packages/prisma/reactions.ts
 !/packages/prisma/activity-duplicates.ts
+!/packages/prisma/home-todo
 
 !/packages/prisma/follow-through
