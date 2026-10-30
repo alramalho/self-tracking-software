@@ -88,7 +88,7 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - **Verified IPA:** `.release/2026-10-30T13-31-41-426Z-47e3c112/tracking.so.ipa` in that worktree, SHA-256 `687d74d142e88f0bb1642a6fa95703ba63b2c85fbaa5f9c83daa337164756652`. iPhone and Watch are 1.0.0 (222); both profiles expire September 10, 2027.
 - **Hosted:** `distribution.json` beside the IPA; the link expires November 6, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,190,027 IPA bytes.
 - **Checked before the build:** both TypeScript projects; the miss-reason, coach chrome and messages Playwright specs in light and dark. Not run on a simulator or a phone.
-- **Backend:** needs the `missed-week` endpoint from `e0242c09`. Its Hetzner deploy (run 41063889148) stopped at the disk check (4 GB free, 6 GB required), so production still runs `e3b435e3209c` and "Plan N days" fails until it is deployed.
+- **Backend:** needs the `missed-week` endpoint from `e0242c09`. Its first Hetzner deploy (run 41063889148) stopped at the disk check (4 GB free, 6 GB required). After removing the unused `ultron-api` images (11 GB free), the rerun passed and production runs `ghcr.io/alramalho/tracking-so-backend:e0242c0973d2` (healthy) since October 30, 20:15 UTC. The rollback image `2c8fc42e0a3e` and the previous `e3b435e3209c` are kept.
 - **EAS build counter:** 222. No Expo cloud build, OTA or store submission.
 
 ## Safari-install build 220 — clearer day tiles, October 28, 2026

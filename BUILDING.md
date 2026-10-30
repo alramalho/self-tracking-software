@@ -16,7 +16,7 @@ The selected `tracking-circles` onboarding uses the original 3D artwork without 
 
 ## Latest Safari-install release — build 222, October 30, 2026
 
-Main `e0242c09`: a missed week's reason on the Coach tab leads to picking this week's days instead of sending a chat message; no eye icon or Assess in the chat; Coach settings on the Coach tab without the Weekly recap switch. Built through the standard local EAS wrapper (signing works again). The backend part is not deployed yet: the Hetzner deploy stopped at its disk-space check. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-222--missed-week-picks-this-weeks-days-october-30-2026). Link expires November 6, 2026.
+Main `e0242c09`: a missed week's reason on the Coach tab leads to picking this week's days instead of sending a chat message; no eye icon or Assess in the chat; Coach settings on the Coach tab without the Weekly recap switch. Built through the standard local EAS wrapper (signing works again). The backend part is live on Hetzner as `e0242c0973d2` since October 30, 20:15 UTC. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-222--missed-week-picks-this-weeks-days-october-30-2026). Link expires November 6, 2026.
 
 ## Earlier Safari-install release — build 220, October 28, 2026
 
