@@ -68,6 +68,7 @@ export function DrawerOptions({ label, options }: DrawerOptionsProps) {
               opacity: option.disabled ? 0.45 : 1,
             })}
           >
+            {!!option.emoji && <Text style={{ fontSize: 22, lineHeight: 28 }}>{option.emoji}</Text>}
             <Text
               style={{
                 flex: 1,

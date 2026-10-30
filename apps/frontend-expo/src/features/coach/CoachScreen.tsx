@@ -11,6 +11,7 @@ import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
 import { MetricLogger } from "@/features/metrics/MetricLogger";
 import { coachAvatar } from "./avatar";
+import { CoachSettings } from "./CoachSettings";
 import { CoachItemDrawer } from "./inbox/CoachItemDrawer";
 import { useCoachInbox } from "./inbox/useCoachInbox";
 import { useCoachingSwitches } from "./useCoaching";
@@ -68,6 +69,7 @@ export default function CoachScreen() {
   const coach = coachIdentity(user.data?.coachPersonality);
   const [open, setOpen] = useState<CoachItem>();
   const [checkIn, setCheckIn] = useState(false);
+  const [settings, setSettings] = useState(false);
   const { refresh, refreshing } = useRefresh(
     "follow-through",
     "plans",
@@ -88,13 +90,20 @@ export default function CoachScreen() {
     <Screen testID="coach-screen" title="Coach" onRefresh={refresh} refreshing={refreshing}>
       <Status loading={inbox.loading} error={inbox.error} retry={refresh} />
       <Panel style={{ padding: 16, borderRadius: 18, gap: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Pressable
+          testID="coach-settings"
+          accessibilityRole="button"
+          accessibilityLabel={`${coach.name} coach settings`}
+          onPress={() => setSettings(true)}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.6 : 1 })}
+        >
           <Image source={coachAvatar(user.data?.coachPersonality === "STRATEGIST")} style={{ width: 48, height: 48 }} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>{coach.name}</Text>
             <Text style={{ color: c.muted, fontSize: 13 }}>{coach.title}</Text>
           </View>
-        </View>
+          <ChevronRight size={18} color={c.muted} />
+        </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: 1, borderColor: c.border, paddingTop: 14 }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Coaching</Text>
@@ -171,6 +180,7 @@ export default function CoachScreen() {
       <Status error={coaching.error} />
       <CoachItemDrawer item={open} onClose={() => setOpen(undefined)} onCheckIn={() => setCheckIn(true)} />
       {checkIn && <MetricLogger onClose={() => setCheckIn(false)} />}
+      <CoachSettings visible={settings} onClose={() => setSettings(false)} />
       {coaching.consentSheet}
     </Screen>
   );

@@ -48,10 +48,6 @@ interface HourlyJobResult {
   started_for_users: string[];
   total_users_checked: number;
   batched_notifications_sent: string[];
-  autonomous_coach_enabled: boolean;
-  autonomous_coach_dry_run: boolean;
-  autonomous_coach_checked: number;
-  autonomous_coach_sent: number;
   onboarding_inactive_checked: number;
   onboarding_inactive_notified: string[];
 }
@@ -230,13 +226,8 @@ export class RecurringJobService {
     const onboardingInactiveResults =
       await onboardingNotificationService.processInactiveOnboardingUsers();
 
-    // Process autonomous coach assessments. This is feature-flagged and dry-run
-    // by default so production rollout can be staged without changing cron.
-    const coachAssessmentResults =
-      await coachAssessmentService.runAutonomousCoachAssessment({
-        filter_usernames: options.filter_usernames,
-        force: options.force,
-      });
+    // The legacy weekly coach assessment ("Weekly recap") no longer runs on a schedule:
+    // plan coaching's check-ins and weekly reviews replace it.
 
     // Auto-accept coach proposals that have been pending for 48+ hours
     const autoAcceptResults = await coachAssessmentService.autoAcceptExpiredProposals();
@@ -245,7 +236,7 @@ export class RecurringJobService {
     }
 
     logger.info(
-      `Hourly job completed: ${batchedNotificationResults.sent.length} batched notifications sent, ${coachAssessmentResults.messages_sent} autonomous coach messages sent`
+      `Hourly job completed: ${batchedNotificationResults.sent.length} batched notifications sent`
     );
 
     return {
@@ -253,10 +244,6 @@ export class RecurringJobService {
       started_for_users: [],
       total_users_checked: 0,
       batched_notifications_sent: batchedNotificationResults.sent,
-      autonomous_coach_enabled: coachAssessmentResults.enabled,
-      autonomous_coach_dry_run: coachAssessmentResults.dry_run,
-      autonomous_coach_checked: coachAssessmentResults.users_checked,
-      autonomous_coach_sent: coachAssessmentResults.messages_sent,
       onboarding_inactive_checked: onboardingInactiveResults.checked,
       onboarding_inactive_notified: onboardingInactiveResults.notified,
     };

@@ -11,7 +11,7 @@ appId: so.tracking.app
 - tapOn: Messages
 - assertVisible: Sam
 - tapOn: Message Helly, AI Coach
-- assertVisible: Helly coach settings
+- assertVisible: Conversation options
 - takeScreenshot: coach-dark
 - tapOn:
     id: chat-message-input
@@ -40,6 +40,5 @@ appId: so.tracking.app
 - waitForAnimationToEnd
 - tapOn: Conversation options
 - waitForAnimationToEnd
-- tapOn: Coach settings
-- assertVisible: Weekly recap
-- takeScreenshot: coach-settings-light
+- assertVisible: New conversation
+- takeScreenshot: coach-menu-light

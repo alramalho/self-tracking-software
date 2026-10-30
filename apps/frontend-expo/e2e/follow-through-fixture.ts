@@ -136,6 +136,11 @@ export function followThroughFixture(
     if (support.monitoring) support.monitoring.pausedPlanIds = support.monitoring.pausedPlanIds.filter(id => id !== body.planId);
     return { ok: true };
   }
+  const missedWeek = path.match(/^\/follow-through\/plans\/([^/]+)\/missed-week$/);
+  if (missedWeek) {
+    support.missedWeeks = { ...support.missedWeeks, [missedWeek[1]]: { ...body, answeredAt: new Date().toISOString() } };
+    return { ok: true };
+  }
   const planMessages = path.match(/^\/plans\/([^/]+)\/coach-action-messages$/);
   if (planMessages) return { messages: state.messages.filter((m: any) => m.planProposals?.some((p: any) => p.planId === planMessages[1] && !p.status)) };
   const decision = path.match(/^\/ai\/messages\/([^/]+)\/(accept|reject)-proposal$/);

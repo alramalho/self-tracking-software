@@ -92,6 +92,20 @@ router.post("/coaching/resume", handle(async (req, res) => {
   });
   res.json({ ok: true });
 }));
+// "What got in the way?" for a missed week, and this week's days: told to the coach as context, not as a chat message.
+router.post("/plans/:planId/missed-week", handle(async (req, res) => {
+  const answer = z.object({
+    week: dateKey,
+    reason: z.enum(["busy", "sick", "travel", "motivation"]),
+    days: z.array(dateKey).max(7),
+  }).parse(req.body);
+  const planId = String(req.params.planId);
+  await changeState(req.user!.id, async state => {
+    if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
+    state.missedWeeks = { ...state.missedWeeks, [planId]: { ...answer, answeredAt: new Date().toISOString() } };
+  });
+  res.json({ ok: true });
+}));
 router.get(
   "/calendar",
   handle(async (req, res) => res.json(await calendarSessions(req.user!))),

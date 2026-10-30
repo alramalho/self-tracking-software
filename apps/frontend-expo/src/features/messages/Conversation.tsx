@@ -1,5 +1,4 @@
 import { useReducedMotion } from "react-native-reanimated";
-import { PlanCoachingRow } from "@/features/plans/coaching/PlanCoachingRow";
 import { IconButton } from "./IconButton";
 import { ConversationHeader } from "./chrome/ConversationHeader";
 import { AttentionIsland } from "./chrome/AttentionIsland";
@@ -38,9 +37,7 @@ import { DictationButton } from "@/features/dictation/DictationButton";
 import { appendDictationText } from "@/features/dictation/VoiceTextArea";
 import {
   useCurrentUser,
-  usePlans,
 } from "@/data/queries";
-import { CoachSettings } from "./CoachSettings";
 import { MessageCard } from "./MessageCard";
 import {
   chatTitle,
@@ -110,7 +107,6 @@ export function Conversation({ id }: ConversationProps) {
         )
       ).data.attentionItems,
   });
-  const plans = usePlans();
   const [text, setText] = useState(params.prompt ?? "");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [editing, setEditing] = useState<Message | null>(null);
@@ -118,10 +114,7 @@ export function Conversation({ id }: ConversationProps) {
   const [progress, setProgress] = useState<ResponseState["status"] | null>(
     null,
   );
-  const [settings, setSettings] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [context, setContext] = useState(false);
-  const [contextPlan, setContextPlan] = useState<string>();
   const [clear, setClear] = useState(false);
   const [attachmentError, setAttachmentError] = useState<unknown>();
   const [picking, setPicking] = useState(false);
@@ -194,7 +187,7 @@ export function Conversation({ id }: ConversationProps) {
     },
   });
   const action = useMutation({
-    mutationFn: async (kind: "new" | "assess" | "clear") => {
+    mutationFn: async (kind: "new" | "clear") => {
       if (kind === "new") {
         const next = await createCoachChat();
         router.replace({
@@ -202,10 +195,6 @@ export function Conversation({ id }: ConversationProps) {
           params: { id: next.id, type: "COACH" },
         });
       }
-      if (kind === "assess")
-        await api.post("/ai/coach/run-assessment", undefined, {
-          timeout: 300000,
-        });
       if (kind === "clear") {
         await api.delete("/ai/coach/history");
         const next = await createCoachChat();
@@ -546,8 +535,6 @@ export function Conversation({ id }: ConversationProps) {
                   Keyboard.dismiss();
                   router.dismissTo("/messages");
                 }}
-                onOpenSettings={() => setSettings(true)}
-                onOpenContext={() => setContext(true)}
                 onOpenMenu={() => setMenu(true)}
                 onOpenPersonMenu={
                   otherPerson
@@ -759,7 +746,6 @@ export function Conversation({ id }: ConversationProps) {
             </View>
           </View>
         </View>
-        <CoachSettings visible={settings} onClose={() => setSettings(false)} />
         <Sheet
           visible={menu}
           title="Conversation"
@@ -768,22 +754,6 @@ export function Conversation({ id }: ConversationProps) {
           <Status error={action.error} />
           <Button busy={action.isPending} onPress={() => action.mutate("new")}>
             New conversation
-          </Button>
-          <Button
-            secondary
-            busy={action.isPending}
-            onPress={() => action.mutate("assess")}
-          >
-            Assess
-          </Button>
-          <Button
-            secondary
-            onPress={() => {
-              setMenu(false);
-              setSettings(true);
-            }}
-          >
-            Coach settings
           </Button>
           <Button
             secondary
@@ -814,21 +784,6 @@ export function Conversation({ id }: ConversationProps) {
           <Button secondary onPress={() => setClear(false)}>
             Cancel
           </Button>
-        </Sheet>
-        <Sheet
-          visible={context}
-          title={`What ${identity.name} can see`}
-          onClose={() => { setContext(false); setContextPlan(undefined); }}
-        >
-          {!contextPlan && <Copy muted>
-            Your coach uses your plans, app logs, ratings, and conversation.
-            Watch workouts and sleep require permission for each plan.
-          </Copy>}
-          {plans.data
-            ?.filter((p) => !p.deletedAt && !p.archivedAt && (!contextPlan || p.id === contextPlan))
-            .map((plan) => (
-              <PlanCoachingRow key={plan.id} plan={plan} showPlanTitle inlineEditor onEditingChange={editing => setContextPlan(editing ? plan.id : undefined)} />
-            ))}
         </Sheet>
         <ReportSheet target={report} onClose={() => setReport(undefined)} />
         {aiConsent.sheet}

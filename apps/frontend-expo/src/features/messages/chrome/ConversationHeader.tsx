@@ -1,5 +1,5 @@
-import { Image, Pressable, View } from "react-native";
-import { ArrowLeft, EllipsisVertical, Eye } from "lucide-react-native";
+import { Image, View } from "react-native";
+import { ArrowLeft, EllipsisVertical } from "lucide-react-native";
 import { useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { IconButton } from "../IconButton";
@@ -11,8 +11,6 @@ export function ConversationHeader({
   coach,
   avatar,
   onBack,
-  onOpenSettings,
-  onOpenContext,
   onOpenMenu,
   onOpenPersonMenu,
 }: ConversationHeaderProps) {
@@ -30,14 +28,7 @@ export function ConversationHeader({
       <IconButton label="Back to messages" onPress={onBack}>
         <ArrowLeft color={c.text} size={22} />
       </IconButton>
-      <Pressable
-        accessible={coach}
-        accessibilityRole={coach ? "button" : undefined}
-        accessibilityLabel={coach ? `${title} coach settings` : undefined}
-        disabled={!coach}
-        onPress={onOpenSettings}
-        style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}
-      >
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
         {avatar && (
           <Image
             source={avatar}
@@ -56,16 +47,11 @@ export function ConversationHeader({
             <Text style={{ color: c.muted, fontSize: 12 }}>AI Coach</Text>
           )}
         </View>
-      </Pressable>
+      </View>
       {coach && (
-        <>
-          <IconButton label={`What ${title} can see`} onPress={onOpenContext}>
-            <Eye size={20} color={c.text} />
-          </IconButton>
-          <IconButton label="Conversation options" onPress={onOpenMenu}>
-            <EllipsisVertical size={20} color={c.text} />
-          </IconButton>
-        </>
+        <IconButton label="Conversation options" onPress={onOpenMenu}>
+          <EllipsisVertical size={20} color={c.text} />
+        </IconButton>
       )}
       {onOpenPersonMenu && (
         <IconButton label="Conversation options" onPress={onOpenPersonMenu}>

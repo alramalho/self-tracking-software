@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Status } from "@/components/ui";
@@ -10,16 +11,23 @@ import { latestCoachChat } from "@/features/messages/service";
 import {
   MISS_REASONS,
   answeredMissedWeek,
-  missMessage,
   missMessageStart,
   rememberMissAnswered,
 } from "@/features/timeline/home-cards/miss-reasons";
+import type { MissReason } from "@/features/timeline/home-cards/types";
 import { alertFact } from "../model";
+import { MissedWeekPlan } from "./MissedWeekPlan";
 import type { CoachChatOpening, CoachItem, CoachItemDrawerProps } from "../types";
 
 /** One coach item, opened: a centered title and one fact, the answers as options, one main button. */
-export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerProps) {
+export function CoachItemDrawer({ item, onClose: close, onCheckIn }: CoachItemDrawerProps) {
   const client = useQueryClient();
+  // Picking a reason moves to this week's days, inside the drawer.
+  const [reason, setReason] = useState<MissReason>();
+  const onClose = () => {
+    setReason(undefined);
+    close();
+  };
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
   // A missed week is asked about once: after an answer, the drawer offers the conversation instead.
   const missedPlanId = item?.kind === "alert" && item.alert.missed ? item.alert.plan.id : undefined;
@@ -76,15 +84,26 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
         const activity = plan.activities[0];
         const nudge = alert.nudge;
         const askReason = !!alert.missed && !answered.data && !nudge?.messageId;
+        if (askReason && reason)
+          return (
+            <MissedWeekPlan
+              plan={plan}
+              reason={reason}
+              target={plan.timesPerWeek || alert.missed?.target || 3}
+              onBack={() => setReason(undefined)}
+              onSaved={onClose}
+            />
+          );
         const reasons: DrawerOption[] = [
-          ...MISS_REASONS.map((reason) => ({
-            label: reason.label,
+          ...MISS_REASONS.map((r) => ({
+            label: r.label,
+            emoji: r.emoji,
             disabled: busy,
-            onPress: () =>
-              talk.mutate({ prompt: missMessage(plan.goal, reason.says), send: true, planId: plan.id, answersMiss: true }),
+            onPress: () => setReason(r),
           })),
           {
             label: "Something else",
+            emoji: "💬",
             disabled: busy,
             onPress: () =>
               talk.mutate({ prompt: missMessageStart(plan.goal), planId: plan.id, answersMiss: true }),

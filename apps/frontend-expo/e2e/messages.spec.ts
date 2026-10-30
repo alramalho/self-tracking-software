@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 test.beforeEach(async ({ request }) => {
   await request.post(`${API}/__reset`);
 });
@@ -132,24 +132,11 @@ test("coach editing, settings and new conversation preserve history", async ({
   await expect(page.getByLabel("Message", { exact: true })).toHaveValue("");
   await page.getByRole("button", { name: "Conversation options" }).click();
   await page
-    .getByRole("button", { name: "Coach settings", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Choose Oli", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Selected: Oli", exact: true }),
-  ).toBeVisible();
-  await page.getByLabel("Reachout hour (0–23)").fill("9");
-  await page.getByRole("button", { name: "Save reachout time" }).click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Conversation options" }).click();
-  await page
     .getByRole("button", { name: "New conversation", exact: true })
     .click();
   await expect(page).not.toHaveURL(/coach-main/);
   await expect(page.getByText("Edited message", { exact: true })).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
-  expect(state.user.coachPersonality).toBe("STRATEGIST");
-  expect(state.user.preferredCoachingHour).toBe(9);
   expect(
     state.requests.some(
       (r: any) =>
@@ -187,4 +174,17 @@ test("photo attachment is sent with the coach message", async ({
   expect(sent.body.message).toBe("");
   expect(sent.body.imageAttachments).toHaveLength(1);
   expect(sent.body.imageAttachments[0].url).toMatch(/^data:image\//);
+});
+
+test("coach settings live on the Coach tab, not in the conversation", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await page.goto("/coach");
+  await page.getByTestId("coach-settings").click();
+  await page.getByRole("button", { name: "Choose Oli", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Selected: Oli", exact: true })).toBeVisible();
+  await page.getByLabel("Reachout hour (0–23)").fill("9");
+  await page.getByRole("button", { name: "Save reachout time" }).click();
+  await expect.poll(async () => (await (await request.get(`${API}/__state`)).json()).user.preferredCoachingHour).toBe(9);
+  const state = await (await request.get(`${API}/__state`)).json();
+  expect(state.user.coachPersonality).toBe("STRATEGIST");
 });

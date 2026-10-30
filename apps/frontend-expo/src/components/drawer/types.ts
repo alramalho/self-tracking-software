@@ -17,6 +17,8 @@ export interface DrawerHeaderProps {
 
 export interface DrawerOption {
   label: string;
+  /** Leads the row, e.g. a reason's emoji. */
+  emoji?: string;
   onPress?: () => void;
   destructive?: boolean;
   disabled?: boolean;

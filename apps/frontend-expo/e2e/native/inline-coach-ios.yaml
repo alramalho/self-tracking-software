@@ -51,7 +51,7 @@ appId: so.tracking.app
 - assertVisible: Manage Plan
 - tapOn: Back
 - waitForAnimationToEnd
-- assertVisible: Oli coach settings
+- assertVisible: Conversation options
 - tapOn: energetic
 - waitForAnimationToEnd
 - assertVisible: Log 4/5 for Energy?
@@ -113,7 +113,7 @@ appId: so.tracking.app
 - assertVisible: Manage Plan
 - tapOn: Back
 - waitForAnimationToEnd
-- assertVisible: Oli coach settings
+- assertVisible: Conversation options
 - tapOn: energetic
 - waitForAnimationToEnd
 - assertVisible: Log 4/5 for Energy?

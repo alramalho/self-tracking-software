@@ -4,7 +4,7 @@ import { api } from "@/data/api";
 import { dayKey } from "@/core/dates";
 import { useEntries, useMetricEntries, useMetrics, usePlans } from "@/data/queries";
 import { useFollowThrough } from "@/features/follow-through/api";
-import { answeredMissedWeek } from "@/features/timeline/home-cards/miss-reasons";
+import { answeredMissedWeek, answeredOnServer } from "@/features/timeline/home-cards/miss-reasons";
 import type { CoachAttentionItem } from "@/features/messages/types";
 import { coachItems } from "../model";
 
@@ -22,7 +22,7 @@ export function useCoachInbox() {
     staleTime: 60000,
   });
   const planIds = (plans.data ?? []).map((p) => p.id).join(",");
-  // A missed week is asked about once; the answer is remembered on this device.
+  // A missed week is asked about once: the saved answer, or on this device a chat started from "Something else".
   const answered = useQuery({
     queryKey: ["miss-answered", planIds],
     enabled: !!plans.data,
@@ -49,7 +49,9 @@ export function useCoachInbox() {
       attention: attention.data ?? [],
       metrics: metrics.data ?? [],
       checkedInToday,
-      answeredMisses: answered.data ?? [],
+      answeredMisses: (plans.data ?? [])
+        .map((p) => p.id)
+        .filter((id) => answered.data?.includes(id) || answeredOnServer(followThrough.data?.state, id)),
     });
   }, [plans.data, entries.data, followThrough.data, attention.data, metrics.data, metricEntries.data, answered.data]);
   return {

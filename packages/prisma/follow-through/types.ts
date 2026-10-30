@@ -183,8 +183,20 @@ export interface OnboardingDraft {
   createdPlanId: string | null;
   preferences?: SupportPreferences;
 }
+export type MissReasonId = "busy" | "sick" | "travel" | "motivation";
+/** The answer to "What got in the way?" for a missed week, and the days picked to make this week work. */
+export interface MissedWeekAnswer {
+  /** Start of the missed week, yyyy-MM-dd. */
+  week: string;
+  reason: MissReasonId;
+  /** This week's days the user picked, yyyy-MM-dd. */
+  days: string[];
+  answeredAt: string;
+}
 export interface FollowThroughState {
   monitoring?: import("./coaching").CoachMonitoringState;
+  /** Latest missed-week answer per plan. */
+  missedWeeks?: Record<string, MissedWeekAnswer>;
   version: 1;
   enabled: boolean;
   pausedAt: string | null;

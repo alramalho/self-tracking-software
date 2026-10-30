@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Switch, View } from "react-native";
+import { Image, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -9,14 +9,12 @@ import {
   Sheet,
   Status,
   s,
-  useColors,
 } from "@/components/ui";
 import { useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
-import { coachIdentity } from "./coach";
+import { coachIdentity } from "@/features/messages/coach";
 import type { CoachSettingsProps } from "./types";
 export function CoachSettings({ visible, onClose }: CoachSettingsProps) {
-  const c = useColors();
   const user = useCurrentUser();
   const client = useQueryClient();
   const [hour, setHour] = useState<string>();
@@ -29,10 +27,6 @@ export function CoachSettings({ visible, onClose }: CoachSettingsProps) {
   });
   return (
     <Sheet visible={visible} title="Coach settings" onClose={onClose}>
-      <Copy muted>
-        Once a week, your coach recaps the week you finished and lays out the
-        week ahead in one message.
-      </Copy>
       {(["CHAMPION", "STRATEGIST"] as const).map((personality) => {
         const identity = coachIdentity(personality);
         return (
@@ -66,21 +60,6 @@ export function CoachSettings({ visible, onClose }: CoachSettingsProps) {
           </Panel>
         );
       })}
-      <View style={s.row}>
-        <View style={{ flex: 1 }}>
-          <Copy>Weekly recap</Copy>
-          <Copy muted>One message every Monday.</Copy>
-        </View>
-        <Switch
-          accessibilityLabel="Weekly recap"
-          value={user.data?.proactiveCoachingEnabled ?? true}
-          onValueChange={(value) =>
-            save.mutate({ proactiveCoachingEnabled: value })
-          }
-          disabled={save.isPending}
-          trackColor={{ true: c.accent }}
-        />
-      </View>
       <Field
         label="Reachout hour (0–23)"
         keyboardType="number-pad"
