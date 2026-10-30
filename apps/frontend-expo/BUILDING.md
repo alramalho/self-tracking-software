@@ -81,6 +81,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 222 — missed week picks this week's days, October 30, 2026
+
+- **Source:** main `e0242c09` (one commit on `554f6943`). On the Coach tab, a missed week's reason no longer sends a chat message: it opens a second drawer step with this week's days and one "Plan N days" button, saved through `POST /follow-through/plans/:id/missed-week` for the coach to read. The chat loses its eye icon and Assess; Coach settings move to the Coach tab and lose the Weekly recap switch.
+- **Built with the standard wrapper**, `build:iphone` (local EAS, `device-production`, EAS-managed signing), from the worktree `tracking-coach-structured`, with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`. Signing worked normally again after the October 28 Apple renewal; no hand signing.
+- **Verified IPA:** `.release/2026-10-30T13-31-41-426Z-47e3c112/tracking.so.ipa` in that worktree, SHA-256 `687d74d142e88f0bb1642a6fa95703ba63b2c85fbaa5f9c83daa337164756652`. iPhone and Watch are 1.0.0 (222); both profiles expire September 10, 2027.
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 6, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,190,027 IPA bytes.
+- **Checked before the build:** both TypeScript projects; the miss-reason, coach chrome and messages Playwright specs in light and dark. Not run on a simulator or a phone.
+- **Backend:** needs the `missed-week` endpoint from `e0242c09`. Its Hetzner deploy (run 41063889148) stopped at the disk check (4 GB free, 6 GB required), so production still runs `e3b435e3209c` and "Plan N days" fails until it is deployed.
+- **EAS build counter:** 222. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 220 — clearer day tiles, October 28, 2026
 
 - **Source:** main `1104e462` (`home-tiles`, one commit on `25a71646`). Day tiles return to the first design: done is a green square with a tick, an open weekly slot a dashed box, a session shows its amount; "Next two weeks" titles the section. Circle cards leave the homepage on iPhone and web.
