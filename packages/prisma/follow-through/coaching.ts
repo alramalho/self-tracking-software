@@ -47,6 +47,8 @@ export interface CoachMonitoringState {
   lastExtraAt?: string;
   viewingUntil?: string;
   lease?: { id: string; until: string };
+  /** Paid generations per decision id, counted at claim, so a dropped or failed result is never paid for over and over. */
+  attempts?: Record<string, { count: number; at: string }>;
 }
 
 /** Stored on a silent nudge message; the app shows two buttons until one is used. */

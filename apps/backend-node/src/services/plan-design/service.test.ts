@@ -144,11 +144,12 @@ describe("designOptions", () => {
   it("steps up to the fallback model before giving up", async () => {
     const bad = routeOutput("steady", 20, [0, 2]);
     const { generate, calls } = fake(fitsNote, bad, routeOutput("focused", 16, FOCUSED), bad, routeOutput("steady", 20, STEADY));
-    // Opus designs by default; Sonnet is its fallback.
+    // Sonnet designs by default; luna is its fallback. Opus is never used.
     const result = await designOptions(input, generate);
-    expect(calls.map((c) => c.model)).toContain("anthropic/claude-opus-5.5");
     expect(calls.map((c) => c.model)).toContain("anthropic/claude-sonnet-5.5");
-    expect(result.models).toContain("anthropic/claude-sonnet-5.5");
+    expect(calls.map((c) => c.model)).toContain("openai/gpt-6-luna");
+    expect(calls.map((c) => c.model)).not.toContain("anthropic/claude-opus-5.5");
+    expect(result.models).toContain("openai/gpt-6-luna");
   });
 
   it("treats a reply that breaks the format as a failed attempt and retries", async () => {
