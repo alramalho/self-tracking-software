@@ -59,21 +59,22 @@ export const CLAUDE_OPUS_5_5_MODEL = "anthropic/claude-opus-5.5";
  * Plan design uses a different model per job, chosen from the live benchmarks (Oct 2026):
  * - quick: reading the goal, the target question, the coach's check of the days. Short, cheap calls (gpt-6-luna).
  * - design: the two routes at onboarding, once per person. Opus 5.5 wrote the most expert plans
- *   (warm-up sets, progression gated on reps in reserve, distinct heavy/volume days) for ~$0.17 a plan.
+ *   (warm-up sets, progression gated on reps in reserve, distinct heavy/volume days) for ~$0.17 a plan,
+ *   but Opus is out since Nov 2026 for cost: Sonnet 5.5 designs, with the same checks and retries.
  * - adapt: the next two weeks, every couple of weeks, in the background. With the load rules enforced in code
  *   (validate.ts loadChangeProblems), Sonnet 5.5 made the same decisions as Opus for ~$0.03 instead of ~$0.07.
- * - fallback: when a plan fails the checks twice, the other Claude model tries before the person sees an error.
+ * - fallback: when a plan fails the checks twice, gpt-6-luna tries before the person sees an error.
  * Overrides: PLAN_QUICK_MODEL, PLAN_DESIGN_MODEL, PLAN_ADAPT_MODEL, PLAN_FALLBACK_MODEL ("none" disables).
  */
 export type PlanModelRole = "quick" | "design" | "adapt";
 export function planModel(role: PlanModelRole): string {
   const env = { quick: process.env.PLAN_QUICK_MODEL, design: process.env.PLAN_DESIGN_MODEL, adapt: process.env.PLAN_ADAPT_MODEL }[role];
-  return env || { quick: GPT_6_LUNA_MODEL, design: CLAUDE_OPUS_5_5_MODEL, adapt: CLAUDE_SONNET_5_5_MODEL }[role];
+  return env || { quick: GPT_6_LUNA_MODEL, design: CLAUDE_SONNET_5_5_MODEL, adapt: CLAUDE_SONNET_5_5_MODEL }[role];
 }
 export function fallbackModel(primary: string): string | null {
   const env = process.env.PLAN_FALLBACK_MODEL;
   if (env === "none") return null;
-  const fallback = env || (primary === CLAUDE_OPUS_5_5_MODEL ? CLAUDE_SONNET_5_5_MODEL : CLAUDE_OPUS_5_5_MODEL);
+  const fallback = env || GPT_6_LUNA_MODEL;
   return fallback === primary ? null : fallback;
 }
 

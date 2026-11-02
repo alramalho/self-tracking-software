@@ -127,10 +127,18 @@ export async function monitorUser(user: User, now = new Date()) {
         const decision = decideMonitoring(initial);
         if (!decision) return null;
         signature = fingerprint(initial);
+        // Longer than the slowest generation (four tries at up to ~6 minutes each), so a run never
+        // loses its lease mid-generation and has its paid result discarded.
         initial.state.lease = {
           id: leaseId,
-          until: new Date(now.getTime() + 10 * 60000).toISOString(),
+          until: new Date(now.getTime() + 30 * 60000).toISOString(),
         };
+        // Counted before generating: a result that is dropped, fails, or crashes still used its attempt.
+        const attempts = Object.fromEntries(
+          Object.entries(initial.state.attempts ?? {}).filter(([, a]) => Date.parse(a.at) > now.getTime() - 30 * 86400000),
+        );
+        attempts[decision.id] = { count: (attempts[decision.id]?.count ?? 0) + 1, at: now.toISOString() };
+        initial.state.attempts = attempts;
         return decision;
       }),
     generate: async (decision) => {

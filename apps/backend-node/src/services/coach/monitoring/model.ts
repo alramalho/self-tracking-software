@@ -141,8 +141,54 @@ export function resumeReturningPlans(input: MonitoringInput) {
   });
 }
 
+/** Reminders and session check-ins are fixed text; every other decision is an AI generation. */
+export const MAX_PAID_ATTEMPTS = 2;
+const paid = (d: MonitoringDecision) => d.kind !== "reminder" && d.kind !== "session";
+export const attemptsLeft = (state: CoachMonitoringState, d: MonitoringDecision) =>
+  !paid(d) || (state.attempts?.[d.id]?.count ?? 0) < MAX_PAID_ATTEMPTS;
+
+/**
+ * A decision that already used its paid attempts is settled as if it was delivered, with nothing sent,
+ * so the next run moves on instead of paying for the same generation every hour.
+ */
+function giveUp(input: MonitoringInput, d: MonitoringDecision) {
+  const { state, now, supports } = input;
+  if (d.kind === "review")
+    for (const id of d.planIds)
+      state.reviewed[id] = formatInTimeZone(now, supports[id].timezone, "yyyy-MM-dd");
+  if (d.kind === "setup")
+    state.setupPlanIds = state.setupPlanIds?.filter((id) => !d.planIds.includes(id));
+  if (d.kind === "lapse")
+    state.lapsePlanIds = state.lapsePlanIds?.filter((id) => !d.planIds.includes(id));
+  const entry = d.entryId && input.entries.find((e) => e.id === d.entryId);
+  if (entry) state.consideredEntries[entry.id] = entry.updatedAt.toISOString();
+  if (d.kind !== "reminder")
+    state.requests.push({
+      id: d.id,
+      kind: d.kind,
+      planIds: d.planIds,
+      entryId: d.entryId,
+      sessionId: d.sessionId,
+      createdAt: now.toISOString(),
+      requiresReply: false,
+      closedAt: now.toISOString(),
+    });
+}
+
 /** Contact eligibility is deterministic. The generator decides what is useful inside these limits. */
 export function decideMonitoring(
+  input: MonitoringInput,
+): MonitoringDecision | null {
+  // Each give-up settles one decision, so this ends; the bound is a guard, not a limit.
+  for (let i = 0; i < 10; i++) {
+    const decision = nextDecision(input);
+    if (!decision || attemptsLeft(input.state, decision)) return decision;
+    giveUp(input, decision);
+  }
+  return null;
+}
+
+function nextDecision(
   input: MonitoringInput,
 ): MonitoringDecision | null {
   resolveRequests(input);

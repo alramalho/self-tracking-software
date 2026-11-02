@@ -60,8 +60,11 @@ services:
       NODE_ENV: "production"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       APNS_KEY_PATH: /run/secrets/apns-key.p8
+      # One JSON line per AI call with its Gateway cost; on the host in logs/, so it survives redeploys.
+      AI_USAGE_LOG: /var/log/tracking/ai-usage.jsonl
     volumes:
       - ./secrets/apns-key.p8:/run/secrets/apns-key.p8:ro
+      - ./logs:/var/log/tracking
     logging: *betterstack-logging
     expose:
       - "3000"
