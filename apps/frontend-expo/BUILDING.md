@@ -81,6 +81,15 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 223 — no Log buttons on the home and plan day cards, November 5, 2026
+
+- **Source:** main `3bde6a2c` (one commit on `19dd3245`). The home card's day row shows a chevron instead of the orange Log pill (tapping it still opens the logger); the plan page's day detail loses its full-width Log button. The web app does the same. No backend change.
+- **Built with the standard wrapper**, `build:iphone` (local EAS, `device-production`, EAS-managed signing), from the worktree `tracking-remove-log-clutter`, with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`.
+- **Verified IPA:** `.release/2026-11-05T09-37-09-959Z-c41adaa2/tracking.so.ipa` in that worktree, SHA-256 `61c66e492d52a7ee1c3bdbb031423989cbb7df638e1a647b8cea29617ec4a344`; iPhone and Watch 1.0.0 (223).
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 12, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,191,470 IPA bytes.
+- **Checked before the build:** both TypeScript projects. Not run on a simulator or a phone; no screenshots.
+- **EAS build counter:** 223. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 222 — missed week picks this week's days, October 30, 2026
 
 - **Source:** main `e0242c09` (one commit on `554f6943`). On the Coach tab, a missed week's reason no longer sends a chat message: it opens a second drawer step with this week's days and one "Plan N days" button, saved through `POST /follow-through/plans/:id/missed-week` for the coach to read. The chat loses its eye icon and Assess; Coach settings move to the Coach tab and lose the Weekly recap switch.
