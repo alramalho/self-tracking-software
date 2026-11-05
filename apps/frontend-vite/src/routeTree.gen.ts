@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WrappedRouteImport } from './routes/wrapped'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as TalkToCoachRouteImport } from './routes/talk-to-coach'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
@@ -50,6 +51,11 @@ const WrappedRoute = WrappedRouteImport.update({
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
   path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TalkToCoachRoute = TalkToCoachRouteImport.update({
+  id: '/talk-to-coach',
+  path: '/talk-to-coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignoutRoute = SignoutRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
+  '/talk-to-coach': typeof TalkToCoachRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
+  '/talk-to-coach': typeof TalkToCoachRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
+  '/talk-to-coach': typeof TalkToCoachRoute
   '/upgrade': typeof UpgradeRoute
   '/wrapped': typeof WrappedRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
+    | '/talk-to-coach'
     | '/upgrade'
     | '/wrapped'
     | '/chat/$chatId'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
+    | '/talk-to-coach'
     | '/upgrade'
     | '/wrapped'
     | '/chat/$chatId'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
+    | '/talk-to-coach'
     | '/upgrade'
     | '/wrapped'
     | '/chat/$chatId'
@@ -431,6 +443,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
+  TalkToCoachRoute: typeof TalkToCoachRoute
   UpgradeRoute: typeof UpgradeRoute
   WrappedRoute: typeof WrappedRoute
   ChatChatIdRoute: typeof ChatChatIdRoute
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/upgrade'
       fullPath: '/upgrade'
       preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/talk-to-coach': {
+      id: '/talk-to-coach'
+      path: '/talk-to-coach'
+      fullPath: '/talk-to-coach'
+      preLoaderRoute: typeof TalkToCoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signout': {
@@ -695,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
+  TalkToCoachRoute: TalkToCoachRoute,
   UpgradeRoute: UpgradeRoute,
   WrappedRoute: WrappedRoute,
   ChatChatIdRoute: ChatChatIdRoute,

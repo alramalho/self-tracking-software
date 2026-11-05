@@ -79,7 +79,7 @@ export function InterviewFrame({
         }}
       >
         <View style={{ width: 64, alignItems: "flex-start" }}>
-          {(!bare || backInBare) && (
+          {!!onBack && (!bare || backInBare) && (
             <IconButton
               label="Previous question"
               icon={ChevronLeft}

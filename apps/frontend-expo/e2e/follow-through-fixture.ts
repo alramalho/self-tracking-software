@@ -141,6 +141,31 @@ export function followThroughFixture(
     support.missedWeeks = { ...support.missedWeeks, [missedWeek[1]]: { ...body, answeredAt: new Date().toISOString() } };
     return { ok: true };
   }
+  // Talk to coach, scripted like the real coach: travelling asks when you're back, then goes quiet until then.
+  const talk = path.match(/^\/follow-through\/plans\/([^/]+)\/talk$/);
+  if (talk && method === "POST") {
+    const until = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+    const quiet = (why: "away" | "not_sure") => {
+      support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring } as typeof support.monitoring;
+      support.monitoring!.quiet = { ...support.monitoring!.quiet, [talk[1]]: { until, why, at: new Date().toISOString() } };
+    };
+    if (body.notSure) {
+      quiet("not_sure");
+      return { say: "No problem.", detail: "I'll ask again in three days.", ask: "none", placeholder: "", quietUntil: null };
+    }
+    if (body.reason === "travel" && !body.turns.length)
+      return { say: "When are you back?", detail: "", ask: "text", placeholder: "Sunday night", quietUntil: null };
+    if (body.reason === "travel") {
+      quiet("away");
+      return { say: "Quiet until you're back.", detail: "No nudges while you're away. The week still counts.", ask: "none", placeholder: "", quietUntil: until };
+    }
+    return { say: "Got it.", detail: "Next session is the one that counts.", ask: "none", placeholder: "", quietUntil: null };
+  }
+  const quietPlan = path.match(/^\/follow-through\/plans\/([^/]+)\/quiet$/);
+  if (quietPlan && method === "DELETE") {
+    if (support.monitoring?.quiet) delete support.monitoring.quiet[quietPlan[1]];
+    return { ok: true };
+  }
   const planMessages = path.match(/^\/plans\/([^/]+)\/coach-action-messages$/);
   if (planMessages) return { messages: state.messages.filter((m: any) => m.planProposals?.some((p: any) => p.planId === planMessages[1] && !p.status)) };
   const decision = path.match(/^\/ai\/messages\/([^/]+)\/(accept|reject)-proposal$/);

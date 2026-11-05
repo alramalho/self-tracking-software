@@ -37,8 +37,8 @@ export interface CoachRowProps {
 }
 
 export interface MissReason {
+  id: import("./talk/types").TalkReason;
   label: string;
-  says: string;
 }
 
 export interface SectionLabelProps {

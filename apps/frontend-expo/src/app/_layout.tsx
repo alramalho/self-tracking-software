@@ -42,6 +42,7 @@ function Routes() {
             <Stack.Screen name="plan-support/[id]" />
             <Stack.Screen name="circle/[id]" />
             <Stack.Screen name="circle-match" options={{ presentation: "fullScreenModal" }} />
+            <Stack.Screen name="talk-to-coach" options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="circle-invite/[code]" />
             <Stack.Screen name="edit-plan/[id]" />
             <Stack.Screen name="settings" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />

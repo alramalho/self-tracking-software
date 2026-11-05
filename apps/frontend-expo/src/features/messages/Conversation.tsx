@@ -73,7 +73,7 @@ export function Conversation({ id }: ConversationProps) {
   const focused = useIsFocused();
   const client = useQueryClient();
   const user = useCurrentUser();
-  const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string; send?: string }>();
+  const params = useLocalSearchParams<{ type?: string; prompt?: string; planId?: string; messageId?: string }>();
   const [selectedPlan, setSelectedPlan] = useState(params.planId ?? "");
   const focusedMessage = useRef<string | undefined>(undefined);
   const chats = useQuery({ queryKey: ["chats"], queryFn: getChats });
@@ -262,17 +262,6 @@ export function Conversation({ id }: ConversationProps) {
       requestAnimationFrame(() => scrollToLatest());
   }, [headerHeight, dockHeight]);
   useEffect(() => { setSelectedPlan(params.planId ?? ""); focusedMessage.current = undefined; }, [params.planId, params.messageId]);
-  // A one-tap answer from elsewhere (why a week was missed) arrives ready to send: send it once.
-  const autoSent = useRef(false);
-  useEffect(() => {
-    if (params.send !== "1" || !params.prompt || !chat || !user.data || busy || autoSent.current) return;
-    autoSent.current = true;
-    router.setParams({ send: undefined });
-    void (async () => {
-      if (coach && !(await aiConsent.ask())) return;
-      mutation.mutate();
-    })();
-  }, [params.send, params.prompt, chat, user.data, busy]);
   useEffect(() => {
     if (!coach || !focused) return;
     const ping = () => { if (AppState.currentState === "active") void api.post("/follow-through/coaching/presence").catch(() => {}); };

@@ -33,7 +33,5 @@ export interface MissReason {
   id: import("@tsw/prisma/follow-through").MissReasonId;
   label: string;
   emoji: string;
-  /** Sessions to suggest this week, from the weekly target and the days left. */
-  suggest: (target: number, daysLeft: number) => number;
 }
 /** How the coach chat opens from the sheet: a prefilled message, optionally sent straight away. */

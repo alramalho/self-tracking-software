@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Status } from "@/components/ui";
 import { Drawer, DrawerButton, DrawerHeader, DrawerOptions } from "@/components/drawer/Drawer";
@@ -8,53 +7,38 @@ import { api } from "@/data/api";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
-import {
-  MISS_REASONS,
-  answeredMissedWeek,
-  missMessageStart,
-  rememberMissAnswered,
-} from "@/features/timeline/home-cards/miss-reasons";
-import type { MissReason } from "@/features/timeline/home-cards/types";
+import { MISS_REASONS, rememberMissAnswered } from "@/features/timeline/home-cards/miss-reasons";
+import type { TalkReason } from "../talk/types";
 import { alertFact } from "../model";
-import { MissedWeekPlan } from "./MissedWeekPlan";
 import type { CoachChatOpening, CoachItem, CoachItemDrawerProps } from "../types";
 
 /** One coach item, opened: a centered title and one fact, the answers as options, one main button. */
-export function CoachItemDrawer({ item, onClose: close, onCheckIn }: CoachItemDrawerProps) {
+export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerProps) {
   const client = useQueryClient();
-  // Picking a reason moves to this week's days, inside the drawer.
-  const [reason, setReason] = useState<MissReason>();
-  const onClose = () => {
-    setReason(undefined);
-    close();
-  };
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
-  // A missed week is asked about once: after an answer, the drawer offers the conversation instead.
-  const missedPlanId = item?.kind === "alert" && item.alert.missed ? item.alert.plan.id : undefined;
-  const answered = useQuery({
-    queryKey: ["miss-answered", missedPlanId],
-    enabled: !!missedPlanId,
-    queryFn: () => answeredMissedWeek(missedPlanId!),
-  });
   const done = async () => {
     await client.invalidateQueries();
     onClose();
   };
   const talk = useMutation({
-    mutationFn: async ({ prompt, send, planId, answersMiss }: CoachChatOpening) => {
+    mutationFn: async ({ prompt, planId }: CoachChatOpening) => {
       const chat = await latestCoachChat();
-      // Recorded before the drawer closes: closing unmounts it, and with it any per-call callback.
-      if (answersMiss && planId) {
-        await rememberMissAnswered(planId);
-        client.setQueryData(["miss-answered", planId], true);
-      }
       onClose();
       router.push({
         pathname: "/chat/[id]",
-        params: { id: chat.id, type: "COACH", ...(planId ? { planId } : {}), ...(prompt ? { prompt } : {}), ...(send ? { send: "1" } : {}) },
+        params: { id: chat.id, type: "COACH", ...(planId ? { planId } : {}), ...(prompt ? { prompt } : {}) },
       });
     },
   });
+  // Every answer to "What got in the way?" opens Talk to coach, one screen at a time.
+  const talkAbout = async (planId: string, reason: TalkReason, missed: boolean) => {
+    if (missed) {
+      await rememberMissAnswered(planId);
+      client.setQueryData(["miss-answered", planId], true);
+    }
+    onClose();
+    router.push({ pathname: "/talk-to-coach", params: { planId, reason } });
+  };
   const post = useMutation({
     mutationFn: async ({ path, body }: { path: string; body: unknown }) => api.post(path, body),
     onSuccess: done,
@@ -82,64 +66,21 @@ export function CoachItemDrawer({ item, onClose: close, onCheckIn }: CoachItemDr
         const { alert } = it;
         const plan = alert.plan;
         const activity = plan.activities[0];
-        const nudge = alert.nudge;
-        const askReason = !!alert.missed && !answered.data && !nudge?.messageId;
-        if (askReason && reason)
-          return (
-            <MissedWeekPlan
-              plan={plan}
-              reason={reason}
-              target={plan.timesPerWeek || alert.missed?.target || 3}
-              onBack={() => setReason(undefined)}
-              onSaved={onClose}
-            />
-          );
+        const missed = alert.status === "missed";
         const reasons: DrawerOption[] = [
-          ...MISS_REASONS.map((r) => ({
-            label: r.label,
-            emoji: r.emoji,
-            disabled: busy,
-            onPress: () => setReason(r),
-          })),
-          {
-            label: "Something else",
-            emoji: "💬",
-            disabled: busy,
-            onPress: () =>
-              talk.mutate({ prompt: missMessageStart(plan.goal), planId: plan.id, answersMiss: true }),
-          },
+          ...MISS_REASONS.map((r) => ({ label: r.label, emoji: r.emoji, onPress: () => void talkAbout(plan.id, r.id, missed) })),
+          { label: "Something else", emoji: "💬", onPress: () => void talkAbout(plan.id, "other", missed) },
         ];
         return (
           <>
             <DrawerHeader emoji={activity?.emoji ?? plan.emoji} title={it.title} subtitle={alertFact(alert)} />
-            {nudge?.messageId ? (
-              // The coach's own note leads; its two answers and the plan stay one tap away.
-              <DrawerOptions
-                options={[
-                  { label: "Open coach message", onPress: () => openChat(nudge.chatId!, nudge.messageId!, plan.id) },
-                  { label: "Remind me tomorrow", disabled: busy, onPress: () => post.mutate({ path: `/follow-through/nudges/${nudge.messageId}`, body: { action: "remind" } }) },
-                  { label: "Let it go", disabled: busy, onPress: () => post.mutate({ path: `/follow-through/nudges/${nudge.messageId}`, body: { action: "archive" } }) },
-                  { label: "Open plan", onPress: () => openPlan(plan.id) },
-                ]}
-              />
-            ) : askReason ? (
-              <DrawerOptions label="What got in the way?" options={reasons} />
-            ) : (
-              <DrawerOptions
-                options={[
-                  {
-                    label: `Talk to ${coach.name}`,
-                    disabled: busy,
-                    onPress: () =>
-                      talk.mutate({
-                        planId: plan.id,
-                        prompt: alert.status === "at_risk" ? `Help me fit the sessions left for "${plan.goal}" this week.` : undefined,
-                      }),
-                  },
-                  { label: "Open plan", onPress: () => openPlan(plan.id) },
-                ]}
-              />
-            )}
+            <DrawerOptions label="What got in the way?" options={reasons} />
+            <DrawerOptions
+              options={[
+                { label: `Talk to ${coach.name}`, onPress: () => void talkAbout(plan.id, "talk", missed) },
+                { label: "Open plan", onPress: () => openPlan(plan.id) },
+              ]}
+            />
             <DrawerButton
               testID="coach-item-log"
               label={`Log ${activity?.title.toLowerCase() ?? "a session"}`}

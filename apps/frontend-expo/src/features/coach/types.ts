@@ -40,25 +40,8 @@ export interface SectionLabelProps {
   children: string;
 }
 
-/** How a coach conversation opens from a drawer: an optional prompt (sent or left for the user), the plan, and whether it answers a missed week. */
-export type CoachChatOpening = { prompt?: string; send?: boolean; planId?: string; answersMiss?: boolean };
-
-/** The missed-week flow's second step: this week's days, after "What got in the way?". */
-export interface MissedWeekPlanProps {
-  plan: Plan;
-  reason: import("@/features/timeline/home-cards/types").MissReason;
-  /** Sessions a week the plan asks for. */
-  target: number;
-  onBack: () => void;
-  onSaved: () => void;
-}
-
-export interface WeekDayChipsProps {
-  /** yyyy-MM-dd keys, today first. */
-  days: string[];
-  value: string[];
-  onChange: (days: string[]) => void;
-}
+/** How the full coach chat opens from a drawer: an optional prompt left in the composer, never sent for the user. */
+export type CoachChatOpening = { prompt?: string; planId?: string };
 
 export interface CoachSettingsProps {
   visible: boolean;

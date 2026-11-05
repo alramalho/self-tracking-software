@@ -93,3 +93,11 @@ it("reopens a plan whose contact paused when the person logs it again", () => {
   expect(decideMonitoring(input)).toMatchObject({ kind: "review" });
   expect(input.state.pausedPlanIds).toEqual([]);
 });
+
+it("sends nothing about a plan the person asked the coach to leave quiet", () => {
+  const input = weeklyReviewInput([]);
+  expect(decideMonitoring(input)).not.toBeNull();
+  input.state.quiet = { gym: { until: "2026-10-18", why: "away", at: daysAgo(2).toISOString() } };
+  expect(decideMonitoring(weeklyReviewInput([]))).not.toBeNull();
+  expect(decideMonitoring(input)).toBeNull();
+});

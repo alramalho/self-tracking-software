@@ -11,7 +11,8 @@ export interface InterviewFrameProps {
   progress?: { current: number; total: number; label: string };
   preview: boolean;
   busy: boolean;
-  onBack: () => void;
+  /** Left out where there is nothing to go back to (Talk to coach): no back button at all. */
+  onBack?: () => void;
   onClose: () => void;
   // Skippable steps show "Skip" where the close button would be.
   onSkip?: () => void;

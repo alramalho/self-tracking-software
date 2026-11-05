@@ -37,6 +37,12 @@ export interface CoachMonitoringState {
   reviewed: Record<string, string>;
   consideredEntries: Record<string, string>;
   pausedPlanIds: string[];
+  /**
+   * Talking to the coach can quiet a plan: no alert and no nudge until `until` (yyyy-MM-dd, inclusive).
+   * "away" when the person said when they're back, "not_sure" when the coach should ask again then.
+   * The streak and the weeks still count; quiet only silences the coach.
+   */
+  quiet?: Record<string, PlanQuiet>;
   /** "Get back on it tomorrow" answers to a nudge: one push at the plan's reminder time. */
   reminders?: { planId: string; dueAt: string; sentAt?: string }[];
   /** Consistency plans that went quiet: the coach owes one "why you started / archive?" message. */
@@ -49,6 +55,12 @@ export interface CoachMonitoringState {
   lease?: { id: string; until: string };
   /** Paid generations per decision id, counted at claim, so a dropped or failed result is never paid for over and over. */
   attempts?: Record<string, { count: number; at: string }>;
+}
+
+export interface PlanQuiet {
+  until: string;
+  why: "away" | "not_sure";
+  at: string;
 }
 
 /** Stored on a silent nudge message; the app shows two buttons until one is used. */

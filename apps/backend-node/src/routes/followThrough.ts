@@ -46,6 +46,8 @@ import { logger } from "../utils/logger";
 import { startPlanMonitoring } from "../services/coach/monitoring/service";
 import { monitoringState } from "../services/coach/monitoring/model";
 import { answerNudge } from "../services/coach/monitoring/requests";
+import { endQuiet, talkTurn } from "../services/coach/talk/service";
+import { talkRequestSchema } from "../services/coach/talk/schema";
 
 const router = Router();
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
@@ -104,6 +106,26 @@ router.post("/plans/:planId/missed-week", handle(async (req, res) => {
     if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
     state.missedWeeks = { ...state.missedWeeks, [planId]: { ...answer, answeredAt: new Date().toISOString() } };
   });
+  res.json({ ok: true });
+}));
+// Talk to coach: one screen per call. The coach writes it; nothing is sent in the person's name.
+router.post(
+  "/plans/:planId/talk",
+  requireAiConsent,
+  rateLimit({
+    windowMs: 60000,
+    max: 12,
+    keyGenerator: (req) => (req as AuthenticatedRequest).user!.id,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+  handle(async (req, res) =>
+    res.json(await talkTurn(req.user!.id, String(req.params.planId), talkRequestSchema.parse(req.body))),
+  ),
+);
+// "Keep nudging me" after the coach went quiet on a plan.
+router.delete("/plans/:planId/quiet", handle(async (req, res) => {
+  await endQuiet(req.user!.id, String(req.params.planId));
   res.json({ ok: true });
 }));
 router.get(

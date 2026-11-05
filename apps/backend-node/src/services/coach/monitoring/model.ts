@@ -199,8 +199,12 @@ function nextDecision(
     (state.lease && Date.parse(state.lease.until) > now.getTime())
   )
     return null;
+  // Quiet until a day the person named in Talk to coach: no nudges, though the weeks still count.
+  const quietUntil = (id: string) => state.quiet?.[id]?.until ?? "";
   const plans = activeMonitoringPlans(input).filter(
-    (p) => !state.pausedPlanIds.includes(p.id),
+    (p) =>
+      !state.pausedPlanIds.includes(p.id) &&
+      quietUntil(p.id) < formatInTimeZone(now, supports[p.id].timezone, "yyyy-MM-dd"),
   );
   if (!plans.length) return null;
   const withinWindow = (id: string) => {

@@ -154,6 +154,12 @@ export function supportFor(state: FollowThroughState | undefined, plan: CoachPla
 
 // ---------- plan alerts ----------
 
+/** The coach was asked to stay quiet on this plan until a day (inclusive), in the person's local days. */
+export function quietFor(state: FollowThroughState | undefined, planId: string, now = new Date()) {
+  const quiet = state?.monitoring?.quiet?.[planId];
+  return quiet && quiet.until >= dayKey(now) ? quiet : undefined;
+}
+
 /** Gone quiet, at risk this week, or missed last week: what the home card's warning and the Coach tab show. */
 export function planAlert<P extends CoachPlan>(input: {
   plan: P;
@@ -162,6 +168,7 @@ export function planAlert<P extends CoachPlan>(input: {
   now?: Date;
 }): PlanAlert<P> | null {
   const { plan, state, now = new Date() } = input;
+  if (quietFor(state, plan.id, now)) return null;
   const logs = input.entries.filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId));
   const role = state?.supports[plan.id]?.coaching?.role;
   const coached = !!role && role !== "tracking";
