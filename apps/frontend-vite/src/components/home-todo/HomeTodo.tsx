@@ -68,7 +68,6 @@ function DayTile({ day, selected, onClick }: HomeDayTileProps) {
 
 function ItemRow({ item, canLog }: HomeItemRowProps) {
   const navigate = useNavigate();
-  const theme = useThemeColors();
   const amount = item.quantity ? ` · ${item.quantity} ${unitLabel(item.measure ?? "", item.quantity)}` : "";
   const fact =
     item.kind === "done"
@@ -99,10 +98,6 @@ function ItemRow({ item, canLog }: HomeItemRowProps) {
       </span>
       {item.kind === "done" ? (
         <Check className="h-5 w-5 shrink-0 text-green-500" strokeWidth={3} />
-      ) : loggable ? (
-        <span className={cn("shrink-0 rounded-full px-3.5 py-[7px] text-sm font-bold text-white", theme.bg)}>
-          Log
-        </span>
       ) : (
         <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
       )}

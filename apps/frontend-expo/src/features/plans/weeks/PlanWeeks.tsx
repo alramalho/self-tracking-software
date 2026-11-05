@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import { router } from "expo-router";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
@@ -55,7 +54,7 @@ function DayTile({ day, emoji, selected, onPress }: DayTileProps) {
 }
 
 // This week and next, the onboarding schedule's layout: tap a day to see what it asks for.
-export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
+export function PlanWeeks({ plan, entries }: PlanWeeksProps) {
   const c = useColors();
   const planEntries = useMemo(
     () => entries.filter((entry) => !entry.deletedAt && plan.activities.some((a) => a.id === entry.activityId)),
@@ -77,7 +76,6 @@ export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
   const session = day.scheduled[0];
   const activity = activityOf(session?.activityId ?? day.done[0]?.activityId ?? day.flexible[0]?.activityId);
   const summary = projection.summaries.find((s) => s.weekIndex === (weeks[0].some((d) => d.key === day.key) ? 0 : 1));
-  const canLog = own && !!activity && !day.logged && kind !== "rest" && day.key <= projection.todayKey;
   const title =
     kind === "scheduled"
       ? `${activity?.emoji ?? ""} ${session.title ?? activity?.title ?? "Session"}`
@@ -120,30 +118,6 @@ export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
         {kind === "scheduled" && !!session.targets && <SessionTargetRows targets={session.targets} />}
         {kind === "scheduled" && !!session.descriptiveGuide && (
           <Text style={{ color: c.muted, fontSize: 14, lineHeight: 20 }}>{session.descriptiveGuide}</Text>
-        )}
-        {canLog && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Log ${activity!.title}`}
-            onPress={() =>
-              router.push({
-                pathname: "/(tabs)/add",
-                params: { activityId: activity!.id, date: new Date(`${day.key}T12:00:00`).toISOString() },
-              })
-            }
-            style={({ pressed }) => ({
-              minHeight: 48,
-              borderRadius: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: c.accent,
-              opacity: pressed ? 0.8 : 1,
-            })}
-          >
-            <Text style={{ color: "white", fontSize: 15, fontWeight: "700" }}>
-              Log {activity!.title.toLowerCase()}
-            </Text>
-          </Pressable>
         )}
       </View>
     </View>

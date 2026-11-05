@@ -17,7 +17,6 @@ export type PlanDay = PlanDayCells<
 export interface PlanWeeksProps {
   plan: CompletePlan;
   entries: { activityId?: string | null; datetime: Date | string; deletedAt?: Date | string | null }[];
-  own: boolean;
 }
 
 export interface DayTileProps {

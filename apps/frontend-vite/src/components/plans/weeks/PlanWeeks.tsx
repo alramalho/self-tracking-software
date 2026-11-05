@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Clock, Dumbbell, Footprints, Gauge, Target } from "lucide-react";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import type { SessionTargets } from "@tsw/prisma/follow-through";
@@ -76,8 +75,7 @@ function DayTile({ day, emoji, selected, onClick }: DayTileProps) {
 
 // This week and next, the onboarding schedule's layout: tap a day to see what it asks for.
 // Same as the iPhone app's plan page.
-export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
-  const navigate = useNavigate();
+export function PlanWeeks({ plan, entries }: PlanWeeksProps) {
   const planEntries = useMemo(
     () => entries.filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId)),
     [plan, entries],
@@ -97,7 +95,6 @@ export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
   const session = day.scheduled[0];
   const activity = activityOf(session?.activityId ?? day.done[0]?.activityId ?? day.flexible[0]?.activityId);
   const summary = projection.summaries.find((s) => s.weekIndex === (weeks[0].some((d) => d.key === day.key) ? 0 : 1));
-  const canLog = own && !!activity && !day.logged && kind !== "rest" && day.key <= projection.todayKey;
   const targets = session?.targets as SessionTargets | null | undefined;
   const title =
     kind === "scheduled"
@@ -135,15 +132,6 @@ export function PlanWeeks({ plan, entries, own }: PlanWeeksProps) {
         {kind === "scheduled" && targets && <SessionTargetRows targets={targets} />}
         {kind === "scheduled" && session.descriptiveGuide && (
           <p className="text-sm leading-5 text-muted-foreground">{session.descriptiveGuide}</p>
-        )}
-        {canLog && (
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/add", search: { activityId: activity!.id } })}
-            className="min-h-12 rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Log {activity!.title.toLowerCase()}
-          </button>
         )}
       </div>
     </div>

@@ -116,7 +116,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       <PlanProgressStrip plan={plan} />
 
-      <PlanWeeks plan={plan} entries={activityEntries} own />
+      <PlanWeeks plan={plan} entries={activityEntries} />
 
       <div className="flex flex-col gap-2.5">
         <h3 className="text-lg font-semibold">History</h3>

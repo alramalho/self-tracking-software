@@ -15,7 +15,6 @@ export type PlanDay = PlanDayCells<
 export interface PlanWeeksProps {
   plan: Plan;
   entries: ActivityEntry[];
-  own: boolean;
 }
 
 export interface DayTileProps {

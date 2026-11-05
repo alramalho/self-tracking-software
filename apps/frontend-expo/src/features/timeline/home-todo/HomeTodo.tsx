@@ -119,10 +119,6 @@ function ItemRow({ item, canLog, logDate }: HomeItemRowProps) {
       </View>
       {item.kind === "done" ? (
         <Check size={20} color={GREEN} strokeWidth={3} />
-      ) : loggable ? (
-        <View style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: c.accent }}>
-          <Text style={{ color: "white", fontSize: 14, fontWeight: "700" }}>Log</Text>
-        </View>
       ) : (
         <ChevronRight size={18} color={c.muted} />
       )}

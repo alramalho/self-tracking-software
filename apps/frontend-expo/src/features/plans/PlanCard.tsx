@@ -145,7 +145,7 @@ export function PlanCard({
       {detail && <PlanProgressStrip plan={plan} />}
       {detail && (
         <Reveal id={`plan-weeks-${plan.id}`} delay={100}>
-          <PlanWeeks plan={plan} entries={entries} own={own} />
+          <PlanWeeks plan={plan} entries={entries} />
         </Reveal>
       )}
       <Reveal id={`plan-grid-${plan.id}-${detail}`} delay={150} style={detail ? { gap: 10 } : undefined}>
