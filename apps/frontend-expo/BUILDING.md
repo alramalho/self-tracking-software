@@ -81,6 +81,15 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 225 — Talk to coach, November 5, 2026
+
+- **Source:** main `6b5f48be`. Every slipping plan alert on the Coach tab asks "What got in the way?"; each answer opens `/talk-to-coach`, one coach-written screen per turn (a line, at most one question answered by text or voice). Travelling asks when you're back and quiets the plan until then (no alert, no nudges; the streak still counts); "Not sure yet" asks again in three days. The missed-week day picker and the chat's auto-send are gone. The web app does the same.
+- **Backend:** needs `POST /follow-through/plans/:id/talk` and `DELETE /follow-through/plans/:id/quiet` from `6b5f48be`. The Hetzner deploy action (run 42045447476) put `ghcr.io/alramalho/tracking-so-backend:6b5f48bebe49` live and healthy on November 5, 14:32 UTC. No migration: the quiet window lives in the coaching state JSON.
+- **Built with the standard wrapper**, `build:iphone`, from the worktree `tracking-remove-log-clutter`, with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`. The EAS counter gave 225 (224 was skipped).
+- **Verified IPA:** `.release/2026-11-05T14-29-33-040Z-e6522bc9/tracking.so.ipa` in that worktree, SHA-256 `6e1f1ee5002af42b3558f6e3d35317ff6fea974d55d3047b0f52cf92ca1adccc`; iPhone and Watch 1.0.0 (225).
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 12, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,191,107 IPA bytes.
+- **Checked before the build:** both TypeScript projects; backend coach and follow-through tests (86); `e2e/miss-reason.spec.ts`, `messages.spec.ts` and `onboarding-flow.spec.ts` in light and dark against a scripted coach. The real model's wording was not checked, and nothing was run on a simulator or a phone.
+
 ## Safari-install build 223 — no Log buttons on the home and plan day cards, November 5, 2026
 
 - **Source:** main `3bde6a2c` (one commit on `19dd3245`). The home card's day row shows a chevron instead of the orange Log pill (tapping it still opens the logger); the plan page's day detail loses its full-width Log button. The web app does the same. No backend change.
