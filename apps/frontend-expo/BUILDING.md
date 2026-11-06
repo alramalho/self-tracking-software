@@ -81,6 +81,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 226 — photo after a fresh Watch workout, November 6, 2026
+
+- **Source:** main `6a79ef07` (one commit on `4d91ae9d`, build 225's source). Logging a synced Watch workout that ended in the last three hours keeps the review open on "Add a photo?": take or pick up to five photos, attached to the log it just made, or "Not now". Older workouts, and a linked log that already has photos, close as before. The window is `PHOTO_PROMPT_WINDOW_MS` in `src/features/health/workout-model.ts`.
+- **Backend:** `POST /health/apple/workouts/reconcile` now also returns `entries` (each workout's log ID and whether it has photos); older apps ignore it, and the app skips the prompt without it. The Hetzner deploy action (run 42250304271) put `ghcr.io/alramalho/tracking-so-backend:6a79ef07c9ba` live and healthy on November 6, about 16:17 UTC, with zero restarts; `/health` 200. No migration.
+- **Built with the standard wrapper**, `build:iphone`, from the worktree `tracking-photo-prompt` (branch `workout-photo-prompt`), with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1` and `.release/production.env.json` and `watch-device.json` copied from `tracking-remove-log-clutter`.
+- **Verified IPA:** `.release/2026-11-06T16-13-54-089Z-d3b3e22a/tracking.so.ipa` in that worktree, SHA-256 `49ea8f33a754f61a5ab71355c0e977840d11d124da4e481ea8bed3f4929c8c93`; iPhone 1.0.0 (226). The bundle contains the new prompt.
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 13, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,199,156 IPA bytes.
+- **Checked before the build:** both TypeScript projects; a unit test for the three-hour rule; `e2e/health.spec.ts` workout review journeys (7) including a new one that picks a photo and uploads it to the right log, in light and dark. Two older heart-rate label unit tests and three other health e2e tests already failed before this change. The reconciliation integration tests need a test database and were not run. Not run on a simulator or a phone.
+- **EAS build counter:** 226. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 225 — Talk to coach, November 5, 2026
 
 - **Source:** main `6b5f48be`. Every slipping plan alert on the Coach tab asks "What got in the way?"; each answer opens `/talk-to-coach`, one coach-written screen per turn (a line, at most one question answered by text or voice). Travelling asks when you're back and quiets the plan until then (no alert, no nudges; the streak still counts); "Not sure yet" asks again in three days. The missed-week day picker and the chat's auto-send are gone. The web app does the same.
