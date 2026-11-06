@@ -1,12 +1,10 @@
-import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { type LowerThemeColor as ThemeColor, getThemeVariants } from "@/utils/theme";
-import { Check } from "lucide-react";
-import React from "react";
+import { SettingsGroup, SettingsRow } from "./SettingsGroup";
 import toast from "react-hot-toast";
 
 interface ColorPalette {
@@ -15,10 +13,6 @@ interface ColorPalette {
   description?: string;
 }
 
-interface ColorPalettePickerPopupProps {
-  open: boolean;
-  onClose: () => void;
-}
 
 const colorPalettes: ColorPalette[] = [
   {
@@ -48,14 +42,11 @@ const colorPalettes: ColorPalette[] = [
   {
     name: "Random",
     color: "random" as ThemeColor,
-    description: "Changes every 3 days",
   },
 ];
 
-const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
-  open,
-  onClose,
-}) => {
+/** Accent colour choice. Lives on the Appearance screen. */
+export default function ColorPalettePickerPopup() {
   const { currentUser } = useCurrentUser();
   const { updateTheme } = useTheme();
   const { userPlanType: userPaidPlanType } = usePaidPlan();
@@ -64,8 +55,6 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
   const handleThemeChange = async (color: ThemeColor) => {
     try {
       await updateTheme(color);
-      toast.success(`Theme updated to ${color}`);
-      onClose();
     } catch (error) {
       console.error("Failed to update theme:", error);
       toast.error("Failed to update theme");
@@ -73,95 +62,42 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
   };
 
   return (
-    <AppleLikePopover open={open} onClose={onClose}>
-      <div className="p-4 space-y-4">
-        <h3 className="text-lg font-semibold mb-4">Color Themes</h3>
-        <div className="grid gap-4">
-          {colorPalettes.map((palette) => {
-            const isSelected =
-              currentUser?.themeBaseColor.toLowerCase() ===
-              palette.color.toLowerCase();
-            const isLocked =
-              userPaidPlanType === "FREE" &&
-              (palette.color === "random" || palette.color !== "blue");
-            return (
-              <div
-                key={palette.name}
-                className={`flex items-center gap-4 p-3 border dark:border-black/40 bg-white/40 dark:bg-black/10 rounded-lg ${
-                  isLocked
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-muted/50 cursor-pointer"
-                } ${
-                  isSelected
-                    ? `ring-2 ring-offset-2 dark:ring-offset-black ${
-                        palette.color === "random"
-                          ? "ring-ring"
-                          : `ring-${palette.color}-500`
-                      }`
-                    : ""
-                }`}
-                onClick={() => !isLocked && handleThemeChange(palette.color)}
-              >
-                <div className="flex items-center gap-2">
-                  {isSelected && (
-                    <Check
-                      className={`w-4 h-4 ${
-                        palette.color === "random"
-                          ? "text-gray-500"
-                          : `text-${palette.color}-500`
-                      }`}
-                    />
-                  )}
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{palette.name}</span>
-                      {isLocked && (
-                        <span className="text-xs text-muted-foreground">🔒</span>
-                      )}
-                    </div>
-                    {palette.description && (
-                      <span className="text-xs text-muted-foreground">
-                        {palette.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {palette.color !== "random" ? (
-                  <div className="flex gap-2 ml-auto">
-                    <div
-                      className={`w-6 h-6 rounded-full ${
-                        getThemeVariants(palette.color).primary
-                      }`}
-                    ></div>
-                    <div
-                      className={`w-6 h-6 rounded-full ${
-                        getThemeVariants(palette.color).secondary
-                      }`}
-                    ></div>
-                    <div
-                      className={`w-6 h-6 rounded-full ${
-                        getThemeVariants(palette.color).accent
-                      }`}
-                    ></div>
+    <div className="flex flex-col gap-4">
+      <SettingsGroup title="Color" footer="Random changes every 3 days.">
+        {colorPalettes.map((palette) => {
+          const isLocked =
+            userPaidPlanType === "FREE" &&
+            (palette.color === "random" || palette.color !== "blue");
+          return (
+            <SettingsRow
+              key={palette.name}
+              title={isLocked ? `${palette.name} 🔒` : palette.name}
+              selected={
+                currentUser?.themeBaseColor.toLowerCase() ===
+                palette.color.toLowerCase()
+              }
+              disabled={isLocked}
+              onClick={() => handleThemeChange(palette.color)}
+              trailing={
+                palette.color !== "random" ? (
+                  <div className="flex gap-1.5">
+                    <div className={`h-5 w-5 rounded-full ${getThemeVariants(palette.color).primary}`} />
+                    <div className={`h-5 w-5 rounded-full ${getThemeVariants(palette.color).secondary}`} />
+                    <div className={`h-5 w-5 rounded-full ${getThemeVariants(palette.color).accent}`} />
                   </div>
                 ) : (
-                  <div className="ml-auto text-2xl">🎲</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {userPaidPlanType === "FREE" && (
-          <Button
-            className="w-full mt-6"
-            onClick={() => setShowUpgradePopover(true)}
-          >
-            Upgrade to unlock all themes
-          </Button>
-        )}
-      </div>
-    </AppleLikePopover>
+                  <span className="text-lg">🎲</span>
+                )
+              }
+            />
+          );
+        })}
+      </SettingsGroup>
+      {userPaidPlanType === "FREE" && (
+        <Button className="w-full" onClick={() => setShowUpgradePopover(true)}>
+          Upgrade to unlock all themes
+        </Button>
+      )}
+    </div>
   );
-};
-
-export default ColorPalettePickerPopup;
+}

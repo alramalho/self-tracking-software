@@ -17,6 +17,8 @@ export default defineConfig({
       { find: /^@\/contexts\/theme\/useTheme$/, replacement: fixture },
       { find: /^@\/hooks\/useNotifications$/, replacement: fixture },
       { find: /^@\/contexts\/upgrade\/useUpgrade$/, replacement: fixture },
+      { find: /^@\/contexts\/auth$/, replacement: fixture },
+      { find: /^@\/contexts\/demo-achievement\/useDemoAchievement$/, replacement: fixture },
       { find: "@", replacement: path.resolve(__dirname, "src") },
     ],
   },

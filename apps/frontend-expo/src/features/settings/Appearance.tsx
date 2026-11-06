@@ -1,7 +1,8 @@
-import { Pressable, View } from "react-native";
-import { Check, Monitor, Moon, Sun } from "lucide-react-native";
+import { View } from "react-native";
+import { Monitor, Moon, Sun } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
-import { useColors } from "@/components/ui";
+import { SettingsGroup } from "./SettingsGroup";
+import { SettingsRow } from "./SettingsRow";
 import type { AppearanceProps } from "./types";
 
 const palettes = [
@@ -13,118 +14,70 @@ const palettes = [
   { name: "Amber", colors: ["#f59e0b", "#fbbf24", "#fcd34d"] },
   { name: "Random", colors: [] },
 ];
-export function ColorPalettes({ selected, busy, onSelect }: AppearanceProps) {
-  const c = useColors();
+const modes = [
+  { name: "Light", mode: "LIGHT", icon: Sun },
+  { name: "Dark", mode: "DARK", icon: Moon },
+  { name: "Auto", mode: "AUTO", icon: Monitor },
+];
+const capitalize = (value: string) =>
+  value.charAt(0) + value.slice(1).toLowerCase();
+
+/** "Dark · Amber": the summary shown on the Appearance row. */
+export function appearanceSummary(mode?: string, palette?: string) {
+  return [mode, palette].filter(Boolean).map((v) => capitalize(v!)).join(" · ");
+}
+
+export function ThemeModes({ selected, busy, onSelect }: AppearanceProps) {
   return (
-    <View testID="settings-palettes" style={{ gap: 16 }}>
-      {palettes.map(({ name, colors }) => {
-        const active = selected === name.toUpperCase();
-        return (
-          <Pressable
-            key={name}
-            accessibilityRole="button"
-            accessibilityLabel={name}
-            accessibilityState={{ selected: active, disabled: busy }}
-            disabled={busy}
-            onPress={() => onSelect(name.toUpperCase())}
-            style={({ pressed }) => ({
-              borderRadius: 8,
-              borderWidth: active ? 2 : 1,
-              borderColor: active ? colors[0] || c.accent : c.inputBorder,
-              backgroundColor: c.dark ? "#0000001a" : "#ffffff66",
-              minHeight: 50,
-              padding: active ? 11 : 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              opacity: busy ? 0.6 : pressed ? 0.65 : 1,
-            })}
-          >
-            {active && <Check size={16} color={colors[0] || c.accent} />}
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
-                {name}
-              </Text>
-              {name === "Random" && (
-                <Text style={{ color: c.muted, fontSize: 12, marginTop: 2 }}>
-                  Changes every 3 days
-                </Text>
-              )}
-            </View>
-            <View style={{ flexDirection: "row", gap: 8 }}>
+    <SettingsGroup title="Mode" footer="Auto matches your device's setting.">
+      {modes.map(({ name, mode, icon }) => (
+        <SettingsRow
+          key={mode}
+          icon={icon}
+          title={name}
+          selected={selected === mode}
+          disabled={busy}
+          onPress={() => onSelect(mode)}
+        />
+      ))}
+    </SettingsGroup>
+  );
+}
+
+export function ColorPalettes({ selected, busy, onSelect }: AppearanceProps) {
+  return (
+    <SettingsGroup
+      testID="settings-palettes"
+      title="Color"
+      footer="Random changes every 3 days."
+      separatorInset={0}
+    >
+      {palettes.map(({ name, colors }) => (
+        <SettingsRow
+          key={name}
+          title={name}
+          selected={selected === name.toUpperCase()}
+          disabled={busy}
+          onPress={() => onSelect(name.toUpperCase())}
+          trailing={
+            <View style={{ flexDirection: "row", gap: 6 }}>
               {colors.map((color) => (
                 <View
                   key={color}
                   testID={`palette-swatch-${name}-${color}`}
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
                     backgroundColor: color,
                   }}
                 />
               ))}
-              {!colors.length && <Text style={{ fontSize: 24 }}>🎲</Text>}
+              {!colors.length && <Text style={{ fontSize: 18 }}>🎲</Text>}
             </View>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-export function ThemeModes({ selected, busy, onSelect }: AppearanceProps) {
-  const c = useColors();
-  return (
-    <View style={{ gap: 12 }}>
-      {[
-        {
-          name: "Light",
-          mode: "LIGHT",
-          description: "Always use light theme",
-          icon: Sun,
-        },
-        {
-          name: "Dark",
-          mode: "DARK",
-          description: "Always use dark theme",
-          icon: Moon,
-        },
-        {
-          name: "Auto",
-          mode: "AUTO",
-          description: "Match system preference",
-          icon: Monitor,
-        },
-      ].map(({ name, mode, description, icon: Icon }) => (
-        <Pressable
-          key={mode}
-          accessibilityRole="button"
-          accessibilityLabel={name}
-          accessibilityState={{ selected: selected === mode, disabled: busy }}
-          disabled={busy}
-          onPress={() => onSelect(mode)}
-          style={({ pressed }) => ({
-            borderRadius: 8,
-            borderWidth: selected === mode ? 2 : 1,
-            borderColor: selected === mode ? c.accent : c.inputBorder,
-            padding: selected === mode ? 11 : 12,
-            minHeight: 64,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 16,
-            opacity: busy ? 0.6 : pressed ? 0.65 : 1,
-          })}
-        >
-          <Icon size={20} color={c.muted} />
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
-              {name}
-            </Text>
-            <Text style={{ color: c.muted, fontSize: 12 }}>{description}</Text>
-          </View>
-          {selected === mode && <Check size={20} color={c.accent} />}
-        </Pressable>
+          }
+        />
       ))}
-    </View>
+    </SettingsGroup>
   );
 }

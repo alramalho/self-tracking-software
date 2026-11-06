@@ -14,19 +14,20 @@ import type { AiConsentFields } from "@/components/ai-consent/types";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import { useThemeColors } from "@/hooks/useThemeColors";
 import { capitalize } from "@/lib/utils";
-import { getThemeVariants } from "@/utils/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
   ChevronLeft,
+  ChevronRight,
+  FileText,
+  LifeBuoy,
+  Wrench,
   CreditCard,
   GraduationCap,
   KeyRound,
   Loader2,
   LogOut,
-  Moon,
   MoveRight,
   Paintbrush,
   Pencil,
@@ -35,7 +36,6 @@ import {
   SquareArrowUp,
   Trash2,
   Sparkles,
-  UserPen,
   UserPlus,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
@@ -46,6 +46,9 @@ import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { Switch } from "../ui/switch";
 import { TextAreaWithVoice } from "../ui/text-area-with-voice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
+import { SettingsGroup, SettingsRow } from "./SettingsGroup";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/contexts/theme/useTheme";
 import {
   EditAgePopup,
   EditFullNamePopup,
@@ -74,8 +77,8 @@ export type ActiveView =
   | "main"
   | "userSummary"
   | "editProfile"
-  | "color"
-  | "themeMode"
+  | "appearance"
+  | "privacy"
   | "integrations"
   | "appleHealth"
   | "garmin"
@@ -86,8 +89,8 @@ const viewLevels: Record<ActiveView, number> = {
   main: 0,
   userSummary: 1,
   editProfile: 2,
-  color: 1,
-  themeMode: 1,
+  appearance: 1,
+  privacy: 1,
   integrations: 1,
   appleHealth: 2,
   garmin: 2,
@@ -107,13 +110,12 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   );
   const previousViewRef = useRef<ActiveView>("main");
 
-  const { isUserFree, userPlanType } = usePaidPlan();
+  const { userPlanType } = usePaidPlan();
   const { signOut } = useAuth();
   const { currentUser, updateUser, deleteAccount, isDeletingAccount, isAdmin } = useCurrentUser();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
-  const themeColors = useThemeColors();
-  const themeVariants = getThemeVariants(themeColors.raw);
+  const { themeMode } = useTheme();
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const { shareOrCopyLink } = useShareOrCopy();
@@ -248,10 +250,46 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
                     <h2 className="text-lg font-semibold mb-6">
-                      User Settings
+                      Account
                     </h2>
 
                     <div className="space-y-4">
+                      {!isNativeIOS && (
+                        <SettingsGroup>
+                          {userPlanType !== "FREE" ? (
+                            <SettingsRow
+                              icon={CreditCard}
+                              title="Manage my subscription"
+                              chevron
+                              onClick={() =>
+                                window.open(
+                                  "https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww",
+                                  "_blank"
+                                )
+                              }
+                            />
+                          ) : (
+                            <SettingsRow
+                              icon={SquareArrowUp}
+                              title="Upgrade"
+                              chevron
+                              onClick={() => setShowUpgradePopover(true)}
+                            />
+                          )}
+                        </SettingsGroup>
+                      )}
+                      <SettingsGroup>
+                        <SettingsRow
+                          icon={Smile}
+                          title="Reaction emojis"
+                          value={normalizeReactionEmojis(currentUser?.reactionEmojis).join(" ")}
+                          chevron
+                          onClick={() => {
+                            onClose();
+                            setShowReactionEmojiDrawer(true);
+                          }}
+                        />
+                      </SettingsGroup>
                       {/* Looking for AP */}
                       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
@@ -466,7 +504,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     )}
                   </div>
                 );
-              case "color":
+              case "appearance":
                 return (
                   <div>
                     <Button
@@ -476,13 +514,14 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     >
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
-                    <ColorPalettePickerPopup
-                      open={true}
-                      onClose={() => navigateTo("main")}
-                    />
+                    <h2 className="text-lg font-semibold mb-6">Appearance</h2>
+                    <div className="flex flex-col gap-6">
+                      <ThemeModeSwitcher />
+                      <ColorPalettePickerPopup />
+                    </div>
                   </div>
                 );
-              case "themeMode":
+              case "privacy":
                 return (
                   <div>
                     <Button
@@ -492,10 +531,41 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     >
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
-                    <ThemeModeSwitcher
-                      open={true}
-                      onClose={() => navigateTo("main")}
-                    />
+                    <h2 className="text-lg font-semibold mb-6">Privacy & safety</h2>
+                    <div className="flex flex-col gap-6">
+                      <SettingsGroup footer="Coach, plan setup, voice logs and dictation send your data to AI providers.">
+                        <SettingsRow
+                          icon={Sparkles}
+                          title="AI features"
+                          trailing={
+                            <Switch
+                              aria-label="AI features"
+                              checked={aiAllowed(currentUser as AiConsentFields | undefined)}
+                              onCheckedChange={async (on) => {
+                                // Turning on shows what is shared and with whom first.
+                                if (on) return askAiConsent();
+                                await api.put("/users/ai-consent", { granted: false });
+                                await queryClient.refetchQueries({ queryKey: ["current-user"] });
+                              }}
+                            />
+                          }
+                        />
+                      </SettingsGroup>
+                      <SettingsGroup>
+                        <SettingsRow
+                          icon={ShieldCheck}
+                          title="Privacy policy"
+                          chevron
+                          onClick={() => window.open("https://tracking.so/privacy", "_blank")}
+                        />
+                        <SettingsRow
+                          icon={FileText}
+                          title="Terms of use"
+                          chevron
+                          onClick={() => window.open("https://tracking.so/terms", "_blank")}
+                        />
+                      </SettingsGroup>
+                    </div>
                   </div>
                 );
               case "integrations":
@@ -880,162 +950,109 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
               default:
                 return (
                   <>
-                    <div className="flex items-center justify-between mb-4">
-                      <h1 className="text-2xl font-bold">Settings</h1>
-                      <span
-                        className={twMerge(
-                          "text-xl font-cursive flex items-center gap-2",
-                          isUserFree ? "text-muted-foreground" : themeVariants.text
-                        )}
-                      >
-                        On {capitalize(userPlanType || "FREE")} Plan
-                        {isUserFree && !isNativeIOS && (
-                          <SquareArrowUp
-                            onClick={() => setShowUpgradePopover(true)}
-                            size={20}
-                            className="text-foreground cursor-pointer"
-                          />
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {/* Push Notifications */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            Push Notifications
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {isPushGranted
-                              ? "Notifications enabled"
-                              : "Enable notifications for updates"}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Bell size={20} className="text-muted-foreground" />
-                          <Switch
-                            checked={isPushGranted}
-                            onCheckedChange={handleNotificationChange}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            AI features
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Coach, plan setup, voice logs and dictation
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Sparkles size={20} className="text-muted-foreground" />
-                          <Switch
-                            checked={aiAllowed(currentUser as AiConsentFields | undefined)}
-                            onCheckedChange={async (on) => {
-                              // Turning on shows what is shared and with whom first.
-                              if (on) return askAiConsent();
-                              await api.put("/users/ai-consent", { granted: false });
-                              await queryClient.refetchQueries({ queryKey: ["current-user"] });
-                            }}
-                          />
-                        </div>
-                      </div>
-                      {userPlanType !== "FREE" && !isNativeIOS && (
-                        <Button
-                          variant="ghost"
-                          className="w-full flex items-center justify-start px-0 gap-2"
-                          onClick={() => {
-                            window.open(
-                              "https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww",
-                              "_blank"
-                            );
-                          }}
-                        >
-                          <CreditCard size={28} />
-                          <span>Manage my subscription</span>
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
+                    <h1 className="text-2xl font-bold mb-5">Settings</h1>
+                    <div className="flex flex-col gap-6">
+                      <button
+                        type="button"
+                        aria-label="Account"
                         onClick={() => navigateTo("userSummary")}
+                        className="flex w-full items-center gap-3.5 rounded-[20px] bg-card p-4 text-left active:opacity-65"
                       >
-                        <UserPen size={28} />
-                        <span>User Settings</span>
-                      </Button>
+                        <Avatar className="h-[52px] w-[52px]">
+                          <AvatarImage src={currentUser?.picture || undefined} />
+                          <AvatarFallback>
+                            {(currentUser?.name || currentUser?.username || "?")[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-lg font-semibold">
+                            {currentUser?.name || currentUser?.username || "Your account"}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">
+                            {[
+                              currentUser?.username && `@${currentUser.username}`,
+                              `${capitalize((userPlanType || "FREE").toLowerCase())} plan`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                        <ChevronRight size={18} className="text-muted-foreground" />
+                      </button>
 
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => {
-                          onClose();
-                          setShowReactionEmojiDrawer(true);
-                        }}
-                      >
-                        <Smile size={28} />
-                        <span className="flex-1 text-left">Reaction emojis</span>
-                        <span className="max-w-[11rem] truncate text-base">
-                          {normalizeReactionEmojis(currentUser?.reactionEmojis).join(" ")}
-                        </span>
-                      </Button>
+                      <SettingsGroup title="Coach">
+                        <SettingsRow
+                          icon={GraduationCap}
+                          title="Coach profile"
+                          chevron
+                          onClick={() => {
+                            onClose();
+                            navigate({ to: "/create-coach-profile" });
+                          }}
+                        />
+                        <SettingsRow
+                          icon={Bell}
+                          title="Notifications"
+                          trailing={
+                            <Switch
+                              aria-label="Notifications"
+                              checked={isPushGranted}
+                              onCheckedChange={handleNotificationChange}
+                            />
+                          }
+                        />
+                      </SettingsGroup>
 
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => {
-                          onClose();
-                          navigate({ to: "/create-coach-profile" });
-                        }}
-                      >
-                        <GraduationCap size={28} />
-                        <span>Coach Profile</span>
-                      </Button>
+                      <SettingsGroup title="App">
+                        <SettingsRow
+                          icon={Paintbrush}
+                          title="Appearance"
+                          value={[themeMode, currentUser?.themeBaseColor]
+                            .filter(Boolean)
+                            .map((v) => capitalize(String(v).toLowerCase()))
+                            .join(" · ")}
+                          chevron
+                          onClick={() => navigateTo("appearance")}
+                        />
+                        <SettingsRow
+                          icon={KeyRound}
+                          title="Integrations"
+                          chevron
+                          onClick={() => navigateTo("integrations")}
+                        />
+                      </SettingsGroup>
 
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("integrations")}
-                      >
-                        <KeyRound size={28} />
-                        <span>Integrations</span>
-                      </Button>
+                      <SettingsGroup>
+                        <SettingsRow
+                          icon={ShieldCheck}
+                          title="Privacy & safety"
+                          chevron
+                          onClick={() => navigateTo("privacy")}
+                        />
+                        <SettingsRow
+                          icon={LifeBuoy}
+                          title="Get help"
+                          chevron
+                          onClick={() => window.open("mailto:alex@tracking.so")}
+                        />
+                        {isAdmin && (
+                          <SettingsRow
+                            icon={Wrench}
+                            title="Admin"
+                            chevron
+                            onClick={() => navigateTo("admin")}
+                          />
+                        )}
+                      </SettingsGroup>
 
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("color")}
-                      >
-                        <Paintbrush size={28} />
-                        <span>Color Palette</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("themeMode")}
-                      >
-                        <Moon size={28} />
-                        <span>Theme Mode</span>
-                      </Button>
-                      {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          className="w-full flex items-center justify-start px-0 gap-2"
-                          onClick={() => navigateTo("admin")}
-                        >
-                          <ShieldCheck size={28} />
-                          <span>Admin</span>
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        onClick={() => setShowLogoutConfirm(true)}
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                      >
-                        <LogOut size={28} />
-                        <span>Logout</span>
-                      </Button>
+                      <SettingsGroup>
+                        <SettingsRow
+                          icon={LogOut}
+                          title="Log out"
+                          destructive
+                          onClick={() => setShowLogoutConfirm(true)}
+                        />
+                      </SettingsGroup>
                     </div>
                   </>
                 );
@@ -1063,9 +1080,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={handleLogout}
-        title="Confirm Logout"
-        description="Are you sure you want to log out?"
-        confirmText="Logout"
+        title="Log out?"
+        description="Log out of this account?"
+        confirmText="Log out"
         cancelText="Cancel"
         variant="destructive"
       />

@@ -245,7 +245,16 @@ export function LoggingDrawer({
               </Pressable>
             </View>
           )}
-          <View style={{ position: "absolute", top: 20, right: 12 }}>
+          {/* Solid backing so content scrolling underneath never shows through the close button. */}
+          <View
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 12,
+              borderRadius: 22,
+              backgroundColor: c.bg,
+            }}
+          >
             <IconButton label="Close" icon={X} onPress={close} />
           </View>
         </Animated.View>

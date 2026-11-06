@@ -628,7 +628,7 @@ function HomePage() {
           navigate({
             to: `/profile/$username`,
             params: { username: currentUser?.username || "" },
-            search: { activeView: "themeMode" },
+            search: { activeView: "appearance" },
           })
         }
       /> */}

@@ -10,32 +10,26 @@ appId: so.tracking.app
     element: Settings
     direction: UP
 - tapOn: Settings
-- tapOn: Color Palette
-- assertVisible: Random
-- waitForAnimationToEnd:
-    timeout: 3000
-- takeScreenshot: settings-colors
-- waitForAnimationToEnd:
-    timeout: 3000
-- tapOn: Back to Settings
-- tapOn: Theme Mode
+- tapOn: Appearance
 - assertVisible: Auto
-- takeScreenshot: settings-theme
+- scrollUntilVisible:
+    element: Random
+    direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: settings-appearance
 - waitForAnimationToEnd:
     timeout: 3000
 - tapOn: Back to Settings
-- tapOn: Integrations & API Keys
+- tapOn: Integrations
 - takeScreenshot: settings-integrations
 - waitForAnimationToEnd:
     timeout: 3000
-- tapOn: API keys
-- assertVisible: 1. Create an API key
-- tapOn: Back to Integrations
 - tapOn: Apple Health
 - assertVisible: Workouts and sleep, together
 - tapOn: Back to Integrations
 - tapOn: Back to Settings
-- tapOn: User Settings
+- tapOn: Account
 - takeScreenshot: settings-profile
 - waitForAnimationToEnd:
     timeout: 3000

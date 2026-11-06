@@ -10,7 +10,7 @@ appId: so.tracking.app
     element: Settings
     direction: UP
 - tapOn: Settings
-- tapOn: Theme Mode
+- tapOn: Appearance
 - scrollUntilVisible:
     element: Dark
     direction: DOWN
@@ -41,7 +41,7 @@ appId: so.tracking.app
     element: Settings
     direction: UP
 - tapOn: Settings
-- tapOn: Theme Mode
+- tapOn: Appearance
 - scrollUntilVisible:
     element: Light
     direction: DOWN

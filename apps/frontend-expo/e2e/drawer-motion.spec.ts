@@ -15,7 +15,7 @@ test("the settings drawer slides up while its dim stays put, and slides away on 
   const early = await dim.boundingBox();
   expect(early).toMatchObject({ x: 0, y: 0, width: viewport.width, height: viewport.height });
   const start = (await drawer.boundingBox())!;
-  await expect(page.getByRole("button", { name: "User Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account", exact: true })).toBeVisible();
   await page.waitForTimeout(600);
   const rest = (await drawer.boundingBox())!;
   // The sheet came up from below and now rests on the bottom edge.

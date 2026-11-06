@@ -1,5 +1,5 @@
 // Renders the real web components for the Coach tab change with illustrative data, for screenshots.
-// Open /e2e/coach/?view=coach|plan|home|profile and add &theme=dark for dark mode.
+// Open /e2e/coach/?view=coach|plan|home|profile|settings and add &theme=dark for dark mode.
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -14,6 +14,7 @@ import BottomNav from "../../src/components/BottomNav";
 import { PlanRendererv2 } from "../../src/components/PlanRendererv2";
 import { HomeTodo } from "../../src/components/home-todo/HomeTodo";
 import { CheckinsCard } from "../../src/components/profile/CheckinsCard";
+import ProfileSettingsPopover, { type ActiveView } from "../../src/components/profile/ProfileSettingsPopover";
 import { Route as CoachRoute } from "../../src/routes/coach";
 import { plans } from "./data";
 import "../../src/index.css";
@@ -49,7 +50,15 @@ const Profile = () => (
   </div>
 );
 
-const root = createRootRoute({ component: Page });
+const Settings = () => (
+  <ProfileSettingsPopover
+    open
+    onClose={() => {}}
+    initialActiveView={(params.get("settings") as ActiveView | null) ?? "main"}
+  />
+);
+
+const root = createRootRoute({ component: view === "settings" ? Settings : Page });
 const route = (path: string, component: () => JSX.Element | null = () => null) =>
   createRoute({ getParentRoute: () => root, path, component });
 const router = createRouter({

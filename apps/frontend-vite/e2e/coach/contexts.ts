@@ -36,11 +36,38 @@ export const usePlans = () => ({
 });
 export const useActivities = () => ({ activities, activityEntries, isLoadingActivityEntries: false });
 export const useMetrics = () => ({ metrics, entries: metricEntries });
+const dark = new URLSearchParams(location.search).get("theme") === "dark";
 export const useCurrentUser = () => ({
-  currentUser: { username: "alex", name: "Alex", coachPersonality: "CHAMPION", planType: "PLUS", preferredCoachingHour: 20 },
+  currentUser: {
+    username: "alex",
+    name: "Alex",
+    coachPersonality: "CHAMPION",
+    planType: "PLUS",
+    preferredCoachingHour: 20,
+    themeBaseColor: "AMBER",
+    reactionEmojis: ["🔥", "💪", "❤️"],
+    aiConsentGrantedAt: new Date().toISOString(),
+  },
+  isAdmin: false,
   updateUser: async () => {},
   isUpdatingUser: false,
+  deleteAccount: async () => {},
+  isDeletingAccount: false,
 });
-export const useTheme = () => ({ effectiveTheme: "blue" });
-export const useNotifications = () => ({ notificationCount: 0 });
+export const useTheme = () => ({
+  effectiveTheme: "blue",
+  themeMode: dark ? "dark" : "light",
+  updateTheme: async () => {},
+  updateThemeMode: async () => {},
+});
+export const useNotifications = () => ({
+  notificationCount: 0,
+  isPushGranted: true,
+  setIsPushGranted: () => {},
+  requestPermission: async () => true,
+});
+export const useAuth = () => ({ signOut: async () => {} });
+export const useSession = () => ({});
+export const useUser = () => ({});
+export const useDemoAchievement = () => ({ setDemoAchievementType: () => {} });
 export const useUpgrade = () => ({ setShowUpgradePopover: () => {} });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Linking, Platform, Pressable, Switch, View } from "react-native";
 import Animated, {
   FadeInRight,
@@ -16,14 +16,10 @@ import {
   Languages,
   LifeBuoy,
   LogOut,
-  Moon,
   Paintbrush,
   Play,
   ShieldCheck,
-  Smartphone,
   Sparkles,
-  Sun,
-  UserPen,
   Users,
   UserX,
 } from "lucide-react-native";
@@ -33,15 +29,20 @@ import {
   enableIosNotifications,
   disableIosNotifications,
 } from "@/native/notifications";
-import { Button, Copy, Field, Status, useColors } from "@/components/ui";
+import { Button, Copy, Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { useSession } from "@/auth/provider";
 import { useAction, useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
-import { pickPhotos, appendPhotos } from "@/native/photos";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { SettingsRow } from "@/features/settings/SettingsRow";
-import { ColorPalettes, ThemeModes } from "@/features/settings/Appearance";
+import {
+  ColorPalettes,
+  ThemeModes,
+  appearanceSummary,
+} from "@/features/settings/Appearance";
+import { SettingsGroup } from "@/features/settings/SettingsGroup";
+import { ProfileCard } from "@/features/settings/ProfileCard";
 import { SettingsCard } from "@/features/settings/SettingsCard";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
 import { Accounts } from "@/features/settings/Accounts";
@@ -54,23 +55,34 @@ import {
 } from "@/features/health/HealthScreen";
 import { CoachProfile } from "@/features/settings/CoachProfile";
 import type { SettingsView } from "@/features/settings/types";
-import { BlockedPeople, SUPPORT_EMAIL } from "@/features/safety/Safety";
+import {
+  BlockedPeople,
+  SUPPORT_EMAIL,
+  showActions,
+} from "@/features/safety/Safety";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { LanguagesDrawer } from "@/features/dictation/LanguagesDrawer";
 import { languagesSummary } from "@/features/dictation/languages";
 import { APPLE_SUBSCRIPTIONS_URL, hasAppleSubscription } from "@/features/billing/apple";
 const titles: Record<SettingsView, string> = {
   main: "Settings",
-  profile: "User Settings",
-  accounts: "Accounts",
-  palette: "Color Themes",
-  theme: "Theme Mode",
+  profile: "Account",
+  accounts: "Switch account",
+  appearance: "Appearance",
   integrations: "Integrations",
-  coach: "Coach Profile",
+  coach: "Coach profile",
   experience: "Preview onboarding",
   appleHealth: "Apple Health",
   garmin: "Garmin Connect",
+  privacy: "Privacy & safety",
   blocked: "Blocked people",
+};
+// Where "Back" goes from each screen; anything not listed returns to Settings.
+const parents: Partial<Record<SettingsView, SettingsView>> = {
+  accounts: "profile",
+  appleHealth: "integrations",
+  garmin: "integrations",
+  blocked: "privacy",
 };
 export default function Settings() {
   const focused = useIsFocused();
@@ -80,7 +92,6 @@ export default function Settings() {
     reduced = useReducedMotion();
   const health = useHealth();
   const [view, setView] = useState<SettingsView>("main");
-  const [confirm, setConfirm] = useState<"logout" | null>(null);
   const [languagesOpen, setLanguagesOpen] = useState(false);
   const [error, setError] = useState<unknown>();
   const [profileBusy, setProfileBusy] = useState(false);
@@ -98,6 +109,13 @@ export default function Settings() {
     api.put("/users/ai-consent", { granted: false }),
   );
   const open = (url: string) => void Linking.openURL(url).catch(setError);
+  const parent = parents[view] ?? "main";
+  const connectedIntegrations = [
+    health.status?.connected && "Apple Health",
+    health.garmin.status?.connected && "Garmin",
+  ]
+    .filter(Boolean)
+    .join(", ");
   if (!focused) return null;
   return (
     <LoggingDrawer
@@ -117,26 +135,17 @@ export default function Settings() {
             : (view === "main" ? FadeInLeft : FadeInRight).duration(200)
         }
         style={{
-          gap: view === "main" ? 12 : 16,
+          gap: view === "main" ? 22 : 16,
           paddingTop: view === "main" ? 28 : 4,
         }}
       >
         {view !== "main" && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              view === "appleHealth" || view === "garmin"
-                ? "Back to Integrations"
-                : "Back to Settings"
-            }
+            accessibilityLabel={`Back to ${titles[parent]}`}
             disabled={profileBusy || theme.isPending}
             onPress={() => {
-              setView(
-                view === "appleHealth" || view === "garmin"
-                  ? "integrations"
-                  : "main",
-              );
-              setConfirm(null);
+              setView(parent);
               theme.reset();
             }}
             style={{
@@ -149,9 +158,7 @@ export default function Settings() {
           >
             <ChevronLeft size={18} color={c.muted} />
             <Text style={{ fontSize: 14, color: c.muted }}>
-              {view === "appleHealth" || view === "garmin"
-                ? "Back to Integrations"
-                : "Back to Settings"}
+              {`Back to ${titles[parent]}`}
             </Text>
           </Pressable>
         )}
@@ -175,207 +182,155 @@ export default function Settings() {
           >
             {titles[view]}
           </Text>
-          {view === "main" && (
-            <Text
-              style={{
-                fontFamily: "Caveat",
-                fontSize: 23,
-                color: user.data?.planType === "FREE" ? c.muted : c.accent,
-              }}
-            >{`On ${user.data?.planType || "FREE"} Plan`}</Text>
-          )}
         </View>
         {view === "main" && (
           <>
-            {Platform.OS === "ios" && (
-              <View
-                style={{
-                  backgroundColor: c.soft + "88",
-                  padding: 12,
-                  borderRadius: 12,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: c.text, fontSize: 16 }}>
-                    Push Notifications
-                  </Text>
-                  <Text style={{ color: c.muted, fontSize: 13, marginTop: 3 }}>
-                    {user.data?.isIosNotificationsEnabled
-                      ? "Notifications enabled"
-                      : "Enable notifications for updates"}
-                  </Text>
-                </View>
-                <Bell size={22} color={c.muted} />
-                <Switch
-                  accessibilityLabel="Push Notifications"
-                  disabled={push.isPending}
-                  value={!!user.data?.isIosNotificationsEnabled}
-                  onValueChange={(enabled) => push.mutate(enabled)}
-                  trackColor={{ true: c.accent }}
-                />
-              </View>
-            )}
-            {/* Bought in the iOS app: Apple manages it. Bought on the website: Stripe does, but the
-                iOS app never links to web billing (App Review 3.1.1), so web subscribers manage it there. */}
-            {user.data?.planType &&
-              user.data.planType !== "FREE" &&
-              (Platform.OS !== "ios" || hasAppleSubscription(user.data)) && (
-              <SettingsRow
-                icon={CreditCard}
-                title="Manage my subscription"
-                onPress={() =>
-                  open(
-                    hasAppleSubscription(user.data)
-                      ? APPLE_SUBSCRIPTIONS_URL
-                      : "https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww",
-                  )
-                }
-              />
-            )}
-            <SettingsRow
-              icon={UserPen}
-              title="User Settings"
+            <ProfileCard
+              name={user.data?.name}
+              username={user.data?.username}
+              picture={user.data?.picture}
+              planType={user.data?.planType}
               onPress={() => setView("profile")}
             />
-            <SettingsRow
-              icon={Users}
-              title="Accounts"
-              onPress={() => setView("accounts")}
-            />
-            <SettingsRow
-              icon={GraduationCap}
-              title="Coach Profile"
-              onPress={() => setView("coach")}
-            />
-            <SettingsRow
-              icon={KeyRound}
-              title="Integrations"
-              onPress={() => setView("integrations")}
-            />
-            <SettingsRow
-              icon={Languages}
-              title={`Languages · ${languagesSummary(user.data?.spokenLanguages)}`}
-              onPress={() => setLanguagesOpen(true)}
-            />
+            <SettingsGroup title="Coach">
+              <SettingsRow
+                icon={GraduationCap}
+                title="Coach profile"
+                chevron
+                onPress={() => setView("coach")}
+              />
+              {Platform.OS === "ios" && (
+                <SettingsRow
+                  icon={Bell}
+                  title="Notifications"
+                  trailing={
+                    <Switch
+                      accessibilityLabel="Notifications"
+                      disabled={push.isPending}
+                      value={!!user.data?.isIosNotificationsEnabled}
+                      onValueChange={(enabled) => push.mutate(enabled)}
+                      trackColor={{ true: c.accent }}
+                    />
+                  }
+                />
+              )}
+              <SettingsRow
+                icon={Languages}
+                title="Languages"
+                value={
+                  user.data?.spokenLanguages?.length
+                    ? languagesSummary(user.data.spokenLanguages)
+                    : "Automatic"
+                }
+                chevron
+                onPress={() => setLanguagesOpen(true)}
+              />
+            </SettingsGroup>
             {languagesOpen && (
               <LanguagesDrawer onClose={() => setLanguagesOpen(false)} />
             )}
-            <SettingsRow
-              icon={Paintbrush}
-              title="Color Palette"
-              onPress={() => setView("palette")}
-            />
-            <SettingsRow
-              icon={Moon}
-              title="Theme Mode"
-              onPress={() => setView("theme")}
-            />
-            <SettingsRow
-              icon={Play}
-              title="Preview onboarding"
-              onPress={() => setView("experience")}
-            />
-            <SettingsRow
-              icon={UserX}
-              title="Blocked people"
-              onPress={() => setView("blocked")}
-            />
-            <SettingsRow
-              icon={LifeBuoy}
-              title="Get help"
-              onPress={() => open(`mailto:${SUPPORT_EMAIL}`)}
-            />
-            <View
-              style={{
-                backgroundColor: c.soft + "88",
-                padding: 12,
-                borderRadius: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.text, fontSize: 16 }}>AI features</Text>
-                <Text style={{ color: c.muted, fontSize: 13, marginTop: 3 }}>
-                  Coach, plan setup, voice logs and dictation send your data
-                  to AI providers.
-                </Text>
-              </View>
-              <Sparkles size={22} color={c.muted} />
-              <Switch
-                accessibilityLabel="AI features"
-                disabled={aiOff.isPending}
-                value={aiConsent.allowed}
-                onValueChange={(on) =>
-                  on ? void aiConsent.ask() : aiOff.mutate(undefined)
-                }
-                trackColor={{ true: c.accent }}
+            <SettingsGroup title="App">
+              <SettingsRow
+                icon={Paintbrush}
+                title="Appearance"
+                value={appearanceSummary(
+                  user.data?.themeMode,
+                  user.data?.themeBaseColor,
+                )}
+                chevron
+                onPress={() => setView("appearance")}
               />
-            </View>
-            <Status error={aiOff.error} />
-            {aiConsent.sheet}
-            <SettingsRow
-              icon={ShieldCheck}
-              title="Privacy policy"
-              onPress={() => open("https://tracking.so/privacy")}
-            />
-            <SettingsRow
-              icon={FileText}
-              title="Terms of use"
-              onPress={() => open("https://tracking.so/terms")}
-            />
-            <SettingsRow
-              icon={LogOut}
-              title="Logout"
-              onPress={() => setConfirm("logout")}
-            />
-            {confirm === "logout" && (
-              <>
-                <Copy>Log out of this account?</Copy>
-                <Button
-                  danger
-                  onPress={() => void auth.signOut().catch(setError)}
-                >
-                  Confirm logout
-                </Button>
-                <Button secondary onPress={() => setConfirm(null)}>
-                  Cancel
-                </Button>
-              </>
-            )}
+              <SettingsRow
+                icon={KeyRound}
+                title="Integrations"
+                value={connectedIntegrations}
+                chevron
+                onPress={() => setView("integrations")}
+              />
+            </SettingsGroup>
+            <SettingsGroup>
+              <SettingsRow
+                icon={ShieldCheck}
+                title="Privacy & safety"
+                chevron
+                onPress={() => setView("privacy")}
+              />
+              <SettingsRow
+                icon={LifeBuoy}
+                title="Get help"
+                chevron
+                onPress={() => open(`mailto:${SUPPORT_EMAIL}`)}
+              />
+              <SettingsRow
+                icon={Play}
+                title="Preview onboarding"
+                chevron
+                onPress={() => setView("experience")}
+              />
+            </SettingsGroup>
+            <SettingsGroup>
+              <SettingsRow
+                icon={LogOut}
+                title="Log out"
+                destructive
+                onPress={() =>
+                  showActions("Log out of this account?", [
+                    {
+                      label: "Log out",
+                      destructive: true,
+                      onPress: () => void auth.signOut().catch(setError),
+                    },
+                  ])
+                }
+              />
+            </SettingsGroup>
           </>
         )}
         {view === "profile" && (
-          <ProfileSettings onBusyChange={setProfileBusy} />
+          <>
+            <SettingsGroup>
+              {/* Bought in the iOS app: Apple manages it. Bought on the website: Stripe does, but the
+                  iOS app never links to web billing (App Review 3.1.1), so web subscribers manage it there. */}
+              {user.data?.planType &&
+                user.data.planType !== "FREE" &&
+                (Platform.OS !== "ios" || hasAppleSubscription(user.data)) && (
+                  <SettingsRow
+                    icon={CreditCard}
+                    title="Manage my subscription"
+                    chevron
+                    onPress={() =>
+                      open(
+                        hasAppleSubscription(user.data)
+                          ? APPLE_SUBSCRIPTIONS_URL
+                          : "https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww",
+                      )
+                    }
+                  />
+                )}
+              <SettingsRow
+                icon={Users}
+                title="Switch account"
+                chevron
+                onPress={() => setView("accounts")}
+              />
+            </SettingsGroup>
+            <ProfileSettings onBusyChange={setProfileBusy} />
+          </>
         )}
         {view === "accounts" && <Accounts />}
-        {view === "theme" && (
-          <ThemeModes
-            selected={user.data?.themeMode}
-            busy={theme.isPending}
-            onSelect={(mode) =>
-              theme.mutate(
-                { themeMode: mode },
-                { onSuccess: () => setView("main") },
-              )
-            }
-          />
-        )}
-        {view === "palette" && (
-          <ColorPalettes
-            selected={user.data?.themeBaseColor}
-            busy={theme.isPending}
-            onSelect={(color) =>
-              theme.mutate(
-                { themeBaseColor: color },
-                { onSuccess: () => setView("main") },
-              )
-            }
-          />
+        {view === "appearance" && (
+          <>
+            <ThemeModes
+              selected={user.data?.themeMode}
+              busy={theme.isPending}
+              onSelect={(mode) => theme.mutate({ themeMode: mode })}
+            />
+            <ColorPalettes
+              selected={user.data?.themeBaseColor}
+              busy={theme.isPending}
+              onSelect={(color) => theme.mutate({ themeBaseColor: color })}
+            />
+          </>
         )}
         {view === "integrations" && (
           <>
@@ -427,6 +382,49 @@ export default function Settings() {
         {view === "appleHealth" && <HealthContent showGarmin={false} />}
         {view === "garmin" && <GarminContent />}
         {view === "coach" && <CoachProfile />}
+        {view === "privacy" && (
+          <>
+            <SettingsGroup footer="Coach, plan setup, voice logs and dictation send your data to AI providers.">
+              <SettingsRow
+                icon={Sparkles}
+                title="AI features"
+                trailing={
+                  <Switch
+                    accessibilityLabel="AI features"
+                    disabled={aiOff.isPending}
+                    value={aiConsent.allowed}
+                    onValueChange={(on) =>
+                      on ? void aiConsent.ask() : aiOff.mutate(undefined)
+                    }
+                    trackColor={{ true: c.accent }}
+                  />
+                }
+              />
+            </SettingsGroup>
+            <Status error={aiOff.error} />
+            {aiConsent.sheet}
+            <SettingsGroup>
+              <SettingsRow
+                icon={UserX}
+                title="Blocked people"
+                chevron
+                onPress={() => setView("blocked")}
+              />
+              <SettingsRow
+                icon={ShieldCheck}
+                title="Privacy policy"
+                chevron
+                onPress={() => open("https://tracking.so/privacy")}
+              />
+              <SettingsRow
+                icon={FileText}
+                title="Terms of use"
+                chevron
+                onPress={() => open("https://tracking.so/terms")}
+              />
+            </SettingsGroup>
+          </>
+        )}
         {view === "blocked" && <BlockedPeople />}
         {view === "experience" && (
           <>
