@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNowStrict } from "date-fns";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { CoachItemDrawer } from "@/components/coach/CoachItemDrawer";
+import { CoachSettings } from "@/components/coach/CoachSettings";
 import { useCoachInbox } from "@/components/coach/useCoachInbox";
 import { useCoachingSwitches } from "@/components/coach/useCoaching";
 import { coachFace } from "@/components/coach/face";
@@ -59,6 +60,7 @@ function CoachPage() {
   const face = coachFace(currentUser?.coachPersonality);
   const [open, setOpen] = useState<CoachItem>();
   const [checkIn, setCheckIn] = useState(false);
+  const [settings, setSettings] = useState(false);
   const active = (plans ?? []).filter(
     (p) => !p.archivedAt && !p.deletedAt && (!p.finishingDate || new Date(p.finishingDate) >= new Date()),
   );
@@ -67,13 +69,20 @@ function CoachPage() {
       <h1 className="pt-2 text-3xl font-bold">Coach</h1>
 
       <div className="flex flex-col gap-3.5 rounded-[18px] border border-border bg-card p-4">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          data-testid="coach-settings"
+          aria-label={`${coach.name} coach settings`}
+          onClick={() => setSettings(true)}
+          className="flex w-full items-center gap-3 text-left transition-opacity hover:opacity-70"
+        >
           <img src={face} alt="" className="h-12 w-12" />
-          <div>
-            <p className="font-semibold">{coach.name}</p>
-            <p className="text-[13px] text-muted-foreground">{coach.title}</p>
-          </div>
-        </div>
+          <span className="flex-1">
+            <span className="block font-semibold">{coach.name}</span>
+            <span className="block text-[13px] text-muted-foreground">{coach.title}</span>
+          </span>
+          <ChevronRight className="h-[18px] w-[18px] text-muted-foreground" />
+        </button>
         <div className="flex items-center gap-3 border-t border-border pt-3.5">
           <div className="flex-1">
             <p className="text-[15px] font-semibold">Coaching</p>
@@ -150,6 +159,7 @@ function CoachPage() {
       })}
       <CoachItemDrawer item={open} onClose={() => setOpen(undefined)} onCheckIn={() => setCheckIn(true)} />
       <MetricsLogPopover open={checkIn} onClose={() => setCheckIn(false)} />
+      <CoachSettings open={settings} onClose={() => setSettings(false)} />
     </div>
   );
 }

@@ -44,3 +44,8 @@ export interface MissReason {
 export interface SectionLabelProps {
   children: string;
 }
+
+export interface CoachSettingsProps {
+  open: boolean;
+  onClose: () => void;
+}

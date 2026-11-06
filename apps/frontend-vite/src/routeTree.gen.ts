@@ -20,7 +20,6 @@ import { Route as RankingsRouteImport } from './routes/rankings'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MessageAiRouteImport } from './routes/message-ai'
-import { Route as ManageAiCoachRouteImport } from './routes/manage-ai-coach'
 import { Route as GetCoachedRouteImport } from './routes/get-coached'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CreatePlanAdvancedRouteImport } from './routes/create-plan-advanced'
@@ -96,11 +95,6 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const MessageAiRoute = MessageAiRouteImport.update({
   id: '/message-ai',
   path: '/message-ai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManageAiCoachRoute = ManageAiCoachRouteImport.update({
-  id: '/manage-ai-coach',
-  path: '/manage-ai-coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GetCoachedRoute = GetCoachedRouteImport.update({
@@ -220,7 +214,6 @@ export interface FileRoutesByFullPath {
   '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
-  '/manage-ai-coach': typeof ManageAiCoachRoute
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -255,7 +248,6 @@ export interface FileRoutesByTo {
   '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
-  '/manage-ai-coach': typeof ManageAiCoachRoute
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -291,7 +283,6 @@ export interface FileRoutesById {
   '/create-plan-advanced': typeof CreatePlanAdvancedRoute
   '/download': typeof DownloadRoute
   '/get-coached': typeof GetCoachedRoute
-  '/manage-ai-coach': typeof ManageAiCoachRoute
   '/message-ai': typeof MessageAiRoute
   '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
@@ -328,7 +319,6 @@ export interface FileRouteTypes {
     | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
-    | '/manage-ai-coach'
     | '/message-ai'
     | '/onboarding'
     | '/plans'
@@ -363,7 +353,6 @@ export interface FileRouteTypes {
     | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
-    | '/manage-ai-coach'
     | '/message-ai'
     | '/onboarding'
     | '/plans'
@@ -398,7 +387,6 @@ export interface FileRouteTypes {
     | '/create-plan-advanced'
     | '/download'
     | '/get-coached'
-    | '/manage-ai-coach'
     | '/message-ai'
     | '/onboarding'
     | '/plans'
@@ -434,7 +422,6 @@ export interface RootRouteChildren {
   CreatePlanAdvancedRoute: typeof CreatePlanAdvancedRoute
   DownloadRoute: typeof DownloadRoute
   GetCoachedRoute: typeof GetCoachedRoute
-  ManageAiCoachRoute: typeof ManageAiCoachRoute
   MessageAiRoute: typeof MessageAiRoute
   OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
@@ -536,13 +523,6 @@ declare module '@tanstack/react-router' {
       path: '/message-ai'
       fullPath: '/message-ai'
       preLoaderRoute: typeof MessageAiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manage-ai-coach': {
-      id: '/manage-ai-coach'
-      path: '/manage-ai-coach'
-      fullPath: '/manage-ai-coach'
-      preLoaderRoute: typeof ManageAiCoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/get-coached': {
@@ -706,7 +686,6 @@ const rootRouteChildren: RootRouteChildren = {
   CreatePlanAdvancedRoute: CreatePlanAdvancedRoute,
   DownloadRoute: DownloadRoute,
   GetCoachedRoute: GetCoachedRoute,
-  ManageAiCoachRoute: ManageAiCoachRoute,
   MessageAiRoute: MessageAiRoute,
   OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,

@@ -37,7 +37,9 @@ export const usePlans = () => ({
 export const useActivities = () => ({ activities, activityEntries, isLoadingActivityEntries: false });
 export const useMetrics = () => ({ metrics, entries: metricEntries });
 export const useCurrentUser = () => ({
-  currentUser: { username: "alex", name: "Alex", coachPersonality: "CHAMPION", planType: "PLUS" },
+  currentUser: { username: "alex", name: "Alex", coachPersonality: "CHAMPION", planType: "PLUS", preferredCoachingHour: 20 },
+  updateUser: async () => {},
+  isUpdatingUser: false,
 });
 export const useTheme = () => ({ effectiveTheme: "blue" });
 export const useNotifications = () => ({ notificationCount: 0 });

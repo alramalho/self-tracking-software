@@ -7,19 +7,12 @@ import { MetricSuggestion } from "@/components/MetricSuggestion";
 import { PlanLink } from "@/components/PlanLink";
 import { ActivityLink } from "@/components/ActivityLink";
 import { UserActionCard } from "@/components/UserActionCard";
-import { CalendarGrid } from "@/components/CalendarGrid";
 import { ChatMessageComposer } from "@/components/ChatMessageComposer";
 import ImageZoomDialog from "@/components/ImageZoomDialog";
-import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   CoachAttentionDrawer,
   useCoachAttentionItems,
 } from "@/components/CoachAttentionBanner";
-import {
-  computeGridCells,
-  isActiveVisiblePlan,
-  type GridData,
-} from "@/utils/ghostGrid";
 import { AnimatePresence, motion } from "framer-motion";
 import { ActivityLogProposalCard } from "@/components/ActivityLogProposalCard";
 import { ActivityEditProposalCard } from "@/components/ActivityEditProposalCard";
@@ -41,8 +34,8 @@ import { getThemeVariants } from "@/utils/theme";
 import { toDisplayErrorMessage } from "@/utils/errorMessage";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, ArrowLeft, X, Settings, AlertCircle, AlertTriangle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Eye, CalendarDays, Pencil, Copy, Check, RotateCcw } from "lucide-react";
-import { differenceInCalendarDays, format } from "date-fns";
+import { Loader2, ArrowLeft, X, AlertCircle, AlertTriangle, EllipsisVertical, MessageSquarePlus, Eraser, Sparkles, ChevronDown, Pencil, Copy, Check, RotateCcw } from "lucide-react";
+import { format } from "date-fns";
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { toast } from "react-hot-toast";
@@ -105,21 +98,6 @@ function AssessmentDivider({ position }: { position: "start" | "end" }) {
       </span>
     </div>
   );
-}
-
-function formatCoachVisibleDate(date: Date): string {
-  const today = new Date();
-  const diffDays = differenceInCalendarDays(today, date);
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays > 1 && diffDays <= 6) {
-    return `${format(date, "EEE")}, ${diffDays} days ago`;
-  }
-  if (date.getFullYear() === today.getFullYear()) {
-    return format(date, "d MMM");
-  }
-  return format(date, "d MMMM yyyy");
 }
 
 function hasProposalChanges(proposal: any): boolean {
@@ -307,111 +285,6 @@ function CitationPill({ source }: { source: CitationSource }) {
   );
 }
 
-type VisibleActivity = {
-  id: string;
-  emoji: string;
-  title: string;
-  quantity: number;
-  measure: string;
-  datetime: Date;
-};
-
-function CoachContextContent({
-  recentActivities,
-  activePlans,
-  gridData,
-  isCompletedOnDay,
-}: {
-  recentActivities: VisibleActivity[];
-  activePlans: Array<{
-    id: string;
-    goal: string;
-    emoji?: string | null;
-  }>;
-  gridData: GridData;
-  isCompletedOnDay: (activityId: string, day: Date) => boolean;
-}) {
-  return (
-    <div className="max-h-[calc(100dvh-8rem)] space-y-3 overflow-y-auto overscroll-contain px-1 pb-2 pt-1">
-                <div>
-                  <div className="mb-2 text-xs font-medium text-muted-foreground">
-                    Recent logs
-                  </div>
-                  {recentActivities.length > 0 ? (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {recentActivities.slice(0, 8).map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="min-w-[116px] rounded-xl bg-muted/80 p-2 text-center"
-                        >
-                          <div className="text-xl leading-none">{activity.emoji}</div>
-                          <div className="mt-1 truncate text-sm font-medium text-foreground">
-                            {activity.title}
-                          </div>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">
-                            {formatCoachVisibleDate(activity.datetime)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                      No recent activity logs are available.
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-xl bg-muted/60 px-3 py-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Active plans
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {activePlans.length > 0 ? (
-                      activePlans.slice(0, 5).map((plan) => (
-                        <PlanLink
-                          key={plan.id}
-                          planId={plan.id}
-                          displayText={plan.goal}
-                          emoji={plan.emoji || undefined}
-                          className="max-w-full bg-background/70 py-1 text-xs"
-                          labelClassName="truncate"
-                        />
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        No active plans.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-muted/60 px-3 py-2">
-                  <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <CalendarDays size={13} />
-                    Upcoming sessions
-                  </div>
-                  {gridData.scheduledSessions.length > 0 ||
-                    gridData.ghostCells.length > 0 ? (
-                    <CalendarGrid
-                      sessions={gridData.scheduledSessions}
-                      activities={gridData.activities}
-                      ghostCells={gridData.ghostCells}
-                      isCompletedOnDay={isCompletedOnDay}
-                      showLegend={false}
-                      weekLabels={{ week1: "This week", week2: "Next week" }}
-                      selectedSessionDisplay="card"
-                      allDaysSelectable
-                    />
-                  ) : (
-                    <div className="text-xs text-muted-foreground">
-                      No upcoming sessions.
-                    </div>
-                  )}
-                </div>
-    </div>
-  );
-}
-
 function MessageWithReadTracking({
   message,
   isOwnMessage,
@@ -464,7 +337,7 @@ function MessageAIPage() {
   const navigate = useNavigate();
   const { coachPrompt, coachStarter } = Route.useSearch();
   const { plans } = usePlans();
-  const { activities, activityEntries } = useActivities();
+  const { activities } = useActivities();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [, copyToClipboard] = useClipboard();
@@ -538,7 +411,6 @@ function MessageAIPage() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [activeActionMessageId, setActiveActionMessageId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
-  const [showCoachContext, setShowCoachContext] = useState(false);
   const [showCoachAttentionDrawer, setShowCoachAttentionDrawer] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<{
@@ -652,55 +524,6 @@ function MessageAIPage() {
     chats?.filter(c => c.type === "COACH")
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()) || []
     , [chats]);
-
-  const recentActivities = useMemo<VisibleActivity[]>(() => {
-    const activitiesById = new Map(
-      (activities || []).map((activity: any) => [activity.id, activity])
-    );
-    return (activityEntries || [])
-      .map((entry: any) => {
-        const activity = activitiesById.get(entry.activityId);
-        if (!activity) return null;
-        return {
-          id: entry.id,
-          emoji: activity.emoji || "📌",
-          title: activity.title,
-          quantity: entry.quantity,
-          measure: activity.measure,
-          datetime: new Date(entry.datetime),
-        };
-      })
-      .filter((activity): activity is VisibleActivity => activity !== null)
-      .sort((a, b) => b.datetime.getTime() - a.datetime.getTime())
-      .slice(0, 12);
-  }, [activities, activityEntries]);
-
-  const activePlans = useMemo(
-    () =>
-      (plans || [])
-        .filter(isActiveVisiblePlan)
-        .map((plan: any) => ({
-          id: plan.id,
-          goal: plan.goal,
-          emoji: plan.emoji,
-        })),
-    [plans]
-  );
-
-  const gridData = useMemo<GridData>(
-    () => computeGridCells(plans, new Date(), activityEntries || []),
-    [plans, activityEntries]
-  );
-
-  const isCompletedOnDay = useCallback(
-    (activityId: string, day: Date) =>
-      (activityEntries || []).some(
-        (entry) =>
-          entry.activityId === activityId &&
-          isSameDay(new Date(entry.datetime), day)
-      ),
-    [activityEntries]
-  );
 
   // Auto-select most recent coach chat or create one
   useEffect(() => {
@@ -1556,16 +1379,13 @@ function MessageAIPage() {
                   <ArrowLeft size={20} />
                 </Button>
                 <div className="relative flex items-center">
-                  <button
-                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                    onClick={() => navigate({ to: "/manage-ai-coach" })}
-                  >
+                  <div className="flex items-center gap-3">
                     <img src={aiCoach.avatar} alt={aiCoach.label} className="w-10 h-10 object-contain" />
                     <div className="text-left">
                       <h1 className="font-semibold text-foreground">{aiCoach.name}</h1>
                       <p className="text-xs text-muted-foreground">AI Coach</p>
                     </div>
-                  </button>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1579,14 +1399,6 @@ function MessageAIPage() {
                     <AlertTriangle size={18} className="text-amber-500" />
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowCoachContext(true)}
-                  aria-label={`What ${aiCoach.name} can see`}
-                >
-                  <Eye size={18} />
-                </Button>
                 <div className="relative">
                   <Button
                     ref={menuButtonRef}
@@ -1645,16 +1457,6 @@ function MessageAIPage() {
               Assess
             </button>
             <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
-              onClick={() => {
-                setShowMenu(false);
-                navigate({ to: "/manage-ai-coach" });
-              }}
-            >
-              <Settings size={16} />
-              Settings
-            </button>
-            <button
               className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-destructive hover:bg-muted transition-colors"
               onClick={() => {
                 setShowMenu(false);
@@ -1666,35 +1468,6 @@ function MessageAIPage() {
             </button>
           </div>
         )}
-
-        <AppleLikePopover
-          open={showCoachContext}
-          onClose={() => setShowCoachContext(false)}
-          title={`What ${aiCoach.name} can see`}
-          className="sm:max-w-xl"
-        >
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                <Eye size={18} className="text-muted-foreground" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  What {aiCoach.name} can see
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Recent logs, active plans, and upcoming sessions.
-                </p>
-              </div>
-            </div>
-            <CoachContextContent
-              recentActivities={recentActivities}
-              activePlans={activePlans}
-              gridData={gridData}
-              isCompletedOnDay={isCompletedOnDay}
-            />
-          </div>
-        </AppleLikePopover>
 
         <CoachAttentionDrawer
           open={showCoachAttentionDrawer}
