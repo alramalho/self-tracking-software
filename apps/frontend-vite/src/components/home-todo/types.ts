@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { HomeDay, HomeDayItem } from "@tsw/prisma/home-todo";
 
 export interface HomeTileItemProps {
@@ -8,11 +9,21 @@ export interface HomeDayTileProps {
   day: HomeDay;
   selected: boolean;
   onClick: () => void;
+  testPrefix: string;
+}
+
+export interface TwoWeeksProps {
+  weeks: HomeDay[][];
+  selectedKey: string;
+  onSelect: (key: string) => void;
+  testPrefix?: string;
 }
 
 export interface HomeDayDetailProps {
   day: HomeDay;
   todayKey: string;
+  testId?: string;
+  children?: ReactNode;
 }
 
 export interface HomeItemRowProps {

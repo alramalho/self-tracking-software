@@ -16,10 +16,3 @@ export interface PlanWeeksProps {
   plan: Plan;
   entries: ActivityEntry[];
 }
-
-export interface DayTileProps {
-  day: PlanDay;
-  emoji: string;
-  selected: boolean;
-  onPress: () => void;
-}

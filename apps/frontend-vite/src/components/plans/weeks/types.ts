@@ -19,13 +19,6 @@ export interface PlanWeeksProps {
   entries: { activityId?: string | null; datetime: Date | string; deletedAt?: Date | string | null }[];
 }
 
-export interface DayTileProps {
-  day: PlanDay;
-  emoji: string;
-  selected: boolean;
-  onClick: () => void;
-}
-
 export interface TargetRowProps {
   icon: LucideIcon;
   children: string;

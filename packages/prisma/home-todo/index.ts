@@ -62,6 +62,7 @@ export function homeDays({ projection, plans, entries, practice = [] }: HomeDays
         add(
           itemFor(cell.planId, cell.activityId, key, "flexible", {
             remaining: summary?.remaining,
+            week,
             ...(anyActivity && plan
               ? { anyActivity, title: plan.goal, emoji: plan.emoji || activityOf(cell.activityId)?.emoji || "•", measure: undefined }
               : {}),

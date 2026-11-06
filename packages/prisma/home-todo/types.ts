@@ -17,6 +17,8 @@ export type HomeDayItem = {
   anyActivity?: boolean;
   /** Flexible slots only: sessions still open that week. */
   remaining?: number;
+  /** Flexible slots only: 0 this week, 1 next week. */
+  week?: number;
   /** The coach's practice session for this day, when there is one: it opens the session screen. */
   sessionId?: string;
   time?: string | null;

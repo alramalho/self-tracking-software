@@ -2,18 +2,11 @@ import { useMemo, useState } from "react";
 import { Clock, Dumbbell, Footprints, Gauge, Target } from "lucide-react";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import type { SessionTargets } from "@tsw/prisma/follow-through";
-import { dayKind, planDays } from "@tsw/prisma/follow-through/coach-inbox";
-import {
-  dayNumber,
-  liftText,
-  longDate,
-  paceText,
-  unitLabel,
-  weekRange,
-  weekday,
-} from "@tsw/prisma/follow-through/session-format";
-import { cn } from "@/lib/utils";
-import type { DayTileProps, PlanDay, PlanWeeksProps, SessionTargetRowsProps, TargetRowProps } from "./types";
+import { planDays } from "@tsw/prisma/follow-through/coach-inbox";
+import { homeDays } from "@tsw/prisma/home-todo";
+import { DayDetail, TwoWeeks } from "@/components/home-todo/Days";
+import { liftText, paceText } from "@tsw/prisma/follow-through/session-format";
+import type { PlanDay, PlanWeeksProps, SessionTargetRowsProps, TargetRowProps } from "./types";
 
 function TargetRow({ icon: Icon, children }: TargetRowProps) {
   return (
@@ -39,41 +32,7 @@ function SessionTargetRows({ targets }: SessionTargetRowsProps) {
   );
 }
 
-function DayTile({ day, emoji, selected, onClick }: DayTileProps) {
-  const kind = dayKind(day);
-  const quantity = day.scheduled[0]?.quantity;
-  return (
-    <button
-      type="button"
-      data-testid={`plan-day-${day.key}`}
-      aria-label={`${longDate(day.key)}, ${kind === "rest" ? "rest day" : kind}`}
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        "flex min-h-[74px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl bg-card",
-        selected ? "border-2 border-primary" : "border border-border",
-        day.isPast && !day.logged && "opacity-55",
-      )}
-    >
-      <span className={cn("text-[10px] font-semibold", day.isToday ? "text-primary" : "text-muted-foreground")}>
-        {weekday(day.key).toUpperCase()}
-      </span>
-      <span className={cn("text-[15px] font-bold", day.isToday && "text-primary")}>{dayNumber(day.key)}</span>
-      {day.logged && kind !== "rest" ? (
-        <span className="text-xs font-bold text-green-500">{emoji} ✓</span>
-      ) : kind === "scheduled" ? (
-        <span className="text-xs">
-          {emoji}
-          {quantity ?? ""}
-        </span>
-      ) : kind === "flexible" ? (
-        <span className="text-xs opacity-45">{emoji}</span>
-      ) : null}
-    </button>
-  );
-}
-
-// This week and next, the onboarding schedule's layout: tap a day to see what it asks for.
+// This week and next for one plan: the homepage's tiles and rows, plus the coach's targets for a session.
 // Same as the iPhone app's plan page.
 export function PlanWeeks({ plan, entries }: PlanWeeksProps) {
   const planEntries = useMemo(
@@ -84,56 +43,22 @@ export function PlanWeeks({ plan, entries }: PlanWeeksProps) {
     () => buildPlanWeekProjection({ plans: [plan], entries: planEntries, now: new Date(), weekCount: 2 }),
     [plan, planEntries],
   );
-  // Plan sessions carry the coach's title and targets; the projection keeps them.
-  const weeks = planDays(projection, planEntries) as PlanDay[][];
+  const weeks = useMemo(
+    () => homeDays({ projection, plans: [plan], entries: planEntries }),
+    [projection, plan, planEntries],
+  );
   const [selectedKey, setSelectedKey] = useState(projection.todayKey);
   const day = weeks.flat().find((d) => d.key === selectedKey) ?? weeks[0][0];
-  // A times-per-week plan has no rest days, only days you haven't used yet.
-  const kind = dayKind(day) === "rest" && plan.outlineType === "TIMES_PER_WEEK" ? "flexible" : dayKind(day);
-  const activityOf = (id?: string) => plan.activities.find((a) => a.id === id) ?? plan.activities[0];
-  const emoji = plan.activities[0]?.emoji ?? plan.emoji ?? "•";
-  const session = day.scheduled[0];
-  const activity = activityOf(session?.activityId ?? day.done[0]?.activityId ?? day.flexible[0]?.activityId);
-  const summary = projection.summaries.find((s) => s.weekIndex === (weeks[0].some((d) => d.key === day.key) ? 0 : 1));
+  // Plan sessions carry the coach's targets and guide; the projection keeps them.
+  const session = (planDays(projection, planEntries) as PlanDay[][]).flat().find((d) => d.key === day.key)?.scheduled[0];
   const targets = session?.targets as SessionTargets | null | undefined;
-  const title =
-    kind === "scheduled"
-      ? `${activity?.emoji ?? ""} ${session.title ?? activity?.title ?? "Session"}`
-      : kind === "rest"
-        ? "Rest day"
-        : `${activity?.emoji ?? ""} ${activity?.title ?? ""}`;
-  const subtitle =
-    kind === "scheduled"
-      ? `${longDate(day.key)}${session.quantity ? ` · ${session.quantity} ${unitLabel(activity?.measure ?? "", session.quantity)}` : ""}${day.logged ? " · done" : ""}`
-      : kind === "done"
-        ? `${longDate(day.key)} · done`
-        : kind === "flexible"
-          ? `Any day works${summary ? ` · ${summary.remaining} left ${summary.weekIndex ? "next week" : "this week"}` : ""}`
-          : longDate(day.key);
   return (
-    <div data-testid="plan-weeks" className="flex flex-col gap-3.5">
-      {weeks.map((days, index) => (
-        <div key={index} className="flex flex-col gap-2">
-          <p className="text-[13px] font-semibold text-muted-foreground">
-            {index ? "Next week" : "This week"} · {weekRange(days[0].key)}
-          </p>
-          <div className="flex gap-[5px]">
-            {days.map((d) => (
-              <DayTile key={d.key} day={d} emoji={emoji} selected={d.key === day.key} onClick={() => setSelectedKey(d.key)} />
-            ))}
-          </div>
-        </div>
-      ))}
-      <div data-testid="plan-day-detail" className="flex flex-col gap-3 rounded-[18px] bg-card p-[18px]">
-        <div>
-          <p className="text-lg font-bold">{title.trim()}</p>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        {kind === "scheduled" && targets && <SessionTargetRows targets={targets} />}
-        {kind === "scheduled" && session.descriptiveGuide && (
-          <p className="text-sm leading-5 text-muted-foreground">{session.descriptiveGuide}</p>
-        )}
-      </div>
+    <div data-testid="plan-weeks" className="flex flex-col gap-3">
+      <TwoWeeks weeks={weeks} selectedKey={day.key} onSelect={setSelectedKey} testPrefix="plan-day" />
+      <DayDetail day={day} todayKey={projection.todayKey} testId="plan-day-detail">
+        {targets && <SessionTargetRows targets={targets} />}
+        {session?.descriptiveGuide && <p className="pb-1 text-sm leading-5 text-muted-foreground">{session.descriptiveGuide}</p>}
+      </DayDetail>
     </div>
   );
 }

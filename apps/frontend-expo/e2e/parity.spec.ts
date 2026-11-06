@@ -558,9 +558,9 @@ test("the two-week overview marks logged days and counts what is left", async ({
     .click();
   const weeks = page.getByTestId("plans-screen").getByTestId("plan-weeks");
   // Today has a run and a reading logged: one distinct day, so two of three are left.
-  await expect(weeks.getByTestId("plan-day-detail")).toContainText("done");
-  const nextWeekFirstDay = weeks.getByRole("button").nth(7);
-  await nextWeekFirstDay.click();
+  await expect(weeks.getByTestId("plan-day-detail")).toContainText("Done");
+  // The last day with something on it is next week's open slot (the same tiles as the homepage).
+  await weeks.getByRole("button", { name: /, \d+ planned$/ }).last().click();
   await expect(weeks.getByTestId("plan-day-detail")).toContainText("Any day works · 3 left next week");
 });
 
