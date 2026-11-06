@@ -87,9 +87,10 @@ export function HealthCard() {
   const garmin = health.garmin.status?.connected;
   const synced = health.status?.lastSyncCompletedAt ?? health.garmin.status?.lastSyncCompletedAt;
   const lastNight = sleep.data?.scores[0];
+  const asleepMinutes = lastNight ? Math.round(lastNight.asleepMinutes) : null;
   const resting = latestRecord(vitals.data?.metrics ?? [], "resting_heart_rate");
   const facts = [
-    lastNight ? `Sleep ${Math.floor(lastNight.asleepMinutes / 60)} h ${String(lastNight.asleepMinutes % 60).padStart(2, "0")}` : null,
+    asleepMinutes !== null ? `Sleep ${Math.floor(asleepMinutes / 60)}h ${asleepMinutes % 60}m` : null,
     resting ? `Resting HR ${formatVitalValue(resting).replace(" bpm", "")}` : null,
   ].filter(Boolean);
   const subtitle = !apple && !garmin
