@@ -94,6 +94,9 @@ describe("Apple Health workout reconciliation persistence", () => {
       },
     ]);
     expect(result.linked).toBe(1);
+    expect(result.entries).toEqual([
+      { healthWorkoutId: workout.id, activityEntryId: entry.id, hasPhotos: false },
+    ]);
 
     const linkedEntry = await prisma.activityEntry.findUniqueOrThrow({
       where: { id: entry.id },

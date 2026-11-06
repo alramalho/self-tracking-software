@@ -174,6 +174,14 @@ export interface WorkoutReconciliationApplyResult {
   imported: number;
   ignored: number;
   alreadyResolved: number;
+  /** Missing from older servers; the photo prompt then stays hidden. */
+  entries?: ReconciledWorkoutEntry[];
+}
+
+export interface ReconciledWorkoutEntry {
+  healthWorkoutId: string;
+  activityEntryId: string;
+  hasPhotos: boolean;
 }
 
 export type WorkoutReviewAction = WorkoutReconciliationAction | "skip";

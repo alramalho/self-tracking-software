@@ -175,6 +175,14 @@ export interface WorkoutReconciliationApplyResult {
   imported: number;
   ignored: number;
   alreadyResolved: number;
+  /** The log each linked or imported workout now belongs to. */
+  entries: ReconciledWorkoutEntry[];
+}
+
+export interface ReconciledWorkoutEntry {
+  healthWorkoutId: string;
+  activityEntryId: string;
+  hasPhotos: boolean;
 }
 
 export interface NormalizedWorkoutMeasurement {
