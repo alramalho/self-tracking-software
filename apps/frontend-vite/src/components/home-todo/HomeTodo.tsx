@@ -145,17 +145,16 @@ export const HomeTodo = () => {
       <CoachNote />
       {visible.length > 0 && (
         <section className="flex flex-col gap-3.5 rounded-3xl bg-card p-4">
-          <h2 className="text-[19px] font-bold">Next two weeks</h2>
-          {weeks.map((days, index) => (
-            <div key={index} className="flex flex-col gap-2">
-              <p className="text-sm text-muted-foreground">{index ? "Next week" : "This week"}</p>
-              <div className="flex gap-[5px]">
+          <h2 className="text-[19px] font-bold">Soon</h2>
+          <div className="flex flex-col gap-[5px]">
+            {weeks.map((days, index) => (
+              <div key={index} className="flex gap-[5px]">
                 {days.map((d) => (
                   <DayTile key={d.key} day={d} selected={d.key === day.key} onClick={() => setSelectedKey(d.key)} />
                 ))}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
           <DayDetail day={day} todayKey={projection.todayKey} />
         </section>
       )}

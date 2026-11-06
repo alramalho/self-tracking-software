@@ -172,17 +172,16 @@ export function HomeTodo({ plans, entries }: HomeTodoProps) {
       <CoachNote />
       {!!visible.length && (
         <View style={{ gap: 14, padding: 16, borderRadius: 24, backgroundColor: c.card }}>
-          <Heading>Next two weeks</Heading>
-          {weeks.map((days, index) => (
-            <View key={index} style={{ gap: 8 }}>
-              <Text style={{ color: c.muted, fontSize: 14 }}>{index ? "Next week" : "This week"}</Text>
-              <View style={{ flexDirection: "row", gap: 5 }}>
+          <Heading>Soon</Heading>
+          <View style={{ gap: 5 }}>
+            {weeks.map((days, index) => (
+              <View key={index} style={{ flexDirection: "row", gap: 5 }}>
                 {days.map((d) => (
                   <DayTile key={d.key} day={d} selected={d.key === day.key} onPress={() => setSelectedKey(d.key)} />
                 ))}
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
           <DayDetail day={day} todayKey={projection.todayKey} />
         </View>
       )}
