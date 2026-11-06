@@ -110,6 +110,14 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - No new tests beyond those recorded for Safari-install build 226. Not run on a phone. No Expo cloud build, OTA or App Store submission.
 - **EAS build counter:** 227.
 
+## TestFlight build 235 — plan page uses the homepage's day tiles, November 6, 2026
+
+- **Source:** main `89a0e635` (on build 233's changes). The plan page's two weeks use the homepage's tiles and day rows (`features/timeline/home-todo/Days.tsx`, web `components/home-todo/Days.tsx`): open slots of a multi-activity plan show the plan's emoji, done days show the logged activity, weekday names line up, no week titles. Coach targets and guide stay under a selected session. Next week's open slot says "left next week" (was "this week"). The web app does the same. No backend change.
+- **Built with** `build:testflight` from the worktree `tracking-remove-log-clutter`, after waiting for another session's local build to finish.
+- **IPA:** `.release/testflight-main-89a0e635/tracking.so.ipa`, SHA-256 `276aba8ef52a4ef3f4adebdc211c19409361340ac2dd110a219e6af1b5486940`; CFBundleVersion 235. The bundle has `plan-day-detail` and "left next week" and no "Rest day".
+- **Apple:** `validate:testflight` passed; `submit:testflight` uploaded it (delivery `11308176-cac7-412b-90a4-134b129c31e5`).
+- **Checked before the build:** both TypeScript projects; 12 home and plan-week unit tests; the plan-page Playwright tests in `parity.spec.ts` ("done" is now "Done"; the next-week check taps a day with a slot); plan page screenshots in light and dark. Not run on a phone.
+
 ## TestFlight build 233 — "Soon" card, plan-level open slots, November 6, 2026
 
 - **Source:** main `cf18d052`. The home card is titled "Soon" with no "This week"/"Next week" labels. An open weekly slot in a plan with several activities shows the plan's emoji and goal instead of its first activity; tapping it opens the logger with a choice. Days the plan pins to an activity, coach practice sessions and logged days keep their activity. The web app does the same. No backend change.
