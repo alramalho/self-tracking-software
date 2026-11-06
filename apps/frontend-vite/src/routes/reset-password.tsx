@@ -1,5 +1,5 @@
 import AuthLayout from "@/components/AuthLayout";
-import { SignIn } from "@clerk/clerk-react";
+import { SignIn } from "@clerk/react";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/reset-password")({

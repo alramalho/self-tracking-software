@@ -46,7 +46,7 @@
     "@aws-sdk/s3-request-presigner": "^3.856.0",
     "@browserbasehq/stagehand": "^3.4.0",
     "@clerk/clerk-sdk-node": "^4.13.23",
-    "@clerk/express": "^1.7.4",
+    "@clerk/express": "^2.1.75",
     "@date-fns/tz": "^1.4.1",
     "@linear/sdk": "^60.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",

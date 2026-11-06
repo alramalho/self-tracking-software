@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
 import { Capacitor } from "@capacitor/core";
-import { SignIn as ClerkSignIn } from "@clerk/clerk-react";
+import { SignIn as ClerkSignIn } from "@clerk/react";
 import { useState } from "react";
 
 interface SignInProps {
