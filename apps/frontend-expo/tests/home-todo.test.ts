@@ -59,6 +59,36 @@ test("a weekly-target plan offers open slots with how many are left", () => {
   assert.equal(slot?.remaining, 3);
 });
 
+const gym = { id: "gym", title: "gym", emoji: "🏋️", measure: "sessions" };
+const swim = { id: "swim", title: "Swimming", emoji: "🏊", measure: "sessions" };
+const exercise = (sessions: { id: string; date: string; activityId: string }[] = []) => ({
+  id: "exercise", goal: "Exercise 4 days a week", emoji: "💪", outlineType: "TIMES_PER_WEEK", timesPerWeek: 4,
+  activities: [gym, swim], sessions,
+});
+const flexible = (plan: ReturnType<typeof exercise>, practice: Parameters<typeof homeDays>[0]["practice"] = []) => {
+  const projection = buildPlanWeekProjection({ plans: [plan], entries: [], now, weekCount: 2 });
+  return homeDays({ projection, plans: [plan], entries: [], practice }).flat().flatMap((day) => day.items);
+};
+
+test("an open slot in a plan of several activities shows the plan, not one of its activities", () => {
+  const slot = flexible(exercise()).find((item) => item.kind === "flexible")!;
+  assert.deepEqual([slot.title, slot.emoji, slot.anyActivity], ["Exercise 4 days a week", "💪", true]);
+  // A one-activity plan's slot is that activity.
+  const reading = days().flatMap((day) => day.items).find((item) => item.planId === "reads" && item.kind === "flexible")!;
+  assert.deepEqual([reading.title, reading.anyActivity], ["Reading", undefined]);
+});
+
+test("a day the plan or the coach gives one activity shows that activity", () => {
+  const pinned = flexible(exercise([{ id: "p1", date: "2026-10-22", activityId: "swim" }])).find(
+    (item) => item.id.endsWith("2026-10-22") && item.kind === "flexible",
+  )!;
+  assert.deepEqual([pinned.title, pinned.emoji, pinned.anyActivity], ["Swimming", "🏊", undefined]);
+  const coached = flexible(exercise(), [
+    { id: "c1", planId: "exercise", activityId: "swim", date: "2026-10-21", time: "18:00", outcome: "PLANNED" },
+  ]).find((item) => item.sessionId === "c1")!;
+  assert.deepEqual([coached.title, coached.emoji, coached.activityId, coached.anyActivity], ["Swimming", "🏊", "swim", false]);
+});
+
 const item = (kind: CoachNoteCandidate["kind"], hoursAgo: number, alert?: CoachNoteCandidate["alert"]) => ({
   kind,
   at: new Date(now.getTime() - hoursAgo * 3_600_000).toISOString(),

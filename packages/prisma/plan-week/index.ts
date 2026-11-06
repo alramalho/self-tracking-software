@@ -302,6 +302,7 @@ export function buildPlanWeekProjection(
           date,
           dateKey,
           kind: "ghost",
+          pinned: !!sessionActivity,
         });
       }
 

@@ -13,6 +13,8 @@ export type HomeDayItem = {
   kind: HomeItemKind;
   quantity?: number | null;
   measure?: string | null;
+  /** An open slot of a plan with several activities: any of them counts, so it shows the plan, not one activity. */
+  anyActivity?: boolean;
   /** Flexible slots only: sessions still open that week. */
   remaining?: number;
   /** The coach's practice session for this day, when there is one: it opens the session screen. */

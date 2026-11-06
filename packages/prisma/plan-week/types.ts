@@ -44,6 +44,8 @@ export type PlanWeekFlexibleCell = {
   emoji?: string | null;
   kind: PlanWeekFlexibleCellKind;
   state?: string | null;
+  /** The plan's own session pins this day to a specific activity. */
+  pinned?: boolean;
 };
 
 export type PlanWeekCompletedCell = {

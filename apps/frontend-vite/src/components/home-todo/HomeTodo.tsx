@@ -83,7 +83,7 @@ function ItemRow({ item, canLog }: HomeItemRowProps) {
       aria-label={`${item.title}${amount}. ${fact}`}
       onClick={() =>
         loggable
-          ? navigate({ to: "/add", search: { activityId: item.activityId } })
+          ? navigate({ to: "/add", search: item.anyActivity ? {} : { activityId: item.activityId } })
           : navigate({ to: "/plans", search: { selectedPlan: item.planId } })
       }
       className="flex min-h-14 w-full items-center gap-3 py-2 text-left transition-opacity active:opacity-60"

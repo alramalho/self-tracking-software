@@ -56,7 +56,17 @@ export function homeDays({ projection, plans, entries, practice = [] }: HomeDays
       for (const cell of projection.flexibleCells.filter((c) => c.dateKey === key)) {
         if (items.some((item) => item.planId === cell.planId)) continue;
         const summary = projection.summaries.find((s) => s.planId === cell.planId && s.weekIndex === week);
-        add(itemFor(cell.planId, cell.activityId, key, "flexible", { remaining: summary?.remaining }));
+        const plan = planOf(cell.planId);
+        // "Exercise 4 days a week" is any of its activities, unless the plan pins this day to one.
+        const anyActivity = !cell.pinned && (plan?.activities?.length ?? 0) > 1;
+        add(
+          itemFor(cell.planId, cell.activityId, key, "flexible", {
+            remaining: summary?.remaining,
+            ...(anyActivity && plan
+              ? { anyActivity, title: plan.goal, emoji: plan.emoji || activityOf(cell.activityId)?.emoji || "•", measure: undefined }
+              : {}),
+          }),
+        );
       }
       // Logged cells carry no plan of their own: the plan is the one that owns the activity.
       for (const cell of projection.completedCells.filter((c) => c.dateKey === key)) {
@@ -70,6 +80,11 @@ export function homeDays({ projection, plans, entries, practice = [] }: HomeDays
           // The practice session is the same piece of work as the plan's slot that day: one row, with its time.
           same.sessionId = session.id;
           same.time = session.time;
+          if (same.anyActivity && session.activityId) {
+            // The coach chose one of the plan's activities for this day: show that one.
+            const chosen = itemFor(session.planId, session.activityId, key, same.kind);
+            Object.assign(same, { activityId: chosen.activityId, title: chosen.title, emoji: chosen.emoji, measure: chosen.measure, anyActivity: false });
+          }
           if (done) same.kind = "done";
           else if (same.kind === "flexible") same.kind = "scheduled";
         } else

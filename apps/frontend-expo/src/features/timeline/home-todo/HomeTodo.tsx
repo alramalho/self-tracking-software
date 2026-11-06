@@ -90,7 +90,7 @@ function ItemRow({ item, canLog, logDate }: HomeItemRowProps) {
   const openSession = () => router.push(`/session/${encodeURIComponent(item.sessionId!)}` as never);
   const openPlan = () => router.push({ pathname: "/(tabs)/plans", params: { selectedPlan: item.planId } });
   const log = () =>
-    router.push({ pathname: "/(tabs)/add", params: { activityId: item.activityId, date: logDate.toISOString() } });
+    router.push({ pathname: "/(tabs)/add", params: { ...(item.anyActivity ? {} : { activityId: item.activityId }), date: logDate.toISOString() } });
   const loggable = canLog && item.kind !== "done";
   return (
     <Pressable
