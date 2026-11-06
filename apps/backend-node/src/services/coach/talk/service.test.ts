@@ -63,4 +63,9 @@ describe("settleTurn", () => {
     expect(shown.say.split(" ")).toHaveLength(12);
     expect(shown.detail.split(" ")).toHaveLength(30);
   });
+
+  it("turns semicolons into full stops", () => {
+    const { shown } = settleTurn(turn({ say: "Motivation slipped; when is your next session?" }), request(), TODAY);
+    expect(shown.say).toBe("Motivation slipped. When is your next session?");
+  });
 });

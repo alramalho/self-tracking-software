@@ -25,7 +25,8 @@ const REASON_WORDS: Record<TalkRequest["reason"], string> = {
   talk: "",
 };
 
-const words = (text: string, max: number) => text.trim().split(/\s+/).slice(0, max).join(" ");
+const sentences = (text: string) => text.replace(/\s*;\s*(\S)/g, (_, c: string) => `. ${c.toUpperCase()}`);
+const words = (text: string, max: number) => sentences(text).trim().split(/\s+/).slice(0, max).join(" ");
 
 /**
  * The owner's rules, enforced after the model: at most two questions, "not sure" always ends with
