@@ -14,7 +14,11 @@ This preference also applies to `~/workspace/verycheapaudiobooks`, with that pro
 
 The selected `tracking-circles` onboarding uses the original 3D artwork without colored backplates and the original target Lottie on Welcome and Goal. “I’m ready!” fades the Welcome body into a second part asking for age with the weekly-frequency number control. Continue saves age before Goal, so matching can reuse it. The requested introduction, overview cards, commitment and **I'm ready!** CTA remain. The target loops gently on both screens; Reduce Motion shows its static target. Every screen change uses quick progressive fades from top to bottom. The [real-screenshot HTML walkthrough](docs/reviews/onboarding-2d/index.html) compares all 16 steps in light/dark (62 captures; the new age step has no original equivalent), plus actual light/dark motion recordings, with the earlier emoji/Lucide report preserved beside it. Local build 184 failed at archive signing because the app's phone/Watch profiles do not include the selected certificate. No new IPA or installer exists for this source update. See the frontend build document for checks and signing recovery.
 
-## Latest Safari-install release — build 226, November 6, 2026
+## Latest Safari-install release — build 234, November 6, 2026
+
+Main `13ea4175`: Settings grouped like iOS Settings on iPhone and web: a profile card, then Coach, App, Privacy & safety / help, and Log out; theme and colour share one Appearance screen. No backend change; the web deployed from main on Vercel. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-234--settings-grouped-like-ios-settings-november-6-2026). Link expires November 13, 2026. Build 228 is recorded only in that document.
+
+## Earlier Safari-install release — build 226, November 6, 2026
 
 Main `6a79ef07`: build 225 (Talk to coach) plus a photo prompt after logging a Watch workout that ended in the last three hours. The backend part is live on Hetzner as `6a79ef07c9ba` since November 6, about 16:17 UTC. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-226--photo-after-a-fresh-watch-workout-november-6-2026). Link expires November 13, 2026. Builds 223 and 225 are recorded only in that document.
 

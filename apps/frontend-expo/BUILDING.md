@@ -81,6 +81,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 234 — Settings grouped like iOS Settings, November 6, 2026
+
+- **Source:** main `13ea4175` (on `3ea9a86c`, TestFlight build 233's docs). Settings opens with a profile card (name, @username, plan → Account: subscription, switch account, profile fields, delete) and four groups: Coach (coach profile, notifications, languages), App (Appearance = theme mode and colour on one screen, integrations), Privacy & safety (AI features, blocked people, privacy, terms) / Get help / Preview onboarding, and Log out in a native action sheet. The sheet's close button has a solid backing. The web settings popover follows the same groups (Vercel deploy for `13ea4175` succeeded).
+- **Built with the standard wrapper**, `build:iphone`, from the worktree `tracking-settings-groups` (branch `settings-groups`), with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1` and `.release/production.env.json` and `watch-device.json` copied from `tracking-sleep-minutes`.
+- **Verified IPA:** `.release/2026-11-06T20-13-13-369Z-3e3ea383/tracking.so.ipa` in that worktree, SHA-256 `a859d2fadcd2b2f0fe2ce8f92b1d06ddab63f48377479363f3b1744169f8df86`; iPhone and Watch 1.0.0 (234). `codesign --verify --deep --strict` passed; the binary references TrackingWatch, TrackingHealth and TrackingMap; the Hermes bundle contains "Privacy & safety", "Switch account" and "Log out of this account?".
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 13, 2026. `scripts/iphone/verify-hosted.cjs` verified the installer, the manifest and all 27,198,938 IPA bytes.
+- **Checked before the build:** both TypeScript projects; the settings Playwright specs (`settings-drawers`, `settings-accounts`, `drawer-motion`) in light and dark; light/dark screenshots of every new screen on Expo web and the web harness (`e2e/coach/?view=settings`). The iOS Maestro flows were updated for the new labels but not run. Not run on a simulator or a phone.
+- **Backend:** none needed. Pushed with `[skip ci]`. Xcode Cloud's "App | Default" check failed on this push, as on the previous main pushes.
+- **EAS build counter:** 234. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 228 — rounded sleep on the profile Health card, November 6, 2026
 
 - **Source:** main `b09a542c` (one commit on `c3813538`, build 226's docs). The profile Health card rounded nothing, so a fractional `asleepMinutes` showed as "Sleep 7 h 58.5245000000001". It now rounds first and reads "Sleep 7h 59m", like the Sleep screen.
