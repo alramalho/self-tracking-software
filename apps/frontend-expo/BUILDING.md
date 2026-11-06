@@ -81,6 +81,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 228 — rounded sleep on the profile Health card, November 6, 2026
+
+- **Source:** main `b09a542c` (one commit on `c3813538`, build 226's docs). The profile Health card rounded nothing, so a fractional `asleepMinutes` showed as "Sleep 7 h 58.5245000000001". It now rounds first and reads "Sleep 7h 59m", like the Sleep screen.
+- **Built with the standard wrapper**, `build:iphone`, from the worktree `tracking-sleep-minutes` (branch `fix-sleep-minutes`), with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1` and `.release/production.env.json` and `watch-device.json` copied from `tracking-photo-prompt`.
+- **Verified IPA:** `.release/2026-11-06T16-35-06-420Z-96e97087/tracking.so.ipa` in that worktree, SHA-256 `de92ec2c00459c3b324c3cd3d3cc532162886f0e2b467bf94c818d22458a42ea`; iPhone 1.0.0 (228).
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 13, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,198,792 IPA bytes.
+- **Checked before the build:** the frontend-expo TypeScript project. Not run on a simulator or a phone.
+- **Backend:** none needed. The push ran "Deploy all to Production" (run 42253727015, success).
+- **EAS build counter:** 228. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 226 — photo after a fresh Watch workout, November 6, 2026
 
 - **Source:** main `6a79ef07` (one commit on `4d91ae9d`, build 225's source). Logging a synced Watch workout that ended in the last three hours keeps the review open on "Add a photo?": take or pick up to five photos, attached to the log it just made, or "Not now". Older workouts, and a linked log that already has photos, close as before. The window is `PHOTO_PROMPT_WINDOW_MS` in `src/features/health/workout-model.ts`.
