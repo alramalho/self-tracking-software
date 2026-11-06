@@ -91,6 +91,15 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - **Backend:** none needed. The push ran "Deploy all to Production" (run 42253727015, success).
 - **EAS build counter:** 228. No Expo cloud build, OTA or store submission.
 
+## TestFlight build 227 — main with the workout photo prompt, November 6, 2026
+
+- **Build 227 is the current TestFlight release.** Source: main `c3813538`, the same app as Safari-install build 226 (Talk to coach and the photo prompt after a fresh Watch workout). It does not have `84352bde`'s Talk-to-coach wording, which is backend-only and reaches every build once deployed. Since TestFlight build 221 it adds everything from Safari-install builds 222 to 226.
+- **Built** with the standard `testflight.ts build` (local EAS, `production` profile, EAS-managed App Store credentials) from the worktree `tracking-photo-prompt`, with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`. The first attempt stopped before compiling because the worktree had no `.release/appstore-connect/AuthKey_RRBPAL9WF4.p8`; it was copied from `tracking-testflight-220`.
+- **IPA:** `.release/testflight-main-c3813538/tracking.so.ipa` in that worktree, SHA-256 `dce6d2505138e23f0bba4fbc01d699056d72361efb6cac1cb715acde4dfbf113`, with `build.log`, `validate.log` and `submit.log` beside it. iPhone 1.0.0 (227) with the Watch app embedded.
+- **Checks:** production API, live Clerk key, `fixtureMode: false`; `codesign --verify --deep --strict` passed with `iPhone Distribution … (7P4CMS849D)`; the Hermes bundle contains `workout-photo-prompt`. Apple validation passed with no errors. Delivery `325550d1-5252-436d-afcb-f88ad4e3bdd0`; `processingState: VALID`; internal state `IN_BETA_TESTING`; external state `READY_FOR_BETA_SUBMISSION`, not submitted for beta review. The build expires February 4, 2027.
+- No new tests beyond those recorded for Safari-install build 226. Not run on a phone. No Expo cloud build, OTA or App Store submission.
+- **EAS build counter:** 227.
+
 ## Safari-install build 226 — photo after a fresh Watch workout, November 6, 2026
 
 - **Source:** main `6a79ef07` (one commit on `4d91ae9d`, build 225's source). Logging a synced Watch workout that ended in the last three hours keeps the review open on "Add a photo?": take or pick up to five photos, attached to the log it just made, or "Not now". Older workouts, and a linked log that already has photos, close as before. The window is `PHOTO_PROMPT_WINDOW_MS` in `src/features/health/workout-model.ts`.
