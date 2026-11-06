@@ -100,6 +100,15 @@ The wrapper verifies production config, bundled JS, release signing and device p
 - No new tests beyond those recorded for Safari-install build 226. Not run on a phone. No Expo cloud build, OTA or App Store submission.
 - **EAS build counter:** 227.
 
+## TestFlight build 233 — "Soon" card, plan-level open slots, November 6, 2026
+
+- **Source:** main `cf18d052`. The home card is titled "Soon" with no "This week"/"Next week" labels. An open weekly slot in a plan with several activities shows the plan's emoji and goal instead of its first activity; tapping it opens the logger with a choice. Days the plan pins to an activity, coach practice sessions and logged days keep their activity. The web app does the same. No backend change.
+- **Built with** `build:testflight` (local EAS, `production` profile) from the worktree `tracking-remove-log-clutter`, with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`. The first attempt failed in Prepare credentials (provisioning profile missing from `~/Library/Developer/Xcode/UserData/Provisioning Profiles`) while another session's local EAS build ran; the retry, once no other build was running, succeeded. Run iPhone builds one at a time on this Mac.
+- **IPA:** `.release/testflight-main-cf18d052/tracking.so.ipa`, SHA-256 `dba016e7661977acec8e42b4275bb21273d7a7e12c58d90cae937fa102388fdc`; CFBundleVersion 233. The bundle contains `anyActivity` and no "Next two weeks".
+- **Apple:** `validate:testflight` passed; `submit:testflight` uploaded it (delivery `0bb5d639-c249-4742-9d65-5bbcf8ac5084`). Shared through TestFlight, no install link (owner, November 6).
+- **Checked before the build:** both TypeScript projects and the backend; 22 home and plan-week unit tests, including two new ones for plan-level slots and pinned or coach-chosen days. The "Soon" card was screenshot on the web harness; the plan-level slot was not, as the fixture has no multi-activity plan. Not run on a phone.
+- **EAS build counter:** 233 (230 was started from `c5faca06` and stopped; 231 and 232 were other sessions'). A Safari IPA from `c5faca06` was also built and hosted before the switch to TestFlight; ignore it.
+
 ## Safari-install build 226 — photo after a fresh Watch workout, November 6, 2026
 
 - **Source:** main `6a79ef07` (one commit on `4d91ae9d`, build 225's source). Logging a synced Watch workout that ended in the last three hours keeps the review open on "Add a photo?": take or pick up to five photos, attached to the log it just made, or "Not now". Older workouts, and a linked log that already has photos, close as before. The window is `PHOTO_PROMPT_WINDOW_MS` in `src/features/health/workout-model.ts`.
