@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Activity, Photo } from "@/core/types";
+import type { Activity, MediaSource, Photo } from "@/core/types";
 
 export interface LoggingDrawerProps {
   testID?: string;
@@ -35,7 +35,9 @@ export interface PhotoStepProps {
   picking: boolean;
   uploadProgress?: number;
   onCaptionChange: (value: string) => void;
-  onAddPhotos: (camera?: boolean) => void;
+  onAddPhotos: (source: MediaSource) => void;
+  onAddVoiceNote: (note: Photo) => void;
+  onRecordingError: (error: unknown) => void;
   onRemovePhoto: (index: number) => void;
   onSave: () => void;
   onBack: () => void;

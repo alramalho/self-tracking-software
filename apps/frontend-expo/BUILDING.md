@@ -81,6 +81,16 @@ node ../../scripts/onboarding-art/verify-hosted.cjs /absolute/path/to/new/distri
 ```
 
 The wrapper verifies production config, bundled JS, release signing and device provisioning. The additional verifier checks the target still, original 3D assets, preserved coach artwork and target/age/reveal bundle markers. The hosted verifier checks the full IPA SHA-256, installer build and manifest identity. Keep signed URLs in ignored release outputs.
+## Safari-install build 224 — videos and voice notes on logs, November 5, 2026
+
+- **Source:** branch `log-media` in the worktree `tracking-log-media`, uncommitted changes on main `56046701` (build 223 plus this work). "Add a proof!" takes photos, videos (≤60 s, compressed on the phone to 960×540 / 640×480 H.264) and voice notes (≤3 min, .m4a), all stored in the entry's `imageUrls`; the home feed autoplays the first visible video muted, tap toggles sound; voice notes play from a waveform pill. The post-log metrics check-in stops after three skips in a row and when today's check-in is done. Adds the native module `expo-video` (`ExpoVideo.framework` is in the IPA) and `!/packages/prisma/media.ts` to `.easignore`.
+- **Built with the standard wrapper**, `build:iphone` (local EAS, `device-production`, EAS-managed signing), with `EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`.
+- **Verified IPA:** `.release/2026-11-05T14-29-23-754Z-8a3897fc/tracking.so.ipa` in that worktree, SHA-256 `a300763cd4f9a5af4ea9dc29c89ec6c4bdaebcd28f1bbb1eb4c921dc9b8d7e17`; iPhone and Watch 1.0.0 (224).
+- **Hosted:** `distribution.json` beside the IPA; the link expires November 12, 2026. `verify-hosted.cjs` verified the installer, the manifest and all 27,622,909 IPA bytes.
+- **Checked before the build:** all three TypeScript projects; Playwright photo-proof, logger and follow-ups specs (including the new three-skips test); backend media and photo-notification unit tests. Not run on a simulator or a phone.
+- **Backend:** works with the live backend (uploads are type-agnostic). The backend half (extension from MIME type, 80 MB limit, "added a video/voice note" copy, photo-only circle previews) is NOT deployed; its overlay must also copy `packages/prisma/media.ts`.
+- **EAS build counter:** 224. No Expo cloud build, OTA or store submission.
+
 ## Safari-install build 223 — no Log buttons on the home and plan day cards, November 5, 2026
 
 - **Source:** main `3bde6a2c` (one commit on `19dd3245`). The home card's day row shows a chevron instead of the orange Log pill (tapping it still opens the logger); the plan page's day detail loses its full-width Log button. The web app does the same. No backend change.

@@ -1,5 +1,6 @@
 export interface MetricLoggerProps {
-  onClose: () => void;
+  /** `rated` is false when the person closed it without rating anything. */
+  onClose: (rated: boolean) => void;
   title?: string;
 }
 

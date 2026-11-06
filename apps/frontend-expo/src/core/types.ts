@@ -278,12 +278,15 @@ export interface TimelinePage {
   achievementPosts: Achievement[];
   nextCursor?: string | null;
 }
+/** A photo, video or voice note attached to a log; `type` is its MIME type. */
 export interface Photo {
   uri: string;
   name: string;
   type: string;
   file?: File;
+  durationMs?: number;
 }
+export type MediaSource = "library" | "camera" | "video-camera";
 export interface LogActivityInput {
   onUploadProgress?: (percent: number) => void;
   activityId: string;

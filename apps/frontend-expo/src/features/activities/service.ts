@@ -12,8 +12,10 @@ export async function uploadActivityPhotos(entryId: string, photos: Photo[], cli
   const form = new FormData();
   form.append("clientRequestId", clientRequestId);
   await appendPhotos(form, photos);
+  // Videos and voice notes take longer than photos on mobile data.
+  const onlyPhotos = photos.every((photo) => photo.type.startsWith("image/"));
   return (await api.put<ActivityEntry>(`/activities/activity-entries/${entryId}/photo`, form, {
-    timeout: 15000,
+    timeout: onlyPhotos ? 15000 : 180000,
   })).data;
 }
 

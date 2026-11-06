@@ -6,6 +6,7 @@ import { ActivityMergeError, mergeActivities } from "@/services/activities/merge
 import { plansService } from "@/services/plansService";
 import { TZDate } from "@date-fns/tz";
 import { ActivityEntry } from "@tsw/prisma";
+import { mediaExtension } from "@tsw/prisma/media";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
@@ -466,7 +467,13 @@ async function canLinkActivityEntries(
   return score >= 50;
 }
 
-const activityEntryPhotoUpload = upload.fields([
+// Photos, compressed videos and voice notes share this upload.
+const activityEntryMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 80 * 1024 * 1024 },
+});
+
+const activityEntryPhotoUpload = activityEntryMediaUpload.fields([
   { name: "photo", maxCount: 10 },
   { name: "photos", maxCount: 10 },
 ]);
@@ -488,9 +495,7 @@ const uploadActivityEntryPhotos = async (
   return Promise.all(
     photos.map(async (photo, index) => {
       const photoId = requestId ? `${requestId}-${index}` : uuidv4();
-      const fileExtension = photo.originalname
-        ? photo.originalname.split(".").pop()
-        : "jpg";
+      const fileExtension = mediaExtension(photo.originalname, photo.mimetype);
       const s3Path = `/users/${userId}/activity_entries/${activityEntryId}/photos/${photoId}.${fileExtension}`;
 
       await s3Service.upload(photo.buffer, s3Path, photo.mimetype);

@@ -20,6 +20,8 @@ import { CommentsSheet } from "./comments/CommentsSheet";
 import { ReactionBadges } from "./reactions/ReactionBadges";
 import { ReactionPicker } from "./reactions/ReactionPicker";
 import { PhotoGrid } from "./PhotoGrid";
+import { VoiceNotePlayer } from "./media/VoiceNotePlayer";
+import { mediaKind } from "@tsw/prisma/media";
 import { router } from "expo-router";
 import {
   Button,
@@ -113,7 +115,10 @@ export function FeedCard({
       ],
     }),
   );
-  const photos = feedPhotos(item);
+  const media = feedPhotos(item);
+  // Photos and videos fill the top of the card; voice notes sit under the title.
+  const photos = media.filter((uri) => mediaKind(uri) !== "audio");
+  const voiceNotes = media.filter((uri) => mediaKind(uri) === "audio");
   const ownRows = [item, ...(item.sharedEntries ?? [])].filter(
     (row) => row.entry?.userId === me.data?.id,
   );
@@ -183,7 +188,7 @@ export function FeedCard({
       </View>
     </View>
   );
-  if (compactInitially && !expanded && !photos.length && entry && !highlighted)
+  if (compactInitially && !expanded && !media.length && entry && !highlighted)
     return (
       <Pressable
         accessibilityRole="button"
@@ -223,6 +228,7 @@ export function FeedCard({
           <View>
             <PhotoGrid
               photos={photos}
+              cardId={item.id}
               title={item.activity?.title ?? post?.title ?? "Activity"}
             />
             {(!entry || !own) && (
@@ -322,6 +328,18 @@ export function FeedCard({
           <Heading>{achievementTitle(post!)}</Heading>
         </View>
       )}
+      {!!voiceNotes.length && (
+        <View style={{ gap: 8, marginTop: 12 }}>
+          {voiceNotes.map((uri, index) => (
+            <VoiceNotePlayer
+              key={uri}
+              uri={uri}
+              index={index}
+              title={item.activity?.title ?? post?.title ?? "Activity"}
+            />
+          ))}
+        </View>
+      )}
       {!photos.length &&
         !!(entry?.description ?? post?.message ?? post?.description) && (
           <FeedCaption
@@ -353,7 +371,7 @@ export function FeedCard({
       <View
         style={{ position: "absolute", top: 4, right: 4, flexDirection: "row" }}
       >
-        {compactInitially && !photos.length && (
+        {compactInitially && !media.length && (
           <IconButton
             label="Collapse activity"
             icon={Minimize2}

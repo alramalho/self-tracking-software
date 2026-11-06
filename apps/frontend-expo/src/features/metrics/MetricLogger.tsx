@@ -11,7 +11,8 @@ import { Pressable, View } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, Field, Status, useColors } from "@/components/ui";
-import { useMetrics } from "@/data/queries";
+import { useCurrentUser, useMetrics } from "@/data/queries";
+import { resetMetricPromptSkips } from "./prompt";
 import { dayKey } from "@/core/dates";
 import { api } from "@/data/api";
 import type { MetricLoggerProps } from "./types";
@@ -20,6 +21,7 @@ const ratingColors = ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e"];
 
 export function MetricLogger({ onClose, title }: MetricLoggerProps) {
   const metrics = useMetrics();
+  const me = useCurrentUser();
   const client = useQueryClient();
   const c = useColors();
   const [ratings, setRatings] = useState<Record<string, number>>({});
@@ -46,8 +48,10 @@ export function MetricLogger({ onClose, title }: MetricLoggerProps) {
         });
     },
     onSuccess: async () => {
+      const rated = saved.current.size > 0;
+      if (rated && me.data) await resetMetricPromptSkips(me.data.id);
       await client.invalidateQueries({ queryKey: ["metric-entries"] });
-      onClose();
+      onClose(rated);
     },
   });
   const allRated =

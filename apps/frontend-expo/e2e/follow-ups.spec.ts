@@ -156,3 +156,33 @@ test("follow-up drawers stay usable with Reduce Motion and save partial ratings 
   expect(ratings).toHaveLength(1);
   expect(ratings[0].body.rating).toBe(4);
 });
+
+test("stops offering the metrics check-in after three skips in a row", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await request.post(`${API}/metrics`, {
+    headers: { Authorization: "Bearer local-e2e-token" },
+    data: { title: "Productivity", emoji: "📈" },
+  });
+  await page.goto("/add");
+  async function logRun() {
+    await page.getByRole("button", { name: "Log Running", exact: true }).click();
+    await page.getByRole("button", { name: "Set quantity to 45", exact: true }).click();
+    await page.getByRole("button", { name: "Log Activity", exact: true }).click();
+    await page.getByRole("button", { name: "Log without photo", exact: true }).click();
+    const effort = page.getByTestId("difficulty-follow-up");
+    const next = effort.or(page.getByTestId("metrics-follow-up")).or(page.getByText("Activity logged!", { exact: true }));
+    await expect(next.first()).toBeVisible();
+    if (await effort.isVisible())
+      await page.getByRole("button", { name: "Close", exact: true }).last().click();
+  }
+  for (let skip = 0; skip < 3; skip++) {
+    await logRun();
+    const metrics = page.getByTestId("metrics-follow-up");
+    await expect(metrics).toBeVisible();
+    await metrics.getByRole("button", { name: "Skip", exact: true }).click();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+  }
+  await logRun();
+  await expect(page.getByText("Activity logged!", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("metrics-follow-up")).toHaveCount(0);
+});

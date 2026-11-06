@@ -1,3 +1,4 @@
+import { describeMedia } from "@tsw/prisma/media";
 import { getActivityEntryImageUrls } from "../../utils/activityEntryImages";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../utils/prisma";
@@ -67,8 +68,8 @@ export async function notifyConnectionsAboutActivityPhotos({
       .filter((recipient) => !recipient.deletedAt && recipient.id !== user.id)
       .map((recipient) => [recipient.id, recipient]),
   );
-  const photoCount = getActivityEntryImageUrls(entry).length;
-  const message = `@${user.username || user.name || "A friend"} added ${photoCount === 1 ? "a photo" : "photos"} to ${activity.emoji} ${activity.title} 📸`;
+  const media = describeMedia(getActivityEntryImageUrls(entry));
+  const message = `@${user.username || user.name || "A friend"} added ${media} to ${activity.emoji} ${activity.title} 📸`;
 
   const results = await Promise.allSettled(
     [...recipients.values()].map(async (recipient) => {

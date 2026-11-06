@@ -13,9 +13,10 @@ import {
   Pressable,
   RefreshControl,
   View,
+  type ViewToken,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams, useScrollToTop } from "expo-router";
+import { router, useIsFocused, useLocalSearchParams, useScrollToTop } from "expo-router";
 import {
   useCurrentUser,
   useEntries,
@@ -36,13 +37,20 @@ import { HomeTodo } from "./home-todo/HomeTodo";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { useTimelineSeen } from "./useTimelineSeen";
 import type { TimelineRow } from "./types";
-import { containsNotificationTarget, timelineRows } from "./layout";
+import { containsNotificationTarget, feedPhotos, timelineRows } from "./layout";
+import { FeedAutoplayProvider } from "./media/autoplay";
+import { mediaKind } from "@tsw/prisma/media";
+import type { FeedItem } from "./types";
 import { ProfileGlow } from "@/components/ProfileGlow";
 import { PendingVoiceLogCard } from "@/features/voice-log/PendingVoiceLogCard";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
 import { usePendingVoiceLog } from "@/features/voice-log/usePendingVoiceLog";
 import { OfflineStatus } from "@/features/offline/OfflineStatus";
 import { Text } from "@/components/typography/Text";
+function hasVideo(card?: FeedItem): card is FeedItem {
+  return !!card && feedPhotos(card).some((uri) => mediaKind(uri) === "video");
+}
+
 export default function HomeScreen() {
   const timeline = useTimeline();
   const plans = usePlans();
@@ -90,6 +98,18 @@ export default function HomeScreen() {
     achievementPostId,
   );
   const list = useRef<FlatList<TimelineRow>>(null);
+  const focused = useIsFocused();
+  const [visibleCardIds, setVisibleCardIds] = useState<string[]>([]);
+  const onRowsViewable = useRef(
+    (info: { viewableItems: ViewToken<TimelineRow>[]; changed: ViewToken<TimelineRow>[] }) => {
+      onViewableItemsChanged(info);
+      setVisibleCardIds(
+        info.viewableItems.flatMap(({ item }) =>
+          [item.item, item.secondary].filter(hasVideo).map((card) => card.id),
+        ),
+      );
+    },
+  ).current;
   useScrollToTop(list);
   const target = rows.findIndex(
     (row) =>
@@ -132,6 +152,7 @@ export default function HomeScreen() {
     timeline.fetchNextPage,
   ]);
   return (
+    <FeedAutoplayProvider playingCardId={focused ? visibleCardIds[0] : undefined}>
     <RevealContext.Provider value={reveal}>
       <SafeAreaView
         collapsable={false}
@@ -201,7 +222,7 @@ export default function HomeScreen() {
               </View>
             )
           }
-          onViewableItemsChanged={onViewableItemsChanged}
+          onViewableItemsChanged={onRowsViewable}
           viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
           onScrollToIndexFailed={({ index, averageItemLength }) => {
             list.current?.scrollToOffset({
@@ -335,5 +356,6 @@ export default function HomeScreen() {
         )}
       </SafeAreaView>
     </RevealContext.Provider>
+    </FeedAutoplayProvider>
   );
 }

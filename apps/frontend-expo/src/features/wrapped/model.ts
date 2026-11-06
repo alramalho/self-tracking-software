@@ -1,3 +1,4 @@
+import { onlyImages } from "@tsw/prisma/media";
 import {
   differenceInCalendarDays,
   eachDayOfInterval,
@@ -47,8 +48,7 @@ export const yearMetrics = (entries: MetricEntry[], year: number) =>
       new Date(e.createdAt).getUTCFullYear() === year,
   );
 export const photoUrl = (entry: ActivityEntry) =>
-  entry.imageUrl ||
-  entry.imageUrls?.[0] ||
+  onlyImages([...(entry.imageUrls ?? []), ...(entry.imageUrl ? [entry.imageUrl] : [])])[0] ||
   (entry.imageS3Path
     ? `https://tracking-software-bucket-production.s3.eu-central-1.amazonaws.com/${entry.imageS3Path}`
     : undefined);

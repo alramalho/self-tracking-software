@@ -14,7 +14,11 @@ This preference also applies to `~/workspace/verycheapaudiobooks`, with that pro
 
 The selected `tracking-circles` onboarding uses the original 3D artwork without colored backplates and the original target Lottie on Welcome and Goal. “I’m ready!” fades the Welcome body into a second part asking for age with the weekly-frequency number control. Continue saves age before Goal, so matching can reuse it. The requested introduction, overview cards, commitment and **I'm ready!** CTA remain. The target loops gently on both screens; Reduce Motion shows its static target. Every screen change uses quick progressive fades from top to bottom. The [real-screenshot HTML walkthrough](docs/reviews/onboarding-2d/index.html) compares all 16 steps in light/dark (62 captures; the new age step has no original equivalent), plus actual light/dark motion recordings, with the earlier emoji/Lucide report preserved beside it. Local build 184 failed at archive signing because the app's phone/Watch profiles do not include the selected certificate. No new IPA or installer exists for this source update. See the frontend build document for checks and signing recovery.
 
-## Latest Safari-install release — build 222, October 30, 2026
+## Latest Safari-install release — build 224, November 5, 2026
+
+Branch `log-media` (uncommitted, on main `56046701`): videos and voice notes on activity logs, muted autoplay in the home feed, and the post-log metrics check-in stops after three skips in a row. Adds the native module `expo-video`. The backend half is not deployed. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-224--videos-and-voice-notes-on-logs-november-5-2026). Link expires November 12, 2026.
+
+## Earlier Safari-install release — build 222, October 30, 2026
 
 Main `e0242c09`: a missed week's reason on the Coach tab leads to picking this week's days instead of sending a chat message; no eye icon or Assess in the chat; Coach settings on the Coach tab without the Weekly recap switch. Built through the standard local EAS wrapper (signing works again). The backend part is live on Hetzner as `e0242c0973d2` since October 30, 20:15 UTC. See [apps/frontend-expo/BUILDING.md](apps/frontend-expo/BUILDING.md#safari-install-build-222--missed-week-picks-this-weeks-days-october-30-2026). Link expires November 6, 2026.
 

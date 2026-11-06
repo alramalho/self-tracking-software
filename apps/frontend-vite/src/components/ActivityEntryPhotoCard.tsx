@@ -39,6 +39,9 @@ import LinkifiedText from "./LinkifiedText";
 import LinkPreview from "./LinkPreview";
 import { ProgressRing } from "./ProgressRing";
 import { Separator } from "./ui/separator";
+import { mediaKind } from "@tsw/prisma/media";
+import { FeedVideo } from "./feed-media/FeedVideo";
+import { VoiceNote } from "./feed-media/VoiceNote";
 
 const getFormattedDate = (date: Date) => {
   const now = new Date();
@@ -639,7 +642,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       ),
     ])
   );
-  const hasImage = imageUrls.length > 0;
+  // Photos and videos fill the top of the card; voice notes play below it.
+  const visualUrls = imageUrls.filter((url) => mediaKind(url) !== "audio");
+  const voiceNoteUrls = imageUrls.filter((url) => mediaKind(url) === "audio");
+  const hasImage = visualUrls.length > 0;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
   // Extract first URL from description for link preview
@@ -757,18 +763,24 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       {hasImage && (
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
-            {imageUrls.length === 1 ? (
+            {visualUrls.length === 1 && mediaKind(visualUrls[0]) === "video" ? (
+              <FeedVideo
+                src={visualUrls[0]}
+                title={activity.title}
+                className="aspect-[4/5] max-h-[480px] rounded-2xl"
+              />
+            ) : visualUrls.length === 1 ? (
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setZoomedImageUrl(imageUrls[0]);
+                  setZoomedImageUrl(visualUrls[0]);
                 }}
                 className="group relative block w-full cursor-zoom-in overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                 aria-label={`Open ${activity.title} photo`}
               >
                 <img
-                  src={imageUrls[0]}
+                  src={visualUrls[0]}
                   alt={activity.title}
                   className="w-full h-full max-h-[400px] object-cover rounded-2xl transition-transform duration-200 group-hover:scale-[1.01]"
                 />
@@ -778,7 +790,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-1">
-                {imageUrls.map((imageUrl, index) => (
+                {visualUrls.map((imageUrl, index) => mediaKind(imageUrl) === "video" ? (
+                  <FeedVideo
+                    key={imageUrl}
+                    src={imageUrl}
+                    title={activity.title}
+                    className={index === 0 && visualUrls.length === 3 ? "col-span-2 max-h-[300px]" : "aspect-square"}
+                  />
+                ) : (
                   <button
                     key={imageUrl}
                     type="button"
@@ -787,7 +806,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       setZoomedImageUrl(imageUrl);
                     }}
                     className={`w-full object-cover ${
-                      index === 0 && imageUrls.length === 3
+                      index === 0 && visualUrls.length === 3
                         ? "col-span-2 max-h-[300px]"
                         : "aspect-square"
                     } group relative cursor-zoom-in overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80`}
@@ -1055,6 +1074,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             </div>
           )}
         </div>
+
+        {voiceNoteUrls.length > 0 && !isCollapsed && (
+          <div className="mt-3 space-y-2">
+            {voiceNoteUrls.map((url) => (
+              <VoiceNote key={url} src={url} title={activity.title} />
+            ))}
+          </div>
+        )}
 
         {/* Non-image posts: link preview (if link exists) */}
         {!hasImage && !isCollapsed && firstUrl && (

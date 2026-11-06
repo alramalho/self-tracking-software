@@ -3,7 +3,7 @@ import { CircleIntroHint } from "@/features/circles/CircleIntroHint";
 import { LoggingDrawer } from "./logging/LoggingDrawer";
 import { PhotoStep } from "./logging/PhotoStep";
 import { QuantityStep } from "./logging/QuantityStep";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Keyboard } from "react-native";
 import * as Location from "expo-location";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,10 +15,17 @@ import {
   useCurrentUser,
   usePlans,
   useMetrics,
+  useMetricEntries,
 } from "@/data/queries";
+import {
+  checkedInToday,
+  readMetricPromptSkips,
+  recordMetricPromptSkip,
+  skipsBeforeQuiet,
+} from "../metrics/prompt";
 import { api } from "@/data/api";
-import { pickPhotos } from "@/native/photos";
-import type { LogActivityResult, Photo } from "@/core/types";
+import { pickMedia } from "@/native/photos";
+import type { LogActivityResult, MediaSource, Photo } from "@/core/types";
 import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
 import { MetricLogger } from "../metrics/MetricLogger";
@@ -31,6 +38,11 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const user = useCurrentUser();
   const plans = usePlans();
   const metrics = useMetrics();
+  const metricEntries = useMetricEntries();
+  const [metricSkips, setMetricSkips] = useState(0);
+  useEffect(() => {
+    if (user.data) void readMetricPromptSkips(user.data.id).then(setMetricSkips);
+  }, [user.data?.id]);
   const [step, setStep] = useState<LogStep>("quantity");
   const [sharedSelection, setSharedSelection] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(String(initialQuantity ?? 0));
@@ -94,9 +106,13 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
         : nextMetricStep(),
     );
   }
+  // Offer the metrics check-in only for a fresh log, when today's isn't done,
+  // and not to someone who keeps closing it.
   function nextMetricStep(): LogStep {
     return metrics.data?.length &&
-      differenceInHours(new Date(), parseLocalDate(date)) < 6
+      differenceInHours(new Date(), parseLocalDate(date)) < 6 &&
+      metricSkips < skipsBeforeQuiet &&
+      !checkedInToday(metrics.data, metricEntries.data ?? [])
       ? "metrics"
       : "done";
   }
@@ -108,13 +124,13 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       );
     }
   });
-  async function addPhotos(camera = false) {
+  async function addPhotos(source: MediaSource) {
     try {
       setError(undefined);
       setPicking(true);
-      const picked = await pickPhotos(camera, 10 - photos.length);
+      const picked = await pickMedia(source, 10 - photos.length);
       if (photos.length + picked.length > 10)
-        throw new Error("Maximum 10 photos allowed");
+        throw new Error("You can attach up to 10 photos, videos or voice notes.");
       setPhotos((p) => [...p, ...picked]);
     } catch (e) {
       setError(e);
@@ -172,7 +188,14 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       />
     );
   if (step === "metrics")
-    return <MetricLogger onClose={() => setStep("done")} />;
+    return (
+      <MetricLogger
+        onClose={(rated) => {
+          if (!rated && user.data) void recordMetricPromptSkip(user.data.id);
+          setStep("done");
+        }}
+      />
+    );
   return (
     <LoggingDrawer
       titleAlign={step === "photos" ? "left" : "center"}
@@ -209,7 +232,12 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           picking={picking}
           uploadProgress={uploadProgress}
           onCaptionChange={setDescription}
-          onAddPhotos={(camera) => void addPhotos(camera)}
+          onAddPhotos={(source) => void addPhotos(source)}
+          onAddVoiceNote={(note) => {
+            setError(undefined);
+            setPhotos((p) => [...p, note]);
+          }}
+          onRecordingError={setError}
           onRemovePhoto={(index) =>
             setPhotos(photos.filter((_, i) => i !== index))
           }

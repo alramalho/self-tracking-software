@@ -17,12 +17,12 @@ for (const theme of ["DARK", "LIGHT"]) {
     await expect(page.getByText("📸 Add a proof!", { exact: true })).toBeVisible();
     await page.screenshot({ path: `test-results/photo-proof-empty-${theme}.png` });
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Add photos (optional)", exact: true }).click();
+    await page.getByRole("button", { name: "Add a photo, video or voice note (optional)", exact: true }).click();
     await (await chooser).setFiles(Array.from({length: 10}, () => resolve("assets/icon.png")));
     await expect(page.getByRole("button", { name: "Remove photo 10", exact: true })).toBeVisible();
     await expect(page.getByTestId("activity-photo-upload-tile")).toHaveCount(0);
     await page.getByRole("button", { name: "Remove photo 10", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Add more photos (9/10)", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add more (9/10)", exact: true })).toBeVisible();
     for (let i=9; i>2; i--) await page.getByRole("button", { name: `Remove photo ${i}`, exact: true }).click();
     await page.getByLabel("Caption (optional)", { exact: true }).fill("Proof with two photos");
     await page.screenshot({ path: `test-results/photo-proof-selected-${theme}.png` });

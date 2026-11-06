@@ -139,7 +139,7 @@ const app: ExpoConfig = {
       "expo-audio",
       {
         microphonePermission:
-          "Record a voice note or dictate an answer. The recording is sent to our speech-to-text provider to turn it into text.",
+          "Record a voice note or video for an activity log, or dictate an answer. Dictated recordings are sent to our speech-to-text provider to turn them into text.",
         // Recording happens only on screen and nothing plays in the background,
         // so no background audio mode (App Review checks UIBackgroundModes).
         enableBackgroundPlayback: false,
@@ -151,8 +151,10 @@ const app: ExpoConfig = {
       {
         // The photo picker needs no library access; the key stays because the
         // library's code references it (ITMS-90683).
-        photosPermission: "Choose photos to add to your activity logs and messages.",
-        cameraPermission: "Take a photo for an activity log or a message.",
+        photosPermission: "Choose photos and videos to add to your activity logs and messages.",
+        cameraPermission: "Take a photo or record a video for an activity log or a message.",
+        microphonePermission:
+          "Record a voice note or video for an activity log, or dictate an answer. Dictated recordings are sent to our speech-to-text provider to turn them into text.",
       },
     ],
     [

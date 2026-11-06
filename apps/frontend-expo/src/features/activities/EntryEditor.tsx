@@ -23,7 +23,10 @@ import { api } from "@/data/api";
 import { useAction, useActivities } from "@/data/queries";
 import { localDateTime, parseLocalDate } from "@/core/dates";
 import type { ActivityEntry, SharedCandidate } from "@/core/types";
-import { appendPhotos, pickPhotos } from "@/native/photos";
+import { appendPhotos, pickMedia } from "@/native/photos";
+import { mediaKind } from "@tsw/prisma/media";
+import { PhotoGrid } from "@/features/timeline/PhotoGrid";
+import { VoiceNotePlayer } from "@/features/timeline/media/VoiceNotePlayer";
 import { VoiceTextArea } from "@/features/dictation/VoiceTextArea";
 import { EditorButton } from "./editor/controls";
 import { LoggingCalendar } from "./logging/LoggingCalendar";
@@ -145,7 +148,7 @@ export function EntryEditor({ entry, onClose }: Props) {
       setImages([]);
       return;
     }
-    const photos = await pickPhotos();
+    const photos = await pickMedia("library", 10);
     if (!photos.length) return;
     const form = new FormData();
     await appendPhotos(form, photos);
@@ -432,25 +435,19 @@ export function EntryEditor({ entry, onClose }: Props) {
               textAlign: "center",
             }}
           >
-            Photos
+            Proof
           </Text>
-          {images.length > 0 && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {images.map((uri) => (
-                <Image
-                  key={uri}
-                  source={{ uri }}
-                  accessibilityLabel="Activity photo"
-                  resizeMode="cover"
-                  style={{
-                    width: images.length === 1 ? "100%" : "48%",
-                    height: images.length === 1 ? 220 : 150,
-                    borderRadius: 12,
-                  }}
-                />
-              ))}
-            </View>
+          {images.some((uri) => mediaKind(uri) !== "audio") && (
+            <PhotoGrid
+              photos={images.filter((uri) => mediaKind(uri) !== "audio")}
+              title="Activity"
+            />
           )}
+          {images
+            .filter((uri) => mediaKind(uri) === "audio")
+            .map((uri, index) => (
+              <VoiceNotePlayer key={uri} uri={uri} index={index} title="Activity" />
+            ))}
           {canEditPhoto ? (
             <>
               <Button
@@ -458,7 +455,7 @@ export function EntryEditor({ entry, onClose }: Props) {
                 busy={photoAction.isPending}
                 onPress={() => photoAction.mutate(false)}
               >
-                {images.length ? "Add more photos" : "Add photos"}
+                {images.length ? "Add more photos or videos" : "Add photos or videos"}
               </Button>
               {!!images.length && (
                 <Button

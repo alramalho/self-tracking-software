@@ -3,16 +3,28 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   Pressable,
   View,
 } from "react-native";
-import { ArrowLeft, Camera, ChevronDown, Info, X } from "lucide-react-native";
+import { ArrowLeft, Camera, ChevronDown, Info } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/theme";
 import { VoiceTextArea } from "@/features/dictation/VoiceTextArea";
+import { describeSelection } from "./media/format";
+import { SelectedMedia } from "./media/SelectedMedia";
+import { VoiceNoteRecording } from "./media/VoiceNoteRecording";
+import { useVoiceNote } from "./media/useVoiceNote";
+import type { MediaSource } from "@/core/types";
 import type { PhotoStepProps } from "./types";
+
+const maxAttachments = 10;
+const sources: { label: string; source: MediaSource | "voice" }[] = [
+  { label: "Photo & Video Library", source: "library" },
+  { label: "Take Photo", source: "camera" },
+  { label: "Record Video", source: "video-camera" },
+  { label: "Record Voice Note", source: "voice" },
+];
 
 export function PhotoStep({
   photos,
@@ -22,6 +34,8 @@ export function PhotoStep({
   uploadProgress,
   onCaptionChange,
   onAddPhotos,
+  onAddVoiceNote,
+  onRecordingError,
   onRemovePhoto,
   onSave,
   onBack,
@@ -29,91 +43,70 @@ export function PhotoStep({
 }: PhotoStepProps) {
   const c = useColors();
   const [options, setOptions] = useState(false);
-  const disabled = busy || picking;
+  const voice = useVoiceNote(onAddVoiceNote, onRecordingError);
+  const disabled = busy || picking || voice.isRecording;
+  function choose(source: MediaSource | "voice") {
+    if (source === "voice") void voice.start();
+    else onAddPhotos(source);
+  }
   function chooseSource() {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ["Photo Library", "Take Photo", "Cancel"],
-          cancelButtonIndex: 2,
+          options: [...sources.map((s) => s.label), "Cancel"],
+          cancelButtonIndex: sources.length,
           userInterfaceStyle: c.dark ? "dark" : "light",
         },
         (index) => {
-          if (index < 2) onAddPhotos(index === 1);
+          if (index < sources.length) choose(sources[index].source);
         },
       );
     } else if (Platform.OS === "android") {
-      Alert.alert("Add photos", undefined, [
-        { text: "Photo Library", onPress: () => onAddPhotos() },
-        { text: "Take Photo", onPress: () => onAddPhotos(true) },
+      Alert.alert("Add a proof", undefined, [
+        ...sources.map((s) => ({ text: s.label, onPress: () => choose(s.source) })),
         { text: "Cancel", style: "cancel" },
       ]);
-    } else onAddPhotos();
+    } else onAddPhotos("library");
   }
+  const selection = describeSelection(photos);
   const label = busy
     ? photos.length && uploadProgress != null && uploadProgress < 100
-      ? `Uploading ${photos.length} photo${photos.length === 1 ? "" : "s"}… ${uploadProgress}%`
+      ? `Uploading ${selection}… ${uploadProgress}%`
       : "Saving activity…"
     : photos.length
-      ? `Upload ${photos.length} photo${photos.length === 1 ? "" : "s"}`
+      ? `Upload ${selection}`
       : "Log without photo";
   return (
     <View testID="activity-photo-step" style={{ gap: 16 }}>
       <View
         style={{
           alignSelf: "center",
-          width: photos.length ? "100%" : 200,
+          width: photos.length || voice.isRecording ? "100%" : 220,
           maxWidth: 304,
           gap: 12,
         }}
       >
         {!!photos.length && (
-          <View
-            testID="selected-activity-photos"
-            style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-          >
-            {photos.map((photo, index) => (
-              <View
-                key={`${photo.uri}-${index}`}
-                style={{ width: "31%", aspectRatio: 1 }}
-              >
-                <Image
-                  accessibilityLabel={`Selected photo ${index + 1}`}
-                  source={{ uri: photo.uri }}
-                  style={{ width: "100%", height: "100%", borderRadius: 12 }}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove photo ${index + 1}`}
-                  disabled={disabled}
-                  onPress={() => onRemovePhoto(index)}
-                  hitSlop={8}
-                  style={{
-                    position: "absolute",
-                    right: 2,
-                    top: 2,
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: `${c.bg}e6`,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <X size={16} color={c.text} />
-                </Pressable>
-              </View>
-            ))}
-          </View>
+          <SelectedMedia
+            media={photos}
+            disabled={disabled}
+            onRemove={onRemovePhoto}
+          />
         )}
-        {photos.length < 10 && (
+        {voice.isRecording ? (
+          <VoiceNoteRecording
+            durationMillis={voice.durationMillis}
+            onStop={() => void voice.stop()}
+            onDiscard={() => void voice.discard()}
+          />
+        ) : photos.length < maxAttachments && (
           <Pressable
             testID="activity-photo-upload-tile"
             accessibilityRole="button"
             accessibilityLabel={
               photos.length
-                ? `Add more photos (${photos.length}/10)`
-                : "Add photos (optional)"
+                ? `Add more (${photos.length}/${maxAttachments})`
+                : "Add a photo, video or voice note (optional)"
             }
             disabled={disabled}
             onPress={chooseSource}
@@ -138,10 +131,10 @@ export function PhotoStep({
             )}
             <Text style={{ fontSize: 14, color: c.muted, textAlign: "center" }}>
               {picking
-                ? "Processing images…"
+                ? "Preparing…"
                 : photos.length
-                  ? `Add more photos (${photos.length}/10)`
-                  : "Add photos (optional)"}
+                  ? `Add more (${photos.length}/${maxAttachments})`
+                  : "Photo, video or voice note (optional)"}
             </Text>
           </Pressable>
         )}

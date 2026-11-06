@@ -1,3 +1,4 @@
+import { onlyImages } from "@tsw/prisma/media";
 import sharp from "sharp";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../utils/prisma";
@@ -25,9 +26,10 @@ export async function blurredPreview(image: Buffer): Promise<string> {
 }
 
 async function sourceUrl(entry: PhotoEntry): Promise<string | null> {
-  const key = entry.imageS3Paths[0] ?? entry.imageS3Path;
+  // Videos and voice notes share this list; only a photo can be blurred.
+  const key = onlyImages([...entry.imageS3Paths, ...(entry.imageS3Path ? [entry.imageS3Path] : [])])[0];
   if (key) return s3Service.generatePresignedUrl(key, 120);
-  return entry.imageUrls[0] ?? entry.imageUrl ?? null;
+  return onlyImages([...entry.imageUrls, ...(entry.imageUrl ? [entry.imageUrl] : [])])[0] ?? null;
 }
 
 // Returns the cached preview, creating it on first use. Failures just mean no square.

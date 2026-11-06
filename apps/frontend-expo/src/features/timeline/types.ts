@@ -18,6 +18,8 @@ export interface FeedCardProps {
 export interface PhotoGridProps {
   photos: string[];
   title: string;
+  /** The feed card this grid belongs to, for home-feed video autoplay. */
+  cardId?: string;
 }
 export interface AchievementEditorProps {
   post: Achievement;
