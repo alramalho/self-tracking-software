@@ -4,6 +4,10 @@ import type {
   WorkoutReconciliationPreviewItem,
 } from "./workout-types";
 
+// A workout that ended this recently is still in front of you, so a photo is
+// easy to take. Older ones skip the question.
+const PHOTO_PROMPT_WINDOW_MS = 3 * 60 * 60 * 1000;
+
 const MATCH_CHOICE_BLOCKERS = new Set<WorkoutMismatch["code"]>([
   "ambiguous_match",
   "possible_duplicate",
@@ -97,4 +101,26 @@ export function defaultWorkoutSelection(
   return item.suggestedActivity
     ? `activity:${item.suggestedActivity.id}`
     : "create";
+}
+
+export function workoutJustEnded(
+  workout: HealthWorkoutPreview,
+  now = new Date(),
+): boolean {
+  const age = now.getTime() - new Date(workout.endAt).getTime();
+  return age <= PHOTO_PROMPT_WINDOW_MS;
+}
+
+export function workoutEndedLabel(
+  workout: HealthWorkoutPreview,
+  now = new Date(),
+): string {
+  const minutes = Math.max(
+    0,
+    Math.round((now.getTime() - new Date(workout.endAt).getTime()) / 60000),
+  );
+  if (minutes < 2) return "just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
+  const hours = Math.round(minutes / 60);
+  return hours === 1 ? "an hour ago" : `${hours} hours ago`;
 }

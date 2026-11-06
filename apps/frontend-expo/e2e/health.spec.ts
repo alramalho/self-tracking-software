@@ -421,6 +421,123 @@ test("Home reviews pending workouts as one continuous batch", async ({
   ]);
 });
 
+test("a workout that just ended asks for a photo after it is logged", async ({
+  page,
+  request,
+}) => {
+  const headers = { Authorization: "Bearer local-e2e-token" };
+  await request.post(`${API}/__reset`);
+  await request.post(`${API}/__health`, { headers });
+  await request.patch(`${API}/users/user`, {
+    headers,
+    data: { themeMode: "DARK" },
+  });
+  const ended = new Date(Date.now() - 25 * 60 * 1000);
+  const started = new Date(ended.getTime() - 28 * 60 * 1000);
+  let resolved = false;
+  const uploads: string[] = [];
+  const workout = {
+    healthWorkout: {
+      id: "fresh-run",
+      displayName: "Running",
+      activityTypeName: "running",
+      startAt: started.toISOString(),
+      endAt: ended.toISOString(),
+      durationSeconds: 1680,
+      distanceMeters: 5400,
+      difficulty: "hard",
+      effortSource: "estimate",
+      averageHeartRateBpm: 169,
+      sourceName: "Apple Watch",
+    },
+    category: "new",
+    recommendedAction: "import_new",
+    resolved: null,
+    mismatches: [],
+    suggestedActivity: {
+      id: "run",
+      title: "running",
+      emoji: "🏃",
+      measure: "kilometers",
+    },
+    candidates: [],
+  };
+  await page.route("**/health/apple/workouts/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith("reconciliation-preview")) {
+      await route.fulfill({
+        json: {
+          summary: { pending: resolved ? 0 : 1 },
+          items: resolved ? [] : [workout],
+        },
+      });
+      return;
+    }
+    if (pathname.endsWith("/reconcile")) {
+      resolved = true;
+      await route.fulfill({
+        json: {
+          linked: 0,
+          imported: 1,
+          ignored: 0,
+          alreadyResolved: 0,
+          entries: [
+            {
+              healthWorkoutId: "fresh-run",
+              activityEntryId: "fresh-entry",
+              hasPhotos: false,
+            },
+          ],
+        },
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route("**/activities/activity-entries/*/photo", async (route) => {
+    uploads.push(new URL(route.request().url()).pathname);
+    await route.fulfill({ json: { id: "fresh-entry" } });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Review workouts", exact: true })
+    .click();
+  const drawer = page.getByTestId("health-workout-drawer");
+  await drawer.getByRole("button", { name: "Log workout", exact: true }).click();
+  const prompt = drawer.getByTestId("workout-photo-prompt");
+  await expect(prompt).toBeVisible();
+  await expect(drawer.getByText("Add a photo?", { exact: true })).toBeVisible();
+  await expect(
+    prompt.getByText("Logged 5 kilometers to Running", { exact: true }),
+  ).toBeVisible();
+  await expect(prompt.getByText(/Finished 25 minutes ago/)).toBeVisible();
+  await expect(
+    prompt.getByRole("button", { name: "Add photo", exact: true }),
+  ).toBeHidden();
+  await page.screenshot({ path: "test-results/workout-photo-prompt.png" });
+  const chooser = page.waitForEvent("filechooser");
+  await prompt
+    .getByRole("button", { name: "Take or choose a photo", exact: true })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "run.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  });
+  await expect(prompt.getByLabel("Selected photo 1")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/workout-photo-selected.png",
+  });
+  await prompt.getByRole("button", { name: "Add photo", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  expect(uploads).toEqual(["/activities/activity-entries/fresh-entry/photo"]);
+});
+
 for (const choice of ["create", "choose", "skip"] as const) {
   test(`Home review can ${choice} without an extra manual log`, async ({
     page,

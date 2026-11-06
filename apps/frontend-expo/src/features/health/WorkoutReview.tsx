@@ -17,6 +17,7 @@ import { ReviewLink, ReviewRow } from "./review/controls";
 import type { ReviewPage } from "./review/types";
 import { workoutIcon } from "./review/icon";
 import { DetectedWorkoutCard } from "./review/DetectedWorkoutCard";
+import { WorkoutPhotoPrompt } from "./review/WorkoutPhotoPrompt";
 import {
   candidateDateLabel,
   relativeDateLabel,
@@ -28,6 +29,8 @@ import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { useActivities } from "@/data/queries";
 import { api } from "@/data/api";
 import type {
+  ReconciledWorkoutEntry,
+  WorkoutReconciliationApplyResult,
   WorkoutReconciliationDecision,
   WorkoutReconciliationPreviewItem,
 } from "./workout-types";
@@ -35,6 +38,7 @@ import {
   defaultWorkoutSelection,
   workoutEffortLabel,
   workoutHeartRateSummary,
+  workoutJustEnded,
   workoutNeedsMatchChoice,
   workoutQuantity,
 } from "./workout-model";
@@ -75,6 +79,27 @@ export function WorkoutReview({
   const [measure, setMeasure] = useState<"minutes" | "kilometers" | "sessions">(
     "minutes",
   );
+  const [photoPrompt, setPhotoPrompt] = useState<{
+    entry: ReconciledWorkoutEntry;
+    loggedSummary: string;
+  } | null>(null);
+  const showNextWorkout = () => {
+    const nextIndex = queueIndex + 1;
+    const next = queue[nextIndex];
+    if (!next) {
+      onClose();
+      return;
+    }
+    Keyboard.dismiss();
+    setQueueIndex(nextIndex);
+    setSelection(defaultWorkoutSelection(next));
+    setUseHealth(false);
+    setShareHealthData(next.shareHealthDataByDefault ?? false);
+    setPage(workoutNeedsMatchChoice(next) ? "choose" : "workout");
+    setTitle(next.healthWorkout.displayName);
+    setMeasure("minutes");
+    setPhotoPrompt(null);
+  };
   const action = useMutation({
     mutationFn: async (ignore: boolean) => {
       const decision: WorkoutReconciliationDecision = {
@@ -93,30 +118,28 @@ export function WorkoutReview({
           else decision.activityId = selection.slice(9);
         }
       }
-      await api.post("/health/apple/workouts/reconcile", {
-        decisions: [decision],
-      });
+      const response = await api.post<WorkoutReconciliationApplyResult>(
+        "/health/apple/workouts/reconcile",
+        { decisions: [decision] },
+      );
+      return response.data.entries?.find(
+        (logged) => logged.healthWorkoutId === workout.id,
+      );
     },
-    onSuccess: async () => {
+    onSuccess: async (logged) => {
       await Promise.all(
         ["health", "activities", "activity-entries", "timeline", "plans"].map(
           (key) => client.invalidateQueries({ queryKey: [key] }),
         ),
       );
-      const nextIndex = queueIndex + 1;
-      const next = queue[nextIndex];
-      if (!next) {
-        onClose();
+      // A workout that just ended can still be photographed; ask once.
+      if (logged && !logged.hasPhotos && workoutJustEnded(workout)) {
+        Keyboard.dismiss();
+        setPhotoPrompt({ entry: logged, loggedSummary });
+        setPage("photo");
         return;
       }
-      Keyboard.dismiss();
-      setQueueIndex(nextIndex);
-      setSelection(defaultWorkoutSelection(next));
-      setUseHealth(false);
-      setShareHealthData(next.shareHealthDataByDefault ?? false);
-      setPage(workoutNeedsMatchChoice(next) ? "choose" : "workout");
-      setTitle(next.healthWorkout.displayName);
-      setMeasure("minutes");
+      showNextWorkout();
     },
   });
   const entry = item.candidates.find(
@@ -138,6 +161,9 @@ export function WorkoutReview({
     : null;
   const canUseHealth =
     !!entry?.comparison.compatible && healthQuantity !== null;
+  const loggedSummary = entry
+    ? `Linked to ${entry.activityTitle}`
+    : `Logged ${quantity} ${selection === "create" ? measure : (selected?.measure ?? "")} to ${selection === "create" ? title.trim() : (selected?.title ?? "your activity")}`;
   const primaryLabel = entry
     ? "Link workout"
     : selection === "create"
@@ -162,7 +188,9 @@ export function WorkoutReview({
             ? "Which amount?"
             : page === "privacy"
               ? "Who can see Watch data?"
-              : "Match your workout"
+              : page === "photo"
+                ? "Add a photo?"
+                : "Match your workout"
       }
       titleAlign="left"
       testID="health-workout-drawer"
@@ -207,7 +235,9 @@ export function WorkoutReview({
           </View>
         </View>
       )}
-      {page !== "workout" && (page !== "choose" || !!selection) && (
+      {page !== "workout" &&
+        page !== "photo" &&
+        (page !== "choose" || !!selection) && (
         <ReviewLink
           label="Back to workout"
           back
@@ -509,6 +539,14 @@ export function WorkoutReview({
             </View>
           </View>
         </View>
+      )}
+      {page === "photo" && photoPrompt && (
+        <WorkoutPhotoPrompt
+          workout={workout}
+          activityEntryId={photoPrompt.entry.activityEntryId}
+          loggedSummary={photoPrompt.loggedSummary}
+          onDone={showNextWorkout}
+        />
       )}
       {page === "quantity" && entry && (
         <>

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react-native";
 import type { HealthWorkoutPreview } from "../workout-types";
-export type ReviewPage = "workout" | "choose" | "quantity" | "privacy";
+export type ReviewPage = "workout" | "choose" | "quantity" | "privacy" | "photo";
 export interface ReviewRowProps {
   title: string;
   detail?: string;
@@ -19,4 +19,10 @@ export interface ReviewLinkProps {
 }
 export interface DetectedWorkoutCardProps {
   workout: HealthWorkoutPreview;
+}
+export interface WorkoutPhotoPromptProps {
+  workout: HealthWorkoutPreview;
+  activityEntryId: string;
+  loggedSummary: string;
+  onDone: () => void;
 }

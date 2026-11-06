@@ -5,7 +5,9 @@ import {
   defaultWorkoutSelection,
   workoutEffortLabel,
   workoutEffortSummary,
+  workoutEndedLabel,
   workoutHeartRateSummary,
+  workoutJustEnded,
   workoutNeedsMatchChoice,
 } from "../src/features/health/workout-model";
 import type {
@@ -138,4 +140,24 @@ test("requires a choice for genuinely ambiguous or incompatible matches", () => 
     assert.equal(workoutNeedsMatchChoice(item), true);
     assert.equal(defaultWorkoutSelection(item), "");
   }
+});
+
+test("only a workout that ended in the last three hours asks for a photo", () => {
+  const ended = workout({ endAt: "2026-09-15T07:39:00.000Z" });
+  const at = (iso: string) => new Date(iso);
+  assert.equal(workoutJustEnded(ended, at("2026-09-15T08:08:00.000Z")), true);
+  assert.equal(workoutJustEnded(ended, at("2026-09-15T10:39:00.000Z")), true);
+  assert.equal(workoutJustEnded(ended, at("2026-09-15T10:40:00.000Z")), false);
+  assert.equal(
+    workoutEndedLabel(ended, at("2026-09-15T08:08:00.000Z")),
+    "29 minutes ago",
+  );
+  assert.equal(
+    workoutEndedLabel(ended, at("2026-09-15T07:40:00.000Z")),
+    "just now",
+  );
+  assert.equal(
+    workoutEndedLabel(ended, at("2026-09-15T09:30:00.000Z")),
+    "2 hours ago",
+  );
 });

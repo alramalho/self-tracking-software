@@ -6,6 +6,7 @@ import type {
 } from "@tsw/prisma";
 
 import { prisma } from "@/utils/prisma";
+import { getActivityEntryImageUrls } from "@/utils/activityEntryImages";
 
 import type {
   ConfirmedWorkoutActivityMatch,
@@ -921,6 +922,7 @@ export async function applyWorkoutReconciliations(
       imported: 0,
       ignored: 0,
       alreadyResolved: 0,
+      entries: [],
     };
 
     for (const decision of decisions) {
@@ -946,6 +948,7 @@ export async function applyWorkoutReconciliations(
         workout.metadata,
       )?.difficulty;
       let activityEntryId: string | null = null;
+      let entryHasPhotos = false;
       let createdActivity = false;
 
       if (decision.action === "ignore") {
@@ -1012,6 +1015,7 @@ export async function applyWorkoutReconciliations(
           },
         });
         activityEntryId = entry.id;
+        entryHasPhotos = getActivityEntryImageUrls(entry).length > 0;
         result.linked += 1;
       } else {
         const target = await resolveTargetActivity(
@@ -1066,6 +1070,12 @@ export async function applyWorkoutReconciliations(
           ),
         },
       });
+      if (activityEntryId)
+        result.entries.push({
+          healthWorkoutId: workout.id,
+          activityEntryId,
+          hasPhotos: entryHasPhotos,
+        });
     }
 
     return result;
