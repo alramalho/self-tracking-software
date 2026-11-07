@@ -22,9 +22,13 @@ env -u SDKROOT DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 Copy the IPA into this directory's `.release/<name>/`, then run `testflight.ts validate` and `submit` on it from here. `submit` only uploads; the external group and beta review were set through the App Store Connect API. No cloud build, OTA, Safari-install publish or App Store release was performed.
 
+## Safari install — build 245, November 7, 2026
+
+**Build 245 is the latest verified and hosted Safari-install release.** It was compiled from exactly the same isolated source as TestFlight build 244 (`.release/proposal-hero-b245/source.tar.gz`, identical to build 244's) with `pnpm --filter frontend-expo build:iphone:local`, then published from here with `pnpm build:iphone:publish "$PWD/.release/proposal-hero-b245/tracking.so.ipa"`. The wrapper verified the production configuration, signatures and provisioning; the publisher GET-checked installer, manifest and IPA. IPA SHA-256 `0244de386b1c76cb995d73f0c564f2a0dab41d7dc1820e27fb94aa76c1055578`. Download links expire November 14 at 16:22 UTC. **Not verified on a device.**
+
 ## Sleep score card — build 231, November 6, 2026
 
-**Build 231 is the latest verified and hosted Safari-install release.** It is build 191's source (from `.release/account-switch-b191/source.tar.gz`) with only the redesigned sleep score card ported on: `src/features/health/sleep/{SleepMetric,Breakdown,NightStrip,SleepGrid}.tsx`, `src/features/health/sleep/types.ts`, and the caption line removed from `src/features/health/HealthOverview.tsx`. Those sleep files were identical to the working tree's HEAD in that lineage, so the port is exact. No backend change is needed.
+**Build 231 was the previous verified and hosted Safari-install release.** It is build 191's source (from `.release/account-switch-b191/source.tar.gz`) with only the redesigned sleep score card ported on: `src/features/health/sleep/{SleepMetric,Breakdown,NightStrip,SleepGrid}.tsx`, `src/features/health/sleep/types.ts`, and the caption line removed from `src/features/health/HealthOverview.tsx`. Those sleep files were identical to the working tree's HEAD in that lineage, so the port is exact. No backend change is needed.
 
 The user chose this lineage over the working tree because the working tree lacks the release's Apple billing/paywall, AI consent and blocked people (and the release lacks the working tree's workout photo prompt, chat chrome and analytics). Reconcile the two before building from the working tree.
 
