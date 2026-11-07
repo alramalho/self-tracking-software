@@ -8,6 +8,7 @@ import type { ProposalReviewProps } from "./types";
 export function ProposalReview({
   label,
   title,
+  subtitle,
   emoji,
   description,
   summary,
@@ -91,6 +92,18 @@ export function ProposalReview({
         >
           {title}
         </Text>
+        {!!subtitle && (
+          <Text
+            style={{
+              textAlign: "center",
+              fontSize: 15,
+              color: c.muted,
+              marginTop: -8,
+            }}
+          >
+            {subtitle}
+          </Text>
+        )}
         {children}
       </PreviewSheet>
     </>

@@ -1,8 +1,53 @@
 # Build on the Mac, install from a link
 
+## TestFlight — plan-change review sheet, build 244, November 7, 2026
+
+**Build 244 is the latest TestFlight build.** The user asked for TestFlight rather than a Safari link. Its source is build 231's (from `.release/sleep-card-b231/source.tar.gz`) plus the redesigned plan-change review sheet: the plan name is a subtitle under "Review Changes", and sessions per week, end date and goal changes appear as a big before → after (for example "6 → 5 sessions a week"). Ported files: `src/features/messages/{MessageCard,ProposalDetails,PlanSetupChange}.tsx`, `src/features/messages/entities/{ProposalReview.tsx,types.ts}` and `ChangeHeroProps` in `src/features/messages/types.ts`. Only the sheet edits went into `MessageCard.tsx`; the working tree's uncommitted chat-chrome edits in that file were not ported.
+
+- Apple processed delivery `289f6642-cd26-40ca-abf1-c046abe8e119` as `VALID`. Internal state is `IN_BETA_TESTING` in the `internal testers` group; TestFlight expiry is February 5, 2027. On November 7 the user approved external testing: build 244 was added to `Friends & Family` (public link enabled) and submitted for beta review (submission `289f6642-cd26-40ca-abf1-c046abe8e119`, `WAITING_FOR_REVIEW`, then `APPROVED` within a minute; external state `IN_BETA_TESTING`). Its English What to Test note describes the at-a-glance plan-change review and the sleep score card. Builds 204–235 are also in TestFlight, internal-only with no notes.
+- Phone, widgets and Watch are all 1.0.0 build 244 with App Store profiles; the strict deep codesign check passes. Apple's local validator passed the exact IPA. The bundle contains the new sheet ("sessions a week"), the sleep card ("Score in"), the subscription screens and `AiConsentSheet`, and no e2e token or fixture host.
+- Checks: TypeScript passes in the isolated source. The sheet was screenshot-checked in light and dark on mobile web from the working tree. **Not verified on a device.**
+- Build numbers 236–243 were used up by attempts that stopped during credential setup. Nothing was uploaded for them.
+
+**Widgets App Store credentials (new).** TestFlight builds before the widgets existed had no App Store profile for `so.tracking.app.widgets`, so `testflight.ts build` (non-interactive, `--freeze-credentials`) failed with "Distribution Certificate is not validated for non-interactive builds". A profile `*[expo] so.tracking.app.widgets AppStore 2026-11-07T10:48:53.871Z` was created on November 7 with one interactive `eas build --local`, authenticated with the App Store Connect key (`EXPO_ASC_API_KEY_PATH`, `EXPO_ASC_KEY_ID`, `EXPO_ASC_ISSUER_ID`, `EXPO_APPLE_TEAM_ID=7P4CMS849D`, `EXPO_APPLE_TEAM_TYPE=INDIVIDUAL`). It is signed with certificate `YZ647674L4`, which all tracking.so profiles use; EAS suggests `WDKCRJC77C` first, but that one belongs to verycheapaudiobooks. EAS now stores all three targets, so `pnpm build:testflight` works non-interactively again. If you ever script these prompts: the team is Individual (not Enterprise); y/n prompts submit on the key alone, so a trailing Enter leaks into the next prompt; use `j`/`k` to move in lists (a split ESC sequence submits the list).
+
+Artifacts are in ignored `.release/testflight-proposal-hero-b244/`: `tracking.so.ipa` (SHA-256 `8656031e9ee960234340cc22bec5f3bd7967d93cdd2ad55036d28cc81016c43e`), `source.tar.gz` (SHA-256 `ea6932c1d04a031ecb616c3b5b2d64eb31baa8f379b64236aa6a2fb77cee75be`), `build.log`, `validate.log` and `submit.log`. To rebuild, extract the source, run `pnpm install --filter "frontend-expo..."`, copy `production.env.json`, `watch-device.json` and `appstore-connect/` into its `apps/frontend-expo/.release/` (mode 600), then from that `apps/frontend-expo`:
+
+```sh
+env -u SDKROOT DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  EAS_NO_VCS=1 EAS_PROJECT_ROOT=<extracted root> EAS_LOCAL_BUILD_SKIP_CLEANUP=1 \
+  EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-testflight-build \
+  node --import tsx scripts/iphone/testflight.ts build .release/<name>/tracking.so.ipa
+```
+
+Copy the IPA into this directory's `.release/<name>/`, then run `testflight.ts validate` and `submit` on it from here. `submit` only uploads; the external group and beta review were set through the App Store Connect API. No cloud build, OTA, Safari-install publish or App Store release was performed.
+
+## Sleep score card — build 231, November 6, 2026
+
+**Build 231 is the latest verified and hosted Safari-install release.** It is build 191's source (from `.release/account-switch-b191/source.tar.gz`) with only the redesigned sleep score card ported on: `src/features/health/sleep/{SleepMetric,Breakdown,NightStrip,SleepGrid}.tsx`, `src/features/health/sleep/types.ts`, and the caption line removed from `src/features/health/HealthOverview.tsx`. Those sleep files were identical to the working tree's HEAD in that lineage, so the port is exact. No backend change is needed.
+
+The user chose this lineage over the working tree because the working tree lacks the release's Apple billing/paywall, AI consent and blocked people (and the release lacks the working tree's workout photo prompt, chat chrome and analytics). Reconcile the two before building from the working tree.
+
+Checks: TypeScript and the 11 unit tests pass in the isolated source. The card was screenshot-checked in light and dark (scored and learning nights, 1M grid) on mobile web from the working tree, whose UI kit and theme are identical to the release lineage. The bundled JS contains the new card ("Score in") and still contains the subscription and AI consent screens. **Not verified on a device.** The three failing `e2e/health.spec.ts` tests (workout drawer copy, "Manage Apple Health") fail identically without this change.
+
+All three signed targets (phone, widgets, Watch) are version 1.0.0 build 231; remote auto-increment skipped 192–230. The publisher verified the IPA and GET-checked installer, manifest and IPA; `hosted-verification.json` confirms the downloaded IPA hash matches. Download links expire November 13 at 17:06 UTC; provisioning expires September 10, 2027.
+
+Artifacts are in ignored `.release/sleep-card-b231/`: `tracking.so.ipa`, `verified.json`, `hosted-verification.json`, private `distribution.json`, `source.tar.gz` (isolated source without `node_modules`), `build.log` and `publish.log`. IPA SHA-256: `371dd5e162c82e5bddaf51c718ee96d03deec8b129fcf8241897045765ecb82c`. Source SHA-256: `88c2f78212ef89eea24400893728234be026bb0963cd8db267e4a935c3cee1ee`.
+
+To rebuild: extract that `source.tar.gz` to a temporary folder, run `pnpm install --filter "frontend-expo..."` there, and copy both `.release/production.env.json` and `.release/watch-device.json` into its `apps/frontend-expo/.release/` (mode 600). The verifier needs `watch-device.json`; without it the build compiles and then fails verification. From the extracted root:
+
+```sh
+env -u SDKROOT DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer AWS_PROFILE=default \
+  EAS_NO_VCS=1 EAS_PROJECT_ROOT="$PWD" EAS_LOCAL_BUILD_SKIP_CLEANUP=1 \
+  EAS_LOCAL_BUILD_WORKINGDIR=/private/tmp/tracking-device-build \
+  pnpm --filter frontend-expo build:iphone:local
+```
+
+Copy the IPA into this directory's `.release/<name>/` and publish it from here with `pnpm build:iphone:publish "$PWD/.release/<name>/tracking.so.ipa"`. No TestFlight, cloud build or OTA was performed.
+
 ## Account switching — build 191, October 1, 2026
 
-**Build 191 is the latest verified and hosted Safari-install release.** The backend it needs was deployed the same day as `local/tracking-so-backend:account-switch-20261001`; see "Account switching overlay" in `hetzner/MIGRATION.md`.
+Build 191 was the previous verified and hosted Safari-install release. The backend it needs was deployed the same day as `local/tracking-so-backend:account-switch-20261001`; see "Account switching overlay" in `hetzner/MIGRATION.md`.
 
 The build adds Settings → Accounts. It keeps one Clerk session at a time and avoids Clerk multi-session: other accounts are remembered in the Keychain as switch tokens, which `POST /auth/switch` trades for a 60-second Clerk sign-in ticket. Add account signs the active account out to the normal sign-in screen, and closing that screen returns to it. Logging out revokes the device's token and hands over to the next remembered account. Web has no switcher.
 
@@ -245,7 +290,7 @@ The new local `TrackingHealth` module, workout matching drawer and estimated Sle
 
 The scoped backend is deployed and verified as `local/tracking-so-backend:interview-health-20260915`. Local production build 29 contains the native Health module, permission purpose, workout review and estimated sleep score. The actual IPA and complete hosted download passed verification below. Build 26 lacks this flow. Real workout/sleep import on the paired devices remains for the user to verify.
 
-## Current TestFlight release — build 162, September 23, 2026
+## Earlier TestFlight release — build 162, September 23, 2026
 
 - Build 162 was compiled locally from build 156's preserved release source with only the shared Apple Health/Garmin heart-rate chart and provider-label changes overlaid. It keeps the thicker 2.7-unit colored line, smooth interpolation, zone shading, and no sample circles. It does **not** contain build 161's pending viewer-detail endpoint flow.
 - App Store IPA: `.release/testflight-heart-rate-b162/tracking.so.ipa` (SHA-256 `8327bbcbf5f075832b45193c7fc7a79558af1d7bedf2276cb330223e150d2ecd`). The matching source archive is `source.tar.gz` (SHA-256 `03701bcd93d7a8016b8d65c5edbd204a6ab97ee469b1caa05811b75d6365c017`). Both iPhone and Watch are version 1.0.0 build 162. Strict signatures, App Store profiles, production API/live Clerk, bundled colored chart, and fixture-auth exclusion were verified; see `verification.json` beside the IPA.
