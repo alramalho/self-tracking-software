@@ -22,9 +22,11 @@ for (const theme of ["DARK", "LIGHT"]) test(`search explores circles and people,
 
   await input.fill("Lia");
   await page.getByRole("button", { name: lia, exact: true }).click();
-  await expect(page).toHaveURL(/profile\/liocas/);
-  // Back from a profile opened here returns to Home (as on main), so start again.
-  await page.goto("/search");
+  await expect(page).toHaveURL(/user\/liocas/);
+  await expect(page.getByText("@liocas", { exact: true }).last()).toBeVisible();
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(input).toHaveValue("Lia");
+  await expect(page.getByRole("button", { name: lia, exact: true })).toBeVisible();
 
   await input.fill("zzzzzz");
   await expect(page.getByText("Nothing matches. Try another name, username or goal.", { exact: true })).toBeVisible();

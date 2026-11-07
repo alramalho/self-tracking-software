@@ -14,7 +14,7 @@ import {
   s,
   useColors,
 } from "@/components/ui";
-import { goBack } from "@/core/navigation";
+import { goBack, openProfile } from "@/core/navigation";
 import { useCurrentUser } from "@/data/queries";
 import { useRankings } from "@/features/profile/rankings";
 import { accountLevels } from "@/features/profile/model";
@@ -103,7 +103,7 @@ export default function Rankings() {
                 key={person.username}
                 accessibilityRole="button"
                 accessibilityLabel={`View ${person.username}`}
-                onPress={() => router.push(`/profile/${person.username}`)}
+                onPress={() => openProfile(person.username)}
                 style={{
                   width: 96,
                   height: person.rank === 1 ? 128 : person.rank === 2 ? 96 : 88,
@@ -167,7 +167,7 @@ export default function Rankings() {
             key={person.username}
             accessibilityRole="button"
             accessibilityLabel={`${person.name || person.username}, rank ${person.rank}`}
-            onPress={() => router.push(`/profile/${person.username}`)}
+            onPress={() => openProfile(person.username)}
           >
             <Panel
               style={{

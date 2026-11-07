@@ -60,6 +60,7 @@ function Routes() {
               }}
             />
             <Stack.Screen name="search" />
+            <Stack.Screen name="user/[username]" />
             <Stack.Screen name="health" />
             <Stack.Screen name="health-workout/[id]" />
             <Stack.Screen name="notifications" />

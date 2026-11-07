@@ -5,7 +5,7 @@ import { Image } from "expo-image";
 import { Camera, ChevronLeft, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react-native";
 import { Copy, Field, Heading, IconButton, Panel, Screen, Sheet, Status, Button, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
-import { goBack } from "@/core/navigation";
+import { goBack, openProfile } from "@/core/navigation";
 import { api, errorMessage } from "@/data/api";
 import { useAction, useCurrentUser, usePlans } from "@/data/queries";
 import { coachAvatar } from "@/features/coach/avatar";
@@ -107,7 +107,7 @@ export default function Circle() {
     const canMotivate = !member.pending && member.week.toGo > 0 && !member.week.isNew;
     showActions(`${name} · ${member.week.done} of ${member.week.target} this week`, [
       ...(canMotivate ? [{ label: `Motivate ${name}`, onPress: () => setMotivating(member) }] : []),
-      ...(member.user.username ? [{ label: "View profile", onPress: () => router.push(`/profile/${member.user.username}` as never) }] : []),
+      ...(member.user.username ? [{ label: "View profile", onPress: () => openProfile(member.user.username!) }] : []),
       { label: `Report ${name}`, destructive: true, onPress: () => setReport({ kind: "USER", id: member.user.id, label: personLabel(member.user) }) },
       { label: `Block ${name}`, destructive: true, onPress: () => blockUser(member.user) },
       ...(isOwner ? [{ label: `Remove ${name} from the circle`, destructive: true, onPress: () => remove.mutate(member) }] : []),

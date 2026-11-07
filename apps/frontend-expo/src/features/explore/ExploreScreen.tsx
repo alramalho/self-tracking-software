@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Text } from "@/components/typography/Text";
 import { IconButton, Status, useColors } from "@/components/ui";
 import { ProfileGlow } from "@/components/ProfileGlow";
-import { goBack } from "@/core/navigation";
+import { goBack, openProfile } from "@/core/navigation";
 import { useCircleSearch, useCircleSuggestions, useMyCircles } from "@/features/circles/api";
 import { JoinSheet } from "@/features/circles/JoinSheet";
 import type { CircleCard } from "@/features/circles/types";
@@ -49,7 +49,7 @@ export default function ExploreScreen() {
   };
   const openPerson = (person: ExplorePerson) => {
     Keyboard.dismiss();
-    router.push({ pathname: "/profile/[username]", params: { username: person.username } });
+    openProfile(person.username);
   };
   const leave = () => { Keyboard.dismiss(); goBack(); };
 
