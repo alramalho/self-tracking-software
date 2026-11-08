@@ -35,7 +35,7 @@ for (const theme of ["DARK", "LIGHT"])
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `test-results/talk-reply-${theme}.png` });
     const talks = ((await (await request.get(`${API}/__state`)).json()).requests as any[]).filter((r) => r.path === "/follow-through/plans/reading/talk");
-    expect(talks.map((r) => r.body)).toEqual([
+    expect(talks.map((r) => r.body)).toMatchObject([
       { reason: "travel", turns: [], notSure: false },
       { reason: "travel", turns: [{ say: "When are you back?", answer: "back sunday night" }], notSure: false },
     ]);
@@ -48,6 +48,37 @@ for (const theme of ["DARK", "LIGHT"])
     await expect(page.getByRole("button", { name: readingRow })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
+
+test("lost motivation: the coach asks for the next session, holds you to it, and the alert clears", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await request.post(`${API}/__plan-nudges`, { headers, data: {} });
+  await page.goto("/coach");
+  await page.getByRole("button", { name: readingRow }).click();
+  // Leaving the drawer for the conversation doesn't answer anything yet.
+  await page.getByRole("button", { name: "Lost motivation", exact: true }).click();
+  await expect(page.getByTestId("talk-say")).toHaveText("Motivation dips. It happens.");
+  await expect(page.getByTestId("talk-detail")).toHaveText("What's the smallest session you'd still do, and when?");
+  await page.getByTestId("talk-answer").fill("today");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByTestId("talk-say")).toHaveText("Today then.");
+  await expect(page.getByTestId("talk-detail")).toContainText("Counting on you.");
+  await expect(page.getByRole("button", { name: "Keep nudging me", exact: true })).toHaveCount(0);
+  // Back on the Coach tab without a reload: the alert is gone.
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByTestId("coach-messages")).toBeVisible();
+  await expect(page.getByRole("button", { name: readingRow })).toHaveCount(0);
+});
+
+test("backing out of the conversation leaves the alert waiting", async ({ page, request }) => {
+  await request.post(`${API}/__reset`);
+  await request.post(`${API}/__plan-nudges`, { headers, data: {} });
+  await page.goto("/coach");
+  await page.getByRole("button", { name: readingRow }).click();
+  await page.getByRole("button", { name: "Lost motivation", exact: true }).click();
+  await expect(page.getByTestId("talk-say")).toHaveText("Motivation dips. It happens.");
+  await page.goto("/coach");
+  await expect(page.getByRole("button", { name: readingRow })).toBeVisible();
+});
 
 test("not sure yet ends the conversation and asks again later", async ({ page, request }) => {
   await request.post(`${API}/__reset`);

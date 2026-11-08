@@ -8,6 +8,7 @@ export const Route = createFileRoute("/talk-to-coach")({
   validateSearch: (search: Record<string, unknown>): TalkToCoachSearch => ({
     planId: typeof search.planId === "string" ? search.planId : "",
     reason: TALK_REASONS.includes(search.reason as TalkReason) ? (search.reason as TalkReason) : "talk",
+    missed: search.missed === true || search.missed === "true",
   }),
 });
 

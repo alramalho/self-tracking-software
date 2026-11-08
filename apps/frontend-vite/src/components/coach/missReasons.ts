@@ -1,4 +1,5 @@
 import { format, startOfWeek, subWeeks } from "date-fns";
+import type { FollowThroughState } from "@tsw/prisma/follow-through";
 import type { MissReason } from "./types";
 
 /** One-tap answers to "What got in the way?". Each opens Talk to coach (same as the app). */
@@ -9,22 +10,8 @@ export const MISS_REASONS: MissReason[] = [
   { id: "motivation", label: "Lost motivation" },
 ];
 
-// The coach asks once per missed week: the answer is remembered on this device.
-const key = (planId: string) => `tracking.so.miss-reason.v1:${planId}`;
+// The coach asks once per missed week: finishing Talk to coach answers it on the server, for every device.
 const missedWeek = (now = new Date()) => format(startOfWeek(subWeeks(now, 1)), "yyyy-MM-dd");
 
-export function answeredMissedWeek(planId: string) {
-  try {
-    return localStorage.getItem(key(planId)) === missedWeek();
-  } catch {
-    return false;
-  }
-}
-
-export function rememberMissAnswered(planId: string) {
-  try {
-    localStorage.setItem(key(planId), missedWeek());
-  } catch {
-    // Private windows can refuse storage; the question will just come back.
-  }
-}
+export const answeredOnServer = (state: FollowThroughState | undefined, planId: string) =>
+  state?.missedWeeks?.[planId]?.week === missedWeek();

@@ -7,7 +7,7 @@ import { api } from "@/data/api";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
-import { MISS_REASONS, rememberMissAnswered } from "@/features/timeline/home-cards/miss-reasons";
+import { MISS_REASONS } from "@/features/timeline/home-cards/miss-reasons";
 import type { TalkReason } from "../talk/types";
 import { alertFact } from "../model";
 import type { CoachChatOpening, CoachItem, CoachItemDrawerProps } from "../types";
@@ -30,14 +30,11 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
       });
     },
   });
-  // Every answer to "What got in the way?" opens Talk to coach, one screen at a time.
-  const talkAbout = async (planId: string, reason: TalkReason, missed: boolean) => {
-    if (missed) {
-      await rememberMissAnswered(planId);
-      client.setQueryData(["miss-answered", planId], true);
-    }
+  // Every answer to "What got in the way?" opens Talk to coach, one screen at a time. The alert is
+  // answered only when that conversation ends, on the server.
+  const talkAbout = (planId: string, reason: TalkReason, missed: boolean) => {
     onClose();
-    router.push({ pathname: "/talk-to-coach", params: { planId, reason } });
+    router.push({ pathname: "/talk-to-coach", params: { planId, reason, ...(missed ? { missed: "1" } : {}) } });
   };
   const post = useMutation({
     mutationFn: async ({ path, body }: { path: string; body: unknown }) => api.post(path, body),

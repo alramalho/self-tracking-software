@@ -39,7 +39,9 @@ export interface CoachMonitoringState {
   pausedPlanIds: string[];
   /**
    * Talking to the coach can quiet a plan: no alert and no nudge until `until` (yyyy-MM-dd, inclusive).
-   * "away" when the person said when they're back, "not_sure" when the coach should ask again then.
+   * "away" when the person said when they're back, "not_sure" when the coach should ask again then,
+   * "committed" when they named the day of their next session, "answered" for the rest of the day they
+   * talked it through.
    * The streak and the weeks still count; quiet only silences the coach.
    */
   quiet?: Record<string, PlanQuiet>;
@@ -59,7 +61,7 @@ export interface CoachMonitoringState {
 
 export interface PlanQuiet {
   until: string;
-  why: "away" | "not_sure";
+  why: "away" | "not_sure" | "committed" | "answered";
   at: string;
 }
 

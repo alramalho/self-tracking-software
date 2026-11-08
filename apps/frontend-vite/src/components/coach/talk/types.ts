@@ -23,9 +23,12 @@ export interface TalkRequest {
   reason: TalkReason;
   turns: TalkAnswered[];
   notSure: boolean;
+  /** The alert was "missed last week": the end of the conversation answers that week. */
+  missed: boolean;
 }
 
 export interface TalkToCoachSearch {
   planId: string;
   reason: TalkReason;
+  missed: boolean;
 }

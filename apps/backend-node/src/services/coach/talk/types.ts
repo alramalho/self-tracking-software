@@ -20,8 +20,17 @@ export interface TalkTurn {
 /** Everything the coach knows when it writes a turn. */
 export interface TalkContext {
   coach: { name: string; persona: string };
+  /** When the coach checks on a commitment: today's time (null when it's too late today), other days' morning time. */
+  checkIn: { today: string | null; laterDays: string };
   plan: { goal: string; emoji: string | null; timesPerWeek: number | null; activities: string[] };
   today: string;
   weekday: string;
   lastLog: string | null;
+}
+
+/** Where the plan's coach settings live, to time the check-in on a commitment. */
+export interface CheckInClock {
+  timezone: string;
+  /** The plan's day reminder, HH:mm. */
+  morning: string;
 }

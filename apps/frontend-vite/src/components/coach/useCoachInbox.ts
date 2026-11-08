@@ -7,7 +7,7 @@ import { getCoachAttentionItems } from "@/contexts/ai/service";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useMetrics } from "@/contexts/metrics";
 import { usePlans } from "@/contexts/plans";
-import { answeredMissedWeek } from "./missReasons";
+import { answeredOnServer } from "./missReasons";
 import { useFollowThrough } from "./useCoaching";
 
 /** Everything the coach is waiting on you for: the Coach tab's Recent list and the tab's count. */
@@ -39,7 +39,7 @@ export function useCoachInbox() {
       attention: attention.data ?? [],
       metrics: metrics ?? [],
       checkedInToday,
-      answeredMisses: (plans ?? []).map((p) => p.id).filter(answeredMissedWeek),
+      answeredMisses: (plans ?? []).map((p) => p.id).filter((id) => answeredOnServer(followThrough.data?.state, id)),
     });
   }, [plans, activityEntries, followThrough.data, attention.data, metrics, metricEntries]);
   return {

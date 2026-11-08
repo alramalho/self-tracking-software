@@ -19,7 +19,7 @@ const SCREENS = 3;
  * Talk to coach: one screen per turn, like onboarding (same as the iPhone app). The coach writes each
  * screen; the person answers in their own words or by voice. Nothing is sent in their name.
  */
-export function TalkToCoach({ planId, reason }: TalkToCoachSearch) {
+export function TalkToCoach({ planId, reason, missed }: TalkToCoachSearch) {
   const api = useApiWithAuth();
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export function TalkToCoach({ planId, reason }: TalkToCoachSearch) {
   const ask = useMutation({
     mutationFn: async ({ text, notSure }: { text: string; notSure: boolean }) => {
       const turns = turn ? [...answered, { say: turn.say, answer: notSure ? "Not sure yet" : text }] : answered;
-      return { next: await nextTurn(api, planId, { reason, turns, notSure }), turns };
+      return { next: await nextTurn(api, planId, { reason, turns, notSure, missed }), turns };
     },
     onSuccess: ({ next, turns }) => {
       setAnswered(turns);

@@ -10,6 +10,7 @@ import { InterviewFrame } from "@/features/onboarding/interview/Frame";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { StepSequence } from "@/features/onboarding/interview/StepReveal";
 import { coachIdentity } from "@/features/messages/coach";
+import { dismissPlanNotifications } from "@/native/notifications/dismiss";
 import { endQuiet, nextTurn, openingQuestion } from "./service";
 import type { TalkAnswered, TalkToCoachProps, TalkTurn } from "./types";
 
@@ -20,7 +21,7 @@ const SCREENS = 3;
  * Talk to coach: one screen per turn, like onboarding. The coach writes each screen (a line, maybe one
  * question); the person answers in their own words or by voice. Nothing is sent in their name.
  */
-export function TalkToCoach({ planId, reason }: TalkToCoachProps) {
+export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
   const c = useColors();
   const client = useQueryClient();
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
@@ -30,9 +31,11 @@ export function TalkToCoach({ planId, reason }: TalkToCoachProps) {
   const ask = useMutation({
     mutationFn: async ({ text, notSure }: { text: string; notSure: boolean }) => {
       const turns = turn ? [...answered, { say: turn.say, answer: notSure ? "Not sure yet" : text }] : answered;
-      return { next: await nextTurn(planId, { reason, turns, notSure }), turns };
+      return { next: await nextTurn(planId, { reason, turns, notSure, missed }), turns };
     },
     onSuccess: ({ next, turns }) => {
+      // The last screen: the server has answered the alert, so its notification goes too.
+      if (next.ask === "none") void dismissPlanNotifications(planId);
       setAnswered(turns);
       setTurn(next);
       setAnswer("");

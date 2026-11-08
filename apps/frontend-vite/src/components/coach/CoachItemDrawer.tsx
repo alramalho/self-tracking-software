@@ -7,7 +7,7 @@ import type { DrawerOption } from "@/components/drawer/types";
 import { startCoachAttentionAction } from "@/contexts/ai/service";
 import { useCurrentUser } from "@/contexts/users";
 import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
-import { MISS_REASONS, rememberMissAnswered } from "./missReasons";
+import { MISS_REASONS } from "./missReasons";
 import type { TalkReason } from "./talk/types";
 import type { CoachItem, CoachItemDrawerProps } from "./types";
 
@@ -48,9 +48,8 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
   };
   // Every answer to "What got in the way?" opens Talk to coach, one screen at a time.
   const talkAbout = (planId: string, reason: TalkReason, missed: boolean) => {
-    if (missed) rememberMissAnswered(planId);
     onClose();
-    navigate({ to: "/talk-to-coach", search: { planId, reason } });
+    navigate({ to: "/talk-to-coach", search: { planId, reason, missed } });
   };
   const openPlan = (planId: string) => {
     onClose();

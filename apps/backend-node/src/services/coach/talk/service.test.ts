@@ -42,12 +42,57 @@ describe("settleTurn", () => {
     expect(quiet).toEqual({ until: "2026-11-09", why: "away" });
   });
 
-  it("drops a quiet day in the past or beyond a month", () => {
+  it("drops a quiet day in the past or beyond a month, so the alert is only answered for today", () => {
     for (const until of ["2026-11-01", "2027-01-30", "monday"]) {
       const { shown, quiet } = settleTurn(turn({ ask: "none", action: "quiet", until }), request(), TODAY);
-      expect(quiet).toBeNull();
+      expect(quiet).toEqual({ until: TODAY, why: "answered" });
       expect(shown.quietUntil).toBeNull();
     }
+  });
+
+  it("a named day ends the conversation with a commitment the coach checks on", () => {
+    const { shown, quiet, commitDay, over } = settleTurn(
+      turn({ say: "Today then.", ask: "text", action: "commit", until: TODAY }),
+      request({ reason: "motivation", turns: [{ say: "When's the next one?", answer: "today" }] }),
+      TODAY,
+    );
+    expect(over).toBe(true);
+    expect(shown.ask).toBe("none");
+    expect(shown.quietUntil).toBeNull();
+    expect(commitDay).toBe(TODAY);
+    expect(quiet).toEqual({ until: TODAY, why: "committed" });
+  });
+
+  it("a commitment more than a week out is not kept", () => {
+    const { commitDay, quiet } = settleTurn(turn({ ask: "none", action: "commit", until: "2026-11-20" }), request(), TODAY);
+    expect(commitDay).toBeNull();
+    expect(quiet).toEqual({ until: TODAY, why: "answered" });
+  });
+
+  it("a conversation that ends without a day still answers the alert for today", () => {
+    const { quiet, over } = settleTurn(turn({ say: "Got it.", ask: "none" }), request({ reason: "busy" }), TODAY);
+    expect(over).toBe(true);
+    expect(quiet).toEqual({ until: TODAY, why: "answered" });
+  });
+
+  it("the last screen never asks a question", () => {
+    const { shown } = settleTurn(
+      turn({ say: "Travel can disrupt the routine. When are you back?", detail: "", ask: "text" }),
+      request({ notSure: true }),
+      TODAY,
+    );
+    expect(shown).toMatchObject({ say: "Travel can disrupt the routine.", ask: "none" });
+    const onlyQuestion = settleTurn(turn({ say: "When are you back?", detail: "I'll ask again Sunday." }), request({ notSure: true }), TODAY);
+    expect(onlyQuestion.shown).toMatchObject({ say: "I'll ask again Sunday.", detail: "" });
+  });
+
+  it("'Not sure yet' always says when the coach asks again", () => {
+    const { shown } = settleTurn(turn({ say: "Travel can shift the rhythm.", detail: "Counting on you." }), request({ notSure: true }), TODAY);
+    expect(shown.detail).toBe("Counting on you. I'll ask again Sunday.");
+  });
+
+  it("a question keeps the conversation open", () => {
+    expect(settleTurn(turn(), request(), TODAY).over).toBe(false);
   });
 
   it("'Not sure yet' always ends with asking again in three days", () => {

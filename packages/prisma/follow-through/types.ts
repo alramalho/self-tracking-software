@@ -183,13 +183,14 @@ export interface OnboardingDraft {
   createdPlanId: string | null;
   preferences?: SupportPreferences;
 }
-export type MissReasonId = "busy" | "sick" | "travel" | "motivation";
+/** "other" when they explained in their own words in Talk to coach. */
+export type MissReasonId = "busy" | "sick" | "travel" | "motivation" | "other";
 /** The answer to "What got in the way?" for a missed week, and the days picked to make this week work. */
 export interface MissedWeekAnswer {
   /** Start of the missed week, yyyy-MM-dd. */
   week: string;
   reason: MissReasonId;
-  /** This week's days the user picked, yyyy-MM-dd. */
+  /** This week's days the user picked, yyyy-MM-dd (empty when answered in Talk to coach). */
   days: string[];
   answeredAt: string;
 }

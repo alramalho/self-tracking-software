@@ -141,25 +141,34 @@ export function followThroughFixture(
     support.missedWeeks = { ...support.missedWeeks, [missedWeek[1]]: { ...body, answeredAt: new Date().toISOString() } };
     return { ok: true };
   }
-  // Talk to coach, scripted like the real coach: travelling asks when you're back, then goes quiet until then.
+  // Talk to coach, scripted like the real coach: travelling asks when you're back and goes quiet until
+  // then, lost motivation asks for the next session and holds you to the day you name. Like the server,
+  // a finished conversation answers the alert (and a missed week) on every device.
   const talk = path.match(/^\/follow-through\/plans\/([^/]+)\/talk$/);
   if (talk && method === "POST") {
-    const until = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
-    const quiet = (why: "away" | "not_sure") => {
+    const today = new Date().toISOString().slice(0, 10);
+    const away = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+    const end = (turn: any, why: "away" | "not_sure" | "committed" | "answered", until = today) => {
       support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring } as typeof support.monitoring;
       support.monitoring!.quiet = { ...support.monitoring!.quiet, [talk[1]]: { until, why, at: new Date().toISOString() } };
+      if (body.missed) {
+        const week = new Date();
+        week.setDate(week.getDate() - week.getDay() - 7);
+        const key = `${week.getFullYear()}-${String(week.getMonth() + 1).padStart(2, "0")}-${String(week.getDate()).padStart(2, "0")}`;
+        support.missedWeeks = { ...support.missedWeeks, [talk[1]]: { week: key, reason: body.reason, days: [], answeredAt: new Date().toISOString() } };
+      }
+      return { placeholder: "", quietUntil: null, ...turn, ask: "none" };
     };
-    if (body.notSure) {
-      quiet("not_sure");
-      return { say: "No problem.", detail: "I'll ask again in three days.", ask: "none", placeholder: "", quietUntil: null };
-    }
-    if (body.reason === "travel" && !body.turns.length)
-      return { say: "When are you back?", detail: "", ask: "text", placeholder: "Sunday night", quietUntil: null };
-    if (body.reason === "travel") {
-      quiet("away");
-      return { say: "Quiet until you're back.", detail: "No nudges while you're away. The week still counts.", ask: "none", placeholder: "", quietUntil: until };
-    }
-    return { say: "Got it.", detail: "Next session is the one that counts.", ask: "none", placeholder: "", quietUntil: null };
+    const ask = (say: string, detail: string, placeholder: string) => ({ say, detail, ask: "text", placeholder, quietUntil: null });
+    if (body.notSure) return end({ say: "No problem.", detail: "I'll ask again in three days." }, "not_sure", away);
+    if (body.reason === "travel" && !body.turns.length) return ask("When are you back?", "", "Sunday night");
+    if (body.reason === "travel")
+      return end({ say: "Quiet until you're back.", detail: "No nudges while you're away. The week still counts.", quietUntil: away }, "away", away);
+    if (body.reason === "motivation" && !body.turns.length)
+      return ask("Motivation dips. It happens.", "What's the smallest session you'd still do, and when?", "20 minutes today");
+    if (body.reason === "motivation")
+      return end({ say: "Today then.", detail: "I'll check in around 18:00. Counting on you." }, "committed");
+    return end({ say: "Got it.", detail: "Next session is the one that counts." }, "answered");
   }
   const quietPlan = path.match(/^\/follow-through\/plans\/([^/]+)\/quiet$/);
   if (quietPlan && method === "DELETE") {
