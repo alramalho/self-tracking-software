@@ -3,7 +3,7 @@ import { Flame, Rocket, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HomeProgressProps, HomeStepsProps } from "./types";
 
-// Under the two weeks: one thin line per plan, this week's sessions then the streak. Same as the iPhone app.
+// Under the selected day: one thin line per plan, this week's sessions then the streak. Same as the iPhone app.
 /** Steps shown before the rest becomes "+n". */
 const MAX_STEPS = 9;
 

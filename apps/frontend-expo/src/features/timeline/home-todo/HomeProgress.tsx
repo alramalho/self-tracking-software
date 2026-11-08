@@ -6,7 +6,7 @@ import { useColors } from "@/components/ui";
 import { progressCircles } from "@/features/plans/streak-progress";
 import type { HomeProgressProps, HomeStepsProps } from "./types";
 
-// Under the two weeks: one thin line per plan, this week's sessions then the streak. The plan's page has the full strip.
+// Under the selected day: one thin line per plan, this week's sessions then the streak. The plan's page has the full strip.
 const WEEK = "#22c55e";
 const HABIT = "#a3e635";
 const LIFESTYLE = "#fbbf24";

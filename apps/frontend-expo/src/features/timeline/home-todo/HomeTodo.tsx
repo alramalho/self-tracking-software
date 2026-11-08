@@ -40,8 +40,8 @@ export function HomeTodo({ plans, entries }: HomeTodoProps) {
         <View style={{ gap: 14, padding: 16, borderRadius: 24, backgroundColor: c.card }}>
           <Heading>Soon</Heading>
           <TwoWeeks weeks={weeks} selectedKey={day.key} onSelect={setSelectedKey} />
-          <HomeProgress rows={progress} />
           <DayDetail day={day} todayKey={projection.todayKey} />
+          <HomeProgress rows={progress} />
         </View>
       )}
     </View>

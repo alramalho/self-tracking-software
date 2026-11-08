@@ -37,8 +37,8 @@ export const HomeTodo = () => {
         <section className="flex flex-col gap-3.5 rounded-3xl bg-card p-4">
           <h2 className="text-[19px] font-bold">Soon</h2>
           <TwoWeeks weeks={weeks} selectedKey={day.key} onSelect={setSelectedKey} />
-          <HomeProgress rows={progress} />
           <DayDetail day={day} todayKey={projection.todayKey} />
+          <HomeProgress rows={progress} />
         </section>
       )}
     </div>
