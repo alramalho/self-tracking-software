@@ -122,3 +122,60 @@ export interface SteppedProgressProps {
 export interface AchievementGlowProps {
   color: string;
 }
+
+export type AgentSyncTier = "fresh" | "stale" | "dark";
+export interface PlanSectionProps {
+  plan: Plan;
+}
+export interface InactivePlanSheetProps {
+  plan?: Plan;
+  onClose: () => void;
+}
+export interface PlanLimitSheetProps {
+  visible: boolean;
+  planType?: string;
+  onClose: () => void;
+}
+export interface InvitePeopleSheetProps {
+  plan: Plan;
+  visible: boolean;
+  onClose: () => void;
+}
+export type GroupMemberStatus = "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
+export interface GroupMemberProgress {
+  userId: string;
+  name: string;
+  username: string | null;
+  picture: string | null;
+  weeklyActivityCount: number;
+  target: number;
+  hasCoachAutomation: boolean;
+  status: GroupMemberStatus | null;
+}
+export interface GroupProgress {
+  planGroupId: string;
+  members: GroupMemberProgress[];
+}
+export interface PlanMetricInsightsProps {
+  plan: Plan;
+  entries: ActivityEntry[];
+}
+export interface AllWeeksSheetProps extends WeekProgressProps {
+  visible: boolean;
+  onClose: () => void;
+}
+export interface PlanGroupSectionProps {
+  plan: Plan;
+  own: boolean;
+}
+export interface PlanDetailHeaderProps {
+  plan: Plan;
+  own: boolean;
+  onInvite: () => void;
+  onManage: () => void;
+}
+export interface PlanChipProps {
+  icon: LucideIcon;
+  label: string;
+  color: string;
+}

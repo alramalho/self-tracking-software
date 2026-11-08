@@ -1,19 +1,18 @@
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/typography/Text";
-import { endOfWeek, format, isSameWeek, startOfWeek } from "date-fns";
-import { router } from "expo-router";
 import {
-  Button,
-  Copy,
-  Heading,
-  Panel,
-  Sheet,
-  s,
-  useColors,
-} from "@/components/ui";
+  endOfWeek,
+  format,
+  isFuture,
+  isSameWeek,
+  startOfWeek,
+} from "date-fns";
+import { router } from "expo-router";
+import { Copy, Panel, Sheet, s, useColors } from "@/components/ui";
 import { dayKey } from "@/core/dates";
-import type { WeekProgressProps } from "./types";
+import { WeekCalendar } from "./WeekCalendar";
+import type { AllWeeksSheetProps, WeekProgressProps } from "./types";
 
 export function WeekProgress({
   plan,
@@ -135,13 +134,62 @@ export function WeekProgress({
   );
 }
 
+// Current and upcoming weeks, titled the way the PWA's "All Weeks" sheet is.
+function AllWeeksSheet({ visible, onClose, ...props }: AllWeeksSheetProps) {
+  const c = useColors();
+  const weeks = props.plan.progress?.weeks ?? [];
+  const upcoming = weeks.filter(
+    (week) =>
+      isSameWeek(new Date(week.startDate), new Date()) ||
+      isFuture(startOfWeek(new Date(week.startDate))),
+  );
+  return (
+    <Sheet visible={visible} title="All weeks" onClose={onClose}>
+      {(upcoming.length
+        ? upcoming.map((week) => new Date(week.startDate))
+        : [startOfWeek(new Date())]
+      ).map((start) => {
+        const index = weeks.findIndex((week) =>
+          isSameWeek(new Date(week.startDate), start),
+        );
+        return (
+          <Panel key={dayKey(start)} style={{ borderRadius: 16 }}>
+            <View style={[s.row, { justifyContent: "space-between" }]}>
+              <Text style={{ fontSize: 18, fontWeight: "600", color: c.text }}>
+                {isSameWeek(start, new Date()) || index === -1
+                  ? "Current week"
+                  : `Week ${index + 1} / ${weeks.length}`}
+              </Text>
+              <Text style={{ fontSize: 14, color: c.muted }}>
+                {format(start, "d")}-{format(endOfWeek(start), "d MMM")}
+              </Text>
+            </View>
+            <WeekProgress {...props} date={start} own={false} />
+          </Panel>
+        );
+      })}
+    </Sheet>
+  );
+}
+
+function SeeAllWeeks({ onPress }: { onPress: () => void }) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="See all weeks"
+      onPress={onPress}
+      style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 4 }}
+    >
+      <Text style={{ fontSize: 12, color: c.muted }}>See all weeks</Text>
+    </Pressable>
+  );
+}
+
 export function CurrentWeek(props: WeekProgressProps) {
   const c = useColors();
   const [allWeeks, setAllWeeks] = useState(false);
   const date = startOfWeek(new Date());
-  const weeks = [...(props.plan.progress?.weeks ?? [])].sort(
-    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-  );
   return (
     <Panel
       testID="plan-current-week-island"
@@ -166,38 +214,48 @@ export function CurrentWeek(props: WeekProgressProps) {
             {format(date, "d")}-{format(endOfWeek(date), "d MMM")}
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="See all weeks"
-          onPress={() => setAllWeeks(true)}
-          style={{
-            minHeight: 44,
-            justifyContent: "center",
-            paddingHorizontal: 4,
-          }}
-        >
-          <Text style={{ fontSize: 12, color: c.muted }}>See all weeks</Text>
-        </Pressable>
+        <SeeAllWeeks onPress={() => setAllWeeks(true)} />
       </View>
       <WeekProgress {...props} />
-      <Sheet
+      <AllWeeksSheet
+        {...props}
         visible={allWeeks}
-        title="All weeks"
         onClose={() => setAllWeeks(false)}
-      >
-        {(weeks.length
-          ? weeks.map((week) => new Date(week.startDate))
-          : [date]
-        ).map((start) => (
-          <Panel key={dayKey(start)}>
-            <Heading>
-              {format(start, "d MMM")} –{" "}
-              {format(endOfWeek(start), "d MMM yyyy")}
-            </Heading>
-            <WeekProgress {...props} date={start} own={false} />
-          </Panel>
-        ))}
-      </Sheet>
+      />
+    </Panel>
+  );
+}
+
+export function ComingUp(props: WeekProgressProps) {
+  const c = useColors();
+  const [allWeeks, setAllWeeks] = useState(false);
+  const { plan, entries, own } = props;
+  return (
+    <Panel testID="plan-coming-up-island" style={{ padding: 16, borderRadius: 16 }}>
+      <View style={[s.row, { justifyContent: "space-between" }]}>
+        <Text style={{ fontSize: 18, fontWeight: "600", color: c.text }}>
+          Coming up
+        </Text>
+        <SeeAllWeeks onPress={() => setAllWeeks(true)} />
+      </View>
+      <WeekCalendar
+        plans={[plan]}
+        entries={entries}
+        onLog={
+          own
+            ? (activityId, date) =>
+                router.push({
+                  pathname: "/(tabs)/add",
+                  params: { activityId, date: date.toISOString() },
+                })
+            : undefined
+        }
+      />
+      <AllWeeksSheet
+        {...props}
+        visible={allWeeks}
+        onClose={() => setAllWeeks(false)}
+      />
     </Panel>
   );
 }

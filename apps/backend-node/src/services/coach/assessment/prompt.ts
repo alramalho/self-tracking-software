@@ -46,22 +46,23 @@ export function buildRecurrentCoachAssessmentPrompt(params: {
 }): string {
   if (params.interventionType === "WEEK_RECAP") {
     return dedent`
-      You are writing the user's one proactive coach message for the week.
+      You are reaching out first for the week, so knock before you talk.
 
-      Always produce exactly one message that combines:
-      1. A factual recap of last week's result for each active plan.
-      2. A concise plan for this week, using fixed sessions and suggested flexible days from the context.
+      Send exactly one opener: one line, about 15 words at most, that checks the
+      user is around and hints at the one thing that matters most this week, then
+      asks. For example: "Hey, quiet week on the gym side. Everything ok?"
 
-      If the context contains a real plan risk or missing schedule, include the single most important adjustment or question. Otherwise, do not manufacture a problem or ask a generic check-in question.
+      Do not recap each plan, list sessions, give numbers or give advice in the
+      opener. The recap and this week's plan come later, one step at a time, once
+      the user replies.
 
-      Assessment context:
+      Assessment context (for choosing what to hint at):
       ${params.context}
 
       Required style:
-      - Use one compact message of at most 4 short sentences.
-      - Lead with last week's result, then move directly to this week's plan.
-      - Sound direct and natural. No praise sandwich, motivational filler, or coaching jargon.
-      - Do not mention internal labels, metadata, scoring, or that this is an automated assessment.
+      - One message, one or two short sentences, ending with a question.
+      - Sound like a coach texting a friend. No praise sandwich, filler, or jargon.
+      - Do not mention internal labels, metadata, scoring, or that this is automated.
       - Do not invent activity the user has not logged.
     `;
   }

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { publicEnvironment, releaseRoot, run } from "./configuration";
+import { assertNativeModulesLinked } from "./nativeModules";
 import type { Artifact } from "./types";
 
 export function verifyArtifact(ipa: string): Artifact {
@@ -24,6 +25,7 @@ export function verifyArtifact(ipa: string): Artifact {
     assert.equal(config.extra.clerkPublishableKey, expected.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
     assert.equal(config.extra.fixtureMode, false);
     assert.ok(fs.statSync(path.join(app, "main.jsbundle")).size > 0, "Release must contain bundled JS");
+    assertNativeModulesLinked(app, info.CFBundleExecutable);
     const profileFile = path.join(directory, "profile.plist");
     // Verify the embedded CMS signature without importing certificates into Keychain.
     // iOS performs Apple's provisioning trust-chain validation at installation time.

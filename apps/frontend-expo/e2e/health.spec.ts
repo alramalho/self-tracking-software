@@ -233,7 +233,10 @@ for (const theme of ["DARK", "LIGHT"]) {
     await expect(sleep.getByTestId("sleep-grid")).toBeVisible();
     await sleep.getByTestId("sleep-range-7D").click();
     await sleep.getByRole("button", { name: "Sleep on 2026-09-14" }).click();
-    await expect(sleep.getByText("Learning your pattern")).toBeVisible();
+    await expect(sleep.getByText(/Score in \d+ nights?/)).toBeVisible();
+    await sleep.screenshot({
+      path: `test-results/health-sleep-learning-${theme}.png`,
+    });
     await expect(sleep.getByText("out of 100")).toBeHidden();
     // A night still being learned shows an empty consistency bar rather than a
     // zero, and keeps the daylight bar for time asleep.

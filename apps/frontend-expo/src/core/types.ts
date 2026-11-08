@@ -134,6 +134,9 @@ export interface Plan {
   currentWeekState?: string | null;
   sortOrder?: number;
   coachId?: string | null;
+  contentPlanner?: "COACH" | "EXTERNAL_AGENT";
+  externalAgentLastSyncAt?: DateValue | null;
+  planGroupId?: string | null;
   progress?: {
     weeks?: ProgressWeek[];
     habitAchievement?: {

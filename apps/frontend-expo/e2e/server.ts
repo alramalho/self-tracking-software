@@ -18,6 +18,7 @@ const now = () => new Date().toISOString();
 let state: ReturnType<typeof seed>;
 let failNext: string | undefined;
 let peopleSearchOn = false;
+let plansParityOn = false;
 let wrappedFriendEntries: { datetime: string }[] = [];
 const requests: { method: string; path: string; body: unknown }[] = [];
 function seed() {
@@ -244,6 +245,7 @@ const server = http.createServer(async (req, res) => {
     resetFollowThrough();
     resetHealthFixture();
     peopleSearchOn = false;
+    plansParityOn = false;
     wrappedFriendEntries = [];
     requests.length = 0;
     failNext = undefined;
@@ -268,6 +270,47 @@ const server = http.createServer(async (req, res) => {
     state.metricEntries = Array.from({length:45},(_,i)=>({id:`polish-metric-${i}`,metricId:"energy",rating:i%3+1+(i<20?2:0),createdAt:new Date(Date.UTC(2026,8,14-i,12)).toISOString()}));
     state.entries = counts.flatMap((count,index)=>Array.from({length:count},(_,i)=>({ ...state.entries[0],id:`polish-entry-${index}-${i}`,activityId:`polish-${index}`,datetime:new Date(Date.UTC(2026,8,14-i,8)).toISOString(),createdAt:new Date(Date.UTC(2026,8,14-i,8)).toISOString() })));
     send({ok:true}); return;
+  }
+  if (path === "/__plans-parity") {
+    plansParityOn = true;
+    state.user.themeMode = body.theme ?? state.user.themeMode;
+    const day = 86400000;
+    Object.assign(state.plans[0], {
+      finishingDate: new Date(Date.now() + 60 * day).toISOString(),
+      contentPlanner: "EXTERNAL_AGENT",
+      externalAgentLastSyncAt: new Date(Date.now() - day).toISOString(),
+      coachId: "coach-maya",
+      planGroupId: "group-fitness",
+      planGroup: { members: [{ user: { id: "test-user", name: "Alex", username: "alex" } }, { user: { id: "friend-user", name: "Sam", username: "sam" } }] },
+      progress: { weeks: [{ startDate: new Date().toISOString(), plannedActivities: 3, completedActivities: [state.entries[0]] }], achievement: { streak: 5 }, habitAchievement: { isAchieved: true } },
+    });
+    (state.plans as any[]).push(
+      { ...state.plans[1], id: "expired", goal: "Learn Spanish", emoji: "🇪🇸", sortOrder: 2, finishingDate: new Date(Date.now() - 5 * day).toISOString() },
+      { ...state.plans[1], id: "archived", goal: "Meditate daily", emoji: "🧘", sortOrder: 3, archivedAt: new Date(Date.now() - 9 * day).toISOString() },
+    );
+    send({ ok: true });
+    return;
+  }
+  if (path === "/__home-todo") {
+    const day = 86400000;
+    state.user.themeMode = body.theme ?? state.user.themeMode;
+    const coach = state.chats.find((chat) => chat.type === "COACH");
+    if (coach && !body.withoutCoachNote)
+      coach.latestCoachMessage = {
+        id: "recap-home",
+        content: "**Strong week.** Three runs in, so {{plan:fitness|Exercise regularly}} is on track. Keep Thursday light and protect your Sunday read.",
+        createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
+        isUnread: true,
+      };
+    state.plans[1].sessions = [0, 2, 4, 7, 9, 11].map((offset) => ({
+      id: `session-read-${offset}`,
+      activityId: "read",
+      date: new Date(Date.now() + offset * day).toISOString(),
+      quantity: 10,
+    }));
+    (state.plans as any[]).push({ ...state.plans[1], id: "expired", goal: "Learn Spanish", emoji: "🇪🇸", sortOrder: 2, sessions: [], finishingDate: new Date(Date.now() - 5 * day).toISOString() });
+    send({ ok: true });
+    return;
   }
   if (path === "/__background.png") {
     res.writeHead(200, { "Content-Type": "image/png" });
@@ -711,6 +754,29 @@ const server = http.createServer(async (req, res) => {
     send({ success: true, milestone });
     return;
   }
+  if (path === "/plans/invite-to-plan") {
+    send({ success: true });
+    return;
+  }
+  const leaveMatch = path.match(/^\/plans\/leave-plan-group\/([^/]+)$/);
+  if (leaveMatch) {
+    Object.assign(state.plans.find((p) => p.id === leaveMatch[1]) ?? {}, { planGroup: null, planGroupId: null });
+    send({ success: true });
+    return;
+  }
+  const groupMatch = path.match(/^\/plans\/([^/]+)\/group-progress$/);
+  if (groupMatch) {
+    const plan: any = state.plans.find((p) => p.id === groupMatch[1]);
+    if (!plan?.planGroupId) {
+      send({ error: "Plan has no group" }, 400);
+      return;
+    }
+    send({ planGroupId: plan.planGroupId, members: [
+      { userId: "test-user", name: "Alex", username: "alex", picture: null, planId: plan.id, weeklyActivityCount: 2, target: 3, hasCoachAutomation: true, status: "ON_TRACK" },
+      { userId: "friend-user", name: "Sam Rivera", username: "sam", picture: null, planId: "friend-plan", weeklyActivityCount: 1, target: 3, hasCoachAutomation: true, status: "AT_RISK" },
+    ] });
+    return;
+  }
   const planMatch = path.match(/^\/plans\/([^/]+)(?:\/(.*))?$/);
   if (planMatch) {
     const [, id, operation] = planMatch;
@@ -804,7 +870,14 @@ const server = http.createServer(async (req, res) => {
     send([]);
     return;
   }
-  if (path === "/coaches") { send([]); return; }
+  if (path === "/coaches") {
+    send(plansParityOn ? [{ id: "coach-maya", ownerId: "coach-user", details: { title: "Running coach" }, owner: { id: "coach-user", name: "Maya Lopes", username: "maya", picture: `http://127.0.0.1:${port}/__background.png` } }] : []);
+    return;
+  }
+  if (path === "/api-keys") {
+    send({ keys: plansParityOn ? [{ id: "key-1", label: "claude-code", createdAt: now(), lastUsedAt: now() }] : [] });
+    return;
+  }
   if (path.startsWith("/users/search-users/")) {
     const candidates: SearchCandidate[]=peopleSearchOn?[{userId:"friend-user",name:"Lia Borges",username:"liocas",activityCount:2,lastActivityAt:"2026-09-15T08:00:00Z"},{userId:"barbara",name:"Bárbara Herbert",username:"barbara",activityCount:12,lastActivityAt:"2026-09-14T08:00:00Z"}]:[{userId:"sam",name:"Sam",username:"sam",activityCount:0,lastActivityAt:null}];
     send(rankPeople(candidates,decodeURIComponent(path.slice("/users/search-users/".length))));return;

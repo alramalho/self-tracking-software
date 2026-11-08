@@ -32,12 +32,9 @@ import {
   s,
   useColors,
 } from "@/components/ui";
-import { FollowThroughHome } from "@/features/follow-through/HomeCards";
-import { startOfDay } from "date-fns";
 import { mergeTimeline } from "./model";
 import { FeedCard } from "./FeedCard";
-import { PlanPreview } from "./home-cards/PlanPreview";
-import { MetricPreview } from "./home-cards/MetricPreview";
+import { HomeTodo } from "./home-todo/HomeTodo";
 import { HealthHomeCard } from "@/features/health/HealthHomeCard";
 import { MetricLogger } from "../metrics/MetricLogger";
 import { useTimelineSeen } from "./useTimelineSeen";
@@ -65,6 +62,7 @@ export default function HomeScreen() {
     "activity-entries",
     "metrics",
     "metric-entries",
+    "chats",
   );
   const c = useColors();
   const reveal = useRevealViewport();
@@ -289,38 +287,14 @@ export default function HomeScreen() {
                 />
               </View>
               <Status error={user.error} retry={() => void user.refetch()} />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {!!metrics.data?.length && user.data?.planType !== "FREE" && (
-                  <Reveal id="home-metrics" style={{ width: "48%" }}>
-                    <MetricPreview
-                      metrics={metrics.data}
-                      entries={metricEntries.data ?? []}
-                      onLog={() => setCheckin(true)}
-                    />
-                  </Reveal>
-                )}
-                {active
-                  .filter(
-                    (p) =>
-                      p.outlineType === "TIMES_PER_WEEK" ||
-                      (p.finishingDate &&
-                        new Date(p.finishingDate) < startOfDay(new Date())) ||
-                      !p.sessions?.some(
-                        (session) =>
-                          new Date(session.date) >= startOfDay(new Date()),
-                      ),
-                  )
-                  .map((plan) => (
-                    <Reveal
-                      id={`home-plan-${plan.id}`}
-                      key={plan.id}
-                      style={{ width: "48%" }}
-                    >
-                      <PlanPreview plan={plan} entries={entries.data ?? []} />
-                    </Reveal>
-                  ))}
-                <FollowThroughHome plans={active} entries={entries.data ?? []} />
-              </View>
+              <HomeTodo
+                plans={active}
+                entries={entries.data ?? []}
+                metrics={metrics.data ?? []}
+                metricEntries={metricEntries.data ?? []}
+                user={user.data}
+                onCheckin={() => setCheckin(true)}
+              />
               <View style={s.row}>
                 <Heading>Friend's last activities</Heading>
                 <Copy muted>({items.length})</Copy>

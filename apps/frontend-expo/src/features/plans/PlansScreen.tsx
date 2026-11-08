@@ -10,10 +10,15 @@ import { useEffect, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { Text } from "@/components/typography/Text";
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, Copy, Screen, Status, useColors } from "@/components/ui";
+import { Copy, Screen, Status, useColors } from "@/components/ui";
 import { useCurrentUser, usePlans, useEntries } from "@/data/queries";
 import { PlanCard } from "./PlanCard";
 import { WeekOverview } from "@/features/follow-through/WeekOverview";
+import { Plus, PlusSquare } from "lucide-react-native";
+import { CoachOverview } from "./CoachOverview";
+import { InactivePlanSheet } from "./InactivePlanSheet";
+import { PlanLimitSheet } from "./PlanLimitSheet";
+import { isPlanActive, isPlanInactive, maxPlans } from "./plan-status";
 export default function PlansScreen() {
   const plans = usePlans();
   const client = useQueryClient();
@@ -28,7 +33,12 @@ export default function PlansScreen() {
     if (initialView) setView(initialView);
     if (selectedPlan) setView("plans");
   }, [initialView, selectedPlan]);
-  const [selected, setSelected] = useState<string | undefined>(selectedPlan);
+  // null means the person closed the selected plan by tapping it again.
+  const [selected, setSelected] = useState<string | null | undefined>(
+    selectedPlan,
+  );
+  const [inactivePlan, setInactivePlan] = useState<Plan>();
+  const [limitReached, setLimitReached] = useState(false);
   useEffect(() => {
     if (selectedPlan) setSelected(selectedPlan);
   }, [selectedPlan]);
@@ -50,12 +60,7 @@ export default function PlansScreen() {
         (a.sortOrder ?? 999) - (b.sortOrder ?? 999) ||
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  const visible = sorted.filter(
-    (p) =>
-      old ||
-      (!p.archivedAt &&
-        (!p.finishingDate || new Date(p.finishingDate) >= new Date())),
-  );
+  const visible = sorted.filter((p) => old || isPlanActive(p));
   const reorder = useMutation({
     mutationFn: async (next: Plan[]) =>
       api.patch("/plans/bulk-update", {
@@ -80,7 +85,18 @@ export default function PlansScreen() {
     if (next !== sorted && !reorder.isPending) reorder.mutate(next);
   };
   const tileSize = (Math.min(width, 672) - 32 - (columns - 1) * 12) / columns;
-  const plan = sorted.find((p) => p.id === selected) ?? visible[0];
+  const plan =
+    selected === null
+      ? undefined
+      : (sorted.find((p) => p.id === selected) ?? visible[0]);
+  const selectPlan = (p: Plan) => {
+    if (isPlanInactive(p)) setInactivePlan(p);
+    else setSelected(p.id === plan?.id ? null : p.id);
+  };
+  const createPlan = () => {
+    if (sorted.length >= maxPlans(user.data?.planType)) setLimitReached(true);
+    else router.push("/create-plan");
+  };
   return (
     <Screen
       testID="plans-screen"
@@ -132,55 +148,88 @@ export default function PlansScreen() {
         <WeekOverview plans={plans.data ?? []} entries={entries.data ?? []} />
       ) : (
         <>
-          <Reveal
-            id="plans-selector"
-            delay={50}
-            style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
-          >
-            {visible.map((p, index) => (
-              <PlanTile
-                key={p.id}
-                plan={p}
-                index={index}
-                count={visible.length}
-                columns={columns}
-                size={tileSize}
-                selected={p.id === plan?.id}
-                disabled={reorder.isPending}
-                onSelect={() => setSelected(p.id)}
-                onMove={(targetIndex) => move({ id: p.id, targetIndex })}
-              />
-            ))}
+          <CoachOverview plans={sorted} entries={entries.data ?? []} />
+          {sorted.length === 0 && !plans.isPending ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Create New Plan"
-              onPress={() => router.push("/create-plan")}
+              accessibilityLabel="Create new Plan"
+              onPress={createPlan}
               style={{
-                width: tileSize,
-                aspectRatio: 1,
+                height: 100,
                 borderWidth: 2,
                 borderStyle: "dashed",
                 borderColor: c.border,
+                borderRadius: 12,
+                backgroundColor: c.soft,
+                gap: 8,
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: 8,
               }}
             >
-              <Text style={{ fontSize: 40, color: c.muted }}>＋</Text>
+              <PlusSquare size={32} color={c.muted} />
+              <Copy muted>Create new Plan</Copy>
             </Pressable>
-          </Reveal>
-          <Status error={reorder.error} />
-          {sorted.length === 0 && !plans.isPending && (
-            <Copy>You haven't created any plans yet.</Copy>
+          ) : (
+            <Reveal
+              id="plans-selector"
+              delay={50}
+              style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+            >
+              {visible.map((p, index) => (
+                <PlanTile
+                  key={p.id}
+                  plan={p}
+                  index={index}
+                  count={visible.length}
+                  columns={columns}
+                  size={tileSize}
+                  selected={p.id === plan?.id}
+                  disabled={reorder.isPending}
+                  onSelect={() => selectPlan(p)}
+                  onMove={(targetIndex) => move({ id: p.id, targetIndex })}
+                />
+              ))}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create New Plan"
+                onPress={createPlan}
+                style={{
+                  width: tileSize,
+                  aspectRatio: 1,
+                  borderWidth: 2,
+                  borderStyle: "dashed",
+                  borderColor: c.border,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 8,
+                  backgroundColor: c.soft,
+                }}
+              >
+                <Plus size={44} color={c.muted} strokeWidth={1.8} />
+              </Pressable>
+            </Reveal>
           )}
-          {sorted.some(
-            (p) =>
-              p.archivedAt ||
-              (p.finishingDate && new Date(p.finishingDate) < new Date()),
-          ) && (
-            <Button secondary onPress={() => setOld(!old)}>
-              {old ? "Hide old & archived plans" : "Show old & archived plans"}
-            </Button>
+          <Status error={reorder.error} />
+          {sorted.some((p) => isPlanInactive(p)) && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setOld(!old)}
+              style={{
+                alignSelf: "center",
+                minHeight: 44,
+                justifyContent: "center",
+                paddingHorizontal: 12,
+              }}
+            >
+              <Text
+                style={{ color: c.muted, fontSize: 14, fontWeight: "500" }}
+              >
+                {old ? "Hide old & archived plans" : "Show old & archived plans"}
+              </Text>
+            </Pressable>
+          )}
+          {plan && (
+            <View style={{ height: 1, backgroundColor: c.border }} />
           )}
           {plan && (
             <PlanCard
@@ -194,6 +243,15 @@ export default function PlansScreen() {
           )}
         </>
       )}
+      <InactivePlanSheet
+        plan={inactivePlan}
+        onClose={() => setInactivePlan(undefined)}
+      />
+      <PlanLimitSheet
+        visible={limitReached}
+        planType={user.data?.planType}
+        onClose={() => setLimitReached(false)}
+      />
     </Screen>
   );
 }

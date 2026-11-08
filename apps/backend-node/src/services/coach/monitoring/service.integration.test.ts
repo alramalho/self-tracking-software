@@ -175,6 +175,40 @@ afterAll(async () => {
 });
 
 describe("The coach across reused running, meditation and fitness plans", () => {
+  it("knocks first: posts only the opener, pushes it as the text, and keeps the agenda for the reply", async () => {
+    await changeState(user.id, async (state) => {
+      state.supports[meditation].preferences.weeklyReview = false;
+    });
+    const agenda = {
+      briefing: "Ran once of three. Ask what got in the way; suggest two runs.",
+      proposals: [
+        {
+          planId: running,
+          planGoal: "Half marathon",
+          planEmoji: "🏃",
+          description: "Two runs next week",
+          patch: { plan: { timesPerWeek: 2 } },
+        },
+      ],
+    };
+    external.push.mockResolvedValue({ platform: "ios" });
+    external.generate.mockResolvedValue({
+      draftMessages: [{ content: "Hey, quiet week on the running side. Everything ok?", requiresReply: true }],
+      agenda,
+    });
+    expect(await monitorUser(user, sunday)).toBe("delivered");
+    const [opener] = await messages();
+    expect(opener.content).toBe("Hey, quiet week on the running side. Everything ok?");
+    expect((opener.metadata as { planProposals?: unknown }).planProposals).toBeUndefined();
+    expect((await saved()).monitoring?.requests[0].agenda).toEqual(agenda);
+    expect(external.push).toHaveBeenCalledWith(
+      user.id,
+      "Your coach",
+      "Hey, quiet week on the running side. Everything ok?",
+      expect.any(String),
+    );
+  });
+
   it("follows the new question after a reply, without reminding about the old question or accepting a reply about another plan", async () => {
     await changeState(user.id, async (state) => {
       state.supports[meditation].preferences.weeklyReview = false;

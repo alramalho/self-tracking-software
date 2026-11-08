@@ -150,8 +150,7 @@ export function SleepGrid({
         />
       </View>
       <Copy muted>
-        Color shows sleep quality. Empty days mean no sleep data was recorded;
-        they are not counted as bad nights.
+        Empty days mean no sleep data was recorded.
       </Copy>
     </View>
   );

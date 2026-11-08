@@ -6,7 +6,9 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { Archive } from "lucide-react-native";
 import { useColors } from "@/components/ui";
+import { isPlanArchived, isPlanInactive } from "./plan-status";
 import type { PlanTileProps } from "./types";
 export function PlanTile({
   plan,
@@ -97,13 +99,20 @@ export function PlanTile({
             backgroundColor: c.card,
             alignItems: "center",
             justifyContent: "center",
-            opacity: plan.archivedAt ? 0.5 : 1,
+            opacity: isPlanInactive(plan) ? 0.5 : 1,
           },
           style,
         ]}
       >
+        {isPlanArchived(plan) && (
+          <Archive
+            size={16}
+            color={c.muted}
+            style={{ position: "absolute", top: 6, left: 6 }}
+          />
+        )}
         <Text style={{ fontSize: 48 }}>
-          {plan.emoji || plan.goal.slice(0, 2)}
+          {plan.emoji || plan.goal.slice(0, 2).toUpperCase()}
         </Text>
       </Animated.View>
     </GestureDetector>

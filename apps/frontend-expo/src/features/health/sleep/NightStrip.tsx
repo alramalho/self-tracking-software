@@ -5,29 +5,26 @@ import { useColors } from "@/components/ui";
 import { asDate } from "@/core/dates";
 import type { NightStripProps } from "./types";
 
-// The same 8-hour reference the duration component scores against, so the
-// strip reads as one chart of how long you slept rather than a row of dashes
-// while the score is still being learned.
+// The same 8-hour reference the duration component scores against, so a full
+// bar means a full night.
 const REFERENCE_MINUTES = 8 * 60;
-const BAR_HEIGHT = 34;
+const BAR_HEIGHT = 72;
+const MIN_BAR = 4;
 
-// Mirrors the check-in strip: one column per recorded night with the selected
-// night called out. The bar is time asleep; the number is the night's score,
-// shown as a dash rather than a zero until we can compare your bedtime.
+// A bar chart of time asleep, one bar per recorded night. The selected night
+// is the solid bar; the others are dimmed. Its score shows in the hero above.
 export function NightStrip({ scores, selectedDate, onSelect }: NightStripProps) {
   const c = useColors();
   const nights = scores.slice(0, 7).reverse();
   return (
-    <View
-      accessibilityRole="tablist"
-      style={{ flexDirection: "row", justifyContent: "space-between", gap: 4 }}
-    >
+    <View accessibilityRole="tablist" style={{ flexDirection: "row" }}>
       {nights.map((score) => {
         const selected = score.date === selectedDate;
         const asleep = Math.max(
           0,
           Math.min(score.asleepMinutes, REFERENCE_MINUTES),
         );
+        const height = Math.max(MIN_BAR, (asleep / REFERENCE_MINUTES) * BAR_HEIGHT);
         return (
           <Pressable
             key={score.date}
@@ -39,13 +36,8 @@ export function NightStrip({ scores, selectedDate, onSelect }: NightStripProps) 
             onPress={() => onSelect(score.date)}
             style={({ pressed }) => ({
               flex: 1,
-              gap: 4,
-              paddingVertical: 8,
-              borderRadius: 12,
-              borderWidth: 1,
+              gap: 8,
               alignItems: "center",
-              borderColor: selected ? c.selectedBorder : c.border,
-              backgroundColor: selected ? c.selectedBg : c.card,
               opacity: pressed ? 0.7 : 1,
             })}
           >
@@ -60,33 +52,25 @@ export function NightStrip({ scores, selectedDate, onSelect }: NightStripProps) 
                 max: REFERENCE_MINUTES,
                 now: Math.round(score.asleepMinutes),
               }}
-              style={{
-                height: BAR_HEIGHT,
-                width: 6,
-                borderRadius: 999,
-                overflow: "hidden",
-                justifyContent: "flex-end",
-                backgroundColor: c.soft,
-              }}
+              style={{ height: BAR_HEIGHT, justifyContent: "flex-end" }}
             >
               <View
                 style={{
-                  width: "100%",
+                  width: 14,
+                  height,
+                  borderRadius: 7,
                   backgroundColor: c.accent,
-                  height: `${(asleep / REFERENCE_MINUTES) * 100}%`,
+                  opacity: selected ? 1 : 0.35,
                 }}
               />
             </View>
             <Text
               style={{
-                fontSize: 15,
-                fontWeight: "600",
-                color: score.total == null ? c.muted : c.text,
+                fontSize: 12,
+                fontWeight: selected ? "600" : "400",
+                color: selected ? c.text : c.muted,
               }}
             >
-              {score.total ?? "—"}
-            </Text>
-            <Text style={{ fontSize: 11, color: c.muted }}>
               {format(asDate(score.date), "EEE")}
             </Text>
           </Pressable>

@@ -47,6 +47,9 @@ import {
   getVisibleToolCalls,
 } from "./toolCalls";
 import { createDraftMessagesTool } from "./tools/draftMessages/tool";
+import { createShareHeldProposalTool } from "./tools/shareHeldProposal/tool";
+import { readOpenAgenda } from "./agenda/read";
+import { formatOpenAgendaContext } from "./agenda/context";
 import type {
   ActiveCoachPlan,
   CoachAgentContext,
@@ -530,6 +533,8 @@ export class CoachAgentService {
         ${recentActivityContext ? `RECENT ACTIVITY FACTS:\n${recentActivityContext}` : "RECENT ACTIVITY FACTS:\nNo recent activity entries are available in this context."}
         ${context.allowSkip ? "This is a proactive check. Use skip instead of draftMessages when there is no useful new information or decision. Never send a message merely to say nothing changed." : ""}
 
+        ${context.openAgenda ? formatOpenAgendaContext(context.openAgenda) : ""}
+
         ${memoriesContext ? `LONG-TERM MEMORY (key facts about this user):\n${memoriesContext}` : ""}
 
         OPERATING GUIDELINES
@@ -639,6 +644,9 @@ export class CoachAgentService {
           execute: async () => ({ success: true }),
         }) } : {}),
         draftMessages: createDraftMessagesTool({ recentAssistantMessages }),
+        ...(context.openAgenda?.proposals.length
+          ? { shareHeldProposal: createShareHeldProposalTool(context.openAgenda, plans) }
+          : {}),
 
         webSearch: tool({
           description:
@@ -1897,13 +1905,15 @@ export class CoachAgentService {
     await onStatus?.("thinking");
     const now = new Date();
     const activePlans = plans.filter((plan) => isActiveCoachPlan(plan));
-    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId, sessionSupportContext, permittedContext] =
+    const [recentActivityContext, activityRecencyById, curriculumFileCountByPlanId, sessionSupportContext, permittedContext, openAgenda] =
       await Promise.all([
         this.buildRecentActivityContext(user, now, activePlans),
         this.buildActivityRecencyById(user.id, activePlans, now),
         getCurriculumFileCounts(activePlans.map((plan) => plan.id)),
         followThroughContext(user.id),
         readPermittedCoachContext(user.id, activePlans.map(p => p.id)),
+        // Only a person's own reply opens the agenda, not a scheduled system turn.
+        messageRole === "user" && !params.allowSkip ? readOpenAgenda(user.id, now) : null,
       ]);
     const conversationHistory = permittedCoachHistory(params.conversationHistory, permittedContext.healthDataAccess);
 
@@ -1918,6 +1928,7 @@ export class CoachAgentService {
       recentActivityContext: recentActivityContext + sessionSupportContext + permittedContext.text,
       activityRecencyById,
       curriculumFileCountByPlanId,
+      openAgenda,
       onStatus,
     });
 
@@ -2164,7 +2175,7 @@ export class CoachAgentService {
         visibleToolCalls
           .filter(
             (tc) =>
-              tc.tool === "proposePlanModification" &&
+              (tc.tool === "proposePlanModification" || tc.tool === "shareHeldProposal") &&
               tc.result &&
               typeof tc.result === "object" &&
               (tc.result as any).success &&

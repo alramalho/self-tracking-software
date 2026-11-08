@@ -245,6 +245,7 @@ export interface Coach {
   id: string;
   ownerId: string;
   owner: { id: string; name?: string; username?: string; picture?: string };
+  details?: { title?: string };
 }
 export interface ResponseState {
   status: "thinking" | "searching" | "browsing" | "drafting" | "error";
@@ -280,6 +281,30 @@ export interface MessageIconProps {
   children: import("react").ReactNode;
   onPress: () => void;
   disabled?: boolean;
+}
+
+export interface ConversationHeaderProps {
+  title: string;
+  coach: boolean;
+  avatar?: string;
+  onBack: () => void;
+  onOpenSettings: () => void;
+  onOpenContext: () => void;
+  onOpenMenu: () => void;
+}
+
+export interface AttentionIslandProps {
+  count: number;
+  top: number;
+  onPress: () => void;
+}
+
+export interface FadeProps {
+  color: string;
+  /** The edge that is fully opaque: "top" under the header, "bottom" above the composer. */
+  toward: "top" | "bottom";
+  height: number;
+  style?: import("react-native").StyleProp<import("react-native").ViewStyle>;
 }
 
 export interface CoachSettingsProps {

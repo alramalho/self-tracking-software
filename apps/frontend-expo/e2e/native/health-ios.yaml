@@ -57,7 +57,7 @@ appId: so.tracking.app
     direction: DOWN
 - takeScreenshot: health-sleep-breakdown
 - tapOn: Sleep on 2026-09-14
-- assertVisible: Learning your pattern
+- assertVisible: '.*Score in .*'
 - takeScreenshot: health-sleep-learning
 - openLink: trackingso://health
 - assertVisible: Health & workouts

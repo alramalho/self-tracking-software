@@ -184,6 +184,10 @@ async function main() {
         requiresReply: d.requiresReply,
         proposals: d.planProposals?.map((p) => ({ description: p.description, patch: p.patch })),
       }));
+      record.agenda = generated.agenda && {
+        briefing: generated.agenda.briefing,
+        proposals: generated.agenda.proposals.map((p) => ({ description: p.description, patch: p.patch })),
+      };
       record.quiet = !!generated.skipped;
     } catch (error) {
       record.error = redact(error.message).slice(0, 500);

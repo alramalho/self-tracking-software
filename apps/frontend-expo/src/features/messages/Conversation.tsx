@@ -1,7 +1,10 @@
 import { useReducedMotion } from "react-native-reanimated";
-import { messagePlanIds } from "./plan-context";
 import { PlanCoachingRow } from "@/features/plans/coaching/PlanCoachingRow";
 import { IconButton } from "./IconButton";
+import { ConversationHeader } from "./chrome/ConversationHeader";
+import { AttentionIsland } from "./chrome/AttentionIsland";
+import { Fade } from "./chrome/Fade";
+import { useKeyboardVisible } from "./chrome/useKeyboardVisible";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,23 +15,15 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  StyleSheet,
   TextInput,
   View,
-  ScrollView,
   AppState,
   type ViewToken,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUp,
-  EllipsisVertical,
-  ImagePlus,
-  X,
-  Eye,
-} from "lucide-react-native";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -66,6 +61,8 @@ import type {
 
 export function Conversation({ id }: ConversationProps) {
   const c = useColors();
+  const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
   const focused = useIsFocused();
   const client = useQueryClient();
   const user = useCurrentUser();
@@ -120,11 +117,25 @@ export function Conversation({ id }: ConversationProps) {
   const [picking, setPicking] = useState(false);
   const list = useRef<FlatList<Message>>(null);
   const nearBottom = useRef(true);
+  // FlatList.scrollToEnd trusts item measurements that can lag behind layout,
+  // so scroll to the measured content height instead.
+  const contentHeight = useRef(0);
+  const viewportHeight = useRef(0);
+  const scrollToLatest = (animated = false) =>
+    list.current?.scrollToOffset({
+      offset: Math.max(0, contentHeight.current - viewportHeight.current),
+      animated,
+    });
   const [showLatest, setShowLatest] = useState(false);
   const reducedMotion = useReducedMotion();
-  const [inputHeight, setInputHeight] = useState(44);
+  const [inputHeight, setInputHeight] = useState(40);
   const read = useRef(new Set<string>());
   const [pending, setPending] = useState<Message | null>(null);
+  // Hide the island once its current items have been drafted into the composer.
+  const [draftedAttention, setDraftedAttention] = useState<string>();
+  // The header and composer float over the thread, which pads itself by their heights.
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [dockHeight, setDockHeight] = useState(0);
   const mutation = useMutation({
     mutationFn: async () => {
       nearBottom.current = true;
@@ -207,6 +218,9 @@ export function Conversation({ id }: ConversationProps) {
     response.data.status !== "error" &&
     new Date(response.data.timeoutAt).getTime() > Date.now();
   const busy = mutation.isPending || !!remoteBusy;
+  const attentionKey = attention.data?.map((item) => item.dedupeKey).join("|");
+  const showAttention = !!attention.data?.length && attentionKey !== draftedAttention;
+  const ready = !busy && !picking && (!!text.trim() || !!images.length);
   const messages = [...(query.data ?? [])];
   if (starter)
     messages.push({
@@ -230,8 +244,7 @@ export function Conversation({ id }: ConversationProps) {
     messages.push(pending);
   // Keep the composer outside the list and preserve the position while reading history.
   const visibleMessages = messages.filter(
-    (m) => (m.role !== "SYSTEM" || !!m.coachAttentionItems?.length) &&
-      (!coach || !selectedPlan || messagePlanIds(m).includes(selectedPlan) || m.id === "pending-message" || (selectedPlan === params.planId && m.id === params.messageId)),
+    (m) => m.role !== "SYSTEM" || !!m.coachAttentionItems?.length,
   );
   const focusRequestedMessage = () => {
     if (!params.messageId || focusedMessage.current === params.messageId) return false;
@@ -241,6 +254,11 @@ export function Conversation({ id }: ConversationProps) {
     list.current?.scrollToIndex({ index, animated: false, viewPosition: 0.2 });
     return true;
   };
+  // Measuring the floating chrome changes the thread's padding after the first scroll.
+  useEffect(() => {
+    if (nearBottom.current && !focusRequestedMessage())
+      requestAnimationFrame(() => scrollToLatest());
+  }, [headerHeight, dockHeight]);
   useEffect(() => { setSelectedPlan(params.planId ?? ""); focusedMessage.current = undefined; }, [params.planId, params.messageId]);
   // One event per visit, not per plan switch inside the conversation.
   useEffect(() => {
@@ -332,115 +350,27 @@ export function Conversation({ id }: ConversationProps) {
     error: "Unable to complete the response",
   }[activeStatus || "thinking"];
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      edges={["top", "bottom"]}
-    >
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View
-          style={[
-            s.row,
-            {
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-            },
-          ]}
-        >
-          <IconButton
-            label="Back to messages"
-            onPress={() => {
-              Keyboard.dismiss();
-              router.dismissTo("/messages");
-            }}
-          >
-            <ArrowLeft color={c.text} size={20} />
-          </IconButton>
-          <Pressable
-            accessible={coach}
-            accessibilityRole={coach ? "button" : undefined}
-            accessibilityLabel={
-              coach ? `${identity.name} coach settings` : undefined
-            }
-            disabled={!coach}
-            onPress={() => setSettings(true)}
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            {coach && (
-              <Image
-                source={{ uri: identity.avatar }}
-                style={{ width: 40, height: 40 }}
-              />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
-                {coach
-                  ? identity.name
-                  : chat
-                    ? chatTitle(chat, user.data?.id)
-                    : "Conversation"}
-              </Text>
-              {coach && (
-                <Text style={{ color: c.muted, fontSize: 12 }}>AI Coach</Text>
-              )}
-            </View>
-          </Pressable>
-          {coach && (
-            <>
-              <IconButton
-                label={`What ${identity.name} can see`}
-                onPress={() => setContext(true)}
-              >
-                <Eye size={18} color={c.text} />
-              </IconButton>
-              <IconButton
-                label="Conversation options"
-                onPress={() => setMenu(true)}
-              >
-                <EllipsisVertical size={18} color={c.text} />
-              </IconButton>
-            </>
-          )}
-        </View>
-        <Status
-          loading={chats.isPending || query.isPending}
-          error={chats.error ?? query.error}
-          retry={() => {
-            void chats.refetch();
-            void query.refetch();
-          }}
-        />
-        {coach && !!plans.data?.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
-          {[{ id: "", goal: "All plans" }, ...plans.data.filter(p => !p.deletedAt && !p.archivedAt)].map(p => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Messages: ${p.goal}`} accessibilityState={{ selected: selectedPlan === p.id }}
-            onPress={() => { setSelectedPlan(p.id); focusedMessage.current = params.messageId; nearBottom.current = true; }}
-            style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: selectedPlan === p.id ? c.text : c.soft }}>
-            <Text style={{ color: selectedPlan === p.id ? c.bg : c.text, fontSize: 14 }}>{p.goal}</Text>
-          </Pressable>)}
-        </ScrollView>}
         <View style={{ flex: 1 }}>
           <FlatList
             ref={list}
             testID="conversation-messages"
             style={{ flex: 1 }}
-            onLayout={() => {
+            onLayout={(event) => {
+              viewportHeight.current = event.nativeEvent.layout.height;
               if (focusRequestedMessage()) return;
               if (nearBottom.current)
-                requestAnimationFrame(() =>
-                  list.current?.scrollToEnd({ animated: false }),
-                );
+                requestAnimationFrame(() => scrollToLatest());
             }}
             data={visibleMessages}
-            onContentSizeChange={() => {
+            onContentSizeChange={(_, height) => {
+              contentHeight.current = height;
               if (focusRequestedMessage()) return;
-              if (nearBottom.current)
-                list.current?.scrollToEnd({ animated: false });
+              if (nearBottom.current) scrollToLatest();
             }}
             onScroll={({ nativeEvent: e }) => {
               nearBottom.current =
@@ -460,9 +390,21 @@ export function Conversation({ id }: ConversationProps) {
             keyboardDismissMode="interactive"
             contentContainerStyle={{
               paddingHorizontal: 16,
-              paddingVertical: 16,
-              gap: 16,
+              paddingTop: headerHeight + (showAttention ? 64 : 12),
+              gap: 20,
             }}
+            ListHeaderComponent={
+              <Status
+                loading={chats.isPending || query.isPending}
+                error={chats.error ?? query.error}
+                retry={() => {
+                  void chats.refetch();
+                  void query.refetch();
+                }}
+              />
+            }
+            // Room for the floating composer, so the newest message rests above it.
+            ListFooterComponent={<View style={{ height: dockHeight }} />}
             onViewableItemsChanged={markVisible}
             viewabilityConfig={{
               itemVisiblePercentThreshold: 60,
@@ -476,7 +418,7 @@ export function Conversation({ id }: ConversationProps) {
               />
             }
             renderItem={({ item, index }) => (
-              <View style={{ gap: 14 }}>
+              <View style={{ gap: 12 }}>
                 {(!visibleMessages[index - 1] ||
                   new Date(
                     visibleMessages[index - 1].createdAt,
@@ -487,6 +429,7 @@ export function Conversation({ id }: ConversationProps) {
                       textAlign: "center",
                       color: c.muted,
                       fontSize: 12,
+                      fontWeight: "500",
                     }}
                   >
                     {new Date(item.createdAt).toLocaleDateString([], {
@@ -517,7 +460,7 @@ export function Conversation({ id }: ConversationProps) {
             <View
               style={{
                 position: "absolute",
-                bottom: 12,
+                bottom: dockHeight + 8,
                 left: "50%",
                 marginLeft: -22,
                 borderRadius: 22,
@@ -534,175 +477,226 @@ export function Conversation({ id }: ConversationProps) {
               <IconButton
                 label="Scroll to latest message"
                 onPress={() =>
-                  list.current?.scrollToEnd({ animated: !reducedMotion })
+                  scrollToLatest(!reducedMotion)
                 }
               >
                 <ArrowDown size={22} color={c.text} />
               </IconButton>
             </View>
           )}
-        </View>
-        {coach && !query.isPending && !messages.length && (
-          <View style={{ padding: 16, gap: 10 }}>
-            <Copy muted>Start a conversation with {identity.name}</Copy>
-            {COACH_CONVERSATION_STARTER_IDS.map((id) => (
-              <Button key={id} secondary onPress={() => setStarter(id)}>
-                {getCoachConversationStarter(
-                  id,
-                  user.data?.name?.split(" ")[0] || "there",
-                )}
-              </Button>
-            ))}
+          {showAttention && (
+            <AttentionIsland
+              count={attention.data!.length}
+              top={headerHeight + 8}
+              onPress={() => {
+                setText(attention.data![0].primaryAction.prompt);
+                setDraftedAttention(attentionKey);
+              }}
+            />
+          )}
+          <View
+            style={{ position: "absolute", top: 0, left: 0, right: 0 }}
+            pointerEvents="box-none"
+          >
+            <View
+              onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+              style={{ paddingTop: insets.top, backgroundColor: c.bg }}
+            >
+              <ConversationHeader
+                title={
+                  coach
+                    ? identity.name
+                    : chat
+                      ? chatTitle(chat, user.data?.id)
+                      : "Conversation"
+                }
+                coach={coach}
+                avatar={coach ? identity.avatar : undefined}
+                onBack={() => {
+                  Keyboard.dismiss();
+                  router.dismissTo("/messages");
+                }}
+                onOpenSettings={() => setSettings(true)}
+                onOpenContext={() => setContext(true)}
+                onOpenMenu={() => setMenu(true)}
+              />
+            </View>
+            <Fade color={c.bg} toward="top" height={32} />
           </View>
-        )}
-        {!!attention.data?.length && (
-          <Button
-            secondary
-            onPress={() => setText(attention.data![0].primaryAction.prompt)}
-          >{`${attention.data.length} plan updates need attention`}</Button>
-        )}
-        {busy && (
-          <View style={[s.row, { paddingHorizontal: 20, paddingVertical: 8 }]}>
-            <ActivityIndicator color={c.muted} />
-            <Copy muted>{label}</Copy>
-          </View>
-        )}
-        <Status
-          error={
-            mutation.error ??
-            attachmentError ??
-            (response.data?.status === "error"
-              ? new Error(
-                  response.data.errorMessage ||
-                    "The coach could not respond. Please try again.",
-                )
-              : null)
-          }
-        />
-        <View style={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}>
-          {editing && (
-            <View style={s.row}>
-              <Copy muted>Editing message</Copy>
-              <IconButton
-                label="Cancel edit"
-                onPress={() => {
-                  setEditing(null);
-                  setText("");
+          <View
+            onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
+            pointerEvents="box-none"
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
+          >
+            <Fade color={c.bg} toward="bottom" height={28} />
+            <View
+              style={{
+                backgroundColor: c.bg,
+                paddingHorizontal: 12,
+                paddingBottom: keyboardVisible ? 8 : Math.max(insets.bottom, 8),
+                gap: 8,
+              }}
+            >
+              {coach && !query.isPending && !messages.length && (
+                <View style={{ padding: 16, gap: 10 }}>
+                  <Copy muted>Start a conversation with {identity.name}</Copy>
+                  {COACH_CONVERSATION_STARTER_IDS.map((id) => (
+                    <Button key={id} secondary onPress={() => setStarter(id)}>
+                      {getCoachConversationStarter(
+                        id,
+                        user.data?.name?.split(" ")[0] || "there",
+                      )}
+                    </Button>
+                  ))}
+                </View>
+              )}
+              {busy && (
+                <View style={[s.row, { paddingHorizontal: 4 }]}>
+                  <ActivityIndicator size="small" color={c.muted} />
+                  <Copy muted>{label}</Copy>
+                </View>
+              )}
+              <Status
+                error={
+                  mutation.error ??
+                  attachmentError ??
+                  (response.data?.status === "error"
+                    ? new Error(
+                        response.data.errorMessage ||
+                          "The coach could not respond. Please try again.",
+                      )
+                    : null)
+                }
+              />
+              {editing && (
+                <View style={[s.row, { paddingLeft: 4 }]}>
+                  <Copy muted>Editing message</Copy>
+                  <IconButton
+                    label="Cancel edit"
+                    onPress={() => {
+                      setEditing(null);
+                      setText("");
+                    }}
+                  >
+                    <X color={c.muted} size={18} />
+                  </IconButton>
+                </View>
+              )}
+              {!!images.length && (
+                <View style={s.row}>
+                  {images.map((image, index) => (
+                    <View key={index}>
+                      <Image
+                        source={{ uri: image.url }}
+                        style={{ width: 64, height: 64, borderRadius: 12 }}
+                      />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove attachment ${index + 1}`}
+                        onPress={() =>
+                          setImages((values) =>
+                            values.filter((_, i) => i !== index),
+                          )
+                        }
+                        style={{
+                          position: "absolute",
+                          right: 0,
+                          top: 0,
+                          backgroundColor: c.card,
+                          borderRadius: 12,
+                          padding: 5,
+                        }}
+                      >
+                        <X size={16} color={c.text} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <View
+                style={{
+                  backgroundColor: c.dark ? "#1f1f21" : "#ffffff",
+                  borderColor: c.dark ? "#ffffff1f" : "#00000014",
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderRadius: 26,
+                  paddingTop: 6,
+                  paddingBottom: 6,
+                  paddingHorizontal: 6,
                 }}
               >
-                <X color={c.muted} size={18} />
-              </IconButton>
-            </View>
-          )}
-          {!!images.length && (
-            <View style={s.row}>
-              {images.map((image, index) => (
-                <View key={index}>
-                  <Image
-                    source={{ uri: image.url }}
-                    style={{ width: 64, height: 64, borderRadius: 12 }}
+                <TextInput
+                  testID="chat-message-input"
+                  accessibilityLabel="Message"
+                  placeholder={
+                    editing ? "Edit your message…" : `Message ${coach ? identity.name : ""}`.trim()
+                  }
+                  placeholderTextColor={c.muted}
+                  multiline
+                  value={text}
+                  onChangeText={setText}
+                  onContentSizeChange={(event) =>
+                    setInputHeight(
+                      Math.max(
+                        40,
+                        Math.min(132, event.nativeEvent.contentSize.height),
+                      ),
+                    )
+                  }
+                  style={{
+                    color: c.text,
+                    fontFamily: "Inter-Regular",
+                    fontSize: 16,
+                    lineHeight: 22,
+                    height: inputHeight,
+                    minHeight: 40,
+                    maxHeight: 132,
+                    paddingTop: 9,
+                    paddingBottom: 9,
+                    paddingHorizontal: 10,
+                  }}
+                />
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <IconButton
+                    label="Attach photos"
+                    disabled={busy || picking || !!editing}
+                    onPress={() => void pickImages()}
+                  >
+                    <Plus color={c.text} size={24} strokeWidth={1.8} />
+                  </IconButton>
+                  <View style={{ flex: 1 }} />
+                  <DictationButton
+                    quiet
+                    accessibilityLabel="Start voice input"
+                    disabled={busy || picking}
+                    label="message"
+                    onError={setAttachmentError}
+                    onTranscript={(transcript) =>
+                      setText((current) => appendDictationText(current, transcript))
+                    }
                   />
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Remove attachment ${index + 1}`}
-                    onPress={() =>
-                      setImages((values) =>
-                        values.filter((_, i) => i !== index),
-                      )
+                    accessibilityLabel={
+                      editing ? "Save edited message" : "Send message"
                     }
+                    disabled={!ready || !chat}
+                    onPress={() => mutation.mutate()}
                     style={{
-                      position: "absolute",
-                      right: 0,
-                      top: 0,
-                      backgroundColor: c.card,
-                      borderRadius: 12,
-                      padding: 5,
+                      width: 36,
+                      height: 36,
+                      marginLeft: 6,
+                      marginRight: 2,
+                      borderRadius: 18,
+                      backgroundColor: ready ? c.text : c.soft,
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <X size={16} color={c.text} />
+                    <ArrowUp color={ready ? c.bg : c.muted} size={20} strokeWidth={2.4} />
                   </Pressable>
                 </View>
-              ))}
+              </View>
             </View>
-          )}
-          <View
-            style={[
-              s.row,
-              {
-                backgroundColor: c.card,
-                borderColor: c.border,
-                borderWidth: 1,
-                borderRadius: 28,
-                padding: 5,
-                alignItems: "flex-end",
-              },
-            ]}
-          >
-            <IconButton
-              label="Attach photos"
-              disabled={busy || picking || !!editing}
-              onPress={() => void pickImages()}
-            >
-              <ImagePlus color={c.muted} size={22} />
-            </IconButton>
-            <TextInput
-              testID="chat-message-input"
-              accessibilityLabel="Message"
-              placeholder={editing ? "Edit your message…" : "Type a message…"}
-              placeholderTextColor={c.muted}
-              multiline
-              value={text}
-              onChangeText={setText}
-              onContentSizeChange={(event) =>
-                setInputHeight(
-                  Math.max(
-                    44,
-                    Math.min(120, event.nativeEvent.contentSize.height),
-                  ),
-                )
-              }
-              style={{
-                flex: 1,
-                color: c.text,
-                fontSize: 16,
-                lineHeight: 22,
-                height: inputHeight,
-                minHeight: 44,
-                maxHeight: 120,
-                paddingTop: 11,
-                paddingBottom: 11,
-              }}
-            />
-            <DictationButton
-              accessibilityLabel="Start voice input"
-              disabled={busy || picking}
-              label="message"
-              onError={setAttachmentError}
-              onTranscript={(transcript) =>
-                setText((current) => appendDictationText(current, transcript))
-              }
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                editing ? "Save edited message" : "Send message"
-              }
-              disabled={
-                busy || picking || (!text.trim() && !images.length) || !chat
-              }
-              onPress={() => mutation.mutate()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: c.accent,
-                opacity: busy || (!text.trim() && !images.length) ? 0.4 : 1,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ArrowUp color="white" size={24} />
-            </Pressable>
           </View>
         </View>
         <CoachSettings visible={settings} onClose={() => setSettings(false)} />
@@ -777,6 +771,6 @@ export function Conversation({ id }: ConversationProps) {
             ))}
         </Sheet>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -43,6 +43,17 @@ export function dailyRatings(entries: MetricEntry[]) {
   }
   return new Map([...groups].map(([key, rows]) => [key, average(rows)!]));
 }
+// Insights need a week of check-ins before correlations mean anything.
+export const MINIMUM_INSIGHT_ENTRIES = 7;
+export const metricsWithInsights = (
+  metrics: import("@/core/types").Metric[],
+  entries: MetricEntry[],
+) =>
+  metrics.filter(
+    (metric) =>
+      entries.filter((entry) => entry.metricId === metric.id).length >=
+      MINIMUM_INSIGHT_ENTRIES,
+  );
 export function correlations(
   metrics: MetricEntry[],
   activities: Activity[],

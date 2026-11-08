@@ -8,7 +8,7 @@ import { useAchievements } from "@/contexts/achievements";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import ClientOverviewPopover from "@/components/ClientOverviewPopover";
 import { CoachOnboardingPopover } from "@/components/CoachOnboardingPopover";
-import { HomeCardGrid } from "@/components/home-cards/HomeCardGrid";
+import { HomeTodo } from "@/components/home-todo/HomeTodo";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { FeedbackAnnouncementPopover } from "@/components/FeedbackAnnouncementPopover";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
@@ -444,7 +444,7 @@ function HomePage() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.075}>
-            <HomeCardGrid onOpenMetricsLog={() => setIsMetricsPopoverOpen(true)} />
+            <HomeTodo onOpenMetricsLog={() => setIsMetricsPopoverOpen(true)} />
           </AnimatedSection>
 
           {/* My Clients Section - Only shown for coaches */}

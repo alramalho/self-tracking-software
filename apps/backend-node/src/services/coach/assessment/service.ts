@@ -57,6 +57,7 @@ import {
   buildRecurrentCoachAssessmentPrompt,
   type RecurrentCoachAssessmentInterventionType,
 } from "./prompt";
+import { unansweredOutreaches } from "../monitoring/silence";
 import {
   buildAssessmentWeeklyOverview,
   buildWeeklyReviewOverview,
@@ -1104,6 +1105,16 @@ export class CoachAssessmentService {
       };
     }
 
+    // The coach already reached out and heard nothing back: wait for the person.
+    if (!force && !bypassDuplicateCheck && (await this.isWaitingOnUser(user.id))) {
+      return {
+        userId: user.id,
+        username: user.username,
+        action: "skipped",
+        reason: "Last coach outreach is unanswered",
+      };
+    }
+
     const candidates = await this.buildInterventionCandidates(user, now, {
       force,
       pendingProposalExists,
@@ -2104,6 +2115,16 @@ export class CoachAssessmentService {
     }
 
     return lines.join("\n");
+  }
+
+  private async isWaitingOnUser(userId: string) {
+    const conversation = await prisma.message.findMany({
+      where: { chat: { userId, type: "COACH" } },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: { role: true, createdAt: true, metadata: true },
+    });
+    return unansweredOutreaches(conversation) > 0;
   }
 
   private async getRecentCoachMessages(userId: string): Promise<Message[]> {

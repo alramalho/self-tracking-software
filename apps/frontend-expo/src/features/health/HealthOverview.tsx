@@ -144,7 +144,6 @@ export function HealthOverview() {
 
   return (
     <View style={{ gap: 18 }} testID="metrics-health-view">
-      <Copy muted>Sleep and vital trends from your connected health data.</Copy>
       <SleepMetric />
       <View style={{ gap: 8 }}>
         <View style={s.row}>

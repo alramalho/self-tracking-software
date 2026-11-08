@@ -38,8 +38,13 @@ import type { Activity, ActivityEntry, Plan, PlanSession } from "@/core/types";
 import { Heatmap } from "./Heatmap";
 import { PlanNotes } from "./PlanNotes";
 import { MilestoneOverview } from "./MilestoneOverview";
-import { CurrentWeek } from "./WeekProgress";
-import { WeekCalendar } from "./WeekCalendar";
+import { ComingUp, CurrentWeek } from "./WeekProgress";
+import { PlanDetailHeader } from "./PlanDetailHeader";
+import { ConnectedAgentToggle } from "./ConnectedAgentToggle";
+import { PlanCoachBanner } from "./PlanCoachBanner";
+import { PlanMetricInsights } from "./PlanMetricInsights";
+import { PlanGroupSection } from "./group/PlanGroupSection";
+import { InvitePeopleSheet } from "./group/InvitePeopleSheet";
 import { EntryEditor } from "../activities/EntryEditor";
 import { ActivityEditor } from "../activities/ActivityEditor";
 import { SettingsCard } from "../settings/SettingsCard";
@@ -66,6 +71,7 @@ export function PlanCard({
   const [manageView, setManageView] = useState<ManageView>("actions");
   const [reason, setReason] = useState("");
   const [showFuture, setShowFuture] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const coachRequest = usePlanCoachRequest(plan, own);
   const scheduledEntries: ActivityEntry[] = (plan.sessions ?? []).map(
     (session) => ({
@@ -148,75 +154,82 @@ export function PlanCard({
           </Svg>
         </View>
       )}
-      <Reveal
-        id={`plan-header-${plan.id}-${detail}`}
-        style={[
-          s.row,
-          {
-            alignItems: "flex-start",
-            marginTop: detail || plan.backgroundImageUrl ? 0 : 12,
-          },
-        ]}
-      >
-        <Text style={{ fontSize: 48 }}>{plan.emoji}</Text>
-        <View style={{ flex: 1, gap: 4 }}>
-          <View style={[s.row, { flexWrap: "wrap", gap: 4 }]}>
-            <Text
-              style={{
-                fontSize: detail ? 24 : 18,
-                fontWeight: "600",
-                color: c.text,
-                flexShrink: 1,
-              }}
-            >
-              {plan.goal}
-            </Text>
-            {own && (
-              <IconButton
-                label={detail ? "Manage Plan" : "Edit Plan"}
-                icon={Pencil}
-                testID="plan-settings-button"
-                onPress={() =>
-                  detail
-                    ? showSettings()
-                    : router.push(`/edit-plan/${plan.id}`)
-                }
-              />
-            )}
-            {achievedColor && (
-              <View
+      {detail ? (
+        <Reveal id={`plan-header-${plan.id}-detail`}>
+          <PlanDetailHeader
+            plan={plan}
+            own={own}
+            onInvite={() => setInviting(true)}
+            onManage={showSettings}
+          />
+        </Reveal>
+      ) : (
+        <Reveal
+          id={`plan-header-${plan.id}-card`}
+          style={[
+            s.row,
+            {
+              alignItems: "flex-start",
+              marginTop: plan.backgroundImageUrl ? 0 : 12,
+            },
+          ]}
+        >
+          <Text style={{ fontSize: 48 }}>{plan.emoji}</Text>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={[s.row, { flexWrap: "wrap", gap: 4 }]}>
+              <Text
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  borderRadius: 20,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  backgroundColor: `${achievedColor}22`,
+                  fontSize: 18,
+                  fontWeight: "600",
+                  color: c.text,
+                  flexShrink: 1,
                 }}
               >
-                {plan.progress?.lifestyleAchievement?.isAchieved ? (
-                  <Medal size={18} color={achievedColor} />
-                ) : (
-                  <Sprout size={18} color={achievedColor} />
-                )}
-                <Text style={{ fontSize: 14, color: achievedColor }}>
-                  {plan.progress?.lifestyleAchievement?.isAchieved
-                    ? "Lifestyle"
-                    : "Habit"}
-                </Text>
-              </View>
-            )}
-            {plan.visibility === "PRIVATE" && <Copy muted>Private</Copy>}
+                {plan.goal}
+              </Text>
+              {own && (
+                <IconButton
+                  label="Edit Plan"
+                  icon={Pencil}
+                  testID="plan-settings-button"
+                  onPress={() => router.push(`/edit-plan/${plan.id}`)}
+                />
+              )}
+              {achievedColor && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    borderRadius: 20,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    backgroundColor: `${achievedColor}22`,
+                  }}
+                >
+                  {plan.progress?.lifestyleAchievement?.isAchieved ? (
+                    <Medal size={18} color={achievedColor} />
+                  ) : (
+                    <Sprout size={18} color={achievedColor} />
+                  )}
+                  <Text style={{ fontSize: 14, color: achievedColor }}>
+                    {plan.progress?.lifestyleAchievement?.isAchieved
+                      ? "Lifestyle"
+                      : "Habit"}
+                  </Text>
+                </View>
+              )}
+              {plan.visibility === "PRIVATE" && <Copy muted>Private</Copy>}
+            </View>
+            <Copy muted>
+              {plan.outlineType === "TIMES_PER_WEEK"
+                ? `${plan.timesPerWeek} times per week`
+                : "Custom plan"}
+            </Copy>
           </View>
-          <Copy muted>
-            {plan.outlineType === "TIMES_PER_WEEK"
-              ? `${plan.timesPerWeek} times per week`
-              : "Custom plan"}
-          </Copy>
-        </View>
-      </Reveal>
-      {plan.isPaused && (
+        </Reveal>
+      )}
+      {plan.isPaused && !detail && (
         <Copy>
           Ⅱ Plan is paused{plan.pauseReason ? ` · ${plan.pauseReason}` : ""}.
           Streaks still count down.
@@ -225,6 +238,19 @@ export function PlanCard({
       {detail && (
         <>
           <PlanProgressStrip plan={plan} />
+          <Reveal id={`plan-notes-${plan.id}`}>
+            <PlanNotes plan={plan} own={own} />
+          </Reveal>
+          {own && (
+            <>
+              <ConnectedAgentToggle plan={plan} />
+              <SupportEditor plan={plan} />
+              <PlanCoachingRow
+                plan={plan}
+                leadingRows={coachRequest ? [coachRequest] : []}
+              />
+            </>
+          )}
           {!!plan.milestones?.length && (
             <Reveal id={`plan-milestones-${plan.id}`} delay={100}>
               <MilestoneOverview
@@ -289,24 +315,12 @@ export function PlanCard({
             {plan.outlineType === "TIMES_PER_WEEK" ? (
               <CurrentWeek plan={plan} entries={entries} own={own} />
             ) : (
-              <Panel style={{ padding: 16, borderRadius: 16 }}>
-                <Heading>Coming up</Heading>
-                <WeekCalendar
-                  plans={[plan]}
-                  entries={entries}
-                  onLog={
-                    own
-                      ? (activityId, date) =>
-                          router.push({
-                            pathname: "/(tabs)/add",
-                            params: { activityId, date: date.toISOString() },
-                          })
-                      : undefined
-                  }
-                />
-              </Panel>
+              <ComingUp plan={plan} entries={entries} own={own} />
             )}
           </Reveal>
+          <PlanCoachBanner plan={plan} />
+          <PlanGroupSection plan={plan} own={own} />
+          {own && <PlanMetricInsights plan={plan} entries={entries} />}
           {own && (
             <Pressable
               accessibilityRole="button"
@@ -327,33 +341,6 @@ export function PlanCard({
               <PlusSquare size={32} color={c.muted} />
               <Copy muted>Log Activity</Copy>
             </Pressable>
-          )}
-          <Reveal id={`plan-notes-${plan.id}`}>
-            <PlanNotes plan={plan} own={own} />
-          </Reveal>
-          {own && (
-            <>
-              <SupportEditor plan={plan} />
-              <PlanCoachingRow
-                plan={plan}
-                leadingRows={coachRequest ? [coachRequest] : []}
-              />
-            </>
-          )}
-          {plan.planGroup && (
-            <>
-              <Heading>Plan group</Heading>
-              {plan.planGroup.members
-                .filter((m) => !m.leftAt)
-                .map((m) => (
-                  <Pressable
-                    key={m.user.id}
-                    onPress={() => router.push(`/profile/${m.user.username}`)}
-                  >
-                    <Copy>{m.user.name ?? m.user.username}</Copy>
-                  </Pressable>
-                ))}
-            </>
           )}
           <Status error={action.error} />
         </>
@@ -384,6 +371,13 @@ export function PlanCard({
             />
           ))}
         </Sheet>
+      )}
+      {detail && own && (
+        <InvitePeopleSheet
+          plan={plan}
+          visible={inviting}
+          onClose={() => setInviting(false)}
+        />
       )}
       {editing && (
         <EntryEditor entry={editing} onClose={() => setEditing(undefined)} />

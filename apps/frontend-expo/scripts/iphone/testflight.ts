@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { appRoot, buildEnvironment, releaseRoot } from "./configuration";
+import { assertIpaNativeModulesLinked } from "./nativeModules";
 
 const action = process.argv[2];
 const keyDirectory = path.join(releaseRoot, "appstore-connect");
@@ -53,12 +54,14 @@ if (action === "build") {
     ],
     env,
   );
+  assertIpaNativeModulesLinked(output);
   console.log(`TestFlight IPA: ${output}`);
 } else {
   if (!fs.existsSync(keyPath)) fail(`Missing App Store Connect key: ${keyPath}`);
   const mode = fs.statSync(keyPath).mode & 0o777;
   if (mode !== 0o600) fail(`App Store Connect key must be mode 600: ${keyPath}`);
   const ipa = ipaPath();
+  assertIpaNativeModulesLinked(ipa);
   const developerDir = process.env.DEVELOPER_DIR && !process.env.DEVELOPER_DIR.endsWith("/CommandLineTools")
     ? process.env.DEVELOPER_DIR
     : "/Applications/Xcode.app/Contents/Developer";
