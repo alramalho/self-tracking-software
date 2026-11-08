@@ -3,7 +3,7 @@ export {
   alertFact,
   alertItem,
   alertTitle,
-  checkInWhen,
+  upcomingTitle,
   coachItems,
   masterOn,
   planAlert,

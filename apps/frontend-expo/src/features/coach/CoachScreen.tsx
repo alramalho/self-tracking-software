@@ -11,7 +11,7 @@ import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
 import { MetricLogger } from "@/features/metrics/MetricLogger";
 import { coachAvatar } from "./avatar";
-import { checkInWhen } from "./model";
+import { upcomingTitle } from "./model";
 import { CoachSettings } from "./CoachSettings";
 import { CoachItemDrawer } from "./inbox/CoachItemDrawer";
 import { useCoachInbox } from "./inbox/useCoachInbox";
@@ -23,10 +23,10 @@ function SectionLabel({ children }: SectionLabelProps) {
   return <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600", paddingHorizontal: 4 }}>{children}</Text>;
 }
 
-/** A check-in the coach booked: when, and for which plan. Opens the plan. */
+/** A push the coach booked: when, and for which plan. Opens the plan. */
 function UpcomingRow({ checkIn, onPress }: UpcomingRowProps) {
   const c = useColors();
-  const when = `Check-in ${checkInWhen(checkIn.at)}`;
+  const when = upcomingTitle(checkIn);
   return (
     <Pressable
       testID={`coach-upcoming-${checkIn.plan.id}`}

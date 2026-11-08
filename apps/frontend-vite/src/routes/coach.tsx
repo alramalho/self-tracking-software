@@ -7,7 +7,7 @@ import { CoachSettings } from "@/components/coach/CoachSettings";
 import { useCoachInbox } from "@/components/coach/useCoachInbox";
 import { useCoachingSwitches } from "@/components/coach/useCoaching";
 import { coachFace } from "@/components/coach/face";
-import { checkInWhen } from "@tsw/prisma/follow-through/coach-inbox";
+import { upcomingTitle } from "@tsw/prisma/follow-through/coach-inbox";
 import type { CoachItem, CoachRowProps, SectionLabelProps, UpcomingRowProps } from "@/components/coach/types";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import { Switch } from "@/components/ui/switch";
@@ -45,9 +45,9 @@ function CoachRow({ item, onClick }: CoachRowProps) {
   );
 }
 
-/** A check-in the coach booked: when, and for which plan. Opens the plan. */
+/** A push the coach booked: when, and for which plan. Opens the plan. */
 function UpcomingRow({ checkIn, onClick }: UpcomingRowProps) {
-  const when = `Check-in ${checkInWhen(checkIn.at)}`;
+  const when = upcomingTitle(checkIn);
   return (
     <button
       type="button"

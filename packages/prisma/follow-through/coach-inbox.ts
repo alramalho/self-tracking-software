@@ -377,11 +377,11 @@ export function dayKind(day: { scheduled: unknown[]; done: unknown[]; flexible: 
 
 // ---------- coming up ----------
 
-/** A check-in the coach booked: on a day the person named, or the morning after a trip. */
+/** A push the coach booked: a check-in on a named day or after a trip, or a "remind me tomorrow". */
 export interface UpcomingCheckIn<P extends CoachPlan = CoachPlan> {
   plan: P;
   at: string;
-  kind: NonNullable<CoachReminder["kind"]>;
+  kind: NonNullable<CoachReminder["kind"]> | "reminder";
 }
 
 /**
@@ -397,17 +397,22 @@ export function upcomingCheckIns<P extends CoachPlan>(input: {
   const { now = new Date() } = input;
   const result: UpcomingCheckIn<P>[] = [];
   for (const reminder of input.state?.monitoring?.reminders ?? []) {
-    if (!reminder.kind || reminder.sentAt || Date.parse(reminder.dueAt) <= now.getTime()) continue;
+    if (reminder.sentAt || Date.parse(reminder.dueAt) <= now.getTime()) continue;
     const plan = input.plans.find((p) => p.id === reminder.planId && !p.archivedAt && !p.deletedAt);
     if (!plan) continue;
-    const booked = Date.parse(reminder.bookedAt ?? reminder.dueAt);
+    // Older bookings have no time booked: like the push, a log in the 12 hours before counts.
+    const booked = reminder.bookedAt ? Date.parse(reminder.bookedAt) : Date.parse(reminder.dueAt) - 12 * 3600000;
     const done = input.entries.some(
       (e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId) && new Date(e.datetime).getTime() >= booked,
     );
-    if (!done) result.push({ plan, at: reminder.dueAt, kind: reminder.kind });
+    if (!done) result.push({ plan, at: reminder.dueAt, kind: reminder.kind ?? "reminder" });
   }
   return result.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
+
+/** "Check-in today at 20:00" or "Reminder tomorrow at 09:00". */
+export const upcomingTitle = (checkIn: Pick<UpcomingCheckIn, "at" | "kind">, now = new Date()) =>
+  `${checkIn.kind === "reminder" ? "Reminder" : "Check-in"} ${checkInWhen(checkIn.at, now)}`;
 
 /** "today at 20:00", "tomorrow at 09:00", "Thursday at 20:00", in the device's local time. */
 export function checkInWhen(at: string, now = new Date()) {
