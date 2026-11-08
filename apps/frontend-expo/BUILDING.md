@@ -50,9 +50,20 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
+
+## TestFlight build 248 — plan lines on the Soon card, November 8, 2026
+
+**Build 248 is the latest TestFlight build**: build 247 plus one line per plan under the Today card in Soon (this week's sessions 🔥, the streak towards the next badge 🌱/🚀; tap opens the plan). Same on the web app (Vercel, deployed from main).
+
+- **Source:** main `19e9b5bb` (`ac056f0e` + `19e9b5bb` on top of 247's `53f63a8c`). Shared rule in `packages/prisma/home-todo` (`homeProgress`, `streakProgress`).
+- **Built** with `pnpm build:testflight .release/testflight-main-19e9b5bb/tracking.so.ipa` in worktree `tracking-soon-progress` (branch `soon-plan-progress`). Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`; native-module guard passed. IPA SHA-256 `b2ac7a339bfa6b83ca819259536961916c172c0877854806c333929544165345`; the Hermes bundle contains `home-progress`.
+- **Apple:** validation passed; delivery `3eb45fcd-e2d6-4849-9039-42b48bc07400`; processed `VALID`; export compliance `usesNonExemptEncryption: false`; internal and `Friends & Family` `IN_BETA_TESTING`, beta review `APPROVED`. What to Test describes the plan lines.
+- **Checked:** unit tests (`tests/home-todo.test.ts`), both apps' TypeScript, Playwright `e2e/home-progress.spec.ts` with light/dark captures in `docs/reviews/home-progress/`. The web bundle on app.tracking.so contains it. **Not run on a phone.**
+- No backend change, Expo cloud build, OTA, Safari publish or App Store release.
+
 ## TestFlight build 247 — launch crash fix on main plus the plan-change sheet, November 8, 2026
 
-**Build 247 is the latest TestFlight build** and replaces build 244, which crashed at launch.
+Build 247 replaces build 244, which crashed at launch.
 
 - **Why 244 crashed:** builds 231, 244 and 245 were compiled from a preserved source archive (build 191's lineage) that had no root `.easignore`. EAS fell back to that lineage's `apps/frontend-expo/.gitignore`, whose unanchored `ios/` rule dropped `modules/*/ios`. The IPAs had no TrackingWatch, TrackingHealth or TrackingMap pods, and the app aborted on start with `Cannot find native module 'TrackingWatch'` (crash logs pulled from the user's iPhone on November 8). This is the same failure as builds 162 and 164 described above. Apple Health was also silently unavailable in those builds.
 - **Guard (new):** `scripts/iphone/nativeModules.ts` reads every `modules/*/ios` module from `expo-module.config.json` and fails when its class name is missing from the app binary. `verifyArtifact` (Safari path) and `testflight.ts` (`build`, `validate`, `submit`) run it. It fails build 244's IPA and passes build 235's.
