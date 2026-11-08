@@ -55,68 +55,58 @@ struct VoiceLogView: View {
             .padding(.vertical, 8)
         }
         .navigationTitle("Voice note")
+        .toolbar {
+            if phase == .review {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button(action: beginRefinement) {
+                        Image(systemName: "mic.fill")
+                    }
+                    .accessibilityLabel("Make changes")
+                    Spacer()
+                    Button(action: commit) {
+                        Image(systemName: "checkmark")
+                    }
+                    .controlSize(.large)
+                    .tint(.green)
+                    .accessibilityLabel("Save voice note")
+                }
+            }
+        }
+        .task {
+            // Like tapping the mic: start listening straight away.
+            if phase == .ready, preview == nil { startRecording() }
+        }
         .onDisappear {
             if recorder.isRecording { recorder.cancel() }
         }
     }
 
     private var readyContent: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "mic.circle.fill")
-                .font(.system(size: 46))
-                .foregroundColor(.accentColor)
-            Text(isRefinement ? "Make changes" : "Log voice note")
+        VStack(spacing: 10) {
+            Text(isRefinement ? "Make changes" : "Tap to talk")
                 .font(.headline)
-            Text(
-                isRefinement
-                    ? "Say what to change or add to the suggestions."
-                    : "Talk naturally about activities, metrics, or anything you want to remember."
-            )
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            Button(action: startRecording) {
-                Label(isRefinement ? "Record changes" : "Start recording", systemImage: "mic.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
+            roundButton(systemImage: "mic.fill", tint: .accentColor, action: startRecording)
+                .accessibilityLabel(isRefinement ? "Record changes" : "Start recording")
         }
     }
 
     private var recordingContent: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 46))
-                .foregroundColor(.red)
-            Text(isRefinement ? "Listening for changes…" : "Listening…")
+        VStack(spacing: 10) {
+            Text(isRefinement ? "Say what to change…" : "Listening…")
                 .font(.headline)
             Text(formattedDuration(recorder.elapsedSeconds))
-                .font(.system(.title2, design: .monospaced))
-            Text(isRefinement ? "Say the correction, then tap stop." : "Tap stop when you’re done.")
-                .font(.caption)
+                .font(.caption.monospacedDigit())
                 .foregroundColor(.secondary)
-            Button(action: stopRecording) {
-                Label("Stop", systemImage: "stop.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
+            roundButton(systemImage: "stop.fill", tint: .red, action: stopRecording)
+                .accessibilityLabel("Stop and send")
         }
     }
 
     private var processingContent: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text(isRefinement ? "Updating your note…" : "Understanding your note…")
-                .font(.headline)
-            Text(
-                isRefinement
-                    ? "Applying your correction to the current suggestions."
-                    : "Transcribing and finding activities, metrics, and notes."
-            )
-                .font(.caption)
+            Text(isRefinement ? "Updating…" : "Understanding…")
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
         }
     }
 
@@ -186,24 +176,6 @@ struct VoiceLogView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button(action: commit) {
-                    if phase == .processing {
-                        ProgressView()
-                    } else {
-                        Text("Save voice note")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(phase == .processing)
-
-                Button(action: beginRefinement) {
-                    Label("Make changes", systemImage: "pencil")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
                 Button("Start over", action: startOver)
                 .font(.caption)
                 .frame(maxWidth: .infinity)
@@ -218,13 +190,23 @@ struct VoiceLogView: View {
                 .foregroundColor(.green)
             Text("Saved")
                 .font(.headline)
-            Text("Your voice note and selected logs are in tracking.so.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
             Button("Done") { dismiss() }
-                .buttonStyle(.borderedProminent)
         }
+    }
+
+    private func roundButton(
+        systemImage: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .frame(width: 64, height: 64)
+        }
+        .buttonStyle(.borderedProminent)
+        .clipShape(Circle())
+        .tint(tint)
     }
 
     private func suggestionButton(

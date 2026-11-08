@@ -5,18 +5,11 @@ struct ActivityListView: View {
     @State private var activities: [Activity] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var showingVoice = false
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    NavigationLink(destination: VoiceLogView()) {
-                        Label("Log voice note", systemImage: "mic.fill")
-                            .font(.headline)
-                    }
-                    .accessibilityLabel("Log voice note")
-                }
-
                 if isLoading {
                     Section {
                         ProgressView("Loading...")
@@ -63,6 +56,20 @@ struct ActivityListView: View {
                             .font(.caption)
                     }
                 }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Spacer()
+                    Button {
+                        showingVoice = true
+                    } label: {
+                        Image(systemName: "mic.fill")
+                    }
+                    .controlSize(.large)
+                    .tint(.accentColor)
+                    .accessibilityLabel("Log voice note")
+                }
+            }
+            .sheet(isPresented: $showingVoice) {
+                NavigationStack { VoiceLogView() }
             }
         }
         .task { await loadActivities() }

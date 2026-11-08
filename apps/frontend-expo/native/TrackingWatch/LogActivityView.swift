@@ -65,21 +65,23 @@ struct LogActivityView: View {
                         .multilineTextAlignment(.center)
                     Button("Retry") { Task { await submit() } }
                         .disabled(isSubmitting)
-                } else {
-                    Button(action: { Task { await submit() } }) {
-                        if isSubmitting {
-                            ProgressView()
-                        } else {
-                            Text("Log")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isSubmitting)
+                } else if isSubmitting {
+                    ProgressView()
                 }
             }
             .padding(.horizontal)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button(action: { Task { await submit() } }) {
+                    Image(systemName: "checkmark")
+                }
+                .controlSize(.large)
+                .tint(.green)
+                .disabled(isSubmitting || showSuccess)
+                .accessibilityLabel("Log")
+            }
         }
     }
 
