@@ -51,9 +51,19 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 249 — Talk to coach holds you to the day you name, November 8, 2026
+
+**Build 249 is the latest TestFlight build**: build 248 plus the Talk to coach commitment. Naming a day ends the conversation with the coach saying the day back, when it checks in, and one line holding you to it; a check-in push is booked. Finishing the conversation answers the Coach tab alert on the server (every device) and clears the plan's notifications; backing out leaves it. Same on the web app (Vercel, deployed from main).
+
+- **Source:** main `394a3730` (on 248's `19e9b5bb`). It does not have `f8b5a497` (Watch mic), which landed after.
+- **Backend:** live through the `deploy hetzner` action, image `tracking-so-backend:394a3730bc8c` (started 10:45 UTC). The coach's wording and check-in pushes are backend-side and reach every build.
+- **Checks:** 18 talk unit tests; 9 `e2e/miss-reason.spec.ts` cases including Lost motivation → "today" → alert gone without reload; 9 live-model cases run inside `tsw-backend` (no DB writes). Notification dismissal is not verified on a phone.
+- **Built** with `pnpm build:testflight .release/testflight-main-394a3730/tracking.so.ipa` in worktree `tracking-coach-commitment` (branch `coach-commitment`). Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `cf4b7723b61a23d3e9b814508e695f80d52f965f2aea576ca090f612003c7b69`; the Hermes bundle contains `getPresentedNotificationsAsync`.
+- **Apple:** validation passed; delivery `f4047e3b-621c-496f-9fe5-91540b08a804`; processed `VALID`. Internal testers only; not yet added to `Friends & Family`.
+
 ## TestFlight build 248 — plan lines on the Soon card, November 8, 2026
 
-**Build 248 is the latest TestFlight build**: build 247 plus one line per plan under the Today card in Soon (this week's sessions 🔥, the streak towards the next badge 🌱/🚀; tap opens the plan). Same on the web app (Vercel, deployed from main).
+Build 248: build 247 plus one line per plan under the Today card in Soon (this week's sessions 🔥, the streak towards the next badge 🌱/🚀; tap opens the plan). Same on the web app (Vercel, deployed from main).
 
 - **Source:** main `19e9b5bb` (`ac056f0e` + `19e9b5bb` on top of 247's `53f63a8c`). Shared rule in `packages/prisma/home-todo` (`homeProgress`, `streakProgress`).
 - **Built** with `pnpm build:testflight .release/testflight-main-19e9b5bb/tracking.so.ipa` in worktree `tracking-soon-progress` (branch `soon-plan-progress`). Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`; native-module guard passed. IPA SHA-256 `b2ac7a339bfa6b83ca819259536961916c172c0877854806c333929544165345`; the Hermes bundle contains `home-progress`.

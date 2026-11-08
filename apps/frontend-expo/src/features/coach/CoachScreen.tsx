@@ -77,7 +77,6 @@ export default function CoachScreen() {
     "coach-attention",
     "metrics",
     "metric-entries",
-    "miss-answered",
   );
   const active = (plans.data ?? []).filter(
     (p) => !p.archivedAt && !p.deletedAt && (!p.finishingDate || new Date(p.finishingDate) >= new Date()),
