@@ -59,7 +59,7 @@ The same file lists each shared `packages/prisma` module the app imports. When t
 - **Backend:** live through the `deploy hetzner` action, image `tracking-so-backend:394a3730bc8c` (started 10:45 UTC). The coach's wording and check-in pushes are backend-side and reach every build.
 - **Checks:** 18 talk unit tests; 9 `e2e/miss-reason.spec.ts` cases including Lost motivation → "today" → alert gone without reload; 9 live-model cases run inside `tsw-backend` (no DB writes). Notification dismissal is not verified on a phone.
 - **Built** with `pnpm build:testflight .release/testflight-main-394a3730/tracking.so.ipa` in worktree `tracking-coach-commitment` (branch `coach-commitment`). Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `cf4b7723b61a23d3e9b814508e695f80d52f965f2aea576ca090f612003c7b69`; the Hermes bundle contains `getPresentedNotificationsAsync`.
-- **Apple:** validation passed; delivery `f4047e3b-621c-496f-9fe5-91540b08a804`; processed `VALID`. Internal testers only; not yet added to `Friends & Family`.
+- **Apple:** validation passed; delivery `f4047e3b-621c-496f-9fe5-91540b08a804`; processed `VALID`; export compliance `usesNonExemptEncryption: false`. Internal and `Friends & Family` `IN_BETA_TESTING`, beta review `APPROVED` (owner asked for F&F). What to Test describes the commitment flow and how to try it.
 
 ## TestFlight build 248 — plan lines on the Soon card, November 8, 2026
 
