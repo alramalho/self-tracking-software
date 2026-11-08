@@ -36,6 +36,7 @@ export interface ProposalReviewProps {
   onViewAccepted?: () => void;
   label: string;
   title: string;
+  subtitle?: string;
   emoji?: string | null;
   description?: string;
   summary?: ReactNode;

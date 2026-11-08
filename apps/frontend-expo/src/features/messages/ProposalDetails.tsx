@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import { format, parseISO } from "date-fns";
 import { Copy, useColors } from "@/components/ui";
 import { useActivities, usePlans } from "@/data/queries";
+import { heroFields } from "./PlanSetupChange";
 import type {
   PlanProposalDetailsProps,
   Message,
@@ -97,6 +98,17 @@ function SessionCard({ op, activity, removed }: SessionCardProps) {
 const isOutlineOnly = (plan: Partial<ProposalOperation>) =>
   Object.keys(plan).every((key) => ["outlineType", "designedThrough", "outlinePhases"].includes(key));
 const sessionTypes = ["add_session", "update_session", "delete_session"];
+/** The big before → after already shows these; the list keeps only what's left. */
+const withoutHeroFields = (op: ProposalOperation): ProposalOperation | null => {
+  if (op.type !== "update_plan") return op;
+  const rest = Object.fromEntries(
+    Object.entries(op).filter(
+      ([key]) => !(heroFields as readonly string[]).includes(key),
+    ),
+  ) as ProposalOperation;
+  const { type: _type, ...fields } = rest;
+  return isOutlineOnly(fields) ? null : rest;
+};
 
 export function ProposalDetails({
   proposal,
@@ -173,7 +185,10 @@ export function ProposalDetails({
   const sessions = operations
     .filter((op) => sessionTypes.includes(op.type))
     .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
-  const others = operations.filter((op) => !sessionTypes.includes(op.type));
+  const others = operations
+    .filter((op) => !sessionTypes.includes(op.type))
+    .map(withoutHeroFields)
+    .filter((op): op is ProposalOperation => op !== null);
   return (
     <View style={{ gap: 12 }}>
       {sessions.length > 0 && (

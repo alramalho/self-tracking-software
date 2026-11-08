@@ -21,6 +21,7 @@ import {
 import { Text } from "@/components/typography/Text";
 import { api } from "@/data/api";
 import { ProposalDetails, hasProposalChanges } from "./ProposalDetails";
+import { PlanSetupChange } from "./PlanSetupChange";
 import { CoachTools } from "./CoachTools";
 import { Markdown } from "./Markdown";
 import type { MessageProps } from "./types";
@@ -288,6 +289,7 @@ export function MessageCard({
             label={p.planGoal}
             emoji={p.planEmoji}
             title="Review Changes"
+            subtitle={p.planGoal}
             status={p.status}
             open={review === `plan-${index}`}
             onOpen={() => setReview(`plan-${index}`)}
@@ -296,9 +298,7 @@ export function MessageCard({
             onViewAccepted={() => router.push(`/plan/${p.planId}`)}
             summary={<ProposalDetails proposal={p} compact />}
           >
-            <Copy>
-              {p.planEmoji} {p.planGoal}
-            </Copy>
+            <PlanSetupChange proposal={p} />
             <Markdown>{p.description}</Markdown>
             <ProposalDetails proposal={p} />
             {buttons("proposal", index, p.status)}

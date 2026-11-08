@@ -351,3 +351,9 @@ export interface PlanProposalDetailsProps {
 export interface CoachToolsProps {
   tools: ToolCall[];
 }
+export interface ChangeHeroProps {
+  from?: string;
+  to: string;
+  caption: string;
+  size?: "large" | "medium";
+}
