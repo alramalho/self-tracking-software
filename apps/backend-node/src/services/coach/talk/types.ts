@@ -15,13 +15,17 @@ export interface TalkTurn {
   placeholder: string;
   /** Set when this turn quieted the plan: the app offers "Keep nudging me" to undo it. */
   quietUntil: string | null;
+  /** Set when they named the day of their next session: the coach checks on it then (null when too late today). */
+  commitment: { day: string; checkAt: string | null } | null;
 }
 
 /** Everything the coach knows when it writes a turn. */
 export interface TalkContext {
   coach: { name: string; persona: string };
-  /** When the coach checks on a commitment: today's time (null when it's too late today), other days' morning time. */
-  checkIn: { today: string | null; laterDays: string };
+  /** The times the coach may pick for checking on a commitment. */
+  checkIn: CheckInTimes;
+  /** The plan's morning reminder time, HH:mm: when the coach checks in after a trip. */
+  morningCheckIn: string;
   plan: { goal: string; emoji: string | null; timesPerWeek: number | null; activities: string[] };
   today: string;
   weekday: string;
@@ -33,4 +37,13 @@ export interface CheckInClock {
   timezone: string;
   /** The plan's day reminder, HH:mm. */
   morning: string;
+}
+
+/** HH:mm in the person's timezone. */
+export interface CheckInTimes {
+  /** Today's earliest check-in, null when it's too late today. */
+  earliestToday: string | null;
+  latest: string;
+  /** When no time was named. */
+  usual: string;
 }

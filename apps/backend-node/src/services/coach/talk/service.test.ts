@@ -11,6 +11,7 @@ const turn = (over: Partial<CoachTurn> = {}): CoachTurn => ({
   placeholder: "Sunday night",
   action: "none",
   until: "",
+  checkAt: "",
   ...over,
 });
 const request = (over: object = {}) => talkRequestSchema.parse({ reason: "travel", ...over });
@@ -61,6 +62,24 @@ describe("settleTurn", () => {
     expect(shown.quietUntil).toBeNull();
     expect(commitDay).toBe(TODAY);
     expect(quiet).toEqual({ until: TODAY, why: "committed" });
+  });
+
+  it("a commitment books the time the coach picked, and the screen says the booked time", () => {
+    const times = { earliestToday: "12:30", latest: "22:00", usual: "20:00" };
+    const said = settleTurn(
+      turn({ say: "Today then. I'll check in at 21:30.", ask: "none", action: "commit", until: TODAY, checkAt: "21:30" }),
+      request({ reason: "motivation" }),
+      TODAY,
+      times,
+    );
+    expect(said.shown.commitment).toEqual({ day: TODAY, checkAt: "21:30" });
+    const moved = settleTurn(
+      turn({ say: "Today then. I'll check in at 12:00.", ask: "none", action: "commit", until: TODAY, checkAt: "12:00" }),
+      request({ reason: "motivation" }),
+      TODAY,
+      times,
+    );
+    expect(moved.shown).toMatchObject({ say: "Today then. I'll check in at 12:30.", commitment: { day: TODAY, checkAt: "12:30" } });
   });
 
   it("a commitment more than a week out is not kept", () => {

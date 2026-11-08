@@ -2,7 +2,7 @@
 // the coaching switches, when a plan needs you, and what the coach is waiting on you for.
 import { planPace, weekAtRisk } from "./pace";
 import type { MissedWeek } from "./streak";
-import type { CoachRequest } from "./coaching";
+import type { CoachReminder, CoachRequest } from "./coaching";
 import type { CoachCheck, FollowThroughState, PlanSupport } from "./types";
 import { addDaysToDateKey, dateKeyToUTCDate, getPlanWeekDateKey, getPlanWeekStartKey } from "../plan-week";
 
@@ -373,4 +373,47 @@ export function dayKind(day: { scheduled: unknown[]; done: unknown[]; flexible: 
   if (day.done.length) return "done" as const;
   if (day.flexible.length) return "flexible" as const;
   return "rest" as const;
+}
+
+// ---------- coming up ----------
+
+/** A check-in the coach booked: on a day the person named, or the morning after a trip. */
+export interface UpcomingCheckIn<P extends CoachPlan = CoachPlan> {
+  plan: P;
+  at: string;
+  kind: NonNullable<CoachReminder["kind"]>;
+}
+
+/**
+ * What the coach will check on next, soonest first. A check-in leaves once it's sent, or once the
+ * plan is logged after it was booked (the push is skipped then too).
+ */
+export function upcomingCheckIns<P extends CoachPlan>(input: {
+  plans: P[];
+  entries: CoachEntry[];
+  state?: FollowThroughState;
+  now?: Date;
+}): UpcomingCheckIn<P>[] {
+  const { now = new Date() } = input;
+  const result: UpcomingCheckIn<P>[] = [];
+  for (const reminder of input.state?.monitoring?.reminders ?? []) {
+    if (!reminder.kind || reminder.sentAt || Date.parse(reminder.dueAt) <= now.getTime()) continue;
+    const plan = input.plans.find((p) => p.id === reminder.planId && !p.archivedAt && !p.deletedAt);
+    if (!plan) continue;
+    const booked = Date.parse(reminder.bookedAt ?? reminder.dueAt);
+    const done = input.entries.some(
+      (e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId) && new Date(e.datetime).getTime() >= booked,
+    );
+    if (!done) result.push({ plan, at: reminder.dueAt, kind: reminder.kind });
+  }
+  return result.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+/** "today at 20:00", "tomorrow at 09:00", "Thursday at 20:00", in the device's local time. */
+export function checkInWhen(at: string, now = new Date()) {
+  const when = new Date(at);
+  const time = `${String(when.getHours()).padStart(2, "0")}:${String(when.getMinutes()).padStart(2, "0")}`;
+  const days = daysBetween(now, when);
+  const day = days === 0 ? "today" : days === 1 ? "tomorrow" : when.toLocaleDateString("en-US", { weekday: "long" });
+  return `${day} at ${time}`;
 }

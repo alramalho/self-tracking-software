@@ -6,7 +6,7 @@ import { useEntries, useMetricEntries, useMetrics, usePlans } from "@/data/queri
 import { useFollowThrough } from "@/features/follow-through/api";
 import { answeredOnServer } from "@/features/timeline/home-cards/miss-reasons";
 import type { CoachAttentionItem } from "@/features/messages/types";
-import { coachItems } from "../model";
+import { coachItems, upcomingCheckIns } from "../model";
 
 /** Everything the coach is waiting on you for: the Coach tab's Recent list and the tab's badge. */
 export function useCoachInbox() {
@@ -43,8 +43,13 @@ export function useCoachInbox() {
       answeredMisses: (plans.data ?? []).map((p) => p.id).filter((id) => answeredOnServer(followThrough.data?.state, id)),
     });
   }, [plans.data, entries.data, followThrough.data, attention.data, metrics.data, metricEntries.data]);
+  const upcoming = useMemo(
+    () => upcomingCheckIns({ plans: plans.data ?? [], entries: entries.data ?? [], state: followThrough.data?.state }),
+    [plans.data, entries.data, followThrough.data],
+  );
   return {
     items,
+    upcoming,
     pendingCount: items.length,
     loading: plans.isPending || followThrough.isPending,
     error: plans.error ?? followThrough.error,

@@ -1,4 +1,8 @@
-import type { CoachItem as SharedCoachItem, PlanAlert as SharedPlanAlert } from "@tsw/prisma/follow-through/coach-inbox";
+import type {
+  CoachItem as SharedCoachItem,
+  PlanAlert as SharedPlanAlert,
+  UpcomingCheckIn as SharedUpcomingCheckIn,
+} from "@tsw/prisma/follow-through/coach-inbox";
 import type { Metric, Plan } from "@/core/types";
 import type { CoachAttentionItem } from "@/features/messages/types";
 import type { ReactNode } from "react";
@@ -6,6 +10,13 @@ import type { ReactNode } from "react";
 /** Everything the coach is waiting on you for, with this app's plan, attention and metric types. */
 export type CoachItem = SharedCoachItem<Plan, CoachAttentionItem, Metric>;
 export type PlanAlert = SharedPlanAlert<Plan>;
+/** A check-in the coach booked, shown under "Coming up". */
+export type UpcomingCheckIn = SharedUpcomingCheckIn<Plan>;
+
+export interface UpcomingRowProps {
+  checkIn: UpcomingCheckIn;
+  onPress: () => void;
+}
 
 export interface CoachingSwitches {
   ready: boolean;

@@ -404,25 +404,32 @@ export async function sendDueReminders(user: User, now = new Date()) {
       },
       select: { id: true, goal: true, emoji: true, activities: { select: { id: true } } },
     });
-    const loggedToday = await tx.activityEntry.findMany({
+    // Done already: logged since the reminder was booked (a check-in), or in the last 12 hours.
+    const since = (planId: string) => {
+      const bookedAt = ready.find((r) => r.planId === planId)?.bookedAt;
+      return bookedAt ? new Date(bookedAt) : new Date(now.getTime() - 12 * 3600000);
+    };
+    const recent = await tx.activityEntry.findMany({
       where: {
         userId: user.id,
         deletedAt: null,
-        datetime: { gte: new Date(now.getTime() - 12 * 3600000) },
+        datetime: { gte: new Date(Math.min(now.getTime() - 12 * 3600000, ...plans.map((p) => since(p.id).getTime()))) },
         activityId: { in: plans.flatMap((p) => p.activities.map((a) => a.id)) },
       },
-      select: { activityId: true },
+      select: { activityId: true, datetime: true },
     });
-    return plans.filter(
-      (p) => !loggedToday.some((e) => p.activities.some((a) => a.id === e.activityId)),
-    );
+    return plans
+      .filter((p) => !recent.some((e) => p.activities.some((a) => a.id === e.activityId) && e.datetime >= since(p.id)))
+      .map((p) => ({ ...p, kind: ready.find((r) => r.planId === p.id)?.kind }));
   });
   for (const plan of due)
     await notificationService
       .sendPushNotification(
         user.id,
         `${plan.emoji ?? ""} ${plan.goal}`.trim(),
-        "Today's the day you said you'd get back to it.",
+        plan.kind === "commitment"
+          ? "Checking in like I said: did it happen today? Log it once it's done."
+          : "Today's the day you said you'd get back to it.",
         `/plan/${plan.id}`,
       )
       .catch((error) => logger.warn("Coach reminder push failed", { userId: user.id, error }));

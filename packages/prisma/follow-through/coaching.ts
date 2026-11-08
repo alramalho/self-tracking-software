@@ -45,8 +45,11 @@ export interface CoachMonitoringState {
    * The streak and the weeks still count; quiet only silences the coach.
    */
   quiet?: Record<string, PlanQuiet>;
-  /** "Get back on it tomorrow" answers to a nudge: one push at the plan's reminder time. */
-  reminders?: { planId: string; dueAt: string; sentAt?: string }[];
+  /**
+   * One push per plan, skipped once they log: "Get back on it tomorrow" answers to a nudge (no kind),
+   * the check-in on a day named in Talk to coach ("commitment"), or the morning after a trip ("return").
+   */
+  reminders?: CoachReminder[];
   /** Consistency plans that went quiet: the coach owes one "why you started / archive?" message. */
   lapsePlanIds?: string[];
   setupPlanIds?: string[];
@@ -70,4 +73,13 @@ export interface CoachNudge {
   planId: string;
   outcome?: "remind" | "archive";
   remindAt?: string;
+}
+
+export interface CoachReminder {
+  planId: string;
+  dueAt: string;
+  sentAt?: string;
+  kind?: "commitment" | "return";
+  /** When it was booked: a log after this means the session happened. */
+  bookedAt?: string;
 }

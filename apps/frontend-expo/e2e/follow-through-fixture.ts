@@ -166,8 +166,16 @@ export function followThroughFixture(
       return end({ say: "Quiet until you're back.", detail: "No nudges while you're away. The week still counts.", quietUntil: away }, "away", away);
     if (body.reason === "motivation" && !body.turns.length)
       return ask("Motivation dips. It happens.", "What's the smallest session you'd still do, and when?", "20 minutes today");
-    if (body.reason === "motivation")
-      return end({ say: "Today then.", detail: "I'll check in around 18:00. Counting on you." }, "committed");
+    if (body.reason === "motivation") {
+      // The coach books its check-in: shown under "Coming up" on the Coach tab.
+      const dueAt = new Date(Date.now() + 2 * 3600000).toISOString();
+      support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring } as typeof support.monitoring;
+      support.monitoring!.reminders = [{ planId: talk[1], dueAt, kind: "commitment", bookedAt: new Date().toISOString() }];
+      return end(
+        { say: "Today then.", detail: "I'll check in at 20:00. Counting on you.", commitment: { day: today, checkAt: "20:00" } },
+        "committed",
+      );
+    }
     return end({ say: "Got it.", detail: "Next session is the one that counts." }, "answered");
   }
   const quietPlan = path.match(/^\/follow-through\/plans\/([^/]+)\/quiet$/);

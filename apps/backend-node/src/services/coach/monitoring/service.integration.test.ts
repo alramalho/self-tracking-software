@@ -750,6 +750,30 @@ describe("Silent nudges for a slipping plan", () => {
     expect(external.push.mock.calls[0][3]).toBe(`/plan/${meditation}`);
   });
 
+  it("a check-in on a day named in Talk to coach is one push with check-in words, skipped once they log after booking", async () => {
+    const bookedAt = sunday.toISOString();
+    const dueAt = new Date(sunday.getTime() + 2 * 3600000);
+    const book = () =>
+      changeState(user.id, async (state) => {
+        state.monitoring ??= { requests: [], reviewed: {}, consideredEntries: {}, pausedPlanIds: [] };
+        state.monitoring.reminders = [{ planId: running, dueAt: dueAt.toISOString(), kind: "commitment", bookedAt }];
+      });
+    external.push.mockResolvedValue({ platform: "ios" });
+
+    await book();
+    await sendDueReminders(user, new Date(dueAt.getTime() + 60000));
+    expect(external.push).toHaveBeenCalledTimes(1);
+    expect(external.push.mock.calls[0][2]).toMatch(/^Checking in like I said/);
+
+    external.push.mockClear();
+    await book();
+    await prisma.activityEntry.create({
+      data: { userId: user.id, activityId: runActivity, quantity: 3, datetime: new Date(sunday.getTime() + 3600000), updatedAt: sunday },
+    });
+    await sendDueReminders(user, new Date(dueAt.getTime() + 60000));
+    expect(external.push).not.toHaveBeenCalled();
+  });
+
   it("'Let it go' archives the plan", async () => {
     const nudge = await slippingMeditation();
     await answerNudge(user.id, nudge.id, "archive");

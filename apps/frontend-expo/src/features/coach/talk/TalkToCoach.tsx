@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
+import { Image } from "expo-image";
+import { useReducedMotion } from "react-native-reanimated";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Text } from "@/components/typography/Text";
@@ -10,6 +12,7 @@ import { InterviewFrame } from "@/features/onboarding/interview/Frame";
 import { OnboardingButton } from "@/features/onboarding/interview/OnboardingButton";
 import { StepSequence } from "@/features/onboarding/interview/StepReveal";
 import { coachIdentity } from "@/features/messages/coach";
+import { hellyThumbsUp } from "@/features/coach/avatar";
 import { dismissPlanNotifications } from "@/native/notifications/dismiss";
 import { endQuiet, nextTurn, openingQuestion } from "./service";
 import type { TalkAnswered, TalkToCoachProps, TalkTurn } from "./types";
@@ -24,7 +27,8 @@ const SCREENS = 3;
 export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
   const c = useColors();
   const client = useQueryClient();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const personality = useCurrentUser().data?.coachPersonality;
+  const coach = coachIdentity(personality);
   const [answered, setAnswered] = useState<TalkAnswered[]>([]);
   const [turn, setTurn] = useState<TalkTurn | null>(() => openingQuestion(reason));
   const [answer, setAnswer] = useState("");
@@ -53,6 +57,8 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
   };
   const busy = ask.isPending || undo.isPending;
   const done = turn?.ask === "none";
+  const reduced = useReducedMotion();
+  const approving = !!turn?.commitment && personality !== "STRATEGIST" && !reduced;
   const send = () => answer.trim() && ask.mutate({ text: answer.trim(), notSure: false });
   return (
     <InterviewFrame
@@ -88,7 +94,14 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
       }
     >
       <StepSequence prefix="talk" style={{ alignItems: "center", gap: 16 }}>
-        <Image source={coach.avatar} accessibilityLabel={coach.name} style={{ width: 72, height: 72 }} />
+        {/* The coach is the one talking. Helly gives a thumbs-up once when you commit to a day. */}
+        <Image
+          testID={approving ? "talk-coach-thumbs-up" : "talk-coach"}
+          source={approving ? hellyThumbsUp : coach.avatar}
+          accessibilityLabel={coach.name}
+          contentFit="contain"
+          style={{ width: 112, height: 112 }}
+        />
         {turn ? (
           <Text testID="talk-say" accessibilityRole="header" style={{ color: c.text, fontSize: 28, lineHeight: 34, fontWeight: "700", textAlign: "center", letterSpacing: -0.4 }}>
             {turn.say}

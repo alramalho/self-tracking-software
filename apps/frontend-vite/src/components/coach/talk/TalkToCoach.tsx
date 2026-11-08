@@ -19,6 +19,9 @@ const SCREENS = 3;
  * Talk to coach: one screen per turn, like onboarding (same as the iPhone app). The coach writes each
  * screen; the person answers in their own words or by voice. Nothing is sent in their name.
  */
+const reducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 export function TalkToCoach({ planId, reason, missed }: TalkToCoachSearch) {
   const api = useApiWithAuth();
   const client = useQueryClient();
@@ -78,7 +81,12 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachSearch) {
       }
     >
       <div className="flex flex-col items-center gap-4 text-center">
-        <CoachAvatar coach={coach.name === "Oli" ? "Oli" : "Helly"} size={72} />
+        {/* The coach is the one talking. Helly gives a thumbs-up once when you commit to a day. */}
+        {turn?.commitment && coach.name !== "Oli" && !reducedMotion() ? (
+          <img data-testid="talk-coach-thumbs-up" src="/images/onboarding/helly-3d-thumbs-up.webp" alt="" style={{ width: 112, height: 112 }} className="object-contain" />
+        ) : (
+          <CoachAvatar coach={coach.name === "Oli" ? "Oli" : "Helly"} size={112} />
+        )}
         {turn ? (
           <h1 data-testid="talk-say" className="text-balance text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-foreground">
             {turn.say}

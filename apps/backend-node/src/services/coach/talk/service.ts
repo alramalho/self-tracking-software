@@ -10,10 +10,10 @@ import { changeState } from "../../follow-through/store";
 import { FollowThroughInputError } from "../../follow-through/errors";
 import { monitoringState } from "../monitoring/model";
 import type { FollowThroughState, MissReasonId, PlanQuiet } from "@tsw/prisma/follow-through";
-import { checkInAt, checkInTimes } from "./commitment";
+import { checkInTimes, resolveCheckTime, zoned } from "./commitment";
 import { talkPrompt } from "./prompt";
 import { turnSchema } from "./schema";
-import type { CheckInClock, CoachTurn, TalkContext, TalkRequest, TalkTurn } from "./types";
+import type { CheckInClock, CheckInTimes, CoachTurn, TalkContext, TalkRequest, TalkTurn } from "./types";
 
 const MAX_QUESTIONS = 2;
 const MAX_QUIET_DAYS = 30;
@@ -43,7 +43,9 @@ const dayWithin = (value: string, today: string, days: number) =>
  * Once the conversation is over the plan's alert is answered: until the committed or return day, or
  * for the rest of today.
  */
-export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string) {
+const ANY_TIME: CheckInTimes = { earliestToday: "00:00", latest: "22:00", usual: "20:00" };
+
+export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string, times: CheckInTimes = ANY_TIME) {
   const answered = request.turns.length;
   let action = request.notSure ? "ask_again" : turn.action;
   const limit = action === "commit" ? MAX_COMMIT_DAYS : MAX_QUIET_DAYS;
@@ -52,8 +54,12 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string)
   if (action !== "none" && !until) action = "none";
   const asks = turn.ask === "text" && answered < MAX_QUESTIONS && !request.notSure && action !== "commit";
   const ask = asks ? "text" : "none";
-  const say = ask === "none" ? withoutQuestions(turn.say) : turn.say;
-  const detail = ask === "none" ? withoutQuestions(turn.detail) : turn.detail;
+  const commitDay = action === "commit" ? until : null;
+  const checkAt = commitDay ? resolveCheckTime(commitDay, today, turn.checkAt, times) : null;
+  // The time on screen is the time booked, even when the model's time had to move.
+  const booked = (text: string) => (checkAt && turn.checkAt && turn.checkAt !== checkAt ? text.split(turn.checkAt).join(checkAt) : text);
+  const say = booked(ask === "none" ? withoutQuestions(turn.say) : turn.say);
+  const detail = booked(ask === "none" ? withoutQuestions(turn.detail) : turn.detail);
   // "Not sure yet" always says when the coach will ask again, even if the model left it out.
   const askAgain = action === "ask_again" && !/again/i.test(`${say} ${detail}`) ? `I'll ask again ${format(parseISO(until), "EEEE")}.` : "";
   const shown: TalkTurn = {
@@ -62,11 +68,12 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string)
     ask,
     placeholder: ask === "text" ? words(turn.placeholder, 5) : "",
     quietUntil: action === "quiet" ? until : null,
+    commitment: commitDay ? { day: commitDay, checkAt } : null,
   };
   const why: Record<string, PlanQuiet["why"]> = { quiet: "away", ask_again: "not_sure", commit: "committed" };
   const quiet: Omit<PlanQuiet, "at"> | null =
     action !== "none" ? { until, why: why[action] } : ask === "none" ? { until: today, why: "answered" } : null;
-  return { shown, quiet, commitDay: action === "commit" ? until : null, over: ask === "none" };
+  return { shown, quiet, commitDay, over: ask === "none" };
 }
 
 async function talkContext(userId: string, planId: string): Promise<TalkContext & { clock: CheckInClock }> {
@@ -93,6 +100,7 @@ async function talkContext(userId: string, planId: string): Promise<TalkContext 
     clock,
     coach: { name: coach.displayName, persona: coach.systemPrompt },
     checkIn: checkInTimes(now, clock),
+    morningCheckIn: clock.morning,
     plan: { goal: plan.goal, emoji: plan.emoji, timesPerWeek: plan.timesPerWeek, activities: plan.activities.map((a) => a.title) },
     today: formatInTimeZone(now, timezone, "yyyy-MM-dd"),
     weekday: formatInTimeZone(now, timezone, "EEEE"),
@@ -131,7 +139,7 @@ export async function talkTurn(userId: string, planId: string, request: TalkRequ
     model,
     effort: effortFor(model),
   });
-  const settled = settleTurn(object, request, context.today);
+  const settled = settleTurn(object, request, context.today, context.checkIn);
   if (settled.over) await finish(userId, planId, request, settled, context);
   const { shown } = settled;
   const latest = request.turns.at(-1);
@@ -159,15 +167,16 @@ async function finish(
     for (const nudge of monitoring.requests)
       if (nudge.kind === "nudge" && nudge.planIds.includes(planId) && !nudge.resolvedAt && !nudge.closedAt)
         nudge.resolvedAt = now.toISOString();
-    // A named day, or the morning after they're back: one push, unless they've logged by then.
-    const checkDay =
-      settled.commitDay ??
-      (settled.quiet?.why === "away" ? format(addDays(parseISO(settled.quiet.until), 1), "yyyy-MM-dd") : null);
-    if (checkDay) {
-      const at = checkInAt(checkDay, now, context.clock);
-      monitoring.reminders = (monitoring.reminders ?? []).filter((r) => r.planId !== planId || r.sentAt);
-      if (at) monitoring.reminders.push({ planId, dueAt: at.toISOString() });
-    }
+    // One push: on a named day at the check-in time, or the morning after a trip. Skipped once they log.
+    const commitment = settled.shown.commitment;
+    const awayUntil = settled.quiet?.why === "away" ? settled.quiet.until : null;
+    const check = commitment?.checkAt
+      ? { kind: "commitment" as const, at: zoned(commitment.day, commitment.checkAt, context.clock) }
+      : awayUntil
+        ? { kind: "return" as const, at: zoned(format(addDays(parseISO(awayUntil), 1), "yyyy-MM-dd"), context.clock.morning, context.clock) }
+        : null;
+    if (commitment || awayUntil) monitoring.reminders = (monitoring.reminders ?? []).filter((r) => r.planId !== planId || r.sentAt);
+    if (check) monitoring.reminders!.push({ planId, dueAt: check.at.toISOString(), kind: check.kind, bookedAt: now.toISOString() });
     if (request.missed) {
       const week = format(startOfWeek(subWeeks(parseISO(context.today), 1)), "yyyy-MM-dd");
       const reason: MissReasonId = request.reason === "talk" ? "other" : request.reason;

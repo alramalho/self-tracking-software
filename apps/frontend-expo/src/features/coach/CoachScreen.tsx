@@ -11,15 +11,38 @@ import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
 import { MetricLogger } from "@/features/metrics/MetricLogger";
 import { coachAvatar } from "./avatar";
+import { checkInWhen } from "./model";
 import { CoachSettings } from "./CoachSettings";
 import { CoachItemDrawer } from "./inbox/CoachItemDrawer";
 import { useCoachInbox } from "./inbox/useCoachInbox";
 import { useCoachingSwitches } from "./useCoaching";
-import type { CoachItem, CoachRowProps, SectionLabelProps } from "./types";
+import type { CoachItem, CoachRowProps, SectionLabelProps, UpcomingRowProps } from "./types";
 
 function SectionLabel({ children }: SectionLabelProps) {
   const c = useColors();
   return <Text style={{ color: c.muted, fontSize: 13, fontWeight: "600", paddingHorizontal: 4 }}>{children}</Text>;
+}
+
+/** A check-in the coach booked: when, and for which plan. Opens the plan. */
+function UpcomingRow({ checkIn, onPress }: UpcomingRowProps) {
+  const c = useColors();
+  const when = `Check-in ${checkInWhen(checkIn.at)}`;
+  return (
+    <Pressable
+      testID={`coach-upcoming-${checkIn.plan.id}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${when}. ${checkIn.plan.goal}`}
+      onPress={onPress}
+      style={({ pressed }) => ({ minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, opacity: pressed ? 0.6 : 1 })}
+    >
+      <Text style={{ width: 36, textAlign: "center", fontSize: 22 }}>{checkIn.plan.emoji ?? "⏰"}</Text>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text numberOfLines={1} style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>{when}</Text>
+        <Text numberOfLines={1} style={{ color: c.muted, fontSize: 13 }}>{checkIn.plan.goal}</Text>
+      </View>
+      <ChevronRight size={18} color={c.muted} />
+    </Pressable>
+  );
 }
 
 function CoachRow({ item, onPress }: CoachRowProps) {
@@ -143,6 +166,22 @@ export default function CoachScreen() {
           <CoachRow key={item.id} item={item} onPress={() => setOpen(item)} />
         ))}
       </Panel>
+
+      {inbox.upcoming.length > 0 && (
+        <>
+          <SectionLabel>Coming up</SectionLabel>
+          <Panel style={{ paddingVertical: 4, paddingHorizontal: 16, borderRadius: 18, gap: 0 }}>
+            {inbox.upcoming.map((checkIn, i) => (
+              <View key={`${checkIn.plan.id}-${checkIn.at}`} style={i ? { borderTopWidth: 1, borderColor: c.border } : undefined}>
+                <UpcomingRow
+                  checkIn={checkIn}
+                  onPress={() => router.push({ pathname: "/(tabs)/plans", params: { selectedPlan: checkIn.plan.id } })}
+                />
+              </View>
+            ))}
+          </Panel>
+        </>
+      )}
 
       {active.length > 0 && <SectionLabel>Your plans</SectionLabel>}
       {!coaching.master && coaching.canCoach && (

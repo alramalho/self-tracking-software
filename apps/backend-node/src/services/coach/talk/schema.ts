@@ -25,4 +25,5 @@ export const turnSchema = z.object({
     .enum(["none", "quiet", "ask_again", "commit"])
     .describe("commit: they named the day of their next session. quiet: away until a day. ask_again: not sure yet."),
   until: z.string().describe("yyyy-MM-dd for commit, quiet or ask_again, else empty."),
+  checkAt: z.string().describe("For commit: HH:mm when you'll check the session happened. Else empty."),
 });

@@ -7,7 +7,8 @@ import { CoachSettings } from "@/components/coach/CoachSettings";
 import { useCoachInbox } from "@/components/coach/useCoachInbox";
 import { useCoachingSwitches } from "@/components/coach/useCoaching";
 import { coachFace } from "@/components/coach/face";
-import type { CoachItem, CoachRowProps, SectionLabelProps } from "@/components/coach/types";
+import { checkInWhen } from "@tsw/prisma/follow-through/coach-inbox";
+import type { CoachItem, CoachRowProps, SectionLabelProps, UpcomingRowProps } from "@/components/coach/types";
 import { MetricsLogPopover } from "@/components/MetricsLogPopover";
 import { Switch } from "@/components/ui/switch";
 import { usePlans } from "@/contexts/plans";
@@ -40,6 +41,26 @@ function CoachRow({ item, onClick }: CoachRowProps) {
         </span>
       </span>
       <span className={cn("h-2 w-2 shrink-0 rounded-full", theme.bg)} aria-hidden />
+    </button>
+  );
+}
+
+/** A check-in the coach booked: when, and for which plan. Opens the plan. */
+function UpcomingRow({ checkIn, onClick }: UpcomingRowProps) {
+  const when = `Check-in ${checkInWhen(checkIn.at)}`;
+  return (
+    <button
+      type="button"
+      data-testid={`coach-upcoming-${checkIn.plan.id}`}
+      onClick={onClick}
+      className="flex min-h-16 w-full items-center gap-3 border-border py-2.5 text-left transition-opacity hover:opacity-70 [&:not(:first-child)]:border-t"
+    >
+      <span className="w-9 shrink-0 text-center text-[22px]">{checkIn.plan.emoji ?? "⏰"}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold">{when}</span>
+        <span className="block truncate text-[13px] text-muted-foreground">{checkIn.plan.goal}</span>
+      </span>
+      <ChevronRight className="h-[18px] w-[18px] text-muted-foreground" />
     </button>
   );
 }
@@ -122,6 +143,21 @@ function CoachPage() {
           <CoachRow key={item.id} item={item} onClick={() => setOpen(item)} />
         ))}
       </div>
+
+      {inbox.upcoming.length > 0 && (
+        <>
+          <SectionLabel>Coming up</SectionLabel>
+          <div className="rounded-[18px] border border-border bg-card px-4 py-1">
+            {inbox.upcoming.map((checkIn) => (
+              <UpcomingRow
+                key={`${checkIn.plan.id}-${checkIn.at}`}
+                checkIn={checkIn}
+                onClick={() => navigate({ to: "/plans", search: { selectedPlan: checkIn.plan.id } })}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {active.length > 0 && <SectionLabel>Your plans</SectionLabel>}
       {!coaching.master && coaching.canCoach && (

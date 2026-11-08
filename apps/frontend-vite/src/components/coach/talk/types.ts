@@ -10,6 +10,8 @@ export interface TalkTurn {
   placeholder: string;
   /** Set when this screen quieted the plan until that day: "Keep nudging me" undoes it. */
   quietUntil: string | null;
+  /** Set when they named the day of their next session; checkAt is null when it's too late today. */
+  commitment?: { day: string; checkAt: string | null } | null;
 }
 
 /** A screen already answered, sent back so the coach knows the conversation so far. */

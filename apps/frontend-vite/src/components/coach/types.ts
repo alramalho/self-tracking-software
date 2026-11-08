@@ -2,6 +2,7 @@ import type { Metric } from "@tsw/prisma";
 import type {
   CoachItem as SharedCoachItem,
   PlanAlert as SharedPlanAlert,
+  UpcomingCheckIn as SharedUpcomingCheckIn,
 } from "@tsw/prisma/follow-through/coach-inbox";
 import type { CompletePlan } from "@/contexts/plans";
 import type { CoachAttentionItem } from "@/contexts/ai/types";
@@ -9,6 +10,13 @@ import type { CoachAttentionItem } from "@/contexts/ai/types";
 /** Everything the coach is waiting on you for, with the web app's plan, attention and metric types. */
 export type CoachItem = SharedCoachItem<CompletePlan, CoachAttentionItem, Metric>;
 export type PlanAlert = SharedPlanAlert<CompletePlan>;
+/** A check-in the coach booked, shown under "Coming up". */
+export type UpcomingCheckIn = SharedUpcomingCheckIn<CompletePlan>;
+
+export interface UpcomingRowProps {
+  checkIn: UpcomingCheckIn;
+  onClick: () => void;
+}
 
 export interface CoachingSwitches {
   ready: boolean;

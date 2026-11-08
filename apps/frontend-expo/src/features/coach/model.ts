@@ -3,9 +3,11 @@ export {
   alertFact,
   alertItem,
   alertTitle,
+  checkInWhen,
   coachItems,
   masterOn,
   planAlert,
   planCoachingOn,
   supportFor,
+  upcomingCheckIns,
 } from "@tsw/prisma/follow-through/coach-inbox";

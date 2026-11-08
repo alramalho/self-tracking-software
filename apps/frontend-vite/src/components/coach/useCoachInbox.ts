@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { coachItems } from "@tsw/prisma/follow-through/coach-inbox";
+import { coachItems, upcomingCheckIns } from "@tsw/prisma/follow-through/coach-inbox";
 import { useApiWithAuth } from "@/api";
 import { getCoachAttentionItems } from "@/contexts/ai/service";
 import { useActivities } from "@/contexts/activities/useActivities";
@@ -42,8 +42,13 @@ export function useCoachInbox() {
       answeredMisses: (plans ?? []).map((p) => p.id).filter((id) => answeredOnServer(followThrough.data?.state, id)),
     });
   }, [plans, activityEntries, followThrough.data, attention.data, metrics, metricEntries]);
+  const upcoming = useMemo(
+    () => upcomingCheckIns({ plans: plans ?? [], entries: activityEntries ?? [], state: followThrough.data?.state }),
+    [plans, activityEntries, followThrough.data],
+  );
   return {
     items,
+    upcoming,
     pendingCount: items.length,
     loading: isLoadingPlans || followThrough.isPending,
     error: followThrough.error,

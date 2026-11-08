@@ -62,11 +62,18 @@ test("lost motivation: the coach asks for the next session, holds you to it, and
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByTestId("talk-say")).toHaveText("Today then.");
   await expect(page.getByTestId("talk-detail")).toContainText("Counting on you.");
+  await expect(page.getByTestId("talk-coach-thumbs-up")).toBeVisible();
   await expect(page.getByRole("button", { name: "Keep nudging me", exact: true })).toHaveCount(0);
-  // Back on the Coach tab without a reload: the alert is gone.
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: "test-results/talk-commitment.png" });
+  // Back on the Coach tab without a reload: the alert is gone and the check-in is coming up.
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByTestId("coach-messages")).toBeVisible();
   await expect(page.getByRole("button", { name: readingRow })).toHaveCount(0);
+  await expect(page.getByText("Coming up", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("coach-upcoming-reading")).toContainText(/Check-in (today|tomorrow) at \d\d:\d\d/);
+  await page.getByTestId("coach-upcoming-reading").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/coach-coming-up.png" });
 });
 
 test("backing out of the conversation leaves the alert waiting", async ({ page, request }) => {

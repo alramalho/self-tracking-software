@@ -1,28 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { checkInAt, checkInTimes } from "./commitment";
+import { checkInTimes, resolveCheckTime } from "./commitment";
 
 const clock = { timezone: "Europe/Lisbon", morning: "09:00" };
+const TODAY = "2026-11-08";
 const at = (iso: string) => new Date(iso);
 
-describe("checking on a commitment", () => {
-  it("today: three hours later, on the next half hour", () => {
-    expect(checkInAt("2026-11-08", at("2026-11-08T11:24:00Z"), clock)?.toISOString()).toBe("2026-11-08T14:30:00.000Z");
+describe("when the coach checks on a commitment", () => {
+  it("offers the next half hour at least 45 minutes away, and the evening by default", () => {
+    expect(checkInTimes(at("2026-11-08T11:24:00Z"), clock)).toEqual({ earliestToday: "12:30", latest: "22:00", usual: "20:00" });
   });
 
-  it("today: never after 21:00", () => {
-    expect(checkInAt("2026-11-08", at("2026-11-08T19:30:00Z"), clock)?.toISOString()).toBe("2026-11-08T21:00:00.000Z");
+  it("is too late today after about 21:15", () => {
+    expect(checkInTimes(at("2026-11-08T21:40:00Z"), clock).earliestToday).toBeNull();
   });
 
-  it("today: too late to check", () => {
-    expect(checkInAt("2026-11-08", at("2026-11-08T20:40:00Z"), clock)).toBeNull();
-    expect(checkInTimes(at("2026-11-08T20:40:00Z"), clock).today).toBeNull();
+  const times = checkInTimes(at("2026-11-08T11:24:00Z"), clock);
+  it("a short run today with no time: checks that evening", () => {
+    expect(resolveCheckTime(TODAY, TODAY, "", times)).toBe("20:00");
   });
 
-  it("a later day: that morning at the plan's reminder time", () => {
-    expect(checkInAt("2026-11-10", at("2026-11-08T11:24:00Z"), clock)?.toISOString()).toBe("2026-11-10T09:00:00.000Z");
+  it("a morning session already past: the earliest time it can still check", () => {
+    expect(resolveCheckTime(TODAY, TODAY, "12:00", times)).toBe("12:30");
   });
 
-  it("tells the coach the times it may promise", () => {
-    expect(checkInTimes(at("2026-11-08T11:24:00Z"), clock)).toEqual({ today: "14:30", laterDays: "09:00" });
+  it("never later than 22:00, and a later day keeps the time it picked", () => {
+    expect(resolveCheckTime(TODAY, TODAY, "23:30", times)).toBe("22:00");
+    expect(resolveCheckTime("2026-11-12", TODAY, "18:00", times)).toBe("18:00");
+    expect(resolveCheckTime("2026-11-12", TODAY, "06:00", times)).toBe("08:00");
+  });
+
+  it("too late today: no check-in", () => {
+    expect(resolveCheckTime(TODAY, TODAY, "21:30", checkInTimes(at("2026-11-08T21:40:00Z"), clock))).toBeNull();
   });
 });
