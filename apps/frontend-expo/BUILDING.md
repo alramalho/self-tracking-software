@@ -51,9 +51,19 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 254 — "Coming up" shows every booked coach push, November 8, 2026
+
+**Build 254 is the latest TestFlight build**: everything on main up to `68c747c3`. The Coach tab's "Coming up" now lists every push the coach booked: "Check-in …" for named days and trips, "Reminder …" for "remind me tomorrow" and for check-ins booked before build 251 (which had no kind and were hidden). An untagged booking counts as done after a log in the 12 hours before it, like the push.
+
+- **Source:** main `68c747c3` (on `00909318`, so it also has build 252/253's goal-check and baseline changes).
+- **Backend:** `deploy hetzner` succeeded, image `tracking-so-backend:68c747c30845`; web on Vercel.
+- **Checks:** Expo, Vite and backend typecheck; 9 `e2e/miss-reason.spec.ts` cases.
+- **Built** with `pnpm build:testflight .release/testflight-main-68c747c3/tracking.so.ipa` in worktree `tracking-coach-commitment`; TrackingHealth, TrackingMap, TrackingWatch installed. IPA SHA-256 `3aa62568c717b7c7672f864e6e9fb346681dc7dc12da90241cead90b376a6aea`.
+- **Apple:** validation passed; delivery `b84a659e-d285-4801-bdc2-0842ea7c616e`; processed `VALID`. Internal and `Friends & Family` `IN_BETA_TESTING`, beta review `APPROVED`.
+
 ## TestFlight build 252 — goal check says what's missing, November 8, 2026
 
-**Build 252 is the latest TestFlight build**: build 251 plus, from main `51bbec50`: when the onboarding goal check fails, the hint names what is missing (a feeling, too broad, or not a goal) with an example, behind an amber warning icon in full-contrast text. The wording comes from the backend (image `51bbec501068`, live), so older builds get the new text but keep the grey icon.
+Build 252: build 251 plus, from main `51bbec50`: when the onboarding goal check fails, the hint names what is missing (a feeling, too broad, or not a goal) with an example, behind an amber warning icon in full-contrast text. The wording comes from the backend (image `51bbec501068`, live), so older builds get the new text but keep the grey icon.
 
 - **Built** with `pnpm build:testflight .release/testflight-main-51bbec50/tracking.so.ipa` in worktree `tracking-goal-hint`. Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `ebee24857b7425cc541c44b4d2661825c75b64d934f18c675ccc419650ca4536`; the Hermes bundle contains `TriangleAlert`.
 - **Apple:** validated and uploaded; added to internal testers and Friends & Family, beta review submitted (WAITING_FOR_REVIEW).
