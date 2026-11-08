@@ -40,6 +40,29 @@ export type HomeDaysInput = {
   practice?: { id: string; planId: string; activityId: string; date: string; time: string | null; outcome: string }[];
 };
 
+/** A plan's streak numbers as the server sends them; both apps' plans fit it. */
+export type HomeProgressStreak = {
+  currentStreak?: number;
+  achievement?: { streak?: number } | null;
+  habitAchievement?: { progressValue?: number; maxValue?: number; isAchieved?: boolean } | null;
+  lifestyleAchievement?: { progressValue?: number; maxValue?: number; isAchieved?: boolean } | null;
+};
+
+export type HomeProgressInput = {
+  projection: PlanWeekProjection;
+  plans: { id: string; goal: string; emoji?: string | null; activities?: { id: string; emoji?: string | null }[]; progress?: HomeProgressStreak | null }[];
+  entries: HomeDaysInput["entries"];
+};
+
+/** One plan at a glance under the two weeks: this week's sessions, then the streak towards the next badge. */
+export type HomeProgressRow = {
+  planId: string;
+  goal: string;
+  emoji: string;
+  week: { done: number; target: number };
+  streak: { stage: "Habit" | "Lifestyle"; value: number; target: number };
+};
+
 /** The parts of a Coach tab item the homepage note reads; both apps' items fit it. */
 export type CoachNoteCandidate = {
   kind: "alert" | "request" | "check" | "attention" | "checkin";

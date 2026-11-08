@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
-import { homeDays } from "@tsw/prisma/home-todo";
+import { homeDays, homeProgress } from "@tsw/prisma/home-todo";
 import { Heading, useColors } from "@/components/ui";
 import { useFollowThrough } from "@/features/follow-through/api";
 import { visibleSessions } from "@/features/follow-through/model";
 import { CoachNote } from "./CoachNote";
 import { DayDetail, TwoWeeks } from "./Days";
+import { HomeProgress } from "./HomeProgress";
 import type { HomeTodoProps } from "./types";
 
 /** Top of the homepage: the coach's note when it matters, then what's on this week and next. */
@@ -29,6 +30,7 @@ export function HomeTodo({ plans, entries }: HomeTodoProps) {
     () => homeDays({ projection, plans: visible, entries: logs, practice }),
     [projection, visible, logs, practice],
   );
+  const progress = useMemo(() => homeProgress({ projection, plans: visible, entries: logs }), [projection, visible]);
   const [selectedKey, setSelectedKey] = useState(projection.todayKey);
   const day = weeks.flat().find((d) => d.key === selectedKey) ?? weeks[0][0];
   return (
@@ -38,6 +40,7 @@ export function HomeTodo({ plans, entries }: HomeTodoProps) {
         <View style={{ gap: 14, padding: 16, borderRadius: 24, backgroundColor: c.card }}>
           <Heading>Soon</Heading>
           <TwoWeeks weeks={weeks} selectedKey={day.key} onSelect={setSelectedKey} />
+          <HomeProgress rows={progress} />
           <DayDetail day={day} todayKey={projection.todayKey} />
         </View>
       )}

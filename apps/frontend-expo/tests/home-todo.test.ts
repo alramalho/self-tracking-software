@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
-import { homeDays, pickCoachNote } from "@tsw/prisma/home-todo";
+import { homeDays, homeProgress, pickCoachNote } from "@tsw/prisma/home-todo";
 import type { CoachNoteCandidate } from "@tsw/prisma/home-todo";
 
 const now = new Date("2026-10-21T12:00:00Z"); // a Wednesday
@@ -125,4 +125,27 @@ test("a coach practice session joins its plan's day with a time, or adds the day
   const readFriday = on(all, "2026-10-23").items.find((item) => item.planId === "reads");
   assert.deepEqual([readFriday?.kind, readFriday?.time], ["scheduled", "07:30"]);
   assert.equal(on(all, "2026-10-20").items.find((item) => item.planId === "reads")?.kind, "done");
+});
+
+test("under the two weeks, each plan shows this week's sessions and its streak towards the next badge", () => {
+  const plans = [
+    { ...runPlan, progress: { achievement: { streak: 2 } } },
+    { ...readPlan, progress: { achievement: { streak: 5 } } },
+  ];
+  const entries = [{ activityId: "read", datetime: "2026-10-19T09:00:00Z" }];
+  const projection = buildPlanWeekProjection({ plans, entries, now, weekCount: 2 });
+  const rows = homeProgress({ projection, plans, entries });
+  assert.deepEqual(
+    rows.map((row) => [row.planId, row.week, row.streak]),
+    [
+      ["runs", { done: 0, target: 2 }, { stage: "Habit", value: 2, target: 4 }],
+      ["reads", { done: 1, target: 3 }, { stage: "Lifestyle", value: 5, target: 9 }],
+    ],
+  );
+});
+
+test("a plan with nothing this week stays out of the summary", () => {
+  const idle = { ...runPlan, id: "idle", sessions: [{ id: "s9", date: "2026-11-30", activityId: "run", quantity: 1 }] };
+  const projection = buildPlanWeekProjection({ plans: [idle], entries: [], now, weekCount: 2 });
+  assert.deepEqual(homeProgress({ projection, plans: [idle], entries: [] }), []);
 });

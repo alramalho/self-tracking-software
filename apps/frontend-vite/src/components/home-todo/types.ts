@@ -30,3 +30,15 @@ export interface HomeItemRowProps {
   item: HomeDayItem;
   canLog: boolean;
 }
+
+export interface HomeProgressProps {
+  rows: import("@tsw/prisma/home-todo").HomeProgressRow[];
+}
+
+export interface HomeStepsProps {
+  value: number;
+  target: number;
+  /** Tailwind background class for a filled step. */
+  color: string;
+  label: string;
+}

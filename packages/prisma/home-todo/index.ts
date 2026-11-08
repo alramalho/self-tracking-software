@@ -1,7 +1,8 @@
 // The homepage's top: this week and next across every plan, and the one coach note worth showing.
 // Shared by the iPhone app and the web app so both show the same days and the same note.
 import { addDaysToDateKey, getPlanWeekDateKey } from "../plan-week";
-import type { CoachNoteCandidate, HomeDay, HomeDayItem, HomeDaysInput } from "./types";
+import { HABIT_WEEKS, LIFESTYLE_WEEKS } from "../follow-through/streak";
+import type { CoachNoteCandidate, HomeDay, HomeDayItem, HomeDaysInput, HomeProgressInput, HomeProgressRow, HomeProgressStreak } from "./types";
 
 export type * from "./types";
 
@@ -100,6 +101,58 @@ export function homeDays({ projection, plans, entries, practice = [] }: HomeDays
       };
     }),
   );
+}
+
+const whole = (value: number | undefined, fallback = 0) =>
+  typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : fallback;
+
+/** The streak and the badge it is heading for. Achievement flags describe the current stage, not whether earlier stages were reached. */
+export function streakProgress(progress: HomeProgressStreak | null | undefined): HomeProgressRow["streak"] {
+  const habit = progress?.habitAchievement;
+  const lifestyle = progress?.lifestyleAchievement;
+  const habitTarget = Math.max(1, whole(habit?.maxValue, HABIT_WEEKS));
+  const lifestyleTarget = Math.max(habitTarget, whole(lifestyle?.maxValue, LIFESTYLE_WEEKS));
+  const value = whole(
+    progress?.achievement?.streak ?? progress?.currentStreak,
+    Math.max(
+      whole(habit?.progressValue),
+      whole(lifestyle?.progressValue),
+      lifestyle?.isAchieved ? lifestyleTarget : habit?.isAchieved ? habitTarget : 0,
+    ),
+  );
+  const stage = value >= habitTarget ? "Lifestyle" : "Habit";
+  return { stage, value, target: stage === "Lifestyle" ? lifestyleTarget : habitTarget };
+}
+
+/** Every plan with sessions this week, in plan order: the same counts the day tiles show, plus its streak. */
+export function homeProgress({ projection, plans, entries }: HomeProgressInput): HomeProgressRow[] {
+  const weekEndKey = addDaysToDateKey(projection.weekStartKey, 7);
+  const thisWeek = (key: string) => key >= projection.weekStartKey && key < weekEndKey;
+  return plans.flatMap((plan) => {
+    const summary = projection.summaries.find((s) => s.planId === plan.id && s.weekIndex === 0);
+    // A weekly-count plan has its week summed up already; a dated plan counts this week's sessions and the days it was logged.
+    const ids = new Set(plan.activities?.map((activity) => activity.id));
+    const target =
+      summary?.target ?? projection.scheduledSessions.filter((s) => s.planId === plan.id && thisWeek(s.dateKey)).length;
+    const done =
+      summary?.completedDays ??
+      new Set(
+        entries
+          .filter((entry) => !entry.deletedAt && entry.activityId && ids.has(entry.activityId))
+          .map((entry) => getPlanWeekDateKey(entry.datetime))
+          .filter(thisWeek),
+      ).size;
+    if (!target) return [];
+    return [
+      {
+        planId: plan.id,
+        goal: plan.goal,
+        emoji: plan.emoji || plan.activities?.[0]?.emoji || "•",
+        week: { done, target },
+        streak: streakProgress(plan.progress),
+      },
+    ];
+  });
 }
 
 /** How much a coach item matters right now, lowest first; null when it is not homepage news. */

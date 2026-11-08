@@ -1,3 +1,4 @@
+import { streakProgress as sharedStreakProgress } from "@tsw/prisma/home-todo";
 import type { Plan } from "@/core/types";
 
 const nonnegative = (value: number | undefined, fallback = 0) =>
@@ -5,20 +6,10 @@ const nonnegative = (value: number | undefined, fallback = 0) =>
     ? Math.max(0, Math.floor(value))
     : fallback;
 
-/** Achievement flags describe the current stage, not whether earlier stages were reached. */
+/** The streak and its next badge, by the rule both apps share. */
 export function streakProgress(progress: Plan["progress"]) {
-  const habit = progress?.habitAchievement;
-  const lifestyle = progress?.lifestyleAchievement;
-  const habitTarget = Math.max(1, nonnegative(habit?.maxValue, 4));
-  const lifestyleTarget = Math.max(habitTarget, nonnegative(lifestyle?.maxValue, 9));
-  const authoritative = progress?.achievement?.streak ?? progress?.currentStreak;
-  const streak = nonnegative(authoritative, Math.max(
-    nonnegative(habit?.progressValue),
-    nonnegative(lifestyle?.progressValue),
-    lifestyle?.isAchieved ? lifestyleTarget : habit?.isAchieved ? habitTarget : 0,
-  ));
-  const stage = streak >= habitTarget ? "Lifestyle" : "Habit";
-  return { stage, streak, target: stage === "Lifestyle" ? lifestyleTarget : habitTarget };
+  const { stage, value, target } = sharedStreakProgress(progress);
+  return { stage, streak: value, target };
 }
 
 /** Cap the visual footprint, never the streak displayed to the person. */

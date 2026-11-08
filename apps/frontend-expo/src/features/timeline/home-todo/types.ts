@@ -31,3 +31,12 @@ export interface HomeItemRowProps {
   canLog: boolean;
   logDate: Date;
 }
+export interface HomeProgressProps {
+  rows: import("@tsw/prisma/home-todo").HomeProgressRow[];
+}
+export interface HomeStepsProps {
+  value: number;
+  target: number;
+  color: string;
+  label: string;
+}

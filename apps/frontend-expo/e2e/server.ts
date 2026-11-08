@@ -337,6 +337,9 @@ const server = http.createServer(async (req, res) => {
       date: new Date(Date.now() + offset * day).toISOString(),
       quantity: 10,
     }));
+    // Streaks for the summary under the two weeks: one plan building its habit, one past it.
+    state.plans[0].progress = { ...state.plans[0].progress, achievement: { streak: 2 } } as any;
+    state.plans[1].progress = { ...state.plans[1].progress, achievement: { streak: 6 } } as any;
     send({ ok: true });
     return;
   }
