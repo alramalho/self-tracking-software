@@ -51,9 +51,16 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 252 — goal check says what's missing, November 8, 2026
+
+**Build 252 is the latest TestFlight build**: build 251 plus, from main `51bbec50`: when the onboarding goal check fails, the hint names what is missing (a feeling, too broad, or not a goal) with an example, behind an amber warning icon in full-contrast text. The wording comes from the backend (image `51bbec501068`, live), so older builds get the new text but keep the grey icon.
+
+- **Built** with `pnpm build:testflight .release/testflight-main-51bbec50/tracking.so.ipa` in worktree `tracking-goal-hint`. Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `ebee24857b7425cc541c44b4d2661825c75b64d934f18c675ccc419650ca4536`; the Hermes bundle contains `TriangleAlert`.
+- **Apple:** validated and uploaded; added to internal testers and Friends & Family, beta review submitted (WAITING_FOR_REVIEW).
+
 ## TestFlight build 251 — check-ins after the session, "Coming up", Helly's thumbs-up, November 8, 2026
 
-**Build 251 is the latest TestFlight build**: build 249 plus, from main `48e93c31`: the coach picks the check-in time from the person's words (a little after the time of day they said, else 20:00; today at least 45 minutes away, never after 22:00), the push says it is a check-in and is skipped once they log after booking; the Coach tab lists booked check-ins under "Coming up" (also on the web app); Talk to coach shows a bigger coach face and Helly's clay thumbs-up when you commit to a day.
+**Build 251**: build 249 plus, from main `48e93c31`: the coach picks the check-in time from the person's words (a little after the time of day they said, else 20:00; today at least 45 minutes away, never after 22:00), the push says it is a check-in and is skipped once they log after booking; the Coach tab lists booked check-ins under "Coming up" (also on the web app); Talk to coach shows a bigger coach face and Helly's clay thumbs-up when you commit to a day.
 
 - **Source:** main `48e93c31` (on `d95e59c3`). Includes `f8b5a497` (Watch mic), unlike 249. Build number 250 was not used by this session.
 - **Backend:** live through `deploy hetzner`, image `tracking-so-backend:48e93c317b64` (started 11:16 UTC).
