@@ -51,9 +51,19 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 251 — check-ins after the session, "Coming up", Helly's thumbs-up, November 8, 2026
+
+**Build 251 is the latest TestFlight build**: build 249 plus, from main `48e93c31`: the coach picks the check-in time from the person's words (a little after the time of day they said, else 20:00; today at least 45 minutes away, never after 22:00), the push says it is a check-in and is skipped once they log after booking; the Coach tab lists booked check-ins under "Coming up" (also on the web app); Talk to coach shows a bigger coach face and Helly's clay thumbs-up when you commit to a day.
+
+- **Source:** main `48e93c31` (on `d95e59c3`). Includes `f8b5a497` (Watch mic), unlike 249. Build number 250 was not used by this session.
+- **Backend:** live through `deploy hetzner`, image `tracking-so-backend:48e93c317b64` (started 11:16 UTC).
+- **Checks:** 49 coach unit tests; 9 `e2e/miss-reason.spec.ts` cases (thumbs-up and the Coming up row asserted, light only); 7 live-model timing cases in `tsw-backend` ("short run today" → 20:00, "tonight after work" → 21:30, "Thursday at lunch" → 15:00, 21:40 "today" → no check). The new `sendDueReminders` integration case needs the local database on port 55432 and was not run.
+- **Built** with `pnpm build:testflight .release/testflight-main-48e93c31/tracking.so.ipa` in worktree `tracking-coach-commitment`. Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `6555b8b9a0853c2b5879ec0ee4b862d1712bb89fc8b8f1636f4798681f423665`; the bundle contains `coach-upcoming` and the thumbs-up webp.
+- **Apple:** validation passed; delivery `26d2658d-4bd1-49d4-bae7-11e1a13bb912`; processed `VALID`; export compliance `usesNonExemptEncryption: false`. Internal and `Friends & Family` `IN_BETA_TESTING`, beta review `APPROVED`. What to Test describes the timing, Coming up and how to try it.
+
 ## TestFlight build 249 — Talk to coach holds you to the day you name, November 8, 2026
 
-**Build 249 is the latest TestFlight build**: build 248 plus the Talk to coach commitment. Naming a day ends the conversation with the coach saying the day back, when it checks in, and one line holding you to it; a check-in push is booked. Finishing the conversation answers the Coach tab alert on the server (every device) and clears the plan's notifications; backing out leaves it. Same on the web app (Vercel, deployed from main).
+Build 249: build 248 plus the Talk to coach commitment. Naming a day ends the conversation with the coach saying the day back, when it checks in, and one line holding you to it; a check-in push is booked. Finishing the conversation answers the Coach tab alert on the server (every device) and clears the plan's notifications; backing out leaves it. Same on the web app (Vercel, deployed from main).
 
 - **Source:** main `394a3730` (on 248's `19e9b5bb`). It does not have `f8b5a497` (Watch mic), which landed after.
 - **Backend:** live through the `deploy hetzner` action, image `tracking-so-backend:394a3730bc8c` (started 10:45 UTC). The coach's wording and check-in pushes are backend-side and reach every build.
