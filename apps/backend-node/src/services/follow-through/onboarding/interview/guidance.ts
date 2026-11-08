@@ -48,6 +48,30 @@ const checks = {
 
 const allSteps = ["goal", "baseline", "motivation"] as const;
 
+/**
+ * When a goal fails, say what is missing instead of a generic "add the outcome".
+ * Asked in the same call as the pass check, so it costs no extra round trip.
+ */
+const goalGap = {
+  type: "choice",
+  instructions:
+    "If this answer is not yet a concrete, actionable goal, what is mainly missing? Pick 'clear' when it already names something the person can work towards.",
+  criteria: {
+    clear: "Already a concrete outcome the person can work towards.",
+    feeling:
+      "Describes a feeling or state of mind (calm, happy, confident, mindful) without anything to do or notice.",
+    broad: "Names an area of life (health, fitness, money, career) but no specific result.",
+    unclear: "Empty, filler, keyboard noise, or not a goal at all.",
+  },
+} as const;
+
+const goalGapDetail: Record<keyof typeof goalGap.criteria, string> = {
+  clear: checks.goal.failedDetail,
+  feeling: "That's a feeling. Add what you'd do to get there, like “meditate 10 min a day”.",
+  broad: "Too broad. Add a specific result, like “run 5 km” or “read 12 books this year”.",
+  unclear: "Write the outcome you want, like “run 5 km” or “meditate daily”.",
+};
+
 export async function goalGuidance(
   input: z.infer<typeof goalGuidanceRequestSchema>,
 ): Promise<GoalGuidanceResult> {
@@ -58,12 +82,15 @@ export async function goalGuidance(
       goal: input.goal || null,
       activityTitle: input.activityTitle || null,
     }),
-    questions: Object.fromEntries(
-      (input.step ? [input.step] : allSteps).map((step) => [
-        step,
-        { type: "boolean", instructions: checks[step].instructions },
-      ]),
-    ),
+    questions: {
+      ...Object.fromEntries(
+        (input.step ? [input.step] : allSteps).map((step) => [
+          step,
+          { type: "boolean", instructions: checks[step].instructions },
+        ]),
+      ),
+      ...(!input.step || input.step === "goal" ? { goalGap } : {}),
+    },
     maxRetries: 1,
   });
 
@@ -78,10 +105,15 @@ export async function goalGuidance(
         phrase: check.phrase,
         required: check.required,
         passed: didPass,
-        detail: didPass ? check.passedDetail : check.failedDetail,
+        detail: didPass ? check.passedDetail : failedDetail(step, result.answers.goalGap),
       };
     }),
   };
+}
+
+function failedDetail(step: keyof typeof checks, gap: { type: string; choice?: string } | undefined) {
+  if (step !== "goal" || gap?.type !== "choice") return checks[step].failedDetail;
+  return goalGapDetail[gap.choice as keyof typeof goalGapDetail] ?? checks.goal.failedDetail;
 }
 
 /**

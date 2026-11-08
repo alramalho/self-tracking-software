@@ -351,7 +351,7 @@ export function followThroughFixture(
         phrase: "",
         required: step === "goal",
         passed,
-        detail: passed ? "This helps shape your plan." : step === "goal" ? "Name one concrete outcome." : "Add a relevant detail, or skip for now.",
+        detail: passed ? "This helps shape your plan." : step === "goal" ? (/calm|mindful|serene|happy|confident/i.test(body.answer) ? "That's a feeling. Add what you'd do to get there, like “meditate 10 min a day”." : "Name one concrete outcome.") : "Add a relevant detail, or skip for now.",
       }],
     };
   }

@@ -77,6 +77,20 @@ test("nonsense is blocked at the goal and the coach reads a good goal before ask
   expect(state.requests.filter((r: any) => r.path.endsWith("/design/classify"))).toHaveLength(1);
 });
 
+for (const mode of ["light", "dark"] as const)
+  test(`a feeling-only goal says what's missing, with a warning that blocks Continue (${mode})`, async ({ page, request }) => {
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: mode.toUpperCase() },
+    });
+    await openOnboarding(page, "/onboarding?preview=1");
+    await page.getByRole("textbox", { name: "Your answer" }).fill("To be more mindful, calm and serene");
+    await expect(page.getByTestId("goal-guidance")).toContainText("That's a feeling. Add what you'd do to get there");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
+    if (process.env.GOAL_HINT_SHOTS) await page.screenshot({ path: `${process.env.GOAL_HINT_SHOTS}/goal-hint-${mode}.png` });
+  });
+
 test("going back keeps what was typed, and the baseline can't be skipped for an outcome", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
   await openOnboarding(page, "/onboarding?preview=1");
