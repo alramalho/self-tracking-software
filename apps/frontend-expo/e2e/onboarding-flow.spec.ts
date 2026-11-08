@@ -91,6 +91,24 @@ for (const mode of ["light", "dark"] as const)
     if (process.env.GOAL_HINT_SHOTS) await page.screenshot({ path: `${process.env.GOAL_HINT_SHOTS}/goal-hint-${mode}.png` });
   });
 
+for (const mode of ["light", "dark"] as const)
+  test(`onboarding also starts the baseline from the person's logs instead of asking from scratch (${mode})`, async ({ page, request }) => {
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: mode.toUpperCase() },
+    });
+    await openOnboarding(page, "/onboarding?preview=1");
+    await page.getByRole("textbox", { name: "Your answer" }).fill("Run my first half marathon");
+    await next(page);
+    await expect(page.getByRole("textbox", { name: "Your answer" })).toHaveValue(/9 sessions in the last 4 weeks/);
+    await expect(page.getByRole("heading", { name: "How much do you run now?" })).toBeVisible();
+    if (process.env.GOAL_HINT_SHOTS) {
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: `${process.env.GOAL_HINT_SHOTS}/baseline-logs-${mode}.png` });
+    }
+  });
+
 test("going back keeps what was typed, and the baseline can't be skipped for an outcome", async ({ page, request }) => {
   await request.post(`${API}/__reset`);
   await openOnboarding(page, "/onboarding?preview=1");

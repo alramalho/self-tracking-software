@@ -31,13 +31,6 @@ export const classifyGoal = async (goal: string) =>
   (await api.post<ClassifyResponse>("/follow-through/onboarding/design/classify", { goal }, { timeout: 90000 })).data;
 
 /** Creating a plan in the app: a starting point measured from the person's own logs, when there are enough. */
-export const suggestBaseline = async (activity: { title: string; measure: string }) =>
-  (
-    await api.get<{ baseline: DesignBaseline | null }>("/follow-through/onboarding/design/baseline", {
-      params: { title: activity.title, measure: activity.measure },
-    })
-  ).data.baseline;
-
 export const nextSubgoal = async (design: PlanDesign, goal: string, baseline: string) =>
   (
     await api.post<{ question: SubgoalQuestion | null }>(

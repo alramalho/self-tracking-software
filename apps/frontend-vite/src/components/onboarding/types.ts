@@ -39,6 +39,8 @@ export interface ClassifyResponse {
   activity: { key: string; title: string; measure: string; emoji: string };
   goalSpec: PlanDesign["goalSpec"];
   baselineQuestion: string;
+  /** Their starting point measured from their own logs, when the goal is about something they log. */
+  loggedBaseline?: PlanDesign["baseline"] | null;
 }
 
 export interface OptionsResponse {

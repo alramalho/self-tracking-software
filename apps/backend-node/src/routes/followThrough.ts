@@ -9,6 +9,7 @@ import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from ".
 import { redesignPlan } from "../services/plan-design/apply";
 import { planDesignDraftSchema } from "../services/plan-design/draft";
 import { baselineFromLogs } from "../services/plan-design/baseline";
+import { baselineFor, loggedActivities } from "../services/plan-design/history";
 import { healthSafeActivityFilter } from "../services/health/apple/ai-boundary";
 import { prisma } from "../utils/prisma";
 import { classifyRequestSchema, optionsRequestSchema, subgoalRequestSchema } from "../services/plan-design/requests";
@@ -164,13 +165,15 @@ router.post(
   designLimit,
   handle(async (req, res) => {
     const input = classifyRequestSchema.parse(req.body);
-    const context = await getInterviewContext(req.user!.id, undefined as never);
+    // The coach reads what they already logged, so it confirms their history instead of asking for it.
+    const history = await loggedActivities(req.user!.id);
     const { usage, ...result } = await classifyGoal({
       goal: input.goal,
-      existingActivities: context.existingActivities.map((a) => ({ title: a.title, measure: a.measure })),
+      existingActivities: history.map(({ baseline, ...a }) => ({ ...a, recentLogs: baseline?.text ?? null })),
     });
-    logger.info("Plan design classified", { userId: req.user!.id, orientation: result.orientation, usage });
-    res.json({ ...result, activity: { key: activityKey(result.activity.title), ...result.activity } });
+    const loggedBaseline = baselineFor(history, result.activity);
+    logger.info("Plan design classified", { userId: req.user!.id, orientation: result.orientation, fromLogs: !!loggedBaseline, usage });
+    res.json({ ...result, activity: { key: activityKey(result.activity.title), ...result.activity }, loggedBaseline });
   }),
 );
 // Creating a plan inside the app: a starting point measured from the person's own logs, when there are enough.

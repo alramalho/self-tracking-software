@@ -5,13 +5,6 @@ import type { ClassifyResponse, OptionsResponse } from "./types";
 export const classifyGoal = async (goal: string) =>
   (await api.post<ClassifyResponse>("/follow-through/onboarding/design/classify", { goal }, { timeout: 90000 })).data;
 
-export const suggestBaseline = async (activity: { title: string; measure: string }) =>
-  (
-    await api.get<{ baseline: PlanDesign["baseline"] | null }>("/follow-through/onboarding/design/baseline", {
-      params: { title: activity.title, measure: activity.measure },
-    })
-  ).data.baseline;
-
 export const nextSubgoal = async (design: PlanDesign, goal: string, baseline: string) =>
   (
     await api.post<{ question: { kind: string; title: string; choices: string[] } | null }>(

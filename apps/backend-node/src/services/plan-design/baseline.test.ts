@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { baselineFromLogs } from "./baseline";
+import { baselineFor } from "./history";
 
 const now = new Date("2026-10-12T10:00:00Z");
 const day = (n: number, quantity: number) => ({ datetime: new Date(now.getTime() - n * 86_400_000), quantity });
@@ -13,5 +14,19 @@ describe("baselineFromLogs", () => {
   it("says nothing when there is too little to go on", () => {
     expect(baselineFromLogs([day(2, 5), day(6, 4)], { title: "Running", measure: "km", now })).toBeNull();
     expect(baselineFromLogs([day(40, 5), day(41, 4), day(42, 5), day(43, 5)], { title: "Running", measure: "km", now })).toBeNull();
+  });
+});
+
+describe("baselineFor", () => {
+  const history = [
+    { title: "Meditation", measure: "minutes", sessionsLast4Weeks: 12, lastLoggedAt: "2026-11-07", baseline: { text: "Meditation: 12 sessions", measurements: [] } },
+    { title: "Running", measure: "km", sessionsLast4Weeks: 1, lastLoggedAt: "2026-11-01", baseline: null },
+  ];
+  it("finds the logged starting point of the activity the goal is about, ignoring case", () => {
+    expect(baselineFor(history, { title: "meditation", measure: "minutes" })?.text).toBe("Meditation: 12 sessions");
+  });
+  it("returns null for a new activity or one with too few recent logs", () => {
+    expect(baselineFor(history, { title: "Yoga", measure: "minutes" })).toBeNull();
+    expect(baselineFor(history, { title: "Running", measure: "km" })).toBeNull();
   });
 });

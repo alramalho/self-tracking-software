@@ -47,7 +47,7 @@ import type { OnboardingArtName } from "./interview/types";
 import { CircleAsk, CirclePrefs } from "./CircleSteps";
 import { DesignSection } from "./design/DesignSection";
 import { ConfidenceSection } from "./design/ConfidenceSection";
-import { classifyGoal, suggestBaseline } from "./design/api";
+import { classifyGoal } from "./design/api";
 import { designedFacts, initialDesign } from "./design/model";
 import { Welcome } from "./Welcome";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
@@ -400,10 +400,8 @@ export default function Onboarding({
       if (state.stage === "goal") {
         // The coach reads the goal first: outcome or consistency, the activity, and the right first question.
         const classified = await classifyGoal(text.trim());
-        loggedBaseline.current = null;
-        if (flow === "create" && !preview) {
-          loggedBaseline.current = await suggestBaseline(classified.activity).catch(() => null);
-        }
+        // Their logs answer "where are you now?": prefill it so they confirm rather than recall.
+        loggedBaseline.current = classified.loggedBaseline ?? null;
         const next = acceptGoal(state, text, classified.baselineQuestion);
         const nextDraft = {
           ...draft,

@@ -20,7 +20,6 @@ import {
   reportProgress,
   saveAiConsent,
   saveDraft,
-  suggestBaseline,
 } from "./api";
 import { CircleStep } from "./circle/CircleStep";
 import { CoachStep } from "./coach/CoachSteps";
@@ -101,7 +100,7 @@ export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingF
   const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false);
   const finishing = useRef(false);
-  // A starting point measured from their logs (creating a plan in the app only).
+  // A starting point measured from their logs, when the goal is about something they log.
   const loggedBaseline = useRef<DesignBaseline | null>(null);
 
   const fail = (e: unknown) => setError(errorMessage(e));
@@ -324,7 +323,8 @@ export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingF
         if (current === "goal") {
           // The coach reads the goal first: outcome or habit, the activity, and the right next question.
           const classified = await classifyGoal(text.trim());
-          loggedBaseline.current = creating ? await suggestBaseline(classified.activity).catch(() => null) : null;
+          // Their logs answer "where are you now?": prefill it so they confirm rather than recall.
+          loggedBaseline.current = classified.loggedBaseline ?? null;
           const next = acceptGoal(interview, text, classified.baselineQuestion);
           // The answer box changes with the screen, in the same render.
           setAnswer(previousAnswer(next, "baseline") || loggedBaseline.current?.text || "");

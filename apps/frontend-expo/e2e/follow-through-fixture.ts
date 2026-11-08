@@ -5,6 +5,16 @@ import type {
   OnboardingDraft,
 } from "@tsw/prisma/follow-through";
 import { randomUUID } from "node:crypto";
+// The person's own Running logs, as the backend measures them. Hand-written fixture.
+const loggedRunning = {
+  text: "Running: 9 sessions in the last 4 weeks, about 2.3 a week. Typically 5 km, longest 7 km.",
+  measurements: [
+    { metric: "sessions_per_week", value: 2.3, unit: "per week", sourceQuote: "from your logs, last 4 weeks" },
+    { metric: "typical_quantity", value: 5, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
+    { metric: "longest_quantity", value: 7, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
+  ],
+};
+
 export const freshSupport = (): FollowThroughState => ({
   version: 1,
   enabled: false,
@@ -358,20 +368,9 @@ export function followThroughFixture(
   // Plan design fixtures serve the hand-written illustrative examples; they are not model output.
   if (path === "/follow-through/onboarding/design/classify") {
     const example = exampleFor(body.goal);
-    return { orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion };
+    return { orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion, loggedBaseline: /^run/i.test(example.activity.title) ? loggedRunning : null };
   }
   // In-app creation: a starting point measured from the person's own logs. Hand-written fixture.
-  if (path === "/follow-through/onboarding/design/baseline" && method === "GET")
-    return {
-      baseline: {
-        text: "Running: 9 sessions in the last 4 weeks, about 2.3 a week. Typically 5 km, longest 7 km.",
-        measurements: [
-          { metric: "sessions_per_week", value: 2.3, unit: "per week", sourceQuote: "from your logs, last 4 weeks" },
-          { metric: "typical_quantity", value: 5, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
-          { metric: "longest_quantity", value: 7, unit: "km", sourceQuote: "from your logs, last 4 weeks" },
-        ],
-      },
-    };
   if (path === "/follow-through/onboarding/design/subgoal") {
     const example = exampleFor(body.goal);
     return { question: example.subgoal && !body.asked.length ? example.subgoal.question : null };

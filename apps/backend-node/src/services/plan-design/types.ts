@@ -37,9 +37,18 @@ export type ObjectGenerator = <T extends z.ZodType>(
   args: GenerateObjectArgs<T>,
 ) => Promise<{ object: z.infer<T>; usage: GenerationUsage }>;
 
+export interface LoggedActivity {
+  title: string;
+  measure: string;
+  sessionsLast4Weeks: number;
+  lastLoggedAt: string | null;
+  /** Measured starting point, or null with under 3 sessions in 4 weeks. */
+  baseline: DesignBaseline | null;
+}
+
 export interface ClassifyInput {
   goal: string;
-  existingActivities: { title: string; measure: string }[];
+  existingActivities: { title: string; measure: string; sessionsLast4Weeks: number; lastLoggedAt: string | null; recentLogs: string | null }[];
 }
 
 export interface SubgoalInput {
