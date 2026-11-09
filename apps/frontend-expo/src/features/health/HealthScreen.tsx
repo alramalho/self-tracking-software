@@ -19,6 +19,8 @@ import { accessRequests } from "@/features/access/model";
 import { useHealth } from "./HealthProvider";
 import { useHealthWorkouts } from "./queries";
 import { WorkoutReview } from "./WorkoutReview";
+import { WorkoutTrendCard } from "./WorkoutTrendCard";
+import { workoutTrends } from "./workout-model";
 import type { WorkoutReconciliationPreviewItem } from "./workout-types";
 import type { GarminStatus, HealthImportStats } from "./types";
 
@@ -299,16 +301,17 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
   const [disconnecting, setDisconnecting] = useState(false);
   const access = useAccessChecklist();
   const pending = workouts.data?.items.filter((item) => !item.resolved) ?? [];
-  const history = (
+  const [showAll, setShowAll] = useState(false);
+  const linked = (
     workouts.data?.items.filter((item) => !!item.resolved?.activityEntryId) ??
     []
-  )
-    .sort(
-      (a, b) =>
-        new Date(b.healthWorkout.startAt).getTime() -
-        new Date(a.healthWorkout.startAt).getTime(),
-    )
-    .slice(0, 20);
+  ).sort(
+    (a, b) =>
+      new Date(b.healthWorkout.startAt).getTime() -
+      new Date(a.healthWorkout.startAt).getTime(),
+  );
+  const trends = workoutTrends(linked);
+  const history = linked.slice(0, showAll ? 20 : 5);
 
   useEffect(() => {
     if (params.review !== "1" || autoOpened.current || !pending[0]) return;
@@ -344,10 +347,10 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
 
       {(health.enabled || health.status?.connected || health.garmin.status?.connected) && (
         <View style={{ gap: 10 }}>
-          <Heading>Workout history</Heading>
-          <Copy muted>
-            Your linked Apple Watch and Garmin workouts with private vitals.
-          </Copy>
+          {trends.map((trend) => (
+            <WorkoutTrendCard key={trend.key} trend={trend} />
+          ))}
+          <Heading>Recent workouts</Heading>
           {history.length ? (
             <Panel style={{ gap: 0 }}>
               {history.map((item, index) => (
@@ -369,6 +372,17 @@ export function HealthContent({ showGarmin = true }: { showGarmin?: boolean }) {
                   />
                 </View>
               ))}
+              {linked.length > history.length && !showAll && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowAll(true)}
+                  style={{ borderTopWidth: 1, borderTopColor: c.border, paddingVertical: 14 }}
+                >
+                  <Text style={{ color: c.accent, fontSize: 16, fontWeight: "600" }}>
+                    Show all
+                  </Text>
+                </Pressable>
+              )}
             </Panel>
           ) : (
             <Panel>

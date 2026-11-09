@@ -196,3 +196,33 @@ export interface AppleHealthWorkoutReconciliationProps {
   enabled: boolean;
   openRequestKey: number;
 }
+
+/** One week's total for an activity: kilometres when the watch measured distance, else minutes. */
+export interface WorkoutTrendWeek {
+  /** Monday of the week, yyyy-MM-dd. */
+  start: string;
+  value: number;
+}
+
+/** Linked workouts of one activity (all runs, say), summed per week like Apple Fitness. */
+export interface WorkoutTrend {
+  key: string;
+  title: string;
+  emoji: string;
+  unit: "km" | "min";
+  /** Oldest first; the last week is this week. */
+  weeks: WorkoutTrendWeek[];
+  /** Workouts inside those weeks. */
+  count: number;
+  /** Average pace of the last three measured workouts against the three before. */
+  pace: { recent: number; earlier: number | null } | null;
+}
+
+export interface WorkoutTrendCardProps {
+  trend: WorkoutTrend;
+}
+
+export interface PlanWorkoutTrendsProps {
+  plan: import("@/core/types").Plan;
+  entries: import("@/core/types").ActivityEntry[];
+}

@@ -16,6 +16,7 @@ import { PlanDrawer } from "./PlanDrawer";
 import { EntryEditor } from "../activities/EntryEditor";
 import { ActivityEditor } from "../activities/ActivityEditor";
 import { CirclePlanSection } from "../circles/CirclePlanSection";
+import { PlanWorkoutTrends } from "../health/WorkoutTrendCard";
 interface Props {
   plan: Plan;
   entries: ActivityEntry[];
@@ -164,6 +165,7 @@ export function PlanCard({
           />
         </View>
       </Reveal>
+      {detail && own && <PlanWorkoutTrends plan={plan} entries={entries} />}
       {detail &&
         (own ? (
           <CirclePlanSection planId={plan.id} />
