@@ -8,7 +8,7 @@ import type { PlanWorkoutTrendsProps, WorkoutTrendCardProps } from "./workout-ty
 const BAR_HEIGHT = 64;
 
 const amount = (value: number, unit: "km" | "min") =>
-  unit === "km" ? value.toFixed(value >= 100 ? 0 : 1) : String(Math.round(value));
+  unit === "km" && value > 0 ? value.toFixed(value >= 100 ? 0 : 1) : String(Math.round(value));
 
 /** Apple Fitness-style summary of one activity: this week's total over eight weekly bars. */
 export function WorkoutTrendCard({ trend }: WorkoutTrendCardProps) {
