@@ -51,9 +51,18 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 256 — workout trends on Health & workouts and the plan page, November 9, 2026
+
+**Build 256 is the latest TestFlight build**: everything on main up to `c1d8c307`. Health & workouts opens with an Apple Fitness-style card per activity done twice in the last 8 weeks (this week's km or minutes, 8 weekly bars, recent pace of the last 3 runs against the 3 before), then the 5 most recent workouts with "Show all". The plan page shows the same cards under History for workouts linked to that plan's activities, only when there is a trend.
+
+- **Source:** main `c1d8c307`. App only; no backend change.
+- **Checks:** Expo typecheck; `tests/workout-trends.test.ts`; 3 `e2e/workout-trends.spec.ts` cases. Older failures not from this change: `tests/workout-effort.test.ts` and `e2e/health.spec.ts` expect "Apple Health" where the app says "Apple Watch", and the "Manage Apple Health" button no longer exists.
+- **Built** with `pnpm build:testflight .release/testflight-main-c1d8c307/tracking.so.ipa` in worktree `tracking-coach-commitment`. IPA SHA-256 `22a6a61c62bc2e18a1f5ff7b2564f861543b982743a81602692855219c6e9537`.
+- **Apple:** validation passed; delivery `421ad7be-2743-4c28-acd9-2775ded88322`; processed `VALID`. Internal and `Friends & Family`, beta review `APPROVED`.
+
 ## TestFlight build 254 — "Coming up" shows every booked coach push, November 8, 2026
 
-**Build 254 is the latest TestFlight build**: everything on main up to `68c747c3`. The Coach tab's "Coming up" now lists every push the coach booked: "Check-in …" for named days and trips, "Reminder …" for "remind me tomorrow" and for check-ins booked before build 251 (which had no kind and were hidden). An untagged booking counts as done after a log in the 12 hours before it, like the push.
+Build 254 was the latest TestFlight build: everything on main up to `68c747c3`. The Coach tab's "Coming up" now lists every push the coach booked: "Check-in …" for named days and trips, "Reminder …" for "remind me tomorrow" and for check-ins booked before build 251 (which had no kind and were hidden). An untagged booking counts as done after a log in the 12 hours before it, like the push.
 
 - **Source:** main `68c747c3` (on `00909318`, so it also has build 252/253's goal-check and baseline changes).
 - **Backend:** `deploy hetzner` succeeded, image `tracking-so-backend:68c747c30845`; web on Vercel.
