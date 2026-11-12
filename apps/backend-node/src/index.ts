@@ -12,7 +12,8 @@ if (process.env.USE_CAP_ENV === "true") {
 
 import compression from "compression";
 import cors from "cors";
-import express, { Express } from "express";
+import { createHash } from "crypto";
+import express, { Express, Request } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 
@@ -63,10 +64,22 @@ if (ENVIRONMENT === "production") {
 }
 
 // Rate limiting
+// Signed-in requests are counted per session token, not per IP: one app refresh fires ~25
+// calls, so a shared 150-per-IP budget throttled normal use (reactions got 429s on 11 Nov 2026).
+const bearerToken = (req: Request) => {
+  const header = req.headers.authorization;
+  return header?.startsWith("Bearer ") ? header.slice(7) : null;
+};
 const limiter = rateLimit({
   windowMs: 3 * 60 * 1000,
-  max: 150,
-  message: "Too many requests from this IP, please try again later.",
+  max: (req) => (bearerToken(req) ? 1500 : 300),
+  keyGenerator: (req) => {
+    const token = bearerToken(req);
+    return token
+      ? `token:${createHash("sha256").update(token).digest("hex")}`
+      : `ip:${req.ip}`;
+  },
+  message: "Too many requests, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
   // Garmin and Apple must always get a 200: a throttled notification counts as failed delivery.
