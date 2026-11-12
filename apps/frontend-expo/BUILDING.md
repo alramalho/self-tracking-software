@@ -51,9 +51,17 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 258 — voice notes can be discarded, November 12, 2026
+
+**Build 258 is the latest TestFlight build**: everything on main up to `8ec8c52a`, so build 257 plus the voice-note discard (`813a4e0d`, `2e5a9cec`) and the activity matching by meaning (`8ec8c52a`). The waiting voice note on Home has Discard and Review buttons (tap the card to review). Inside the voice note, Discard sits next to Start over under Save, and also shows while recording and while processing; it closes the drawer and clears the draft (previews are not stored server-side, so no backend change). Home and Add share the waiting note, so one left on Add shows on Home at once.
+
+- **Checks:** Expo typecheck; voice-log Playwright specs including a new discard case (review and in-flight processing). `voice note review makes extracted items explicit` fails on main too: the fixture's only unresolved item ("next time") is coach context, so "Not included" never shows. Simulator (iOS 26.5, fixture Debug build) light and dark captures in `docs/reviews/voice-note-discard/`; discard from recording, review and the Home card checked there. Not run on a phone.
+- **Built** with `pnpm build:testflight .release/testflight-main-8ec8c52a/tracking.so.ipa` in worktree `tracking-voice-note-discard`. Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `3bf05a1c770f38be162f182a0aca9fb4e56547d001b587366a223d34d29be1ab`; the bundle contains "Discard voice note" and no fixture token.
+- **Apple:** validation passed; delivery `f9ddba44-9709-4b87-be02-967b731164d6`; VALID; internal IN_BETA_TESTING. Adding to `Friends & Family` returned 500 twice, then 204; beta review submitted (WAITING_FOR_REVIEW at the time of writing).
+
 ## TestFlight build 257 — gpt-4o-transcribe and feedback on voice notes, November 12, 2026
 
-**Build 257 is the latest TestFlight build**: everything on main up to `08ee8c03`. Speech to text moved to `openai/gpt-4o-transcribe` on OpenRouter (backend `stt-gpt4o-20261112`, reaches every build), and the voice-note review now shows "Did we get that right?" under the transcript. The "What went wrong?" sheet has one Done bar instead of two.
+Build 257 was the latest TestFlight build: everything on main up to `08ee8c03`. Speech to text moved to `openai/gpt-4o-transcribe` on OpenRouter (backend `stt-gpt4o-20261112`, reaches every build), and the voice-note review now shows "Did we get that right?" under the transcript. The "What went wrong?" sheet has one Done bar instead of two.
 
 - **Built** with `pnpm build:testflight .release/testflight-main-08ee8c03/tracking.so.ipa` in worktree `tracking-stt-upgrade`. IPA SHA-256 `475ce9a7bfd2d7c52d0aab21ac21879579a717dd81bda7b328bb5defeb2f314b`. Validated, uploaded, VALID, internal + Friends & Family, beta review APPROVED.
 
