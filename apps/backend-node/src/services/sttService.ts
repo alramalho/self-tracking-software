@@ -4,7 +4,9 @@ import { assertAiConsent } from "../utils/aiConsent";
 import { logger } from "../utils/logger";
 import { resolveSTTConfig } from "./stt/config";
 import {
+  reportsLanguage,
   languageCode,
+  languagePrompt,
   languageToRequest,
   languageToRetry,
 } from "./stt/languages";
@@ -13,6 +15,7 @@ import type { TimestampedTranscript, Transcript } from "./stt/types";
 export class STTService {
   private openai: OpenAI;
   private model: string;
+  private timestampModel: string;
 
   constructor() {
     const config = resolveSTTConfig();
@@ -21,6 +24,7 @@ export class STTService {
       baseURL: config.baseURL,
     });
     this.model = config.model;
+    this.timestampModel = config.timestampModel;
     logger.info(
       `Speech-to-text configured with ${config.provider} (${config.model})`,
     );
@@ -97,13 +101,13 @@ export class STTService {
         type: mimeType,
       });
 
-      let heard = await this.listen(audioFile, languageToRequest(spoken));
+      let heard = await this.listen(audioFile, languageToRequest(spoken), spoken);
       const retry = languageToRetry(spoken, heard.language);
       if (retry) {
         logger.info(
           `Heard "${heard.language}", which this person doesn't speak. Transcribing again in "${retry}"`,
         );
-        heard = await this.listen(audioFile, retry);
+        heard = await this.listen(audioFile, retry, spoken);
       }
 
       logger.info(
@@ -116,18 +120,30 @@ export class STTService {
     }
   }
 
-  // One request to the model. verbose_json is the format that reports the language heard.
-  private async listen(audioFile: File, language?: string) {
+  // One request to the model. Whisper: verbose_json reports the language heard.
+  // gpt-4o-transcribe: plain json, with the person's languages as a prompt.
+  private async listen(audioFile: File, language: string | undefined, spoken: string[]) {
+    if (reportsLanguage(this.model)) {
+      const transcription = await this.openai.audio.transcriptions.create({
+        file: audioFile,
+        model: this.model,
+        response_format: "verbose_json",
+        ...(language ? { language } : {}),
+      });
+      return {
+        text: transcription.text,
+        language: language ?? languageCode(transcription.language),
+      };
+    }
+    const prompt = languagePrompt(spoken);
     const transcription = await this.openai.audio.transcriptions.create({
       file: audioFile,
       model: this.model,
-      response_format: "verbose_json",
+      response_format: "json",
       ...(language ? { language } : {}),
+      ...(prompt ? { prompt } : {}),
     });
-    return {
-      text: transcription.text,
-      language: language ?? languageCode(transcription.language),
-    };
+    return { text: transcription.text, language };
   }
 
   async speechToTextWithTimestamps(
@@ -154,7 +170,7 @@ export class STTService {
 
       const transcription = await this.openai.audio.transcriptions.create({
         file: audioFile,
-        model: this.model,
+        model: this.timestampModel,
         response_format: "verbose_json",
         timestamp_granularities: ["segment"],
       });

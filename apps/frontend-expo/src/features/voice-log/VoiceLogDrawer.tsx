@@ -24,6 +24,7 @@ import { ReviewRow } from "@/features/health/review/controls";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { useCurrentUser, useEntries } from "@/data/queries";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
+import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { commitVoiceLog, previewVoiceLog } from "./service";
 import { enrichVoiceLogPreview } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
@@ -131,6 +132,8 @@ export function VoiceLogDrawer({
   );
   const [error, setError] = useState<unknown>();
   const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  // "Did we get that right?" after every recording, like every other voice field.
+  const transcriptionFeedback = useTranscriptionFeedback();
   const [clientRequestId, setClientRequestId] = useState(
     () => initialDraft?.preview.clientRequestId ?? randomUUID(),
   );
@@ -203,6 +206,11 @@ export function VoiceLogDrawer({
         });
         const enriched = enrichVoiceLogPreview(result, entries.data ?? []);
         setPreview(enriched);
+        transcriptionFeedback.ask({
+          text: result.transcript,
+          language: result.transcriptLanguage,
+          model: result.transcriptModel,
+        });
         setSelectedActivityIDs(
           new Set(enriched.activities.map(voiceLogActivityKey)),
         );
@@ -640,6 +648,7 @@ export function VoiceLogDrawer({
                 </Pressable>
               )}
             </View>
+            {transcriptionFeedback.banner}
             <View
               style={{
                 flexDirection: "row",

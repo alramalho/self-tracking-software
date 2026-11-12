@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { resolveSTTConfig } from "./config";
 
 describe("resolveSTTConfig", () => {
-  it("uses Whisper through OpenRouter when its key is available", () => {
+  it("uses gpt-4o-transcribe through OpenRouter when its key is available", () => {
     expect(resolveSTTConfig({ OPENROUTER_API_KEY: "configured" })).toEqual({
       apiKey: "configured",
       baseURL: "https://openrouter.ai/api/v1",
-      model: "openai/whisper-large-v3",
+      model: "openai/gpt-4o-transcribe",
+      timestampModel: "openai/whisper-large-v3",
       provider: "OpenRouter",
     });
   });
@@ -14,7 +15,8 @@ describe("resolveSTTConfig", () => {
   it("keeps the direct OpenAI fallback for local environments", () => {
     expect(resolveSTTConfig({ OPENAI_API_KEY: "configured" })).toEqual({
       apiKey: "configured",
-      model: "whisper-1",
+      model: "gpt-4o-transcribe",
+      timestampModel: "whisper-1",
       provider: "OpenAI",
     });
   });

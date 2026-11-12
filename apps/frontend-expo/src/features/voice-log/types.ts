@@ -63,6 +63,8 @@ export interface VoiceLogPlanSuggestion {
 export interface VoiceLogPreview {
   clientRequestId: string;
   transcript: string;
+  transcriptModel?: string;
+  transcriptLanguage?: string;
   activities: VoiceLogActivity[];
   metrics: VoiceLogMetric[];
   note: VoiceLogNote;

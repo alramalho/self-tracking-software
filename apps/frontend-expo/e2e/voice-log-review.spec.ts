@@ -142,3 +142,33 @@ test("start over clears the current voice note and keeps recording ready", async
     state.requests.filter((entry: any) => entry.path === "/voice-logs/preview"),
   ).toHaveLength(2);
 });
+
+// A voice note asks "Did we get that right?" under its transcript, like every other voice field.
+for (const theme of ["LIGHT", "DARK"]) {
+  test(`voice note asks if the transcript was right in ${theme}`, async ({ page, request }) => {
+    await installFakeMicrophone(page);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme },
+    });
+    const feedback: unknown[] = [];
+    await page.route("**/ai/transcribe/feedback", async (route) => {
+      feedback.push(route.request().postDataJSON());
+      await route.fulfill({ json: { success: true } });
+    });
+    await page.goto("/add");
+    await page.getByTestId("log-voice-note-card").click();
+    const drawer = page.getByTestId("voice-log-drawer");
+    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+    await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+    const banner = drawer.getByTestId("transcription-feedback");
+    await expect(banner.getByText("Did we get that right?")).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `test-results/voice-log-feedback-${theme}.png` });
+    await banner.getByRole("button", { name: "Transcription is right" }).click();
+    await expect(banner.getByText("Thanks, that helps.")).toBeVisible();
+    expect(feedback).toEqual([expect.objectContaining({ helpful: true })]);
+  });
+}

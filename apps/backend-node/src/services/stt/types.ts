@@ -2,6 +2,8 @@ export interface STTConfig {
   apiKey?: string;
   baseURL?: string;
   model: string;
+  /** Model for segment timestamps (Whisper; gpt-4o-transcribe has none). */
+  timestampModel: string;
   provider: "OpenAI" | "OpenRouter";
 }
 

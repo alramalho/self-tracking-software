@@ -79,6 +79,9 @@ export type VoiceLogMetricPreview = VoiceLogMetric & {
 export type VoiceLogPreview = {
   clientRequestId: string;
   transcript: string;
+  /** Speech to text as run, for the "Did we get that right?" feedback. */
+  transcriptModel?: string;
+  transcriptLanguage?: string;
   activities: VoiceLogActivityPreview[];
   metrics: VoiceLogMetricPreview[];
   note: VoiceLogNote;

@@ -61,3 +61,21 @@ export function languageToRetry(
   if (spoken.length < 2 || !detected || spoken.includes(detected)) return undefined;
   return spoken[0];
 }
+
+// Models without a language report (gpt-4o-transcribe) get the person's languages as a prompt,
+// so a short Portuguese clip isn't heard as Spanish and a mixed note keeps both.
+export function languagePrompt(spoken: string[]): string | undefined {
+  const names = spoken
+    .map((code) => LANGUAGES[code])
+    .filter(Boolean)
+    .map((name) => name.charAt(0).toUpperCase() + name.slice(1));
+  if (!names.length) return undefined;
+  const list =
+    names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `The speaker speaks ${list}. Transcribe exactly what they say, in the language they say it.`;
+}
+
+// Whisper models report the language they heard (verbose_json); gpt-4o-transcribe doesn't.
+export function reportsLanguage(model: string): boolean {
+  return /whisper/i.test(model);
+}

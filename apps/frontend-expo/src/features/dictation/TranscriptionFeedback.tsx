@@ -179,7 +179,6 @@ function WhatWentWrong({ busy, error, onSend, onClose }: WhatWentWrongProps) {
           maxLength={2000}
           placeholder="Optional"
           placeholderTextColor={c.muted}
-          inputAccessoryViewID="logging-input-done"
           style={[
             s.input,
             {

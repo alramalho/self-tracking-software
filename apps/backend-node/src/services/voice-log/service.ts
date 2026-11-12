@@ -215,15 +215,12 @@ export async function previewVoiceLog(input: {
   const timezone = resolveTimezone(input.timezone, user?.timezone || "UTC");
 
   const sttStartedAt = Date.now();
-  const transcript = (
-    await sttService.transcribe(
-      input.audioBytes,
-      input.audioFormat,
-      user?.spokenLanguages,
-    )
-  ).text
-    .trim()
-    .slice(0, MAX_TRANSCRIPT_LENGTH);
+  const heard = await sttService.transcribe(
+    input.audioBytes,
+    input.audioFormat,
+    user?.spokenLanguages,
+  );
+  const transcript = heard.text.trim().slice(0, MAX_TRANSCRIPT_LENGTH);
   const sttDurationMs = Date.now() - sttStartedAt;
   if (!transcript) throw new Error("The recording did not contain speech.");
 
@@ -319,6 +316,8 @@ export async function previewVoiceLog(input: {
   return {
     clientRequestId: input.clientRequestId,
     transcript: responseTranscript,
+    transcriptModel: heard.model,
+    transcriptLanguage: heard.language,
     activities: extraction.activities.map((activity) => ({
       ...activity,
       title: activityById.get(activity.activityId)!.title,

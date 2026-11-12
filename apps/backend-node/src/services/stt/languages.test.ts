@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { parseTranscriptionFeedback } from "./feedback";
 import {
   languageCode,
+  languagePrompt,
+  reportsLanguage,
   languageToRequest,
   languageToRetry,
   parseSpokenLanguages,
@@ -87,5 +89,23 @@ describe("transcription feedback", () => {
     expect(
       parseTranscriptionFeedback({ helpful: false, reason: "NOT_A_REASON" })?.reason,
     ).toBeUndefined();
+  });
+});
+
+describe("languagePrompt", () => {
+  it("names every language the person speaks", () => {
+    expect(languagePrompt(["pt", "en"])).toBe(
+      "The speaker speaks Portuguese and English. Transcribe exactly what they say, in the language they say it.",
+    );
+  });
+  it("is empty without languages", () => {
+    expect(languagePrompt([])).toBeUndefined();
+  });
+});
+
+describe("reportsLanguage", () => {
+  it("is true only for Whisper", () => {
+    expect(reportsLanguage("openai/whisper-large-v3")).toBe(true);
+    expect(reportsLanguage("openai/gpt-4o-transcribe")).toBe(false);
   });
 });
