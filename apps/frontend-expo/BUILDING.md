@@ -57,7 +57,7 @@ The same file lists each shared `packages/prisma` module the app imports. When t
 
 - **Checks:** Expo typecheck; voice-log Playwright specs including a new discard case (review and in-flight processing). `voice note review makes extracted items explicit` fails on main too: the fixture's only unresolved item ("next time") is coach context, so "Not included" never shows. Simulator (iOS 26.5, fixture Debug build) light and dark captures in `docs/reviews/voice-note-discard/`; discard from recording, review and the Home card checked there. Not run on a phone.
 - **Built** with `pnpm build:testflight .release/testflight-main-8ec8c52a/tracking.so.ipa` in worktree `tracking-voice-note-discard`. Log shows `Installing TrackingHealth`, `TrackingMap`, `TrackingWatch`. IPA SHA-256 `3bf05a1c770f38be162f182a0aca9fb4e56547d001b587366a223d34d29be1ab`; the bundle contains "Discard voice note" and no fixture token.
-- **Apple:** validation passed; delivery `f9ddba44-9709-4b87-be02-967b731164d6`; VALID; internal IN_BETA_TESTING. Adding to `Friends & Family` returned 500 twice, then 204; beta review submitted (WAITING_FOR_REVIEW at the time of writing).
+- **Apple:** validation passed; delivery `f9ddba44-9709-4b87-be02-967b731164d6`; VALID; internal IN_BETA_TESTING. Adding to `Friends & Family` returned 500 twice, then 204; beta review APPROVED; external IN_BETA_TESTING.
 
 ## TestFlight build 257 — gpt-4o-transcribe and feedback on voice notes, November 12, 2026
 
