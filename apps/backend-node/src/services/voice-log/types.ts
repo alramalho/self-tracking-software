@@ -44,6 +44,42 @@ export const voiceLogExtractionSchema = z.object({
   unresolved: z.array(voiceLogUnresolvedSchema).max(10),
 });
 
+/**
+ * What the model returns. Every field is required (nullable instead of optional) so it also passes OpenAI's
+ * strict structured outputs, and the quantity may have decimals ("5.4 km"): the service rounds it to the whole
+ * number an entry stores, so a decimal never makes an activity disappear.
+ */
+export const voiceLogModelOutputSchema = z.object({
+  activities: z
+    .array(
+      z.object({
+        activityId: z.string(),
+        quantity: z.number().describe("Amount in the activity's saved measure; decimals allowed"),
+        date: z.string().describe("YYYY-MM-DD"),
+        time: z.string().nullable().describe("HH:mm, only when the user stated a time"),
+        description: z.string().nullable(),
+        difficulty: z.enum(["very_easy", "easy", "moderate", "hard", "very_hard"]).nullable(),
+        confidence: z.number(),
+      }),
+    )
+    .max(10),
+  metrics: z
+    .array(
+      z.object({
+        metricId: z.string(),
+        rating: z.number().int().describe("1 to 5"),
+        date: z.string().describe("YYYY-MM-DD"),
+        description: z.string().nullable(),
+        confidence: z.number(),
+      }),
+    )
+    .max(10),
+  note: z
+    .object({ title: z.string(), text: z.string(), date: z.string(), confidence: z.number() })
+    .nullable(),
+  unresolved: z.array(z.object({ text: z.string(), reason: z.string() })).max(10),
+});
+
 export const voiceLogCommitSchema = z.object({
   clientRequestId: z.string().uuid(),
   transcript: z.string().trim().min(1).max(4_000),
@@ -62,6 +98,7 @@ export type VoiceLogActivity = z.infer<typeof voiceLogActivitySchema>;
 export type VoiceLogMetric = z.infer<typeof voiceLogMetricSchema>;
 export type VoiceLogNote = z.infer<typeof voiceLogNoteSchema>;
 export type VoiceLogExtraction = z.infer<typeof voiceLogExtractionSchema>;
+export type VoiceLogModelOutput = z.infer<typeof voiceLogModelOutputSchema>;
 export type VoiceLogCommit = z.infer<typeof voiceLogCommitSchema>;
 export type VoiceLogRefinementContext = z.infer<typeof voiceLogRefinementContextSchema>;
 

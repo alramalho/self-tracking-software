@@ -1,0 +1,1500 @@
+{
+  "real-meditation-lock@34ad19a779": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "meditate",
+          "quantity": 22,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Lock 22 minutes of meditation.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005178,
+    "ms": 1317
+  },
+  "run-plain-km@9603f3cb99": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "I went for a run today, five kilometers.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005031,
+    "ms": 1338
+  },
+  "run-5k@55ba5e04c4": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "felt pretty good",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Did a 5k this morning, felt pretty good.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005233,
+    "ms": 1623
+  },
+  "run-decimal-up@2d9831dea6": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 8,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Ran at an easy pace.",
+          "difficulty": "easy",
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Ran 7.8 km at an easy pace.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005332,
+    "ms": 1487
+  },
+  "run-decimal@0858600475": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "along the river",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Log a run, 5.4 kilometers along the river.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005234,
+    "ms": 1557
+  },
+  "run-weekday@b55884530d": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 10,
+          "date": "2026-11-08",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "On Sunday I ran ten kilometers.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006528,
+    "ms": 1655
+  },
+  "run-miles@f6a3514935": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Morning run",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Morning run, three miles.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005277,
+    "ms": 1626
+  },
+  "run-spoken-number@a2dd4f6502": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 9,
+          "date": "2026-11-11",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Ran nine K yesterday evening.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00007277,
+    "ms": 3905
+  },
+  "run-half-marathon@e5ef8b3711": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 21,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "I ran a half marathon today!",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005129,
+    "ms": 1442
+  },
+  "run-with-time@e584515734": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 10,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "10K run in 52 minutes.",
+          "difficulty": "hard",
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "10K run in 52 minutes, it was really hard at the end.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005337,
+    "ms": 1919
+  },
+  "run-duration-only@51a0ab0347": {
+    "extraction": {
+      "activities": [],
+      "metrics": [],
+      "note": {
+        "title": "Running",
+        "text": "I went running for about 30 minutes.",
+        "date": "2026-11-12",
+        "confidence": 1
+      },
+      "unresolved": [
+        {
+          "text": "Running for about 30 minutes",
+          "reason": "Running is tracked in kilometers; no distance was stated."
+        }
+      ]
+    },
+    "costUsd": 0.0000578,
+    "ms": 2174
+  },
+  "run-no-amount@3cff8ca072": {
+    "extraction": {
+      "activities": [],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Went for a run.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": [
+        {
+          "text": "Went for a run.",
+          "reason": "Running is tracked in kilometers; no distance was given."
+        }
+      ]
+    },
+    "costUsd": 0.00005826,
+    "ms": 1841
+  },
+  "run-jog@51c366e80d": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 4,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Quick jog around the park",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Quick jog around the park, like four kilometers.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005331,
+    "ms": 1675
+  },
+  "run-pt@49f9db462b": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 6,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Fui correr hoje, fiz seis quilómetros.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005031,
+    "ms": 1231
+  },
+  "run-pt-yesterday@721362598f": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 12,
+          "date": "2026-11-11",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Corri 12 km ontem.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005028,
+    "ms": 1435
+  },
+  "real-meditation-reflection@dddee3e78a": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "meditate",
+          "quantity": 30,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "My mind raced between my project, Better Groceries, and Cassandra.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Meditation reflection",
+        "text": "Things felt good. Meditation felt important and gave me clarity. I also realized I had forgotten to study the system design topic, particularly Cassandra.",
+        "date": "2026-11-12",
+        "confidence": 0.98
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00013918,
+    "ms": 10053
+  },
+  "run-filler@05f1e68d59": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 8,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Uh so yeah, um, I did my run, it was, uh, eight kilometers, and then I stretched a bit.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": [
+        {
+          "text": "I stretched a bit",
+          "reason": "No matching stretching activity is available in the catalog."
+        }
+      ]
+    },
+    "costUsd": 0.00006097,
+    "ms": 2119
+  },
+  "guitar@a7b46ba852": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "guitar",
+          "quantity": 30,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Played guitar for half an hour.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005078,
+    "ms": 1335
+  },
+  "reading@05700ced95": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "reading",
+          "quantity": 20,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "before bed",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Read 20 pages before bed.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005178,
+    "ms": 1350
+  },
+  "gym-session@e4e9d1301c": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "gym",
+          "quantity": 1,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Legs and core.",
+          "difficulty": null,
+          "confidence": 0.98
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Gym session this morning, legs and core.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.0000708,
+    "ms": 4137
+  },
+  "gym-duration@a3602997ea": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "gym",
+          "quantity": 1,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.98
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Lifted weights for an hour and a half.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00007731,
+    "ms": 4280
+  },
+  "hike-duplicate@2e1e362a8c": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "hiking",
+          "quantity": 120,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Did a hike, about two hours.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006879,
+    "ms": 3664
+  },
+  "two-activities@805e1c1754": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "leetcode",
+          "quantity": 45,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        },
+        {
+          "activityId": "system-design",
+          "quantity": 60,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Did LeetCode for 45 minutes and then an hour of system design.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006787,
+    "ms": 1604
+  },
+  "surf@c9bbae9dac": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "surf",
+          "quantity": 90,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Waves were great.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Surfed for an hour and a half, waves were great.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005284,
+    "ms": 1839
+  },
+  "sauna-plus-unknown@cdcb7e9509": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "sauna",
+          "quantity": 15,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Sauna for 15 minutes and then a cold plunge.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": [
+        {
+          "text": "a cold plunge",
+          "reason": "No matching activity in the catalog."
+        }
+      ]
+    },
+    "costUsd": 0.00006033,
+    "ms": 1782
+  },
+  "bars-vs-minutes@a30ae66859": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "music-writing",
+          "quantity": 16,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Wrote bars for a new track.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Wrote 16 bars of a new track.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00007831,
+    "ms": 3282
+  },
+  "cycling-each-way@d3bacced21": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "cycling",
+          "quantity": 50,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Cycled to work, 25 minutes each way.",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Cycled to work, 25 minutes each way.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006982,
+    "ms": 3597
+  },
+  "meditation-pt@d13493c986": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "meditate",
+          "quantity": 15,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Meditei 15 minutos esta manhã.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005179,
+    "ms": 1578
+  },
+  "run-and-gym-pt@3a99c54915": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        },
+        {
+          "activityId": "gym",
+          "quantity": 1,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Hoje corri cinco quilómetros e depois fui ao ginásio.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006735,
+    "ms": 1742
+  },
+  "side-project-hours@0192fd2c12": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "side-project",
+          "quantity": 3,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Worked on Better Groceries.",
+          "difficulty": null,
+          "confidence": 0.83
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Worked on Better Groceries for three hours.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.0000818,
+    "ms": 4368
+  },
+  "reflection-only@c0425d3624": {
+    "extraction": {
+      "activities": [],
+      "metrics": [],
+      "note": {
+        "title": "Work stress and sleep",
+        "text": "Feeling a bit stressed about work lately; I think I need more sleep.",
+        "date": "2026-11-12",
+        "confidence": 0.99
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005136,
+    "ms": 1212
+  },
+  "yoga-energy@d4b16433c4": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "yoga",
+          "quantity": 20,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [
+        {
+          "metricId": "energy",
+          "rating": 4,
+          "date": "2026-11-12",
+          "description": null,
+          "confidence": 1
+        }
+      ],
+      "note": {
+        "title": "Voice note",
+        "text": "Yoga for 20 minutes, energy is like four out of five.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006435,
+    "ms": 1471
+  },
+  "swim-distance@ed9b9c4607": {
+    "extraction": {
+      "activities": [],
+      "metrics": [],
+      "note": {
+        "title": "Swimming",
+        "text": "Swam 1.5 kilometers.",
+        "date": "2026-11-12",
+        "confidence": 1
+      },
+      "unresolved": [
+        {
+          "text": "Swam 1.5 kilometers.",
+          "reason": "Swimming is tracked in minutes, not kilometers."
+        }
+      ]
+    },
+    "costUsd": 0.00008979,
+    "ms": 4656
+  },
+  "hard-decimal-comma-pt@12cd78935d": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 6,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Corri de manhã.",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Corri 5,6 km hoje de manhã.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005282,
+    "ms": 1310
+  },
+  "hard-decimal-words-pt@656512cb3b": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 8,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Fiz uma corrida de oito vírgula dois quilómetros.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005134,
+    "ms": 1311
+  },
+  "hard-self-correction@851713cd72": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 7,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "I ran six, no wait, seven kilometers today.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005032,
+    "ms": 1457
+  },
+  "hard-point-k@2ee3836c59": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 6,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Just finished a six point three K run.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.0000513,
+    "ms": 1545
+  },
+  "hard-time-and-pace@88b054171a": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Ran in 26 minutes, pace around 5:12; legs felt heavy.",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Ran 5 km in 26 minutes, pace around 5:12, legs felt heavy.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005791,
+    "ms": 1611
+  },
+  "plan-only@1d2a77bd76": {
+    "extraction": {
+      "activities": [],
+      "metrics": [],
+      "note": {
+        "title": "Plans for tomorrow",
+        "text": "Tomorrow I'm going to run 10 kilometers and go to the gym.",
+        "date": "2026-11-12",
+        "confidence": 1
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006535,
+    "ms": 5378
+  },
+  "hard-time-and-distance-pt@c641ed5e11": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 7,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Junto ao rio; cerca de 40 minutos.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Corrida de 40 minutos, mais ou menos 7 quilómetros, junto ao rio.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": [
+        {
+          "text": "40 minutos de corrida",
+          "reason": "A corrida está registada em quilómetros; foi registada a distância indicada."
+        }
+      ]
+    },
+    "costUsd": 0.0000694,
+    "ms": 2123
+  },
+  "hard-two-runs@5238c86f83": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 8,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "3 km in the morning and 5 km in the evening",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Two runs today, 3 km in the morning and 5 km in the evening.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005589,
+    "ms": 1313
+  },
+  "hard-intervals@b6618c7447": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 9,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Track interval session: 2 km warm-up, 6 × 800 meters, 2 km cool-down.",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Interval session on the track: warm-up 2 km, 6 times 800 meters, cool-down 2 km.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00007946,
+    "ms": 4285
+  },
+  "hard-mishear-log@0d9ad01705": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 6,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Locked a run of 6 K.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005129,
+    "ms": 2494
+  },
+  "hard-run-walk@d32881d4ca": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 4,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Ran 4 kilometers out and walked the 4 kilometers back.",
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Ran 4 kilometers out and walked the 4 kilometers back.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": [
+        {
+          "text": "Walked 4 kilometers back",
+          "reason": "No walking activity is available in the catalog."
+        }
+      ]
+    },
+    "costUsd": 0.00010134,
+    "ms": 5078
+  },
+  "hard-yesterday-and-today@c866e14457": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "gym",
+          "quantity": 1,
+          "date": "2026-11-11",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.98
+        },
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Yesterday I did gym, today I ran 5 kilometers.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006933,
+    "ms": 2563
+  },
+  "hard-mishear-ran@22428f1b67": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 10,
+          "date": "2026-11-08",
+          "time": null,
+          "description": "Long run with Jo.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Rand ten kilometres with Jo, Sunday long run.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00007081,
+    "ms": 5577
+  },
+  "hard-long-note@dcefc5dc18": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "meditate",
+          "quantity": 10,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        },
+        {
+          "activityId": "running",
+          "quantity": 8,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        },
+        {
+          "activityId": "side-project",
+          "quantity": 2,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [
+        {
+          "metricId": "energy",
+          "rating": 4,
+          "date": "2026-11-12",
+          "description": "Energy was pretty high.",
+          "confidence": 0.99
+        }
+      ],
+      "note": {
+        "title": "Today",
+        "text": "Today was a good day. Woke up early.",
+        "date": "2026-11-12",
+        "confidence": 0.98
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.0001208,
+    "ms": 3369
+  },
+  "hard-hours-minutes@4448ea6341": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "meditate",
+          "quantity": 75,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "on the retreat",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Meditated for an hour and fifteen minutes on the retreat.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005283,
+    "ms": 1937
+  },
+  "hard-chess-games@54ad4b0a88": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "chess",
+          "quantity": 40,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Played three games.",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Played three games of chess, around 40 minutes in total.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005284,
+    "ms": 1468
+  },
+  "hard-not-guitar@c666edaf7c": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Guitar music",
+        "text": "Listened to a lot of guitar music while running.",
+        "date": "2026-11-12",
+        "confidence": 0.98
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006635,
+    "ms": 1855
+  },
+  "hard-past-negation@2bac87105c": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "yoga",
+          "quantity": 20,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Reflection",
+        "text": "I wanted to run today but skipped it.",
+        "date": "2026-11-12",
+        "confidence": 1
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00006389,
+    "ms": 1822
+  },
+  "hard-treadmill@87fcb59e6f": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 5,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "On the treadmill at the gym.",
+          "difficulty": null,
+          "confidence": 0.98
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Did 5 km on the treadmill at the gym, nothing else.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00009035,
+    "ms": 5994
+  },
+  "hard-semi-marathon-pt@c13bab7738": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "running",
+          "quantity": 21,
+          "date": "2026-11-12",
+          "time": null,
+          "description": "Meia maratona de Lisboa",
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Hoje fiz a meia maratona de Lisboa!",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005432,
+    "ms": 1514
+  },
+  "other-run@0b4d7efece": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "run",
+          "quantity": 4,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Went running, 4k.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00004381,
+    "ms": 1362
+  },
+  "hard-pt-gym-yesterday@71eece6ae0": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "gym",
+          "quantity": 1,
+          "date": "2026-11-11",
+          "time": null,
+          "description": "Treino de pernas.",
+          "difficulty": null,
+          "confidence": 0.99
+        },
+        {
+          "activityId": "meditate",
+          "quantity": 20,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 0.99
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Ontem fui ao ginásio, treino de pernas, e hoje meditei 20 minutos.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00008791,
+    "ms": 3662
+  },
+  "other-walk-hours@a672a27449": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "walk",
+          "quantity": 70,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Walked for an hour and ten minutes.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.00005983,
+    "ms": 4316
+  },
+  "other-mixed@5846558d6b": {
+    "extraction": {
+      "activities": [
+        {
+          "activityId": "pushups",
+          "quantity": 50,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        },
+        {
+          "activityId": "strength",
+          "quantity": 1,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        },
+        {
+          "activityId": "water",
+          "quantity": 3,
+          "date": "2026-11-12",
+          "time": null,
+          "description": null,
+          "difficulty": null,
+          "confidence": 1
+        }
+      ],
+      "metrics": [],
+      "note": {
+        "title": "Voice note",
+        "text": "Did 50 push-ups, a strength workout and drank three glasses of water.",
+        "date": "2026-11-12",
+        "confidence": 0.9
+      },
+      "unresolved": []
+    },
+    "costUsd": 0.0001004,
+    "ms": 6236
+  }
+}
