@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Square,
   Sparkles,
+  Trash2,
 } from "lucide-react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useQueryClient } from "@tanstack/react-query";
@@ -103,6 +104,41 @@ function SelectionGroup({ children }: VoiceLogSelectionGroupProps) {
   );
 }
 
+function TextAction({
+  icon: Icon,
+  label,
+  disabled,
+  onPress,
+}: {
+  icon: typeof Trash2;
+  label: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        paddingHorizontal: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        opacity: disabled ? 0.4 : pressed ? 0.6 : 1,
+      })}
+    >
+      <Icon size={15} color={c.muted} />
+      <Text style={{ color: c.muted, fontSize: 13 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function VoiceLogDrawer({
   onClose,
   initialDraft,
@@ -139,6 +175,9 @@ export function VoiceLogDrawer({
   );
   const recordingKindRef = useRef<VoiceLogRecordingKind>("initial");
   const discardedDraftClientRequestIdRef = useRef<string | undefined>(undefined);
+  // Bumped on discard so a preview still in flight is ignored when it lands.
+  const runRef = useRef(0);
+  const discardedRef = useRef(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {
@@ -167,7 +206,11 @@ export function VoiceLogDrawer({
       savedAt: new Date().toISOString(),
     };
     void writePendingVoiceLog(draft)
-      .then(() => onPendingChange?.(draft))
+      .then(() =>
+        discardedRef.current
+          ? clearPendingVoiceLog()
+          : onPendingChange?.(draft),
+      )
       .catch((nextError) => setError(nextError));
   }, [
     onPendingChange,
@@ -196,6 +239,8 @@ export function VoiceLogDrawer({
               },
             }
           : undefined;
+      if (discardedRef.current) return;
+      const run = ++runRef.current;
       setPhase("processing");
       setError(undefined);
       try {
@@ -204,6 +249,7 @@ export function VoiceLogDrawer({
           clientRequestId,
           refinementContext,
         });
+        if (run !== runRef.current) return;
         const enriched = enrichVoiceLogPreview(result, entries.data ?? []);
         setPreview(enriched);
         transcriptionFeedback.ask({
@@ -220,6 +266,7 @@ export function VoiceLogDrawer({
         setSelectedPlanId(enriched.planMatches?.[0]?.planId ?? null);
         setPhase("review");
       } catch (nextError) {
+        if (run !== runRef.current) return;
         setError(nextError);
         setPhase(activeRecordingKind === "refinement" ? "review" : "ready");
       }
@@ -328,6 +375,21 @@ export function VoiceLogDrawer({
     }
   }
 
+  // Throws the note away (recording, preview in flight or draft) and closes.
+  async function discard() {
+    if (phase === "committing") return;
+    discardedRef.current = true;
+    runRef.current += 1;
+    if (phase === "recording") await recorder.cancel();
+    try {
+      await clearPendingVoiceLog();
+    } catch {
+      // Nothing else to clean up: previews are not stored server-side.
+    }
+    onPendingChange?.(null);
+    onClose();
+  }
+
   function createPlan(suggestion: NonNullable<VoiceLogPreview["planSuggestions"]>[number]) {
     close();
     router.push({
@@ -404,7 +466,7 @@ export function VoiceLogDrawer({
       title={title}
       titleAlign={phase === "review" ? "left" : "center"}
       testID="voice-log-drawer"
-      dismissLabel="Dismiss voice note"
+      dismissLabel="Close voice note"
       onClose={close}
     >
       {phase === "ready" && (
@@ -515,6 +577,7 @@ export function VoiceLogDrawer({
               {recorder.isWorking ? "Finishing…" : "Stop recording"}
             </Text>
           </Pressable>
+          <TextAction icon={Trash2} label="Discard" onPress={() => void discard()} />
           <Status error={error} />
         </View>
       )}
@@ -528,6 +591,7 @@ export function VoiceLogDrawer({
           <Copy muted>
             We’ll show you exactly what was found before anything is saved.
           </Copy>
+          <TextAction icon={Trash2} label="Discard" onPress={() => void discard()} />
         </View>
       )}
 
@@ -980,23 +1044,22 @@ export function VoiceLogDrawer({
             <Button secondary disabled={busy} onPress={makeChanges}>
               Make changes
             </Button>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Start over"
-              disabled={busy}
-              onPress={() => void startOver()}
-              style={({ pressed }) => ({
-                minHeight: 44,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                opacity: busy ? 0.4 : pressed ? 0.6 : 1,
-              })}
+            <View
+              style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}
             >
-              <RotateCcw size={15} color={c.muted} />
-              <Text style={{ color: c.muted, fontSize: 13 }}>Start over</Text>
-            </Pressable>
+              <TextAction
+                icon={RotateCcw}
+                label="Start over"
+                disabled={busy}
+                onPress={() => void startOver()}
+              />
+              <TextAction
+                icon={Trash2}
+                label="Discard"
+                disabled={isCommitting}
+                onPress={() => void discard()}
+              />
+            </View>
           </View>
         </View>
       )}

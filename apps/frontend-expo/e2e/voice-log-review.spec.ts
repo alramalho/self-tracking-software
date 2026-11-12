@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 
 async function installFakeMicrophone(page: Page) {
   await page.addInitScript(() => {
@@ -172,3 +172,41 @@ for (const theme of ["LIGHT", "DARK"]) {
     expect(feedback).toEqual([expect.objectContaining({ helpful: true })]);
   });
 }
+
+test("discard throws the voice note away from review and while processing", async ({
+  page,
+  request,
+}) => {
+  await installFakeMicrophone(page);
+  await request.post(`${API}/__reset`);
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.goto("/add");
+
+  const drawer = page.getByTestId("voice-log-drawer");
+  await page.getByTestId("log-voice-note-card").click();
+  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+  await drawer.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await page.goto("/");
+  await expect(page.getByTestId("pending-voice-note-card")).toHaveCount(0);
+
+  let releasePreview = () => {};
+  await page.route("**/voice-logs/preview", async (route) => {
+    await new Promise<void>((resolve) => (releasePreview = resolve));
+    await route.continue();
+  });
+  await page.goto("/add");
+  await page.getByTestId("log-voice-note-card").click();
+  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+  await expect(drawer.getByTestId("voice-log-processing")).toBeVisible();
+  await drawer.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  releasePreview();
+  await page.waitForTimeout(500);
+  await page.goto("/");
+  await expect(page.getByTestId("pending-voice-note-card")).toHaveCount(0);
+});

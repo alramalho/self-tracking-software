@@ -54,6 +54,16 @@ export function useVoiceLogRecorder({
     [],
   );
 
+  // Stops without handing the recording on, for a discarded voice note.
+  const cancel = useCallback(async () => {
+    try {
+      if (recorder.getStatus().isRecording) await recorder.stop();
+    } catch {
+      // The recording is thrown away either way.
+    }
+    await setAudioModeAsync({ allowsRecording: false }).catch(() => {});
+  }, [recorder]);
+
   async function start() {
     setIsStarting(true);
     try {
@@ -83,5 +93,6 @@ export function useVoiceLogRecorder({
     isWorking: isStarting || isStopping,
     start,
     stop,
+    cancel,
   };
 }

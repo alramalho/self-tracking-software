@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 
 async function installFakeMicrophone(page: Page) {
   await page.addInitScript(() => {
@@ -78,7 +78,7 @@ test("voice note survives navigation into plan onboarding and can be dismissed f
   await expect(page.getByTestId("pending-voice-note-card")).toBeVisible();
   await page
     .getByTestId("pending-voice-note-card")
-    .getByRole("button", { name: "Dismiss voice note", exact: true })
+    .getByRole("button", { name: "Discard voice note", exact: true })
     .click();
   await expect(page.getByTestId("pending-voice-note-card")).toBeHidden();
 });

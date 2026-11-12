@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const API = "http://127.0.0.1:4317";
+const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 
 for (const theme of ["DARK", "LIGHT"]) {
   test(`voice note entry point stays secondary and opens its review drawer in ${theme}`, async ({

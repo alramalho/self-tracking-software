@@ -253,7 +253,7 @@ export default function HomeScreen() {
                 <PendingVoiceLogCard
                   draft={pendingVoice.draft}
                   onReview={() => setVoiceLogOpen(true)}
-                  onDismiss={() => {
+                  onDiscard={() => {
                     setVoiceLogOpen(false);
                     void pendingVoice.clear();
                   }}
