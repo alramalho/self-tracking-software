@@ -51,9 +51,15 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 257 — gpt-4o-transcribe and feedback on voice notes, November 12, 2026
+
+**Build 257 is the latest TestFlight build**: everything on main up to `08ee8c03`. Speech to text moved to `openai/gpt-4o-transcribe` on OpenRouter (backend `stt-gpt4o-20261112`, reaches every build), and the voice-note review now shows "Did we get that right?" under the transcript. The "What went wrong?" sheet has one Done bar instead of two.
+
+- **Built** with `pnpm build:testflight .release/testflight-main-08ee8c03/tracking.so.ipa` in worktree `tracking-stt-upgrade`. IPA SHA-256 `475ce9a7bfd2d7c52d0aab21ac21879579a717dd81bda7b328bb5defeb2f314b`. Validated, uploaded, VALID, internal + Friends & Family, beta review APPROVED.
+
 ## TestFlight build 256 — workout trends on Health & workouts and the plan page, November 9, 2026
 
-**Build 256 is the latest TestFlight build**: everything on main up to `c1d8c307`. Health & workouts opens with an Apple Fitness-style card per activity done twice in the last 8 weeks (this week's km or minutes, 8 weekly bars, recent pace of the last 3 runs against the 3 before), then the 5 most recent workouts with "Show all". The plan page shows the same cards under History for workouts linked to that plan's activities, only when there is a trend.
+Build 256 was the latest TestFlight build: everything on main up to `c1d8c307`. Health & workouts opens with an Apple Fitness-style card per activity done twice in the last 8 weeks (this week's km or minutes, 8 weekly bars, recent pace of the last 3 runs against the 3 before), then the 5 most recent workouts with "Show all". The plan page shows the same cards under History for workouts linked to that plan's activities, only when there is a trend.
 
 - **Source:** main `c1d8c307`. App only; no backend change.
 - **Checks:** Expo typecheck; `tests/workout-trends.test.ts`; 3 `e2e/workout-trends.spec.ts` cases. Older failures not from this change: `tests/workout-effort.test.ts` and `e2e/health.spec.ts` expect "Apple Health" where the app says "Apple Watch", and the "Manage Apple Health" button no longer exists.
