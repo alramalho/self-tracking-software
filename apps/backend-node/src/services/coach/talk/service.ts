@@ -68,7 +68,9 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string,
   const say = booked(ask === "none" ? withoutQuestions(turn.say) : turn.say);
   const detail = booked(ask === "none" ? withoutQuestions(turn.detail) : turn.detail);
   // "Not sure yet" always says when the coach will ask again, even if the model left it out.
-  const askAgain = action === "ask_again" && !/again/i.test(`${say} ${detail}`) ? `I'll ask again ${format(parseISO(until), "EEEE")}.` : "";
+  const askDay = until ? format(parseISO(until), "EEEE") : "";
+  const namesDay = askDay && new RegExp(`\\b(again|revisit|${askDay})\\b`, "i").test(`${say} ${detail}`);
+  const askAgain = action === "ask_again" && !namesDay ? `I'll ask again ${askDay}.` : "";
   const shown: TalkTurn = {
     say: words(say || detail, 12) || "Got it.",
     detail: [say ? words(detail, 30) : "", askAgain].filter(Boolean).join(" "),

@@ -103,6 +103,11 @@ describe("settleTurn", () => {
     expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
   });
 
+  it("doesn't add a second \"ask again\" when the coach already named the day", () => {
+    const { shown } = settleTurn(turn({ say: "Okay.", detail: "We'll revisit this Sunday.", ask: "none", action: "ask_again", until: "2026-11-08" }), request({ notSure: true }), TODAY);
+    expect(shown.detail).toBe("We'll revisit this Sunday.");
+  });
+
   it("the last screen never asks a question", () => {
     const { shown } = settleTurn(
       turn({ say: "Travel can disrupt the routine. When are you back?", detail: "", ask: "text" }),

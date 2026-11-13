@@ -1,6 +1,19 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { ScheduledCoachInput } from "./types";
 
+function lastLog(input: ScheduledCoachInput, activityIds: string[]) {
+  const timezone = input.user.timezone || "UTC";
+  const last = input.entries
+    .filter((e) => !!e.activityId && activityIds.includes(e.activityId) && e.datetime <= input.now)
+    .reduce<Date | null>((latest, e) => (!latest || e.datetime > latest ? e.datetime : latest), null);
+  if (!last) return { lastLoggedOn: null, daysSinceLastLog: null };
+  const day = (d: Date) => Date.parse(formatInTimeZone(d, timezone, "yyyy-MM-dd"));
+  return {
+    lastLoggedOn: formatInTimeZone(last, timezone, "yyyy-MM-dd"),
+    daysSinceLastLog: Math.round((day(input.now) - day(last)) / 86_400_000),
+  };
+}
+
 /** A small, factual snapshot. The scheduler owns eligibility; this is only generation input. */
 export function scheduledCoachSnapshot(
   input: ScheduledCoachInput,
@@ -31,6 +44,8 @@ export function scheduledCoachSnapshot(
       outline: p.outline,
       designedThrough: p.designedThrough?.toISOString().slice(0, 10) ?? null,
       timesPerWeek: p.timesPerWeek,
+      // Counted here, not by the model: it miscounted "days since" in the 13 Nov journeys benchmark.
+      ...lastLog(input, p.activities.map((a) => a.id)),
       availability: {
         mode: input.supports[p.id]?.mode,
         weekdays: input.supports[p.id]?.weekdays,
@@ -72,7 +87,7 @@ export function scheduledCoachSnapshot(
       .map((e) => ({
         id: e.id,
         activityId: e.activityId,
-        date: e.datetime.toISOString().slice(0, 10),
+        date: formatInTimeZone(e.datetime, input.user.timezone || "UTC", "yyyy-MM-dd EEE"),
         quantity: e.quantity,
         difficulty: e.difficulty,
         note: e.privateNotes,

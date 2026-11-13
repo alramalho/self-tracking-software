@@ -1,6 +1,6 @@
 // The Coach tab's rules, shared by the iPhone app and the web app so both always agree:
 // the coaching switches, when a plan needs you, and what the coach is waiting on you for.
-import { planPace, weekAtRisk } from "./pace";
+import { planPace, weekOnTheLine } from "./pace";
 import type { MissedWeek } from "./streak";
 import type { CoachReminder, CoachRequest } from "./coaching";
 import type { CoachCheck, FollowThroughState, PlanSupport } from "./types";
@@ -154,10 +154,20 @@ export function supportFor(state: FollowThroughState | undefined, plan: CoachPla
 
 // ---------- plan alerts ----------
 
+/**
+ * After a trip the coach checks in the morning after the return day; nothing else asks for two more days,
+ * so coming home isn't met by a check-in, a nudge and the drawer at once.
+ */
+export const AWAY_TAIL_DAYS = 2;
+
+/** The last day (inclusive) a quiet keeps the coach from asking: its day, plus the tail after a trip. */
+export const quietThrough = (quiet: { until: string; why: string }) =>
+  quiet.why === "away" ? addDaysToDateKey(quiet.until, AWAY_TAIL_DAYS) : quiet.until;
+
 /** The coach was asked to stay quiet on this plan until a day (inclusive), in the person's local days. */
 export function quietFor(state: FollowThroughState | undefined, planId: string, now = new Date()) {
   const quiet = state?.monitoring?.quiet?.[planId];
-  return quiet && quiet.until >= dayKey(now) ? quiet : undefined;
+  return quiet && quietThrough(quiet) >= dayKey(now) ? quiet : undefined;
 }
 
 /** Gone quiet, at risk this week, or missed last week: what the home card's warning and the Coach tab show. */
@@ -189,8 +199,11 @@ export function planAlert<P extends CoachPlan>(input: {
   const target = typeof week?.plannedActivities === "number" ? week.plannedActivities : (plan.timesPerWeek ?? 0);
   const doneDays = new Set(logs.filter((e) => sameWeek(e.datetime, now)).map((e) => dayKey(e.datetime))).size;
   const daysLeft = 7 - now.getDay();
-  const atRisk = plan.outlineType === "TIMES_PER_WEEK" && weekAtRisk({ target, doneDays, daysLeft });
-  const missed = plan.progress?.achievement?.missedLastWeek ?? null;
+  const atRisk = plan.outlineType === "TIMES_PER_WEEK" && weekOnTheLine({ target, doneDays, daysLeft });
+  // A missed week they already talked through during that week isn't asked about again.
+  const talkedAt = state?.monitoring?.quiet?.[plan.id]?.at;
+  const talkedLastWeek = !!talkedAt && sameWeek(talkedAt, new Date(now.getTime() - 7 * 86_400_000));
+  const missed = talkedLastWeek ? null : (plan.progress?.achievement?.missedLastWeek ?? null);
   // Answering the coach's nudge (remind me tomorrow, or let it go) quiets the alert for a day.
   const answeredNudge = state?.monitoring?.requests.some(
     (r) =>

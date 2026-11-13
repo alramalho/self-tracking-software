@@ -21,6 +21,13 @@ describe("plan pace (homepage ring and coach nudge share this rule)", () => {
     expect(planPace({ timesPerWeek: 1, startedAt: started, now, logDates: [daysAgo(7)] })).toBe("normal");
   });
 
+  it("is not slipping after a gap when the last 7 days already met the target", () => {
+    // 4x/week: four sessions, then four quiet days, is a rhythm, not a slip.
+    const four = [daysAgo(4.2), daysAgo(5), daysAgo(5.5), daysAgo(6)];
+    expect(planPace({ timesPerWeek: 4, startedAt: started, now, logDates: four })).toBe("on_track");
+    expect(planPace({ timesPerWeek: 4, startedAt: started, now, logDates: four.slice(0, 2) })).toBe("slipping");
+  });
+
   it("counts a new plan from the day it was created, not from nothing", () => {
     expect(planPace({ timesPerWeek: 3, startedAt: daysAgo(2), now, logDates: [] })).toBe("normal");
     expect(planPace({ timesPerWeek: 3, startedAt: daysAgo(6), now, logDates: [] })).toBe("slipping");

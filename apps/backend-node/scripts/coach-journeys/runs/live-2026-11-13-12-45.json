@@ -1,0 +1,222 @@
+[
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "talk",
+    "transcript": "them: I'm travelling.\ncoach: Travel has interrupted a couple of weeks. When will you be back?\nthem: Just got back today, but I need to work.\ncoach: You're back today, despite work. When is your next session? I'll be looking for that log.\nthem: Saturday morning.\ncoach: Saturday morning. I’ll check at 12:00. I’ll be looking for that log.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "talk",
+    "transcript": "them: I was busy.\ncoach: Work is crowding training again. When is your next session? Counting on you.\nthem: Saturday.\ncoach: Saturday. I’ll check at 20:00. Counting on you.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "review",
+    "text": "Hey, quiet since Friday's session. What's the plan for training this week?",
+    "rules": [],
+    "verdict": {
+      "worthIt": false,
+      "why": "It asks for a broad plan for the week, not about the next session; a smaller, specific check-in would be more useful. / It asks for a broad plan for the week rather than when their next session is."
+    }
+  },
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session on this. You started this to feel strong and have energy for your kids, so do you want to get back to it tomorrow or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "review",
+    "text": "Hey, you mentioned Saturday morning for your session. Did it happen?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "owner-back-and-busy",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session. You started this to feel strong and have energy for your kids — want to get back to it tomorrow, or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "gone-quiet",
+    "kind": "lapse",
+    "text": "Your run plan's been quiet 11 days. You said you've done it before when you had a routine, so does it still fit?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "travel-with-return",
+    "kind": "talk",
+    "transcript": "them: I'm travelling.\ncoach: Travel can shift the plan. What day will you be back?\nthem: I'm back on Saturday.\ncoach: I'll quiet nudges until Saturday. I'll check in Sunday at 09:00. I'll be looking for your next session.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "travel-with-return",
+    "kind": "nudge",
+    "text": "It's been 3 days since you last trained. You started this to feel strong and have energy for your kids, so do you want to get back to it tomorrow or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "travel-back-logged",
+    "kind": "talk",
+    "transcript": "them: I'm travelling.\ncoach: Travel can shift the plan. When will you be back?\nthem: I'm back on Saturday.\ncoach: I’ll quiet nudges until Saturday. I’ll check in Sunday at 09:00. Counting on you.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "travel-back-logged",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session. You started this to feel strong and have energy for your kids — want to get back to it tomorrow, or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-commits",
+    "kind": "talk",
+    "transcript": "them: I lost motivation.\ncoach: Motivation dips happen. What’s the smallest session you’d do, and when? I’ll be looking for that log.\nthem: Maybe a short run tomorrow morning.\ncoach: Friday morning works. I’ll check in at 12:00. Counting on you.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-commits",
+    "kind": "review",
+    "text": "Hey, quiet since Friday's session. What's the plan for the rest of the week?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-commits",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session, and you started this to feel strong and have energy for your kids. Want to get back to it tomorrow, or let this go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-shows-up",
+    "kind": "talk",
+    "transcript": "them: I lost motivation.\ncoach: Motivation dips happen. What’s the smallest session you’d do, and when? I’ll be looking for that log.\nthem: Tomorrow morning, a short run.\ncoach: Tomorrow, Friday. I’ll check at 12:00. I’ll be looking for that log.",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-shows-up",
+    "kind": "review",
+    "text": "Hey, quiet since Friday on the training side. When's your next session?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "lost-motivation-shows-up",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last training session. You started this to feel strong and have energy for your kids, so do you want to get back to it tomorrow or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "sick",
+    "kind": "talk",
+    "transcript": "them: I was tired or sick.\ncoach: Rest up and recover well. ",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "sick",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session. You started this to feel strong and have energy for your kids — want to get back to it tomorrow, or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "not-sure",
+    "kind": "talk",
+    "transcript": "them: I'm travelling.\ncoach: Travel can shift the plan. When will you be back?\nthem: Not sure yet.\ncoach: I'll ask again Sunday, November 8. ",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "not-sure",
+    "kind": "nudge",
+    "text": "It's been 3 days since your last session. You started this to feel strong and have energy for your kids, so do you want to get back to it tomorrow or let it go?",
+    "rules": [],
+    "verdict": {
+      "worthIt": true,
+      "why": ""
+    }
+  },
+  {
+    "journey": "hard-session",
+    "kind": "difficulty",
+    "text": "Saw today's session ended early with the knee. How's it feeling now?",
+    "rules": [],
+    "verdict": {
+      "worthIt": false,
+      "why": "It invents that today’s session ended early because of a knee issue; that isn’t in the situation. / It assumes the session ended early because of a knee issue, which the situation doesn’t establish."
+    }
+  }
+]

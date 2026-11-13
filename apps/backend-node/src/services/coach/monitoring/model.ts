@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import { dueForSession } from "../../follow-through/model";
 import { planPace } from "@tsw/prisma/follow-through/pace";
+import { quietThrough } from "@tsw/prisma/follow-through/coach-inbox";
 import { MAX_UNANSWERED_OUTREACHES, unansweredOutreaches } from "./silence";
 
 const DAY = 86400000;
@@ -200,7 +201,10 @@ function nextDecision(
   )
     return null;
   // Quiet until a day the person named in Talk to coach: no nudges, though the weeks still count.
-  const quietUntil = (id: string) => state.quiet?.[id]?.until ?? "";
+  const quietUntil = (id: string) => {
+    const quiet = state.quiet?.[id];
+    return quiet ? quietThrough(quiet) : "";
+  };
   const plans = activeMonitoringPlans(input).filter(
     (p) =>
       !state.pausedPlanIds.includes(p.id) &&

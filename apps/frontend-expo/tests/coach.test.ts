@@ -121,12 +121,15 @@ test("with coaching off, or a plan just tracked, the coach has nothing waiting",
   assert.deepEqual(tracked.map((i) => i.kind), ["checkin"]);
 });
 
-test("a plan the coach was told to leave quiet shows no alert until the day after", () => {
+test("a plan the coach was told to leave quiet shows no alert until two days after the return check-in", () => {
   const entries = [{ id: "e", activityId: "run", datetime: "2026-10-13T08:00:00Z", userId: "u", quantity: 3, createdAt: "2026-10-13T08:00:00Z" }] as never;
   const quiet = state({
     monitoring: { requests: [], reviewed: {}, pausedPlanIds: [], quiet: { p1: { until: "2026-10-25", why: "away", at: "2026-10-21T09:00:00Z" } } },
   });
   assert.equal(planAlert({ plan: plan(), entries, state: quiet, now }), null);
   assert.equal(planAlert({ plan: plan(), entries, state: quiet, now: new Date("2026-10-25T20:00:00Z") }), null);
-  assert.equal(planAlert({ plan: plan(), entries, state: quiet, now: new Date("2026-10-26T10:00:00Z") })?.status, "quiet");
+  // Back on the 25th: the coach checks in the morning of the 26th, and nothing else asks until the 28th.
+  assert.equal(planAlert({ plan: plan(), entries, state: quiet, now: new Date("2026-10-26T10:00:00Z") }), null);
+  assert.equal(planAlert({ plan: plan(), entries, state: quiet, now: new Date("2026-10-27T20:00:00Z") }), null);
+  assert.equal(planAlert({ plan: plan(), entries, state: quiet, now: new Date("2026-10-28T10:00:00Z") })?.status, "quiet");
 });
