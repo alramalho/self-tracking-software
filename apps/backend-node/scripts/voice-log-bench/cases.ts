@@ -8,6 +8,7 @@
  * Portuguese, including the failure the owner reported (a run that wasn't extracted).
  */
 import type { VoiceLogActivityContext, VoiceLogMetricContext } from "../../src/services/voice-log/extract";
+import type { VoiceLogRefinementContext } from "../../src/services/voice-log/types";
 
 export const NOW = new Date("2026-11-12T19:00:00.000Z"); // Thursday 20:00 in Berlin
 export const TIMEZONE = "Europe/Berlin";
@@ -73,9 +74,11 @@ const otherActivities: VoiceLogActivityContext[] = [
 export type ExpectedActivity = {
   /** Any of these ids is right (near-duplicate activities). */
   id: string | string[];
-  /** Exact quantity, or any of the listed values. */
-  quantity: number | number[];
+  /** Exact quantity, any of the listed values, or a range (for estimates). */
+  quantity: number | number[] | { min: number; max: number };
   date?: string;
+  /** true: must be marked as an estimate from another unit; false: must not be. Unset: not checked. */
+  estimated?: boolean;
 };
 
 export type BenchCase = {
@@ -84,6 +87,8 @@ export type BenchCase = {
   transcript: string;
   activities?: VoiceLogActivityContext[];
   metrics?: VoiceLogMetricContext[];
+  /** A spoken correction of an existing draft: transcript is the correction. */
+  refinement?: VoiceLogRefinementContext;
   expect: {
     activities: ExpectedActivity[];
     metrics?: { id: string; rating: number | number[] }[];
@@ -107,6 +112,10 @@ export const cases: BenchCase[] = [
   },
 
   // Running: the owner's main activity, logged in kilometers.
+  // 13 Nov, from the watch: "Log" heard as "Long", reading is tracked in pages. Logged nothing before.
+  { id: "real-reading-long", source: "real", transcript: "Long half an hour of reading.", expect: { activities: [{ id: "reading", quantity: { min: 12, max: 30 }, estimated: true }] } },
+  { id: "reading-minutes-pt", source: "written", transcript: "Li durante uma hora.", expect: { activities: [{ id: "reading", quantity: { min: 25, max: 60 }, estimated: true }] } },
+  { id: "reading-pages-not-estimated", source: "written", transcript: "Log 12 pages of reading.", expect: { activities: [{ id: "reading", quantity: 12, estimated: false }] } },
   { id: "run-plain-km", source: "written", transcript: "I went for a run today, five kilometers.", expect: { activities: [{ id: "running", quantity: 5 }] } },
   { id: "run-5k", source: "written", transcript: "Did a 5k this morning, felt pretty good.", expect: { activities: [{ id: "running", quantity: 5 }] } },
   { id: "run-decimal", source: "written", transcript: "Log a run, 5.4 kilometers along the river.", expect: { activities: [{ id: "running", quantity: 5 }] } },
@@ -116,7 +125,8 @@ export const cases: BenchCase[] = [
   { id: "run-miles", source: "written", transcript: "Morning run, three miles.", expect: { activities: [{ id: "running", quantity: 5 }] } },
   { id: "run-half-marathon", source: "written", transcript: "I ran a half marathon today!", expect: { activities: [{ id: "running", quantity: 21 }] } },
   { id: "run-with-time", source: "written", transcript: "10K run in 52 minutes, it was really hard at the end.", expect: { activities: [{ id: "running", quantity: 10 }] } },
-  { id: "run-duration-only", source: "written", transcript: "I went running for about 30 minutes.", expect: { activities: [], unresolvedMentions: /run/i } },
+  // A duration for an activity tracked in distance: log an estimate the user can correct (owner's choice, 13 Nov).
+  { id: "run-duration-only", source: "written", transcript: "I went running for about 30 minutes.", expect: { activities: [{ id: "running", quantity: { min: 4, max: 6 }, estimated: true }] } },
   { id: "run-no-amount", source: "written", transcript: "Went for a run.", expect: { activities: [], unresolvedMentions: /run/i } },
   { id: "run-jog", source: "written", transcript: "Quick jog around the park, like four kilometers.", expect: { activities: [{ id: "running", quantity: 4 }] } },
   { id: "run-pt", source: "written", transcript: "Fui correr hoje, fiz seis quilómetros.", expect: { activities: [{ id: "running", quantity: 6 }] } },
@@ -135,7 +145,7 @@ export const cases: BenchCase[] = [
   { id: "bars-vs-minutes", source: "written", transcript: "Wrote 16 bars of a new track.", expect: { activities: [{ id: "music-writing", quantity: 16 }] } },
   { id: "side-project-hours", source: "written", transcript: "Worked on Better Groceries for three hours.", expect: { activities: [{ id: "side-project", quantity: 3 }] } },
   { id: "sauna-plus-unknown", source: "written", transcript: "Sauna for 15 minutes and then a cold plunge.", expect: { activities: [{ id: "sauna", quantity: 15 }] } },
-  { id: "swim-distance", source: "written", transcript: "Swam 1.5 kilometers.", expect: { activities: [], unresolvedMentions: /sw[ai]m/i } },
+  { id: "swim-distance", source: "written", transcript: "Swam 1.5 kilometers.", expect: { activities: [{ id: "swimming", quantity: { min: 25, max: 50 }, estimated: true }] } },
   { id: "meditation-pt", source: "written", transcript: "Meditei 15 minutos esta manhã.", expect: { activities: [{ id: "meditate", quantity: 15 }] } },
   { id: "run-and-gym-pt", source: "written", transcript: "Hoje corri cinco quilómetros e depois fui ao ginásio.", expect: { activities: [{ id: "running", quantity: 5 }, { id: "gym", quantity: 1 }] } },
   { id: "plan-only", source: "written", transcript: "Tomorrow I'm going to run 10 kilometers and go to the gym.", expect: { activities: [] } },
@@ -163,6 +173,56 @@ export const cases: BenchCase[] = [
   { id: "hard-past-negation", source: "written", transcript: "I wanted to run today but I skipped it, did 20 minutes of yoga instead.", expect: { activities: [{ id: "yoga", quantity: 20 }] } },
   { id: "hard-pt-gym-yesterday", source: "written", transcript: "Ontem fui ao ginásio, treino de pernas, e hoje meditei 20 minutos.", expect: { activities: [{ id: "gym", quantity: 1, date: YESTERDAY }, { id: "meditate", quantity: 20 }] } },
   { id: "hard-semi-marathon-pt", source: "written", transcript: "Hoje fiz a meia maratona de Lisboa!", expect: { activities: [{ id: "running", quantity: 21 }] } },
+
+  // Spoken corrections of a draft (the mic on the review screen).
+  {
+    id: "fix-estimate-by-voice",
+    source: "written",
+    transcript: "Reading was actually 25 pages.",
+    refinement: {
+      originalTranscript: "Long half an hour of reading.",
+      currentDraft: {
+        activities: [{ activityId: "reading", quantity: 21, date: "2026-11-12", time: null, description: null, estimatedFrom: "half an hour", confidence: 0.5 }],
+        metrics: [],
+        note: { title: "Reading", text: "Half an hour of reading.", date: "2026-11-12", confidence: 0.8 },
+        unresolved: [],
+      },
+    },
+    expect: { activities: [{ id: "reading", quantity: 25, estimated: false }] },
+  },
+  {
+    id: "fix-amount-short",
+    source: "written",
+    transcript: "No, eight kilometers.",
+    refinement: {
+      originalTranscript: "Ran 6 km this morning.",
+      currentDraft: {
+        activities: [{ activityId: "running", quantity: 6, date: "2026-11-12", time: null, description: null, confidence: 0.9 }],
+        metrics: [],
+        note: { title: "Run", text: "Morning run.", date: "2026-11-12", confidence: 0.8 },
+        unresolved: [],
+      },
+    },
+    expect: { activities: [{ id: "running", quantity: 8 }] },
+  },
+  {
+    id: "fix-keeps-others",
+    source: "written",
+    transcript: "Change the run to ten kilometers.",
+    refinement: {
+      originalTranscript: "Ran 9 km and went to the gym.",
+      currentDraft: {
+        activities: [
+          { activityId: "running", quantity: 9, date: "2026-11-12", time: null, description: null, confidence: 0.9 },
+          { activityId: "gym", quantity: 1, date: "2026-11-12", time: null, description: null, confidence: 0.9 },
+        ],
+        metrics: [],
+        note: { title: "Training", text: "Run and gym.", date: "2026-11-12", confidence: 0.8 },
+        unresolved: [],
+      },
+    },
+    expect: { activities: [{ id: "running", quantity: 10 }, { id: "gym", quantity: 1 }] },
+  },
 
   // Another person's catalog.
   { id: "other-run", source: "written", transcript: "Went running, 4k.", activities: otherActivities, metrics: [], expect: { activities: [{ id: "run", quantity: 4 }] } },

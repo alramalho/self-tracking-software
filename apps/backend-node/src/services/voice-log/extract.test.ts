@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../utils/aiSdk", () => ({ generateObject: vi.fn() }));
+vi.mock("../../utils/prisma", () => ({ prisma: {} }));
+vi.mock("../sttService", () => ({ sttService: {} }));
 
 import { normalizeExtraction, roundQuantity, VOICE_LOG_PROMPT } from "./extract";
 import { voiceLogSamplesFile } from "./samples";
+import { entryDescription } from "./service";
 import type { VoiceLogModelOutput } from "./types";
 import { cases } from "../../../scripts/voice-log-bench/cases";
 import { score } from "../../../scripts/voice-log-bench/run";
@@ -21,6 +24,7 @@ const run = (quantity: number, extra: Partial<VoiceLogModelOutput["activities"][
   time: null,
   description: null,
   difficulty: null,
+  estimatedFrom: null,
   confidence: 0.9,
   ...extra,
 });
@@ -97,6 +101,18 @@ describe("normalizeExtraction", () => {
     expect(result.unresolved.map((item) => item.text)).toContain("invented");
   });
 
+  it("describes what was logged when the model leaves the note empty", () => {
+    const result = normalizeExtraction(
+      output({ activities: [{ ...run(21), activityId: "side", quantity: 2, estimatedFrom: "two hours" }] }),
+      "Long two hours on my side project",
+      "2026-11-12",
+      activities,
+      metrics,
+    );
+    expect(result.note?.text).toBe("Logged work on side project: 2 hours (estimated from two hours).");
+    expect(result.activities[0].estimatedFrom).toBe("two hours");
+  });
+
   it("falls back to the transcript as the note", () => {
     const result = normalizeExtraction(output({}), "Feeling good", "2026-11-12", activities, metrics);
     expect(result.note).toEqual(expect.objectContaining({ text: "Feeling good", date: "2026-11-12" }));
@@ -108,6 +124,16 @@ describe("voice-log prompt", () => {
     expect(VOICE_LOG_PROMPT).toMatch(/Keep decimals/);
     expect(VOICE_LOG_PROMPT).toMatch(/Match by meaning/);
     expect(VOICE_LOG_PROMPT).toMatch(/lastLoggedOn/);
+    expect(VOICE_LOG_PROMPT).toMatch(/"Long half an hour of reading" means "Log/);
+    expect(VOICE_LOG_PROMPT).toMatch(/estimatedFrom/);
+  });
+});
+
+describe("entryDescription", () => {
+  it("keeps an estimate visible on the saved entry", () => {
+    expect(entryDescription({ description: null, estimatedFrom: "30 minutes" })).toBe("Estimated from 30 minutes");
+    expect(entryDescription({ description: "by the river", estimatedFrom: null })).toBe("by the river");
+    expect(entryDescription({})).toBeNull();
   });
 });
 

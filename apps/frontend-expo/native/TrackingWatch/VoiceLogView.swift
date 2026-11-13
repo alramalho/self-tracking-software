@@ -128,9 +128,21 @@ struct VoiceLogView: View {
                     suggestionButton(
                         isSelected: selectedActivityIDs.contains(activity.id),
                         title: "\(activity.emoji) \(activity.title)",
-                        detail: "\(activity.quantity) \(activity.measure) · \(activity.date)",
+                        detail: "\(activity.amountText) · \(activity.date)",
                         action: { toggleActivity(activity.id) }
                     )
+                }
+
+                if let example = preview.activities.first(where: { $0.estimatedFrom != nil })
+                    ?? preview.activities.first {
+                    Label {
+                        Text(voiceFixHint(for: example))
+                    } icon: {
+                        Image(systemName: "mic.fill")
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 ForEach(preview.metrics) { metric in
@@ -181,6 +193,11 @@ struct VoiceLogView: View {
                 .frame(maxWidth: .infinity)
             }
         }
+    }
+
+    private func voiceFixHint(for activity: VoiceLogActivity) -> String {
+        let lead = activity.estimatedFrom == nil ? "Wrong amount?" : "≈ is an estimate."
+        return "\(lead) Tap the mic and say \(activity.voiceFixExample)."
     }
 
     private var committedContent: some View {
@@ -404,7 +421,8 @@ struct VoiceLogView: View {
                     time: $0.time,
                     description: $0.description,
                     privateNotes: $0.privateNotes,
-                    difficulty: $0.difficulty
+                    difficulty: $0.difficulty,
+                    estimatedFrom: $0.estimatedFrom
                 )
             }
         let metrics = preview.metrics

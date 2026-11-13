@@ -42,6 +42,18 @@ function activityDateTime(
   return fromZonedTime(`${date}T${time || "12:00"}:00`, timezone);
 }
 
+/** An estimated amount stays visible on the saved entry: "Estimated from 30 minutes". */
+export function entryDescription(activity: {
+  description?: string | null;
+  estimatedFrom?: string | null;
+}): string | null {
+  const parts = [
+    activity.description?.trim(),
+    activity.estimatedFrom?.trim() ? `Estimated from ${activity.estimatedFrom.trim()}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ").slice(0, 500) : null;
+}
+
 function metricDate(date: string) {
   return new Date(`${date}T00:00:00.000Z`);
 }
@@ -239,6 +251,7 @@ export async function commitVoiceLog(input: {
 
     const activityEntries: ActivityEntry[] = [];
     for (const activity of commit.activities) {
+      const description = entryDescription(activity);
       const datetime = activityDateTime(activity.date, activity.time, timezone);
       const bounds = localDayBounds(activity.date, timezone);
       const existing = await tx.activityEntry.findFirst({
@@ -257,7 +270,7 @@ export async function commitVoiceLog(input: {
             where: { id: existing.id },
             data: {
               quantity: existing.quantity + activity.quantity,
-              description: activity.description || existing.description,
+              description: description || existing.description,
               privateNotes: activity.privateNotes || existing.privateNotes,
               difficulty: activity.difficulty || existing.difficulty,
             },
@@ -271,7 +284,7 @@ export async function commitVoiceLog(input: {
               activityId: activity.activityId,
               quantity: activity.quantity,
               datetime,
-              description: activity.description || null,
+              description,
               privateNotes: activity.privateNotes || null,
               difficulty: activity.difficulty || null,
               timezone,

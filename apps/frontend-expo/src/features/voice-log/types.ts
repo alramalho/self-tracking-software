@@ -11,6 +11,8 @@ export interface VoiceLogActivity {
   description?: string | null;
   privateNotes?: string | null;
   difficulty?: string | null;
+  /** Set when the amount is an estimate from another unit: what was said ("30 minutes"). */
+  estimatedFrom?: string | null;
   confidence: number;
 }
 

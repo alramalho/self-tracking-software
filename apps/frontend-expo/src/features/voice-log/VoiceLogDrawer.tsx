@@ -57,9 +57,21 @@ function dateLabel(date: string, time?: string | null) {
   return time ? `${formatted} · ${time}` : formatted;
 }
 
+function activityAmount(activity: VoiceLogPreview["activities"][number]) {
+  return activity.estimatedFrom
+    ? `≈ ${activity.quantity} ${activity.measure} (from ${activity.estimatedFrom})`
+    : `${activity.quantity} ${activity.measure}`;
+}
+
+/** A concrete spoken example for fixing an amount, e.g. “reading was 25 pages”. */
+export function voiceFixExample(activity: { title: string; quantity: number; measure: string }) {
+  const other = activity.quantity + (activity.quantity >= 10 ? 5 : 1);
+  return `“${activity.title.toLocaleLowerCase()} was ${other} ${activity.measure.toLocaleLowerCase()}”`;
+}
+
 function activityDetail(activity: VoiceLogPreview["activities"][number]) {
   return [
-    `${activity.quantity} ${activity.measure} · ${dateLabel(activity.date, activity.time)}`,
+    `${activityAmount(activity)} · ${dateLabel(activity.date, activity.time)}`,
     activity.description,
     activity.privateNotes ? `Private note: ${activity.privateNotes}` : undefined,
     activity.difficulty ? `Effort: ${activity.difficulty.replaceAll("_", " ")}` : undefined,
@@ -1037,6 +1049,22 @@ export function VoiceLogDrawer({
           )}
 
           <Status error={error} />
+          {!!preview.activities.length && (
+            <Text
+              testID="voice-log-fix-hint"
+              style={{ color: c.muted, fontSize: 13, lineHeight: 18, textAlign: "center" }}
+            >
+              {preview.activities.some((activity) => activity.estimatedFrom)
+                ? "≈ is an estimate. "
+                : "Wrong amount? "}
+              Tap Make changes and say{" "}
+              {voiceFixExample(
+                preview.activities.find((activity) => activity.estimatedFrom) ??
+                  preview.activities[0],
+              )}
+              .
+            </Text>
+          )}
           <View style={{ gap: 8 }}>
             <Button busy={isCommitting} onPress={() => void commit()}>
               Save voice note

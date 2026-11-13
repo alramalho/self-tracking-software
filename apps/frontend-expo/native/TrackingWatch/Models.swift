@@ -45,9 +45,22 @@ struct VoiceLogActivity: Codable, Identifiable {
     let description: String?
     let privateNotes: String?
     let difficulty: String?
+    /// Set when the amount is an estimate from another unit: what was said ("30 minutes").
+    let estimatedFrom: String?
     let confidence: Double
 
     var id: String { "\(activityId)-\(date)-\(time ?? "day")" }
+
+    var amountText: String {
+        if let estimatedFrom { return "≈ \(quantity) \(measure) · from \(estimatedFrom)" }
+        return "\(quantity) \(measure)"
+    }
+
+    /// A spoken example for fixing the amount, e.g. "reading was 25 pages".
+    var voiceFixExample: String {
+        let other = quantity + (quantity >= 10 ? 5 : 1)
+        return "“\(title.lowercased()) was \(other) \(measure.lowercased())”"
+    }
 }
 
 struct VoiceLogMetric: Codable, Identifiable {
@@ -150,6 +163,7 @@ struct VoiceLogCommitActivity: Encodable {
     let description: String?
     let privateNotes: String?
     let difficulty: String?
+    let estimatedFrom: String?
 }
 
 struct VoiceLogCommitMetric: Encodable {

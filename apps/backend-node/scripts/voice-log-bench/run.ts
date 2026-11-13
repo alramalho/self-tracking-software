@@ -4,7 +4,7 @@
  * inside the backend container (the local gateway key doesn't work):
  *
  *   docker cp scripts/voice-log-bench tsw-backend:/app/apps/backend-node/scripts/
- *   docker exec tsw-backend node --import tsx scripts/voice-log-bench/run.ts --config v3:openai/gpt-6-luna:medium
+ *   docker exec tsw-backend node --import tsx scripts/voice-log-bench/run.ts --config v4:openai/gpt-6-luna:medium
  *
  * --config prompt:model:effort (repeatable; see PROMPTS below).
  * Results are cached per config and case in scripts/voice-log-bench/runs/, so re-runs only pay for new cases.
@@ -18,9 +18,10 @@ import type { VoiceLogExtraction } from "../../src/services/voice-log/types";
 import { cases, NOW, ownerActivities, ownerMetrics, TIMEZONE, TODAY, type BenchCase } from "./cases";
 import { PROMPT_V1 } from "./prompt-v1";
 
-// v1 = the prompt before 12 Nov 2026. v3 = the current prompt with decimal quantities rounded in code.
+// v1 = the prompt before 12 Nov 2026. v3 = 12 Nov prompt; v4 = 13 Nov (estimates across units, "Long" = "Log").
+// Refinement cases always use the current refinement prompt.
 // (v2 was an intermediate version with whole-number quantities; its runs are kept in runs/ for the record.)
-const PROMPTS: Record<string, string> = { v1: PROMPT_V1, v3: VOICE_LOG_PROMPT };
+const PROMPTS: Record<string, string> = { v1: PROMPT_V1, v4: VOICE_LOG_PROMPT };
 
 export function score(c: BenchCase, x: VoiceLogExtraction) {
   const problems: string[] = [];
@@ -33,7 +34,10 @@ export function score(c: BenchCase, x: VoiceLogExtraction) {
       continue;
     }
     const got = remaining.splice(i, 1)[0];
-    if (![e.quantity].flat().includes(got.quantity)) problems.push(`${ids[0]} quantity ${got.quantity} ≠ ${e.quantity}`);
+    const q = e.quantity;
+    const quantityOk = typeof q === "object" && !Array.isArray(q) ? got.quantity >= q.min && got.quantity <= q.max : [q].flat().includes(got.quantity);
+    if (!quantityOk) problems.push(`${ids[0]} quantity ${got.quantity} ≠ ${JSON.stringify(q)}`);
+    if (e.estimated !== undefined && Boolean(got.estimatedFrom) !== e.estimated) problems.push(`${ids[0]} estimatedFrom ${JSON.stringify(got.estimatedFrom ?? null)}`);
     if (got.date !== (e.date ?? TODAY)) problems.push(`${ids[0]} date ${got.date} ≠ ${e.date ?? TODAY}`);
   }
   for (const extra of remaining) problems.push(`extra ${extra.activityId} ${extra.quantity}`);
@@ -57,7 +61,7 @@ export function score(c: BenchCase, x: VoiceLogExtraction) {
   return problems;
 }
 
-const hash = (c: BenchCase) => crypto.createHash("sha1").update(JSON.stringify([c.transcript, c.activities ?? null, c.metrics ?? null])).digest("hex").slice(0, 10);
+const hash = (c: BenchCase) => crypto.createHash("sha1").update(JSON.stringify([c.transcript, c.activities ?? null, c.metrics ?? null, c.refinement ?? null, c.expect])).digest("hex").slice(0, 10);
 
 async function runConfig(config: string, only: string[] | null) {
   const [promptName, model, effort = "low"] = config.split(":");
@@ -80,9 +84,10 @@ async function runConfig(config: string, only: string[] | null) {
             timezone: TIMEZONE,
             activities: c.activities ?? ownerActivities,
             metrics: c.metrics ?? ownerMetrics,
+            refinement: c.refinement,
             model,
             reasoningEffort: effort,
-            instructions,
+            instructions: c.refinement ? undefined : instructions,
           });
           cache[key] = { extraction: r.extraction, costUsd: r.costUsd, ms: r.durationMs };
         } catch (e: any) {
@@ -121,7 +126,7 @@ async function main() {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error("Set AI_GATEWAY_API_KEY (run inside tsw-backend)");
   process.env.VOICE_LOG_SAMPLES = "off";
   const summary = [];
-  for (const config of configs.length ? configs : ["v3:openai/gpt-6-luna:medium"]) summary.push(await runConfig(config, only));
+  for (const config of configs.length ? configs : ["v4:openai/gpt-6-luna:medium"]) summary.push(await runConfig(config, only));
   console.log(JSON.stringify(summary));
 }
 

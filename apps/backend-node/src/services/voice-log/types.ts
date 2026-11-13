@@ -14,6 +14,8 @@ export const voiceLogActivitySchema = z.object({
     .enum(["very_easy", "easy", "moderate", "hard", "very_hard"])
     .nullable()
     .optional(),
+  /** What the user actually said when the quantity is an estimate in another unit ("30 minutes" → 20 pages). */
+  estimatedFrom: z.string().trim().max(60).nullable().optional(),
   confidence: z.number().min(0).max(1),
 });
 
@@ -59,6 +61,10 @@ export const voiceLogModelOutputSchema = z.object({
         time: z.string().nullable().describe("HH:mm, only when the user stated a time"),
         description: z.string().nullable(),
         difficulty: z.enum(["very_easy", "easy", "moderate", "hard", "very_hard"]).nullable(),
+        estimatedFrom: z
+          .string()
+          .nullable()
+          .describe("Only for an estimate from another unit: the amount as the user said it"),
         confidence: z.number(),
       }),
     )
