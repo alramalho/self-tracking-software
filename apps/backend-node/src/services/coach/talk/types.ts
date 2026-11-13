@@ -30,6 +30,8 @@ export interface TalkContext {
   today: string;
   weekday: string;
   lastLog: string | null;
+  /** Earlier messages with the coach about this plan, oldest first ("you" is the coach). */
+  history: { day: string; from: "them" | "you"; text: string }[];
 }
 
 /** Where the plan's coach settings live, to time the check-in on a commitment. */

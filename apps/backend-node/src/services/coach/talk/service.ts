@@ -34,6 +34,12 @@ const words = (text: string, max: number) => sentences(text).trim().split(/\s+/)
 const withoutQuestions = (text: string) =>
   (text.match(/[^.!?]+[.!?]*/g) ?? []).filter((s) => !s.trim().endsWith("?")).join("").trim();
 
+/** The last day of the plan week (weeks run Sunday to Saturday, like the at-risk count). */
+export const endOfWeek = (today: string) => {
+  const day = parseISO(today);
+  return format(addDays(day, 6 - day.getDay()), "yyyy-MM-dd");
+};
+
 const dayWithin = (value: string, today: string, days: number) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) && value >= today && value <= format(addDays(parseISO(today), days), "yyyy-MM-dd");
 
@@ -41,7 +47,8 @@ const dayWithin = (value: string, today: string, days: number) =>
  * The owner's rules, enforced after the model: at most two questions, "not sure" always ends with an
  * ask-again, a named day ends with a commitment the coach checks on, and quiet days are real dates.
  * Once the conversation is over the plan's alert is answered: until the committed or return day, or
- * for the rest of today.
+ * else for the rest of the week (13 Nov 2026: answering only for the day brought the same "What got in
+ * the way?" back every morning after the owner had already said why).
  */
 const ANY_TIME: CheckInTimes = { earliestToday: "00:00", latest: "22:00", usual: "20:00" };
 
@@ -72,7 +79,7 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string,
   };
   const why: Record<string, PlanQuiet["why"]> = { quiet: "away", ask_again: "not_sure", commit: "committed" };
   const quiet: Omit<PlanQuiet, "at"> | null =
-    action !== "none" ? { until, why: why[action] } : ask === "none" ? { until: today, why: "answered" } : null;
+    action !== "none" ? { until, why: why[action] } : ask === "none" ? { until: endOfWeek(today), why: "answered" } : null;
   return { shown, quiet, commitDay, over: ask === "none" };
 }
 
@@ -91,6 +98,7 @@ async function talkContext(userId: string, planId: string): Promise<TalkContext 
     orderBy: { datetime: "desc" },
     select: { datetime: true },
   });
+  const history = await recentTalk(userId, planId, timezoneOf(row, user.timezone, planId));
   const support = (row?.data as FollowThroughState | undefined)?.supports?.[planId];
   const timezone = support?.timezone || user.timezone || "Europe/Berlin";
   const clock = { timezone, morning: support?.preferences.dayReminderTime ?? "09:00" };
@@ -105,7 +113,37 @@ async function talkContext(userId: string, planId: string): Promise<TalkContext 
     today: formatInTimeZone(now, timezone, "yyyy-MM-dd"),
     weekday: formatInTimeZone(now, timezone, "EEEE"),
     lastLog: last ? formatInTimeZone(last.datetime, timezone, "yyyy-MM-dd") : null,
+    history,
   };
+}
+
+const HISTORY_DAYS = 21;
+const HISTORY_MESSAGES = 16;
+
+const timezoneOf = (row: { data: unknown } | null, userTimezone: string | null, planId: string) =>
+  (row?.data as FollowThroughState | undefined)?.supports?.[planId]?.timezone || userTimezone || "Europe/Berlin";
+
+/**
+ * What the person and the coach said in the last three weeks about this plan (or with no plan attached),
+ * oldest first, so the coach doesn't ask again what they already answered.
+ */
+async function recentTalk(userId: string, planId: string, timezone: string): Promise<TalkContext["history"]> {
+  const messages = await prisma.message.findMany({
+    where: {
+      chat: { userId, type: "COACH" },
+      createdAt: { gte: new Date(Date.now() - HISTORY_DAYS * 86_400_000) },
+      OR: [{ planId }, { planId: null }],
+      role: { in: ["USER", "COACH"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: HISTORY_MESSAGES,
+    select: { createdAt: true, role: true, content: true },
+  });
+  return messages.reverse().map((m) => ({
+    day: formatInTimeZone(m.createdAt, timezone, "yyyy-MM-dd EEE"),
+    from: m.role === "USER" ? "them" : "you",
+    text: m.content.replace(/\{\{plan:[^|}]+\|([^}]+)\}\}/g, "$1").slice(0, 300),
+  }));
 }
 
 /** Both sides land in the coach chat, so the full coach and its history know what was said. */

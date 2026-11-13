@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { settleTurn } from "./service";
+import { endOfWeek, settleTurn } from "./service";
 import { talkRequestSchema } from "./schema";
 import type { CoachTurn } from "./types";
 
-const TODAY = "2026-11-05";
+const TODAY = "2026-11-05"; // a Thursday
+const WEEK_END = "2026-11-07";
 const turn = (over: Partial<CoachTurn> = {}): CoachTurn => ({
   say: "When are you back?",
   detail: "",
@@ -15,6 +16,14 @@ const turn = (over: Partial<CoachTurn> = {}): CoachTurn => ({
   ...over,
 });
 const request = (over: object = {}) => talkRequestSchema.parse({ reason: "travel", ...over });
+
+describe("endOfWeek", () => {
+  it("is the Saturday of the plan week", () => {
+    expect(endOfWeek("2026-11-05")).toBe("2026-11-07");
+    expect(endOfWeek("2026-11-07")).toBe("2026-11-07");
+    expect(endOfWeek("2026-11-08")).toBe("2026-11-14");
+  });
+});
 
 describe("settleTurn", () => {
   it("lets the coach ask its first question", () => {
@@ -43,10 +52,10 @@ describe("settleTurn", () => {
     expect(quiet).toEqual({ until: "2026-11-09", why: "away" });
   });
 
-  it("drops a quiet day in the past or beyond a month, so the alert is only answered for today", () => {
+  it("drops a quiet day in the past or beyond a month, so the alert is answered for the rest of the week", () => {
     for (const until of ["2026-11-01", "2027-01-30", "monday"]) {
       const { shown, quiet } = settleTurn(turn({ ask: "none", action: "quiet", until }), request(), TODAY);
-      expect(quiet).toEqual({ until: TODAY, why: "answered" });
+      expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
       expect(shown.quietUntil).toBeNull();
     }
   });
@@ -85,13 +94,13 @@ describe("settleTurn", () => {
   it("a commitment more than a week out is not kept", () => {
     const { commitDay, quiet } = settleTurn(turn({ ask: "none", action: "commit", until: "2026-11-20" }), request(), TODAY);
     expect(commitDay).toBeNull();
-    expect(quiet).toEqual({ until: TODAY, why: "answered" });
+    expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
   });
 
-  it("a conversation that ends without a day still answers the alert for today", () => {
+  it("a conversation that ends without a day answers the alert for the rest of the week", () => {
     const { quiet, over } = settleTurn(turn({ say: "Got it.", ask: "none" }), request({ reason: "busy" }), TODAY);
     expect(over).toBe(true);
-    expect(quiet).toEqual({ until: TODAY, why: "answered" });
+    expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
   });
 
   it("the last screen never asks a question", () => {
