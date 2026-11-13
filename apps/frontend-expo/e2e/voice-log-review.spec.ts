@@ -210,3 +210,63 @@ test("discard throws the voice note away from review and while processing", asyn
   await page.goto("/");
   await expect(page.getByTestId("pending-voice-note-card")).toHaveCount(0);
 });
+
+// An amount said in another unit ("half an hour" of reading, tracked in pages) is logged as an estimate,
+// marked ≈, with a spoken example of how to fix it. The estimate travels to the saved entry.
+for (const theme of ["LIGHT", "DARK"]) {
+  test(`voice note shows an estimated amount and how to fix it by voice in ${theme}`, async ({ page, request }) => {
+    await installFakeMicrophone(page);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme },
+    });
+    const date = new Date().toISOString().slice(0, 10);
+    await page.route("**/voice-logs/preview", async (route) => {
+      const clientRequestId = /name="client_request_id"\r\n\r\n([^\r]+)/.exec(route.request().postData() ?? "")?.[1];
+      await route.fulfill({
+        json: {
+          clientRequestId,
+          transcript: "Long half an hour of reading.",
+          activities: [
+            {
+              activityId: "reading",
+              title: "reading",
+              emoji: "📚",
+              measure: "pages",
+              quantity: 21,
+              date,
+              time: null,
+              description: null,
+              privateNotes: null,
+              difficulty: null,
+              estimatedFrom: "half an hour",
+              confidence: 0.6,
+            },
+          ],
+          metrics: [],
+          note: { title: "Voice note", text: "Logged reading: 21 pages (estimated from half an hour).", date, confidence: 0.9 },
+          unresolved: [],
+        },
+      });
+    });
+    await page.goto("/add");
+    await page.getByTestId("log-voice-note-card").click();
+    const drawer = page.getByTestId("voice-log-drawer");
+    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+    await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+    await expect(drawer.getByText("≈ 21 pages (from half an hour)", { exact: false })).toBeVisible();
+    await expect(drawer.getByTestId("voice-log-fix-hint")).toHaveText(
+      "≈ is an estimate. Tap Make changes and say “reading was 26 pages”.",
+    );
+    await page.waitForTimeout(400);
+    await drawer.getByTestId("voice-log-fix-hint").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `test-results/voice-log-estimate-${theme}.png` });
+    await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-committed")).toBeVisible();
+    const state = await (await request.get(`${API}/__state`)).json();
+    const commit = state.requests.find((entry: any) => entry.path === "/voice-logs/commit");
+    expect(commit.body.activities).toEqual([expect.objectContaining({ activityId: "reading", quantity: 21, estimatedFrom: "half an hour" })]);
+  });
+}
