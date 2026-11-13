@@ -57,6 +57,12 @@ struct VoiceLogView: View {
         .navigationTitle("Voice note")
         .toolbar {
             if phase == .review {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: startOver) {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .accessibilityLabel("Start over")
+                }
                 ToolbarItemGroup(placement: .bottomBar) {
                     Button(action: beginRefinement) {
                         Image(systemName: "mic.fill")
@@ -113,22 +119,18 @@ struct VoiceLogView: View {
     @ViewBuilder
     private var reviewContent: some View {
         if let preview {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("I heard")
-                    .font(.headline)
-                Text(preview.transcript)
-                    .font(.caption)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\u{201C}\(preview.transcript)\u{201D}")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
+                    .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
-
-                Text("Log these")
-                    .font(.headline)
 
                 ForEach(preview.activities) { activity in
                     suggestionButton(
                         isSelected: selectedActivityIDs.contains(activity.id),
                         title: "\(activity.emoji) \(activity.title)",
-                        detail: "\(activity.amountText) · \(activity.date)",
+                        detail: [activity.amountText, dayLabel(activity.date)].compactMap { $0 }.joined(separator: " · "),
                         action: { toggleActivity(activity.id) }
                     )
                 }
@@ -137,7 +139,7 @@ struct VoiceLogView: View {
                     suggestionButton(
                         isSelected: selectedMetricIDs.contains(metric.id),
                         title: "\(metric.emoji) \(metric.title)",
-                        detail: "Rating \(metric.rating)/5 · \(metric.date)",
+                        detail: ["\(metric.rating)/5", dayLabel(metric.date)].compactMap { $0 }.joined(separator: " · "),
                         action: { toggleMetric(metric.id) }
                     )
                 }
@@ -147,24 +149,26 @@ struct VoiceLogView: View {
                 }
 
                 if !preview.note.isLogSummary {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Note", systemImage: "note.text")
-                        .font(.subheadline.weight(.semibold))
-                    Text(preview.note.text)
-                        .font(.caption)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(8)
-                .background(Color.secondary.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Label {
+                        Text(preview.note.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "lock.fill").foregroundColor(.secondary)
+                    }
+                    .font(.caption2)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
                 if !preview.unresolved.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Couldn’t place")
-                            .font(.subheadline.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Not logged")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.secondary)
                         ForEach(preview.unresolved) { item in
-                            Text("• \(item.text)")
+                            Text(item.text)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -177,11 +181,9 @@ struct VoiceLogView: View {
                         .foregroundColor(.red)
                         .multilineTextAlignment(.center)
                 }
-
-                Button("Start over", action: startOver)
-                .font(.caption)
-                .frame(maxWidth: .infinity)
             }
+            // Clear of the mic and ✓ in the bottom bar.
+            .padding(.bottom, 44)
         }
     }
 
@@ -209,6 +211,21 @@ struct VoiceLogView: View {
         .buttonStyle(.borderedProminent)
         .clipShape(Circle())
         .tint(tint)
+    }
+
+    /// nil for today (the default), "Yesterday", else "Nov 8".
+    private func dayLabel(_ date: String) -> String? {
+        let parser = DateFormatter()
+        parser.calendar = Calendar(identifier: .gregorian)
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let day = parser.date(from: date) else { return date }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(day) { return nil }
+        if calendar.isDateInYesterday(day) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        return formatter.string(from: day)
     }
 
     private func suggestionButton(
@@ -265,9 +282,6 @@ struct VoiceLogView: View {
                 .foregroundColor(.secondary)
                 .lineLimit(3)
 
-            Text("Nothing changes in the plan until you save this note.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
         }
         .padding(8)
         .background(Color.accentColor.opacity(0.12))
