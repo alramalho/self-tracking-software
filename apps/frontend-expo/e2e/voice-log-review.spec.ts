@@ -212,9 +212,9 @@ test("discard throws the voice note away from review and while processing", asyn
 });
 
 // An amount said in another unit ("half an hour" of reading, tracked in pages) is logged as an estimate,
-// marked ≈, with a spoken example of how to fix it. The estimate travels to the saved entry.
+// marked ≈ (Make changes fixes it by voice). The estimate travels to the saved entry.
 for (const theme of ["LIGHT", "DARK"]) {
-  test(`voice note shows an estimated amount and how to fix it by voice in ${theme}`, async ({ page, request }) => {
+  test(`voice note shows an estimated amount in ${theme}`, async ({ page, request }) => {
     await installFakeMicrophone(page);
     await request.post(`${API}/__reset`);
     await request.patch(`${API}/users/user`, {
@@ -257,11 +257,10 @@ for (const theme of ["LIGHT", "DARK"]) {
     await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
     await expect(drawer.getByText("≈ 21 pages (from half an hour)", { exact: false })).toBeVisible();
-    await expect(drawer.getByTestId("voice-log-fix-hint")).toHaveText(
-      "≈ is an estimate. Tap Make changes and say “reading was 26 pages”.",
-    );
+    // The server's "Logged reading: …" note only repeats the row, so it isn't shown.
+    await expect(drawer.getByTestId("voice-log-private-note")).toHaveCount(0);
     await page.waitForTimeout(400);
-    await drawer.getByTestId("voice-log-fix-hint").scrollIntoViewIfNeeded();
+    await drawer.getByRole("button", { name: "Make changes", exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `test-results/voice-log-estimate-${theme}.png` });
     await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-committed")).toBeVisible();

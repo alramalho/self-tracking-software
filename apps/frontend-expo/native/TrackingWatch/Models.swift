@@ -55,12 +55,6 @@ struct VoiceLogActivity: Codable, Identifiable {
         if let estimatedFrom { return "≈ \(quantity) \(measure) · from \(estimatedFrom)" }
         return "\(quantity) \(measure)"
     }
-
-    /// A spoken example for fixing the amount, e.g. "reading was 25 pages".
-    var voiceFixExample: String {
-        let other = quantity + (quantity >= 10 ? 5 : 1)
-        return "“\(title.lowercased()) was \(other) \(measure.lowercased())”"
-    }
 }
 
 struct VoiceLogMetric: Codable, Identifiable {
@@ -80,6 +74,10 @@ struct VoiceLogNote: Codable {
     let text: String
     let date: String
     let confidence: Double
+
+    /// The note the server writes when a voice note only logged things ("Logged reading: 21 pages."):
+    /// the activity rows already say it.
+    var isLogSummary: Bool { title == "Voice note" && text.hasPrefix("Logged ") }
 }
 
 struct VoiceLogUnresolved: Codable, Identifiable {

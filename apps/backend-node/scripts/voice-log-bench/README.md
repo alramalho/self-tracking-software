@@ -41,3 +41,24 @@ matches by meaning (synonyms, verb forms, Portuguese, misheard words), prefers t
 duplicate activities (`lastLoggedOn`), sums repeated sessions, and keeps time and pace in the description.
 
 Total Gateway spend for all of the runs above, smoke tests included: about $0.5 at most (the totals above include cached answers, so the real figure is lower).
+
+## 13 Nov 2026: amounts in another unit
+
+The owner said "Log half an hour of reading" on the watch. Speech to text heard "Long half an hour of
+reading", the model wrote "it felt long" into the note, and nothing was logged: reading is tracked in pages and
+the 12 Nov prompt refused to turn a duration into pages. The owner chose: log it with an estimate, and make the
+fix-by-voice obvious.
+
+Now an amount in a different kind of unit is estimated at a typical rate (reading ~0.7 pages a minute, running
+~6 min/km, …) and marked with `estimatedFrom` ("half an hour"), which the phone and watch show as
+"≈ 21 pages (from half an hour)" with a hint to say the right amount, and which the saved entry keeps as
+"Estimated from half an hour". A spoken correction ("reading was 25 pages") replaces the estimate. "Lock",
+"Long", "Look"… at the start of a note mean "Log".
+
+63 cases (6 new: the real reading note, a Portuguese duration, pages-not-estimated, three spoken corrections;
+the two duration/distance cases now expect an estimate instead of "unresolved").
+
+| Setup | Passed | Cost (63 notes) | Median model time |
+| --- | --- | --- | --- |
+| Prompt before 12 Nov (v1), gpt-5.6-luna xhigh, decimals now rounded in code | 57/63 | $0.047 | 3.9 s |
+| 13 Nov prompt, gpt-6-luna medium (2 runs) | 63/63, 63/63 | $0.006–0.013 | 3.5–3.7 s |

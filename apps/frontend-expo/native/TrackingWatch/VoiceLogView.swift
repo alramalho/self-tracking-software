@@ -133,18 +133,6 @@ struct VoiceLogView: View {
                     )
                 }
 
-                if let example = preview.activities.first(where: { $0.estimatedFrom != nil })
-                    ?? preview.activities.first {
-                    Label {
-                        Text(voiceFixHint(for: example))
-                    } icon: {
-                        Image(systemName: "mic.fill")
-                    }
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-
                 ForEach(preview.metrics) { metric in
                     suggestionButton(
                         isSelected: selectedMetricIDs.contains(metric.id),
@@ -158,6 +146,7 @@ struct VoiceLogView: View {
                     planContextSection(planMatch)
                 }
 
+                if !preview.note.isLogSummary {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Note", systemImage: "note.text")
                         .font(.subheadline.weight(.semibold))
@@ -168,6 +157,7 @@ struct VoiceLogView: View {
                 .padding(8)
                 .background(Color.secondary.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
 
                 if !preview.unresolved.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
@@ -193,11 +183,6 @@ struct VoiceLogView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-    }
-
-    private func voiceFixHint(for activity: VoiceLogActivity) -> String {
-        let lead = activity.estimatedFrom == nil ? "Wrong amount?" : "≈ is an estimate."
-        return "\(lead) Tap the mic and say \(activity.voiceFixExample)."
     }
 
     private var committedContent: some View {

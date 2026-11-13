@@ -63,10 +63,9 @@ function activityAmount(activity: VoiceLogPreview["activities"][number]) {
     : `${activity.quantity} ${activity.measure}`;
 }
 
-/** A concrete spoken example for fixing an amount, e.g. “reading was 25 pages”. */
-export function voiceFixExample(activity: { title: string; quantity: number; measure: string }) {
-  const other = activity.quantity + (activity.quantity >= 10 ? 5 : 1);
-  return `“${activity.title.toLocaleLowerCase()} was ${other} ${activity.measure.toLocaleLowerCase()}”`;
+/** The note the server writes when a voice note only logged things ("Logged reading: 21 pages."): the rows say it already. */
+function isLogSummaryNote(note: VoiceLogPreview["note"]) {
+  return note.title === "Voice note" && /^Logged /.test(note.text);
 }
 
 function activityDetail(activity: VoiceLogPreview["activities"][number]) {
@@ -634,14 +633,9 @@ export function VoiceLogDrawer({
                   resizeMode="contain"
                 />
               </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
-                  What I heard
-                </Text>
-                <Text style={{ color: c.muted, fontSize: 12 }}>
-                  {coachName}’s read on your note
-                </Text>
-              </View>
+              <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: "700" }}>
+                What I heard
+              </Text>
             </View>
             <View
               style={{
@@ -725,32 +719,14 @@ export function VoiceLogDrawer({
               )}
             </View>
             {transcriptionFeedback.banner}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 7,
-                paddingHorizontal: 2,
-              }}
-            >
-              <CheckCircle2 size={14} color={c.muted} strokeWidth={1.8} />
-              <Text style={{ color: c.muted, fontSize: 12, opacity: 0.82 }}>
-                Review the suggestions below. Nothing is saved until you confirm.
-              </Text>
-            </View>
           </View>
 
           <View testID="voice-log-extracted" style={{ gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Sparkles size={17} color={c.accent} strokeWidth={1.8} />
-              <View style={{ gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
-                  What I extracted
-                </Text>
-                <Text style={{ color: c.muted, fontSize: 12 }}>
-                  Suggestions from what you said
-                </Text>
-              </View>
+              <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
+                What I extracted
+              </Text>
             </View>
             <View
               style={{
@@ -902,17 +878,13 @@ export function VoiceLogDrawer({
             </View>
           )}
 
+          {!isLogSummaryNote(preview.note) && (
           <View testID="voice-log-private-note" style={{ gap: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <LockKeyhole size={17} color={c.muted} strokeWidth={1.8} />
-              <View style={{ gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
-                  Private note
-                </Text>
-                <Text style={{ color: c.muted, fontSize: 12 }}>
-                  Kept in your coach context
-                </Text>
-              </View>
+              <Text style={{ color: c.text, fontSize: 16, fontWeight: "700" }}>
+                Private note
+              </Text>
             </View>
             <View
               style={{
@@ -924,9 +896,11 @@ export function VoiceLogDrawer({
                 borderColor: c.inputBorder,
               }}
             >
-              <Text style={{ color: c.text, fontWeight: "600" }}>
-                {preview.note.title}
-              </Text>
+              {preview.note.title !== "Voice note" && (
+                <Text style={{ color: c.text, fontWeight: "600" }}>
+                  {preview.note.title}
+                </Text>
+              )}
               {noteRepeatsTranscript ? (
                 <Text style={{ color: c.muted, lineHeight: 20, fontSize: 13 }}>
                   The full note above will be kept privately for your coach.
@@ -936,11 +910,9 @@ export function VoiceLogDrawer({
                   {preview.note.text}
                 </Text>
               )}
-              <Text style={{ color: c.muted, fontSize: 12 }}>
-                Private to you and your coach
-              </Text>
             </View>
           </View>
+          )}
 
           {!!planMatch && (
             <View testID="voice-log-plan-context" style={{ gap: 8 }}>
@@ -1049,22 +1021,6 @@ export function VoiceLogDrawer({
           )}
 
           <Status error={error} />
-          {!!preview.activities.length && (
-            <Text
-              testID="voice-log-fix-hint"
-              style={{ color: c.muted, fontSize: 13, lineHeight: 18, textAlign: "center" }}
-            >
-              {preview.activities.some((activity) => activity.estimatedFrom)
-                ? "≈ is an estimate. "
-                : "Wrong amount? "}
-              Tap Make changes and say{" "}
-              {voiceFixExample(
-                preview.activities.find((activity) => activity.estimatedFrom) ??
-                  preview.activities[0],
-              )}
-              .
-            </Text>
-          )}
           <View style={{ gap: 8 }}>
             <Button busy={isCommitting} onPress={() => void commit()}>
               Save voice note
