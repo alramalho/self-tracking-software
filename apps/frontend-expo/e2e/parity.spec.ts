@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { closeCelebration } from "./celebration";
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 let runtimeErrors: string[] = [];
 test.afterEach(() => {
@@ -37,12 +38,12 @@ test("logs activity and updates timeline and profile history", async ({
   await page
     .getByRole("button", { name: "Log without photo", exact: true })
     .click();
+  await closeCelebration(page);
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(
     page.getByText("Log Your Metrics", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
-  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByTestId("nav-home").click();
   await page
     .getByRole("button", { name: "Expand Running 7 kilometers", exact: true })
@@ -207,6 +208,7 @@ test("failed log keeps inputs and supports retry without a duplicate", async ({
   await page
     .getByRole("button", { name: "Log without photo", exact: true })
     .click();
+  await closeCelebration(page);
   await expect(
     page.getByText("How did it feel?", { exact: true }),
   ).toBeVisible();

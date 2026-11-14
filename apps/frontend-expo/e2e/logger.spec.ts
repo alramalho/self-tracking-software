@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { closeCelebration } from "./celebration";
 import { subDays } from "date-fns";
 const API = "http://127.0.0.1:4317";
 for (const theme of ["DARK", "LIGHT"]) {
@@ -93,8 +94,8 @@ for (const theme of ["DARK", "LIGHT"]) {
     await page
       .getByRole("button", { name: "Log without photo", exact: true })
       .click();
+    await closeCelebration(page);
     await page.getByRole("button", { name: "Skip", exact: true }).click();
-    await page.getByRole("button", { name: "Done", exact: true }).click();
     const state = await (await request.get(`${API}/__state`)).json();
     const log = state.requests.find(
       (r: any) => r.path === "/activities/log-activity",

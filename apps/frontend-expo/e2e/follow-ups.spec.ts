@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { closeCelebration } from "./celebration";
 const API = "http://127.0.0.1:4317";
 for (const theme of ["DARK", "LIGHT"]) {
   test(`post-log effort and metrics match the PWA flow in ${theme}`, async ({
@@ -29,6 +30,7 @@ for (const theme of ["DARK", "LIGHT"]) {
     await page
       .getByRole("button", { name: "Log without photo", exact: true })
       .click();
+    await closeCelebration(page);
     const effort = page.getByTestId("difficulty-follow-up");
     await expect(
       effort.getByRole("heading", { name: "How hard was Running?" }),
@@ -103,9 +105,8 @@ for (const theme of ["DARK", "LIGHT"]) {
       metrics.getByText("Simulated network failure. Please try again."),
     ).toBeVisible();
     await metrics.getByRole("button", { name: "Done", exact: true }).click();
-    await expect(
-      page.getByText("Activity logged!", { exact: true }),
-    ).toBeVisible();
+    // The celebration was the confirmation: the logger is closed now.
+    await expect(page.getByTestId("metrics-follow-up")).toHaveCount(0);
     state = await (await request.get(`${API}/__state`)).json();
     const saved = state.entries.find((e: any) => e.id === entry.id);
     expect(saved.difficulty).toBe("hard");
@@ -136,6 +137,7 @@ test("follow-up drawers stay usable with Reduce Motion and save partial ratings 
   await page
     .getByRole("button", { name: "Log without photo", exact: true })
     .click();
+  await closeCelebration(page);
   const effort = page.getByTestId("difficulty-follow-up");
   const header = effort.getByRole("heading", { name: "How hard was Running?" });
   await expect(header).toBeVisible();
@@ -146,9 +148,7 @@ test("follow-up drawers stay usable with Reduce Motion and save partial ratings 
     .getByRole("button", { name: "Energy rating 4", exact: true })
     .click();
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(
-    page.getByText("Activity logged!", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByTestId("metrics-follow-up")).toHaveCount(0);
   const state = await (await request.get(`${API}/__state`)).json();
   const ratings = state.requests.filter(
     (r: any) => r.path === "/metrics/entries" && r.method === "POST",

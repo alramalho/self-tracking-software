@@ -3,7 +3,7 @@ import { CircleIntroHint } from "@/features/circles/CircleIntroHint";
 import { LoggingDrawer } from "./logging/LoggingDrawer";
 import { PhotoStep } from "./logging/PhotoStep";
 import { QuantityStep } from "./logging/QuantityStep";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Keyboard } from "react-native";
 import * as Location from "expo-location";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,9 @@ import {
 } from "@/data/queries";
 import { api } from "@/data/api";
 import { pickPhotos } from "@/native/photos";
-import type { LogActivityResult, Photo } from "@/core/types";
+import type { ActivityEntry, LogActivityResult, Photo } from "@/core/types";
+import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
+import { celebrationFor, type Celebration } from "@/features/celebration/model";
 import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
 import { MetricLogger } from "../metrics/MetricLogger";
@@ -45,10 +47,17 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const [error, setError] = useState<unknown>();
   const [result, setResult] = useState<LogActivityResult>();
   const [queuedError, setQueuedError] = useState<string>();
+  // The "Nice work!" moment plays first; the usual next step (shared, difficulty, metrics) waits for it.
+  const [celebration, setCelebration] = useState<{ value: Celebration; then: () => void }>();
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
   }>();
+  // The celebration is the confirmation now: once nothing else is asked, the logger closes.
+  useEffect(() => {
+    if (step === "done" && result && !celebration) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, result, celebration]);
   const save = useMutation({
     mutationFn: () =>
       offline.save({
@@ -64,18 +73,34 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
         ...location,
       }),
     onMutate: () => setUploadProgress(undefined),
-    onSuccess: (outcome) => {
+    onSuccess: async (outcome) => {
       if (outcome.queued || !outcome.result) {
         setQueuedError(outcome.error);
         setStep("queued");
         return;
       }
       const data = outcome.result;
+      // This week's earlier logs, without the new one: from the cache, or fetched when this screen never loaded them.
+      const cached = client.getQueryData<ActivityEntry[]>(["activity-entries"]);
+      const earlier = (
+        cached ??
+        (await api.get<ActivityEntry[]>("/activities/activity-entries").then((r) => r.data).catch(() => []))
+      ).filter((e) => e.id !== data.entry.id);
+      const value = celebrationFor({
+        activity,
+        quantity: Number(quantity),
+        datetime: parseLocalDate(date),
+        plans: plans.data ?? [],
+        entries: earlier,
+      });
       setResult(data);
       onLogged?.(data.entry);
       void client.invalidateQueries();
-      if (data.sharedActivityCandidates?.length) setStep("shared");
-      else afterShared();
+      const then = () => {
+        if (data.sharedActivityCandidates?.length) setStep("shared");
+        else afterShared();
+      };
+      setCelebration({ value, then });
     },
   });
   function afterShared() {
@@ -154,6 +179,17 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       setError(e);
     }
   }
+  if (celebration)
+    return (
+      <CelebrationOverlay
+        celebration={celebration.value}
+        onDone={() => {
+          const { then } = celebration;
+          setCelebration(undefined);
+          then();
+        }}
+      />
+    );
   if (step === "difficulty" && result)
     return (
       <DifficultyStep

@@ -1,0 +1,311 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log motion</title>
+<style>
+  :root {
+    --accent: #3b82f6; --accent-2: #00bcff; --done: #22c55e; --flame: #f97316;
+    --bg: #1c1c1c; --card: #232325; --text: #fafafa; --muted: #a1a1aa; --track: #3a3a3d;
+    --final: #0b0b0c;
+  }
+  :root[data-theme="light"] {
+    --bg: #f2f2f2; --card: #ffffff; --text: #09090b; --muted: #71717a; --track: #e4e4e7; --final: #f7f7f8;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden;
+    font-family: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif; color: var(--text); }
+  #stage { position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--bg); }
+
+  /* The form underneath, as in the real Add screen. */
+  .form { position: absolute; inset: 0; padding: 70px 20px; }
+  .form .field { height: 52px; border-radius: 14px; background: var(--card); margin-bottom: 12px; }
+  .form .save { position: absolute; left: 20px; right: 20px; bottom: 40px; height: 56px; border-radius: 16px;
+    background: var(--accent); color: white; font-weight: 700; font-size: 17px; display: grid; place-items: center; }
+
+  svg#wave, canvas#fx, svg#ribbons { position: absolute; inset: 0; pointer-events: none; }
+  svg#ribbons { opacity: 0; }
+  #final { position: absolute; inset: 0; background: var(--final); opacity: 0; }
+
+  .center { position: absolute; left: 0; right: 0; top: 300px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .emoji { font-size: 76px; line-height: 1; transform: scale(0); }
+  .what { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; opacity: 0; transform: translateY(12px); }
+  .plan { margin-top: 26px; width: 300px; padding: 18px 20px; border-radius: 22px; background: var(--card);
+    opacity: 0; transform: translateY(24px) scale(.96); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .plan .row { display: flex; align-items: center; gap: 12px; }
+  .plan .icon { font-size: 26px; }
+  .steps { flex: 1; display: flex; gap: 6px; position: relative; height: 12px; }
+  .step { flex: 1; height: 12px; border-radius: 6px; background: var(--track); position: relative; overflow: hidden; }
+  .step i { position: absolute; inset: 0; border-radius: 6px; background: var(--done); transform-origin: left center; transform: scaleX(0); }
+  .step.on i { transform: scaleX(1); }
+  .fused { position: absolute; inset: 0; border-radius: 6px; background: linear-gradient(90deg, var(--done), #a3e635); opacity: 0; }
+  .flame { width: 26px; height: 26px; color: var(--flame); display: grid; place-items: center; transform-origin: 50% 70%; }
+  .count { margin-top: 10px; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .num { display: inline-block; min-width: 10px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .streak { display: inline-flex; gap: 4px; align-items: center; }
+  .headline { position: absolute; left: 0; right: 0; top: 190px; height: 52px; overflow: hidden; text-align: center;
+    font-size: 40px; font-weight: 900; letter-spacing: -1px; line-height: 52px; opacity: 0; transform: scale(.6); }
+  .roll { transition: none; }
+  .roll div { height: 52px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="form">
+    <div class="field"></div><div class="field" style="height:96px"></div><div class="field"></div>
+    <div class="field" style="height:140px"></div><div class="field"></div><div class="field"></div>
+    <div class="save">Log activity</div>
+  </div>
+  <svg id="wave" viewBox="0 0 390 844" preserveAspectRatio="none"><path id="wavePath" fill="var(--accent)"/></svg>
+  <div id="final"></div>
+  <svg id="ribbons" viewBox="0 0 390 844">
+    <path id="r1" d="M 470 -40 C 380 120, 260 160, 150 210 S -40 330, -80 380" fill="none" stroke="var(--accent)" stroke-width="58" stroke-linecap="round"/>
+    <path id="r2" d="M -80 760 C 40 700, 140 690, 230 720 S 380 800, 480 740" fill="none" stroke="var(--accent)" stroke-width="58" stroke-linecap="round"/>
+  </svg>
+  <canvas id="fx" width="780" height="1688" style="width:390px;height:844px"></canvas>
+  <div class="headline" id="headline"><div class="roll" id="roll"><div>Nice work!</div><div>Week done</div></div></div>
+  <div class="center">
+    <div class="emoji" id="emoji">🏃</div>
+    <div class="what" id="what">Running · 5 km</div>
+    <div class="plan" id="plan">
+      <div class="row">
+        <div class="icon">💪</div>
+        <div class="steps" id="steps"></div>
+        <div class="flame" id="flame">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        </div>
+      </div>
+      <div class="count"><span><span class="num" id="done">2</span> of 4 this week</span><span class="streak" id="streakWrap"><span class="num" id="streak">3</span> weeks</span></div>
+    </div>
+  </div>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const scene = q.get("scene") || "log";          // log | week
+const theme = q.get("theme") || "dark";
+document.documentElement.dataset.theme = theme;
+const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+const target = 4, before = scene === "week" ? 3 : 2;
+
+const $ = (id) => document.getElementById(id);
+const steps = $("steps");
+for (let i = 0; i < target; i++) {
+  const s = document.createElement("div");
+  s.className = "step" + (i < before ? " on" : "");
+  s.innerHTML = "<i></i>";
+  steps.appendChild(s);
+}
+const fused = document.createElement("div"); fused.className = "fused"; steps.appendChild(fused);
+$("done").textContent = before;
+
+const SLOW = 1.35; // a bit more breathing room everywhere
+const wait = (ms) => new Promise((r) => setTimeout(r, ms * SLOW));
+
+// Sound: a soft, rising "pop" per step (C5, E5, G5, C6...), a bright chord when the week completes.
+// window.__sounds records each one so the recording can be scored with the same sounds.
+window.__sounds = [];
+let audio;
+const NOTES = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568];
+function playTone(freq, at, dur, gain, type = "sine") {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, at); o.frequency.exponentialRampToValueAtTime(freq * 1.02, at + dur);
+  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(gain, at + .008); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  o.connect(g).connect(audio.destination); o.start(at); o.stop(at + dur + .02);
+}
+function noise(at, dur, gain, from, to, grain = 0) {
+  const n = audio.createBuffer(1, Math.ceil(audio.sampleRate * dur), audio.sampleRate), d = n.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (grain ? .55 + .45 * Math.sin(i / audio.sampleRate * grain * 6.28 + Math.random()) : 1);
+  const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+  src.buffer = n; f.type = "bandpass"; f.Q.value = .8;
+  f.frequency.setValueAtTime(from, at); f.frequency.exponentialRampToValueAtTime(to, at + dur);
+  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(gain, at + dur * .3); g.gain.linearRampToValueAtTime(0, at + dur);
+  src.connect(f).connect(g).connect(audio.destination); src.start(at);
+}
+function sound(kind, step = 0, dur = 0) {
+  window.__sounds.push({ kind, step, dur, t: performance.now() });
+  if (kind !== "step" && kind !== "complete") {
+    try {
+      audio ??= new (window.AudioContext || window.webkitAudioContext)();
+      const now = audio.currentTime;
+      if (kind === "whoosh") noise(now, dur, .12, 300, 2400);
+      if (kind === "crayon") noise(now, dur, .07, 2200, 1500, 38);
+      if (kind === "swish") noise(now, dur, .06, 900, 2600);
+      if (kind === "rise") noise(now, dur, .1, 400, 4000);
+      if (kind === "pluck") playTone(392, now, .14, .12);
+      if (kind === "sparkle") for (let i = 0; i < 10; i++) playTone(2000 + Math.random() * 2500, now + i * .09, .08, .03);
+    } catch {}
+    return;
+  }
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    const now = audio.currentTime;
+    if (kind === "step") { playTone(NOTES[step], now, .22, .35); playTone(NOTES[step] * 2, now, .12, .08, "triangle"); }
+    else { [0, 2, 4, 5].forEach((n, i) => playTone(NOTES[n] * (i === 3 ? 1 : 1), now + i * .07, .7, .22)); }
+  } catch {}
+}
+const spring = "cubic-bezier(.34,1.56,.64,1)";
+const _animate = Element.prototype.animate;
+Element.prototype.animate = function (k, o) { if (typeof o === "object") { o = { ...o, duration: (o.duration ?? 0) * 1.15, delay: (o.delay ?? 0) * SLOW }; } return _animate.call(this, k, o); };
+const out = "cubic-bezier(.22,1,.36,1)";
+
+// 1. A liquid wave rises from the button and floods the screen.
+function wave(duration = 650) {
+  const path = $("wavePath");
+  const start = performance.now();
+  return new Promise((done) => {
+    function frame(t) {
+      const p = Math.min(1, (t - start) / duration);
+      const e = 1 - Math.pow(1 - p, 3);
+      const y = 844 - e * 960;                       // crest height
+      const amp = 70 * (1 - e) + 10;                  // the bulge relaxes as it rises
+      const bulgeX = 195 + Math.sin(p * 3) * 40;
+      path.setAttribute("d",
+        `M0 844 L0 ${y + amp} C ${bulgeX - 160} ${y + amp}, ${bulgeX - 90} ${y - amp}, ${bulgeX} ${y - amp}` +
+        ` S ${bulgeX + 150} ${y + amp * .6}, 390 ${y + amp * .4} L390 844 Z`);
+      if (p < 1) requestAnimationFrame(frame); else done();
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+// 2. Particles on a canvas: line icons flung outwards, or confetti for the week.
+const ctx = $("fx").getContext("2d"); ctx.scale(2, 2);
+const parts = [];
+const ICONS = {
+  check: (c) => { c.beginPath(); c.moveTo(-7, 0); c.lineTo(-2, 5); c.lineTo(8, -6); c.stroke(); },
+  flame: (c) => { c.beginPath(); c.moveTo(0, -9); c.bezierCurveTo(6, -3, 8, 2, 6, 6); c.bezierCurveTo(4, 10, -4, 10, -6, 6); c.bezierCurveTo(-8, 2, -4, -1, -2, -4); c.bezierCurveTo(-1, -1, 1, 0, 0, -9); c.stroke(); },
+  plus: (c) => { c.beginPath(); c.moveTo(-7, 0); c.lineTo(7, 0); c.moveTo(0, -7); c.lineTo(0, 7); c.stroke(); },
+  ring: (c) => { c.beginPath(); c.arc(0, 0, 7, 0, Math.PI * 2); c.stroke(); },
+};
+function burst({ x, y, n, kind, speed = 9, color = "#fff", gravity = .18, life = 70 }) {
+  const names = Object.keys(ICONS);
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n + Math.random() * .5;
+    const v = speed * (.5 + Math.random());
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, rot: Math.random() * 6, vr: (Math.random() - .5) * .3,
+      s: .9 + Math.random() * .9, life, age: 0, kind, icon: names[i % names.length], color,
+      w: 6 + Math.random() * 6, h: 3 + Math.random() * 4, gravity });
+  }
+}
+// Confetti falling from the top for a while.
+function rain(n) {
+  const colors = ["#22c55e", "#a3e635", "#f97316", "#facc15", "#3b82f6", "#ffffff", "#f43f5e"];
+  for (let i = 0; i < n; i++) setTimeout(() => parts.push({ x: Math.random() * 390, y: -10, vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3,
+    rot: Math.random() * 6, vr: (Math.random() - .5) * .3, s: 1, life: 160, age: 0, kind: "bit", color: colors[i % colors.length],
+    w: 6 + Math.random() * 7, h: 3 + Math.random() * 4, gravity: .04 }), i * 14);
+}
+function tick() {
+  ctx.clearRect(0, 0, 390, 844);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.age++; p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= .985; p.rot += p.vr;
+    const fade = Math.max(0, 1 - p.age / p.life);
+    if (fade <= 0) { parts.splice(i, 1); continue; }
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = fade;
+    if (p.kind === "icon") {
+      ctx.scale(p.s * 1.4, p.s * 1.4); ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ICONS[p.icon](ctx);
+    } else {
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    }
+    ctx.restore();
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// 3. Thick ribbons draw themselves in, Strava-style.
+function ribbons(color) {
+  $("ribbons").style.opacity = 1;
+  for (const [id, delay] of [["r1", 0], ["r2", 220]]) {
+    const r = $(id), len = r.getTotalLength();
+    r.style.stroke = color;
+    r.style.strokeDasharray = len; r.style.strokeDashoffset = len;
+    r.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 900, delay, easing: out, fill: "forwards" });
+  }
+}
+
+function countUp(el, to) {
+  el.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-10px)", opacity: 0 }], { duration: 160, fill: "forwards" })
+    .finished.then(() => {
+      el.textContent = to;
+      el.animate([{ transform: "translateY(10px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], { duration: 260, easing: spring, fill: "forwards" });
+    });
+}
+
+async function play() {
+  await wait(400);
+  // Press the button.
+  document.querySelector(".save").animate([{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "scale(1)" }], { duration: 220 });
+  await wait(120);
+  const flooded = wave();
+  setTimeout(() => burst({ x: 195, y: 560, n: 26, kind: "icon", speed: 10, color: "rgba(255,255,255,.95)", gravity: .05, life: 80 }), 380);
+  await flooded;
+  // The flood turns into the dark (or light) stage; ribbons sweep in.
+  $("final").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 380, fill: "forwards", easing: out });
+  ribbons(accent);
+  await wait(250);
+
+  $("emoji").animate([{ transform: "scale(0) rotate(-20deg)" }, { transform: "scale(1.15) rotate(6deg)" }, { transform: "scale(1) rotate(0)" }], { duration: 620, easing: spring, fill: "forwards" });
+  // Everything comes in one after another, top to bottom, then the card's own parts.
+  const enter = (el, i, from = "translateY(14px) scale(.96)") =>
+    el.animate([{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], { duration: 480, delay: i * 110, easing: spring, fill: "both" });
+  enter($("headline"), 0, "translateY(10px) scale(.7)");
+  $("emoji").animate([{ transform: "scale(0) rotate(-20deg)" }, { transform: "scale(1.12) rotate(5deg)" }, { transform: "scale(1) rotate(0)" }], { duration: 560, delay: 110, easing: spring, fill: "both" });
+  enter($("what"), 2);
+  enter($("plan"), 3, "translateY(22px) scale(.96)");
+  const row = $("plan").querySelector(".row");
+  const parts = [row.querySelector(".icon"), ...[...steps.children].slice(0, target), $("flame"), $("plan").querySelector(".count")];
+  parts.forEach((el, i) => el.animate([{ opacity: 0, transform: "translateY(6px) scale(.85)" }, { opacity: 1, transform: "none" }], { duration: 360, delay: 3 * 110 + 160 + i * 70, easing: spring, fill: "both" }));
+  await wait(3 * 110 + 160 + parts.length * 70 + 380);
+
+  // The step for this log fills with a spring and a little glow.
+  const step = steps.children[before];
+  const fill = step.querySelector("i");
+  step.style.overflow = "visible";
+  fill.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1.06)" }, { transform: "scaleX(1)" }], { duration: 520, easing: spring, fill: "forwards" });
+  step.animate([{ boxShadow: "0 0 0 0 rgba(34,197,94,.0)" }, { boxShadow: "0 0 18px 4px rgba(34,197,94,.55)" }, { boxShadow: "0 0 0 0 rgba(34,197,94,0)" }], { duration: 800 });
+  const r = step.getBoundingClientRect();
+  burst({ x: r.left + r.width / 2, y: r.top + 6, n: 10, kind: "bit", speed: 4, color: "#22c55e", gravity: .12, life: 40 });
+  countUp($("done"), before + 1);
+  sound("step", before);
+  // A little pop on the click: the step and its card grow a touch and tilt, then settle.
+  step.animate([{ transform: "scale(1) rotate(0)" }, { transform: "scale(1.08, 1.15) rotate(-1.5deg)" }, { transform: "scale(.995) rotate(.4deg)" }, { transform: "scale(1) rotate(0)" }],
+    { duration: 420, easing: "ease-out" });
+  $("plan").animate([{ transform: "scale(1) rotate(0)" }, { transform: "scale(1.018) rotate(-.6deg)" }, { transform: "scale(.998) rotate(.15deg)" }, { transform: "scale(1) rotate(0)" }],
+    { duration: 460, easing: "ease-out" });
+  await wait(500);
+  if (scene !== "week") return;
+
+  // Week done: the segments fuse into one bar, it flashes, everything bursts, the streak goes up.
+  await wait(250);
+  steps.animate([{ gap: "6px" }, { gap: "0px" }], { duration: 260, easing: out, fill: "forwards" });
+  for (const s of [...steps.children].slice(0, target)) s.animate([{ borderRadius: "6px" }, { borderRadius: "0px" }], { duration: 260, fill: "forwards" });
+  fused.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 160, fill: "forwards" });
+  await wait(380);
+  steps.animate([{ transform: "scaleY(1)" }, { transform: "scaleY(1.9)" }, { transform: "scaleY(1)" }], { duration: 420, easing: spring });
+  $("plan").animate([{ transform: "scale(1)" }, { transform: "scale(1.06)" }, { transform: "scale(1)" }], { duration: 480, easing: spring });
+  const b = steps.getBoundingClientRect();
+  const colors = ["#22c55e", "#a3e635", "#f97316", "#facc15", accent, "#ffffff"];
+  for (let i = 0; i < 8; i++) burst({ x: b.left + (b.width * i) / 7, y: b.top + 6, n: 22, kind: "bit", speed: 11, color: colors[i % colors.length], gravity: .2, life: 110 });
+  burst({ x: 195, y: 420, n: 22, kind: "icon", speed: 12, color: "#facc15", gravity: .08, life: 90 });
+  // The flame wakes up.
+  $("flame").animate([{ transform: "scale(1)" }, { transform: "scale(1.9) rotate(-8deg)" }, { transform: "scale(1.25)" }], { duration: 700, easing: spring, fill: "forwards" });
+  $("flame").animate([{ filter: "drop-shadow(0 0 0 #f97316)" }, { filter: "drop-shadow(0 0 10px #f97316)" }], { duration: 700, fill: "forwards" });
+  // Ribbons turn warm.
+  for (const id of ["r1", "r2"]) $(id).animate([{ stroke: accent }, { stroke: "#f97316" }], { duration: 700, fill: "forwards" });
+  // "Nice work!" rolls up into "Week done".
+  $("roll").animate([{ transform: "translateY(0)" }, { transform: "translateY(-58px)" }, { transform: "translateY(-52px)" }], { duration: 560, easing: spring, fill: "forwards" });
+  $("headline").animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 560, easing: spring, fill: "forwards" });
+  sound("complete");
+  rain(110);
+  $("emoji").animate([{ transform: "scale(1)" }, { transform: "scale(.8)" }], { duration: 300, fill: "forwards" });
+  await wait(300);
+  countUp($("streak"), 4);
+  $("streakWrap").animate([{ color: "var(--muted)" }, { color: "#f97316" }], { duration: 400, fill: "forwards" });
+}
+window.__start = performance.now();
+play();
+</script>
+</body>
+</html>
