@@ -10,7 +10,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, {
   Easing,
-  interpolateColor,
   useAnimatedProps,
   useAnimatedStyle,
   useReducedMotion,
@@ -213,12 +212,16 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useAnimatedProps(() => ({
       strokeDashoffset: RIBBON_LENGTH * (1 - v.value),
-      stroke: interpolateColor(warm.value, [0, 1], [c.accent, WARM]),
       strokeOpacity: v.value > 0 ? 1 : 0,
     }));
-  const ribbonTop = ribbonProps(ribbons);
-  const ribbonBottom = ribbonProps(ribbons2);
+  const ribbonLayers = [
+    [ribbonProps(ribbons), ribbonProps(ribbons2)],
+    [ribbonProps(ribbons), ribbonProps(ribbons2)],
+  ];
   const settleStyle = useAnimatedStyle(() => ({ opacity: settle.value }));
+  // Week done: an orange copy of the ribbons fades in over the accent ones (an animated stroke colour
+  // didn't repaint on web; an opacity fade looks the same and works everywhere).
+  const warmStyle = useAnimatedStyle(() => ({ opacity: warm.value }));
   const rootStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
   const enterStyle = (v: SharedValue<number>, dy: number, from = 0.96) =>
@@ -251,10 +254,14 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
             </Svg>
           )}
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: finalBg }, reduced ? null : settleStyle]} />
-          <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-            <AnimatedPath d={RIBBON_TOP} fill="none" strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonTop} />
-            <AnimatedPath d={RIBBON_BOTTOM} fill="none" strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonBottom} />
-          </Svg>
+          {[c.accent, WARM].map((color, layer) => (
+            <Animated.View key={color} pointerEvents="none" style={[StyleSheet.absoluteFill, layer ? warmStyle : null]}>
+              <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                <AnimatedPath d={RIBBON_TOP} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[layer][0]} />
+                <AnimatedPath d={RIBBON_BOTTOM} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[layer][1]} />
+              </Svg>
+            </Animated.View>
+          ))}
 
           {!reduced && <IconBurst progress={iconBurst} x={195 * sx} y={560 * sy} />}
 
