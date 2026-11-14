@@ -40,7 +40,7 @@ for (const theme of ["DARK", "LIGHT"]) {
     const overlay = page.getByTestId("log-celebration");
     await expect(overlay).toBeVisible();
     await expect(page.getByTestId("log-celebration-line")).toHaveText("Running · 5 km");
-    await expect(page.getByText("Nice work!", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("log-celebration-nice")).toHaveText("Nice work!");
     await expect(page.getByTestId("log-celebration-count")).toHaveText("2 of 3 this week", { timeout: 8000 });
     await page.waitForTimeout(600);
     await page.screenshot({ path: `test-results/log-celebration-${theme}.png` });
@@ -52,7 +52,7 @@ for (const theme of ["DARK", "LIGHT"]) {
     test.skip(new Date().getDay() < 3, "needs two earlier days in this week");
     await logRun(page, request, theme, 2);
     await expect(page.getByTestId("log-celebration-count")).toHaveText("3 of 3 this week", { timeout: 8000 });
-    await expect(page.getByText("Week done", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("log-celebration-week")).toHaveCSS("opacity", "1", { timeout: 8000 });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `test-results/week-celebration-${theme}.png` });
     await expect(page.getByTestId("log-celebration")).toHaveCount(0, { timeout: 15000 });

@@ -4,7 +4,7 @@
  * thick ribbons drawn in, and "Nice work!", the activity and the plan card come in one after another. The
  * plan's stepper fills the new step with a pop, a tiny tilt, a sound and a haptic. When that step completes
  * the week, the bar fuses and flashes, confetti bursts and rains, the flame wakes, the ribbons turn warm,
- * "Nice work!" rolls into "Week done" with a chord, and the streak goes up. Tap anywhere to close.
+ * "Nice work!" blurs into "Week done" with a chord, and the streak goes up. Tap anywhere to close.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -172,7 +172,7 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
       const tFuse = tStep + ms(750);
       const tBoom = tFuse + ms(380);
       fuse.value = withDelay(tFuse, withTiming(1, { duration: ms(260), easing: out }));
-      roll.value = withDelay(tBoom, withSpring(1, { damping: 10, stiffness: 140 }));
+      roll.value = withDelay(tBoom, withTiming(1, { duration: 260, easing: Easing.inOut(Easing.quad) }));
       flame.value = withDelay(tBoom, withSpring(1, { damping: 8, stiffness: 120 }));
       warm.value = withDelay(tBoom, withTiming(1, { duration: ms(700) }));
       weekBurst.value = withDelay(tBoom, withTiming(1, { duration: 1800, easing: Easing.linear }));
@@ -239,7 +239,7 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
   const cardPop = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + pop.value * 0.018 }, { rotate: `${pop.value * -0.6}deg` }],
   }));
-  const rollStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -52 * roll.value }] }));
+
   const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + flame.value * 0.25 }, { rotate: `${flame.value * -4}deg` }] }));
   const fusedStyle = useAnimatedStyle(() => ({ opacity: fuse.value }));
   const gapStyle = useAnimatedStyle(() => ({ gap: 6 * (1 - fuse.value) }));
@@ -268,10 +268,8 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
           <View style={[styles.headline, { top: 190 * sy }]}>
             <Animated.View style={headlineStyle}>
               <View style={styles.rollWindow}>
-                <Animated.View style={rollStyle}>
-                  <Text style={[styles.headlineText, { color: c.text }]}>Nice work!</Text>
-                  <Text style={[styles.headlineText, { color: c.text }]}>Week done</Text>
-                </Animated.View>
+                <BlurText text="Nice work!" progress={roll} out color={c.text} />
+                <BlurText text="Week done" progress={roll} color={c.text} />
               </View>
             </Animated.View>
           </View>
@@ -337,6 +335,46 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
         </Pressable>
       </Animated.View>
     </Modal>
+  );
+}
+
+/**
+ * A quick blur cross-fade ("Nice work!" → "Week done"). Text can't be blurred on iOS, so faint copies spread
+ * around the word stand in for the blur, widest halfway through, while the word itself fades.
+ */
+const GHOSTS = [
+  [-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7],
+] as const;
+function BlurText({ text, progress, out, color }: { text: string; progress: SharedValue<number>; out?: boolean; color: string }) {
+  // 0 = sharp and shown, 1 = fully blurred away.
+  const away = (p: number) => (out ? p : 1 - p);
+  const mainStyle = useAnimatedStyle(() => {
+    const a = away(progress.value);
+    return { opacity: Math.max(0, 1 - a * 1.6), transform: [{ scale: 1 + a * 0.06 }] };
+  });
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {GHOSTS.map(([gx, gy], i) => (
+        <Ghost key={i} text={text} progress={progress} out={out} color={color} gx={gx} gy={gy} />
+      ))}
+      <Animated.Text testID={out ? "log-celebration-nice" : "log-celebration-week"} style={[styles.headlineText, styles.headlineAbs, { color }, mainStyle]}>
+        {text}
+      </Animated.Text>
+    </View>
+  );
+}
+function Ghost({ text, progress, out, color, gx, gy }: { text: string; progress: SharedValue<number>; out?: boolean; color: string; gx: number; gy: number }) {
+  const style = useAnimatedStyle(() => {
+    const a = out ? progress.value : 1 - progress.value;
+    const spread = a * 7;
+    // The blur is strongest while the word is leaving or arriving, and gone when it's sharp.
+    const opacity = a <= 0 || a >= 1 ? 0 : 0.22 * Math.sin(Math.PI * Math.min(1, a * 1.2));
+    return { opacity, transform: [{ translateX: gx * spread }, { translateY: gy * spread }, { scale: 1 + a * 0.06 }] };
+  });
+  return (
+    <Animated.Text aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.headlineText, styles.headlineAbs, { color }, style]}>
+      {text}
+    </Animated.Text>
   );
 }
 
@@ -458,7 +496,8 @@ function RainBit({ p, progress, height }: { p: { x: number; vx: number; vy: numb
 
 const styles = StyleSheet.create({
   headline: { position: "absolute", left: 0, right: 0, alignItems: "center" },
-  rollWindow: { height: 52, overflow: "hidden" },
+  rollWindow: { height: 52, width: 320 },
+  headlineAbs: { position: "absolute", left: 0, right: 0 },
   headlineText: { fontSize: 40, lineHeight: 52, height: 52, fontWeight: "900", letterSpacing: -1, textAlign: "center" },
   center: { position: "absolute", left: 0, right: 0, alignItems: "center", gap: 14 },
   emoji: { fontSize: 76, lineHeight: 90 },
