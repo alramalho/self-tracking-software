@@ -51,6 +51,13 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 266 — log celebration crash fix, November 15, 2026
+
+- **Builds 263 and 265 crash on every log.** The headline blur's animated style called a plain JS helper on the UI thread (`[Worklets] Tried to synchronously call a Remote Function`), which is fatal in a release build. Expo web runs worklets on the JS thread, so every Playwright test passed. Fixed in main `e74919c6` by inlining the helper.
+- **Checks:** reproduced the error, then confirmed the fix, in a fixture Debug simulator build (iOS 26, `EXPO_PUBLIC_E2E=true`): a normal log (1 of 3) and week done (the count was forced to 2 of 3 locally, not committed). Both play to the end and close; recording `docs/reviews/log-celebration/ios-sim-week-done-fixed.mp4`. Not run on a phone; sound and haptics still unverified on a device.
+- **Built** with `pnpm build:testflight .release/testflight-main-e74919c6/tracking.so.ipa`. IPA SHA-256 `bf75b44171d19ef5e2bbf1a7c8948e66761ebdbb615c009d100a633ec4bd325d`.
+- **Apple:** validated and uploaded; VALID; What to Test written; internal and `Friends & Family` `IN_BETA_TESTING`, beta review submitted.
+
 ## TestFlight build 265 — log celebration, November 14–15, 2026
 
 **Build 265 is the latest TestFlight build**: everything on main up to `f1255096`. After a successful log a full-screen "Nice work!" moment plays (designed with the owner from Strava's; prototype and recordings in `docs/reviews/log-celebration/`): accent wave, icon burst, ribbons, a staggered entrance, and the plan's weekly stepper filling the new step with a small pop and tilt, a pitch-rising pop sound (`assets/sounds/step-N.wav`) and a haptic (`expo-haptics`, new native module). Completing the week fuses the bar, bursts and rains confetti, turns the ribbons orange, blurs "Nice work!" into "Week done" with a chord and a success haptic, and adds a streak week. It replaces the "Activity logged!" drawer; offline-queued logs keep "Saved for sync".
