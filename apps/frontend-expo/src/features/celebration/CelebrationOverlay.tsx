@@ -346,10 +346,9 @@ const GHOSTS = [
   [-1, 0], [1, 0], [0, -1], [0, 1], [-0.7, -0.7], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7],
 ] as const;
 function BlurText({ text, progress, out, color }: { text: string; progress: SharedValue<number>; out?: boolean; color: string }) {
-  // 0 = sharp and shown, 1 = fully blurred away.
-  const away = (p: number) => (out ? p : 1 - p);
+  // 0 = sharp and shown, 1 = fully blurred away. Inline: a worklet can't call a plain JS function on the UI thread.
   const mainStyle = useAnimatedStyle(() => {
-    const a = away(progress.value);
+    const a = out ? progress.value : 1 - progress.value;
     return { opacity: Math.max(0, 1 - a * 1.6), transform: [{ scale: 1 + a * 0.06 }] };
   });
   return (
