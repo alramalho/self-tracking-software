@@ -303,8 +303,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       queryClient.refetchQueries({ queryKey: ["timeline"] });
 
-      // Refetch plans to update progress after activity deletion
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
+      // Refetch plans to update progress after activity deletion (in the background: it recomputes progress)
+      void queryClient.refetchQueries({ queryKey: ["plans"] });
 
       toast.success("Activity deleted successfully!");
     },
@@ -336,8 +336,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       );
 
-      // Refetch plans to update progress after entry deletion
-      await queryClient.refetchQueries({ queryKey: ["plans"] });
+      // Refetch plans to update progress after entry deletion (in the background: it recomputes progress)
+      void queryClient.refetchQueries({ queryKey: ["plans"] });
 
       toast.success("Activity deleted successfully!");
     },
