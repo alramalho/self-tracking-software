@@ -83,12 +83,19 @@ export const useTimeline = () =>
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 // All activity mutations affect profile history, heatmaps, home cards and plan progress.
-export function useAction<T>(mutationFn: (input: T) => Promise<unknown>) {
+/**
+ * A server action, then a refresh of every loaded query. The refresh runs in the background so the action
+ * finishes (and drawers close) as soon as the server answers; waiting for it made delete take seconds.
+ * Pass waitForRefresh where stale data must never show after the action (switching accounts).
+ */
+export function useAction<T>(mutationFn: (input: T) => Promise<unknown>, options?: { waitForRefresh?: boolean }) {
   const client = useQueryClient();
   return useMutation({
     mutationFn,
     onSuccess: async () => {
-      await client.invalidateQueries();
+      const refresh = client.invalidateQueries();
+      if (options?.waitForRefresh) await refresh;
+      else void refresh.catch(() => {});
     },
   });
 }

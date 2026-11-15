@@ -10,8 +10,8 @@ import { SettingsRow } from "./SettingsRow";
 export function Accounts() {
   const auth = useSession(),
     c = useColors();
-  const switchTo = useAction((userId: string) => auth.switchAccount(userId));
-  const add = useAction<void>(() => auth.addAccount());
+  const switchTo = useAction((userId: string) => auth.switchAccount(userId), { waitForRefresh: true });
+  const add = useAction<void>(() => auth.addAccount(), { waitForRefresh: true });
   const busy = switchTo.isPending || add.isPending;
   return (
     <View style={{ gap: 4 }}>
