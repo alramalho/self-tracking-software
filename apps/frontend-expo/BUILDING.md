@@ -51,6 +51,13 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 267 — delete and save close at once, November 15, 2026
+
+- **Delete Entry spun for seconds.** The server deletes in three small queries, but every `useAction` waited for `invalidateQueries()` to refetch every loaded query (plan progress recomputed, since the delete clears it) before the spinner stopped. Main `6b7ab61f` refreshes in the background, so delete, save and the other 36 actions finish when the server answers; account switching and adding an account still wait (`waitForRefresh`).
+- **Checks:** Expo typecheck; full Playwright suite: 171 passed, 35 failed, and the same 35 fail with the change reverted. Not timed on a phone.
+- **Built** with `pnpm build:testflight .release/testflight-main-6b7ab61f/tracking.so.ipa`; ExpoHaptics, TrackingHealth, TrackingMap, TrackingWatch installed. IPA SHA-256 `285988cdbacb7e8f2d25724a0195db5b317a21ba7655fdebe9b9ed1c5f335e87`; the bundle contains `waitForRefresh`.
+- **Apple:** validated and uploaded (delivery `93824d1b-3602-4145-a2cb-0a057fa99ea6`); VALID; What to Test written; internal and `Friends & Family` `IN_BETA_TESTING`, beta review submitted.
+
 ## TestFlight build 266 — log celebration crash fix, November 15, 2026
 
 - **Builds 263 and 265 crash on every log.** The headline blur's animated style called a plain JS helper on the UI thread (`[Worklets] Tried to synchronously call a Remote Function`), which is fatal in a release build. Expo web runs worklets on the JS thread, so every Playwright test passed. Fixed in main `e74919c6` by inlining the helper.
