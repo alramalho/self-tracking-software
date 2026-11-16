@@ -70,7 +70,7 @@ interface ItemBase {
 /** Everything the coach is waiting on you for, as one list. */
 export type CoachItem<P extends CoachPlan = CoachPlan, A extends CoachAttention = CoachAttention, M extends CoachMetric = CoachMetric> =
   | (ItemBase & { kind: "alert"; alert: PlanAlert<P> })
-  | (ItemBase & { kind: "request"; request: CoachRequest; plan?: P; weeks?: ReviewWeek<P>[] })
+  | (ItemBase & { kind: "request"; request: CoachRequest; plan?: P })
   | (ItemBase & { kind: "check"; check: CoachCheck; plan?: P })
   | (ItemBase & { kind: "attention"; attention: A })
   | (ItemBase & { kind: "checkin"; metrics: M[] });
@@ -146,7 +146,7 @@ export function supportFor(state: FollowThroughState | undefined, plan: CoachPla
     ? {
         ...current,
         coaching: { ...coaching, role: plan.orientation === "OUTCOME" ? "training" : "consistency", followUps: true },
-        preferences: { ...current.preferences, coaching: true, weeklyReview: true },
+        preferences: { ...current.preferences, coaching: true },
       }
     : { ...current, coaching: { ...coaching, role: "tracking" } };
   return { support, resume: on && !!state?.monitoring?.pausedPlanIds.includes(plan.id) };
@@ -256,63 +256,12 @@ export const alertItem = <P extends CoachPlan, A extends CoachAttention = CoachA
   alert,
 });
 
-// ---------- the weekly review ----------
-
-/** One plan's week as a weekly review shows it: the seven days, which were logged, and the count. */
-export interface ReviewWeek<P extends CoachPlan = CoachPlan> {
-  plan: P;
-  /** yyyy-MM-dd of the week's Sunday. */
-  startKey: string;
-  days: { key: string; logged: boolean }[];
-  done: number;
-  target: number;
-  /** The week under review is the one still running (a review on any day but Sunday). */
-  current: boolean;
-}
-
-/**
- * The plan week a weekly review looks back on: the week holding the day before it was sent. Weeks start on
- * Sunday, so a Sunday review covers the week that just ended, never the one that began that morning.
- * Pass the person's timezone on the server; the apps use the device's.
- */
-export function reviewWeek<P extends CoachPlan>(
-  plan: P,
-  entries: CoachEntry[],
-  sentAt: DateValue,
-  options: { now?: Date; timezone?: string | null } = {},
-): ReviewWeek<P> {
-  const { now = new Date(), timezone } = options;
-  const startKey = getPlanWeekStartKey(new Date(new Date(sentAt).getTime() - 86_400_000), timezone);
-  const logged = new Set(
-    entries
-      .filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId))
-      .map((e) => getPlanWeekDateKey(e.datetime, timezone)),
-  );
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const key = addDaysToDateKey(startKey, i);
-    return { key, logged: logged.has(key) };
-  });
-  const week = plan.progress?.weeks?.find((w) => getPlanWeekStartKey(new Date(w.startDate), timezone) === startKey);
-  const target = typeof week?.plannedActivities === "number" ? week.plannedActivities : (plan.timesPerWeek ?? 0);
-  return {
-    plan,
-    startKey,
-    days,
-    done: days.filter((d) => d.logged).length,
-    target,
-    current: startKey === getPlanWeekStartKey(now, timezone),
-  };
-}
-
-/** "3 of 4 last week", or "2 of 4 this week" for a review sent mid-week. */
-export const reviewWeekLine = (week: Pick<ReviewWeek, "done" | "target" | "current">) =>
-  `${week.target ? `${week.done} of ${week.target}` : `${week.done} ${week.done === 1 ? "day" : "days"}`} ${week.current ? "this week" : "last week"}`;
-
 // ---------- the Coach tab's list ----------
 
 const requestTitle: Record<string, string> = {
   setup: "Preparing your first week",
-  review: "Your weekly review",
+  // The weekly slot now only proposes a training plan's next two weeks.
+  review: "Your next two weeks",
   difficulty: "How hard was that?",
   session: "Did your session happen?",
   lapse: "Checking in on you",
@@ -344,24 +293,15 @@ export function coachItems<P extends CoachPlan, A extends CoachAttention, M exte
   for (const request of state?.monitoring?.requests ?? []) {
     if (!request.requiresReply || request.resolvedAt || request.closedAt || request.kind === "nudge") continue;
     const plan = planOf(request.planIds[0]);
-    // A weekly review shows the week it looks back on, so its card and drawer are a review, not a link.
-    const weeks =
-      request.kind === "review"
-        ? request.planIds
-            .map(planOf)
-            .filter((p): p is P => !!p)
-            .map((p) => reviewWeek(p, input.entries, request.createdAt, { now }))
-        : undefined;
     items.push({
       kind: "request",
       id: `request:${request.id}`,
       title: requestTitle[request.kind] ?? "A question for you",
-      label: weeks?.length === 1 ? `${reviewWeekLine(weeks[0])} · ${weeks[0].plan.goal}` : plan ? plan.goal : "Coach",
+      label: plan ? plan.goal : "Coach",
       emoji: plan?.emoji ?? "💬",
       at: request.createdAt,
       request,
       plan,
-      ...(weeks ? { weeks } : {}),
     });
   }
   for (const check of Object.values(state?.checks ?? {})) {

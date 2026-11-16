@@ -69,6 +69,11 @@ export function resolveRequests(input: MonitoringInput) {
         : [];
     });
     const decided = proposals.length > 0 && proposals.every((p) => !!p.status);
+    // Weekly reviews are gone; one still open (a question with no plan proposal) just closes, pausing nothing.
+    if (request.kind === "review" && !proposals.length) {
+      request.closedAt = now.toISOString();
+      continue;
+    }
     // Logging the habit again answers a nudge about it. It never marks an earlier session done.
     const resumedPractice =
       (request.kind === "lapse" ||
@@ -335,9 +340,11 @@ function nextDecision(
       planIds,
     };
   }
+  // No weekly review message (owner, 16 Nov: "I didn't ask for this"). The weekly slot only lets a coached
+  // training plan get its next two weeks of sessions designed (generation skips it until its window is due).
   const due = plans.filter((p) => {
     const s = supports[p.id];
-    if (!s.preferences.coaching || !s.preferences.weeklyReview) return false;
+    if (!s.preferences.coaching || s.coaching?.role !== "training") return false;
     const today = formatInTimeZone(now, s.timezone, "yyyy-MM-dd");
     const day = new Date(`${today}T12:00:00Z`).getUTCDay();
     if (day !== s.preferences.reviewDay || state.reviewed[p.id] === today)

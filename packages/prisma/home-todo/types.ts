@@ -62,10 +62,3 @@ export type HomeProgressRow = {
   week: { done: number; target: number };
   streak: { stage: "Habit" | "Lifestyle"; value: number; target: number };
 };
-
-/** The parts of a Coach tab item the homepage note reads; both apps' items fit it. */
-export type CoachNoteCandidate = {
-  kind: "alert" | "request" | "check" | "attention" | "checkin";
-  at: string;
-  alert?: { status: "quiet" | "at_risk" | "missed"; nudge?: unknown };
-};

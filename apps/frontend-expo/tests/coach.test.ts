@@ -40,7 +40,7 @@ test("a plan's switch keeps its own choice and maps to a coaching role", () => {
   const on = supportFor(state({ supports: { p1: support("tracking") } }), plan({ orientation: "OUTCOME" }), true);
   assert.equal(on.support.coaching?.role, "training");
   assert.equal(on.support.coaching?.followUps, true);
-  assert.equal(on.support.preferences.weeklyReview, true);
+  assert.equal(on.support.preferences.coaching, true);
 });
 
 test("turning a coach-paused plan back on also resumes it", () => {

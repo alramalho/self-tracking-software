@@ -2,12 +2,11 @@
 // Shared by the iPhone app and the web app so both show the same days and the same note.
 import { addDaysToDateKey, getPlanWeekDateKey } from "../plan-week";
 import { HABIT_WEEKS, LIFESTYLE_WEEKS } from "../follow-through/streak";
-import type { CoachNoteCandidate, HomeDay, HomeDayItem, HomeDaysInput, HomeProgressInput, HomeProgressRow, HomeProgressStreak } from "./types";
+import type { HomeDay, HomeDayItem, HomeDaysInput, HomeProgressInput, HomeProgressRow, HomeProgressStreak } from "./types";
 
 export type * from "./types";
 
 /** A coach message older than this is no longer news on the homepage. */
-export const COACH_NOTE_FRESH_HOURS = 48;
 
 const KIND_ORDER = { scheduled: 0, flexible: 1, done: 2 } as const;
 
@@ -155,30 +154,3 @@ export function homeProgress({ projection, plans, entries }: HomeProgressInput):
   });
 }
 
-/** How much a coach item matters right now, lowest first; null when it is not homepage news. */
-function noteRank(item: CoachNoteCandidate, now: Date): number | null {
-  if (item.kind === "checkin") return null;
-  if (item.kind === "alert") {
-    if (item.alert?.status === "at_risk") return 1;
-    if (item.alert?.status === "missed") return 4;
-    // A plan going quiet is only news once the coach has actually reached out about it.
-    return item.alert?.nudge ? 5 : null;
-  }
-  const ageHours = (now.getTime() - new Date(item.at).getTime()) / 3_600_000;
-  if (ageHours < 0 || ageHours > COACH_NOTE_FRESH_HOURS) return null;
-  return item.kind === "request" ? 0 : item.kind === "attention" ? 2 : 3;
-}
-
-/**
- * The one thing from the Coach tab worth a note on the homepage: the coach asked you something,
- * a plan is at risk this week, or a fresh plan warning. Nothing else, so the note stays rare.
- */
-export function pickCoachNote<T extends CoachNoteCandidate>(items: T[], now = new Date()): T | null {
-  let best: { item: T; rank: number } | null = null;
-  for (const item of items) {
-    const rank = noteRank(item, now);
-    if (rank === null) continue;
-    if (!best || rank < best.rank || (rank === best.rank && item.at > best.item.at)) best = { item, rank };
-  }
-  return best?.item ?? null;
-}

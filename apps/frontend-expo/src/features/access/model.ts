@@ -76,7 +76,7 @@ export const accessRequests = {
     items: [
       {
         kind: "notifications",
-        detail: `Check-ins, weekly reviews and replies from ${coach}`,
+        detail: `Check-ins and replies from ${coach}`,
       },
       ...(health
         ? [

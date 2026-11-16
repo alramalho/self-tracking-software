@@ -1,8 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
-import { homeDays, homeProgress, pickCoachNote } from "@tsw/prisma/home-todo";
-import type { CoachNoteCandidate } from "@tsw/prisma/home-todo";
+import { homeDays, homeProgress } from "@tsw/prisma/home-todo";
 
 const now = new Date("2026-10-21T12:00:00Z"); // a Wednesday
 const run = { id: "run", title: "Running", emoji: "🏃", measure: "km" };
@@ -87,28 +86,6 @@ test("a day the plan or the coach gives one activity shows that activity", () =>
     { id: "c1", planId: "exercise", activityId: "swim", date: "2026-10-21", time: "18:00", outcome: "PLANNED" },
   ]).find((item) => item.sessionId === "c1")!;
   assert.deepEqual([coached.title, coached.emoji, coached.activityId, coached.anyActivity], ["Swimming", "🏊", "swim", false]);
-});
-
-const item = (kind: CoachNoteCandidate["kind"], hoursAgo: number, alert?: CoachNoteCandidate["alert"]) => ({
-  kind,
-  at: new Date(now.getTime() - hoursAgo * 3_600_000).toISOString(),
-  alert,
-});
-
-test("the coach note picks a fresh question from the coach first", () => {
-  const question = item("request", 2);
-  assert.equal(pickCoachNote([item("alert", 0, { status: "at_risk" }), question, item("checkin", 0)], now), question);
-});
-
-test("the coach note shows nothing when only routine or stale items wait", () => {
-  assert.equal(pickCoachNote([item("checkin", 0), item("request", 49), item("attention", 72)], now), null);
-  assert.equal(pickCoachNote([item("alert", 0, { status: "quiet" })], now), null);
-  assert.equal(pickCoachNote([], now), null);
-});
-
-test("a plan at risk this week outranks an older miss or a fresh warning", () => {
-  const atRisk = item("alert", 0, { status: "at_risk" });
-  assert.equal(pickCoachNote([item("alert", 0, { status: "missed" }), item("attention", 1), atRisk], now), atRisk);
 });
 
 test("a coach practice session joins its plan's day with a time, or adds the day", () => {

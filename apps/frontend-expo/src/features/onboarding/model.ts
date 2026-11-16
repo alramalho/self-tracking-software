@@ -40,7 +40,7 @@ export const stepOrder = (d: OnboardingDraft) => [
   ...(d.commitment !== "WEEKLY" ? ["format"] : []),
   "review",
   ...(d.commitment !== "WEEKLY" ? ["reminder"] : []),
-  ...(d.wantsCoaching ? [...(d.commitment !== "WEEKLY" ? ["checkIn"] : []), "weeklyReview"] : []),
+  ...(d.wantsCoaching ? [...(d.commitment !== "WEEKLY" ? ["checkIn"] : [])] : []),
   "finish",
 ];
 export function canContinue(d: OnboardingDraft) {

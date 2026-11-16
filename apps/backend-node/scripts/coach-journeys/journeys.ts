@@ -47,12 +47,11 @@ export const journeys: Journey[] = [
   },
   {
     id: "owner-sunday-review",
-    title: "Sunday review after a thin week, four days after 'just got back'",
-    why: "The owner's complaint (16 Nov): the 15 Nov review said \"Now you're back, when's your next session?\" about a trip that ended on Wednesday, and counted Sunday's run into the week it reviewed.",
+    title: "Sunday after a thin week, four days after 'just got back'",
+    why: "The owner (16 Nov): the 15 Nov weekly review was a chat message nobody asked for. There is no weekly review now: Sunday evening sends nothing.",
     source: "real",
     days: 1,
     plan: FOUR_A_WEEK,
-    // Three of four last week (Monday, Wednesday, Friday), then a short run on Sunday morning.
     pastLogs: [6, 4, 2],
     pastMessages: [
       { daysBefore: 4, from: "USER", text: "I'm travelling." },
@@ -61,16 +60,7 @@ export const journeys: Journey[] = [
       { daysBefore: 4, from: "COACH", text: "Back today, with work still waiting. I'll be looking for your next session." },
     ],
     events: [{ day: 0, at: "12:00", log: true }],
-    expect: {
-      maxPushes: 1,
-      pushes: [{ kind: "review", day: 0, fromHour: 18, toHour: 21 }],
-      messages: [
-        {
-          kind: "review",
-          never: [/now (that )?you'?re back|you'?re back now|just got back|back today/i, /before the week ends|rest of (the|this) week|left this week/i],
-        },
-      ],
-    },
+    expect: { maxPushes: 0, noPushKinds: ["review"] },
   },
   {
     id: "on-track",
@@ -82,12 +72,10 @@ export const journeys: Journey[] = [
     pastLogs: [1, 3, 5, 6],
     events: [1, 2, 4, 6, 8, 9, 11, 13].map((day) => ({ day, at: "07:30", log: true as const })),
     expect: {
-      maxPushes: 2,
-      pushes: [{ kind: "review", day: 7, fromHour: 18, toHour: 21 }],
-      noPushKinds: ["lapse", "reminder", "nudge"],
+      maxPushes: 0,
+      noPushKinds: ["lapse", "reminder", "nudge", "review"],
       maxNudges: 0,
       alertOff: [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13],
-      messages: [{ kind: "review", never: [/\d+\s*(of|\/)\s*\d+/, /great job|amazing|crushing/i] }],
     },
   },
   {

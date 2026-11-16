@@ -1,5 +1,5 @@
 import { Pressable, View } from "react-native";
-import { Activity, CalendarClock, Check, Dumbbell, ListChecks, MessageCircle, Moon, Repeat } from "lucide-react-native";
+import { Activity, Check, Dumbbell, ListChecks, MessageCircle, Moon, Repeat } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { Copy, useColors } from "@/components/ui";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
@@ -8,10 +8,6 @@ import { accessRequests, coachNeedsAppleHealth } from "@/features/access/model";
 import { useHealth } from "@/features/health/HealthProvider";
 import { coachIdentity } from "@/features/messages/coach";
 import { useCurrentUser } from "@/data/queries";
-import {
-  DaysInput,
-  TimeInput,
-} from "@/features/follow-through/assistance/Inputs";
 import type { PlanCoaching } from "@tsw/prisma/follow-through";
 import type { CoachingFieldsProps, CoachingChoiceProps } from "./types";
 
@@ -95,7 +91,6 @@ export function CoachingFields({
   onChange,
   onPreferences,
   canCoach,
-  timezone,
 }: CoachingFieldsProps) {
   const c = useColors();
   const aiConsent = useAiConsent();
@@ -125,11 +120,7 @@ export function CoachingFields({
             const askedAi = !aiConsent.allowed;
             if (role !== "tracking" && !(await aiConsent.ask())) return;
             onChange({ ...value, role });
-            onPreferences({
-              ...preferences,
-              coaching: role !== "tracking",
-              weeklyReview: role !== "tracking" && preferences.weeklyReview,
-            });
+            onPreferences({ ...preferences, coaching: role !== "tracking", weeklyReview: false });
             if (role !== "tracking" && value.role === "tracking")
               askCoachAccess(value.dataAccess, askedAi);
           }}
@@ -142,41 +133,6 @@ export function CoachingFields({
         <>
           <SectionLabel>Contact</SectionLabel>
           <ChoiceGroup>
-            <CoachingChoice
-              icon={CalendarClock}
-              label="Weekly review"
-              detail="One message in your coach conversation."
-              selected={preferences.weeklyReview}
-              onPress={() =>
-                onPreferences({
-                  ...preferences,
-                  coaching: true,
-                  weeklyReview: !preferences.weeklyReview,
-                })
-              }
-            />
-            {preferences.weeklyReview && (
-              <View style={{ gap: 10, paddingVertical: 12 }}>
-                <DaysInput
-                  single
-                  value={[preferences.reviewDay]}
-                  onChange={([reviewDay]) =>
-                    onPreferences({ ...preferences, reviewDay })
-                  }
-                />
-                <TimeInput
-                  value={preferences.reviewTime}
-                  onChange={(reviewTime) =>
-                    onPreferences({ ...preferences, reviewTime })
-                  }
-                />
-                {timezone && (
-                  <Text style={{ color: c.muted, fontSize: 12 }}>
-                    Times use {timezone.replaceAll("_", " ")}
-                  </Text>
-                )}
-              </View>
-            )}
             <CoachingChoice
               icon={MessageCircle}
               label="Follow up when useful"

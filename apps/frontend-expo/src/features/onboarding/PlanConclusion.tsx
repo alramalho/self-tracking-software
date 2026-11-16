@@ -11,9 +11,6 @@ export function PlanConclusion({ facts, coaching, preferences }: PlanConclusionP
     facts.wantsCoaching
       ? coaching?.role === "training" ? "Training guidance and plan suggestions" : "Support staying consistent"
       : "Free activity tracking",
-    facts.wantsCoaching && preferences?.weeklyReview
-      ? `Weekly review · ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][preferences.reviewDay]} ${preferences.reviewTime}`
-      : null,
     facts.wantsCoaching && coaching?.followUps ? "One useful follow-up, then quiet" : null,
   ].filter((row): row is string => !!row);
   return (

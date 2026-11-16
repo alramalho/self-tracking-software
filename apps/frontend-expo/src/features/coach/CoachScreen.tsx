@@ -131,7 +131,7 @@ export default function CoachScreen() {
             <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>Coaching</Text>
             <Text style={{ color: c.muted, fontSize: 13 }}>
               {coaching.canCoach || !coaching.ready
-                ? "Check-ins, weekly reviews and messages after you log"
+                ? "Check-ins when a plan needs you"
                 : "Coaching comes with Plus"}
             </Text>
           </View>

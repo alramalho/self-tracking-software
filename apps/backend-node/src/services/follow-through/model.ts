@@ -261,66 +261,7 @@ export function outreach(
         });
     }
   }
-  for (const support of Object.values(state.supports)) {
-    const plan = plans.find((p) => p.id === support.planId);
-    if (
-      !canCoach ||
-      state.pausedAt ||
-      !support.preferences.coaching ||
-      !support.preferences.weeklyReview ||
-      support.coaching ||
-      !plan
-    )
-      continue;
-    const today = localDate(now, support.timezone);
-    if (
-      !isActive(plan, today) ||
-      new Date(`${today}T12:00:00Z`).getUTCDay() !==
-        support.preferences.reviewDay
-    )
-      continue;
-    if (support.mode === "WEEKLY" && plan.outlineType !== "SPECIFIC") {
-      const completedWeekEnd = format(
-        startOfWeek(new Date(`${today}T12:00:00`), { weekStartsOn: 0 }),
-        "yyyy-MM-dd",
-      );
-      if (support.effectiveDate > calendarDay(completedWeekEnd, -7)) continue;
-    }
-    const due = instant(
-      today,
-      support.preferences.reviewTime,
-      support.timezone,
-    );
-    if (!eligible(due)) continue;
-    const week = format(
-      startOfWeek(new Date(`${today}T12:00:00`), { weekStartsOn: 1 }),
-      "yyyy-MM-dd",
-    );
-    const id = `week:${plan.id}:${week}`;
-    if (!state.checks[id])
-      state.checks[id] = {
-        id,
-        planId: plan.id,
-        sessionId: null,
-        kind: "WEEKLY",
-        dueAt: due.toISOString(),
-        sentAt: null,
-        answeredAt: null,
-        dismissedAt: null,
-        message: weeklyMessage(plan, support, entries, today),
-      };
-    const check = state.checks[id];
-    if (!check.sentAt && !check.answeredAt && !check.dismissedAt)
-      result.push({
-        id,
-        planId: plan.id,
-        sessionId: null,
-        checkId: id,
-        title: "Your agreed weekly check",
-        body: check.message,
-        dueAt: check.dueAt,
-      });
-  }
+  // The agreed weekly check is gone with the weekly review (owner, 16 Nov); old ones stay answered or dismissed.
   return result;
 }
 

@@ -18,14 +18,12 @@ const OUTCOME_ROWS: PaywallRow[] = [
   { text: "Next weeks planned as you go", free: false },
   { text: "Lighter week after a hard one", free: false },
   { text: "Nudge before a week slips", free: false },
-  { text: "Weekly review", free: false },
 ];
 const HABIT_ROWS: PaywallRow[] = [
   { text: "Your habit and streaks", free: true },
   { text: "Reminders, friends, Health", free: true },
   { text: "Target adjusts as weeks go", free: false },
   { text: "Nudge before a week slips", free: false },
-  { text: "Weekly review", free: false },
 ];
 
 // The coaching paywall: the person's own goal, what changes with a coach, who's in, and the plans.

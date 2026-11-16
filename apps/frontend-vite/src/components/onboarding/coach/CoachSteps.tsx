@@ -9,7 +9,6 @@ const details = [
   "Questions and proposals open in Messages.",
   "Choose the watch summaries your coach may use for this plan.",
 ];
-const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function ExampleCard({ label, children }: ExampleCardProps) {
   const theme = useThemeColors();
@@ -44,8 +43,7 @@ function CoachingChoice({ label, detail, selected, icon: Icon, onClick }: Coachi
 
 // The coach introduces itself and what it will do. The plan already decided its role,
 // so these screens only set how often it speaks up and what it may see.
-export function CoachStep({ step, coach, facts, coaching, preferences, onCoaching, onPreferences }: CoachStepProps) {
-  const theme = useThemeColors();
+export function CoachStep({ step, coach, facts, coaching, preferences, onCoaching }: CoachStepProps) {
   const training = coaching.role === "training";
   return (
     <div data-testid={["coach-tour-role", "coach-tour-contact", "coach-tour-data"][step]} className="flex flex-col gap-5">
@@ -70,39 +68,6 @@ export function CoachStep({ step, coach, facts, coaching, preferences, onCoachin
         <div className="flex flex-col gap-3.5">
           <ExampleCard label="EXAMPLE · AFTER A DIFFICULT WEEK">“Hard week. Should we keep the plan or make it lighter?”</ExampleCard>
           <div>
-            <CoachingChoice
-              label="Weekly review"
-              detail="One message at the day and time you choose."
-              selected={preferences.weeklyReview}
-              onClick={() => onPreferences({ ...preferences, weeklyReview: !preferences.weeklyReview })}
-            />
-            {preferences.weeklyReview && (
-              <div className="flex flex-col gap-3 py-3">
-                <div className="flex gap-1.5" role="radiogroup" aria-label="Review day">
-                  {weekdays.map((label, index) => (
-                    <button
-                      key={label}
-                      type="button"
-                      role="radio"
-                      aria-checked={preferences.reviewDay === index}
-                      onClick={() => onPreferences({ ...preferences, reviewDay: index })}
-                      className={`h-10 min-w-0 flex-1 rounded-xl text-[13px] font-semibold ${
-                        preferences.reviewDay === index ? `border-2 ${theme.border} text-foreground` : "border border-border text-muted-foreground"
-                      } bg-card`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="time"
-                  aria-label={`Review time ${preferences.reviewTime}`}
-                  value={preferences.reviewTime}
-                  onChange={(e) => e.target.value && onPreferences({ ...preferences, reviewTime: e.target.value })}
-                  className="h-11 rounded-xl border border-border bg-card px-3 text-[15px] text-foreground"
-                />
-              </div>
-            )}
             <CoachingChoice
               label="Follow up when useful"
               detail={

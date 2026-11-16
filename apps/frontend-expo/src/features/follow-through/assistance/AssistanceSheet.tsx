@@ -38,7 +38,6 @@ export function AssistanceSheet({
     if (!save.isPending) onClose();
   };
   const persist = () => save.mutate(undefined, { onSuccess: onSaved });
-  const reviewOn = prefs.coaching && prefs.weeklyReview;
   let title = "",
     description = "",
     icon = "",
@@ -52,9 +51,9 @@ export function AssistanceSheet({
   const coach = coachIdentity(useCurrentUser().data?.coachPersonality).name;
   const updatePrefs = (patch: Partial<typeof prefs>) => {
     setDraft({ ...draft, preferences: { ...prefs, ...patch } });
-    // Reminders, reviews and check-ins arrive as notifications: ask as one turns on.
+    // Reminders and check-ins arrive as notifications: ask as one turns on.
     if (patch.reminder) void access.ask(accessRequests.reminders());
-    else if (patch.weeklyReview || patch.checkIn)
+    else if (patch.checkIn)
       void access.ask(accessRequests.coach(coach, false));
   };
   if (control === "schedule") {
@@ -295,86 +294,6 @@ export function AssistanceSheet({
         </Button>
       );
     }
-  } else if (control === "review") {
-    icon = "🤖";
-    title = "Review your week?";
-    if (step === "choice") {
-      description =
-        "One brief coach check about your logged week, at a time you choose.";
-      body = (
-        <>
-          <Choice
-            icon="🌿"
-            title="Off"
-            selected={!reviewOn}
-            onPress={() =>
-              updatePrefs({
-                weeklyReview: false,
-                coaching: prefs.coaching && prefs.checkIn,
-              })
-            }
-          />
-          <Choice
-            icon="🤖"
-            title="One weekly review"
-            selected={reviewOn}
-            disabled={!canCoach}
-            detail={
-              !canCoach
-                ? "Requires an active coaching trial or subscription."
-                : "Based on what you actually logged."
-            }
-            onPress={() => {
-              updatePrefs({
-                coaching: true,
-                weeklyReview: true,
-                checkIn: support.preferences.coaching && prefs.checkIn,
-              });
-              next("days");
-            }}
-          />
-        </>
-      );
-      footer = (
-        <Button
-          busy={save.isPending}
-          onPress={reviewOn ? () => next("days") : persist}
-        >
-          {reviewOn ? "Continue" : "Save review preference"}
-        </Button>
-      );
-    } else if (step === "days") {
-      title = "Which day for your review?";
-      description = flexible
-        ? "The coach reviews the previous complete week, Sunday through Saturday."
-        : "The coach reviews recent session progress and the week ahead.";
-      body = (
-        <DaysInput
-          single
-          value={[prefs.reviewDay]}
-          onChange={([reviewDay]) => updatePrefs({ reviewDay })}
-        />
-      );
-      footer = <Button onPress={() => next("time")}>Continue</Button>;
-    } else {
-      title = "What time suits you?";
-      description = `${days[prefs.reviewDay]} · ${draft.timezone}. One weekly check; no daily chasing. Unanswered checks eventually pause.`;
-      body = (
-        <TimeInput
-          value={prefs.reviewTime}
-          onChange={(reviewTime) => updatePrefs({ reviewTime })}
-        />
-      );
-      footer = (
-        <Button
-          busy={save.isPending}
-          disabled={!validTime(prefs.reviewTime)}
-          onPress={persist}
-        >
-          Save weekly review
-        </Button>
-      );
-    }
   } else if (control === "check-in") {
     icon = "💬";
     title = "Check after a session?";
@@ -410,7 +329,6 @@ export function AssistanceSheet({
             onPress={() =>
               updatePrefs({
                 checkIn: false,
-                coaching: prefs.coaching && prefs.weeklyReview,
               })
             }
           />
@@ -429,8 +347,6 @@ export function AssistanceSheet({
                 updatePrefs({
                   coaching: true,
                   checkIn: true,
-                  weeklyReview:
-                    support.preferences.coaching && prefs.weeklyReview,
                 })
               }
             />
@@ -570,9 +486,7 @@ export function AssistanceSheet({
               step === "time"
                 ? control === "schedule"
                   ? "optional-time"
-                  : control === "review"
-                    ? "days"
-                    : "choice"
+                  : "choice"
                 : step === "optional-time"
                   ? "days"
                   : "choice",

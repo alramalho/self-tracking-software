@@ -3,7 +3,6 @@ import { buildPlanWeekProjection } from "@tsw/prisma/plan-week";
 import { homeDays, homeProgress } from "@tsw/prisma/home-todo";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { usePlans } from "@/contexts/plans";
-import { CoachNote } from "./CoachNote";
 import { DayDetail, TwoWeeks } from "./Days";
 import { HomeProgress } from "./HomeProgress";
 
@@ -32,7 +31,6 @@ export const HomeTodo = () => {
   const day = weeks.flat().find((d) => d.key === selectedKey) ?? weeks[0][0];
   return (
     <div data-testid="home-todo" className="flex flex-col gap-3">
-      <CoachNote />
       {visible.length > 0 && (
         <section className="flex flex-col gap-3.5 rounded-3xl bg-card p-4">
           <h2 className="text-[19px] font-bold">Soon</h2>

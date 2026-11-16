@@ -8,7 +8,8 @@ test("flexible tracking skips scheduling and coaching questions", () => {
 });
 test("timed coaching asks the fields that power sessions and independent consent", () => {
  const draft = { ...newDraft("local"), commitment: "TIMED" as const, wantsCoaching: true, resourceName: "Pickup Music" }; const steps = stepOrder(draft);
- for (const step of ["days", "time", "link", "followup", "reminder", "checkIn", "weeklyReview"]) assert.ok(steps.includes(step));
+ for (const step of ["days", "time", "link", "followup", "reminder", "checkIn"]) assert.ok(steps.includes(step));
+  assert.ok(!steps.includes("weeklyReview"));
 });
 test("impossible schedules and unsafe resource links cannot continue", () => {
  const draft = newDraft("local"); assert.equal(canContinue({...draft,step:"days",weekdays:[1,2,3,4],frequency:3}),false);

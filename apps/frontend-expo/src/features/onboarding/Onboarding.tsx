@@ -292,7 +292,7 @@ export default function Onboarding({
       nextDraft.preferences = {
         ...onboardingPreferences(baseDraft),
         coaching: selectedCoaching,
-        weeklyReview: selectedCoaching,
+        weeklyReview: false,
         // Training plans get a "did it happen?" check after each planned session.
         checkIn: selectedCoaching && result.facts.coachingRole === "training",
       };
@@ -343,7 +343,7 @@ export default function Onboarding({
       design,
       interview: next,
       coaching: { ...initialCoaching(), role },
-      preferences: { ...onboardingPreferences(draft), coaching: true, weeklyReview: true, checkIn: role === "training" },
+      preferences: { ...onboardingPreferences(draft), coaching: true, weeklyReview: false, checkIn: role === "training" },
       step: "coaching-tour-0",
     });
     setHistory((h) => [...h, state]);

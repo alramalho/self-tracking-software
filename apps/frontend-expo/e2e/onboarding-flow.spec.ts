@@ -53,7 +53,7 @@ test("a paid member meets the coach straight after choosing a route, with no coa
   await expect(page).toHaveURL(/plans\?selectedPlan=/);
   const state = await (await request.get(`${API}/__state`)).json();
   const finish = state.requests.filter((r: any) => r.path.endsWith("/finish")).at(-1);
-  expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: true, checkIn: true });
+  expect(finish.body.preferences).toMatchObject({ coaching: true, weeklyReview: false, checkIn: true });
   expect(finish.body.draft.design).toMatchObject({ orientation: "OUTCOME", selected: "focused" });
   expect(finish.body.draft.design.confidence).toMatchObject({ score: 8, why: "I already run twice a week and my friends are in", question: "Why an 8, and not a 5?" });
   expect(finish.body.draft.coaching.role).toBe("training");
@@ -182,7 +182,7 @@ test("free tracking keeps the designed plan, without a trial or checkout", async
   await expect(compare).toContainText("With Oli");
   await expect(compare).toContainText("Two weeks, pace, targets");
   await expect(compare).toContainText("Next weeks planned as you go");
-  await expect(compare.getByLabel("Not included")).toHaveCount(4);
+  await expect(compare.getByLabel("Not included")).toHaveCount(3);
   await expect(page.getByText("Your plan is ready either way")).toHaveCount(0);
   // Quarterly (7 free days) is preselected; weekly has no trial.
   await expect(page.getByRole("button", { name: "Start my 7 free days" })).toBeVisible();

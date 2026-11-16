@@ -24,18 +24,17 @@ TZ=UTC node --import tsx scripts/coach-journeys/run.ts --live    # when + what (
 ## 16 Nov 2026
 
 The owner, Monday 16 Nov: "Your weekly review" on Home opened the chat at "Saw today's run came in short. Now
-you're back, when's your next session?" No review, and the trip had ended four days earlier.
+you're back, when's your next session?" They never asked for a weekly review: the coach works through the
+Coach tab, not Home cards and chat messages.
 
-- **The review counts the week it reviews.** `reviewedWeek` (shared `reviewWeek`): a Sunday review covers the
-  week that just ended, so Sunday's own run no longer counts as last week, and the coach no longer asks what
-  fits "before the week ends". The opener may now give the result in a few words ("Three of four last week.").
-- **The conversation is dated** ("[2026-11-11 Wed, 4 days ago] them: …"), so old news isn't "now".
-- **The scheduled model sees its JSON schema.** DeepSeek has no structured outputs, so it guessed the shape
-  (`{"messages": […]}` for a nudge, no lists on a quiet review) and those runs failed and retried in production
-  too (3 of 3 on main for the quiet-review case). Missing empty plan-change lists are also filled in.
-- **Home and the Coach tab** open the review as a review: last week's days per plan, the coach's line, Reply.
-- New journey `owner-sunday-review`. When: 12/12. What: 22/23 live (the one failure, a review asking about
-  the whole week, led to the "ask about one session" line).
+- **No weekly review and no weekly check.** The Sunday slot only lets a coached training plan get its next two
+  weeks of sessions designed ("Your next two weeks" on the Coach tab). An open review question closes without
+  pausing the plan. The switches are gone from plan settings, onboarding and the paywall on both apps.
+- **No coach card on Home.**
+- **The conversation the generator sees is dated** ("[2026-11-11 Wed, 4 days ago] them: …").
+- **The scheduled model sees its JSON schema.** DeepSeek has no structured outputs and guessed shapes
+  (`{"messages": […]}` for a nudge, no lists when quiet); those runs failed and retried in production too.
+- `owner-sunday-review` and `on-track` now expect no Sunday push. When: 12/12.
 
 ## 13 Nov 2026
 

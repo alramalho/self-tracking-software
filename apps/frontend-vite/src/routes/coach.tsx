@@ -109,7 +109,7 @@ function CoachPage() {
             <p className="text-[15px] font-semibold">Coaching</p>
             <p className="text-[13px] text-muted-foreground">
               {coaching.canCoach || !coaching.ready
-                ? "Check-ins, weekly reviews and messages after you log"
+                ? "Check-ins when a plan needs you"
                 : "Coaching comes with Plus"}
             </p>
           </div>

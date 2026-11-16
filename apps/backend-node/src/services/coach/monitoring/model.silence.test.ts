@@ -1,12 +1,13 @@
 import { expect, it } from "vitest";
-import { decideMonitoring, monitoringState } from "./model";
+import { decideMonitoring, monitoringState, resolveRequests } from "./model";
 import type { MonitoringInput, MonitoringMessage } from "./types";
 
 // Sunday review hour, 18:00 UTC.
 const now = new Date("2026-10-18T18:07:00Z");
 const daysAgo = (days: number) => new Date(now.getTime() - days * 86400000);
 
-function weeklyReviewInput(messages: MonitoringMessage[]) {
+// The weekly slot now only designs a training plan's next sessions; these tests use a training plan.
+function weeklyReviewInput(messages: MonitoringMessage[], role = "training") {
   return {
     now,
     entitled: true,
@@ -28,7 +29,7 @@ function weeklyReviewInput(messages: MonitoringMessage[]) {
     supports: {
       gym: {
         coaching: {
-          role: "consistency",
+          role,
           followUps: true,
           dataAccess: { workouts: false, sleep: false },
         },
@@ -100,4 +101,23 @@ it("sends nothing about a plan the person asked the coach to leave quiet", () =>
   input.state.quiet = { gym: { until: "2026-10-18", why: "away", at: daysAgo(2).toISOString() } };
   expect(decideMonitoring(weeklyReviewInput([]))).not.toBeNull();
   expect(decideMonitoring(input)).toBeNull();
+});
+
+it("never sends a weekly review for a consistency plan", () => {
+  expect(decideMonitoring(weeklyReviewInput([], "consistency"))).toBeNull();
+});
+
+it("closes a weekly review still waiting for a reply, without pausing the plan", () => {
+  const input = weeklyReviewInput([], "consistency");
+  input.state.requests.push({
+    id: "review:2026-11-15:gym",
+    kind: "review",
+    planIds: ["gym"],
+    createdAt: daysAgo(1).toISOString(),
+    requiresReply: true,
+  });
+  resolveRequests(input);
+  expect(input.state.requests[0].closedAt).toBeDefined();
+  expect(input.state.pausedPlanIds).toEqual([]);
+  expect(input.state.lapsePlanIds ?? []).toEqual([]);
 });

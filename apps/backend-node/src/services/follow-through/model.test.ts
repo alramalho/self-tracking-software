@@ -234,17 +234,12 @@ describe("flexible weekly tracking", () => {
     ).toEqual([]);
     expect(Object.values(state.checks)).toEqual([]);
   });
-  it("only checks a completed week after opt-in, at the agreed weekly time", () => {
+  it("never sends a weekly check, even with the old weekly review switch on", () => {
     const state = setup();
     state.supports.p.mode = "WEEKLY";
     state.supports.p.preferences.weeklyReview = true;
-    const now = new Date("2026-09-20T17:00:00Z");
-    expect(outreach(state, [plan], now, true)).toEqual([]);
     state.supports.p.effectiveDate = "2026-09-06";
-    const checks = outreach(state, [plan], now, true);
-    expect(checks).toHaveLength(1);
-    expect(checks[0].sessionId).toBeNull();
-    expect(checks[0].body).toContain("0 of 3 days logged last week");
+    expect(outreach(state, [plan], new Date("2026-09-20T17:00:00Z"), true)).toEqual([]);
   });
   it("retires an old flexible timer without inventing a completion", () => {
     const state = setup();

@@ -3,7 +3,6 @@ import type { Plan } from "@/core/types";
 export type Control =
   | "schedule"
   | "reminders"
-  | "review"
   | "tools"
   | "check-in";
 export type Step = "choice" | "days" | "optional-time" | "time";

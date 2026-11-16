@@ -5,7 +5,6 @@ import { useColors } from "@/components/ui";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { CoachingChoice } from "@/features/plans/coaching/CoachingFields";
-import { DaysInput, TimeInput } from "@/features/follow-through/assistance/Inputs";
 import { StepSequence } from "./interview/StepReveal";
 import type { CoachingTourProps } from "./types";
 
@@ -79,8 +78,6 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
             “Hard week. Should we keep the plan or make it lighter?”
           </Example>
           <View>
-            <CoachingChoice label="Weekly review" detail="One message at the day and time you choose." selected={preferences.weeklyReview} onPress={() => onPreferences({ ...preferences, weeklyReview: !preferences.weeklyReview })} />
-            {preferences.weeklyReview && <View style={{ gap: 12, paddingVertical: 12 }}><DaysInput single value={[preferences.reviewDay]} onChange={([reviewDay]) => onPreferences({ ...preferences, reviewDay })} /><TimeInput value={preferences.reviewTime} onChange={(reviewTime) => onPreferences({ ...preferences, reviewTime })} /></View>}
             <CoachingChoice label="Follow up when useful" detail={coaching.role === "training" ? "Asks after each planned session. No reply counts as missed, and next week adapts." : "One reminder, then a nudge about why you started before offering to archive."} selected={coaching.followUps} onPress={() => onCoaching({ ...coaching, followUps: !coaching.followUps })} />
           </View>
         </StepSequence>

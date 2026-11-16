@@ -435,7 +435,7 @@ export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingF
                 pending: undefined,
               },
               coaching: { ...initialCoaching(), role },
-              preferences: { ...onboardingPreferences(draft), coaching: true, weeklyReview: true, checkIn: role === "training" },
+              preferences: { ...onboardingPreferences(draft), coaching: true, weeklyReview: false, checkIn: role === "training" },
               step: "coaching-tour-0",
             });
           })
