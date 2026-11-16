@@ -7,7 +7,9 @@ import type { DrawerOption } from "@/components/drawer/types";
 import { startCoachAttentionAction } from "@/contexts/ai/service";
 import { useCurrentUser } from "@/contexts/users";
 import { getCoachPersonalityConfig } from "@/lib/coachPersonality";
+import { coachFace } from "./face";
 import { MISS_REASONS } from "./missReasons";
+import { CoachLine, ReviewWeekCard, reviewRange } from "./WeeklyReview";
 import type { TalkReason } from "./talk/types";
 import type { CoachItem, CoachItemDrawerProps } from "./types";
 
@@ -101,6 +103,18 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
       case "request": {
         const { request, plan } = it;
         const sessionId = request.kind === "session" ? request.sessionId : undefined;
+        // A weekly review is a review: the week it looks back on, what the coach said, and a way to answer.
+        if (it.weeks?.length)
+          return (
+            <>
+              <DrawerHeader title={it.title} subtitle={`${it.weeks[0].current ? "This week" : "Last week"} · ${reviewRange(it.weeks[0])}`} />
+              {it.weeks.map((week) => (
+                <ReviewWeekCard key={week.plan.id} week={week} />
+              ))}
+              {request.text && <CoachLine text={request.text} face={coachFace(currentUser?.coachPersonality)} />}
+              <DrawerButton testId="review-reply" label={`Reply to ${coach.name}`} onClick={openChat} />
+            </>
+          );
         return (
           <>
             <DrawerHeader emoji={it.emoji} title={it.title} subtitle={plan?.goal} />

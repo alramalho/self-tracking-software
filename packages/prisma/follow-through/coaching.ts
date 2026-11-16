@@ -23,6 +23,8 @@ export interface CoachRequest {
   kind: "setup" | "review" | "difficulty" | "session" | "lapse" | "nudge" | "conversation";
   messageId?: string;
   chatId?: string;
+  /** What the coach said (the message's text), so a card can show it without opening the chat. */
+  text?: string;
   createdAt: string;
   requiresReply: boolean;
   reminderAt?: string;

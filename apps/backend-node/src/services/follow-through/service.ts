@@ -1,5 +1,6 @@
 import { FollowThroughInputError } from "./errors";
 import { randomUUID } from "node:crypto";
+import { prisma } from "../../utils/prisma";
 import type { User } from "@tsw/prisma";
 import type {
   FollowThroughSnapshot,
@@ -58,7 +59,32 @@ export async function snapshot(user: User): Promise<FollowThroughSnapshot> {
     reconcileEntries(state, await recentEntries(user.id, tx), now);
     updateSilence(state, now);
     return { state, canCoach: canCoach(user), serverTime: now.toISOString() };
+  }).then((result) => withRequestText(result, user.id));
+}
+
+/** Requests made before they stored the coach's text get it from their message, for the apps only. */
+async function withRequestText(result: FollowThroughSnapshot, userId: string): Promise<FollowThroughSnapshot> {
+  const open = (result.state.monitoring?.requests ?? []).filter(
+    (r) => !r.text && r.messageId && !r.resolvedAt && !r.closedAt,
+  );
+  if (!open.length) return result;
+  const messages = await prisma.message.findMany({
+    where: { id: { in: open.map((r) => r.messageId!) }, chat: { userId } },
+    select: { id: true, content: true },
   });
+  const text = new Map(messages.map((m) => [m.id, m.content.slice(0, 500)]));
+  return {
+    ...result,
+    state: {
+      ...result.state,
+      monitoring: {
+        ...result.state.monitoring!,
+        requests: result.state.monitoring!.requests.map((r) =>
+          !r.text && r.messageId && text.has(r.messageId) ? { ...r, text: text.get(r.messageId) } : r,
+        ),
+      },
+    },
+  };
 }
 export async function configure(user: User, support: PlanSupport) {
   return changeState(user.id, async (state, tx) => {

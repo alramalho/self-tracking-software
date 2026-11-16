@@ -57,6 +57,7 @@ export const generateObject = withAiConsent(withUsage("generateObject", ai.gener
 export const generateText = withAiConsent(withUsage("generateText", ai.generateText));
 export const evaluate = withAiConsent(ai.experimental_evaluate);
 export const Output = ai.Output;
+export const NoObjectGeneratedError = ai.NoObjectGeneratedError;
 // Loosely typed: some tool schemas don't match the SDK's zod typings yet.
 export const tool = ai.tool as any;
 export const ToolLoopAgent = class extends ai.ToolLoopAgent<any, any, any, any> {

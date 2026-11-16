@@ -18,6 +18,8 @@ export type CoachConversationMessage = {
   content: string;
   imageAttachments?: ImageAttachment[];
   healthDataAccess?: CoachHealthAccess[];
+  /** When it was sent (ISO). Set for the scheduled coach, which must not treat old news as today's. */
+  sentAt?: string;
 };
 
 export interface CoachHealthAccess {

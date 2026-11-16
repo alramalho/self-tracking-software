@@ -21,6 +21,22 @@ TZ=UTC node --import tsx scripts/coach-journeys/run.ts           # when
 TZ=UTC node --import tsx scripts/coach-journeys/run.ts --live    # when + what (~$0.02)
 ```
 
+## 16 Nov 2026
+
+The owner, Monday 16 Nov: "Your weekly review" on Home opened the chat at "Saw today's run came in short. Now
+you're back, when's your next session?" No review, and the trip had ended four days earlier.
+
+- **The review counts the week it reviews.** `reviewedWeek` (shared `reviewWeek`): a Sunday review covers the
+  week that just ended, so Sunday's own run no longer counts as last week, and the coach no longer asks what
+  fits "before the week ends". The opener may now give the result in a few words ("Three of four last week.").
+- **The conversation is dated** ("[2026-11-11 Wed, 4 days ago] them: …"), so old news isn't "now".
+- **The scheduled model sees its JSON schema.** DeepSeek has no structured outputs, so it guessed the shape
+  (`{"messages": […]}` for a nudge, no lists on a quiet review) and those runs failed and retried in production
+  too (3 of 3 on main for the quiet-review case). Missing empty plan-change lists are also filled in.
+- **Home and the Coach tab** open the review as a review: last week's days per plan, the coach's line, Reply.
+- New journey `owner-sunday-review`. When: 12/12. What: 22/23 live (the one failure, a review asking about
+  the whole week, led to the "ask about one session" line).
+
 ## 13 Nov 2026
 
 The owner, Friday 13 Nov: the "train 4 times a week is at risk" drawer, again, with 3 of 4 done and two days

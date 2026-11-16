@@ -94,7 +94,7 @@ export async function liveMessages(journey: Journey, result: SimResult) {
       plans: [plan as never],
       supports: { plan: { mode: "WEEKLY", weekdays: [], time: null, timezone: "UTC", coaching: { role: "consistency" } } } as never,
       entries: entries as never,
-      conversationHistory: g.history.filter((m) => m.content).map((m) => ({ role: m.role === "USER" ? "user" : "assistant", content: m.content })) as never,
+      conversationHistory: g.history.filter((m) => m.content).map((m) => ({ role: m.role === "USER" ? "user" : "assistant", content: m.content, sentAt: m.at })) as never,
       assumedMissedSessionIds: [],
       unansweredOutreaches: 0,
     };

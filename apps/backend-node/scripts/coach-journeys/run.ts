@@ -50,7 +50,9 @@ async function main() {
       const expect = journey.expect.messages?.find((m) => m.kind === message.kind);
       const rules = lv.scoreMessage(expect, message.text);
       const hour = message.kind === "nudge" ? 8 : 18;
-      const verdict = await lv.judge(`Today is ${dateOf(message.day)}, ${hour}:07. The coach reaches out on its own (${message.kind}). ${facts(journey, message.day, hour)}`, message.text);
+      // A Sunday review looks back on the week that just ended (Sunday to Saturday), not the one that began today.
+      const reviewed = message.kind === "review" ? ` This is the weekly review of the week ${dateOf(message.day - 7)} to ${dateOf(message.day - 1)}; logs on day ${message.day} or later belong to the new week.` : "";
+      const verdict = await lv.judge(`Today is ${dateOf(message.day)}, ${hour}:07. The coach reaches out on its own (${message.kind}).${reviewed} ${facts(journey, message.day, hour)}`, message.text);
       const failed = rules.length > 0 || !verdict.worthIt;
       texts++;
       if (failed) textsFailed++;

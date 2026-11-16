@@ -162,9 +162,12 @@ export async function monitorUser(user: User, now = new Date()) {
         plans: active,
         supports: initial.supports,
         entries: initial.entries,
-        conversationHistory: toCoachConversationHistory(
-          [...initial.messages].reverse().slice(-30),
-        ),
+        conversationHistory: [...initial.messages]
+          .reverse()
+          .slice(-30)
+          .flatMap((m) =>
+            toCoachConversationHistory([m]).map((h) => ({ ...h, sentAt: m.createdAt.toISOString() })),
+          ),
         assumedMissedSessionIds: initial.sessions
           .filter((s) => s.assumedMissed && s.id.startsWith("existing:"))
           .map((s) => s.id.slice("existing:".length)),
@@ -247,6 +250,7 @@ export async function monitorUser(user: User, now = new Date()) {
           });
         }
         let messageId = "";
+        let text = "";
         const requiresReply = result.draftMessages.some(
           (d) => d.requiresReply || d.planProposals?.length,
         );
@@ -279,6 +283,7 @@ export async function monitorUser(user: User, now = new Date()) {
             },
           });
           messageId = message.id;
+          text = draft.content;
         }
         await tx.chat.update({
           where: { id: chat.id },
@@ -294,6 +299,7 @@ export async function monitorUser(user: User, now = new Date()) {
           requiresReply,
           chatId: chat.id,
           messageId,
+          ...(text ? { text: text.slice(0, 500) } : {}),
           ...(result.agenda ? { agenda: result.agenda } : {}),
         });
         // Retain unresolved work; bound old completed review history.

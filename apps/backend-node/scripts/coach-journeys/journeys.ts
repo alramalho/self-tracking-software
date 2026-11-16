@@ -46,6 +46,33 @@ export const journeys: Journey[] = [
     },
   },
   {
+    id: "owner-sunday-review",
+    title: "Sunday review after a thin week, four days after 'just got back'",
+    why: "The owner's complaint (16 Nov): the 15 Nov review said \"Now you're back, when's your next session?\" about a trip that ended on Wednesday, and counted Sunday's run into the week it reviewed.",
+    source: "real",
+    days: 1,
+    plan: FOUR_A_WEEK,
+    // Three of four last week (Monday, Wednesday, Friday), then a short run on Sunday morning.
+    pastLogs: [6, 4, 2],
+    pastMessages: [
+      { daysBefore: 4, from: "USER", text: "I'm travelling." },
+      { daysBefore: 4, from: "COACH", text: "Travel can interrupt the rhythm. When are you back?" },
+      { daysBefore: 4, from: "USER", text: "Just got back today But I need to work." },
+      { daysBefore: 4, from: "COACH", text: "Back today, with work still waiting. I'll be looking for your next session." },
+    ],
+    events: [{ day: 0, at: "12:00", log: true }],
+    expect: {
+      maxPushes: 1,
+      pushes: [{ kind: "review", day: 0, fromHour: 18, toHour: 21 }],
+      messages: [
+        {
+          kind: "review",
+          never: [/now (that )?you'?re back|you'?re back now|just got back|back today/i, /before the week ends|rest of (the|this) week|left this week/i],
+        },
+      ],
+    },
+  },
+  {
     id: "on-track",
     title: "Doing the plan: four logs a week",
     why: "Most weeks for an engaged person. The coach should barely exist: one weekly review at most.",

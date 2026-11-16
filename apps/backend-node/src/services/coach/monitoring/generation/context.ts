@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { reviewWeek } from "@tsw/prisma/follow-through/coach-inbox";
 import type { ScheduledCoachInput } from "./types";
 
 function lastLog(input: ScheduledCoachInput, activityIds: string[]) {
@@ -11,6 +12,31 @@ function lastLog(input: ScheduledCoachInput, activityIds: string[]) {
   return {
     lastLoggedOn: formatInTimeZone(last, timezone, "yyyy-MM-dd"),
     daysSinceLastLog: Math.round((day(input.now) - day(last)) / 86_400_000),
+  };
+}
+
+function sentOn(input: ScheduledCoachInput, sentAt: string) {
+  const timezone = input.user.timezone || "UTC";
+  const day = (d: Date) => Date.parse(formatInTimeZone(d, timezone, "yyyy-MM-dd"));
+  const daysAgo = Math.round((day(input.now) - day(new Date(sentAt))) / 86_400_000);
+  // "[2026-11-11 Wed, 4 days ago]": plain text, so the model reads it as a date, not a shape to copy.
+  return `[${formatInTimeZone(new Date(sentAt), timezone, "yyyy-MM-dd EEE")}, ${daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`}]`;
+}
+
+function reviewedWeek(input: ScheduledCoachInput, plan: ScheduledCoachInput["plans"][number]) {
+  const week = reviewWeek(
+    { ...plan, createdAt: plan.createdAt ?? input.now },
+    input.entries,
+    input.now,
+    { now: input.now, timezone: input.user.timezone || "UTC" },
+  );
+  return {
+    from: week.days[0].key,
+    to: week.days[6].key,
+    isCurrentWeek: week.current,
+    target: week.target,
+    daysLogged: week.done,
+    loggedOn: week.days.filter((d) => d.logged).map((d) => d.key),
   };
 }
 
@@ -46,6 +72,10 @@ export function scheduledCoachSnapshot(
       timesPerWeek: p.timesPerWeek,
       // Counted here, not by the model: it miscounted "days since" in the 13 Nov journeys benchmark.
       ...lastLog(input, p.activities.map((a) => a.id)),
+      // A weekly review looks back on one plan week, counted here. On a Sunday that is the week that just
+      // ended: the 15 Nov review mixed the new week's first day into "this week" and asked what fits "before
+      // the week ends" on its first evening.
+      ...(input.decision.kind === "review" ? { reviewedWeek: reviewedWeek(input, p) } : {}),
       availability: {
         mode: input.supports[p.id]?.mode,
         weekdays: input.supports[p.id]?.weekdays,
@@ -92,9 +122,10 @@ export function scheduledCoachSnapshot(
         difficulty: e.difficulty,
         note: e.privateNotes,
       })),
+    // Dated, so something said days ago isn't news today ("Now you're back" four days after the trip).
     recentConversation: input.conversationHistory
       .slice(-12)
-      .map((m) => ({ role: m.role, content: m.content })),
+      .map((m) => `${m.sentAt ? `${sentOn(input, m.sentAt)} ` : ""}${m.role === "user" ? "them" : m.role === "assistant" ? "coach" : "app"}: ${m.content}`),
     unansweredOutreaches: input.unansweredOutreaches,
     selectedFeedback: input.entries.find((e) => e.id === input.decision.entryId)
       ? {

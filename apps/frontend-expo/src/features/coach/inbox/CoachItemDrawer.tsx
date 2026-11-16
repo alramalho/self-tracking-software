@@ -10,12 +10,16 @@ import { latestCoachChat } from "@/features/messages/service";
 import { MISS_REASONS } from "@/features/timeline/home-cards/miss-reasons";
 import type { TalkReason } from "../talk/types";
 import { alertFact } from "../model";
+import { coachAvatar } from "../avatar";
+import { CoachLine, ReviewWeekCard, reviewRange } from "./WeeklyReview";
 import type { CoachChatOpening, CoachItem, CoachItemDrawerProps } from "../types";
 
 /** One coach item, opened: a centered title and one fact, the answers as options, one main button. */
 export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerProps) {
   const client = useQueryClient();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const personality = useCurrentUser().data?.coachPersonality;
+  const coach = coachIdentity(personality);
+  const strategist = personality === "STRATEGIST";
   const done = async () => {
     await client.invalidateQueries();
     onClose();
@@ -92,6 +96,24 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
       case "request": {
         const { request, plan } = it;
         const sessionId = request.kind === "session" ? request.sessionId : undefined;
+        // A weekly review is a review: the week it looks back on, what the coach said, and a way to answer.
+        if (it.weeks?.length)
+          return (
+            <>
+              <DrawerHeader title={it.title} subtitle={`${it.weeks[0].current ? "This week" : "Last week"} · ${reviewRange(it.weeks[0])}`} />
+              {it.weeks.map((week) => (
+                <ReviewWeekCard key={week.plan.id} week={week} />
+              ))}
+              {!!request.text && <CoachLine text={request.text} avatar={coachAvatar(strategist)} />}
+              {request.chatId && request.messageId ? (
+                <DrawerButton
+                  testID="review-reply"
+                  label={`Reply to ${coach.name}`}
+                  onPress={() => openChat(request.chatId!, request.messageId!, plan?.id)}
+                />
+              ) : null}
+            </>
+          );
         return (
           <>
             <DrawerHeader emoji={it.emoji} title={it.title} subtitle={plan?.goal} />

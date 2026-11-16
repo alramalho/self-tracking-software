@@ -104,7 +104,7 @@ export interface SimResult {
   alertDays: number[];
   talks: TalkRecord[];
   /** Proactive messages that need generated text in the live layer. */
-  generated: { day: number; kind: string; decision: unknown; history: { role: string; content: string }[] }[];
+  generated: { day: number; kind: string; decision: unknown; history: { role: string; content: string; at?: string }[] }[];
 }
 
 /** Coach screens for the deterministic layer, one per answer; the live layer replaces this. */
@@ -318,7 +318,7 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
       const push = decision.kind !== "nudge";
       touches.push({ at: now.toISOString(), day, kind: decision.kind, push });
       if (decision.kind !== "reminder" && decision.kind !== "session")
-        generated.push({ day, kind: decision.kind, decision, history: messages.filter((m) => m.createdAt <= now).slice(-12).map((m) => ({ role: m.role, content: m.content })) });
+        generated.push({ day, kind: decision.kind, decision, history: messages.filter((m) => m.createdAt <= now).slice(-12).map((m) => ({ role: m.role, content: m.content, at: m.createdAt.toISOString() })) });
       commitDecision(state, decision, now, messages);
     }
 
