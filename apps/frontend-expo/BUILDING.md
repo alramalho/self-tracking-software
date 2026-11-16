@@ -51,6 +51,13 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 269 — the coach lives on the Coach tab, November 16, 2026
+
+- **No weekly review and no coach card on Home** (owner: nobody asked for it; coach interactions belong on the Coach tab). Main `5556789f`: review messages and weekly checks are never scheduled, the switches are gone from plan settings, onboarding and paywall, Home's coach note is deleted. Backend `no-weekly-review-20261116` (on `weekly-review-20261116`, which added the dated history and schema-in-prompt fixes). Build 268 went to a build stopped mid-way (it had a review drawer that was then removed).
+- **Checks:** Expo typecheck; unit tests (2 heart-rate failures unrelated); Home, coach, onboarding and plan-assistance Playwright specs (3 plan-assistance failures also fail on main before this); backend tests 98/98; coach journeys 12/12. Not run on a phone.
+- **Built** with `pnpm build:testflight .release/testflight-main-5556789f/tracking.so.ipa`. IPA SHA-256 `200918bd8b069a19a46b76d6d32bde14c209cf7d4f9aeb7a25bd91973db31994`; the bundle has no `home-coach-note`.
+- **Apple:** validated and uploaded (delivery `08979ec0-4526-45a0-bdc1-234e1514bb3e`); VALID; What to Test written; internal and `Friends & Family` `IN_BETA_TESTING`, beta review submitted.
+
 ## TestFlight build 267 — delete and save close at once, November 15, 2026
 
 - **Delete Entry spun for seconds.** The server deletes in three small queries, but every `useAction` waited for `invalidateQueries()` to refetch every loaded query (plan progress recomputed, since the delete clears it) before the spinner stopped. Main `6b7ab61f` refreshes in the background, so delete, save and the other 36 actions finish when the server answers; account switching and adding an account still wait (`waitForRefresh`).
