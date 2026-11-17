@@ -152,7 +152,7 @@ const PlanUpsertSchema = z.object({
   suggestedByCoachAt: z.date().nullable().optional(),
   coachSuggestedTimesPerWeek: z.number().positive().nullable().optional(),
   deletedAt: z.iso.datetime().nullable().optional(),
-  visibility: z.enum(["PUBLIC", "PRIVATE", "FRIENDS"]).optional(),
+  visibility: z.enum(["PUBLIC", "PRIVATE", "FRIENDS", "LOGS_ONLY"]).optional(),
   backgroundImageUrl: z.string().url().nullable().optional(),
   progressState: z.any().nullable().optional(),
 });

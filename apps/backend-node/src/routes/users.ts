@@ -1,4 +1,5 @@
 import { getWrappedLeaderboard } from "../services/wrapped/service";
+import { loadHiddenActivityIds, planShownToOthers } from "../services/plan-visibility/visibility";
 import { yearBounds } from "../services/wrapped/model";
 import { addPeopleActivity } from "../services/people/activity";
 import { rankPeople } from "../services/people/rank";
@@ -862,6 +863,16 @@ usersRouter.post(
 
       const hidden = await blockedUserIds(req.user!.id);
       const visibleComments = { deletedAt: null, userId: { notIn: hidden } };
+      // Someone else's profile leaves out logs that only hidden plans hold.
+      const target = await prisma.user.findFirst({
+        where: { deletedAt: null, OR: orConditions },
+        select: { id: true },
+      });
+      const isOwnProfile = target?.id === req.user!.id;
+      const hiddenActivities =
+        target && !isOwnProfile
+          ? [...(await loadHiddenActivityIds([target.id]))]
+          : [];
       const user = await prisma.user.findFirst({
         where: {
           deletedAt: null,
@@ -885,12 +896,12 @@ usersRouter.post(
             orderBy: PLAN_DISPLAY_ORDER_BY,
           },
           activities: {
-            where: { deletedAt: null },
+            where: { deletedAt: null, id: { notIn: hiddenActivities } },
           },
           activityEntries: {
             where: {
               deletedAt: null,
-              activityId: { not: null },
+              activityId: { not: null, notIn: hiddenActivities },
               activity: { deletedAt: null },
             },
             orderBy: [{ datetime: "desc" }, { id: "desc" }],
@@ -1000,7 +1011,7 @@ usersRouter.post(
         where: {
           userId: user.id,
           deletedAt: null,
-          activityId: { not: null },
+          activityId: { not: null, notIn: hiddenActivities },
           activity: { deletedAt: null },
         },
         orderBy: { datetime: "desc" },
@@ -1008,10 +1019,9 @@ usersRouter.post(
         select: { id: true, userId: true, activityId: true, datetime: true, quantity: true },
       });
 
-      // If viewing another user's profile, filter out private plans
-      const isOwnProfile = user.id === req.user!.id;
+      // Hidden plans (with or without their logs) never show on someone else's profile.
       if (!isOwnProfile) {
-        user.plans = user.plans.filter((plan) => plan.visibility !== "PRIVATE");
+        user.plans = user.plans.filter((plan) => planShownToOthers(plan.visibility));
       }
 
       // Batch load progress for all user's plans
@@ -1184,22 +1194,9 @@ usersRouter.get(
       ];
       const allUsers = [user, ...connections, ...circleOnlyPeers];
 
-      // Build sets of activity IDs in plans
-      const activityIdsInPublicPlans = new Set<string>();
-      const activityIdsInAnyPlan = new Set<string>();
+      // Logs show unless every plan holding the activity hides them (circles aside).
+      const hiddenActivities = await loadHiddenActivityIds([...friendIds]);
 
-      allUsers.forEach((u) => {
-        u.plans?.forEach((plan: any) => {
-          plan.activities?.forEach((activity: { id: string }) => {
-            activityIdsInAnyPlan.add(activity.id);
-            if (plan.visibility === "PUBLIC") {
-              activityIdsInPublicPlans.add(activity.id);
-            }
-          });
-        });
-      });
-
-      // Get all activities for these users
       const allActivities = await prisma.activity.findMany({
         where: {
           userId: { in: userIds },
@@ -1208,40 +1205,26 @@ usersRouter.get(
         select: { id: true, userId: true },
       });
 
-      // Determine which activity IDs to include:
-      // - Activities in at least one PUBLIC plan, OR
-      // - Activities not in any plan
       const visibleWithoutCircles = new Set(
         allActivities
           .filter(
             (activity) =>
-              friendIds.has(activity.userId) &&
-              (activityIdsInPublicPlans.has(activity.id) ||
-                !activityIdsInAnyPlan.has(activity.id))
+              friendIds.has(activity.userId) && !hiddenActivities.has(activity.id)
           )
           .map((activity) => activity.id)
       );
       const validActivityIds = allActivities
-        .filter((activity) => {
-          if (circles.sharedSince.has(activity.id)) return true;
-          if (!friendIds.has(activity.userId)) return false;
-          if (activityIdsInPublicPlans.has(activity.id)) {
-            // If activity is in at least one PUBLIC plan, include it
-            return true;
-          }
-          // If activity is not in any plan, include it
-          if (!activityIdsInAnyPlan.has(activity.id)) {
-            return true;
-          }
-          // Otherwise, exclude (it's only in non-PUBLIC plans)
-          return false;
-        })
+        .filter(
+          (activity) =>
+            visibleWithoutCircles.has(activity.id) ||
+            circles.sharedSince.has(activity.id)
+        )
         .map((a) => a.id);
 
-      // Get public plan IDs for connected users
+      // Achievements name their plan, so they need a plan others may see.
       const publicPlanIds = allUsers.flatMap(
         (u) =>
-          u.plans?.filter((p) => p.visibility === "PUBLIC").map((p) => p.id) ||
+          u.plans?.filter((p) => planShownToOthers(p.visibility)).map((p) => p.id) ||
           []
       );
 

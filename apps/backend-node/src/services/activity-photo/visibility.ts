@@ -1,22 +1,23 @@
+import { logsShownToOthers } from "../plan-visibility/visibility";
 import { getActivityEntryImageUrls } from "../../utils/activityEntryImages";
 import { prisma } from "../../utils/prisma";
 
+// Same rule as the feed: hidden only when every plan holding the activity hides its logs.
 export async function isPhotoActivityVisibleToConnections(
   ownerId: string,
   activityId: string,
-  now: Date,
+  _now: Date,
 ): Promise<boolean> {
   const plans = await prisma.plan.findMany({
     where: {
       userId: ownerId,
       deletedAt: null,
-      OR: [{ finishingDate: { gt: now } }, { finishingDate: null }],
       activities: { some: { id: activityId } },
     },
     select: { visibility: true },
   });
   return (
-    plans.length === 0 || plans.some((plan) => plan.visibility === "PUBLIC")
+    plans.length === 0 || plans.some((plan) => logsShownToOthers(plan.visibility))
   );
 }
 

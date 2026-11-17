@@ -6,19 +6,15 @@ import { randomUUID } from "expo-crypto";
 import {
   Calendar,
   CalendarCheck,
-  Check,
   ChevronLeft,
   Dumbbell,
-  Earth,
   Eye,
   Flag,
   Goal,
   ImageIcon,
-  Lock,
   Plus,
   Route,
   Smile,
-  Users,
   X,
 } from "lucide-react-native";
 import {
@@ -36,66 +32,20 @@ import { useColors } from "@/components/theme";
 import { useAction, useActivities } from "@/data/queries";
 import { api } from "@/data/api";
 import { dateLabel, dayKey, parseLocalDate } from "@/core/dates";
-import type { Activity, PlanSession } from "@/core/types";
+import type { Activity, Plan, PlanSession } from "@/core/types";
 import { ActivityEditor } from "../activities/ActivityEditor";
 import { DateField } from "@/components/DateField";
 import { MilestoneFields } from "./MilestoneFields";
 import { PlanBackground } from "./PlanBackground";
 import { PlanEditorOverview } from "./PlanEditorOverview";
+import { ChoiceRow } from "./ChoiceRow";
+import { PlanVisibilityChoices } from "./visibility/PlanVisibility";
+import { visibilityLabel } from "./visibility/model";
 import type {
   DraftMilestone,
-  PlanEditorChoiceProps,
   PlanEditorProps,
   PlanEditorSection,
 } from "./types";
-
-function ChoiceRow({
-  label,
-  description,
-  icon: Icon,
-  selected,
-  onPress,
-}: PlanEditorChoiceProps) {
-  const c = useColors();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        padding: 14,
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: selected ? c.selectedBorder : c.border,
-        backgroundColor: selected ? c.selectedBg : c.card,
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      {Icon ? (
-        <Icon
-          size={23}
-          color={selected ? c.accent : c.muted}
-          strokeWidth={1.8}
-        />
-      ) : null}
-      <View style={{ flex: 1, gap: description ? 4 : 0 }}>
-        <Text style={{ color: c.text, fontSize: 16, fontWeight: "600" }}>
-          {label}
-        </Text>
-        {description ? (
-          <Text style={{ color: c.muted, fontSize: 13, lineHeight: 18 }}>
-            {description}
-          </Text>
-        ) : null}
-      </View>
-      {selected ? <Check size={20} color={c.accent} strokeWidth={2.3} /> : null}
-    </Pressable>
-  );
-}
 
 function AddRow({ label, onPress }: { label: string; onPress: () => void }) {
   const c = useColors();
@@ -137,7 +87,9 @@ export function PlanEditor({ plan }: PlanEditorProps) {
   const [duration, setDuration] = useState(plan?.durationType ?? "LIFESTYLE");
   const [outline, setOutline] = useState(plan?.outlineType ?? "TIMES_PER_WEEK");
   const [times, setTimes] = useState(String(plan?.timesPerWeek ?? 3));
-  const [visibility, setVisibility] = useState(plan?.visibility ?? "PUBLIC");
+  const [visibility, setVisibility] = useState<Plan["visibility"]>(
+    plan?.visibility ?? "PUBLIC",
+  );
   const [finish, setFinish] = useState(
     plan?.finishingDate ? dayKey(plan.finishingDate) : "",
   );
@@ -403,29 +355,17 @@ export function PlanEditor({ plan }: PlanEditorProps) {
           setMilestonesChanged(true);
         }}
       />
-      <Heading>Visibility</Heading>
-      {(["PUBLIC", "FRIENDS", "PRIVATE"] as const).map((value) => (
-        <Button
-          key={value}
-          secondary={visibility !== value}
-          onPress={() => setVisibility(value)}
-        >
-          {value === "PUBLIC"
-            ? "Public"
-            : value === "FRIENDS"
-              ? "Friends"
-              : "Private"}
-        </Button>
-      ))}
+      <Heading>Who sees this plan?</Heading>
+      <PlanVisibilityChoices
+        value={visibility}
+        onChange={setVisibility}
+        activityIds={selected}
+        planId={plan?.id}
+      />
     </View>,
   ];
 
   if (plan) {
-    const visibilityLabels = {
-      PUBLIC: "Public",
-      FRIENDS: "Friends only",
-      PRIVATE: "Private",
-    } as const;
     const sectionTitles: Record<PlanEditorSection, string> = {
       overview: "Edit Plan",
       goal: "Goal",
@@ -466,7 +406,7 @@ export function PlanEditor({ plan }: PlanEditorProps) {
       },
       {
         label: "Visibility",
-        value: visibilityLabels[visibility],
+        value: visibilityLabel(visibility),
         icon: Eye,
         onPress: () => setEditSection("visibility"),
       },
@@ -672,28 +612,12 @@ export function PlanEditor({ plan }: PlanEditorProps) {
         case "visibility":
           return (
             <View style={{ gap: 14 }}>
-              <Heading>Who can see this plan?</Heading>
-              <Copy muted>Control who can view your plan and progress.</Copy>
-              <ChoiceRow
-                icon={Earth}
-                label="Public"
-                description="Everyone can see this plan, including activity entries."
-                selected={visibility === "PUBLIC"}
-                onPress={() => setVisibility("PUBLIC")}
-              />
-              <ChoiceRow
-                icon={Users}
-                label="Friends only"
-                description="Only your connections can see this plan and entries."
-                selected={visibility === "FRIENDS"}
-                onPress={() => setVisibility("FRIENDS")}
-              />
-              <ChoiceRow
-                icon={Lock}
-                label="Private"
-                description="Only you can see this plan."
-                selected={visibility === "PRIVATE"}
-                onPress={() => setVisibility("PRIVATE")}
+              <Heading>Who sees this plan?</Heading>
+              <PlanVisibilityChoices
+                value={visibility}
+                onChange={setVisibility}
+                activityIds={selected}
+                planId={plan?.id}
               />
               <SectionFooter onDone={finishEdit} />
             </View>

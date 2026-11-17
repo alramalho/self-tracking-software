@@ -17,6 +17,8 @@ export const draftSchema = z.object({
       wantsAge: z.boolean(),
     })
     .optional(),
+  // Who sees the plan, chosen on the plan review when creating a plan; onboarding leaves it unset.
+  visibility: z.enum(["PUBLIC", "LOGS_ONLY", "PRIVATE"]).optional(),
   id: z.string().uuid(),
   // Goals may come from dictation and can include context. Keep the same
   // bounded input size as interview answers rather than truncating a natural

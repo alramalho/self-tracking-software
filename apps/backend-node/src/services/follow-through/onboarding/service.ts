@@ -164,7 +164,7 @@ export async function finishOnboarding(
           : undefined,
         designedThrough: lastDesigned ? new Date(`${lastDesigned}T12:00:00Z`) : null,
         confidence: design?.confidence ? (design.confidence as unknown as Prisma.InputJsonValue) : undefined,
-        visibility: "PRIVATE",
+        visibility: draft.visibility ?? "PRIVATE",
         notes: [
           draft.resourceName
             ? `Resource: ${draft.resourceName}${draft.resourceUrl ? ` (${draft.resourceUrl})` : ""}`

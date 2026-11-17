@@ -182,7 +182,12 @@ export interface OnboardingDraft {
   step: string;
   createdPlanId: string | null;
   preferences?: SupportPreferences;
+  // Who sees the plan; set when creating a plan, unset in onboarding (saved as PRIVATE).
+  visibility?: PlanVisibilityChoice;
 }
+
+// PUBLIC: plan and logs. LOGS_ONLY: logs without the plan. PRIVATE: neither.
+export type PlanVisibilityChoice = "PUBLIC" | "LOGS_ONLY" | "PRIVATE";
 /** "other" when they explained in their own words in Talk to coach. */
 export type MissReasonId = "busy" | "sick" | "travel" | "motivation" | "other";
 /** The answer to "What got in the way?" for a missed week, and the days picked to make this week work. */

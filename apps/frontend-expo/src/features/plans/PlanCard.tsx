@@ -42,6 +42,13 @@ export function PlanCard({
     : plan.progress?.habitAchievement?.isAchieved
       ? "#84cc16"
       : undefined;
+  // Only you see this label: others never get a hidden plan.
+  const hidden =
+    plan.visibility === "PRIVATE"
+      ? "Hidden"
+      : plan.visibility === "LOGS_ONLY"
+        ? "Plan hidden"
+        : null;
   const cadence = [
     plan.outlineType === "TIMES_PER_WEEK" ? `${plan.timesPerWeek} times per week` : "Custom plan",
     detail && plan.finishingDate ? `until ${dateLabel(plan.finishingDate)}` : null,
@@ -105,7 +112,7 @@ export function PlanCard({
           <Text style={{ fontSize: detail ? 24 : 18, fontWeight: "600", color: c.text }}>
             {plan.goal}
           </Text>
-          {(achievedColor || plan.visibility === "PRIVATE") && (
+          {(achievedColor || hidden) && (
             <View style={[s.row, { flexWrap: "wrap", gap: 6 }]}>
               {achievedColor && (
                 <View
@@ -129,7 +136,7 @@ export function PlanCard({
                   </Text>
                 </View>
               )}
-              {plan.visibility === "PRIVATE" && <Copy muted>Private</Copy>}
+              {hidden && <Copy muted>{hidden}</Copy>}
             </View>
           )}
           <Copy muted>{cadence}</Copy>

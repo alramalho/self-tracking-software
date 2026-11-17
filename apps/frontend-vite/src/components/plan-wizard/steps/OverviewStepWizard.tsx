@@ -137,8 +137,9 @@ const OverviewStepWizard = () => {
   const isCreating = isSaving || isUpsertingPlan;
 
   const visibilityLabels: Record<string, string> = {
-    PUBLIC: "Public",
-    PRIVATE: "Private",
+    PUBLIC: "Everyone",
+    LOGS_ONLY: "Hide the plan",
+    PRIVATE: "Hide everything",
     FRIENDS: "Friends only",
   };
 

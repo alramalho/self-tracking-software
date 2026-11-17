@@ -1,8 +1,7 @@
 import { usePlanCreation } from "@/contexts/plan-creation";
 import { withFadeUpAnimation } from "@/contexts/plan-creation/lib";
 import { Button } from "@/components/ui/button";
-import { type Visibility } from "@tsw/prisma";
-import { Earth, Lock, Users, Eye } from "lucide-react";
+import { Earth, Lock, EyeOff, Eye } from "lucide-react";
 
 const VisibilityOption = ({
   icon: Icon,
@@ -53,31 +52,31 @@ const VisibilityStepWizard = () => {
           </h2>
         </div>
         <p className="text-md text-muted-foreground">
-          Control who can view your plan and progress
+          Choose what your profile and friends' feeds show
         </p>
       </div>
 
       <div className="space-y-3 px-2">
         <VisibilityOption
           icon={Earth}
-          title="Public"
-          description="Everyone can see this plan, including activity entries"
-          isSelected={visibility === "PUBLIC"}
+          title="Everyone"
+          description="Your profile shows this plan and its logs."
+          isSelected={visibility === "PUBLIC" || visibility === "FRIENDS"}
           onSelect={() => setVisibility("PUBLIC")}
         />
 
         <VisibilityOption
-          icon={Users}
-          title="Friends Only"
-          description="Only your connections can see this plan and activity entries"
-          isSelected={visibility === "FRIENDS"}
-          onSelect={() => setVisibility("FRIENDS")}
+          icon={EyeOff}
+          title="Hide the plan"
+          description="Your logs still show, without the plan."
+          isSelected={visibility === "LOGS_ONLY"}
+          onSelect={() => setVisibility("LOGS_ONLY")}
         />
 
         <VisibilityOption
           icon={Lock}
-          title="Private"
-          description="Only you can see this plan. It won't appear on your profile to others"
+          title="Hide everything"
+          description="Only you see this plan and its logs. A log also in a visible plan still shows."
           isSelected={visibility === "PRIVATE"}
           onSelect={() => setVisibility("PRIVATE")}
         />

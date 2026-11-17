@@ -14,6 +14,8 @@ const art: Record<Exclude<OnboardingArtName, "welcome" | "goal">, OnboardingArtS
   circle: { still: require("../../../../assets/onboarding/circle.png") },
   match: { still: require("../../../../assets/onboarding/match.png") },
   review: { still: require("../../../../assets/onboarding/plan.png") },
+  // A clay padlock for "Who sees this plan?".
+  privacy: { still: require("../../../../assets/onboarding/privacy.png") },
   // A clay "?" for the questions the coach writes itself.
   question: { still: require("../../../../assets/onboarding/question.png") },
 };

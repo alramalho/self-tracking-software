@@ -146,7 +146,7 @@ export interface Plan {
   finishingDate?: DateValue | null;
   archivedAt?: DateValue | null;
   deletedAt?: DateValue | null;
-  visibility?: "PUBLIC" | "PRIVATE" | "FRIENDS";
+  visibility?: "PUBLIC" | "PRIVATE" | "FRIENDS" | "LOGS_ONLY";
   backgroundImageUrl?: string | null;
   isPaused?: boolean;
   pauseReason?: string | null;

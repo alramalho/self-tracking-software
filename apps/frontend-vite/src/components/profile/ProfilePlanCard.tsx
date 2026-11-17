@@ -147,9 +147,9 @@ export function ProfilePlanCard({
                   </div>
                 </h3>
 
-                {plan.visibility === "PRIVATE" && isOwnProfile && (
+                {(plan.visibility === "PRIVATE" || plan.visibility === "LOGS_ONLY") && isOwnProfile && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
-                    Private
+                    {plan.visibility === "PRIVATE" ? "Hidden" : "Plan hidden"}
                   </span>
                 )}
               </div>

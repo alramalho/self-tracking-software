@@ -84,7 +84,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-5xl leading-none">{plan.emoji}</span>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <h2 className="text-2xl font-semibold leading-tight">{plan.goal}</h2>
-          {(lifestyle || habit || plan.visibility === "PRIVATE") && (
+          {(lifestyle || habit || plan.visibility === "PRIVATE" || plan.visibility === "LOGS_ONLY") && (
             <div className="flex flex-wrap items-center gap-1.5">
               {(lifestyle || habit) && (
                 <span
@@ -98,7 +98,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   {lifestyle ? "Lifestyle" : "Habit"}
                 </span>
               )}
-              {plan.visibility === "PRIVATE" && <span className="text-sm text-muted-foreground">Private</span>}
+              {(plan.visibility === "PRIVATE" || plan.visibility === "LOGS_ONLY") && <span className="text-sm text-muted-foreground">{plan.visibility === "PRIVATE" ? "Hidden" : "Plan hidden"}</span>}
             </div>
           )}
           <p className="text-sm text-muted-foreground">{cadence}</p>

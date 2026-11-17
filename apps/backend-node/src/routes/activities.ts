@@ -1,4 +1,5 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
+import { loadHiddenActivityIds } from "../services/plan-visibility/visibility";
 import { requireAiConsent } from "../utils/aiConsent";
 import { listActivitiesByUsage } from "@/services/activities/list";
 import { findDuplicateActivity } from "@/services/activities/duplicates";
@@ -203,44 +204,15 @@ async function getVisibleActivityIdsForUsers(
   userIds: string[]
 ): Promise<Set<string>> {
   if (!userIds.length) return new Set();
-
-  const [activities, publicPlans] = await Promise.all([
+  const [activities, hidden] = await Promise.all([
     prisma.activity.findMany({
       where: { userId: { in: userIds }, deletedAt: null },
       select: { id: true },
     }),
-    prisma.plan.findMany({
-      where: {
-        userId: { in: userIds },
-        deletedAt: null,
-        visibility: "PUBLIC",
-      },
-      select: { activities: { select: { id: true } } },
-    }),
+    loadHiddenActivityIds(userIds),
   ]);
-
-  const publicActivityIds = new Set<string>();
-  publicPlans.forEach((plan) => {
-    plan.activities.forEach((activity) => publicActivityIds.add(activity.id));
-  });
-
-  const plannedActivityIds = new Set<string>();
-  const allPlans = await prisma.plan.findMany({
-    where: { userId: { in: userIds }, deletedAt: null },
-    select: { activities: { select: { id: true } } },
-  });
-  allPlans.forEach((plan) => {
-    plan.activities.forEach((activity) => plannedActivityIds.add(activity.id));
-  });
-
   return new Set(
-    activities
-      .filter(
-        (activity) =>
-          publicActivityIds.has(activity.id) ||
-          !plannedActivityIds.has(activity.id)
-      )
-      .map((activity) => activity.id)
+    activities.map((activity) => activity.id).filter((id) => !hidden.has(id))
   );
 }
 

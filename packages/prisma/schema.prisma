@@ -1279,8 +1279,9 @@ enum ThemeMode {
 
 enum Visibility {
   PUBLIC
-  PRIVATE
+  PRIVATE // the plan and its logs are hidden
   FRIENDS
+  LOGS_ONLY // the plan is hidden, its logs still show
 
   @@schema("public")
 }

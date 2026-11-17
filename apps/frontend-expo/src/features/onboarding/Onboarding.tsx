@@ -25,7 +25,7 @@ import { defaultPreferences } from "@/features/circles/api";
 import { approximateLocation } from "@/features/circles/location";
 import { setPendingMatch } from "@/features/circles/pendingMatch";
 import type { MatchPreferences, PendingMatch } from "@/features/circles/types";
-import { useCurrentUser } from "@/data/queries";
+import { useActivities, useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
 import type { User } from "@/core/types";
 import { goBack } from "@/core/navigation";
@@ -55,6 +55,8 @@ import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
 import { CoachingTour } from "./CoachingTour";
 import { PlanConclusion } from "./PlanConclusion";
+import { PlanVisibilityChoices } from "@/features/plans/visibility/PlanVisibility";
+import type { PlanVisibilityChoice } from "@/features/plans/visibility/types";
 import { Paywall, paywallCta, price } from "./Paywall";
 import { appleBilling, buyApplePlan, loadApplePlans, restoreApplePurchases } from "@/features/billing/apple";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
@@ -110,6 +112,7 @@ export default function Onboarding({
   const access = useAccessChecklist();
   const garminConnected = !!useHealth().garmin.status?.connected;
   const transcriptionFeedback = useTranscriptionFeedback();
+  const activities = useActivities(flow === "create");
   const [draft, setDraft] = useState(() => ({
     ...newDraft(randomUUID()),
     ...(initialGoal?.trim() ? { goal: initialGoal.trim() } : {}),
@@ -117,6 +120,14 @@ export default function Onboarding({
   const [state, setState] = useState<InterviewState>(() =>
     startInterview(draft),
   );
+  // The activity the new plan will use, if it already exists (the server matches by title too).
+  const planActivityIds = (activities.data ?? [])
+    .filter((a) =>
+      draft.activityId
+        ? a.id === draft.activityId
+        : a.title.toLowerCase() === draft.activityTitle.trim().toLowerCase() && a.measure === draft.measure,
+    )
+    .map((a) => a.id);
   const [answer, setAnswer] = useState(initialGoal?.trim() ?? "");
   const [weeklyFrequency, setWeeklyFrequency] = useState(draft.frequency);
   const [candidate, setCandidate] = useState<InterviewResult>();
@@ -137,6 +148,8 @@ export default function Onboarding({
   const loggedBaseline = useRef<DesignBaseline | null>(null);
   // Non-null while on "Match me by", after choosing "Find me a circle".
   const [circlePrefs, setCirclePrefs] = useState<MatchPreferences | null>(null);
+  // "Who sees this plan?" when creating a plan in the app; onboarding plans skip it.
+  const [visibilityPick, setVisibilityPick] = useState<PlanVisibilityChoice>("PUBLIC");
   const [locating, setLocating] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
   const circleLocation = useRef<PendingMatch["location"] | null>(null);
@@ -375,6 +388,9 @@ export default function Onboarding({
     await persist({ ...draft, circle });
     setCirclePrefs(null);
   }
+  async function chooseVisibility() {
+    await persist({ ...draft, visibility: visibilityPick });
+  }
   // Nearby needs a rough location; without it we fall back to time zones.
   async function changeCirclePrefs(next: MatchPreferences) {
     setCirclePrefs(next);
@@ -542,6 +558,8 @@ export default function Onboarding({
             {
               draft: {
                 ...draft,
+                // A new plan from the Plans tab defaults to public; onboarding plans stay private.
+                visibility: flow === "create" ? (draft.visibility ?? "PUBLIC") : draft.visibility,
                 awaitingUpgrade: false,
                 coaching: coaching ? draft.coaching : initialCoaching(),
                 wantsCoaching: coaching,
@@ -793,6 +811,11 @@ export default function Onboarding({
     setValidationReady(false);
     gate.reset();
     accept.reset();
+    if (rating && flow === "create") {
+      await persist({ ...draft, visibility: undefined, step: "interview" });
+      setRating(false);
+      return;
+    }
     if (rating) {
       await persist({ ...draft, circle: undefined, step: "interview" });
       setRating(false);
@@ -824,6 +847,10 @@ export default function Onboarding({
       upgradeIntent.current = false;
       setAwaitingUpgrade(false);
       setPaywall(false);
+      return;
+    }
+    if (!validation && tourStep === null && state.stage === "review" && draft.circle && draft.visibility && flow === "create") {
+      await persist({ ...draft, visibility: undefined });
       return;
     }
     if (!validation && tourStep === null && state.stage === "review" && draft.circle) {
@@ -913,6 +940,17 @@ export default function Onboarding({
     !finished &&
     !validation &&
     !gate.isPending;
+  // Right after the circle, before the confidence dial or the plan review.
+  const askingVisibility =
+    flow === "create" &&
+    state.stage === "review" &&
+    !!draft.circle &&
+    !draft.visibility &&
+    tourStep === null &&
+    !paywall &&
+    !finished &&
+    !validation &&
+    !gate.isPending;
   // One line from the first question to the paywall: 4 questions, 3 coach steps,
   // 2 circle steps, the plan, the paywall.
   const questions: InterviewStage[] = ["goal", "baseline", "motivation", "rhythm"];
@@ -924,11 +962,15 @@ export default function Onboarding({
       ? { current: 12, total: 12, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
       : tourStep !== null
         ? { current: 7 + tourStep, total: 12, label: "Your coach" }
-        : { current: circlePrefs ? 11 : 10, total: 12, label: "Your circle" }
+        : askingVisibility
+          ? { current: 11, total: 12, label: "Who sees it" }
+          : { current: circlePrefs ? 11 : 10, total: 12, label: "Your circle" }
     : paywall
     ? { current: 11, total: 11, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
     : tourStep !== null || state.stage === "support"
       ? { current: 5 + (tourStep ?? 0), total: 11, label: "Your coach" }
+      : askingVisibility
+        ? { current: 9, total: 11, label: "Who sees it" }
       : askingCircle
         ? { current: circlePrefs ? 9 : 8, total: 11, label: "Your circle" }
         : state.stage === "review"
@@ -1216,6 +1258,46 @@ export default function Onboarding({
         onDone={(design) => void completeDesign(design).catch(setError)}
       />
     );
+  if (askingVisibility)
+    return (
+      <InterviewFrame
+        stage="review"
+        transitionKey="visibility"
+        progress={journeyProgress}
+        preview={preview}
+        busy={busy}
+        onBack={() => void persist({ ...draft, circle: undefined }).catch(setError)}
+        onClose={goBack}
+        actions={
+          <EditorButton
+            label="Continue"
+            disabled={busy}
+            onPress={() => void chooseVisibility().catch(setError)}
+          />
+        }
+      >
+        <StepSequence prefix="visibility-heading" style={{ alignItems: "center", gap: 16 }}>
+          <OnboardingArt name="privacy" size={150} />
+          <Text
+            accessibilityRole="header"
+            style={{ color: c.text, fontSize: 32, lineHeight: 38, fontWeight: "700", textAlign: "center", letterSpacing: -0.6 }}
+          >
+            Who sees this plan?
+          </Text>
+          <Text style={{ color: c.muted, fontSize: 17, lineHeight: 24, textAlign: "center" }}>
+            On your profile and in friends' feeds.
+          </Text>
+        </StepSequence>
+        <StepSequence start={3} prefix="visibility-options" style={{ gap: 10 }}>
+          <PlanVisibilityChoices
+            value={visibilityPick}
+            onChange={setVisibilityPick}
+            activityIds={planActivityIds}
+          />
+        </StepSequence>
+        <Status error={statusError} retry={retryStatus} />
+      </InterviewFrame>
+    );
   if (rating && draft.design && !paywall && !finished)
     return (
       <ConfidenceSection
@@ -1390,6 +1472,7 @@ export default function Onboarding({
                 {state.stage === "review" && !paywall && (
                   <PlanSummary facts={state.facts} circle={circleSummary(draft.circle)} />
                 )}
+
                 {!candidate && !paywall && (
                   <>
                     {lastTurn && !lastTurn.accepted && (
