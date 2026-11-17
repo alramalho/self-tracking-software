@@ -51,6 +51,13 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 270 — private plans, November 17, 2026
+
+**Build 270 is the latest TestFlight build**: everything on main up to `5462e7d4`. Creating a plan asks "Who sees this plan?" after the circle step: Everyone, Hide the plan (logs still show) or Hide everything. Plan settings on iPhone and web offer the same choices and say when a shared activity keeps its logs visible. Onboarding plans still save as Private. Backend `plan-privacy-20261117` (enum value `LOGS_ONLY`, context `deployment/tracking-plan-privacy-20261117` with `rollback.sh`) went live first.
+
+- **Built** with `pnpm build:testflight .release/testflight-main-5462e7d4/tracking.so.ipa`; ExpoHaptics, TrackingHealth, TrackingMap, TrackingWatch installed; backend URL api.tracking.so. IPA SHA-256 `be27f0fff4158765905a1391376c4a8786a33f9a7d69b47118314627be02d0e2`; the bundle contains "Who sees this plan?" and no e2e token.
+- **Apple:** validated and uploaded (delivery `14642886-a7fc-4dcc-99d1-f6809f07d60f`); VALID; What to Test written; internal and `Friends & Family` `IN_BETA_TESTING`, beta review submitted.
+
 ## TestFlight build 269 — the coach lives on the Coach tab, November 16, 2026
 
 - **No weekly review and no coach card on Home** (owner: nobody asked for it; coach interactions belong on the Coach tab). Main `5556789f`: review messages and weekly checks are never scheduled, the switches are gone from plan settings, onboarding and paywall, Home's coach note is deleted. Backend `no-weekly-review-20261116` (on `weekly-review-20261116`, which added the dated history and schema-in-prompt fixes). Build 268 went to a build stopped mid-way (it had a review drawer that was then removed).
