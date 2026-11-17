@@ -4,10 +4,12 @@ import { sttService } from "../sttService";
 import type { ActivityEntry, MetricEntry } from "@tsw/prisma";
 import { logger } from "../../utils/logger";
 import { extractVoiceLog, localDate } from "./extract";
-import { recordVoiceLogSample } from "./samples";
+import { recordVoiceLogSample, storeVoiceRecording } from "./samples";
+import { isVoiceNotePromptEcho, voiceNotePrompt } from "../stt/voiceNotePrompt";
 import {
   voiceLogCommitSchema,
   type VoiceLogRefinementContext,
+  type VoiceLogFollowUp,
   type VoiceLogCommit,
   type VoiceLogPreview,
 } from "./types";
@@ -65,6 +67,7 @@ export async function previewVoiceLog(input: {
   timezone?: string;
   clientRequestId: string;
   refinement?: VoiceLogRefinementContext;
+  followUp?: VoiceLogFollowUp;
   now?: Date;
 }): Promise<VoiceLogPreview> {
   const previewStartedAt = Date.now();
@@ -75,16 +78,7 @@ export async function previewVoiceLog(input: {
   });
   const timezone = resolveTimezone(input.timezone, user?.timezone || "UTC");
 
-  const sttStartedAt = Date.now();
-  const heard = await sttService.transcribe(
-    input.audioBytes,
-    input.audioFormat,
-    user?.spokenLanguages,
-  );
-  const transcript = heard.text.trim().slice(0, MAX_TRANSCRIPT_LENGTH);
-  const sttDurationMs = Date.now() - sttStartedAt;
-  if (!transcript) throw new Error("The recording did not contain speech.");
-
+  // The catalog comes first: its titles prime speech-to-text (stt/voiceNotePrompt.ts) and then the extraction.
   const [activities, metrics, latestEntries] = await Promise.all([
     prisma.activity.findMany({
       where: { userId: input.userId, deletedAt: null },
@@ -102,6 +96,29 @@ export async function previewVoiceLog(input: {
       _max: { datetime: true },
     }),
   ]);
+  const mostRecent = (id: string) =>
+    latestEntries.find((entry) => entry.activityId === id)?._max.datetime?.getTime() ?? 0;
+  const words = [
+    ...[...activities].sort((a, b) => mostRecent(b.id) - mostRecent(a.id)).map((activity) => activity.title),
+    ...metrics.map((metric) => metric.title),
+  ];
+  const spoken = user?.spokenLanguages ?? [];
+
+  const recordingKey = storeVoiceRecording(input);
+  const sttStartedAt = Date.now();
+  const heard = await sttService.transcribe(
+    input.audioBytes,
+    input.audioFormat,
+    spoken,
+    voiceNotePrompt(spoken, words),
+  );
+  const heardText = heard.text.trim();
+  const transcript = isVoiceNotePromptEcho(heardText, spoken, words)
+    ? ""
+    : heardText.slice(0, MAX_TRANSCRIPT_LENGTH);
+  const sttDurationMs = Date.now() - sttStartedAt;
+  if (!transcript) throw new Error("The recording did not contain speech.");
+
   const lastLogged = new Map(
     latestEntries
       .filter((entry) => entry.activityId && entry._max.datetime)
@@ -128,6 +145,7 @@ export async function previewVoiceLog(input: {
     activities: activityContext,
     metrics: metricContext,
     refinement: input.refinement,
+    followUp: input.followUp,
   });
   const { extraction, model, reasoningEffort } = generated;
   const modelDurationMs = generated.durationMs;
@@ -148,7 +166,7 @@ export async function previewVoiceLog(input: {
   logger.info("voice_log_preview_timing", {
     event: "voice_log_preview_timing",
     userId: input.userId,
-    mode: input.refinement ? "refinement" : "initial",
+    mode: input.refinement ? "refinement" : input.followUp ? "follow-up" : "initial",
     audioBytes: input.audioBytes.length,
     transcriptCharacters: transcript.length,
     sttDurationMs,
@@ -158,7 +176,8 @@ export async function previewVoiceLog(input: {
     reasoningEffort,
   });
   recordVoiceLogSample({
-    kind: input.refinement ? "refinement" : "preview",
+    kind: input.refinement ? "refinement" : input.followUp ? "follow-up" : "preview",
+    recordingKey,
     userId: input.userId,
     clientRequestId: input.clientRequestId,
     timezone,
@@ -264,7 +283,21 @@ export async function commitVoiceLog(input: {
             : { datetime: { gte: bounds.start, lt: bounds.end } }),
         },
       });
-      if (existing) {
+      if (activity.detailsOnly) {
+        // Share more: the session is already saved. Add what it was about and how hard it felt; never the amount.
+        if (!existing) continue;
+        activityEntries.push(
+          await tx.activityEntry.update({
+            where: { id: existing.id },
+            data: {
+              description:
+                [existing.description, description].filter(Boolean).join(" · ").slice(0, 500) || null,
+              privateNotes: activity.privateNotes || existing.privateNotes,
+              difficulty: activity.difficulty || existing.difficulty,
+            },
+          }),
+        );
+      } else if (existing) {
         activityEntries.push(
           await tx.activityEntry.update({
             where: { id: existing.id },
@@ -323,7 +356,9 @@ export async function commitVoiceLog(input: {
     });
 
     const affectedActivityIds = Array.from(
-      new Set(commit.activities.map((activity) => activity.activityId)),
+      new Set(
+        commit.activities.filter((activity) => !activity.detailsOnly).map((activity) => activity.activityId),
+      ),
     );
     if (affectedActivityIds.length > 0) {
       await tx.plan.updateMany({

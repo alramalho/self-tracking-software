@@ -13,6 +13,8 @@ struct VoiceLogView: View {
     private enum RecordingKind: Equatable {
         case initial
         case refinement
+        /// "Share more" after a save: how it felt, what it was about, anything else.
+        case followUp
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -25,6 +27,10 @@ struct VoiceLogView: View {
     @State private var errorMessage: String?
     @State private var clientRequestId = UUID().uuidString.lowercased()
     @State private var recordingKind: RecordingKind = .initial
+    @State private var isStarting = false
+    /// What the last save logged, for "Share more"; nil once shared (one follow-up per log).
+    @State private var followUpContext: VoiceLogFollowUpContext?
+    @State private var lastSaved: [VoiceLogFollowUpContext.Logged] = []
 
     private var timezone: String { TimeZone.current.identifier }
 
@@ -89,7 +95,7 @@ struct VoiceLogView: View {
 
     private var readyContent: some View {
         VStack(spacing: 10) {
-            Text(isRefinement ? "Make changes" : "Tap to talk")
+            Text(isStarting ? "Starting…" : isRefinement ? "Make changes" : "Tap to talk")
                 .font(.headline)
             roundButton(systemImage: "mic.fill", tint: .accentColor, action: startRecording)
                 .accessibilityLabel(isRefinement ? "Record changes" : "Start recording")
@@ -100,6 +106,9 @@ struct VoiceLogView: View {
         VStack(spacing: 10) {
             Text(isRefinement ? "Say what to change…" : "Listening…")
                 .font(.headline)
+            if recordingKind == .followUp {
+                followUpGuide
+            }
             Text(formattedDuration(recorder.elapsedSeconds))
                 .font(.caption.monospacedDigit())
                 .foregroundColor(.secondary)
@@ -130,7 +139,7 @@ struct VoiceLogView: View {
                     suggestionButton(
                         isSelected: selectedActivityIDs.contains(activity.id),
                         title: "\(activity.emoji) \(activity.title)",
-                        detail: [activity.amountText, dayLabel(activity.date)].compactMap { $0 }.joined(separator: " · "),
+                        detail: [activity.detailText, dayLabel(activity.date)].compactMap { $0 }.joined(separator: " · "),
                         action: { toggleActivity(activity.id) }
                     )
                 }
@@ -194,8 +203,32 @@ struct VoiceLogView: View {
                 .foregroundColor(.green)
             Text("Saved")
                 .font(.headline)
-            Button("Done") { dismiss() }
+            if !lastSaved.isEmpty {
+                Button(action: shareMore) {
+                    Label("Share more", systemImage: "mic.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+                .accessibilityHint("Say how it felt, what it was about and anything else")
+                Button("Done") { dismiss() }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
+            } else {
+                Button("Done") { dismiss() }
+            }
         }
+    }
+
+    private var followUpGuide: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label("How it felt", systemImage: "heart")
+            Label("What it was about", systemImage: "text.alignleft")
+            Label("Anything else", systemImage: "ellipsis")
+        }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func roundButton(
@@ -330,11 +363,15 @@ struct VoiceLogView: View {
                 await processRecording(url)
             }
         }
+        isStarting = true
         Task {
             do {
                 try await recorder.start()
+                isStarting = false
+                WKInterfaceDevice.current().play(.start)
                 phase = .recording
             } catch {
+                isStarting = false
                 errorMessage = error.localizedDescription
             }
         }
@@ -352,8 +389,20 @@ struct VoiceLogView: View {
         errorMessage = nil
         selectedPlanID = nil
         clientRequestId = UUID().uuidString.lowercased()
-        recordingKind = .initial
+        if recordingKind != .followUp { recordingKind = .initial }
         phase = .ready
+    }
+
+    private func shareMore() {
+        followUpContext = VoiceLogFollowUpContext(logged: lastSaved)
+        lastSaved = []
+        preview = nil
+        selectedPlanID = nil
+        errorMessage = nil
+        clientRequestId = UUID().uuidString.lowercased()
+        recordingKind = .followUp
+        phase = .ready
+        startRecording()
     }
 
     private func stopRecording() {
@@ -368,6 +417,7 @@ struct VoiceLogView: View {
     private func processRecording(_ url: URL) async {
         let isRefinement = recordingKind == .refinement
         let refinementContext = isRefinement ? makeRefinementContext() : nil
+        let followUp = followUpContext
         phase = .processing
         errorMessage = nil
         defer { try? FileManager.default.removeItem(at: url) }
@@ -376,7 +426,8 @@ struct VoiceLogView: View {
                 audioURL: url,
                 timezone: timezone,
                 clientRequestId: clientRequestId,
-                refinementContext: refinementContext
+                refinementContext: refinementContext,
+                followUpContext: followUp
             )
             preview = result
             selectedActivityIDs = Set(result.activities.map(\.id))
@@ -421,7 +472,8 @@ struct VoiceLogView: View {
                     description: $0.description,
                     privateNotes: $0.privateNotes,
                     difficulty: $0.difficulty,
-                    estimatedFrom: $0.estimatedFrom
+                    estimatedFrom: $0.estimatedFrom,
+                    detailsOnly: $0.detailsOnly
                 )
             }
         let metrics = preview.metrics
@@ -451,6 +503,10 @@ struct VoiceLogView: View {
             do {
                 _ = try await APIService.shared.commitVoiceLog(payload)
                 WKInterfaceDevice.current().play(.success)
+                // Share more is offered once, after a note that logged something new.
+                lastSaved = followUpContext == nil
+                    ? activities.map { .init(activityId: $0.activityId, date: $0.date, quantity: $0.quantity) }
+                    : []
                 phase = .committed
             } catch {
                 WKInterfaceDevice.current().play(.failure)

@@ -520,6 +520,21 @@ const server = http.createServer(async (req, res) => {
   }
   if (path === "/voice-logs/preview" && req.method === "POST") {
     const date = new Date().toISOString().slice(0, 10);
+    if (body.follow_up_context) {
+      // "Share more" after a log: details for the session just saved, a feeling, and the rest in the note.
+      const logged = JSON.parse(body.follow_up_context).logged[0];
+      send({
+        clientRequestId: body.client_request_id,
+        transcript: "It felt great, energy five out of five. It was hill repeats along the river. I want to try a longer run on Sunday.",
+        activities: [
+          { activityId: logged.activityId, title: "Running", emoji: "🏃", measure: "kilometers", quantity: logged.quantity, date: logged.date, time: null, description: "Hill repeats along the river", privateNotes: null, difficulty: "hard", estimatedFrom: null, confidence: 0.9, detailsOnly: true },
+        ],
+        metrics: [{ metricId: "energy", title: "Energy", emoji: "⚡", rating: 5, date: logged.date, description: null, confidence: 0.9 }],
+        note: { title: "After the run", text: "Felt great. Wants to try a longer run on Sunday.", date: logged.date, confidence: 0.9 },
+        unresolved: [],
+      });
+      return;
+    }
     send({
       clientRequestId: body.client_request_id,
       transcript:

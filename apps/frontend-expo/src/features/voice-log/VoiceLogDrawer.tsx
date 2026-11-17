@@ -7,7 +7,10 @@ import {
   ChevronRight,
   ChevronUp,
   Compass,
+  Heart,
   Lightbulb,
+  MoreHorizontal,
+  AlignLeft,
   LockKeyhole,
   Mic,
   RotateCcw,
@@ -32,6 +35,7 @@ import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
 import { useVoiceLogRecorder } from "./useVoiceLogRecorder";
 import { voiceLogActivityKey, voiceLogMetricKey } from "./types";
 import type {
+  VoiceLogFollowUp,
   VoiceLogDraft,
   VoiceLogDrawerProps,
   VoiceLogPhase,
@@ -69,6 +73,13 @@ function isLogSummaryNote(note: VoiceLogPreview["note"]) {
 }
 
 function activityDetail(activity: VoiceLogPreview["activities"][number]) {
+  if (activity.detailsOnly) {
+    // Share more: the amount is already saved; the row shows what this note adds to it.
+    const added = [activity.description, activity.difficulty && `Effort: ${activity.difficulty.replaceAll("_", " ")}`]
+      .filter(Boolean)
+      .join(" · ");
+    return `${added || activityAmount(activity)} · added to today's log`;
+  }
   return [
     `${activityAmount(activity)} · ${dateLabel(activity.date, activity.time)}`,
     activity.description,
@@ -97,6 +108,26 @@ function isCoachContextItem(
 ) {
   return /\b(?:next time|future|intention|goal|plan|coach|context|remember)\b/i.test(
     `${item.text} ${item.reason}`,
+  );
+}
+
+/** What "Share more" asks for, while it listens. */
+function FollowUpGuide() {
+  const c = useColors();
+  const rows = [
+    { icon: Heart, text: "How it felt" },
+    { icon: AlignLeft, text: "What it was about" },
+    { icon: MoreHorizontal, text: "Anything else" },
+  ];
+  return (
+    <View testID="voice-log-follow-up-guide" style={{ gap: 10, alignSelf: "stretch", paddingHorizontal: 8 }}>
+      {rows.map(({ icon: Icon, text }) => (
+        <View key={text} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Icon size={20} color={c.muted} strokeWidth={1.8} />
+          <Text style={{ color: c.text, fontSize: 16 }}>{text}</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -154,6 +185,7 @@ export function VoiceLogDrawer({
   onClose,
   initialDraft,
   onPendingChange,
+  followUp: initialFollowUp,
 }: VoiceLogDrawerProps) {
   const c = useColors();
   const client = useQueryClient();
@@ -190,6 +222,10 @@ export function VoiceLogDrawer({
   const runRef = useRef(0);
   const discardedRef = useRef(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // "Share more": the sessions this follow-up note talks about. Set from the logger, or after a save here.
+  const [followUp, setFollowUp] = useState(initialFollowUp);
+  // What the last save logged, for "Share more" (offered once, not after a follow-up).
+  const [lastSaved, setLastSaved] = useState<VoiceLogFollowUp["logged"]>([]);
 
   useEffect(() => {
     if (
@@ -259,6 +295,7 @@ export function VoiceLogDrawer({
           timezone,
           clientRequestId,
           refinementContext,
+          followUpContext: followUp,
         });
         if (run !== runRef.current) return;
         const enriched = enrichVoiceLogPreview(result, entries.data ?? []);
@@ -284,6 +321,7 @@ export function VoiceLogDrawer({
     },
     [
       clientRequestId,
+      followUp,
       preview,
       entries.data,
       selectedActivityIDs,
@@ -343,6 +381,26 @@ export function VoiceLogDrawer({
     recordingKindRef.current = kind;
     setPhase("recording");
     await recorder.start();
+  }
+
+  // Opened from "Share more" after a log: start listening straight away, like the watch.
+  const startedFollowUp = useRef(false);
+  useEffect(() => {
+    if (!initialFollowUp || startedFollowUp.current) return;
+    startedFollowUp.current = true;
+    void startRecording("initial");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function shareMore() {
+    setFollowUp({ logged: lastSaved });
+    setLastSaved([]);
+    setPreview(undefined);
+    setSelectedActivityIDs(new Set());
+    setSelectedMetricIDs(new Set());
+    setSelectedPlanId(null);
+    setClientRequestId(randomUUID());
+    void startRecording("initial");
   }
 
   function toggleActivity(id: string) {
@@ -452,6 +510,13 @@ export function VoiceLogDrawer({
       await client.invalidateQueries();
       await clearPendingVoiceLog();
       onPendingChange?.(null);
+      setLastSaved(
+        followUp
+          ? []
+          : preview.activities
+              .filter((activity) => selectedActivityIDs.has(voiceLogActivityKey(activity)))
+              .map(({ activityId, date, quantity }) => ({ activityId, date, quantity })),
+      );
       setPhase("committed");
     } catch (nextError) {
       setError(nextError);
@@ -460,7 +525,9 @@ export function VoiceLogDrawer({
   }
 
   const title =
-    phase === "review"
+    followUp && (phase === "ready" || phase === "recording")
+      ? "Share more"
+      : phase === "review"
       ? "Review voice note"
       : phase === "processing"
         ? "Understanding your note"
@@ -545,6 +612,7 @@ export function VoiceLogDrawer({
           <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
             {recorder.isWorking ? "Finishing recording…" : "Listening…"}
           </Text>
+          {followUp && !recorder.isWorking && <FollowUpGuide />}
           <Text
             accessibilityLabel="Voice note duration"
             style={{
@@ -1066,7 +1134,16 @@ export function VoiceLogDrawer({
           <Copy muted>
             Your voice note and selected logs are now in tracking.so.
           </Copy>
-          <Button onPress={onClose}>Done</Button>
+          {lastSaved.length ? (
+            <>
+              <Button onPress={shareMore} testID="voice-log-share-more">
+                Share more
+              </Button>
+              <TextAction icon={CheckCircle2} label="Done" onPress={onClose} />
+            </>
+          ) : (
+            <Button onPress={onClose}>Done</Button>
+          )}
         </View>
       )}
       {aiConsent.sheet}

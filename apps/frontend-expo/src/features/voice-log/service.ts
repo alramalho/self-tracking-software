@@ -40,6 +40,9 @@ export async function previewVoiceLog(
       JSON.stringify(options.refinementContext),
     );
   }
+  if (options.followUpContext) {
+    form.append("follow_up_context", JSON.stringify(options.followUpContext));
+  }
 
   return (
     await api.post<VoiceLogPreview>("/voice-logs/preview", form)

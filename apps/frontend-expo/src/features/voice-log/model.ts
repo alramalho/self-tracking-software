@@ -103,6 +103,8 @@ export function enrichVoiceLogPreview(
     : deriveVoiceLogPlanSuggestions(preview);
   const alreadyLogged: VoiceLogAlreadyLogged[] = [];
   const activities = preview.activities.filter((activity) => {
+    // Share more adds details to a session saved a moment ago; it is meant to match it.
+    if (activity.detailsOnly) return true;
     const matching = entries.filter((entry) =>
       sameVoiceLogOccurrence(activity, entry),
     );

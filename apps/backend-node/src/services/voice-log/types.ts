@@ -17,6 +17,8 @@ export const voiceLogActivitySchema = z.object({
   /** What the user actually said when the quantity is an estimate in another unit ("30 minutes" → 20 pages). */
   estimatedFrom: z.string().trim().max(60).nullable().optional(),
   confidence: z.number().min(0).max(1),
+  /** "Share more" after a log: this session is already saved; only its details (description, effort) change. */
+  detailsOnly: z.boolean().optional(),
 });
 
 export const voiceLogMetricSchema = z.object({
@@ -100,6 +102,21 @@ export const voiceLogRefinementContextSchema = z.object({
   currentDraft: voiceLogExtractionSchema,
 });
 
+/** "Share more": the sessions the person just logged, which the follow-up note talks about. */
+export const voiceLogFollowUpSchema = z.object({
+  logged: z
+    .array(
+      z.object({
+        activityId: z.string().min(1),
+        date: z.string().regex(datePattern),
+        quantity: z.number().int().positive().max(100_000),
+      }),
+    )
+    .min(1)
+    .max(10),
+});
+
+export type VoiceLogFollowUp = z.infer<typeof voiceLogFollowUpSchema>;
 export type VoiceLogActivity = z.infer<typeof voiceLogActivitySchema>;
 export type VoiceLogMetric = z.infer<typeof voiceLogMetricSchema>;
 export type VoiceLogNote = z.infer<typeof voiceLogNoteSchema>;

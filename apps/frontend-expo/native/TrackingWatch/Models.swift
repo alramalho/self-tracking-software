@@ -48,12 +48,22 @@ struct VoiceLogActivity: Codable, Identifiable {
     /// Set when the amount is an estimate from another unit: what was said ("30 minutes").
     let estimatedFrom: String?
     let confidence: Double
+    /// "Share more": the session is already saved; this only adds what it was about and how it felt.
+    let detailsOnly: Bool?
 
     var id: String { "\(activityId)-\(date)-\(time ?? "day")" }
 
     var amountText: String {
         if let estimatedFrom { return "≈ \(quantity) \(measure) · from \(estimatedFrom)" }
         return "\(quantity) \(measure)"
+    }
+
+    /// The row's second line: the amount, or for a session already saved, the details being added.
+    var detailText: String {
+        guard detailsOnly == true else { return amountText }
+        let effort = difficulty.map { $0.replacingOccurrences(of: "_", with: " ").capitalized }
+        let parts = [description, effort].compactMap { $0 }
+        return parts.isEmpty ? amountText : parts.joined(separator: " · ")
     }
 }
 
@@ -162,6 +172,17 @@ struct VoiceLogCommitActivity: Encodable {
     let privateNotes: String?
     let difficulty: String?
     let estimatedFrom: String?
+    let detailsOnly: Bool?
+}
+
+/// "Share more" after a save: the sessions just logged, so the follow-up note adds to them instead of logging again.
+struct VoiceLogFollowUpContext: Encodable {
+    struct Logged: Encodable {
+        let activityId: String
+        let date: String
+        let quantity: Int
+    }
+    let logged: [Logged]
 }
 
 struct VoiceLogCommitMetric: Encodable {

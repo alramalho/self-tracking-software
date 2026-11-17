@@ -20,6 +20,9 @@ import { api } from "@/data/api";
 import { pickPhotos } from "@/native/photos";
 import type { ActivityEntry, LogActivityResult, Photo } from "@/core/types";
 import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
+import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
+import type { VoiceLogFollowUp } from "@/features/voice-log/types";
+import { dayKey } from "@/core/dates";
 import { celebrationFor, type Celebration } from "@/features/celebration/model";
 import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
@@ -49,6 +52,8 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const [queuedError, setQueuedError] = useState<string>();
   // The "Nice work!" moment plays first; the usual next step (shared, difficulty, metrics) waits for it.
   const [celebration, setCelebration] = useState<{ value: Celebration; then: () => void }>();
+  // "Share more" from the celebration: a voice note about this session (how it felt, what it was about, anything else).
+  const [shareMore, setShareMore] = useState<VoiceLogFollowUp>();
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -188,8 +193,22 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           setCelebration(undefined);
           then();
         }}
+        onShareMore={
+          result
+            ? () => {
+                setCelebration(undefined);
+                setShareMore({
+                  logged: [
+                    { activityId: activity.id, date: dayKey(result.entry.datetime), quantity: result.entry.quantity },
+                  ],
+                });
+              }
+            : undefined
+        }
       />
     );
+  // Share more replaces the follow-up questions (difficulty, metrics): the note covers them.
+  if (shareMore) return <VoiceLogDrawer followUp={shareMore} onClose={onClose} />;
   if (step === "difficulty" && result)
     return (
       <DifficultyStep

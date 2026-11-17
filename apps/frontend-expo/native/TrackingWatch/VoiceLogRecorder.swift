@@ -42,6 +42,10 @@ final class VoiceLogRecorder: NSObject, ObservableObject, AVAudioRecorderDelegat
             throw VoiceLogRecorderError.couldNotStart
         }
 
+        // The watch mic takes a moment to deliver sound after record() returns; a note spoken straight away
+        // lost its first word ("Log" heard as "Long" or "Walk"). Only say "Listening" once it really is.
+        try? await Task.sleep(for: .milliseconds(300))
+
         self.recorder = recorder
         recordingURL = url
         elapsedSeconds = 0

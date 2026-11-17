@@ -52,6 +52,20 @@ describe("roundQuantity", () => {
 });
 
 describe("normalizeExtraction", () => {
+  it("Share more: keeps a just-logged session's saved amount and marks it details only", () => {
+    const result = normalizeExtraction(
+      output({ activities: [run(10, { description: "hill repeats", difficulty: "hard" })] }),
+      "It was hill repeats, really hard",
+      "2026-11-12",
+      activities,
+      metrics,
+      { logged: [{ activityId: "running", date: "2026-11-12", quantity: 5 }] },
+    );
+    expect(result.activities).toEqual([
+      expect.objectContaining({ quantity: 5, description: "hill repeats", difficulty: "hard", detailsOnly: true }),
+    ]);
+  });
+
   it("keeps a decimal run instead of dropping it", () => {
     const result = normalizeExtraction(output({ activities: [run(5.4)] }), "Ran 5.4 km", "2026-11-12", activities, metrics);
     expect(result.activities).toEqual([expect.objectContaining({ activityId: "running", quantity: 5 })]);

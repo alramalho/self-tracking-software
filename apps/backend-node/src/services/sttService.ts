@@ -68,10 +68,12 @@ export class STTService {
   }
 
   // `spoken` is the person's languages (ISO 639-1, main one first); see stt/languages.ts.
+  // `prompt` replaces the plain language prompt (voice logs prime the model with stt/voiceNotePrompt.ts).
   async transcribe(
     audioBytes: Buffer,
     receivedAudioFormat?: string,
     spoken: string[] = [],
+    prompt?: string,
   ): Promise<Transcript> {
     assertAiConsent();
     try {
@@ -101,13 +103,13 @@ export class STTService {
         type: mimeType,
       });
 
-      let heard = await this.listen(audioFile, languageToRequest(spoken), spoken);
+      let heard = await this.listen(audioFile, languageToRequest(spoken), spoken, prompt);
       const retry = languageToRetry(spoken, heard.language);
       if (retry) {
         logger.info(
           `Heard "${heard.language}", which this person doesn't speak. Transcribing again in "${retry}"`,
         );
-        heard = await this.listen(audioFile, retry, spoken);
+        heard = await this.listen(audioFile, retry, spoken, prompt);
       }
 
       logger.info(
@@ -122,7 +124,12 @@ export class STTService {
 
   // One request to the model. Whisper: verbose_json reports the language heard.
   // gpt-4o-transcribe: plain json, with the person's languages as a prompt.
-  private async listen(audioFile: File, language: string | undefined, spoken: string[]) {
+  private async listen(
+    audioFile: File,
+    language: string | undefined,
+    spoken: string[],
+    givenPrompt?: string,
+  ) {
     if (reportsLanguage(this.model)) {
       const transcription = await this.openai.audio.transcriptions.create({
         file: audioFile,
@@ -135,7 +142,7 @@ export class STTService {
         language: language ?? languageCode(transcription.language),
       };
     }
-    const prompt = languagePrompt(spoken);
+    const prompt = givenPrompt ?? languagePrompt(spoken);
     const transcription = await this.openai.audio.transcriptions.create({
       file: audioFile,
       model: this.model,

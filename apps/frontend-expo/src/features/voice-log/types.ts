@@ -14,6 +14,13 @@ export interface VoiceLogActivity {
   /** Set when the amount is an estimate from another unit: what was said ("30 minutes"). */
   estimatedFrom?: string | null;
   confidence: number;
+  /** "Share more": the session is already saved; this only adds what it was about and how it felt. */
+  detailsOnly?: boolean;
+}
+
+/** "Share more" after a log: the sessions just saved, so the follow-up note adds to them instead of logging again. */
+export interface VoiceLogFollowUp {
+  logged: { activityId: string; date: string; quantity: number }[];
 }
 
 export interface VoiceLogMetric {
@@ -101,6 +108,7 @@ export interface PreviewVoiceLogOptions {
   timezone: string;
   clientRequestId: string;
   refinementContext?: VoiceLogRefinementContext;
+  followUpContext?: VoiceLogFollowUp;
 }
 
 export interface VoiceLogCommitActivity {
@@ -111,6 +119,7 @@ export interface VoiceLogCommitActivity {
   description?: string | null;
   privateNotes?: string | null;
   difficulty?: string | null;
+  detailsOnly?: boolean;
 }
 
 export interface VoiceLogCommitMetric {
@@ -153,6 +162,8 @@ export interface VoiceLogDrawerProps {
   onClose: () => void;
   initialDraft?: VoiceLogDraft | null;
   onPendingChange?: (draft: VoiceLogDraft | null) => void;
+  /** Opens straight into "Share more" for these just-saved sessions. */
+  followUp?: VoiceLogFollowUp;
 }
 
 export interface VoiceLogSelectionGroupProps {

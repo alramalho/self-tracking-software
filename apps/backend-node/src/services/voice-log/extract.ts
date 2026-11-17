@@ -6,6 +6,7 @@ import {
   voiceLogExtractionSchema,
   voiceLogModelOutputSchema,
   type VoiceLogExtraction,
+  type VoiceLogFollowUp,
   type VoiceLogModelOutput,
   type VoiceLogRefinementContext,
 } from "./types";
@@ -50,6 +51,11 @@ Details:
 - Dates: use the supplied local date as today. "Yesterday" is the day before; a weekday name means the most recent past such day (today if it is that day). Use a time only when the user states one; otherwise leave time null.
 - note: keep the useful remaining content (reflections, feelings, context) without adding medical, causal or motivational claims. If the whole transcript is a general reflection, return no activities or metrics and put the full thought in the note.
 - unresolved: every phrase the user might reasonably expect to be logged that you did not log, with a short reason.
+
+Follow-up notes ("Share more"):
+- When alreadyLogged is present, the person just saved those sessions and is now saying how it felt, what it was about and anything else. Return each alreadyLogged session they talk about as an activity with the same activityId, date and quantity as given (never add to the amount), with description = what it was about (exercises, route, topic, pages, pieces practised) in their words, and difficulty when they say how hard it felt. Do not put feelings into description.
+- Feelings and energy go to metrics only when a catalog metric fits and they rate or clearly describe it; how it felt also goes in the note.
+- Log a different activity only when they clearly say they also did it.
 
 Return only the requested structured object.`;
 
@@ -103,6 +109,7 @@ export function extractionPrompt(
   timezone: string,
   activities: VoiceLogActivityContext[],
   metrics: VoiceLogMetricContext[],
+  followUp?: VoiceLogFollowUp,
 ) {
   return JSON.stringify({
     transcript,
@@ -112,6 +119,7 @@ export function extractionPrompt(
     timezone,
     activities,
     metrics,
+    ...(followUp ? { alreadyLogged: followUp.logged } : {}),
   });
 }
 
@@ -153,6 +161,7 @@ export function normalizeExtraction(
   today: string,
   activities: VoiceLogActivityContext[],
   metrics: VoiceLogMetricContext[],
+  followUp?: VoiceLogFollowUp,
 ): VoiceLogExtraction {
   const activityById = new Map(activities.map((activity) => [activity.activityId, activity]));
   const metricById = new Map(metrics.map((metric) => [metric.metricId, metric]));
@@ -220,7 +229,15 @@ export function normalizeExtraction(
     }
   }
 
-  const loggedActivities = Array.from(mergedActivities.values());
+  // Share more: a session that was just logged keeps its saved amount; the note only adds its details.
+  const loggedActivities = Array.from(mergedActivities.values()).map((activity) => {
+    const saved = followUp?.logged.find(
+      (logged) => logged.activityId === activity.activityId && logged.date === activity.date,
+    );
+    return saved
+      ? { ...activity, quantity: saved.quantity, estimatedFrom: null, time: null, detailsOnly: true }
+      : activity;
+  });
   const note = extraction.note?.text.trim()
     ? {
         title: clip(extraction.note.title, 120) || "Voice note",
@@ -290,6 +307,7 @@ export async function extractVoiceLog(input: {
   activities: VoiceLogActivityContext[];
   metrics: VoiceLogMetricContext[];
   refinement?: VoiceLogRefinementContext;
+  followUp?: VoiceLogFollowUp;
   model?: string;
   reasoningEffort?: string;
   /** Benchmark only: compare against an earlier prompt. */
@@ -324,6 +342,7 @@ export async function extractVoiceLog(input: {
           input.timezone,
           input.activities,
           input.metrics,
+          input.followUp,
         ),
   });
   const extraction = normalizeExtraction(
@@ -332,6 +351,7 @@ export async function extractVoiceLog(input: {
     localDate(input.now, input.timezone),
     input.activities,
     input.metrics,
+    input.followUp,
   );
   const gatewayMeta = (generated as any).providerMetadata?.gateway;
   return {

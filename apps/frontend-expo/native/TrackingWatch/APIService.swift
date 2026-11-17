@@ -69,7 +69,8 @@ class APIService {
         audioURL: URL,
         timezone: String,
         clientRequestId: String,
-        refinementContext: VoiceLogRefinementContext? = nil
+        refinementContext: VoiceLogRefinementContext? = nil,
+        followUpContext: VoiceLogFollowUpContext? = nil
     ) async throws -> VoiceLogPreview {
         guard let url = URL(string: "\(baseUrl)/voice-logs/preview") else {
             throw APIError.invalidURL
@@ -96,6 +97,10 @@ class APIService {
                 throw APIError.invalidResponse
             }
             appendField("refinement_context", context)
+        }
+        if let followUpContext,
+           let context = String(data: try JSONEncoder().encode(followUpContext), encoding: .utf8) {
+            appendField("follow_up_context", context)
         }
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"audio_file\"; filename=\"voice-note.m4a\"\r\n".data(using: .utf8)!)

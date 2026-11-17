@@ -8,7 +8,9 @@ import { commitVoiceLog, previewVoiceLog } from "../services/voice-log/service";
 import { logger } from "../utils/logger";
 import {
   voiceLogCommitSchema,
+  voiceLogFollowUpSchema,
   voiceLogRefinementContextSchema,
+  type VoiceLogFollowUp,
   type VoiceLogRefinementContext,
 } from "../services/voice-log/types";
 
@@ -57,6 +59,23 @@ router.post(
         refinement = parsedRefinement.data;
       }
 
+      let followUp: VoiceLogFollowUp | undefined;
+      if (req.body.follow_up_context) {
+        let parsedJson: unknown;
+        try {
+          parsedJson = JSON.parse(req.body.follow_up_context);
+        } catch {
+          res.status(400).json({ error: "follow_up_context must be valid JSON" });
+          return;
+        }
+        const parsedFollowUp = voiceLogFollowUpSchema.safeParse(parsedJson);
+        if (!parsedFollowUp.success) {
+          res.status(400).json({ error: parsedFollowUp.error.flatten() });
+          return;
+        }
+        followUp = parsedFollowUp.data;
+      }
+
       const preview = await previewVoiceLog({
         userId: req.user!.id,
         audioBytes: req.file.buffer,
@@ -64,6 +83,7 @@ router.post(
         timezone: req.body.timezone,
         clientRequestId: clientRequestId.data,
         refinement,
+        followUp,
       });
       res.json(preview);
     } catch (error) {
