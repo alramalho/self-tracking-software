@@ -6,13 +6,13 @@ import type { CoachNoteProps } from "./types";
 /** The coach's face beside a speech bubble: why the plan changes, in its words. */
 export function CoachNote({ strategist, mood, size = "regular", children }: CoachNoteProps) {
   const c = useColors();
-  const face = size === "small" ? 34 : 52;
+  const face = size === "small" ? 38 : 56;
   return (
     <View testID="coach-note" style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
       <Image
         accessibilityIgnoresInvertColors
         source={coachMoodAvatar(strategist, mood)}
-        style={{ width: face, height: face, borderRadius: face / 2, backgroundColor: c.soft }}
+        style={{ width: face, height: face }}
       />
       <View
         style={{

@@ -29,35 +29,21 @@ export const proposedPlanSetup = (
     (op) => op.type === "update_plan",
   );
 
-/** One number in a tile; the new one is lit in the accent colour. */
-function NumberTile({ value, lit }: { value: string; lit?: boolean }) {
+/** One big number; the new one is in the accent colour. */
+function BigNumber({ value, lit }: { value: string; lit?: boolean }) {
   const c = useColors();
   return (
-    <View
+    <Text
       style={{
-        minWidth: 92,
-        height: 92,
-        paddingHorizontal: 14,
-        borderRadius: 24,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: lit ? 2 : 1,
-        borderColor: lit ? c.accent : c.border,
-        backgroundColor: lit ? c.selectedBg : c.soft,
+        fontSize: 64,
+        lineHeight: 72,
+        fontWeight: "800",
+        color: lit ? c.accent : c.muted,
+        fontVariant: ["tabular-nums"],
       }}
     >
-      <Text
-        style={{
-          fontSize: 56,
-          lineHeight: 64,
-          fontWeight: "800",
-          color: lit ? c.accent : c.muted,
-          fontVariant: ["tabular-nums"],
-        }}
-      >
-        {value}
-      </Text>
-    </View>
+      {value}
+    </Text>
   );
 }
 
@@ -67,24 +53,11 @@ export function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProp
   const changed = from !== undefined && from !== to;
   if (size === "large")
     return (
-      <View testID="change-hero" style={{ alignItems: "center", gap: 10, paddingVertical: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          {changed && <NumberTile value={from!} />}
-          {changed && (
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: c.soft,
-              }}
-            >
-              <ArrowRight size={22} color={c.text} strokeWidth={2.4} />
-            </View>
-          )}
-          <NumberTile value={to} lit />
+      <View testID="change-hero" style={{ alignItems: "center", gap: 4, paddingVertical: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
+          {changed && <BigNumber value={from!} />}
+          {changed && <ArrowRight size={30} color={c.muted} strokeWidth={2.2} />}
+          <BigNumber value={to} lit />
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <CalendarDays size={16} color={c.muted} strokeWidth={2} />
