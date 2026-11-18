@@ -37,7 +37,7 @@ import { useAccessChecklist } from "@/features/access/AccessChecklist";
 import { accessRequests, coachNeedsAppleHealth } from "@/features/access/model";
 import { useHealth } from "@/features/health/HealthProvider";
 import { coachIdentity } from "@/features/messages/coach";
-import { newDraft } from "./model";
+import { draftStillFresh, newDraft } from "./model";
 import { InterviewFrame } from "./interview/Frame";
 import { OnboardingArt } from "./interview/OnboardingArt";
 import { Orbit } from "@/features/circles/Orbit";
@@ -111,7 +111,6 @@ export default function Onboarding({
   const aiConsent = useAiConsent();
   const access = useAccessChecklist();
   const garminConnected = !!useHealth().garmin.status?.connected;
-  const transcriptionFeedback = useTranscriptionFeedback();
   const activities = useActivities(flow === "create");
   const [draft, setDraft] = useState(() => ({
     ...newDraft(randomUUID()),
@@ -119,6 +118,9 @@ export default function Onboarding({
   }));
   const [state, setState] = useState<InterviewState>(() =>
     startInterview(draft),
+  );
+  const transcriptionFeedback = useTranscriptionFeedback(
+    `${state.stage}-${state.turns.length}`,
   );
   // The activity the new plan will use, if it already exists (the server matches by title too).
   const planActivityIds = (activities.data ?? [])
@@ -184,7 +186,7 @@ export default function Onboarding({
     if (preview || loaded.current || !saved.data) return;
     loaded.current = true;
     const value = saved.data.state.draft;
-    if (!value || value.createdPlanId) return;
+    if (!value || value.createdPlanId || !draftStillFresh(value)) return;
     setDraft(value);
     const interview = normalizeInterviewState(
       value.interview || startInterview(value),

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Image, Pressable, TextInput, View } from "react-native";
+import { Animated, AppState, Image, Pressable, TextInput, View } from "react-native";
+import axios from "axios";
 import { Check } from "lucide-react-native";
 import { EditorButton } from "@/features/activities/editor/controls";
 import type { DesignOption, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
@@ -14,9 +15,22 @@ import { StepSequence } from "../interview/StepReveal";
 import { designRoutes, nextSubgoal } from "./api";
 import { RouteCard, days } from "./RouteCard";
 import { TwoWeeks } from "./TwoWeeks";
-import type { DesignSectionProps, DesignStepName } from "./types";
+import type { AnsweredSubgoal, DesignSectionProps, DesignStepName } from "./types";
 
 const DECLINE = "No target in mind";
+
+// iOS drops a request when the app goes to the background. Once the app is back, ask
+// again: the server hands over the design it kept working on.
+const droppedConnection = (e: unknown) => axios.isAxiosError(e) && !e.response && e.code !== "ECONNABORTED";
+const whenActive = () =>
+  new Promise<void>((resolve) => {
+    if (AppState.currentState === "active") return resolve();
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      listener.remove();
+      resolve();
+    });
+  });
 
 function firstStep(design: PlanDesign): DesignStepName {
   if (design.selected) return "preview";
@@ -37,6 +51,9 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   const [error, setError] = useState<unknown>();
   const [working, setWorking] = useState(false);
   const requested = useRef(false);
+  // The questions answered in this visit, so Back can show the last one again.
+  const answered = useRef<AnsweredSubgoal[]>([]);
+  const [revisiting, setRevisiting] = useState<AnsweredSubgoal>();
   const activity = design.activities[0];
   const chosen = design.options.find((o) => o.id === design.selected);
 
@@ -56,14 +73,21 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   async function answerSubgoal(answer: string) {
     if (!question) return;
     const declined = answer === DECLINE || /^(just|no )/i.test(answer);
+    // Answering a question again replaces the earlier answer instead of adding one.
+    const before = revisiting
+      ? { asked: design.asked.slice(0, -1), goalSpec: revisiting.goalSpecBefore }
+      : { asked: design.asked, goalSpec: design.goalSpec };
     const next: PlanDesign = {
       ...design,
-      asked: [...design.asked, { question: question.title, answer }],
+      asked: [...before.asked, { question: question.title, answer }],
       goalSpec: declined
-        ? design.goalSpec
+        ? before.goalSpec
         : { metric: question.kind, value: null, unit: null, text: answer, chosenByUser: true },
     };
     await save(next);
+    if (revisiting) answered.current.pop();
+    answered.current.push({ question, answer, goalSpecBefore: before.goalSpec });
+    setRevisiting(undefined);
     setQuestion(null);
     setTyped("");
     setTyping(false);
@@ -79,7 +103,12 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     try {
       // Why it matters is context for the coach's tone, not something to store as an answer twice.
       const context = goalReason ? [...from.asked, { question: "Why does it matter?", answer: goalReason }] : from.asked;
-      const result = await designRoutes({ ...from, asked: context.slice(-4) }, goal, timezone);
+      const request = () => designRoutes({ ...from, asked: context.slice(-4) }, goal, timezone);
+      const result = await request().catch(async (e) => {
+        if (!droppedConnection(e)) throw e;
+        await whenActive();
+        return request();
+      });
       if (result.status === "ASK" && result.question) {
         setAsking(result.question);
         setStep("ask");
@@ -110,7 +139,16 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     if (step === "options") return setStep("days");
     if (step === "ask" || step === "pushback") return setStep("days");
     if (step === "retarget") return setStep("pushback");
-    if (step === "days" && outcome && design.asked.length) return setStep("subgoal");
+    if (step === "days" && outcome && design.asked.length) {
+      const last = answered.current.at(-1);
+      if (last) {
+        // Show the question they answered, with their answer marked, rather than asking anew.
+        requested.current = true;
+        setQuestion(last.question);
+        setRevisiting(last);
+      }
+      return setStep("subgoal");
+    }
     onBack();
   };
   const choose = async (option: DesignOption) => {
@@ -139,7 +177,10 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
                 onPress={() => void answerSubgoal(choice).catch(setError)}
                 style={({ pressed }) => ({ minHeight: 58, justifyContent: "center", paddingHorizontal: 18, borderRadius: 16, backgroundColor: c.card, opacity: pressed ? 0.6 : 1 })}
               >
-                <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>{choice}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ flex: 1, color: c.text, fontSize: 17, fontWeight: "600" }}>{choice}</Text>
+                  {revisiting?.answer === choice && <Check size={20} color={c.accent} />}
+                </View>
               </Pressable>
             ))}
             {typing ? (

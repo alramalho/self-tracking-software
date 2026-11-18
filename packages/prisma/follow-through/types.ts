@@ -181,6 +181,8 @@ export interface OnboardingDraft {
   answers: OnboardingAnswer[];
   step: string;
   createdPlanId: string | null;
+  /** When the server last saved it; drafts older than a few days start over. */
+  savedAt?: string;
   preferences?: SupportPreferences;
   // Who sees the plan; set when creating a plan, unset in onboarding (saved as PRIVATE).
   visibility?: PlanVisibilityChoice;

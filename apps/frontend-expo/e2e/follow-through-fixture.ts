@@ -347,7 +347,7 @@ export function followThroughFixture(
       serverTime: new Date().toISOString(),
     };
   if (path === "/follow-through/onboarding/draft") {
-    support.draft = body;
+    support.draft = { ...body, savedAt: new Date().toISOString() };
     return body;
   }
   if (path === "/follow-through/onboarding/goal-guidance") {

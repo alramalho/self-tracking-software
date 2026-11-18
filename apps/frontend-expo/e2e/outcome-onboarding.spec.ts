@@ -229,3 +229,55 @@ for (const theme of ["LIGHT", "DARK"]) {
     await capture(page, `reality-04-adjusted-${theme}`);
   });
 }
+
+test("going back from the days shows the coach's question again, with the answer marked", async ({ page, request }) => {
+  test.setTimeout(90000);
+  await start(page, request, "DARK");
+  await page.getByRole("textbox", { name: "Your answer" }).fill("Finish my first half marathon");
+  await next(page);
+  await answer(page, "How much do you run now?", "Twice a week, about 5 km each.");
+  await next(page);
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Your answer" }).fill("I want to finish it with my friends");
+  await next(page);
+  const question = page.getByRole("heading", { name: "Do you have a finish time in mind?" });
+  await expect(question).toBeVisible();
+  await page.getByRole("button", { name: "Under 2:30", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  const subgoalAsks = async () =>
+    (await request.get(`${API}/__state`).then((r) => r.json())).requests.filter((r: any) => r.path.endsWith("/design/subgoal")).length;
+  const before = await subgoalAsks();
+
+  await page.getByRole("button", { name: "Previous question" }).click();
+  await expect(question).toBeVisible();
+  await expect(page.getByRole("button", { name: "Under 2:30", exact: true })).toBeVisible();
+  // Shown from memory, not asked anew.
+  expect(await subgoalAsks()).toBe(before);
+  await capture(page, "back-to-question-DARK");
+
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+});
+
+test("a dropped design request is asked again and the routes still arrive", async ({ page, request }) => {
+  test.setTimeout(90000);
+  await start(page, request, "LIGHT");
+  await page.getByRole("textbox", { name: "Your answer" }).fill("Finish my first half marathon");
+  await next(page);
+  await answer(page, "How much do you run now?", "Twice a week, about 5 km each.");
+  await next(page);
+  await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Your answer" }).fill("I want to finish it with my friends");
+  await next(page);
+  await page.getByRole("button", { name: "No target in mind" }).click();
+  await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+  let dropped = false;
+  await page.route("**/design/options", async (route) => {
+    if (dropped) return route.continue();
+    dropped = true;
+    await route.abort("connectionreset");
+  });
+  await next(page, "Ask my coach");
+  await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
+  await expect(page.getByText("Unable to reach the server")).toHaveCount(0);
+});

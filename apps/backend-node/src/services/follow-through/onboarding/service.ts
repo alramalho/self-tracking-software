@@ -41,7 +41,7 @@ export async function saveDraft(userId: string, draft: OnboardingDraft) {
     if (state.draft?.id === draft.id && state.draft.createdPlanId)
       return { draft: state.draft, events: [] };
     const events = onboardingReviewEvents(userId, draft, state.draft);
-    state.draft = { ...draft, createdPlanId: null };
+    state.draft = { ...draft, createdPlanId: null, savedAt: new Date().toISOString() };
     return { draft: state.draft, events };
   });
   // Emit after the transaction commits, so database retries do not duplicate it.

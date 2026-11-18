@@ -19,6 +19,7 @@ import rateLimit from "express-rate-limit";
 import { calendarSessions } from "../services/follow-through/calendar";
 import { coachingOffer } from "../services/follow-through/onboarding/billing";
 import { draftSchema } from "../services/follow-through/onboarding/schema";
+import { sharedRequest } from "../services/plan-design/sharedRequest";
 import {
   nextQuestion,
   saveDraft,
@@ -222,8 +223,11 @@ router.post(
   handle(async (req, res) => {
     const { timezone, ...input } = optionsRequestSchema.parse(req.body);
     const startDate = formatInTimeZone(new Date(), timezone || "UTC", "yyyy-MM-dd");
-    const result = await designOptions({ ...input, startDate });
-    logger.info("Plan design generated", { userId: req.user!.id, status: result.status, usage: result.usage });
+    const result = await sharedRequest(req.user!.id, { ...input, startDate }, async () => {
+      const designed = await designOptions({ ...input, startDate });
+      logger.info("Plan design generated", { userId: req.user!.id, status: designed.status, usage: designed.usage });
+      return designed;
+    });
     res.json({ status: result.status, question: result.question, coachNote: result.coachNote, baseline: result.baseline, options: result.options, startDate });
   }),
 );

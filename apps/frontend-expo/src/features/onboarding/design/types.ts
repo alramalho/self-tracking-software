@@ -1,4 +1,4 @@
-import type { CoachNote, DesignActivity, DesignOption, DesignSession, PlanDesign } from "@tsw/prisma/follow-through";
+import type { CoachNote, DesignActivity, DesignOption, DesignSession, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
 
 export interface DesignSectionProps {
   design: PlanDesign;
@@ -78,4 +78,11 @@ export interface ConfidenceDialProps {
   compact?: boolean;
   /** 0–1 while the person is speaking; the dial glows with their voice. */
   voice?: number;
+}
+
+/** A coach question answered during this visit, kept so Back can show it again. */
+export interface AnsweredSubgoal {
+  question: SubgoalQuestion;
+  answer: string;
+  goalSpecBefore: PlanDesign["goalSpec"];
 }
