@@ -114,6 +114,13 @@ export interface PlanDesign {
   startDate: string;
   /** How sure the person was of the plan they ended up with, asked as the last design step. */
   confidence?: PlanConfidence | null;
+  /** Plan category from the goal read; saved on the plan. */
+  category?: string | null;
+  /**
+   * Learning plans only: the course or book they follow ("Coursera Chinese 1, week 2"). Null when they
+   * asked the coach to make one; undefined until asked.
+   */
+  course?: string | null;
 }
 
 /**
@@ -158,6 +165,8 @@ export interface CoachNote {
 export interface ClassifyResult {
   /** The plan's name in a few words. Optional: an older server leaves it out. */
   title?: string;
+  /** Plan category key; learning categories get the course question. */
+  category?: string;
   orientation: PlanOrientation;
   reason: string;
   activity: { title: string; measure: string; emoji: string };

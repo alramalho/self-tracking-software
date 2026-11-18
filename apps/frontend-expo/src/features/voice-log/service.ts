@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
 import { api } from "@/data/api";
 import type {
+  VoiceLogCoverage,
+  VoiceLogCoverageRequest,
   VoiceLogCommitRequest,
   VoiceLogCommitResponse,
   VoiceLogPreview,
@@ -54,4 +56,9 @@ export async function commitVoiceLog(
 ): Promise<VoiceLogCommitResponse> {
   return (await api.post<VoiceLogCommitResponse>("/voice-logs/commit", payload))
     .data;
+}
+
+/** After a "What did you cover?" note on a learning plan: the coach's read, and a suggested change when there is one. */
+export async function checkCoverage(payload: VoiceLogCoverageRequest): Promise<VoiceLogCoverage | null> {
+  return (await api.post<{ coverage: VoiceLogCoverage | null }>("/voice-logs/coverage", payload, { timeout: 60000 })).data.coverage;
 }

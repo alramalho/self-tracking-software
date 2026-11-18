@@ -1,5 +1,6 @@
 import { interviewFixture } from "./interview-fixture";
 import { bracket, exampleFor, startDate as exampleStart } from "./design-examples";
+import { skipCoverage } from "@tsw/prisma/follow-through/coverage";
 import type {
   FollowThroughState,
   OnboardingDraft,
@@ -34,6 +35,24 @@ export function followThroughFixture(
   body: any,
   state: any,
 ): unknown | undefined {
+  // A coached Chinese plan (the "read" activity, renamed) with a session logged today and no note yet.
+  if (path === "/__learning-coverage") {
+    followThroughFixture("/__follow-through", "POST", {}, state);
+    const plan = state.plans[1];
+    Object.assign(plan, { goal: "Conversational Chinese", emoji: "🇨🇳", category: "language_learning" });
+    Object.assign(plan.activities[0], { title: "Chinese", emoji: "🇨🇳", measure: "minutes" });
+    const first = Object.values(support.supports)[0] as any;
+    for (const p of state.plans) {
+      support.supports[p.id] ??= { ...first, planId: p.id, mode: "WEEKLY", weekdays: [], time: null };
+      support.supports[p.id].coaching = { role: p.id === plan.id ? "consistency" : "tracking", followUps: false, dataAccess: { workouts: false, sleep: false } };
+    }
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [] };
+    support.checks = {};
+    if (body?.logged !== false)
+      state.entries.unshift({ id: "entry-chinese", activityId: plan.activities[0].id, quantity: 20, datetime: new Date().toISOString(), createdAt: new Date().toISOString(), description: null, userId: "test-user" });
+    state.metrics = [];
+    return { ok: true };
+  }
   if (path === "/__coaching-monitoring") {
     followThroughFixture("/__follow-through", "POST", {}, state);
     Object.assign(state.plans[0], { goal: "Run my first half marathon", timesPerWeek: 3 });
@@ -144,6 +163,12 @@ export function followThroughFixture(
   if (path === "/follow-through/coaching/presence") return { ok: true };
   if (path === "/follow-through/coaching/resume") {
     if (support.monitoring) support.monitoring.pausedPlanIds = support.monitoring.pausedPlanIds.filter(id => id !== body.planId);
+    return { ok: true };
+  }
+  // "Not now" on "What did you cover?": the same skip rule as the server.
+  const coverageSkip = path.match(/^\/follow-through\/plans\/([^/]+)\/coverage\/skip$/);
+  if (coverageSkip) {
+    support.coverage = { ...support.coverage, [coverageSkip[1]]: skipCoverage(support.coverage?.[coverageSkip[1]]) };
     return { ok: true };
   }
   const missedWeek = path.match(/^\/follow-through\/plans\/([^/]+)\/missed-week$/);
@@ -368,7 +393,8 @@ export function followThroughFixture(
   // Plan design fixtures serve the hand-written illustrative examples; they are not model output.
   if (path === "/follow-through/onboarding/design/classify") {
     const example = exampleFor(body.goal);
-    return { orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion, loggedBaseline: /^run/i.test(example.activity.title) ? loggedRunning : null };
+    const category = ({ "half-marathon": "running", bench: "strength_training", cutting: "weight_management", guitar: "music" } as Record<string, string>)[example.id] ?? "other";
+    return { category, orientation: example.orientation, reason: "Fixture", activity: example.activity, goalSpec: example.goalSpec.chosenByUser && /\d/.test(body.goal) ? example.goalSpec : { metric: null, value: null, unit: null, text: null, chosenByUser: false }, baselineQuestion: example.baselineQuestion, loggedBaseline: /^run/i.test(example.activity.title) ? loggedRunning : null };
   }
   // In-app creation: a starting point measured from the person's own logs. Hand-written fixture.
   if (path === "/follow-through/onboarding/design/subgoal") {

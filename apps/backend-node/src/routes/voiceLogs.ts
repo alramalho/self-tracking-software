@@ -6,6 +6,7 @@ import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { requireAiConsent } from "../utils/aiConsent";
 import { commitVoiceLog, previewVoiceLog } from "../services/voice-log/service";
 import { logger } from "../utils/logger";
+import { checkCoverage } from "../services/coach/learning/service";
 import {
   voiceLogCommitSchema,
   voiceLogFollowUpSchema,
@@ -120,6 +121,35 @@ router.post(
         return;
       }
       res.status(500).json({ error: "Voice log commit failed" });
+    }
+  },
+);
+
+// "What did you cover?" on a learning plan: after a Share more note is saved, the coach reads it against the plan.
+const coverageRequestSchema = z.object({
+  logged: z
+    .array(z.object({ activityId: z.string().min(1), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
+    .min(1)
+    .max(10),
+  said: z.string().trim().min(1).max(4000),
+});
+
+router.post(
+  "/coverage",
+  requireAuth,
+  requireAiConsent,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const parsed = coverageRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    try {
+      res.json({ coverage: await checkCoverage(req.user!.id, parsed.data.logged, parsed.data.said) });
+    } catch (error) {
+      // The note is already saved; a failed read only means no suggestion this time.
+      logger.error("Error checking learning coverage:", error);
+      res.json({ coverage: null });
     }
   },
 );

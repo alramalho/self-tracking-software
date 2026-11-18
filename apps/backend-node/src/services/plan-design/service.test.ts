@@ -330,6 +330,7 @@ describe("stray characters", () => {
 describe("classify and sub-goal question", () => {
   const classified = (over: object = {}) => ({
     title: "Half marathon",
+    category: "running",
     orientation: "OUTCOME",
     reason: "A finishable race.",
     activity: { title: "Running", measure: "km", emoji: "🏃" },

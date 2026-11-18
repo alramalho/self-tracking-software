@@ -14,6 +14,7 @@ export function initialDesign(classified: ClassifyResponse, baseline: string, we
     options: [],
     selected: null,
     startDate: new Date().toISOString().slice(0, 10),
+    category: classified.category ?? null,
   };
 }
 

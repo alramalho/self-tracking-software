@@ -23,6 +23,7 @@ import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
 import type { VoiceLogFollowUp } from "@/features/voice-log/types";
 import { dayKey } from "@/core/dates";
+import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { celebrationFor, type Celebration } from "@/features/celebration/model";
 import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
@@ -184,10 +185,15 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       setError(e);
     }
   }
+  // Learning plans ask what was covered, so the coach knows where they are in the course.
+  const learning = (plans.data ?? []).some(
+    (p) => !p.archivedAt && isLearningPlan(p) && p.activities.some((a) => a.id === activity.id),
+  );
   if (celebration)
     return (
       <CelebrationOverlay
         celebration={celebration.value}
+        shareMoreLabel={learning ? "What did you cover?" : "Share more"}
         onDone={() => {
           const { then } = celebration;
           setCelebration(undefined);

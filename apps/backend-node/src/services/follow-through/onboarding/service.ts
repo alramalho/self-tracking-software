@@ -165,7 +165,10 @@ export async function finishOnboarding(
         designedThrough: lastDesigned ? new Date(`${lastDesigned}T12:00:00Z`) : null,
         confidence: design?.confidence ? (design.confidence as unknown as Prisma.InputJsonValue) : undefined,
         visibility: draft.visibility ?? "PRIVATE",
+        // The goal read already named the category: set it now so learning plans are known from day one.
+        ...(design?.category ? { category: design.category, goalChanged: false } : {}),
         notes: [
+          design?.course ? `Course or book they follow: ${design.course}` : "",
           draft.resourceName
             ? `Resource: ${draft.resourceName}${draft.resourceUrl ? ` (${draft.resourceUrl})` : ""}`
             : "",
@@ -215,7 +218,7 @@ export async function finishOnboarding(
       // Follow-through timer default; never treat this as the duration of every planned session.
       durationMinutes: draft.durationMinutes,
       format: draft.format,
-      resourceName: draft.resourceName || null,
+      resourceName: draft.resourceName || design?.course?.slice(0, 120) || null,
       resourceUrl: draft.resourceUrl || null,
       nextStep: draft.nextStep,
       preferences,

@@ -135,6 +135,8 @@ export interface Plan {
   goalReason?: string | null;
   /** What the coach understood: a finishable outcome or an ongoing habit. Null for plans made before coached design. */
   orientation?: "OUTCOME" | "CONSISTENCY" | null;
+  /** Plan category key ("language_learning", "running"…); learning ones ask "What did you cover?". */
+  category?: string | null;
   notes?: string | null;
   outlineType: "TIMES_PER_WEEK" | "SPECIFIC";
   timesPerWeek: number;

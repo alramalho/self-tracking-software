@@ -11,6 +11,7 @@ import {
   Lightbulb,
   MoreHorizontal,
   AlignLeft,
+  BookOpen,
   LockKeyhole,
   Mic,
   RotateCcw,
@@ -26,15 +27,18 @@ import { Text } from "@/components/typography/Text";
 import { Button, Copy, Status, useColors } from "@/components/ui";
 import { ReviewRow } from "@/features/health/review/controls";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
-import { useCurrentUser, useEntries } from "@/data/queries";
+import { useCurrentUser, useEntries, usePlans } from "@/data/queries";
+import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
+import { CoachNote } from "@/features/messages/adaptation/CoachNote";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
-import { commitVoiceLog, previewVoiceLog } from "./service";
+import { checkCoverage, commitVoiceLog, previewVoiceLog } from "./service";
 import { enrichVoiceLogPreview } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
 import { useVoiceLogRecorder } from "./useVoiceLogRecorder";
 import { voiceLogActivityKey, voiceLogMetricKey } from "./types";
 import type {
+  VoiceLogCoverage,
   VoiceLogFollowUp,
   VoiceLogDraft,
   VoiceLogDrawerProps,
@@ -112,13 +116,19 @@ function isCoachContextItem(
 }
 
 /** What "Share more" asks for, while it listens. */
-function FollowUpGuide() {
+function FollowUpGuide({ learning }: { learning: boolean }) {
   const c = useColors();
-  const rows = [
-    { icon: Heart, text: "How it felt" },
-    { icon: AlignLeft, text: "What it was about" },
-    { icon: MoreHorizontal, text: "Anything else" },
-  ];
+  const rows = learning
+    ? [
+        { icon: BookOpen, text: "What you covered" },
+        { icon: Heart, text: "How it went" },
+        { icon: MoreHorizontal, text: "Anything else" },
+      ]
+    : [
+        { icon: Heart, text: "How it felt" },
+        { icon: AlignLeft, text: "What it was about" },
+        { icon: MoreHorizontal, text: "Anything else" },
+      ];
   return (
     <View testID="voice-log-follow-up-guide" style={{ gap: 10, alignSelf: "stretch", paddingHorizontal: 8 }}>
       {rows.map(({ icon: Icon, text }) => (
@@ -226,6 +236,12 @@ export function VoiceLogDrawer({
   const [followUp, setFollowUp] = useState(initialFollowUp);
   // What the last save logged, for "Share more" (offered once, not after a follow-up).
   const [lastSaved, setLastSaved] = useState<VoiceLogFollowUp["logged"]>([]);
+  // Learning plans ask "What did you cover?" and the coach reads the answer against the plan.
+  const plans = usePlans();
+  const learning = !!followUp?.logged.some((l) =>
+    (plans.data ?? []).some((p) => !p.archivedAt && isLearningPlan(p) && p.activities.some((a) => a.id === l.activityId)),
+  );
+  const [coverage, setCoverage] = useState<VoiceLogCoverage | "checking" | null>(null);
 
   useEffect(() => {
     if (
@@ -518,15 +534,27 @@ export function VoiceLogDrawer({
               .map(({ activityId, date, quantity }) => ({ activityId, date, quantity })),
       );
       setPhase("committed");
+      if (followUp && learning) {
+        setCoverage("checking");
+        checkCoverage({ logged: followUp.logged.map(({ activityId, date }) => ({ activityId, date })), said: preview.transcript })
+          .then(setCoverage)
+          .catch(() => setCoverage(null));
+      }
     } catch (nextError) {
       setError(nextError);
       setPhase("review");
     }
   }
 
+  const openSuggestion = (suggestion: NonNullable<VoiceLogCoverage["suggestion"]>) => {
+    onClose();
+    router.push({ pathname: "/chat/[id]", params: { id: suggestion.chatId, messageId: suggestion.messageId, type: "COACH" } });
+  };
+  const suggestion = coverage && coverage !== "checking" ? coverage.suggestion : null;
+
   const title =
     followUp && (phase === "ready" || phase === "recording")
-      ? "Share more"
+      ? learning ? "What did you cover?" : "Share more"
       : phase === "review"
       ? "Review voice note"
       : phase === "processing"
@@ -612,7 +640,7 @@ export function VoiceLogDrawer({
           <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
             {recorder.isWorking ? "Finishing recording…" : "Listening…"}
           </Text>
-          {followUp && !recorder.isWorking && <FollowUpGuide />}
+          {followUp && !recorder.isWorking && <FollowUpGuide learning={learning} />}
           <Text
             accessibilityLabel="Voice note duration"
             style={{
@@ -1119,7 +1147,22 @@ export function VoiceLogDrawer({
       {phase === "committed" && (
         <View testID="voice-log-committed" style={{ alignItems: "center", gap: 14, paddingVertical: 16 }}>
           <CheckCircle2 size={56} color="#10b981" strokeWidth={1.8} accessibilityLabel="Voice note saved" />
-          {lastSaved.length ? (
+          {coverage === "checking" && (
+            <ActivityIndicator testID="voice-log-coverage-checking" color={c.muted} accessibilityLabel="Your coach is reading your note" />
+          )}
+          {suggestion && coverage !== "checking" && coverage && (
+            <View testID="voice-log-coverage" style={{ alignSelf: "stretch", gap: 14 }}>
+              <CoachNote strategist={user.data?.coachPersonality === "STRATEGIST"} mood={coverage.pace === "BEHIND" ? "sad" : "smiling"}>
+                <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>{suggestion.message}</Text>
+              </CoachNote>
+              <Button onPress={() => openSuggestion(suggestion)} testID="voice-log-coverage-review">
+                Review change
+              </Button>
+            </View>
+          )}
+          {suggestion ? (
+            <TextAction icon={CheckCircle2} label="Not now" onPress={onClose} />
+          ) : lastSaved.length ? (
             <>
               <Button onPress={shareMore} testID="voice-log-share-more">
                 Share more

@@ -203,6 +203,8 @@ export interface FollowThroughState {
   monitoring?: import("./coaching").CoachMonitoringState;
   /** Latest missed-week answer per plan. */
   missedWeeks?: Record<string, MissedWeekAnswer>;
+  /** "What did you cover?" on learning plans, per plan. */
+  coverage?: Record<string, import("./coverage").CoverageState>;
   version: 1;
   enabled: boolean;
   pausedAt: string | null;

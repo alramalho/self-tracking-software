@@ -163,6 +163,23 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
             />
           </>
         );
+      // The iPhone answers with a voice note; on the web the note goes to the coach chat.
+      case "coverage":
+        return (
+          <>
+            <DrawerHeader emoji={it.emoji} title={it.title} subtitle={it.plan.goal} />
+            <DrawerOptions
+              options={[
+                {
+                  label: "Not now",
+                  disabled: busy,
+                  onClick: () => post.mutate({ path: `/follow-through/plans/${encodeURIComponent(it.plan.id)}/coverage/skip`, body: {} }),
+                },
+              ]}
+            />
+            <DrawerButton label={`Tell ${coach.name}`} onClick={openChat} />
+          </>
+        );
       case "checkin":
         return (
           <>

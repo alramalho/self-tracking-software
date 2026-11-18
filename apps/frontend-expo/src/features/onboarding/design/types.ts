@@ -15,7 +15,7 @@ export interface DesignSectionProps {
   onDone: (design: PlanDesign) => void;
 }
 
-export type DesignStepName = "subgoal" | "days" | "loading" | "ask" | "pushback" | "retarget" | "options" | "preview";
+export type DesignStepName = "course" | "subgoal" | "days" | "loading" | "ask" | "pushback" | "retarget" | "options" | "preview";
 
 export interface RouteCardProps {
   option: DesignOption;
@@ -37,6 +37,8 @@ export interface SessionDetailProps {
 export interface ClassifyResponse {
   /** The plan's name in a few words; missing from an older server. */
   title?: string;
+  /** Plan category key; learning ones get "Following a course or book?". */
+  category?: string;
   orientation: PlanDesign["orientation"];
   reason: string;
   activity: { key: string; title: string; measure: string; emoji: string };

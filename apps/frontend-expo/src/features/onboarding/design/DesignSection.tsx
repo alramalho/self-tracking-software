@@ -11,6 +11,7 @@ import { NumberPicker } from "../interview/NumberPicker";
 import { OnboardingArt } from "../interview/OnboardingArt";
 import { OnboardingButton } from "../interview/OnboardingButton";
 import { StepSequence } from "../interview/StepReveal";
+import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { designRoutes, nextSubgoal } from "./api";
 import { RouteCard, days } from "./RouteCard";
 import { TwoWeeks } from "./TwoWeeks";
@@ -18,10 +19,19 @@ import type { DesignSectionProps, DesignStepName } from "./types";
 
 const DECLINE = "No target in mind";
 
+/** Learning plans ask once whether they follow a course or book, so sessions follow it instead of an invented syllabus. */
+const asksCourse = (design: PlanDesign) => isLearningPlan(design);
+const COURSE_QUESTION = "Course or book they follow";
+
+/** After the course question (or straight away): the target question for outcome goals, else the days. */
+const afterCourse = (design: PlanDesign): DesignStepName =>
+  design.orientation === "OUTCOME" && !design.asked.length ? "subgoal" : "days";
+
 function firstStep(design: PlanDesign): DesignStepName {
   if (design.selected) return "preview";
   if (design.options.length) return "options";
-  return design.orientation === "OUTCOME" && !design.asked.length ? "subgoal" : "days";
+  if (asksCourse(design) && design.course === undefined) return "course";
+  return afterCourse(design);
 }
 
 // Section 4, "Your week". Outcome: [one optional question] → days → two routes → the first two weeks.
@@ -34,6 +44,8 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   const [asking, setAsking] = useState("");
   const [typed, setTyped] = useState("");
   const [typing, setTyping] = useState(false);
+  const [course, setCourse] = useState(design.course ?? "");
+  const [following, setFollowing] = useState(!!design.course);
   const [error, setError] = useState<unknown>();
   const [working, setWorking] = useState(false);
   const requested = useRef(false);
@@ -72,6 +84,12 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     setStep(declined || next.asked.length >= 2 ? "days" : "subgoal");
   }
 
+  async function answerCourse(answer: string | null) {
+    const next: PlanDesign = { ...design, course: answer?.trim() || null };
+    await save(next);
+    setStep(afterCourse(next));
+  }
+
   async function generate(from: PlanDesign) {
     setError(undefined);
     if (!outcome) return onDone(from);
@@ -79,7 +97,9 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     try {
       // Why it matters is context for the coach's tone, not something to store as an answer twice.
       const context = goalReason ? [...from.asked, { question: "Why does it matter?", answer: goalReason }] : from.asked;
-      const result = await designRoutes({ ...from, asked: context.slice(-4) }, goal, timezone);
+      // The course they follow is the one answer that must reach the designer.
+      const withCourse = from.course ? [...context.slice(-3), { question: COURSE_QUESTION, answer: from.course.slice(0, 300) }] : context.slice(-4);
+      const result = await designRoutes({ ...from, asked: withCourse }, goal, timezone);
       if (result.status === "ASK" && result.question) {
         setAsking(result.question);
         setStep("ask");
@@ -100,7 +120,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   }
 
   const progress = {
-    current: step === "subgoal" || step === "days" || step === "ask" || step === "loading" ? 4 : step === "options" ? 5 : 6,
+    current: step === "course" || step === "subgoal" || step === "days" || step === "ask" || step === "loading" ? 4 : step === "options" ? 5 : 6,
     total: 12,
     label: "Your week",
   };
@@ -111,6 +131,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     if (step === "ask" || step === "pushback") return setStep("days");
     if (step === "retarget") return setStep("pushback");
     if (step === "days" && outcome && design.asked.length) return setStep("subgoal");
+    if ((step === "days" || step === "subgoal") && asksCourse(design)) return setStep("course");
     onBack();
   };
   const choose = async (option: DesignOption) => {
@@ -121,7 +142,64 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
 
   let body;
   let actions: React.ReactNode = <View />;
-  if (step === "subgoal") {
+  if (step === "course") {
+    const choice = (label: string, selected: boolean, onPress: () => void, testID: string) => (
+      <Pressable
+        testID={testID}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+        accessibilityLabel={label}
+        disabled={anything}
+        onPress={onPress}
+        style={({ pressed }) => ({
+          minHeight: 58,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 18,
+          borderRadius: 16,
+          backgroundColor: c.card,
+          borderWidth: 2,
+          borderColor: selected ? c.accent : "transparent",
+          opacity: pressed ? 0.6 : 1,
+        })}
+      >
+        <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>{label}</Text>
+        {selected && <Check size={20} color={c.accent} />}
+      </Pressable>
+    );
+    body = (
+      <StepSequence prefix="design-course" style={{ alignItems: "center", gap: 20 }}>
+        <OnboardingArt name="question" size={120} />
+        <Text accessibilityRole="header" style={{ color: c.text, fontSize: 30, lineHeight: 36, fontWeight: "700", textAlign: "center", letterSpacing: -0.5 }}>
+          Following a course or book?
+        </Text>
+        <View style={{ alignSelf: "stretch", gap: 12 }}>
+          {choice("Yes, I am", following, () => setFollowing(true), "course-yes")}
+          {following && (
+            <TextInput
+              testID="course-name"
+              accessibilityLabel="Which one, and where are you?"
+              autoFocus
+              value={course}
+              onChangeText={setCourse}
+              onSubmitEditing={() => course.trim() && void answerCourse(course).catch(setError)}
+              placeholder="Which one, and where are you?"
+              placeholderTextColor={c.muted}
+              multiline
+              blurOnSubmit
+              returnKeyType="done"
+              style={{ minHeight: 58, paddingVertical: 16, textAlignVertical: "top", borderRadius: 16, borderWidth: 1, borderColor: c.inputBorder, backgroundColor: c.card, paddingHorizontal: 18, fontSize: 17, color: c.text }}
+            />
+          )}
+          {choice("Make one for me", false, () => void answerCourse(null).catch(setError), "course-none")}
+        </View>
+      </StepSequence>
+    );
+    actions = following ? (
+      <OnboardingButton label="Continue" disabled={!course.trim() || anything} onPress={() => void answerCourse(course).catch(setError)} />
+    ) : <View />;
+  } else if (step === "subgoal") {
     body = (
       <StepSequence prefix="design-subgoal" style={{ alignItems: "center", gap: 20 }}>
         <OnboardingArt name="question" size={120} />

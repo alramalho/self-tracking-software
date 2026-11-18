@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { PLAN_CATEGORY_KEYS } from "../../constants/planCategories";
 
 // Structured outputs need every field present, so "absent" is always an explicit null.
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -20,6 +21,8 @@ const activitySchema = z.object({
 export const classifySchema = z.object({
   /** The plan's name: the goal in a few words, not the sentence they said. */
   title: z.string().min(1).max(60),
+  /** The plan's category; learning ones (a language, an instrument, coding) get the course question. */
+  category: z.enum(PLAN_CATEGORY_KEYS as [string, ...string[]]),
   orientation: z.enum(["OUTCOME", "CONSISTENCY"]),
   reason: z.string().max(200),
   activity: activitySchema,

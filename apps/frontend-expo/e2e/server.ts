@@ -593,6 +593,20 @@ const server = http.createServer(async (req, res) => {
     });
     return;
   }
+  // "What did you cover?": a scripted coach read, not model output. Past the plan → a suggested change.
+  if (path === "/voice-logs/coverage" && req.method === "POST") {
+    const ahead = body.logged?.some((l: any) => l.activityId === "read") || /ahead|finished|already|moved on/i.test(body.said ?? "");
+    send({
+      coverage: {
+        pace: ahead ? "AHEAD" : "ON_TRACK",
+        covered: "chord changes",
+        suggestion: ahead
+          ? { message: "You're past numbers already. Thursday moves on to ordering food.", chatId: "coach-main", messageId: "coverage-message" }
+          : null,
+      },
+    });
+    return;
+  }
   if (path === "/voice-logs/commit" && req.method === "POST") {
     send({
       success: true,

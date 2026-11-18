@@ -170,6 +170,8 @@ for (const theme of ["LIGHT", "DARK"])
       await next(page);
       await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
       await page.getByRole("button", { name: "Skip this question" }).click();
+      // A learning goal asks about a course first; these screens let the coach make one.
+      if (o.id === "guitar") await page.getByTestId("course-none").click();
       if (o.target) {
         await expect(page.getByTestId("onboarding-art-question")).toBeVisible();
         await capture(page, `${o.id}-01-target-${theme}`);

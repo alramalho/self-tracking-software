@@ -51,4 +51,6 @@ export const planDesignDraftSchema = z.object({
     })
     .nullable()
     .optional(),
+  category: z.string().max(40).nullable().optional(),
+  course: z.string().max(300).nullable().optional(),
 });

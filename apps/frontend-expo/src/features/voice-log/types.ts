@@ -23,6 +23,18 @@ export interface VoiceLogFollowUp {
   logged: { activityId: string; date: string; quantity: number }[];
 }
 
+export interface VoiceLogCoverageRequest {
+  logged: { activityId: string; date: string }[];
+  said: string;
+}
+
+/** The coach's read of a "What did you cover?" note. */
+export interface VoiceLogCoverage {
+  pace: "ON_TRACK" | "AHEAD" | "BEHIND" | "UNCLEAR";
+  covered: string;
+  suggestion: { message: string; chatId: string; messageId: string } | null;
+}
+
 export interface VoiceLogMetric {
   metricId: string;
   title: string;

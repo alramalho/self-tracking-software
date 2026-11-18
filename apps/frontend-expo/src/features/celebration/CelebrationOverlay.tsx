@@ -80,11 +80,14 @@ export function CelebrationOverlay({
   celebration,
   onDone,
   onShareMore,
+  shareMoreLabel = "Share more",
 }: {
   celebration: Celebration;
   onDone: () => void;
   /** Shows "Share more"; called instead of onDone when tapped. */
   onShareMore?: () => void;
+  /** "What did you cover?" on learning plans. */
+  shareMoreLabel?: string;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -346,13 +349,13 @@ export function CelebrationOverlay({
               <Pressable
                 testID="log-celebration-share-more"
                 accessibilityRole="button"
-                accessibilityLabel="Share more"
-                accessibilityHint="Say how it felt, what it was about and anything else"
+                accessibilityLabel={shareMoreLabel}
+                accessibilityHint="Say how it went and anything else"
                 onPress={() => finish(onShareMore)}
                 style={({ pressed }) => [styles.shareMoreButton, { backgroundColor: c.accent, opacity: pressed ? 0.8 : 1 }]}
               >
                 <Mic size={20} color="white" strokeWidth={2.2} />
-                <Text style={styles.shareMoreText}>Share more</Text>
+                <Text style={styles.shareMoreText}>{shareMoreLabel}</Text>
               </Pressable>
             </Animated.View>
           )}
@@ -543,7 +546,8 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, fontWeight: "600" },
   countNum: { fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] },
   particle: { position: "absolute", left: 0, top: 0 },
-  shareMore: { position: "absolute", left: 0, right: 0, alignItems: "center" },
-  shareMoreButton: { minHeight: 52, paddingHorizontal: 28, borderRadius: 26, flexDirection: "row", alignItems: "center", gap: 10 },
+  // Full width, like the app's main buttons, so it reads as the next step rather than an extra.
+  shareMore: { position: "absolute", left: 20, right: 20 },
+  shareMoreButton: { minHeight: 56, borderRadius: 28, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   shareMoreText: { color: "white", fontSize: 17, fontWeight: "700" },
 });

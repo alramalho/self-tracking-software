@@ -4,6 +4,7 @@ import { planPace, weekOnTheLine } from "./pace";
 import type { MissedWeek } from "./streak";
 import type { CoachReminder, CoachRequest } from "./coaching";
 import type { CoachCheck, FollowThroughState, PlanSupport } from "./types";
+import { coverageAsk } from "./coverage";
 import { addDaysToDateKey, dateKeyToUTCDate, getPlanWeekDateKey, getPlanWeekStartKey } from "../plan-week";
 
 type DateValue = Date | string;
@@ -14,6 +15,7 @@ export interface CoachPlan {
   goal: string;
   emoji?: string | null;
   outlineType?: string | null;
+  category?: string | null;
   timesPerWeek?: number | null;
   orientation?: string | null;
   createdAt: DateValue;
@@ -27,8 +29,11 @@ export interface CoachPlan {
   } | null;
 }
 export interface CoachEntry {
+  id?: string;
   activityId?: string | null;
   datetime: DateValue;
+  quantity?: number;
+  description?: string | null;
   deletedAt?: DateValue | null;
 }
 export interface CoachAttention {
@@ -73,7 +78,8 @@ export type CoachItem<P extends CoachPlan = CoachPlan, A extends CoachAttention 
   | (ItemBase & { kind: "request"; request: CoachRequest; plan?: P })
   | (ItemBase & { kind: "check"; check: CoachCheck; plan?: P })
   | (ItemBase & { kind: "attention"; attention: A })
-  | (ItemBase & { kind: "checkin"; metrics: M[] });
+  | (ItemBase & { kind: "checkin"; metrics: M[] })
+  | (ItemBase & { kind: "coverage"; plan: P; entry: CoachEntry });
 
 export interface CoachItemsInput<P extends CoachPlan, A extends CoachAttention, M extends CoachMetric> {
   plans: P[];
@@ -340,6 +346,23 @@ export function coachItems<P extends CoachPlan, A extends CoachAttention, M exte
       at: now.toISOString(),
       metrics: input.metrics,
     });
+  // "What did you cover?" only when nothing else from the coach waits (the daily check-in aside), one plan at a time.
+  if (!items.some((item) => item.kind !== "checkin"))
+    for (const plan of active.filter((p) => planCoachingOn(state, p.id))) {
+      const entry = coverageAsk({ plan, entries: input.entries, coverage: state?.coverage?.[plan.id], now });
+      if (!entry) continue;
+      items.push({
+        kind: "coverage",
+        id: `coverage:${plan.id}`,
+        title: "What did you cover?",
+        label: plan.goal,
+        emoji: plan.emoji ?? "📚",
+        at: new Date(entry.datetime).toISOString(),
+        plan,
+        entry,
+      });
+      break;
+    }
   return items.sort((a, b) => b.at.localeCompare(a.at));
 }
 

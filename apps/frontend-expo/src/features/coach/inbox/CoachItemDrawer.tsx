@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Status } from "@/components/ui";
@@ -7,6 +8,9 @@ import { api } from "@/data/api";
 import { useCurrentUser } from "@/data/queries";
 import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
+import { dayKey } from "@/core/dates";
+import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
+import type { VoiceLogFollowUp } from "@/features/voice-log/types";
 import { MISS_REASONS } from "@/features/timeline/home-cards/miss-reasons";
 import type { TalkReason } from "../talk/types";
 import { alertFact } from "../model";
@@ -48,6 +52,9 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
     onClose();
     router.push({ pathname: "/chat/[id]", params: { id: chatId, messageId, type: "COACH", ...(planId ? { planId } : {}) } });
   };
+  // "What did you cover?" is answered with the Share more voice note, opened here.
+  const [voice, setVoice] = useState<VoiceLogFollowUp>();
+  if (voice) return <VoiceLogDrawer followUp={voice} onClose={onClose} />;
   if (!item) return null;
   const busy = talk.isPending || post.isPending;
   return (
@@ -155,6 +162,37 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
               label={`Update with ${coach.name}`}
               busy={talk.isPending}
               onPress={() => talk.mutate({ prompt: attention.primaryAction.prompt, planId: attention.planIds[0] })}
+            />
+          </>
+        );
+      }
+      case "coverage": {
+        const { plan, entry } = it;
+        const activity = plan.activities.find((a) => a.id === entry.activityId);
+        return (
+          <>
+            <DrawerHeader
+              emoji={it.emoji}
+              title={it.title}
+              subtitle={`${plan.goal}${activity && entry.quantity ? ` · ${entry.quantity} ${activity.measure}` : ""}`}
+            />
+            <DrawerOptions
+              options={[
+                {
+                  label: "Not now",
+                  disabled: busy,
+                  onPress: () => post.mutate({ path: `/follow-through/plans/${encodeURIComponent(plan.id)}/coverage/skip`, body: {} }),
+                },
+              ]}
+            />
+            <DrawerButton
+              testID="coach-coverage-answer"
+              label={`Tell ${coach.name}`}
+              onPress={() =>
+                setVoice({
+                  logged: [{ activityId: entry.activityId!, date: dayKey(new Date(entry.datetime)), quantity: entry.quantity ?? 1 }],
+                })
+              }
             />
           </>
         );

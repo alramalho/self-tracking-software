@@ -26,6 +26,7 @@ import {
 } from "../services/follow-through/onboarding/service";
 import { preferencesSchema } from "../services/follow-through/schema";
 import { Router, type Response } from "express";
+import { skipCoverage } from "@tsw/prisma/follow-through/coverage";
 import { z } from "zod/v4";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
 import { requireAiConsent } from "../utils/aiConsent";
@@ -106,6 +107,15 @@ router.post("/plans/:planId/missed-week", handle(async (req, res) => {
   await changeState(req.user!.id, async state => {
     if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
     state.missedWeeks = { ...state.missedWeeks, [planId]: { ...answer, answeredAt: new Date().toISOString() } };
+  });
+  res.json({ ok: true });
+}));
+// "Not now" on the Coach tab's "What did you cover?": two in a row keep it quiet for two weeks.
+router.post("/plans/:planId/coverage/skip", handle(async (req, res) => {
+  const planId = String(req.params.planId);
+  await changeState(req.user!.id, async state => {
+    if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
+    state.coverage = { ...state.coverage, [planId]: skipCoverage(state.coverage?.[planId]) };
   });
   res.json({ ok: true });
 }));
