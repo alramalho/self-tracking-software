@@ -14,7 +14,7 @@ export interface NextResponse {
   suggestedFormat: "LOG" | "TIMER" | "RESOURCE";
 }
 export interface CoachingPlan {
-  id: "weekly" | "monthly" | "quarterly" | "yearly";
+  id: "weekly" | "monthly" | "quarterly";
   /** Stripe checkout link (web). */
   url?: string;
   /** App Store product (iOS). */

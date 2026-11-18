@@ -24,7 +24,7 @@ import {
   showsWelcome,
   startInterview,
 } from "../src/components/onboarding/model.ts";
-import { paywallCta, perMonth, savingVsMonthly } from "../src/components/onboarding/paywall/plans.ts";
+import { paywallCta, savingVsWeekly } from "../src/components/onboarding/paywall/plans.ts";
 import type { CoachingPlan } from "../src/components/onboarding/types.ts";
 
 const route = (id: "steady" | "focused", daysMin: number, daysMax: number): DesignOption => ({
@@ -160,7 +160,7 @@ test("the dial maps the left end to 1 and the right end to 10", () => {
   assert.equal(scoreAt(150, 0, 150, 100), 5);
 });
 
-test("the paywall shows the trial in the button and per-month prices against monthly", () => {
+test("the paywall shows the trial in the button and the saving against weekly", () => {
   const plan = (id: CoachingPlan["id"], amount: number, interval: string, intervalCount: number, trialDays = 0): CoachingPlan => ({
     id,
     amount,
@@ -169,17 +169,12 @@ test("the paywall shows the trial in the button and per-month prices against mon
     trialDays,
     currency: "eur",
   });
-  const monthly = plan("monthly", 1299, "month", 1);
-  const quarterly = plan("quarterly", 2699, "month", 3, 7);
-  const yearly = plan("yearly", 7199, "year", 1, 7);
-  const plans = [yearly, quarterly, monthly];
+  const weekly = plan("weekly", 499, "week", 1);
+  const quarterly = plan("quarterly", 2499, "month", 3, 7);
   assert.equal(paywallCta(quarterly), "Start my 7 free days");
-  assert.equal(paywallCta(monthly), "Start coaching");
-  assert.equal(perMonth(quarterly), 899);
-  assert.equal(perMonth(yearly), 599);
-  assert.equal(savingVsMonthly(yearly, plans), 54);
-  assert.equal(savingVsMonthly(quarterly, plans), 31);
-  assert.equal(savingVsMonthly(monthly, plans), 0);
+  assert.equal(paywallCta(weekly), "Start coaching");
+  assert.equal(savingVsWeekly(quarterly, [quarterly, weekly]), 61);
+  assert.equal(savingVsWeekly(weekly, [quarterly, weekly]), 0);
 });
 
 test("creating a plan in the app skips the welcome and closes back to the plans", () => {
