@@ -269,3 +269,45 @@ for (const theme of ["LIGHT", "DARK"]) {
     expect(commit.body.activities).toEqual([expect.objectContaining({ activityId: "reading", quantity: 21, estimatedFrom: "half an hour" })]);
   });
 }
+
+// The waiting and saved states stay short: a title, the spinner or tick, and the buttons.
+for (const theme of ["DARK", "LIGHT"])
+  test(`voice note waiting and saved states are short (${theme})`, async ({ page, request }) => {
+    await installFakeMicrophone(page);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme, themeBaseColor: "AMBER" },
+    });
+    const out = "../../../output/plan-polish";
+    let releasePreview = () => {};
+    let releaseCommit = () => {};
+    await page.route("**/voice-logs/preview", async (route) => {
+      await new Promise<void>((resolve) => (releasePreview = resolve));
+      await route.continue();
+    });
+    await page.route("**/voice-logs/commit", async (route) => {
+      await new Promise<void>((resolve) => (releaseCommit = resolve));
+      await route.continue();
+    });
+    await page.goto("/add");
+    await page.getByTestId("log-voice-note-card").click();
+    const drawer = page.getByTestId("voice-log-drawer");
+    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+    await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-processing")).toBeVisible();
+    await expect(drawer.getByText("Transcribing and finding suggestions…")).toHaveCount(0);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${out}/voice-processing-${theme}.png` });
+    releasePreview();
+    await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+    await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-committing")).toBeVisible();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${out}/voice-saving-${theme}.png` });
+    releaseCommit();
+    await expect(drawer.getByTestId("voice-log-committed")).toBeVisible();
+    await expect(drawer.getByText("Your voice note and selected logs are now in tracking.so.")).toHaveCount(0);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${out}/voice-saved-${theme}.png` });
+  });

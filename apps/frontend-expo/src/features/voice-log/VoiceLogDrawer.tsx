@@ -530,11 +530,11 @@ export function VoiceLogDrawer({
       : phase === "review"
       ? "Review voice note"
       : phase === "processing"
-        ? "Understanding your note"
+        ? "Understanding…"
         : phase === "committing"
-          ? "Saving voice note"
+          ? "Saving…"
           : phase === "committed"
-            ? "Voice note saved"
+            ? "Saved"
             : phase === "recording"
               ? "Recording"
               : "Log voice note";
@@ -663,13 +663,7 @@ export function VoiceLogDrawer({
 
       {phase === "processing" && (
         <View testID="voice-log-processing" style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
-          <ActivityIndicator color={c.accent} />
-          <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>
-            Transcribing and finding suggestions…
-          </Text>
-          <Copy muted>
-            We’ll show you exactly what was found before anything is saved.
-          </Copy>
+          <ActivityIndicator color={c.accent} accessibilityLabel="Transcribing your note" />
           <TextAction icon={Trash2} label="Discard" onPress={() => void discard()} />
         </View>
       )}
@@ -1118,22 +1112,13 @@ export function VoiceLogDrawer({
 
       {phase === "committing" && (
         <View testID="voice-log-committing" style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
-          <ActivityIndicator color={c.accent} />
-          <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>
-            Saving your voice note…
-          </Text>
+          <ActivityIndicator color={c.accent} accessibilityLabel="Saving your voice note" />
         </View>
       )}
 
       {phase === "committed" && (
         <View testID="voice-log-committed" style={{ alignItems: "center", gap: 14, paddingVertical: 16 }}>
-          <CheckCircle2 size={48} color="#10b981" strokeWidth={1.8} />
-          <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
-            Saved
-          </Text>
-          <Copy muted>
-            Your voice note and selected logs are now in tracking.so.
-          </Copy>
+          <CheckCircle2 size={56} color="#10b981" strokeWidth={1.8} accessibilityLabel="Voice note saved" />
           {lastSaved.length ? (
             <>
               <Button onPress={shareMore} testID="voice-log-share-more">
