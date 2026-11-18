@@ -21,7 +21,9 @@ import {
 import { Text } from "@/components/typography/Text";
 import { api } from "@/data/api";
 import { ProposalDetails, hasProposalChanges } from "./ProposalDetails";
-import { PlanSetupChange } from "./PlanSetupChange";
+import { PlanSetupChange, proposalMood } from "./PlanSetupChange";
+import { CoachNote } from "./adaptation/CoachNote";
+import { useCurrentUser, usePlans } from "@/data/queries";
 import { CoachTools } from "./CoachTools";
 import { Markdown } from "./Markdown";
 import type { MessageProps } from "./types";
@@ -44,6 +46,8 @@ export function MessageCard({
 }: MessageProps) {
   const c = useColors();
   const client = useQueryClient();
+  const plans = usePlans();
+  const strategist = useCurrentUser().data?.coachPersonality === "STRATEGIST";
   // Coach replies read as the page itself; only people's messages get bubbles.
   const unboxed = coach && !own;
   const [review, setReview] = useState<string>();
@@ -298,8 +302,13 @@ export function MessageCard({
             onViewAccepted={() => router.push(`/plan/${p.planId}`)}
             summary={<ProposalDetails proposal={p} compact />}
           >
+            <CoachNote
+              strategist={strategist}
+              mood={proposalMood(p, plans.data?.find((plan) => plan.id === p.planId)?.timesPerWeek)}
+            >
+              <Markdown>{p.description}</Markdown>
+            </CoachNote>
             <PlanSetupChange proposal={p} />
-            <Markdown>{p.description}</Markdown>
             <ProposalDetails proposal={p} />
             {buttons("proposal", index, p.status)}
             <Status error={action.error} />

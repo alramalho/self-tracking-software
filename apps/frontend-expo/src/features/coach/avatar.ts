@@ -11,3 +11,13 @@ export const coachTabIcon = (strategist: boolean) =>
   strategist
     ? require("../../../assets/coaches/tab/oli.png")
     : require("../../../assets/coaches/tab/helly.png");
+
+// Flat faces with a mood, for the coach's notes: sad when it eases a plan off, smiling when it steps it up.
+export const coachMoodAvatar = (strategist: boolean, mood: "sad" | "smiling") =>
+  strategist
+    ? mood === "sad"
+      ? require("../../../assets/coaches/oli-sad.png")
+      : require("../../../assets/coaches/oli-smiling.png")
+    : mood === "sad"
+      ? require("../../../assets/coaches/helly-sad.png")
+      : require("../../../assets/coaches/helly-smiling.png");

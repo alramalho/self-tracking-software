@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { format, parseISO } from "date-fns";
-import { ArrowRight } from "lucide-react-native";
+import { ArrowRight, CalendarDays } from "lucide-react-native";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { usePlans } from "@/data/queries";
@@ -10,6 +10,7 @@ import type {
   ProposalOperation,
   ProposalPatch,
 } from "./types";
+import type { CoachMood } from "./adaptation/types";
 
 /** Plan setup fields that read best as a big before → after, not as a list row. */
 export const heroFields = ["timesPerWeek", "finishingDate", "goal"] as const;
@@ -28,12 +29,70 @@ export const proposedPlanSetup = (
     (op) => op.type === "update_plan",
   );
 
+/** One number in a tile; the new one is lit in the accent colour. */
+function NumberTile({ value, lit }: { value: string; lit?: boolean }) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        minWidth: 92,
+        height: 92,
+        paddingHorizontal: 14,
+        borderRadius: 24,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: lit ? 2 : 1,
+        borderColor: lit ? c.accent : c.border,
+        backgroundColor: lit ? c.selectedBg : c.soft,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 56,
+          lineHeight: 64,
+          fontWeight: "800",
+          color: lit ? c.accent : c.muted,
+          fontVariant: ["tabular-nums"],
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 /** A big "6 → 5" with what it measures underneath. */
-function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProps) {
+export function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProps) {
   const c = useColors();
   const changed = from !== undefined && from !== to;
-  const fontSize = size === "large" ? 56 : 26;
-  const stacked = size === "medium" && (to.length > 14 || (from?.length ?? 0) > 14);
+  if (size === "large")
+    return (
+      <View testID="change-hero" style={{ alignItems: "center", gap: 10, paddingVertical: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          {changed && <NumberTile value={from!} />}
+          {changed && (
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: c.soft,
+              }}
+            >
+              <ArrowRight size={22} color={c.text} strokeWidth={2.4} />
+            </View>
+          )}
+          <NumberTile value={to} lit />
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <CalendarDays size={16} color={c.muted} strokeWidth={2} />
+          <Text style={{ fontSize: 14, color: c.muted, fontWeight: "600" }}>{caption}</Text>
+        </View>
+      </View>
+    );
+  const stacked = to.length > 14 || (from?.length ?? 0) > 14;
   return (
     <View style={{ alignItems: "center", gap: 2, paddingVertical: 4 }}>
       <View
@@ -47,7 +106,7 @@ function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProps) {
         {changed && (
           <Text
             style={{
-              fontSize: stacked ? 16 : fontSize,
+              fontSize: stacked ? 16 : 26,
               fontWeight: "800",
               color: c.muted,
               textAlign: "center",
@@ -58,12 +117,10 @@ function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProps) {
             {from}
           </Text>
         )}
-        {changed && !stacked && (
-          <ArrowRight size={size === "large" ? 30 : 20} color={c.muted} />
-        )}
+        {changed && !stacked && <ArrowRight size={20} color={c.muted} />}
         <Text
           style={{
-            fontSize: stacked ? 20 : fontSize,
+            fontSize: stacked ? 20 : 26,
             fontWeight: "800",
             color: c.accent,
             textAlign: "center",
@@ -78,6 +135,15 @@ function ChangeHero({ from, to, caption, size = "large" }: ChangeHeroProps) {
       </Text>
     </View>
   );
+}
+
+/** Sad when the coach eases the plan off, smiling when it steps it up or changes something else. */
+export function proposalMood(
+  proposal: PlanProposalDetailsProps["proposal"],
+  currentTimesPerWeek?: number | null,
+): CoachMood {
+  const next = proposedPlanSetup(proposal)?.timesPerWeek;
+  return next != null && currentTimesPerWeek != null && next < currentTimesPerWeek ? "sad" : "smiling";
 }
 
 export function PlanSetupChange({ proposal }: PlanProposalDetailsProps) {
