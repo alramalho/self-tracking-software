@@ -3,6 +3,7 @@ import type {
   CoachNote,
   DesignActivity,
   DesignOption,
+  DesignProgress,
   DesignSession,
   SubgoalQuestion,
 } from "@tsw/prisma/follow-through";
@@ -279,16 +280,22 @@ export async function assessPreferredDays(
 export async function designOptions(
   input: DesignInput,
   generate: ObjectGenerator = gatewayGenerator,
+  report: (progress: DesignProgress) => void = () => {},
 ): Promise<DesignResult> {
+  const progress: DesignProgress = { days: "working", steady: "waiting", focused: "waiting" };
+  const mark = (change: Partial<DesignProgress>) => report(Object.assign(progress, change));
+  mark({});
   const assessed = await assessPreferredDays(input, generate);
   const usage: GenerationUsage[] = [assessed.usage];
+  mark({ days: "done" });
   if (assessed.note.verdict === "PUSHBACK")
     return { status: "PUSHBACK", question: null, coachNote: assessed.note, retried: [], models: [], baseline: { text: input.baseline, measurements: [] }, options: [], usage };
   const { steady: steadyRange, focused: focusedRange } = assessed.ranges;
   const { steady: steadyWeeks, focused: focusedWeeks } = assessed.weeks;
+  mark({ steady: "working", focused: "working" });
   const [steady, focusedFirst] = await Promise.all([
-    designRoute(input, "steady", steadyRange, steadyWeeks, generate),
-    designRoute(input, "focused", focusedRange, focusedWeeks, generate),
+    designRoute(input, "steady", steadyRange, steadyWeeks, generate).finally(() => mark({ steady: "done" })),
+    designRoute(input, "focused", focusedRange, focusedWeeks, generate).finally(() => mark({ focused: "done" })),
   ]);
   usage.push(...steady.usage, ...focusedFirst.usage);
   const retried = [...steady.retried, ...focusedFirst.retried];
@@ -301,9 +308,11 @@ export async function designOptions(
   const helly = week1(steady.output);
   if (week1(focusedFirst.output) < helly) {
     retried.push(`focused: week 1 totals ${week1(focusedFirst.output)}, less than steady's ${helly}`);
+    mark({ focused: "working" });
     focused = await designRoute(input, "focused", focusedRange, focusedWeeks, generate, `\nThe steady route's week 1 totals ${helly}. As the more demanding route, your week 1 total must be at least ${helly}.`);
     usage.push(...focused.usage);
     retried.push(...focused.retried);
+    mark({ focused: "done" });
     if (week1(focused.output) < helly)
       throw new FollowThroughInputError("We couldn't build two distinct plans just now. Please try again.");
   }

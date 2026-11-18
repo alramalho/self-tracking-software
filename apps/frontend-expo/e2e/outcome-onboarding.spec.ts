@@ -281,3 +281,34 @@ test("a dropped design request is asked again and the routes still arrive", asyn
   await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
   await expect(page.getByText("Unable to reach the server")).toHaveCount(0);
 });
+
+for (const theme of ["LIGHT", "DARK"])
+  test(`while the coach plans, each stage ticks off (${theme})`, async ({ page, request }) => {
+    test.setTimeout(90000);
+    await start(page, request, theme);
+    await page.getByRole("textbox", { name: "Your answer" }).fill("Finish my first half marathon");
+    await next(page);
+    await answer(page, "How much do you run now?", "Twice a week, about 5 km each.");
+    await next(page);
+    await expect(page.getByRole("heading", { name: "Why does it matter?" })).toBeVisible();
+    await page.getByRole("textbox", { name: "Your answer" }).fill("I want to finish it with my friends");
+    await next(page);
+    await page.getByRole("button", { name: "No target in mind" }).click();
+    await expect(page.getByRole("heading", { name: "How many days would you prefer?" })).toBeVisible();
+    // The design takes a while; the stages are followed meanwhile.
+    await page.route("**/design/options", async (route) => {
+      const response = await route.fetch();
+      await new Promise((r) => setTimeout(r, 5000));
+      await route.fulfill({ response });
+    });
+    await next(page, "Ask my coach");
+    const stages = page.getByTestId("design-stages");
+    const stage = (label: string) => stages.locator(`[aria-label="${label}"]`);
+    await expect(stage("Checking 3 days a week, in progress")).toBeVisible();
+    await expect(stage("Helly’s steady route, in progress")).toBeVisible();
+    await capture(page, `planning-stages-working-${theme}`);
+    await expect(stage("Helly’s steady route, done")).toBeVisible();
+    await expect(stage("Oli’s focused route, in progress")).toBeVisible();
+    await capture(page, `planning-stages-steady-done-${theme}`);
+    await expect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
+  });

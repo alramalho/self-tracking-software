@@ -88,6 +88,15 @@ describe("days a person prefers", () => {
 });
 
 describe("designOptions", () => {
+  it("reports each stage as it goes: the days, then both routes", async () => {
+    const { generate } = fake(fitsNote, routeOutput("steady", 20, STEADY), routeOutput("focused", 16, FOCUSED));
+    const seen: string[] = [];
+    await designOptions(input, generate, (p) => seen.push(`${p.days}/${p.steady}/${p.focused}`));
+    expect(seen[0]).toBe("working/waiting/waiting");
+    expect(seen).toContain("done/working/working");
+    expect(seen.at(-1)).toBe("done/done/done");
+  });
+
   it("checks the days first, then builds each route in its own call", async () => {
     const { generate, calls } = fake(fitsNote, routeOutput("steady", 20, STEADY), routeOutput("focused", 16, FOCUSED));
     const result = await designOptions(input, generate);

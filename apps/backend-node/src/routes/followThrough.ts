@@ -20,6 +20,8 @@ import { calendarSessions } from "../services/follow-through/calendar";
 import { coachingOffer } from "../services/follow-through/onboarding/billing";
 import { draftSchema } from "../services/follow-through/onboarding/schema";
 import { sharedRequest } from "../services/plan-design/sharedRequest";
+import { readProgress, recordProgress } from "../services/plan-design/progress";
+import type { DesignProgress } from "@tsw/prisma/follow-through";
 import {
   nextQuestion,
   saveDraft,
@@ -221,15 +223,21 @@ router.post(
   requireAiConsent,
   designLimit,
   handle(async (req, res) => {
-    const { timezone, ...input } = optionsRequestSchema.parse(req.body);
+    const { timezone, progressId, ...input } = optionsRequestSchema.parse(req.body);
     const startDate = formatInTimeZone(new Date(), timezone || "UTC", "yyyy-MM-dd");
-    const result = await sharedRequest(req.user!.id, { ...input, startDate }, async () => {
-      const designed = await designOptions({ ...input, startDate });
+    const userId = req.user!.id;
+    const result = await sharedRequest(userId, { ...input, startDate }, async () => {
+      const report = progressId ? (p: DesignProgress) => recordProgress(userId, progressId, p) : undefined;
+      const designed = await designOptions({ ...input, startDate }, undefined, report);
       logger.info("Plan design generated", { userId: req.user!.id, status: designed.status, usage: designed.usage });
       return designed;
     });
     res.json({ status: result.status, question: result.question, coachNote: result.coachNote, baseline: result.baseline, options: result.options, startDate });
   }),
+);
+router.get(
+  "/onboarding/design/progress/:progressId",
+  handle(async (req, res) => res.json({ progress: readProgress(req.user!.id, String(req.params.progressId)) })),
 );
 router.post(
   "/onboarding/interview",
