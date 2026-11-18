@@ -172,7 +172,8 @@ export function CelebrationOverlay({
     const tStep = T_CARD_PARTS + partCount * PART_STAGGER + ms(380);
 
     if (moves) {
-      fill.value = withDelay(tStep, withSpring(1, { damping: 11, stiffness: 160 }));
+      // One smooth fill that stops at full: the spring here overshot and pulled the bar back to ~75% (18 Nov 2026).
+      fill.value = withDelay(tStep, withTiming(1, { duration: 420, easing: out }));
       pop.value = withDelay(tStep, withSequence(withTiming(1, { duration: 150 }), withTiming(-0.25, { duration: 160 }), withTiming(0, { duration: 170 })));
       stepBurst.value = withDelay(tStep, withTiming(1, { duration: 700, easing: Easing.linear }));
       at(tStep, () => {
@@ -417,13 +418,13 @@ function Part({ v, children, grow }: { v: SharedValue<number>; children: React.R
 
 function Step(props: { index: number; filled: boolean; filling: boolean; fill: SharedValue<number>; pop: SharedValue<number>; track: string }) {
   const { filled, filling, fill, pop } = props;
-  const fillStyle = useAnimatedStyle(() => ({ width: `${(filled ? 1 : filling ? Math.min(1.06, fill.value) : 0) * 100}%` }));
+  const fillStyle = useAnimatedStyle(() => ({ width: `${(filled ? 1 : filling ? Math.min(1, fill.value) : 0) * 100}%` }));
   const popStyle = useAnimatedStyle(() =>
     filling ? { transform: [{ scaleX: 1 + pop.value * 0.08 }, { scaleY: 1 + pop.value * 0.15 }, { rotate: `${pop.value * -1.5}deg` }] } : {},
   );
   return (
     <Animated.View style={[styles.step, { backgroundColor: props.track }, popStyle]}>
-      <Animated.View style={[styles.stepFill, fillStyle]} />
+      <Animated.View testID={props.filling ? "log-celebration-filling" : undefined} style={[styles.stepFill, fillStyle]} />
     </Animated.View>
   );
 }
