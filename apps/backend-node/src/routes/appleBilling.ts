@@ -27,6 +27,7 @@ const BUNDLE_ID = "so.tracking.app";
 const APP_APPLE_ID = 6754610882;
 // The "tracking.so Coaching" subscription group in App Store Connect.
 export const APPLE_PRODUCT_IDS = [
+  "so.tracking.app.yearly",
   "so.tracking.app.quarterly",
   "so.tracking.app.monthly",
   "so.tracking.app.weekly",

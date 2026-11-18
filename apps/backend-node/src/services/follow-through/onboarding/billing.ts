@@ -3,11 +3,11 @@ import type { User } from "@tsw/prisma";
 
 // The coaching plans shown on the paywall, read live from Stripe payment links so price and
 // trial terms are never invented here. COACHING_PAYMENT_LINKS lists them in paywall order,
-// e.g. "quarterly=plink_…,monthly=plink_…,weekly=plink_…". Without it, the original monthly
+// e.g. "yearly=plink_…,quarterly=plink_…,monthly=plink_…". Without it, the original monthly
 // link is the only plan.
 const LEGACY_LINK = process.env.ONBOARDING_PAYMENT_LINK_ID || "plink_1SeCxKG1Uxsr0eW48xMnLmee";
 
-export type CoachingPlanId = "weekly" | "monthly" | "quarterly";
+export type CoachingPlanId = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export interface CoachingPlan {
   id: CoachingPlanId;
@@ -23,7 +23,7 @@ function configuredLinks(): { id: CoachingPlanId; link: string }[] {
   const pairs = (process.env.COACHING_PAYMENT_LINKS ?? "")
     .split(",")
     .map((pair) => pair.trim().split("="))
-    .filter(([id, link]) => ["weekly", "monthly", "quarterly"].includes(id) && link);
+    .filter(([id, link]) => ["weekly", "monthly", "quarterly", "yearly"].includes(id) && link);
   return pairs.length
     ? pairs.map(([id, link]) => ({ id: id as CoachingPlanId, link }))
     : [{ id: "monthly", link: LEGACY_LINK }];

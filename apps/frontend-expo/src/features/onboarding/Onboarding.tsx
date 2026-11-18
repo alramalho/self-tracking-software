@@ -159,7 +159,7 @@ export default function Onboarding({
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false),
     [checking, setChecking] = useState(false);
   // Quarterly is the best value, so it starts selected.
-  const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
+  const [planId, setPlanId] = useState<CoachingPlan["id"]>("yearly");
   const [error, setError] = useState<unknown>();
   const [dictationBusy, setDictationBusy] = useState(false);
   const upgradeIntent = useRef(false);

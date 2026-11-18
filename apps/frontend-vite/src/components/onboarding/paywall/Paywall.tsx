@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { CoachingPlan, PaywallProps, PaywallRow } from "../types";
-import { LABELS, money, period, savingVsWeekly, weeksIn } from "./plans";
+import { LABELS, money, monthsIn, period, perMonth, savingVsMonthly } from "./plans";
 
 // Real members who agreed to appear on tracking.so (the same as the app and the website).
 const MEMBERS = [
@@ -30,7 +30,7 @@ const HABIT_ROWS: PaywallRow[] = [
 export function Paywall({ facts, plans, selected, onSelect, coach }: PaywallProps) {
   const theme = useThemeColors();
   const best = plans.reduce<CoachingPlan | undefined>(
-    (top, plan) => (savingVsWeekly(plan, plans) > (top ? savingVsWeekly(top, plans) : 0) ? plan : top),
+    (top, plan) => (savingVsMonthly(plan, plans) > (top ? savingVsMonthly(top, plans) : 0) ? plan : top),
     undefined,
   );
   return (
@@ -81,7 +81,7 @@ export function Paywall({ facts, plans, selected, onSelect, coach }: PaywallProp
       <div role="radiogroup" aria-label="Coaching plan" className="flex flex-col gap-2.5 pt-1">
         {plans.map((plan) => {
           const active = plan.id === selected;
-          const save = plan.id === best?.id ? savingVsWeekly(plan, plans) : 0;
+          const save = plan.id === best?.id ? savingVsMonthly(plan, plans) : 0;
           return (
             <button
               key={plan.id}
@@ -94,7 +94,7 @@ export function Paywall({ facts, plans, selected, onSelect, coach }: PaywallProp
             >
               {save > 0 && (
                 <span className="absolute -top-[11px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[10px] bg-green-600 px-2.5 py-[3px] text-[11px] font-bold text-white">
-                  Save {save}% vs weekly
+                  Best value · save {save}%
                 </span>
               )}
               <span
@@ -107,13 +107,14 @@ export function Paywall({ facts, plans, selected, onSelect, coach }: PaywallProp
               <span className="flex flex-1 flex-col gap-0.5">
                 <span className="text-base font-semibold text-foreground">{LABELS[plan.id]}</span>
                 <span className="text-xs text-muted-foreground">
-                  {[plan.trialDays ? `${plan.trialDays} days free` : null, plan.id !== "weekly" ? `${money(plan, plan.amount / weeksIn(plan))}/week` : null]
+                  {[plan.trialDays ? `${plan.trialDays} days free` : null, monthsIn(plan) > 1 ? `${money(plan)} every ${period(plan).replace(/^1 /, "")}` : "Cancel anytime"]
                     .filter(Boolean)
-                    .join(" · ") || "Cancel anytime"}
+                    .join(" · ")}
                 </span>
               </span>
-              <span className="text-[15px] font-semibold text-foreground">
-                {money(plan)}/{period(plan).replace(/^1 /, "")}
+              <span className="flex flex-col items-end">
+                <span className="text-[17px] font-bold text-foreground">{money(plan, perMonth(plan))}</span>
+                <span className="text-[11px] text-muted-foreground">per month</span>
               </span>
             </button>
           );

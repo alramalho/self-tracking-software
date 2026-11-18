@@ -1,7 +1,7 @@
 import type { CoachingPlan } from "../types";
 
 // Prices as the paywall shows them, from the Stripe plans the server reads.
-export const LABELS: Record<CoachingPlan["id"], string> = { weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly" };
+export const LABELS: Record<CoachingPlan["id"], string> = { weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly" };
 const WEEKS_PER: Record<string, number> = { day: 1 / 7, week: 1, month: 52 / 12, year: 52 };
 
 export const weeksIn = (plan: CoachingPlan) => (WEEKS_PER[plan.interval] ?? 1) * plan.intervalCount;
@@ -13,8 +13,13 @@ export const period = (plan: CoachingPlan) =>
 /** Button text for the chosen plan: the trial is the promise, otherwise the start. */
 export const paywallCta = (plan?: CoachingPlan) => (plan?.trialDays ? `Start my ${plan.trialDays} free days` : "Start coaching");
 
-/** How much a longer plan saves against paying weekly, in percent. */
-export function savingVsWeekly(plan: CoachingPlan, plans: CoachingPlan[]) {
-  const weekly = plans.find((candidate) => candidate.id === "weekly");
-  return weekly && plan.id !== "weekly" ? Math.round((1 - plan.amount / weeksIn(plan) / weekly.amount) * 100) : 0;
+const MONTHS_PER: Record<string, number> = { week: 12 / 52, month: 1, year: 12 };
+export const monthsIn = (plan: CoachingPlan) => (MONTHS_PER[plan.interval] ?? 1) * plan.intervalCount;
+// Rounded down, so €71.99 a year reads €5.99 a month, never more than they pay.
+export const perMonth = (plan: CoachingPlan) => Math.floor(plan.amount / monthsIn(plan));
+
+/** How much a longer plan saves against paying monthly, in percent. */
+export function savingVsMonthly(plan: CoachingPlan, plans: CoachingPlan[]) {
+  const monthly = plans.find((candidate) => candidate.id === "monthly");
+  return monthly && monthsIn(plan) > 1 ? Math.round((1 - perMonth(plan) / monthly.amount) * 100) : 0;
 }

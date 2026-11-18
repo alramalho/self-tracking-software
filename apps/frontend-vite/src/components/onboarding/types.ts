@@ -53,7 +53,7 @@ export interface OptionsResponse {
 }
 
 export interface CoachingPlan {
-  id: "weekly" | "monthly" | "quarterly";
+  id: "weekly" | "monthly" | "quarterly" | "yearly";
   /** Stripe checkout link with the person's id attached. */
   url?: string;
   trialDays: number;

@@ -39,11 +39,16 @@ const LABELS: Record<CoachingPlan["id"], string> = {
   weekly: "Weekly",
   monthly: "Monthly",
   quarterly: "Quarterly",
+  yearly: "Yearly",
 };
 
 const WEEKS_PER = { day: 1 / 7, week: 1, month: 52 / 12, year: 52 } as Record<string, number>;
 
 export const weeksIn = (plan: CoachingPlan) => (WEEKS_PER[plan.interval] ?? 1) * plan.intervalCount;
+const MONTHS_PER = { week: 12 / 52, month: 1, year: 12 } as Record<string, number>;
+const monthsIn = (plan: CoachingPlan) => (MONTHS_PER[plan.interval] ?? 1) * plan.intervalCount;
+// Rounded down, so €71.99 a year reads €5.99 a month, never more than they pay.
+const perMonth = (plan: CoachingPlan) => Math.floor(plan.amount / monthsIn(plan));
 
 export const money = (plan: CoachingPlan, amount = plan.amount) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency: plan.currency }).format(amount / 100);
@@ -68,11 +73,9 @@ export function Paywall({ facts, plans, selected, onSelect, coach: chosenCoach }
   // The route chosen in onboarding names the coach, because that is who the plan was built by.
   const coach = chosenCoach ? { ...account, name: chosenCoach } : account;
   const coachName = coach.name;
-  const weekly = plans.find((plan) => plan.id === "weekly");
+  const monthly = plans.find((plan) => plan.id === "monthly");
   const saving = (plan: CoachingPlan) =>
-    weekly && plan.id !== "weekly"
-      ? Math.round((1 - plan.amount / weeksIn(plan) / weekly.amount) * 100)
-      : 0;
+    monthly && monthsIn(plan) > 1 ? Math.round((1 - perMonth(plan) / monthly.amount) * 100) : 0;
   const best = plans.reduce<CoachingPlan | undefined>(
     (top, plan) => (saving(plan) > (top ? saving(top) : 0) ? plan : top),
     undefined,
@@ -193,7 +196,7 @@ export function Paywall({ facts, plans, selected, onSelect, coach: chosenCoach }
                       overflow: "hidden",
                     }}
                   >
-                    Save {save}% vs weekly
+                    Best value · save {save}%
                   </Text>
                 </View>
               )}
@@ -216,15 +219,16 @@ export function Paywall({ facts, plans, selected, onSelect, coach: chosenCoach }
                 <Text style={{ color: c.muted, fontSize: 12 }}>
                   {[
                     plan.trialDays ? `${plan.trialDays} days free` : null,
-                    plan.id !== "weekly" ? `${money(plan, plan.amount / weeksIn(plan))}/week` : null,
+                    monthsIn(plan) > 1 ? `${price(plan)} every ${period(plan).replace(/^1 /, "")}` : "Cancel anytime",
                   ]
                     .filter(Boolean)
-                    .join(" · ") || "Cancel anytime"}
+                    .join(" · ")}
                 </Text>
               </View>
-              <Text style={{ color: c.text, fontSize: 15, fontWeight: "600" }}>
-                {price(plan)}/{period(plan).replace(/^1 /, "")}
-              </Text>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ color: c.text, fontSize: 17, fontWeight: "700" }}>{money(plan, perMonth(plan))}</Text>
+                <Text style={{ color: c.muted, fontSize: 11 }}>per month</Text>
+              </View>
             </Pressable>
           );
         })}

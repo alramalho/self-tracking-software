@@ -97,7 +97,7 @@ export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingF
   const [locationDenied, setLocationDenied] = useState(false);
   const location = useRef<ApproxLocation | null>(null);
   const pendingAge = useRef<number | null>(null);
-  const [planId, setPlanId] = useState<CoachingPlan["id"]>("quarterly");
+  const [planId, setPlanId] = useState<CoachingPlan["id"]>("yearly");
   const [awaitingUpgrade, setAwaitingUpgrade] = useState(false);
   const finishing = useRef(false);
   // A starting point measured from their logs, when the goal is about something they log.
