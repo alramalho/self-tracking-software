@@ -51,9 +51,18 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 273 — plan creation survives leaving the app, November 18, 2026
+
+**Build 273 is the latest TestFlight build**: everything on main up to `a2239eb3` (build 272 plus these fixes). The owner's plan design failed with "Unable to reach the server": the phone dropped `design/options` after 19.5 s when switching apps (Caddy status 0, closed by the client), the server finished anyway and the retry started over (41 s). Now identical design requests per person share one result for 15 minutes (`plan-design/sharedRequest.ts`), and the app asks again once it is back in the foreground. Also: drafts carry a server `savedAt` and resume only within 3 days; "Did we get that right?" clears when the question changes; the baseline check accepts "pretty much nothing" (hint: "Say where you are now, even “nothing yet”"); Back from "How many days?" shows the coach's question with the answer ticked instead of asking anew.
+
+- **Backend:** `plan-creation-20261118` (code-only, FROM `share-more-20261117`; context `deployment/tracking-plan-creation-20261118` with `rollback.sh`), live since 12:41 UTC. The four replaced files matched main before the change. Live Jev check: "Pretty much nothing…", "None yet" pass; "asdf" and a future-only goal fail.
+- **Checks:** Expo and backend typecheck; `sharedRequest.test.ts` (3); `outcome-onboarding.spec.ts` 16/16 incl. Back-to-question and a dropped design request; onboarding-flow and plan-visibility pass; 4 voice-feedback tests fail on stale expectations (Settings "Languages · …" label, coach `/chat/` URL). Foreground retry not run on a phone.
+- **Built** with `pnpm build:testflight .release/testflight-main-a2239eb3/tracking.so.ipa`; backend URL api.tracking.so. IPA SHA-256 `8aa04b16285159fdd48aa412bdf7bc996560010d7d79dd5c9892c4ba6857f4f8`; no e2e token.
+- **Apple:** uploaded (altool crashed after the upload; ASC lists 273 at 12:53 UTC); VALID; What to Test written; internal and `Friends & Family` `IN_BETA_TESTING`, beta review submitted.
+
 ## TestFlight build 272 — the log celebration's step no longer bounces back, November 18, 2026
 
-**Build 272 is the latest TestFlight build**: everything on main up to `46d9fa5f` (build 271 plus this fix). On "Nice work!", the plan step that fills was a spring (damping 11) that overshot and pulled the bar back to about 75% before settling; it is now one 420 ms ease-out that stops at full. The card pop and tilt stay. No backend change.
+Build 272: everything on main up to `46d9fa5f` (build 271 plus this fix). On "Nice work!", the plan step that fills was a spring (damping 11) that overshot and pulled the bar back to about 75% before settling; it is now one 420 ms ease-out that stops at full. The card pop and tilt stay. No backend change.
 
 - **Checks:** `celebration-fill.spec.ts` samples the fill every frame (before: full, then down to 0.75; after: grows once to 1.0 and stays); `log-celebration`, `share-more` specs pass; Expo typecheck. Recordings `docs/reviews/log-celebration/*-fill-fixed-dark.mp4` (web build). Not run on a phone.
 - **Built** with `pnpm build:testflight .release/testflight-main-46d9fa5f/tracking.so.ipa`; backend URL api.tracking.so. IPA SHA-256 `4a1855392697b177fdfa08eef3724c9f9dee9d944e5608e6cf6d17888f350dee`; no e2e token.
