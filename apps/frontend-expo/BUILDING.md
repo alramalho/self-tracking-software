@@ -51,9 +51,16 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 275 — only weekly and quarterly plans, November 18, 2026
+
+**Build 275 is the latest TestFlight build**: everything on main up to `f3e71c4d` (build 274 plus `0fc91706`). The paywall offers only `so.tracking.app.quarterly` (€26.99 / $26.99) and `so.tracking.app.weekly` (€3.99 / $3.99), each with a free first week in App Store Connect; monthly and yearly stay in App Store Connect but are no longer offered. The web paywall reads the same two plans from Stripe (`COACHING_PAYMENT_LINKS` on the server).
+
+- **Built** with `pnpm build:testflight .release/testflight-main-f3e71c4d/tracking.so.ipa` in worktree `tracking-pricing`; ExpoHaptics, TrackingHealth, TrackingMap, TrackingWatch installed. IPA SHA-256 `9559011433a4b683f392c7c6dee9c9157137b6f86039a721093435317e9ee159`; the bundle names quarterly and weekly only, no e2e token.
+- **Apple:** validated; uploaded (delivery `5959095b-cf29-427d-9f98-10e02a6eea2e`; altool crashed after the upload succeeded, as for 274); VALID, internal + Friends & Family, beta review accepted (IN_BETA_TESTING).
+
 ## TestFlight build 274 — the plan design shows its real stages, November 18, 2026
 
-**Build 274 is the latest TestFlight build**: everything on main up to `c9e08aae` (build 273 plus this). While "Planning your two routes" waits (about 40 s live), three rows tick off as the server reports them: "Checking N days a week", "Helly’s steady route", "Oli’s focused route" (spinner while working, tick when done; "Usually under a minute."). The app sends a `progressId` with `design/options` and polls `GET /follow-through/onboarding/design/progress/:id` every 1.2 s; `designOptions` reports each stage (`plan-design/progress.ts`, kept 15 min in memory). No SSE: polling survives the app going to the background together with the shared design request.
+Build 274 was the latest TestFlight build: everything on main up to `c9e08aae` (build 273 plus this). While "Planning your two routes" waits (about 40 s live), three rows tick off as the server reports them: "Checking N days a week", "Helly’s steady route", "Oli’s focused route" (spinner while working, tick when done; "Usually under a minute."). The app sends a `progressId` with `design/options` and polls `GET /follow-through/onboarding/design/progress/:id` every 1.2 s; `designOptions` reports each stage (`plan-design/progress.ts`, kept 15 min in memory). No SSE: polling survives the app going to the background together with the shared design request.
 
 - **Backend:** `plan-progress-20261118` (code-only, FROM `plan-creation-20261118`; context `deployment/tracking-plan-progress-20261118` with `rollback.sh`), live since 13:30 UTC. Replaced files matched main before the change.
 - **Checks:** Expo and backend typecheck; plan-design unit tests incl. the stage order; `outcome-onboarding` + `onboarding-flow` 32/32 incl. the stages ticking off (light and dark captures in `output/onboarding-design/screens/planning-stages-*`). Not run on a phone.
