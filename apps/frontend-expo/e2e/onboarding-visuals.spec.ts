@@ -70,12 +70,15 @@ for (const theme of ['LIGHT', 'DARK']) {
     await expect(page.getByTestId('onboarding-weekly-frequency-value')).toHaveText('4');
     await capture(page, `06-rhythm-${theme}`);
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByTestId('coach-tour-role')).toBeVisible();
+    await expect(page.getByTestId('coach-tour-adapts')).toBeVisible();
     await page.getByRole('radio', { name: 'Plan and adjust training' }).click();
     await capture(page, `07-coach-role-${theme}`);
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByTestId('coach-tour-contact')).toBeVisible();
     await capture(page, `08-coach-contact-${theme}`);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByTestId('coach-tour-weeks')).toBeVisible();
+    await capture(page, `08b-coach-weeks-${theme}`);
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByTestId('coach-tour-data')).toBeVisible();
     await capture(page, `09-coach-data-${theme}`);

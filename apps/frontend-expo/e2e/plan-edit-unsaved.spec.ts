@@ -4,12 +4,12 @@ const headers = { Authorization: "Bearer local-e2e-token" };
 
 async function shot(page: Page, name: string) {
   await page.waitForTimeout(700);
-  await page.screenshot({ path: `test-results/plan-edit-unsaved/${name}.png` });
+  await page.screenshot({ path: `../../../output/plan-polish/${name}.png` });
 }
 
 async function openEditor(page: Page, request: any, theme: string) {
   await request.post(`${API}/__reset`);
-  await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme } });
+  await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
   await page.goto("/");
   await page.getByTestId("nav-plans").click();
   await page.getByRole("button", { name: "Exercise regularly", exact: true }).click();

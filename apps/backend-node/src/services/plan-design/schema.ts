@@ -18,6 +18,8 @@ const activitySchema = z.object({
 });
 
 export const classifySchema = z.object({
+  /** The plan's name: the goal in a few words, not the sentence they said. */
+  title: z.string().min(1).max(60),
   orientation: z.enum(["OUTCOME", "CONSISTENCY"]),
   reason: z.string().max(200),
   activity: activitySchema,

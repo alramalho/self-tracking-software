@@ -26,7 +26,7 @@ for (const theme of ["LIGHT", "DARK"]) {
     await next(page, "Ask my coach");
     await page.getByTestId("route-steady").click();
     await next(page);
-    for (let i = 0; i < 3; i++) await next(page);
+    for (let i = 0; i < 4; i++) await next(page);
     await page.getByRole("button", { name: "Just me for now" }).click();
 
     await expect(page.getByRole("heading", { name: "Who sees this plan?" })).toBeVisible();

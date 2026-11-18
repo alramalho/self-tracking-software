@@ -29,6 +29,7 @@ import type {
 import { useColors } from "./theme";
 import { ChevronRight, X } from "lucide-react-native";
 import { VoiceTextArea } from "@/features/dictation/VoiceTextArea";
+import { Fade } from "@/features/messages/chrome/Fade";
 export { useColors } from "./theme";
 export function Screen({
   testID,
@@ -108,6 +109,8 @@ export function Screen({
                 backgroundColor: c.bg,
               }}
             >
+              {/* The list dissolves into the footer, so it reads as scrolling on under it. */}
+              <Fade color={c.bg} toward="bottom" height={28} style={{ position: "absolute", top: -28, left: 0, right: 0 }} />
               {footer}
             </View>
           )}

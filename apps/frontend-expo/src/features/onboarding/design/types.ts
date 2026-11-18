@@ -35,6 +35,8 @@ export interface SessionDetailProps {
 }
 
 export interface ClassifyResponse {
+  /** The plan's name in a few words; missing from an older server. */
+  title?: string;
   orientation: PlanDesign["orientation"];
   reason: string;
   activity: { key: string; title: string; measure: string; emoji: string };

@@ -60,8 +60,14 @@ export async function classifyGoal(
   const goalSpec = object.goalSpec.chosenByUser
     ? object.goalSpec
     : { metric: null, value: null, unit: null, text: null, chosenByUser: false };
-  return { ...object, goalSpec, usage };
+  return { ...object, title: planTitle(object.title, input.goal), goalSpec, usage };
 }
+
+/** A short name for the plan; the person's own words when the model gives nothing usable. */
+export const planTitle = (title: string | undefined, goal: string) => {
+  const short = (title ?? "").trim().replace(/[.!]+$/, "");
+  return short || goal.trim().slice(0, 60);
+};
 
 /** Step 3: at most one more question, only when something the person would choose is missing. */
 export async function nextSubgoalQuestion(

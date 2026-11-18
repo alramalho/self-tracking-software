@@ -156,6 +156,8 @@ export interface CoachNote {
 }
 
 export interface ClassifyResult {
+  /** The plan's name in a few words. Optional: an older server leaves it out. */
+  title?: string;
   orientation: PlanOrientation;
   reason: string;
   activity: { title: string; measure: string; emoji: string };

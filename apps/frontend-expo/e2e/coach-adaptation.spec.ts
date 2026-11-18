@@ -18,27 +18,44 @@ async function capture(page: Page, name: string) {
   await page.screenshot({ path: path.join(output, `${name}.png`) });
 }
 
+async function seedLighterWeek(request: any, theme: string) {
+  await request.post(`${API}/__reset`);
+  await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
+  const state = await (await request.get(`${API}/__state`)).json();
+  const planId = state.plans[0].id;
+  await request.post(`${API}/__coaching-monitoring`, {
+    headers,
+    data: {
+      planOverrides: [{ id: planId, goal: "Play a bit of chess every day", emoji: "♟️", outlineType: "TIMES_PER_WEEK", timesPerWeek: 6 }],
+      messages: [{
+        id: "coach-lighter", chatId: "coach-main", planId, planIds: [planId], role: "COACH", status: "SENT",
+        content: "Two weeks short of six. Want a target that holds?", createdAt: new Date().toISOString(),
+        planProposals: [{
+          planId, planGoal: "Play a bit of chess every day", planEmoji: "♟️",
+          description: "Six didn't hold the last two weeks. Five keeps the habit without the end-of-week scramble.",
+          patch: { plan: { timesPerWeek: 5 } }, status: null,
+        }],
+      }],
+    },
+  });
+}
+
+// The website's phone frame takes a 720 × 1565 screenshot.
+test.describe("website capture", () => {
+  test.use({ viewport: { width: 360, height: 782 }, deviceScaleFactor: 2 });
+  test("the review sheet for the website", async ({ page, request }) => {
+    test.skip(!process.env.CAPTURE_WEBSITE, "only when refreshing the website image");
+    await seedLighterWeek(request, "DARK");
+    await page.goto("/chat/coach-main");
+    await page.getByRole("button", { name: /^Review Play a bit of chess/ }).click();
+    await expect(page.getByTestId("change-hero")).toBeVisible();
+    await capture(page, "website-coach-drawer");
+  });
+});
+
 for (const theme of ["DARK", "LIGHT"]) {
   test(`a lighter week reads as the coach's note and a big 6 → 5 (${theme})`, async ({ page, request }) => {
-    await request.post(`${API}/__reset`);
-    await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
-    const state = await (await request.get(`${API}/__state`)).json();
-    const planId = state.plans[0].id;
-    await request.post(`${API}/__coaching-monitoring`, {
-      headers,
-      data: {
-        planOverrides: [{ id: planId, goal: "Play a bit of chess every day", emoji: "♟️", outlineType: "TIMES_PER_WEEK", timesPerWeek: 6 }],
-        messages: [{
-          id: "coach-lighter", chatId: "coach-main", planId, planIds: [planId], role: "COACH", status: "SENT",
-          content: "Two weeks short of six. Want a target that holds?", createdAt: new Date().toISOString(),
-          planProposals: [{
-            planId, planGoal: "Play a bit of chess every day", planEmoji: "♟️",
-            description: "Six didn't hold the last two weeks. Five keeps the habit without the end-of-week scramble.",
-            patch: { plan: { timesPerWeek: 5 } }, status: null,
-          }],
-        }],
-      },
-    });
+    await seedLighterWeek(request, theme);
     await page.goto("/chat/coach-main");
     await page.getByRole("button", { name: /^Review Play a bit of chess/ }).click();
     await expect(page.getByTestId("coach-note")).toBeVisible();

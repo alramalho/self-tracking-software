@@ -7,15 +7,23 @@ import { coachIdentity } from "@/features/messages/coach";
 import { CoachingChoice } from "@/features/plans/coaching/CoachingFields";
 import { StepSequence } from "./interview/StepReveal";
 import type { CoachingTourProps } from "./types";
+import { AdaptationPreview } from "./coach-tour/AdaptationPreview";
+import { AdaptingWeeks } from "./coach-tour/AdaptingWeeks";
+import { LockScreenPreview } from "./coach-tour/LockScreenPreview";
 
+/** Three screens that show the coach at work, then the data it may use. */
+export const TOUR_STEPS = 4;
+export const DATA_STEP = 3;
 const titles = [
-  "A coach for this plan.",
+  "Your plan adapts.",
   "A timely check-in.",
+  "It follows how you do.",
   "You choose what it can see.",
 ];
 const details = [
-  "See a first step, session explanations and changes for your approval.",
-  "Questions and proposals open in Messages.",
+  "When a week slips, your coach suggests a lighter one. You decide.",
+  "One quick question when a week is at risk.",
+  "Hit your week and it grows. Miss it and it eases off.",
   "Choose the watch summaries your coach may use for this plan.",
 ];
 
@@ -35,9 +43,11 @@ function Example({ label, children }: { label: string; children: string }) {
 
 export function CoachingTour({ locked = false, step, facts, coaching, preferences, onCoaching, onPreferences }: CoachingTourProps) {
   const c = useColors();
-  const coach = coachIdentity(useCurrentUser().data?.coachPersonality);
+  const personality = useCurrentUser().data?.coachPersonality;
+  const coach = coachIdentity(personality);
+  const strategist = personality === "STRATEGIST";
   return (
-    <View testID={["coach-tour-role", "coach-tour-contact", "coach-tour-data"][step]} style={{ gap: 20 }}>
+    <View testID={["coach-tour-adapts", "coach-tour-contact", "coach-tour-weeks", "coach-tour-data"][step]} style={{ gap: 20 }}>
       <StepSequence prefix="coach-heading" style={{ alignItems: "center", gap: 12 }}>
         {/* The coach introduces itself on every step. */}
         <View style={{ alignItems: "center", gap: 4 }}>
@@ -57,13 +67,7 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
 
       {step === 0 && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
-          <Example label="EXAMPLE · YOUR PLAN">
-            {locked
-              ? coaching.role === "training"
-                ? "“Your first two weeks are set. I’ll plan the next ones from how these go.”"
-                : "“I’ll check in when a week slips, and help you pick it back up.”"
-              : `“Let’s start with the ${facts.activityTitle.toLowerCase()} routine you described. I’ll suggest a first week for you to review.”`}
-          </Example>
+          <AdaptationPreview strategist={strategist} />
           {!locked && <View style={{ gap: 10 }}>
             <Text style={{ color: c.text, fontSize: 15, fontWeight: "600", marginBottom: 4 }}>What help do you want?</Text>
             <CoachingChoice card label="Plan and adjust training" detail="For a goal with sessions that need to progress." selected={coaching.role === "training"} onPress={() => onCoaching({ ...coaching, role: "training" })} />
@@ -74,9 +78,10 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
 
       {step === 1 && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
-          <Example label="EXAMPLE · AFTER A DIFFICULT WEEK">
-            “Hard week. Should we keep the plan or make it lighter?”
-          </Example>
+          <LockScreenPreview
+            coachName={coach.name}
+            message="Two sessions left and four days to go. Which days work?"
+          />
           <View>
             <CoachingChoice label="Follow up when useful" detail={coaching.role === "training" ? "Asks after each planned session. No reply counts as missed, and next week adapts." : "One reminder, then a nudge about why you started before offering to archive."} selected={coaching.followUps} onPress={() => onCoaching({ ...coaching, followUps: !coaching.followUps })} />
           </View>
@@ -84,6 +89,12 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
       )}
 
       {step === 2 && (
+        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
+          <AdaptingWeeks strategist={strategist} emoji={facts.emoji || "✅"} />
+        </StepSequence>
+      )}
+
+      {step === DATA_STEP && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <Example label={coaching.role === "training" ? "EXAMPLE · WITH WORKOUT ACCESS" : "EXAMPLE · FROM THIS PLAN'S LOGS"}>
             {coaching.role === "training"

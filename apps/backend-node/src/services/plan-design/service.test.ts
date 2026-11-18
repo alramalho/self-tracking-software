@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultRanges, sanitizeRanges } from "./frequency";
-import { classifyGoal, designOptions, extendWindow, nextSubgoalQuestion } from "./service";
+import { classifyGoal, designOptions, extendWindow, nextSubgoalQuestion, planTitle } from "./service";
 import { loadChangeProblems, validateSessions } from "./validate";
 import type { ObjectGenerator } from "./types";
 import type { DesignInput, WindowInput } from "./types";
@@ -329,12 +329,19 @@ describe("stray characters", () => {
 
 describe("classify and sub-goal question", () => {
   const classified = (over: object = {}) => ({
+    title: "Half marathon",
     orientation: "OUTCOME",
     reason: "A finishable race.",
     activity: { title: "Running", measure: "km", emoji: "🏃" },
     goalSpec: { metric: "FINISH_TIME", value: 7200, unit: "s", text: "under 2 hours", chosenByUser: false },
     baselineQuestion: "How much do you run now?",
     ...over,
+  });
+  it("names the plan in a few words, not the sentence they said", async () => {
+    const said = "I would like to learn Chinese rather fast, be proficient, so let's say conversational level.";
+    const result = await classifyGoal({ goal: said, existingActivities: [] }, fake(classified({ title: "Conversational Chinese." })).generate);
+    expect(result.title).toBe("Conversational Chinese");
+    expect(planTitle("  ", "Meditate daily")).toBe("Meditate daily");
   });
   it("never keeps a target the person did not write", async () => {
     const result = await classifyGoal({ goal: "Finish my first half marathon", existingActivities: [] }, fake(classified()).generate);

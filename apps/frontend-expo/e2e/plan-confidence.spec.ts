@@ -28,7 +28,7 @@ const dialHeading = (page: Page) => page.getByRole("heading", { name: "How sure 
 
 async function start(page: Page, request: any, theme: string, goal: string, baselineHeading: string, baseline: string) {
   await request.post(`${API}/__reset`);
-  await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme } });
+  await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
   await page.goto("/onboarding?preview=1");
   await enterWelcomeAge(page);
   await next(page);
@@ -44,7 +44,8 @@ async function start(page: Page, request: any, theme: string, goal: string, base
 
 // The coach steps and "Do it with a group?" come first: the question is asked once everything is settled.
 async function throughCoachAndCircle(page: Page) {
-  await expect(page.getByTestId("coach-tour-role")).toBeVisible();
+  await expect(page.getByTestId("coach-tour-adapts")).toBeVisible();
+  await next(page);
   await next(page);
   await next(page);
   await next(page).catch(() => {});

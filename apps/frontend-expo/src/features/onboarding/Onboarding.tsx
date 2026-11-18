@@ -53,7 +53,10 @@ import { Welcome } from "./Welcome";
 import { WeeklyFrequencyPicker } from "./interview/WeeklyFrequencyPicker";
 import { PlanSummary } from "./interview/PlanSummary";
 import { onboardingPreferences } from "./preferences";
-import { CoachingTour } from "./CoachingTour";
+import { CoachingTour, DATA_STEP, TOUR_STEPS } from "./CoachingTour";
+
+/** The coach screens fill three steps of the journey bar, however many there are. */
+const tourProgress = (step: number) => Math.floor((step * 3) / TOUR_STEPS);
 import { PlanConclusion } from "./PlanConclusion";
 import { PlanVisibilityChoices } from "@/features/plans/visibility/PlanVisibility";
 import type { PlanVisibilityChoice } from "@/features/plans/visibility/types";
@@ -204,7 +207,7 @@ export default function Onboarding({
     setValidation(undefined);
     setPaywall(value.step === "interview-finish");
     setRating(value.step === "confidence");
-    const savedTour = /^coaching-tour-([0-2])$/.exec(value.step);
+    const savedTour = /^coaching-tour-([0-3])$/.exec(value.step);
     setTourStep(savedTour ? Number(savedTour[1]) : null);
     setAwaitingUpgrade(!!value.awaitingUpgrade);
     upgradeIntent.current = !!value.awaitingUpgrade;
@@ -425,7 +428,8 @@ export default function Onboarding({
           activityTitle: classified.activity.title,
           measure: classified.activity.measure,
           design: initialDesign(classified, "", draft.frequency),
-          goal: text.trim(),
+          // The plan is named in a few words; the coach still reads everything they said.
+          goal: classified.title?.trim() || text.trim(),
           interview: next,
           step: "interview",
           answers: next.turns.map((turn) => ({
@@ -523,14 +527,14 @@ export default function Onboarding({
   async function advanceTour() {
     if (tourStep === null) return;
     // Leaving "You choose what it can see": ask for what the coach needs to reach you.
-    if (tourStep === 2 && !preview) {
+    if (tourStep === DATA_STEP && !preview) {
       const coaching = draft.coaching ?? initialCoaching();
       const coach = coachIdentity(user.data?.coachPersonality).name;
       await access.ask(accessRequests.coach(coach, coachNeedsAppleHealth(coaching.dataAccess, garminConnected)));
     }
     const next = tourStep + 1;
-    await persist({ ...draft, step: next < 3 ? `coaching-tour-${next}` : "interview" });
-    setTourStep(next < 3 ? next : null);
+    await persist({ ...draft, step: next < TOUR_STEPS ? `coaching-tour-${next}` : "interview" });
+    setTourStep(next < TOUR_STEPS ? next : null);
   }
   const complete = useMutation({
     mutationFn: async (coaching: boolean) => {
@@ -858,8 +862,8 @@ export default function Onboarding({
       return;
     }
     if (!validation && tourStep === null && state.stage === "review" && state.facts.wantsCoaching) {
-      await persist({ ...draft, step: "coaching-tour-2" });
-      setTourStep(2);
+      await persist({ ...draft, step: `coaching-tour-${DATA_STEP}` });
+      setTourStep(DATA_STEP);
       return;
     }
     // A completed question produces both pre-answer and accepted snapshots.
@@ -900,7 +904,7 @@ export default function Onboarding({
         );
       setAnswer(
         priorAnswer ||
-          (previous.stage === "goal" ? draft.goal || previous.facts.goal : ""),
+          (previous.stage === "goal" ? previous.facts.goal || draft.goal : ""),
       );
       setHistory((h) => h.slice(0, stageStartIndex));
     } else if (state.stage !== "goal") {
@@ -961,14 +965,14 @@ export default function Onboarding({
     ? paywall
       ? { current: 12, total: 12, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
       : tourStep !== null
-        ? { current: 7 + tourStep, total: 12, label: "Your coach" }
+        ? { current: 7 + tourProgress(tourStep), total: 12, label: "Your coach" }
         : askingVisibility
           ? { current: 11, total: 12, label: "Who sees it" }
           : { current: circlePrefs ? 11 : 10, total: 12, label: "Your circle" }
     : paywall
     ? { current: 11, total: 11, label: state.facts.wantsCoaching && !paid ? "Your trial" : "Ready to start" }
     : tourStep !== null || state.stage === "support"
-      ? { current: 5 + (tourStep ?? 0), total: 11, label: "Your coach" }
+      ? { current: 5 + tourProgress(tourStep ?? 0), total: 11, label: "Your coach" }
       : askingVisibility
         ? { current: 9, total: 11, label: "Who sees it" }
       : askingCircle
