@@ -6,6 +6,9 @@ import { Card } from "@/components/ui/card";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser } from "@/contexts/users";
 import { Capacitor } from "@capacitor/core";
+import { coachingPlans } from "@/components/onboarding/api";
+import { LABELS, money, paywallCta, period, savingVsWeekly, weeksIn } from "@/components/onboarding/paywall/plans";
+import { useQuery } from "@tanstack/react-query";
 import { Check, CheckCircle } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
@@ -13,72 +16,6 @@ interface UpgradePopoverProps {
   open: boolean;
   onClose: () => void;
 }
-
-const PLUS_MONTHLY = 9.99;
-const PLUS_QUARTERLY = 24.99;
-const PLUS_YEARLY = 59.99;
-
-const QUARTERLY_MONTHLY_PRICE = Math.floor((PLUS_QUARTERLY / 3) * 100) / 100;
-const YEARLY_MONTHLY_PRICE = Math.floor((PLUS_YEARLY / 12) * 100) / 100;
-
-// Calculate savings compared to monthly
-const QUARTERLY_SAVINGS = Math.round(
-  ((PLUS_MONTHLY * 3 - PLUS_QUARTERLY) / (PLUS_MONTHLY * 3)) * 100
-);
-const YEARLY_SAVINGS = Math.round(
-  ((PLUS_MONTHLY * 12 - PLUS_YEARLY) / (PLUS_MONTHLY * 12)) * 100
-);
-
-interface PricingTier {
-  id: "monthly" | "quarterly" | "yearly";
-  title: string;
-  subtitle: string;
-  price: number;
-  period: string;
-  equivalentMonthly?: number;
-  savings?: number;
-  badge?: string;
-  positioning: string;
-  paymentLink: string;
-  isPopular?: boolean;
-}
-
-const pricingTiers: PricingTier[] = [
-  {
-    id: "monthly",
-    title: "Monthly",
-    subtitle: "Flexible Plan",
-    price: PLUS_MONTHLY,
-    period: "month",
-    positioning: "Try it out",
-    paymentLink: "https://buy.stripe.com/14A3cvdmH5td9E2803cfK0i",
-  },
-  {
-    id: "quarterly",
-    title: "Quarterly",
-    subtitle: "Most Popular",
-    price: PLUS_QUARTERLY,
-    period: "3 months",
-    equivalentMonthly: QUARTERLY_MONTHLY_PRICE,
-    savings: QUARTERLY_SAVINGS,
-    badge: "Most Popular",
-    positioning: "Commit to real transformation",
-    paymentLink: "https://buy.stripe.com/eVqeVdeqLcVF6rQ2FJcfK0h",
-    isPopular: true,
-  },
-  {
-    id: "yearly",
-    title: "Yearly",
-    subtitle: "Best Value",
-    price: PLUS_YEARLY,
-    period: "year",
-    equivalentMonthly: YEARLY_MONTHLY_PRICE,
-    savings: YEARLY_SAVINGS,
-    badge: `Save ${YEARLY_SAVINGS}%`,
-    positioning: "Best long term value",
-    paymentLink: "https://buy.stripe.com/8x2aEX1DZ8Fp9E24NRcfK0g",
-  },
-];
 
 export const Coffee = () => {
   return (
@@ -114,9 +51,10 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   open,
   onClose,
 }) => {
-  const [selectedTier, setSelectedTier] = useState<
-    "monthly" | "quarterly" | "yearly"
-  >("quarterly");
+  // The same plans, prices and checkout links as the onboarding paywall, read live from Stripe.
+  const offer = useQuery({ queryKey: ["coaching-offer"], queryFn: coachingPlans, enabled: open, retry: 1 });
+  const plans = offer.data ?? [];
+  const [selectedId, setSelectedId] = useState<string>();
   const {currentUser, refetchCurrentUser} = useCurrentUser();
   const { getThemeClass } = useTheme();
 
@@ -141,7 +79,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
     "Customizable color themes and reactions",
   ];
 
-  const currentTier = pricingTiers.find((tier) => tier.id === selectedTier)!;
+  const currentPlan = plans.find((plan) => plan.id === selectedId) ?? plans[0];
+  const currentSaving = currentPlan ? savingVsWeekly(currentPlan, plans) : 0;
 
   if (isNativeIOS) {
     return (
@@ -210,43 +149,53 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
         </div>
 
         <div className="grid gap-6">
-          {/* Pricing Tier Switch */}
-          <div className="bg-muted rounded-2xl p-1 grid grid-cols-3 gap-1">
-            {pricingTiers.map((tier) => (
-              <button
-                key={tier.id}
-                onClick={() => setSelectedTier(tier.id)}
-                className={`relative py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  selectedTier === tier.id
-                    ? "bg-card shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span>{tier.title}</span>
-                  {tier.savings && (
-                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                      Save {tier.savings}%
-                    </span>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+          {offer.isError && (
+            <p className="text-center text-sm text-muted-foreground">
+              Plans couldn&apos;t load. Close this and try again.
+            </p>
+          )}
+          {plans.length > 1 && (
+            <div className={`bg-muted rounded-2xl p-1 grid gap-1`} style={{ gridTemplateColumns: `repeat(${plans.length}, minmax(0, 1fr))` }}>
+              {plans.map((plan) => {
+                const saving = savingVsWeekly(plan, plans);
+                return (
+                  <button
+                    key={plan.id}
+                    onClick={() => setSelectedId(plan.id)}
+                    className={`relative py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      plan.id === currentPlan?.id
+                        ? "bg-card shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span>{LABELS[plan.id]}</span>
+                      {saving > 0 && (
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                          Save {saving}%
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Selected Pricing Card */}
+          {currentPlan && (
           <Card className="p-6 relative overflow-hidden rounded-2xl">
             <div className="space-y-4">
               <div className="flex flex-row items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">{currentTier.title}</h3>
+                  <h3 className="text-lg font-semibold">{LABELS[currentPlan.id]}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {currentTier.positioning}
+                    {currentPlan.trialDays ? `${currentPlan.trialDays} days free, then` : "Cancel anytime"}
                   </p>
                 </div>
-                {currentTier.badge && (
+                {currentSaving > 0 && (
                   <Badge className={`${getThemeClass("primary")} text-white`}>
-                    {currentTier.badge}
+                    Save {currentSaving}% vs weekly
                   </Badge>
                 )}
               </div>
@@ -254,13 +203,13 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               <div className="space-y-1">
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold">
-                    €{currentTier.equivalentMonthly || currentTier.price}
+                    {money(currentPlan, currentPlan.amount / weeksIn(currentPlan))}
                   </span>
-                  <span className="text-muted-foreground">/ month</span>
+                  <span className="text-muted-foreground">/ week</span>
                 </div>
-                {currentTier.equivalentMonthly && (
+                {currentPlan.id !== "weekly" && (
                   <p className="text-sm text-muted-foreground">
-                    €{currentTier.price} per {currentTier.period}
+                    {money(currentPlan)} every {period(currentPlan)}
                   </p>
                 )}
               </div>
@@ -296,21 +245,22 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 </Button>
               ) : (
                 <a
-                  href={`${currentTier.paymentLink}?client_reference_id=${currentUser?.id}`}
+                  href={currentPlan.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block"
                 >
                   <Button className={`w-full rounded-xl ${getThemeClass("primary")} ${getThemeClass("hover")} text-white text-lg py-6`}>
-                    Start Free Trial
+                    {paywallCta(currentPlan)}
                   </Button>
                 </a>
               )}
             </div>
           </Card>
+          )}
 
           <div className="text-center text-sm text-muted-foreground space-y-1">
-            <p>All plans include a free trial and full access to all features.</p>
+            <p>Every plan starts with a free week and has every feature.</p>
             <p>Cancel anytime.</p>
             <a
               href="https://tracking.so/terms"
