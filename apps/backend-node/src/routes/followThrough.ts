@@ -52,6 +52,7 @@ import { monitoringState } from "../services/coach/monitoring/model";
 import { answerNudge } from "../services/coach/monitoring/requests";
 import { endQuiet, talkTurn } from "../services/coach/talk/service";
 import { talkRequestSchema } from "../services/coach/talk/schema";
+import { onboardingNotificationService } from "../services/onboardingNotificationService";
 
 const router = Router();
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
@@ -281,9 +282,11 @@ router.post(
     const body = z
       .object({ draft: draftSchema, preferences: preferencesSchema })
       .parse(req.body);
+    const firstTime = !req.user!.onboardingCompletedAt;
     const result = await finishOnboarding(req.user!, body.draft, body.preferences);
     res.json(result);
     startPlanMonitoring(req.user!);
+    if (firstTime) void onboardingNotificationService.sendOnboardingCompleted(req.user!, body.preferences.coaching);
   }),
 );
 router.get(

@@ -52,7 +52,7 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   // Onboarding and the coach-designed "Create plan" are full-screen flows with their own header and buttons.
-  const isFullScreenFlow = isOnboardingPage || pathname === "/create-plan";
+  const isFullScreenFlow = isOnboardingPage || pathname === "/create-plan" || pathname.startsWith("/analytics");
   const isDownloadPage = pathname.startsWith("/download");
   const isDmsPage = pathname.startsWith("/messages") || pathname.startsWith("/message-ai") || pathname.startsWith("/message/") || pathname.startsWith("/chat/");
   const isProfilePage = pathname.startsWith("/profile");

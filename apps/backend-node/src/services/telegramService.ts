@@ -9,6 +9,25 @@ import type {
 } from "./telegram/types";
 
 const TELEGRAM_API_TIMEOUT_MS = 6000;
+/** The same error or warning goes out at most once per window; the next one says how many were held back. */
+const REPEAT_WINDOW_MS = 30 * 60 * 1000;
+const lastSent = new Map<string, { at: number; held: number }>();
+
+/**
+ * Whether a message with this key may go out now, and how many were held back since the last one.
+ * In memory: one backend process, and a restart simply lets the next one through.
+ */
+export function claimRepeat(key: string, windowMs = REPEAT_WINDOW_MS, now = Date.now()) {
+  const last = lastSent.get(key);
+  if (last && now - last.at < windowMs) {
+    last.held++;
+    return { send: false, held: 0 };
+  }
+  lastSent.set(key, { at: now, held: 0 });
+  return { send: true, held: last?.held ?? 0 };
+}
+
+const heldNote = (held: number) => (held ? ` (+${held} more)` : "");
 
 function firstConfiguredValue(...values: Array<string | undefined>): string {
   return values.find((value) => value?.trim())?.trim() ?? "";
@@ -70,20 +89,20 @@ export class TelegramService {
   async sendErrorNotification(
     data: TelegramErrorNotificationData,
   ): Promise<TelegramDeliveryReport> {
-    let message = `🚨 *Error on user ${data.userUsername || data.userId || "unknown"}*\n${data.errorMessage}`;
+    const endpoint = [data.method, data.path].filter(Boolean).join(" ");
+    const repeat = claimRepeat(`error:${endpoint}:${data.errorMessage}`);
+    if (!repeat.send) return this.heldReport("alerts");
+    const who = data.userUsername || data.userId || "unknown";
+    const message = `🚨 ${data.errorMessage}${endpoint ? ` · ${endpoint}` : ""} · ${who}${heldNote(repeat.held)}`;
+    return this.sendToChannel(this.alertMessage(message), "alerts");
+  }
 
-    if (data.method || data.path) {
-      let endpoint = "*Endpoint:*";
-      if (data.method) {
-        endpoint += ` ${data.method}`;
-      }
-      if (data.path) {
-        endpoint += ` ${data.path}`;
-      }
-      message += `\n${endpoint}`;
-    }
-
-    return this.sendToChannel(this.alertMessage(message), "alerts", "Markdown");
+  /** A warning that can repeat (a failing tool, a webhook): at most once per window per key. */
+  async sendRepeatable(key: string, message: string, channel: TelegramChannel = "alerts") {
+    const repeat = claimRepeat(key);
+    if (!repeat.send) return this.heldReport(channel);
+    const text = `${message}${heldNote(repeat.held)}`;
+    return this.sendToChannel(channel === "alerts" ? this.alertMessage(text) : text, channel);
   }
 
   async sendMessage(message: string): Promise<TelegramDeliveryReport> {
@@ -299,7 +318,11 @@ export class TelegramService {
   }
 
   private alertMessage(message: string): string {
-    return `📱 *${this.appName}*\n${message}`;
+    return `[${this.appName}] ${message}`;
+  }
+
+  private heldReport(channel: TelegramChannel): TelegramDeliveryReport {
+    return { channel, configured: true, attempted: 0, delivered: 0, failed: 0 };
   }
 
   private unconfiguredReport(

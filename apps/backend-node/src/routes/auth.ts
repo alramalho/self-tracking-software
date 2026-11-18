@@ -70,7 +70,7 @@ async function createNativeSession(profile: NativeAuthProfile, client?: string) 
       picture: profile.picture,
     });
     const telegramService = new TelegramService();
-    void telegramService.sendMessage(`🎉 New user! (${databaseUser.username || databaseUser.id})`);
+    void telegramService.sendMessage(`👋 New user: ${databaseUser.username || databaseUser.id}`);
   }
 
   return { ticket: await createSignInTicket(clerkUser.id), databaseUser };

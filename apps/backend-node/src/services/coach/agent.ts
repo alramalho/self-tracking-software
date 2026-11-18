@@ -727,8 +727,9 @@ export class CoachAgentService {
             if (!searchResult.success) {
               logger.error(`Web search failed: ${searchResult.error}`);
               collector.recordTool("webSearch", "failed");
-              self.telegram.sendMessage(
-                `🔴 Coach webSearch tool failed\nUser: ${user.username}\nProvider: ${searchResult.provider}\nQueries: ${searchQueries.length}\nError: ${searchResult.error}`
+              self.telegram.sendRepeatable(
+                `coach-websearch:${searchResult.provider}`,
+                `🔴 Coach web search failed (${searchResult.provider}): ${searchResult.error} · ${user.username}`
               );
               return {
                 success: false as const,
@@ -2142,8 +2143,9 @@ export class CoachAgentService {
         });
 
         if (failure.reason === "internal_state_leak") {
-          this.telegram.sendMessage(
-            `🔴 Coach draft leaked internal proposal state\nUser: ${user.username}\nModel: ${resolvedModel}`
+          this.telegram.sendRepeatable(
+            "coach-state-leak",
+            `🔴 Coach reply leaked proposal state · ${user.username} · ${resolvedModel}`
           );
         }
 
@@ -2263,8 +2265,9 @@ export class CoachAgentService {
           (tc.result as any).success === false
       );
       if (failedPlanProposal && planProposals.length === 0 && planCreationProposals.length === 0) {
-        this.telegram.sendMessage(
-          `🟠 Coach plan proposal failed (no card attached)\nUser: ${user.username}\nTool: ${failedPlanProposal.tool}\nError: ${(failedPlanProposal.result as any).error}`
+        this.telegram.sendRepeatable(
+          `coach-proposal:${failedPlanProposal.tool}`,
+          `🟠 Coach ${failedPlanProposal.tool} failed, no card shown: ${(failedPlanProposal.result as any).error} · ${user.username}`
         );
       }
 

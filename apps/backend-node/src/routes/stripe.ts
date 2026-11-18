@@ -29,9 +29,7 @@ function getUserPlanFromProduct(productId: string): "PLUS" | "FREE" {
 
   logger.error(`Unknown product id: ${productId}`);
   telegramService.sendAlert(
-    `🚨 Unknown product id ${productId}\n\n` +
-      `UTC Time: ${new Date().toISOString()}\n` +
-      `Check logs for full event`
+    `🚨 Stripe: unknown product ${productId}`
   );
 
   return "FREE";
@@ -46,8 +44,7 @@ async function findUserByCustomerId(customerId: string) {
   if (!user) {
     logger.error(`User not found for Stripe customer ID: ${customerId}`);
     telegramService.sendAlert(
-      `🚨 **User not found for customer ID ${customerId}**\n\n` +
-        `UTC Time: ${new Date().toISOString()}`
+      `🚨 Stripe: no user for customer ${customerId}`
     );
   }
 
@@ -86,9 +83,7 @@ async function findUserByCustomerIdWithRetry(
     `User not found for Stripe customer ID: ${customerId} after ${maxAttempts} attempts`
   );
   telegramService.sendAlert(
-    `🚨 **User not found for customer ID ${customerId}** after polling\\n\\n` +
-      `Attempts: ${maxAttempts}\\n` +
-      `UTC Time: ${new Date().toISOString()}`
+    `🚨 Stripe: no user for customer ${customerId} after ${maxAttempts} tries`
   );
 
   return null;
@@ -163,10 +158,7 @@ async function handleSubscriptionEvent(
 
     // Telegram reaches the operator: username and ID, never the email.
     telegramService.sendAlert(
-      `🎉 *New PLUS subscription*!\n\n` +
-        `User: ${updatedUser.username || "unknown"} (${updatedUser.id})\n` +
-        `Plan: ${planType}\n` +
-        `UTC Time: ${new Date().toISOString()}`
+      `🎉 New subscription: ${updatedUser.username || updatedUser.id} · ${planType} · Stripe`
     );
   }
 }
@@ -196,10 +188,7 @@ async function handleCheckoutSessionCompleted(
   if (!user) {
     logger.error(`User not found for client_reference_id: ${clientReferenceId}`);
     telegramService.sendAlert(
-      `🚨 **User not found for checkout session**\n\n` +
-        `Client Reference ID: ${clientReferenceId}\n` +
-        `Customer ID: ${customerId}\n` +
-        `UTC Time: ${new Date().toISOString()}`
+      `🚨 Stripe checkout: no user ${clientReferenceId} (customer ${customerId})`
     );
     return;
   }
@@ -234,10 +223,7 @@ async function handlePaymentIntent(
 
   // Username, ID and plan only: no email or payment amount leaves the server.
   telegramService.sendAlert(
-    `🎉💰 Payment received!\n\n` +
-      `User: ${user.username || "unknown"} (${user.id})\n` +
-      `Plan: ${user.planType}\n` +
-      `UTC Time: ${new Date().toISOString()}`
+    `💰 Payment: ${user.username || user.id} · ${user.planType}`
   );
 
   logger.info(
@@ -316,11 +302,9 @@ router.post(
     } catch (error) {
       logger.error(`Error processing webhook ${event.type}:`, error);
 
-      telegramService.sendAlert(
-        `🚨 *Webhook processing failed*\n\n` +
-          `Event: ${event.type}\n` +
-          `UTC Time: ${new Date().toISOString()}\n` +
-          `Check logs for details`
+      telegramService.sendRepeatable(
+        `stripe-webhook:${event.type}`,
+        `🚨 Stripe webhook ${event.type} failed (see logs)`
       );
 
       return res

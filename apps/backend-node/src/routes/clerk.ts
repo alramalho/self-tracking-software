@@ -112,7 +112,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
         const created = await prisma.user.create({
           data: userData,
         });
-        telegramService.sendMessage(`🎉 New user! (${created.username || created.id})`);
+        telegramService.sendMessage(`👋 New user: ${created.username || created.id}`);
       }
       return res.json({
         status: "success",

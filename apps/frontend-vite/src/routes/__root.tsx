@@ -102,8 +102,8 @@ function ThemedLayout() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const location = useLocation();
   const isDownloadPage = location.pathname.startsWith("/download");
-  // Full-screen flows (onboarding, the coach-designed "Create plan") have no sidebar.
-  const isOnboardingPage = location.pathname.startsWith("/onboarding") || location.pathname === "/create-plan";
+  // Full-screen flows (onboarding, the coach-designed "Create plan", /analytics) have no sidebar.
+  const isOnboardingPage = location.pathname.startsWith("/onboarding") || location.pathname === "/create-plan" || location.pathname.startsWith("/analytics");
 
   return (
     <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} isOnboardingPage={isOnboardingPage} />

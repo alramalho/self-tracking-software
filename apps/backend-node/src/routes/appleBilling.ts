@@ -129,11 +129,8 @@ async function saveSubscription(
       logger.error("Failed to send Loops event:", loopsError);
     }
     telegramService.sendAlert(
-      `🎉 *New PLUS subscription (Apple)*!\n\n` +
-        `User: ${updated.username || "unknown"} (${updated.id})\n` +
-        `Product: ${transaction.productId}\n` +
-        `Environment: ${transaction.environment}\n` +
-        `UTC Time: ${new Date().toISOString()}`
+      `🎉 New subscription: ${updated.username || updated.id} · ${String(transaction.productId).split(".").pop()} · Apple` +
+        (transaction.environment === "Production" ? "" : ` (${transaction.environment})`)
     );
   }
   return updated;
@@ -294,11 +291,9 @@ router.post("/notifications", async (req: Request, res: Response): Promise<Respo
     await handleNotification(notification);
   } catch (error) {
     logger.error(`Error processing Apple notification ${notification.notificationType}:`, error);
-    telegramService.sendAlert(
-      `🚨 *Apple notification processing failed*\n\n` +
-        `Type: ${notification.notificationType}\n` +
-        `UTC Time: ${new Date().toISOString()}\n` +
-        `Check logs for details`
+    telegramService.sendRepeatable(
+      `apple-notification:${notification.notificationType}`,
+      `🚨 Apple ${notification.notificationType} notification failed (see logs)`
     );
   }
   // Verified: always 200, so Apple doesn't retry something we can't fix by retrying.

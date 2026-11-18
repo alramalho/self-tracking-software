@@ -27,6 +27,7 @@ import { Route as CreatePlanRouteImport } from './routes/create-plan'
 import { Route as CreateCoachProfileRouteImport } from './routes/create-coach-profile'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CircleMatchRouteImport } from './routes/circle-match'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
@@ -132,6 +133,11 @@ const CircleMatchRoute = CircleMatchRouteImport.update({
   path: '/circle-match',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiRoute = AiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/analytics': typeof AnalyticsRoute
   '/circle-match': typeof CircleMatchRoute
   '/coach': typeof CoachRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/analytics': typeof AnalyticsRoute
   '/circle-match': typeof CircleMatchRoute
   '/coach': typeof CoachRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/ai': typeof AiRoute
+  '/analytics': typeof AnalyticsRoute
   '/circle-match': typeof CircleMatchRoute
   '/coach': typeof CoachRoute
   '/create-coach-profile': typeof CreateCoachProfileRoute
@@ -312,6 +321,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/analytics'
     | '/circle-match'
     | '/coach'
     | '/create-coach-profile'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/analytics'
     | '/circle-match'
     | '/coach'
     | '/create-coach-profile'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add'
     | '/ai'
+    | '/analytics'
     | '/circle-match'
     | '/coach'
     | '/create-coach-profile'
@@ -415,6 +427,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddRoute: typeof AddRoute
   AiRoute: typeof AiRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   CircleMatchRoute: typeof CircleMatchRoute
   CoachRoute: typeof CoachRoute
   CreateCoachProfileRoute: typeof CreateCoachProfileRoute
@@ -574,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CircleMatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai': {
       id: '/ai'
       path: '/ai'
@@ -679,6 +699,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
   AiRoute: AiRoute,
+  AnalyticsRoute: AnalyticsRoute,
   CircleMatchRoute: CircleMatchRoute,
   CoachRoute: CoachRoute,
   CreateCoachProfileRoute: CreateCoachProfileRoute,

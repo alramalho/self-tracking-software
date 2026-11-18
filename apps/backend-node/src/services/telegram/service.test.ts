@@ -130,3 +130,14 @@ describe("TelegramService routing", () => {
     });
   });
 });
+
+describe("claimRepeat", () => {
+  it("lets the first through, holds repeats in the window, then reports how many were held", async () => {
+    const { claimRepeat } = await import("../telegramService");
+    const key = `test-${Math.random()}`;
+    expect(claimRepeat(key, 1000, 0)).toEqual({ send: true, held: 0 });
+    expect(claimRepeat(key, 1000, 500).send).toBe(false);
+    expect(claimRepeat(key, 1000, 900).send).toBe(false);
+    expect(claimRepeat(key, 1000, 1500)).toEqual({ send: true, held: 2 });
+  });
+});
