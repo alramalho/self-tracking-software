@@ -44,7 +44,7 @@ async function start(page: Page, request: any, theme: string, goal: string, base
 
 // The coach steps and "Do it with a group?" come first: the question is asked once everything is settled.
 async function throughCoachAndCircle(page: Page) {
-  await expect(page.getByTestId("coach-tour-adapts")).toBeVisible();
+  await expect(page.getByTestId("coach-tour-contact")).toBeVisible();
   await next(page);
   await next(page);
   await next(page);

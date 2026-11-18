@@ -88,10 +88,13 @@ appId: so.tracking.app
 - takeScreenshot: onboarding-week
 - tapOn: ^Continue$
 - assertVisible:
-    id: coach-tour-role
+    id: coach-tour-contact
 - tapOn: ^Continue$
 - assertVisible:
-    id: coach-tour-contact
+    id: coach-tour-weeks
+- tapOn: ^Continue$
+- assertVisible:
+    id: coach-tour-adapts
 - tapOn: ^Continue$
 - assertVisible:
     id: coach-tour-data

@@ -11,19 +11,22 @@ import { AdaptationPreview } from "./coach-tour/AdaptationPreview";
 import { AdaptingWeeks } from "./coach-tour/AdaptingWeeks";
 import { LockScreenPreview } from "./coach-tour/LockScreenPreview";
 
-/** Three screens that show the coach at work, then the data it may use. */
+/** Three screens that show the coach at work (a check-in, a slipped week, the change it suggests), then the data it may use. */
 export const TOUR_STEPS = 4;
+const CONTACT_STEP = 0;
+const WEEKS_STEP = 1;
+const ADAPTS_STEP = 2;
 export const DATA_STEP = 3;
 const titles = [
-  "Your plan adapts.",
   "A timely check-in.",
   "It follows how you do.",
+  "Your plan adapts.",
   "You choose what it can see.",
 ];
 const details = [
-  "When a week slips, your coach suggests a lighter one. You decide.",
   "One quick question when a week is at risk.",
-  "Hit your week and it grows. Miss it and it eases off.",
+  "Miss your week and it eases off. Hit it and it grows.",
+  "Your coach suggests the change. You decide.",
   "Choose the watch summaries your coach may use for this plan.",
 ];
 
@@ -47,7 +50,7 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
   const coach = coachIdentity(personality);
   const strategist = personality === "STRATEGIST";
   return (
-    <View testID={["coach-tour-adapts", "coach-tour-contact", "coach-tour-weeks", "coach-tour-data"][step]} style={{ gap: 20 }}>
+    <View testID={["coach-tour-contact", "coach-tour-weeks", "coach-tour-adapts", "coach-tour-data"][step]} style={{ gap: 20 }}>
       <StepSequence prefix="coach-heading" style={{ alignItems: "center", gap: 12 }}>
         {/* The coach introduces itself on every step. */}
         <View style={{ alignItems: "center", gap: 4 }}>
@@ -65,18 +68,7 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
         </Text>
       </StepSequence>
 
-      {step === 0 && (
-        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
-          <AdaptationPreview strategist={strategist} />
-          {!locked && <View style={{ gap: 10 }}>
-            <Text style={{ color: c.text, fontSize: 15, fontWeight: "600", marginBottom: 4 }}>What help do you want?</Text>
-            <CoachingChoice card label="Plan and adjust training" detail="For a goal with sessions that need to progress." selected={coaching.role === "training"} onPress={() => onCoaching({ ...coaching, role: "training" })} />
-            <CoachingChoice card label="Help me stay consistent" detail="For a habit or routine you already know." selected={coaching.role === "consistency"} onPress={() => onCoaching({ ...coaching, role: "consistency" })} />
-          </View>}
-        </StepSequence>
-      )}
-
-      {step === 1 && (
+      {step === CONTACT_STEP && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <LockScreenPreview
             coachName={coach.name}
@@ -88,9 +80,20 @@ export function CoachingTour({ locked = false, step, facts, coaching, preference
         </StepSequence>
       )}
 
-      {step === 2 && (
+      {step === WEEKS_STEP && (
         <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
           <AdaptingWeeks strategist={strategist} emoji={facts.emoji || "✅"} />
+        </StepSequence>
+      )}
+
+      {step === ADAPTS_STEP && (
+        <StepSequence start={3} prefix="coach-content" style={{ gap: 14 }}>
+          <AdaptationPreview strategist={strategist} />
+          {!locked && <View style={{ gap: 10 }}>
+            <Text style={{ color: c.text, fontSize: 15, fontWeight: "600", marginBottom: 4 }}>What help do you want?</Text>
+            <CoachingChoice card label="Plan and adjust training" detail="For a goal with sessions that need to progress." selected={coaching.role === "training"} onPress={() => onCoaching({ ...coaching, role: "training" })} />
+            <CoachingChoice card label="Help me stay consistent" detail="For a habit or routine you already know." selected={coaching.role === "consistency"} onPress={() => onCoaching({ ...coaching, role: "consistency" })} />
+          </View>}
         </StepSequence>
       )}
 

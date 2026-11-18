@@ -95,17 +95,18 @@ for (const theme of ["LIGHT", "DARK"])
     await next(page);
 
     // The plan decides what the coach does, so there is no coaching question and no role to pick.
+    await expect(page.getByTestId("coach-tour-contact")).toBeVisible();
+    await expect(page.getByTestId("lock-screen-preview")).toBeVisible();
+    await capture(page, `half-marathon-12-coach-check-in-${theme}`);
+    await next(page);
+    await expect(page.getByTestId("adapting-weeks")).toBeVisible();
+    await capture(page, `half-marathon-12a-coach-weeks-${theme}`);
+    await next(page);
     await expect(page.getByTestId("coach-tour-adapts")).toBeVisible();
     await expect(page.getByText("What help do you want?")).toHaveCount(0);
     await expect(page.getByText(/coach this plan/i)).toHaveCount(0);
     await expect(page.getByTestId("adaptation-preview")).toBeVisible();
-    await capture(page, `half-marathon-12-coach-${theme}`);
-    await next(page);
-    await expect(page.getByTestId("lock-screen-preview")).toBeVisible();
-    await capture(page, `half-marathon-12a-coach-check-in-${theme}`);
-    await next(page);
-    await expect(page.getByTestId("adapting-weeks")).toBeVisible();
-    await capture(page, `half-marathon-12b-coach-weeks-${theme}`);
+    await capture(page, `half-marathon-12b-coach-adapts-${theme}`);
     await next(page);
     await expect(page.getByTestId("coach-tour-data")).toBeVisible();
     await capture(page, `half-marathon-12c-coach-data-${theme}`);
@@ -144,7 +145,7 @@ for (const theme of ["LIGHT", "DARK"])
     await expect(page.getByTestId("design-days-value")).toHaveText("4");
     await capture(page, `consistency-01-times-${theme}`);
     await next(page);
-    await expect(page.getByTestId("coach-tour-adapts")).toBeVisible();
+    await expect(page.getByTestId("coach-tour-contact")).toBeVisible();
     await capture(page, `consistency-02-coach-${theme}`);
     const state = await (await request.get(`${API}/__state`)).json();
     expect(state.requests.filter((r: any) => r.path.endsWith("/design/options"))).toHaveLength(0);
