@@ -326,7 +326,7 @@ test("milestone progress survives unrelated plan edits", async ({
   await page.getByRole("button", { name: "Edit goal", exact: true }).click();
   await page.getByLabel("Why is this important to you?").fill("Feel stronger");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByTestId("plans-screen")).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.plans[0].milestones[0].progress).toBe(20);

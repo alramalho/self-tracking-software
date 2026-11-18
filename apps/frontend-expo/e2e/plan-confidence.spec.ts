@@ -49,7 +49,7 @@ async function throughCoachAndCircle(page: Page) {
   await next(page);
   await next(page).catch(() => {});
   await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
-  await page.getByRole("button", { name: "Just me" }).click();
+  await page.getByRole("button", { name: "Just me for now" }).click();
 }
 async function outcomeTo(page: Page, request: any, theme: string, route: "route-steady" | "route-focused") {
   await start(page, request, theme, "Finish my first half marathon", "How much do you run now?", "Twice a week, about 5 km each. My easy 5 km takes 35–37 minutes.");

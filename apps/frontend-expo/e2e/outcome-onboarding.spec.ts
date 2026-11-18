@@ -105,7 +105,7 @@ for (const theme of ["LIGHT", "DARK"])
     await expect(page.getByRole("heading", { name: "Do it with a group?" })).toBeVisible();
     await expect(page.getByLabel(/people in this circle/)).toBeVisible();
     await capture(page, `half-marathon-12b-circle-${theme}`);
-    await page.getByRole("button", { name: "Just me" }).click();
+    await page.getByRole("button", { name: "Just me for now" }).click();
     await commit(page);
     await expect(page.getByTestId("coaching-paywall")).toBeVisible();
     await capture(page, `half-marathon-13-paywall-${theme}`);

@@ -56,7 +56,7 @@ export interface FloatingProps {
 }
 export interface PlanSummaryProps {
   facts: InterviewFacts;
-  // "Find one · nearby, age", "Invite friends" or "Just me".
+  // "Find one · nearby, age", "Invite friends" or "Just me for now".
   circle?: string;
 }
 

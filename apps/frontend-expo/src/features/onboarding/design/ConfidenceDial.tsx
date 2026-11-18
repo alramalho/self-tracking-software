@@ -12,7 +12,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from "react-native-svg";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
 import { confidenceLabel } from "./confidence";
@@ -20,6 +20,8 @@ import type { ConfidenceDialProps } from "./types";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+// The voice halo grows 11pt past each side of the arc; the drawing gets this much room so it isn't clipped.
+const HALO_ROOM = 12;
 
 // A half-circle gauge from 1 (left) to 10 (right). Drag or tap along it to set the score.
 // On first appearance the needle sweeps to full and settles back, like a car dashboard waking up.
@@ -92,13 +94,18 @@ export function ConfidenceDial({ score, onChange, compact = false, voice = 0 }: 
       onAccessibilityAction={(e) => onChange?.(Math.max(1, Math.min(10, score + (e.nativeEvent.actionName === "increment" ? 1 : -1))))}
       style={{ width, height, alignSelf: "center" }}
     >
-      <Svg width={width} height={height}>
+      <Svg
+        width={width + HALO_ROOM * 2}
+        height={height + HALO_ROOM * 2}
+        style={{ position: "absolute", left: -HALO_ROOM, top: -HALO_ROOM }}
+      >
         <Defs>
           <LinearGradient id="confidence-fill" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor={c.selectedBorder} />
             <Stop offset="1" stopColor={c.accent} />
           </LinearGradient>
         </Defs>
+        <G transform={`translate(${HALO_ROOM} ${HALO_ROOM})`}>
         {/* Voice halo: widens and brightens with the person's voice while they answer. */}
         <AnimatedPath d={arcPath} stroke={c.accent} fill="none" strokeLinecap="round" animatedProps={halo} />
         <Path d={arcPath} stroke={c.soft} strokeWidth={stroke} fill="none" strokeLinecap="round" />
@@ -112,6 +119,7 @@ export function ConfidenceDial({ score, onChange, compact = false, voice = 0 }: 
           animatedProps={arc}
         />
         {!compact && <AnimatedCircle r={stroke / 2 + 5} fill="#fff" stroke={c.accent} strokeWidth={3} animatedProps={knob} />}
+        </G>
       </Svg>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: compact ? 0 : 6, alignItems: "center" }}>
         <Animated.View style={number}>

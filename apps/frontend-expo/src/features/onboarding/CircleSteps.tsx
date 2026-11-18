@@ -12,7 +12,7 @@ export function CircleAsk({ busy, onFind, onInvite, onSolo }: CircleAskProps) {
   const options = [
     { label: "Find me a circle", icon: Users, onPress: onFind },
     { label: "Invite friends", icon: Mail, onPress: onInvite },
-    { label: "Just me", icon: User, onPress: onSolo },
+    { label: "Just me for now", icon: User, onPress: onSolo },
   ];
   return (
     <StepSequence start={3} prefix="circle-choice" style={{ gap: 12 }}>

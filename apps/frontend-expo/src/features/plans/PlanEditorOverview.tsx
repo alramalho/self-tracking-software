@@ -6,6 +6,7 @@ import { useColors } from "@/components/theme";
 import type {
   PlanEditorOverviewItem,
   PlanEditorOverviewProps,
+  PlanEditorSaveBarProps,
 } from "./types";
 
 function OverviewCard({ item }: { item: PlanEditorOverviewItem }) {
@@ -65,13 +66,23 @@ function OverviewCard({ item }: { item: PlanEditorOverviewItem }) {
   );
 }
 
-export function PlanEditorOverview({
-  emoji,
-  items,
+/** Pinned under the scrolling list so saving never needs a scroll. */
+export function PlanEditorSaveBar({
   canSave,
   saving,
   onSave,
-}: PlanEditorOverviewProps) {
+}: PlanEditorSaveBarProps) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Button disabled={!canSave} busy={saving} onPress={onSave}>
+        Save changes
+      </Button>
+      {!canSave && <Copy muted>Set a goal to continue</Copy>}
+    </View>
+  );
+}
+
+export function PlanEditorOverview({ emoji, items }: PlanEditorOverviewProps) {
   const c = useColors();
   return (
     <View style={{ gap: 16 }}>
@@ -89,24 +100,6 @@ export function PlanEditorOverview({
         {items.map((item) => (
           <OverviewCard key={item.label} item={item} />
         ))}
-      </View>
-
-      <View
-        style={{
-          gap: 8,
-          paddingTop: 16,
-          borderTopWidth: 1,
-          borderTopColor: c.border,
-        }}
-      >
-        <Button disabled={!canSave} busy={saving} onPress={onSave}>
-          Save Changes
-        </Button>
-        {!canSave && (
-          <Copy muted>
-            Set a goal to continue
-          </Copy>
-        )}
       </View>
     </View>
   );

@@ -35,7 +35,7 @@ async function toPaywall(page: Page) {
   await page.getByTestId("route-focused").click();
   await next(page);
   for (let i = 0; i < 3; i++) await next(page);
-  await page.getByRole("button", { name: "Just me" }).click();
+  await page.getByRole("button", { name: "Just me for now" }).click();
   // The last question before the paywall, once the plan, coach and circle are settled.
   await commit(page);
 }
@@ -224,7 +224,7 @@ test("reopening on the confidence question returns to it", async ({ page, reques
   await page.getByTestId("route-focused").click();
   await next(page);
   for (let i = 0; i < 3; i++) await next(page);
-  await page.getByRole("button", { name: "Just me" }).click();
+  await page.getByRole("button", { name: "Just me for now" }).click();
   await expect(page.getByRole("heading", { name: "How sure are you that you’ll stick to this?" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "How sure are you that you’ll stick to this?" })).toBeVisible();

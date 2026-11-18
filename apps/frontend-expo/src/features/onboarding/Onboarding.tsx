@@ -93,7 +93,7 @@ function EditorButton(props: EditorButtonProps) {
 
 function circleSummary(circle?: OnboardingCircleChoice) {
   if (!circle) return undefined;
-  if (circle.choice === "solo") return "Just me";
+  if (circle.choice === "solo") return "Just me for now";
   if (circle.choice === "invite") return "Invite friends";
   const by = [circle.wantsNearby && "nearby", circle.wantsAge && "similar age"].filter(Boolean);
   return by.length ? `Find one · ${by.join(", ")}` : "Find one";

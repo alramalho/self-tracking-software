@@ -27,6 +27,8 @@ export interface PlanEditorOverviewItem {
 export interface PlanEditorOverviewProps {
   emoji: string;
   items: PlanEditorOverviewItem[];
+}
+export interface PlanEditorSaveBarProps {
   canSave: boolean;
   saving: boolean;
   onSave: () => void;

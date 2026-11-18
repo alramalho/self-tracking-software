@@ -27,7 +27,7 @@ for (const theme of ["LIGHT", "DARK"]) {
     await page.getByTestId("route-steady").click();
     await next(page);
     for (let i = 0; i < 3; i++) await next(page);
-    await page.getByRole("button", { name: "Just me" }).click();
+    await page.getByRole("button", { name: "Just me for now" }).click();
 
     await expect(page.getByRole("heading", { name: "Who sees this plan?" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Everyone" })).toBeVisible();

@@ -37,7 +37,8 @@ import { ActivityEditor } from "../activities/ActivityEditor";
 import { DateField } from "@/components/DateField";
 import { MilestoneFields } from "./MilestoneFields";
 import { PlanBackground } from "./PlanBackground";
-import { PlanEditorOverview } from "./PlanEditorOverview";
+import { PlanEditorOverview, PlanEditorSaveBar } from "./PlanEditorOverview";
+import { useUnsavedChangesGuard } from "./useUnsavedChangesGuard";
 import { ChoiceRow } from "./ChoiceRow";
 import { PlanVisibilityChoices } from "./visibility/PlanVisibility";
 import { visibilityLabel } from "./visibility/model";
@@ -120,6 +121,22 @@ export function PlanEditor({ plan }: PlanEditorProps) {
   );
   const [uploadingBackground, setUploadingBackground] = useState(false);
   const [step, setStep] = useState(plan ? 5 : 0);
+  const draft = JSON.stringify({
+    goal,
+    reason,
+    emoji,
+    duration,
+    outline,
+    times,
+    visibility,
+    finish,
+    selected,
+    sessions,
+    milestones,
+    backgroundImageUrl,
+  });
+  const [initialDraft] = useState(draft);
+  const unsaved = useUnsavedChangesGuard(!!plan && draft !== initialDraft);
   const action = useAction(async () => {
     if (!goal.trim()) throw new Error("Enter your goal.");
     if (!selected.length) throw new Error("Choose at least one activity.");
@@ -726,19 +743,25 @@ export function PlanEditor({ plan }: PlanEditorProps) {
         actions={
           <IconButton label="Close" icon={X} onPress={() => goBack()} />
         }
+        footer={
+          editSection === "overview" ? (
+            <PlanEditorSaveBar
+              canSave={!!goal.trim() && !uploadingBackground}
+              saving={action.isPending}
+              onSave={() =>
+                action.mutate(undefined, {
+                  onSuccess: () => {
+                    unsaved.allowLeave();
+                    router.dismissTo("/(tabs)/plans");
+                  },
+                })
+              }
+            />
+          ) : undefined
+        }
       >
         {editSection === "overview" ? (
-          <PlanEditorOverview
-            emoji={emoji}
-            items={editItems}
-            canSave={!!goal.trim() && !uploadingBackground}
-            saving={action.isPending}
-            onSave={() =>
-              action.mutate(undefined, {
-                onSuccess: () => router.dismissTo("/(tabs)/plans"),
-              })
-            }
-          />
+          <PlanEditorOverview emoji={emoji} items={editItems} />
         ) : (
           renderEditSection()
         )}
