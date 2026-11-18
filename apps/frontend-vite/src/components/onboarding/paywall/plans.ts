@@ -29,6 +29,6 @@ export function buyersCurrency(timeZone = Intl.DateTimeFormat().resolvedOptions(
 
 /** The plan priced in the currency checkout will charge this buyer. */
 export function inBuyersCurrency(plan: CoachingPlan, currency = buyersCurrency()): CoachingPlan {
-  const amount = currency ? plan.amounts?.[currency] : undefined;
-  return amount ? { ...plan, amount, currency } : plan;
+  const amount = currency && plan.amounts?.[currency];
+  return currency && amount ? { ...plan, amount, currency } : plan;
 }
