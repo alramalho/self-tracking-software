@@ -30,12 +30,12 @@ export function FunnelCard({ funnel }: { funnel: Funnel }) {
         return (
           <div key={step.id}>
             <button
-              className="grid w-full grid-cols-[minmax(8rem,14rem)_1fr_auto] items-center gap-3 text-left text-sm disabled:cursor-default"
+              className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 text-left text-sm disabled:cursor-default sm:grid-cols-[minmax(7rem,14rem)_1fr_auto]"
               onClick={() => setOpen(open === step.id ? undefined : step.id)}
               disabled={stopped === 0}
             >
-              <span className={isWorst ? "font-semibold" : ""}>{step.label}</span>
-              <span className="relative h-6 overflow-hidden rounded-md bg-foreground/5">
+              <span className={`sm:col-start-1 sm:row-start-1 ${isWorst ? "font-semibold" : ""}`}>{step.label}</span>
+              <span className="relative col-span-2 row-start-2 h-6 overflow-hidden rounded-md bg-foreground/5 sm:col-span-1 sm:col-start-2 sm:row-start-1">
                 <span
                   className="absolute inset-y-0 left-0 rounded-md"
                   style={{ width: `${(100 * step.reached) / total}%`, background: isWorst ? "var(--analytics-red)" : "var(--analytics-blue)" }}
@@ -44,7 +44,7 @@ export function FunnelCard({ funnel }: { funnel: Funnel }) {
                   {step.reached} · {Math.round((100 * step.reached) / total)}%
                 </span>
               </span>
-              <span className="w-36 text-right text-xs tabular-nums text-muted-foreground">
+              <span className="col-start-2 row-start-1 text-right text-xs tabular-nums whitespace-nowrap text-muted-foreground sm:col-start-3 sm:w-52">
                 {i > 0 && lost > 0 ? `−${lost} (${Math.round((100 * lost) / prev)}%)` : ""}
                 {stopped > 0 && <span className="ml-1 underline decoration-dotted">{stopped} stopped</span>}
                 {step.inProgress > 0 && <span className="ml-1">· {step.inProgress} now</span>}
