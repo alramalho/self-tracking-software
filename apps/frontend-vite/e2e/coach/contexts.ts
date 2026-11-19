@@ -15,11 +15,20 @@ api.defaults.adapter = async (config) => {
   else if (url === "/follow-through/reach-outs") {
     followThrough.state.pausedAt = body.enabled ? null : new Date().toISOString();
     followThrough.state.monitoring.outreachPaused = !body.enabled;
+  } else if (url.endsWith("/coverage/skip")) {
+    const state = followThrough.state as { coverage?: Record<string, unknown> };
+    state.coverage = { ...state.coverage, [url.split("/")[3]]: { skips: 1, skippedAt: new Date().toISOString() } };
   } else if (url.startsWith("/follow-through/plans/")) {
     followThrough.state.supports[url.split("/").at(-1)!] = body;
   } else if (url.startsWith("/follow-through/nudges/")) {
     for (const r of followThrough.state.monitoring.requests) if (r.messageId === url.split("/").at(-1)) r.resolvedAt = new Date().toISOString();
   } else if (url === "/ai/coach/attention") data = { attentionItems: [] };
+  else if (url === "/voice-logs/coverage")
+    data = {
+      coverage: /week 3/i.test(body.said)
+        ? { pace: "AHEAD", covered: body.said, suggestion: { message: "You're past numbers already. Thursday moves on to ordering food.", chatId: "coach", messageId: "coverage-1" } }
+        : { pace: "ON_TRACK", covered: body.said, suggestion: null },
+    };
   else if (url === "/circles/mine") data = [];
   return { data, status: 200, statusText: "OK", headers: {}, config };
 };
@@ -34,7 +43,14 @@ export const usePlans = () => ({
   unarchivePlan: async () => {},
   deletePlan: async () => {},
 });
-export const useActivities = () => ({ activities, activityEntries, isLoadingActivityEntries: false });
+export const useActivities = () => ({
+  activities,
+  activityEntries,
+  isLoadingActivityEntries: false,
+  upsertActivityEntry: async ({ entry }: { entry: { id: string; description?: string } }) => {
+    requests.push({ method: "PUT", url: `/activities/activity-entries/${entry.id}`, body: entry });
+  },
+});
 export const useMetrics = () => ({ metrics, entries: metricEntries });
 const dark = new URLSearchParams(location.search).get("theme") === "dark";
 export const useCurrentUser = () => ({

@@ -177,3 +177,15 @@ export const followThrough = {
     },
   },
 };
+
+// ?scenario=coverage: one learning plan logged today without a note, nothing else waiting,
+// so the Coach tab asks "What did you cover?".
+if (new URLSearchParams(location.search).get("scenario") === "coverage") {
+  const chinese = activity("chinese", "Chinese", "🇨🇳", "minutes");
+  activities.splice(0, activities.length, chinese);
+  plans.splice(0, plans.length, plan("chinese", "Conversational Chinese", "🇨🇳", chinese, 0, { category: "language_learning" }) as never);
+  activityEntries.splice(0, activityEntries.length, { ...entry("c1", "chinese", 0), quantity: 20 });
+  metrics.splice(0);
+  followThrough.state.supports = { chinese: support("chinese", "consistency") };
+  followThrough.state.monitoring.requests = [];
+}
