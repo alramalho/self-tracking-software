@@ -15,7 +15,7 @@ export async function loggedActivities(userId: string, now = new Date()): Promis
   const activities = await prisma.activity.findMany({
     where: { userId, deletedAt: null },
     orderBy: { updatedAt: "desc" },
-    take: 20,
+    take: 60,
     select: {
       title: true,
       measure: true,
@@ -27,7 +27,7 @@ export async function loggedActivities(userId: string, now = new Date()): Promis
       },
     },
   });
-  return activities.map((activity) => {
+  const logged = activities.map((activity) => {
     const recent = activity.entries.filter((e) => e.datetime >= since);
     return {
       title: activity.title,
@@ -37,12 +37,40 @@ export async function loggedActivities(userId: string, now = new Date()): Promis
       baseline: baselineFromLogs(recent, { title: activity.title, measure: activity.measure, now }),
     };
   });
+  // The habits they keep logging come first, however long ago the activity itself was edited.
+  return logged
+    .sort((a, b) => (b.lastLoggedAt ?? "").localeCompare(a.lastLoggedAt ?? ""))
+    .slice(0, 20);
 }
 
-/** The starting point measured from the logs of the activity the goal turned out to be about. */
+/** "Meditate", "Meditation" and "meditating" are one habit; so are "Run" and "Running". */
+function stem(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z]/g, "")
+    .replace(/(ing|ions|ion|es|s)$/, "")
+    .replace(/(ate|at|e)$/, "")
+    .replace(/(.)\1$/, "$1");
+}
+
+/**
+ * The logged activity the goal turned out to be about. The model names activities its own way
+ * ("Meditation" for their "meditate"), so an exact title is only the first try.
+ */
+export function loggedActivityFor(history: LoggedActivity[], activity: { title: string; measure: string }): LoggedActivity | null {
+  const exact = history.find((a) => a.title.toLowerCase() === activity.title.toLowerCase() && a.measure === activity.measure);
+  if (exact) return exact;
+  const same = history.filter((a) => stem(a.title) === stem(activity.title));
+  return same.find((a) => a.measure === activity.measure) ?? same.find((a) => a.baseline) ?? same[0] ?? null;
+}
+
+/** The starting point measured from the logs of the activity the goal is about. */
 export function baselineFor(history: LoggedActivity[], activity: { title: string; measure: string }): DesignBaseline | null {
-  const match = history.find(
-    (a) => a.title.toLowerCase() === activity.title.toLowerCase() && a.measure === activity.measure,
-  );
-  return match?.baseline ?? null;
+  return loggedActivityFor(history, activity)?.baseline ?? null;
+}
+
+/** Their logs answer "where are you now?", so the coach asks them to confirm it. */
+export function confirmLogsQuestion(baseline: DesignBaseline): string {
+  const perWeek = baseline.measurements.find((m) => m.metric === "sessions_per_week")?.value;
+  return perWeek ? `Your logs say about ${perWeek} a week. Still right?` : "Your logs show a start. Still right?";
 }

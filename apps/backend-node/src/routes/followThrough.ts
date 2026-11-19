@@ -9,7 +9,7 @@ import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from ".
 import { redesignPlan } from "../services/plan-design/apply";
 import { planDesignDraftSchema } from "../services/plan-design/draft";
 import { baselineFromLogs } from "../services/plan-design/baseline";
-import { baselineFor, loggedActivities } from "../services/plan-design/history";
+import { confirmLogsQuestion, loggedActivities, loggedActivityFor } from "../services/plan-design/history";
 import { healthSafeActivityFilter } from "../services/health/apple/ai-boundary";
 import { prisma } from "../utils/prisma";
 import { classifyRequestSchema, optionsRequestSchema, subgoalRequestSchema } from "../services/plan-design/requests";
@@ -185,9 +185,13 @@ router.post(
       goal: input.goal,
       existingActivities: history.map(({ baseline, ...a }) => ({ ...a, recentLogs: baseline?.text ?? null })),
     });
-    const loggedBaseline = baselineFor(history, result.activity);
-    logger.info("Plan design classified", { userId: req.user!.id, orientation: result.orientation, fromLogs: !!loggedBaseline, usage });
-    res.json({ ...result, activity: { key: activityKey(result.activity.title), ...result.activity }, loggedBaseline });
+    // Their own activity, under their own name, so the plan builds on its logs instead of starting a twin.
+    const logged = loggedActivityFor(history, result.activity);
+    const activity = logged ? { ...result.activity, title: logged.title, measure: logged.measure } : result.activity;
+    const loggedBaseline = logged?.baseline ?? null;
+    const baselineQuestion = loggedBaseline ? confirmLogsQuestion(loggedBaseline) : result.baselineQuestion;
+    logger.info("Plan design classified", { userId: req.user!.id, orientation: result.orientation, matchedActivity: !!logged, fromLogs: !!loggedBaseline, usage });
+    res.json({ ...result, baselineQuestion, activity: { key: activityKey(activity.title), ...activity }, loggedBaseline });
   }),
 );
 // Creating a plan inside the app: a starting point measured from the person's own logs, when there are enough.

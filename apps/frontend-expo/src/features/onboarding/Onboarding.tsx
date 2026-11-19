@@ -1598,7 +1598,8 @@ export default function Onboarding({
                             />
                           </View>
                         </View>
-                        {transcriptionFeedback.banner}
+                        {/* It asks about the words in the box; an empty box has nothing to ask about. */}
+                        {answer.trim() ? transcriptionFeedback.banner : null}
                         {checkingContext && answer.trim().length >= 3 && (
                           <GoalGuidance result={goalGuidance} loading={goalGuidanceBusy} />
                         )}
