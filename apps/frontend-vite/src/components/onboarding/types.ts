@@ -59,6 +59,8 @@ export interface CoachingPlan {
   trialDays: number;
   amount: number;
   currency: string;
+  /** Every currency the Stripe price charges in (minor units). */
+  amounts?: Record<string, number>;
   interval: string;
   intervalCount: number;
 }

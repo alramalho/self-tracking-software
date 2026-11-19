@@ -37,9 +37,9 @@ export const appleMayStillBill = (user?: User) =>
   ["active", "grace", "billing_retry"].includes(user?.appleSubscriptionStatus ?? "");
 
 // The "tracking.so Coaching" subscription group in App Store Connect, in paywall order.
+// Monthly and yearly stay in App Store Connect but are not offered.
 const PLAN_IDS: Record<string, CoachingPlan["id"]> = {
   "so.tracking.app.quarterly": "quarterly",
-  "so.tracking.app.monthly": "monthly",
   "so.tracking.app.weekly": "weekly",
 };
 const DAYS: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };

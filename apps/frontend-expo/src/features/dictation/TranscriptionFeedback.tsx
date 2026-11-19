@@ -22,10 +22,12 @@ const reasons: { reason: TranscriptionFeedbackReason; label: string }[] = [
 ];
 
 // A screen with a dictation button shows `banner` under its text field and passes
-// `ask` to the button's onTranscription.
-export function useTranscriptionFeedback() {
+// `ask` to the button's onTranscription. A screen that reuses one field for several
+// questions passes `question`, so the banner leaves with the answer it was about.
+export function useTranscriptionFeedback(question?: string) {
   const count = useRef(0);
   const [asked, setAsked] = useState<{ key: number; transcription: Transcription }>();
+  useEffect(() => setAsked(undefined), [question]);
   return {
     ask: (transcription: Transcription) =>
       setAsked({ key: ++count.current, transcription }),

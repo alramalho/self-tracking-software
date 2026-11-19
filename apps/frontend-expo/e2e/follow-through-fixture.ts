@@ -16,6 +16,7 @@ const loggedRunning = {
   ],
 };
 
+const designStarted = new Map<string, number>();
 export const freshSupport = (): FollowThroughState => ({
   version: 1,
   enabled: false,
@@ -372,7 +373,7 @@ export function followThroughFixture(
       serverTime: new Date().toISOString(),
     };
   if (path === "/follow-through/onboarding/draft") {
-    support.draft = body;
+    support.draft = { ...body, savedAt: new Date().toISOString() };
     return body;
   }
   if (path === "/follow-through/onboarding/goal-guidance") {
@@ -401,7 +402,16 @@ export function followThroughFixture(
     const example = exampleFor(body.goal);
     return { question: example.subgoal && !body.asked.length ? example.subgoal.question : null };
   }
+  // Hand-written stages: the days check, then both routes, ticking off over a few seconds.
+  if (path.startsWith("/follow-through/onboarding/design/progress/")) {
+    const started = designStarted.get(path.split("/").at(-1)!);
+    if (!started) return { progress: null };
+    const ms = Date.now() - started;
+    const stage = (from: number, to: number) => (ms < from ? "waiting" : ms < to ? "working" : "done");
+    return { progress: { days: stage(0, 1200), steady: stage(1200, 2600), focused: stage(1200, 4000) } };
+  }
   if (path === "/follow-through/onboarding/design/options") {
+    if (body.progressId && !designStarted.has(body.progressId)) designStarted.set(body.progressId, Date.now());
     const example = exampleFor(body.goal);
     const days: number = body.preferredDays;
     const halfMarathon = example.id === "half-marathon";

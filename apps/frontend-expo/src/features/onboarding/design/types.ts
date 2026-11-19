@@ -1,4 +1,5 @@
-import type { CoachNote, DesignActivity, DesignOption, DesignSession, PlanDesign } from "@tsw/prisma/follow-through";
+import type { ReactNode } from "react";
+import type { CoachNote, DesignActivity, DesignOption, DesignProgress, DesignSession, DesignStageState, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
 
 export interface DesignSectionProps {
   design: PlanDesign;
@@ -82,4 +83,23 @@ export interface ConfidenceDialProps {
   compact?: boolean;
   /** 0–1 while the person is speaking; the dial glows with their voice. */
   voice?: number;
+}
+
+/** A coach question answered during this visit, kept so Back can show it again. */
+export interface AnsweredSubgoal {
+  question: SubgoalQuestion;
+  answer: string;
+  goalSpecBefore: PlanDesign["goalSpec"];
+}
+
+export interface PlanningProps {
+  days: number;
+  /** Unknown until the server answers the first time: the days check is then assumed underway. */
+  stages?: DesignProgress;
+}
+
+export interface PlanningStageProps {
+  label: string;
+  state: DesignStageState;
+  icon: ReactNode;
 }

@@ -60,6 +60,7 @@ export const draftSchema = z.object({
     .max(60),
   step: z.string().max(40),
   createdPlanId: z.string().nullable(),
+  savedAt: z.string().datetime().optional(),
   preferences: preferencesSchema.optional(),
 });
 export const nextSchema = z.object({

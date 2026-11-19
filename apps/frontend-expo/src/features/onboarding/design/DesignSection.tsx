@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Image, Pressable, TextInput, View } from "react-native";
-import { Check } from "lucide-react-native";
+import { ActivityIndicator, Animated, AppState, Image, Pressable, TextInput, View } from "react-native";
+import axios from "axios";
+import { CalendarCheck, Check } from "lucide-react-native";
+import { randomUUID } from "expo-crypto";
 import { EditorButton } from "@/features/activities/editor/controls";
-import type { DesignOption, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
+import type { DesignOption, DesignProgress, DesignStageState, PlanDesign, SubgoalQuestion } from "@tsw/prisma/follow-through";
 import { Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { errorMessage } from "@/data/api";
@@ -12,10 +14,10 @@ import { OnboardingArt } from "../interview/OnboardingArt";
 import { OnboardingButton } from "../interview/OnboardingButton";
 import { StepSequence } from "../interview/StepReveal";
 import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
-import { designRoutes, nextSubgoal } from "./api";
+import { designProgress, designRoutes, nextSubgoal } from "./api";
 import { RouteCard, days } from "./RouteCard";
 import { TwoWeeks } from "./TwoWeeks";
-import type { DesignSectionProps, DesignStepName } from "./types";
+import type { AnsweredSubgoal, DesignSectionProps, DesignStepName, PlanningProps, PlanningStageProps } from "./types";
 
 const DECLINE = "No target in mind";
 
@@ -26,6 +28,19 @@ const COURSE_QUESTION = "Course or book they follow";
 /** After the course question (or straight away): the target question for outcome goals, else the days. */
 const afterCourse = (design: PlanDesign): DesignStepName =>
   design.orientation === "OUTCOME" && !design.asked.length ? "subgoal" : "days";
+
+// iOS drops a request when the app goes to the background. Once the app is back, ask
+// again: the server hands over the design it kept working on.
+const droppedConnection = (e: unknown) => axios.isAxiosError(e) && !e.response && e.code !== "ECONNABORTED";
+const whenActive = () =>
+  new Promise<void>((resolve) => {
+    if (AppState.currentState === "active") return resolve();
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      listener.remove();
+      resolve();
+    });
+  });
 
 function firstStep(design: PlanDesign): DesignStepName {
   if (design.selected) return "preview";
@@ -49,6 +64,26 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   const [error, setError] = useState<unknown>();
   const [working, setWorking] = useState(false);
   const requested = useRef(false);
+  // The questions answered in this visit, so Back can show the last one again.
+  const answered = useRef<AnsweredSubgoal[]>([]);
+  const [revisiting, setRevisiting] = useState<AnsweredSubgoal>();
+  // The stages of the design being made, followed while the app waits for it.
+  const [progressId, setProgressId] = useState<string>();
+  const [stages, setStages] = useState<DesignProgress>();
+  useEffect(() => {
+    if (!progressId) return;
+    let stopped = false;
+    const follow = async () => {
+      const latest = await designProgress(progressId).catch(() => undefined);
+      if (!stopped && latest) setStages(latest);
+    };
+    void follow();
+    const timer = setInterval(() => void follow(), 1200);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [progressId]);
   const activity = design.activities[0];
   const chosen = design.options.find((o) => o.id === design.selected);
 
@@ -68,14 +103,21 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   async function answerSubgoal(answer: string) {
     if (!question) return;
     const declined = answer === DECLINE || /^(just|no )/i.test(answer);
+    // Answering a question again replaces the earlier answer instead of adding one.
+    const before = revisiting
+      ? { asked: design.asked.slice(0, -1), goalSpec: revisiting.goalSpecBefore }
+      : { asked: design.asked, goalSpec: design.goalSpec };
     const next: PlanDesign = {
       ...design,
-      asked: [...design.asked, { question: question.title, answer }],
+      asked: [...before.asked, { question: question.title, answer }],
       goalSpec: declined
-        ? design.goalSpec
+        ? before.goalSpec
         : { metric: question.kind, value: null, unit: null, text: answer, chosenByUser: true },
     };
     await save(next);
+    if (revisiting) answered.current.pop();
+    answered.current.push({ question, answer, goalSpecBefore: before.goalSpec });
+    setRevisiting(undefined);
     setQuestion(null);
     setTyped("");
     setTyping(false);
@@ -94,12 +136,20 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     setError(undefined);
     if (!outcome) return onDone(from);
     setStep("loading");
+    setStages(undefined);
+    const id = randomUUID();
+    setProgressId(id);
     try {
       // Why it matters is context for the coach's tone, not something to store as an answer twice.
       const context = goalReason ? [...from.asked, { question: "Why does it matter?", answer: goalReason }] : from.asked;
       // The course they follow is the one answer that must reach the designer.
-      const withCourse = from.course ? [...context.slice(-3), { question: COURSE_QUESTION, answer: from.course.slice(0, 300) }] : context.slice(-4);
-      const result = await designRoutes({ ...from, asked: withCourse }, goal, timezone);
+      const asked = from.course ? [...context.slice(-3), { question: COURSE_QUESTION, answer: from.course.slice(0, 300) }] : context.slice(-4);
+      const request = () => designRoutes({ ...from, asked }, goal, timezone, id);
+      const result = await request().catch(async (e) => {
+        if (!droppedConnection(e)) throw e;
+        await whenActive();
+        return request();
+      });
       if (result.status === "ASK" && result.question) {
         setAsking(result.question);
         setStep("ask");
@@ -116,6 +166,8 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     } catch (e) {
       setError(e);
       setStep("days");
+    } finally {
+      setProgressId(undefined);
     }
   }
 
@@ -130,7 +182,16 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
     if (step === "options") return setStep("days");
     if (step === "ask" || step === "pushback") return setStep("days");
     if (step === "retarget") return setStep("pushback");
-    if (step === "days" && outcome && design.asked.length) return setStep("subgoal");
+    if (step === "days" && outcome && design.asked.length) {
+      const last = answered.current.at(-1);
+      if (last) {
+        // Show the question they answered, with their answer marked, rather than asking anew.
+        requested.current = true;
+        setQuestion(last.question);
+        setRevisiting(last);
+      }
+      return setStep("subgoal");
+    }
     if ((step === "days" || step === "subgoal") && asksCourse(design)) return setStep("course");
     onBack();
   };
@@ -217,7 +278,10 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
                 onPress={() => void answerSubgoal(choice).catch(setError)}
                 style={({ pressed }) => ({ minHeight: 58, justifyContent: "center", paddingHorizontal: 18, borderRadius: 16, backgroundColor: c.card, opacity: pressed ? 0.6 : 1 })}
               >
-                <Text style={{ color: c.text, fontSize: 17, fontWeight: "600" }}>{choice}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ flex: 1, color: c.text, fontSize: 17, fontWeight: "600" }}>{choice}</Text>
+                  {revisiting?.answer === choice && <Check size={20} color={c.accent} />}
+                </View>
               </Pressable>
             ))}
             {typing ? (
@@ -367,7 +431,7 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
       </>
     );
   } else if (step === "loading") {
-    body = <Planning />;
+    body = <Planning days={design.preferredDays} stages={stages} />;
   } else if (step === "options") {
     body = (
       <StepSequence prefix="design-options" style={{ gap: 14 }}>
@@ -425,8 +489,12 @@ export function DesignSection({ design, goal, goalReason, timezone, preview, bus
   );
 }
 
-// Helly and Oli at work while the two routes are built.
-function Planning() {
+const helly = require("../../../../assets/coaches/helly-3d.png");
+const oli = require("../../../../assets/coaches/oli-3d.png");
+
+// Helly and Oli at work while the two routes are built, with each real stage ticking off:
+// the coach checks the days first, then both routes are written at the same time.
+function Planning({ days, stages }: PlanningProps) {
   const c = useColors();
   const pulse = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -439,15 +507,47 @@ function Planning() {
     loop.start();
     return () => loop.stop();
   }, [pulse]);
+  const now = stages ?? { days: "working", steady: "waiting", focused: "waiting" };
   return (
     <View testID="design-loading" style={{ alignItems: "center", gap: 22 }}>
       <Animated.View style={{ flexDirection: "row", gap: 16, opacity: pulse }}>
-        <Image source={require("../../../../assets/coaches/helly-3d.png")} style={{ width: 96, height: 96 }} />
-        <Image source={require("../../../../assets/coaches/oli-3d.png")} style={{ width: 96, height: 96 }} />
+        <Image source={helly} style={{ width: 96, height: 96 }} />
+        <Image source={oli} style={{ width: 96, height: 96 }} />
       </Animated.View>
       <Text accessibilityRole="header" style={{ color: c.text, fontSize: 28, lineHeight: 34, fontWeight: "700", textAlign: "center" }}>
         Planning your two routes
       </Text>
+      <View testID="design-stages" style={{ alignSelf: "stretch", gap: 4, marginTop: 6 }}>
+        <PlanningStage
+          label={`Checking ${days} ${days === 1 ? "day" : "days"} a week`}
+          state={now.days}
+          icon={<CalendarCheck size={26} color={c.text} strokeWidth={1.8} />}
+        />
+        <PlanningStage label="Helly’s steady route" state={now.steady} icon={<Image source={helly} style={{ width: 30, height: 30 }} />} />
+        <PlanningStage label="Oli’s focused route" state={now.focused} icon={<Image source={oli} style={{ width: 30, height: 30 }} />} />
+      </View>
+      <Text style={{ color: c.muted, fontSize: 14, textAlign: "center" }}>Usually under a minute.</Text>
+    </View>
+  );
+}
+
+const stageWords: Record<DesignStageState, string> = { waiting: "waiting", working: "in progress", done: "done" };
+
+function PlanningStage({ label, state, icon }: PlanningStageProps) {
+  const c = useColors();
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${label}, ${stageWords[state]}`}
+      testID={`design-stage-${state}`}
+      style={{ minHeight: 52, flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 8, opacity: state === "waiting" ? 0.45 : 1 }}
+    >
+      <View style={{ width: 32, alignItems: "center" }}>{icon}</View>
+      <Text style={{ flex: 1, color: c.text, fontSize: 17, fontWeight: state === "working" ? "600" : "400" }}>{label}</Text>
+      <View style={{ width: 24, alignItems: "center" }}>
+        {state === "working" && <ActivityIndicator color={c.muted} />}
+        {state === "done" && <Check size={22} color={c.accent} strokeWidth={2.4} />}
+      </View>
     </View>
   );
 }

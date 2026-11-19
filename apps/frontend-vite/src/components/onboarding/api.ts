@@ -1,3 +1,4 @@
+import { inBuyersCurrency } from "./paywall/plans";
 import type {
   DesignBaseline,
   FollowThroughSnapshot,
@@ -67,7 +68,7 @@ export const designRoutes = async (design: PlanDesign, goal: string, timezone: s
 
 export const coachingPlans = async (): Promise<CoachingPlan[]> => {
   const offer = (await api.get<CoachingOffer>("/follow-through/onboarding/offer")).data;
-  return offer.plans ?? [{ ...offer, id: "monthly" }];
+  return (offer.plans ?? [{ ...offer, id: "monthly" }]).map((plan) => inBuyersCurrency(plan));
 };
 
 export const finishOnboarding = async (request: { draft: OnboardingDraft; preferences: unknown }) =>

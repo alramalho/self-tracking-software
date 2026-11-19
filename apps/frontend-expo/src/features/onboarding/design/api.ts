@@ -1,4 +1,4 @@
-import type { PlanDesign } from "@tsw/prisma/follow-through";
+import type { DesignProgress, PlanDesign } from "@tsw/prisma/follow-through";
 import { api } from "@/data/api";
 import type { ClassifyResponse, OptionsResponse } from "./types";
 
@@ -21,7 +21,14 @@ export const nextSubgoal = async (design: PlanDesign, goal: string, baseline: st
     )
   ).data.question;
 
-export const designRoutes = async (design: PlanDesign, goal: string, timezone: string) =>
+export const designProgress = async (progressId: string) =>
+  (
+    await api.get<{ progress: DesignProgress | null }>(`/follow-through/onboarding/design/progress/${progressId}`, {
+      timeout: 10000,
+    })
+  ).data.progress;
+
+export const designRoutes = async (design: PlanDesign, goal: string, timezone: string, progressId: string) =>
   (
     await api.post<OptionsResponse>(
       "/follow-through/onboarding/design/options",
@@ -34,6 +41,7 @@ export const designRoutes = async (design: PlanDesign, goal: string, timezone: s
         fixedDate: design.fixedDate,
         asked: design.asked,
         timezone,
+        progressId,
       },
       { timeout: 180000 },
     )

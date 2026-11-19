@@ -19,6 +19,9 @@ import rateLimit from "express-rate-limit";
 import { calendarSessions } from "../services/follow-through/calendar";
 import { coachingOffer } from "../services/follow-through/onboarding/billing";
 import { draftSchema } from "../services/follow-through/onboarding/schema";
+import { sharedRequest } from "../services/plan-design/sharedRequest";
+import { readProgress, recordProgress } from "../services/plan-design/progress";
+import type { DesignProgress } from "@tsw/prisma/follow-through";
 import {
   nextQuestion,
   saveDraft,
@@ -50,6 +53,7 @@ import { monitoringState } from "../services/coach/monitoring/model";
 import { answerNudge } from "../services/coach/monitoring/requests";
 import { endQuiet, talkTurn } from "../services/coach/talk/service";
 import { talkRequestSchema } from "../services/coach/talk/schema";
+import { onboardingNotificationService } from "../services/onboardingNotificationService";
 
 const router = Router();
 type Operation = (req: AuthenticatedRequest, res: Response) => Promise<unknown>;
@@ -230,12 +234,21 @@ router.post(
   requireAiConsent,
   designLimit,
   handle(async (req, res) => {
-    const { timezone, ...input } = optionsRequestSchema.parse(req.body);
+    const { timezone, progressId, ...input } = optionsRequestSchema.parse(req.body);
     const startDate = formatInTimeZone(new Date(), timezone || "UTC", "yyyy-MM-dd");
-    const result = await designOptions({ ...input, startDate });
-    logger.info("Plan design generated", { userId: req.user!.id, status: result.status, usage: result.usage });
+    const userId = req.user!.id;
+    const result = await sharedRequest(userId, { ...input, startDate }, async () => {
+      const report = progressId ? (p: DesignProgress) => recordProgress(userId, progressId, p) : undefined;
+      const designed = await designOptions({ ...input, startDate }, undefined, report);
+      logger.info("Plan design generated", { userId: req.user!.id, status: designed.status, usage: designed.usage });
+      return designed;
+    });
     res.json({ status: result.status, question: result.question, coachNote: result.coachNote, baseline: result.baseline, options: result.options, startDate });
   }),
+);
+router.get(
+  "/onboarding/design/progress/:progressId",
+  handle(async (req, res) => res.json({ progress: readProgress(req.user!.id, String(req.params.progressId)) })),
 );
 router.post(
   "/onboarding/interview",
@@ -279,9 +292,11 @@ router.post(
     const body = z
       .object({ draft: draftSchema, preferences: preferencesSchema })
       .parse(req.body);
+    const firstTime = !req.user!.onboardingCompletedAt;
     const result = await finishOnboarding(req.user!, body.draft, body.preferences);
     res.json(result);
     startPlanMonitoring(req.user!);
+    if (firstTime) void onboardingNotificationService.sendOnboardingCompleted(req.user!, body.preferences.coaching);
   }),
 );
 router.get(

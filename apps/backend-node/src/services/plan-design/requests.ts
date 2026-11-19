@@ -27,4 +27,6 @@ export const optionsRequestSchema = z.object({
   fixedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   asked,
   timezone: z.string().max(100),
+  /** Chosen by the app so it can follow the design's stages while it waits. */
+  progressId: z.string().uuid().optional(),
 });

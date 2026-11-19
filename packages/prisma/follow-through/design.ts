@@ -173,3 +173,13 @@ export interface ClassifyResult {
   goalSpec: GoalSpec;
   baselineQuestion: string;
 }
+
+/** Where one stage of the plan design stands. */
+export type DesignStageState = "waiting" | "working" | "done";
+
+/** Live progress of a design request: the coach's check on the days, then the two routes in parallel. */
+export interface DesignProgress {
+  days: DesignStageState;
+  steady: DesignStageState;
+  focused: DesignStageState;
+}

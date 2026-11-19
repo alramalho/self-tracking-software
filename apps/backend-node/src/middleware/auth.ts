@@ -56,7 +56,7 @@ async function tryClerkAuth(req: Request): Promise<User | null> {
       picture: clerkUser.imageUrl,
     });
     const telegramService = new TelegramService();
-    void telegramService.sendMessage(`🎉 New user! (${user.username || user.id})`);
+    void telegramService.sendMessage(`👋 New user: ${user.username || user.id}`);
   }
 
   return user;

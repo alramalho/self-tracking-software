@@ -22,6 +22,12 @@ export const newDraft = (id: string): OnboardingDraft => ({
   step: "goal",
   createdPlanId: null,
 });
+// A half-made plan is picked up again for a few days; after that, start fresh.
+const DRAFT_KEPT_DAYS = 3;
+export function draftStillFresh(d: OnboardingDraft, now = Date.now()) {
+  if (!d.savedAt) return false;
+  return now - Date.parse(d.savedAt) < DRAFT_KEPT_DAYS * 86400000;
+}
 export const stepOrder = (d: OnboardingDraft) => [
   "goal",
   "activity",

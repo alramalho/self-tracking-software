@@ -15,6 +15,8 @@ export interface CoachingPlan {
   trialDays: number;
   amount: number;
   currency: string;
+  /** Every currency the price charges in (minor units), so a client can show the buyer's own. */
+  amounts: Record<string, number>;
   interval: string;
   intervalCount: number;
 }
@@ -35,7 +37,9 @@ async function readPlan(
   id: CoachingPlanId,
   linkId: string
 ): Promise<CoachingPlan | null> {
-  const link = await stripe.paymentLinks.retrieve(linkId, { expand: ["line_items"] });
+  const link = await stripe.paymentLinks.retrieve(linkId, {
+    expand: ["line_items.data.price.currency_options"],
+  });
   const price = link.line_items?.data[0]?.price;
   if (!link.active || !price?.unit_amount || !price.recurring) return null;
   const url = new URL(link.url);
@@ -46,6 +50,14 @@ async function readPlan(
     trialDays: link.subscription_data?.trial_period_days ?? 0,
     amount: price.unit_amount,
     currency: price.currency,
+    amounts: {
+      ...Object.fromEntries(
+        Object.entries(price.currency_options ?? {}).flatMap(([currency, option]) =>
+          option.unit_amount ? [[currency, option.unit_amount]] : []
+        )
+      ),
+      [price.currency]: price.unit_amount,
+    },
     interval: price.recurring.interval,
     intervalCount: price.recurring.interval_count,
   };

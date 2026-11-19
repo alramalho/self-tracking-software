@@ -18,3 +18,17 @@ export function savingVsWeekly(plan: CoachingPlan, plans: CoachingPlan[]) {
   const weekly = plans.find((candidate) => candidate.id === "weekly");
   return weekly && plan.id !== "weekly" ? Math.round((1 - plan.amount / weeksIn(plan) / weekly.amount) * 100) : 0;
 }
+
+// Stripe checkout charges in the buyer's local currency when the price has it (USD in the US),
+// otherwise in the price's own (EUR). The server can't see the country, so the time zone stands in.
+const US_ZONE = /^(America\/(New_York|Detroit|Kentucky\/.*|Indiana\/.*|Chicago|Menominee|North_Dakota\/.*|Denver|Boise|Phoenix|Los_Angeles|Anchorage|Juneau|Sitka|Metlakatla|Yakutat|Nome|Adak|Puerto_Rico)|Pacific\/Honolulu|US\/.*)$/;
+
+export function buyersCurrency(timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  return US_ZONE.test(timeZone ?? "") ? "usd" : undefined;
+}
+
+/** The plan priced in the currency checkout will charge this buyer. */
+export function inBuyersCurrency(plan: CoachingPlan, currency = buyersCurrency()): CoachingPlan {
+  const amount = currency && plan.amounts?.[currency];
+  return currency && amount ? { ...plan, amount, currency } : plan;
+}

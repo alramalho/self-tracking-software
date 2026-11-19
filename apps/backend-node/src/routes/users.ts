@@ -551,13 +551,9 @@ usersRouter.delete(
     const providersStatus = failures.length ? `❌ ${failures.join(", ")}` : "✅ removed";
 
     telegramService.sendAlert(
-      `😵🗑️ *User Account Deleted*\n\n` +
-        `User: ${username}\n` +
-        `User ID: ${userId}\n` +
-        `Stripe: ${stripeSubscriptionId ? "cancelled" : "no subscription"}\n` +
-        `Media: ${mediaStatus}\n` +
-        `Coach memory, email contact, Stripe customer: ${providersStatus}\n` +
-        `UTC Time: ${new Date().toISOString()}`
+      `🗑️ Account deleted: ${username}` +
+        (stripeSubscriptionId ? " · subscription cancelled" : "") +
+        (failures.length || !mediaStatus.startsWith("✅") ? `\nMedia: ${mediaStatus} · Providers: ${providersStatus}` : "")
     );
     logger.info(`User account permanently deleted: ${userId}`);
     res.json({ message: "Account deleted successfully" });
@@ -1872,17 +1868,8 @@ Timestamp: ${new Date().toISOString()}</small></p>
 
       // Send Telegram notification for bug reports
       if (feedback.type === "bug_report") {
-        const imageLinksText =
-          imageUrls.length > 0
-            ? `\n**Image Links:**\n${imageUrls.map((url, i) => `${i + 1}. ${url}`).join("\n")}\n`
-            : "";
-
-        const telegramMessage =
-          `🐛 **New Bug Report**\n\n` +
-          `**From:** ${userInfo}\n` +
-          `**Contact:** ${feedback.email}\n` +
-          `**Message:** ${feedback.text}${imageLinksText}` +
-          `**UTC Time:** ${new Date().toISOString()}`;
+        // The photos follow as their own messages; the contact email is in the feedback email, not here.
+        const telegramMessage = `🐛 Bug from ${user?.username ?? "someone signed out"}: ${feedback.text}`;
 
         if (imageUrls.length > 0) {
           await telegramService.sendAlertWithPhotos(
@@ -2032,15 +2019,8 @@ Timestamp: ${new Date().toISOString()}</small></p>
       }
 
       // Send Telegram notification
-      const telegramRewriteFlag = feedback.wasRewritten
-        ? " ✨ (AI-rewritten)"
-        : " 📝 (Original message)";
       const telegramMessage =
-        `✨ **New Testimonial Feedback**\n\n` +
-        `**From:** ${user.name} (@${user.username})\n` +
-        `**Sentiment:** ${sentimentEmoji} ${sentimentLabel}\n\n` +
-        `**Testimonial:**${telegramRewriteFlag}\n"${feedback.message}"\n\n` +
-        `**UTC Time:** ${new Date().toISOString()}`;
+        `✨ Testimonial from ${user.username} ${sentimentEmoji}: "${feedback.message}"${feedback.wasRewritten ? " (AI-rewritten)" : ""}`;
 
       try {
         await telegramService.sendMessage(telegramMessage);

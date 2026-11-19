@@ -31,9 +31,9 @@ const checks = {
     phrase: "Mention your current starting point.",
     required: false,
     instructions:
-      "Does the answer give a useful current starting point toward the stated goal, such as present ability, experience, routine, resources, or a relevant constraint? 'I'm starting from scratch' is valid. Do not demand numbers, a training history, or personal details. A future goal alone is not a starting point.",
+      "Does the answer give a useful current starting point toward the stated goal, such as present ability, experience, routine, resources, or a relevant constraint? Having little or nothing yet is a starting point: 'I'm starting from scratch', 'pretty much nothing', 'none yet', 'I've only watched a few videos' and 'total beginner' all pass. Do not demand numbers, a training history, or personal details. Fail only empty, keyboard-noise or off-topic answers, or a future goal with no word about now.",
     passedDetail: "Useful starting-point context included.",
-    failedDetail: "Mention where you are now, or skip this step.",
+    failedDetail: "Say where you are now, even “nothing yet”.",
   },
   motivation: {
     label: "Why it matters",

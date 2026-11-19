@@ -34,7 +34,6 @@ import {
 import { getNextPlanSortOrder, plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
 import { parseTranscriptionFeedback } from "../services/stt/feedback";
-import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -42,7 +41,6 @@ import type { CoachAttentionItem } from "../services/coachAttentionService";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
-const telegramService = new TelegramService();
 
 // Plans past their finishingDate stay included so attention items can drive
 // them to a decision (renew or archive).
@@ -1238,22 +1236,11 @@ router.post(
     res: Response,
   ): Promise<Response | void> => {
     try {
-      const { attempts, id, extracted_data } = req.body;
+      const { attempts, id } = req.body;
 
       logger.info(
         `Dynamic UI attempt error logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
       );
-
-      // Send to Telegram notification service for significant errors
-      if (attempts >= 3) {
-        telegramService.sendMessage(
-          `⚠️ User struggling to accept the AI extraction in step ${id}\n\n` +
-            `User: ${req.user!.username}\n` +
-            `Attempts: ${attempts}\n` +
-            `Extracted fields: ${Object.keys(extracted_data ?? {}).join(", ") || "none"}\n` +
-            `UTC Time: ${new Date().toISOString()}`,
-        );
-      }
 
       res.json({ status: "success" });
     } catch (error) {
@@ -1271,19 +1258,10 @@ router.post(
     res: Response,
   ): Promise<Response | void> => {
     try {
-      const { question_checks, attempts, extracted_data, id } = req.body;
+      const { attempts, id } = req.body;
 
       logger.info(
         `Dynamic UI skip logged for user ${req.user!.username}, attempts: ${attempts}, id: ${id}`,
-      );
-
-      // Send to Telegram notification service for pattern analysis
-      telegramService.sendMessage(
-        `⏭️ Dynamic UI skip\n\n` +
-          `User: ${req.user!.username}\n` +
-          `Attempts: ${attempts}\n` +
-          `ID: ${id}\n` +
-          `UTC Time: ${new Date().toISOString()}`,
       );
 
       res.json({ status: "success" });
