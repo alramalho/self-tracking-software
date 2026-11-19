@@ -108,7 +108,6 @@ export class CronScheduler {
               unactivated_emails: false, // Set to false for production
               notifications: false,
             },
-            send_report: true,
           });
           logger.info("Daily job completed successfully", { result });
         } catch (error) {
