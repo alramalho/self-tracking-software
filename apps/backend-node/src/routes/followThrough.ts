@@ -9,7 +9,8 @@ import { classifyGoal, designOptions, nextSubgoalQuestion, activityKey } from ".
 import { redesignPlan } from "../services/plan-design/apply";
 import { planDesignDraftSchema } from "../services/plan-design/draft";
 import { baselineFromLogs } from "../services/plan-design/baseline";
-import { confirmLogsQuestion, loggedActivities, loggedActivityFor } from "../services/plan-design/history";
+import { confirmLogsQuestion, loggedActivities } from "../services/plan-design/history";
+import { activityTheGoalIsAbout, loggedActivityNamed } from "../services/plan-design/relevantActivity";
 import { healthSafeActivityFilter } from "../services/health/apple/ai-boundary";
 import { prisma } from "../utils/prisma";
 import { classifyRequestSchema, optionsRequestSchema, subgoalRequestSchema } from "../services/plan-design/requests";
@@ -181,12 +182,16 @@ router.post(
     const input = classifyRequestSchema.parse(req.body);
     // The coach reads what they already logged, so it confirms their history instead of asking for it.
     const history = await loggedActivities(req.user!.id);
-    const { usage, ...result } = await classifyGoal({
-      goal: input.goal,
-      existingActivities: history.map(({ baseline, ...a }) => ({ ...a, recentLogs: baseline?.text ?? null })),
-    });
+    // Jev reads the goal for a logged habit while the coach classifies it, so it adds no wait.
+    const [{ usage, ...result }, aboutLogged] = await Promise.all([
+      classifyGoal({
+        goal: input.goal,
+        existingActivities: history.map(({ baseline, emoji: _emoji, ...a }) => ({ ...a, recentLogs: baseline?.text ?? null })),
+      }),
+      activityTheGoalIsAbout(input.goal, history),
+    ]);
     // Their own activity, under their own name, so the plan builds on its logs instead of starting a twin.
-    const logged = loggedActivityFor(history, result.activity);
+    const logged = loggedActivityNamed(history, result.activity.title) ?? aboutLogged;
     const activity = logged ? { ...result.activity, title: logged.title, measure: logged.measure } : result.activity;
     const loggedBaseline = logged?.baseline ?? null;
     const baselineQuestion = loggedBaseline ? confirmLogsQuestion(loggedBaseline) : result.baselineQuestion;

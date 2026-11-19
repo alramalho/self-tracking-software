@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { baselineFromLogs } from "./baseline";
-import { baselineFor, confirmLogsQuestion, loggedActivityFor } from "./history";
+import { confirmLogsQuestion } from "./history";
+import { loggedActivityNamed } from "./relevantActivity";
 
 const now = new Date("2026-10-12T10:00:00Z");
 const day = (n: number, quantity: number) => ({ datetime: new Date(now.getTime() - n * 86_400_000), quantity });
@@ -17,29 +18,15 @@ describe("baselineFromLogs", () => {
   });
 });
 
-describe("baselineFor", () => {
-  const history = [
-    { title: "Meditation", measure: "minutes", sessionsLast4Weeks: 12, lastLoggedAt: "2026-11-07", baseline: { text: "Meditation: 12 sessions", measurements: [] } },
-    { title: "Running", measure: "km", sessionsLast4Weeks: 1, lastLoggedAt: "2026-11-01", baseline: null },
+describe("loggedActivityNamed", () => {
+  const logged = [
+    { title: "Running", emoji: "🏃", measure: "km", sessionsLast4Weeks: 6, lastLoggedAt: "2026-11-17", baseline: null },
+    { title: "meditate", emoji: "🧘", measure: "minutes", sessionsLast4Weeks: 11, lastLoggedAt: "2026-11-17", baseline: null },
   ];
-  it("finds the logged starting point of the activity the goal is about, ignoring case", () => {
-    expect(baselineFor(history, { title: "meditation", measure: "minutes" })?.text).toBe("Meditation: 12 sessions");
-  });
-  it("returns null for a new activity or one with too few recent logs", () => {
-    expect(baselineFor(history, { title: "Yoga", measure: "minutes" })).toBeNull();
-    expect(baselineFor(history, { title: "Running", measure: "km" })).toBeNull();
-  });
-  it("matches the habit when the coach names it differently", () => {
-    const logged = [
-      { title: "meditate", measure: "minutes", sessionsLast4Weeks: 11, lastLoggedAt: "2026-11-17", baseline: { text: "meditate: 11 sessions", measurements: [] } },
-      { title: "Swim", measure: "laps", sessionsLast4Weeks: 0, lastLoggedAt: "2026-05-01", baseline: null },
-    ];
-    for (const title of ["Meditation", "Meditating", "meditate"]) {
-      expect(loggedActivityFor(logged, { title, measure: "sessions" })?.title).toBe("meditate");
-    }
-    expect(baselineFor(logged, { title: "Meditation", measure: "minutes" })?.text).toBe("meditate: 11 sessions");
-    expect(loggedActivityFor(logged, { title: "Swimming", measure: "laps" })?.title).toBe("Swim");
-    expect(loggedActivityFor(logged, { title: "Medicine", measure: "doses" })).toBeNull();
+  it("finds their activity under the coach's name, ignoring case and word endings", () => {
+    expect(loggedActivityNamed(logged, "Run")?.title).toBe("Running");
+    expect(loggedActivityNamed(logged, "Meditate")?.title).toBe("meditate");
+    expect(loggedActivityNamed(logged, "Yoga")).toBeNull();
   });
 });
 

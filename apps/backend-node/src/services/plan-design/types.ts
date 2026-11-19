@@ -39,6 +39,7 @@ export type ObjectGenerator = <T extends z.ZodType>(
 
 export interface LoggedActivity {
   title: string;
+  emoji: string;
   measure: string;
   sessionsLast4Weeks: number;
   lastLoggedAt: string | null;
