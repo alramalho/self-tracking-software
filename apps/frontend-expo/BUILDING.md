@@ -51,9 +51,18 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 276 — plan polish and learning plans, November 19, 2026
+
+**Build 276 is the latest TestFlight build**: everything on main up to `c72a58ec` (build 275 plus branch `plan-polish`). Edit Plan saves from a pinned footer and asks before discarding; the coach tour runs check-in → two weeks (4 of 6, next week 5) → 6 → 5 → data; Review Changes shows the coach's 3D face; new plans get a short name; voice note waiting and saved sheets are shorter. Learning plans (`LEARNING_CATEGORIES` in `packages/prisma/follow-through/coverage.ts`) ask for a course or book while the plan is made, show a full-width "What did you cover?" after a log, let the coach suggest the next sessions when the person is clearly ahead or behind (`POST /voice-logs/coverage`), and ask once a week on the Coach tab when nothing else waits.
+
+- **Backend:** `plan-polish-20261119` (code-only, FROM `pricing-currency-20261118`; context `deployment/tracking-plan-polish-20261119` with `rollback.sh`), live since 09:30 UTC. Replaced files matched main before the change. Live model check: pace right 9/9; the schema's first field `noteLanguage` keeps replies in the note's language.
+- **Built** with `pnpm build:testflight .release/testflight-main-c72a58ec/tracking.so.ipa` in worktree `tracking-plan-polish`; native modules check passed. IPA SHA-256 `e0b6b47537878eecc3d0c5fd59f3a3d50c9de702f7eb32672a11370b0d02981d`.
+- **Apple:** validated; uploaded (delivery `38084372-1fdf-4a32-879b-8261c3ad21ab`; altool crashed after the upload succeeded, as for 274–275); VALID, internal + Friends & Family, beta review accepted (IN_BETA_TESTING).
+- **Checks:** Expo, web and backend typecheck; backend unit tests 101/101; e2e `outcome-onboarding`, `learning-coverage`, `plan-confidence`, `share-more` 34/34 after merging main. Not run on a phone.
+
 ## TestFlight build 275 — only weekly and quarterly plans, November 18, 2026
 
-**Build 275 is the latest TestFlight build**: everything on main up to `f3e71c4d` (build 274 plus `0fc91706`). The paywall offers only `so.tracking.app.quarterly` (€26.99 / $26.99) and `so.tracking.app.weekly` (€3.99 / $3.99), each with a free first week in App Store Connect; monthly and yearly stay in App Store Connect but are no longer offered. The web paywall reads the same two plans from Stripe (`COACHING_PAYMENT_LINKS` on the server).
+Build 275 was the latest TestFlight build: everything on main up to `f3e71c4d` (build 274 plus `0fc91706`). The paywall offers only `so.tracking.app.quarterly` (€26.99 / $26.99) and `so.tracking.app.weekly` (€3.99 / $3.99), each with a free first week in App Store Connect; monthly and yearly stay in App Store Connect but are no longer offered. The web paywall reads the same two plans from Stripe (`COACHING_PAYMENT_LINKS` on the server).
 
 - **Built** with `pnpm build:testflight .release/testflight-main-f3e71c4d/tracking.so.ipa` in worktree `tracking-pricing`; ExpoHaptics, TrackingHealth, TrackingMap, TrackingWatch installed. IPA SHA-256 `9559011433a4b683f392c7c6dee9c9157137b6f86039a721093435317e9ee159`; the bundle names quarterly and weekly only, no e2e token.
 - **Apple:** validated; uploaded (delivery `5959095b-cf29-427d-9f98-10e02a6eea2e`; altool crashed after the upload succeeded, as for 274); VALID, internal + Friends & Family, beta review accepted (IN_BETA_TESTING).
