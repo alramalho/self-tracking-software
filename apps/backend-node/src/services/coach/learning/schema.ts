@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 
 export const coverageSchema = z.object({
+  /** Named first so everything after it is written in the language of the note, not the one being learned. */
+  noteLanguage: z.string().max(30),
   pace: z.enum(["ON_TRACK", "AHEAD", "BEHIND", "UNCLEAR"]),
   /** What they covered, a few words ("numbers 1–10, tones"). */
   covered: z.string().max(120),
