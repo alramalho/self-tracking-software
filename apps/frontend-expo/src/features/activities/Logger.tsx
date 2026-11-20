@@ -214,8 +214,9 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   if (step === "metrics")
     return <MetricLogger onClose={() => setStep("done")} />;
   return (
-    <>
     <LoggingDrawer
+      // Inside the sheet's modal, on top until it fades into "Saved": iOS won't open a second modal over it.
+      overlay={celebration && <CelebrationOverlay embedded celebration={celebration} onDone={() => setCelebration(undefined)} />}
       titleAlign={step === "photos" ? "left" : "center"}
       title={
         step === "quantity"
@@ -335,8 +336,5 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       )}
       <Status error={error ?? save.error ?? link.error} />
     </LoggingDrawer>
-    {/* Mounted after the sheet, so it sits on top until it fades. */}
-    {celebration && <CelebrationOverlay celebration={celebration} onDone={() => setCelebration(undefined)} />}
-    </>
   );
 }

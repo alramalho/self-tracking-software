@@ -75,7 +75,16 @@ function haptic(kind: "step" | "week") {
   ).catch(() => {});
 }
 
-export function CelebrationOverlay({ celebration, onDone }: { celebration: Celebration; onDone: () => void }) {
+export function CelebrationOverlay({
+  celebration,
+  onDone,
+  embedded,
+}: {
+  celebration: Celebration;
+  onDone: () => void;
+  /** Drawn inside another modal (the Saved sheet's, via LoggingDrawer's overlay) instead of opening its own. */
+  embedded?: boolean;
+}) {
   const c = useColors();
   const reduced = useReducedMotion();
   const { width, height } = useWindowDimensions();
@@ -247,8 +256,7 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
   const fusedStyle = useAnimatedStyle(() => ({ opacity: fuse.value }));
   const gapStyle = useAnimatedStyle(() => ({ gap: 6 * (1 - fuse.value) }));
 
-  return (
-    <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={() => finish()}>
+  const body = (
       <Animated.View style={[StyleSheet.absoluteFill, rootStyle]} testID="log-celebration">
         <Pressable style={StyleSheet.absoluteFill} onPress={() => finish()} accessibilityRole="button" accessibilityLabel="Close">
           {!reduced && (
@@ -338,6 +346,11 @@ export function CelebrationOverlay({ celebration, onDone }: { celebration: Celeb
           )}
         </Pressable>
       </Animated.View>
+  );
+  if (embedded) return body;
+  return (
+    <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={() => finish()}>
+      {body}
     </Modal>
   );
 }

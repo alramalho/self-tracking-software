@@ -42,6 +42,7 @@ export function LoggingDrawer({
   scrollToEndOnKeyboard = true,
   onClose,
   children,
+  overlay,
 }: LoggingDrawerProps) {
   const c = useColors();
   const reduced = useReducedMotion();
@@ -286,6 +287,7 @@ export function LoggingDrawer({
           </InputAccessoryView>
         )}
       </View>
+      {overlay}
     </Modal>
   );
 }

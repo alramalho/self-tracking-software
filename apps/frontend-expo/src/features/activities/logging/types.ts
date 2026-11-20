@@ -11,6 +11,8 @@ export interface LoggingDrawerProps {
   scrollToEndOnKeyboard?: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** Full-screen layer over the sheet, inside its modal (the log celebration): iOS can't present a second modal on top. */
+  overlay?: ReactNode;
 }
 
 export interface LoggingCalendarProps {

@@ -629,8 +629,9 @@ export function VoiceLogDrawer({
               : "Voice note";
 
   return (
-    <>
     <LoggingDrawer
+      // Inside the sheet's modal, on top until it fades into "Saved": iOS won't open a second modal over it.
+      overlay={celebration && <CelebrationOverlay embedded celebration={celebration} onDone={() => setCelebration(undefined)} />}
       title={title}
       titleAlign={phase === "review" ? "left" : "center"}
       testID="voice-log-drawer"
@@ -1166,8 +1167,5 @@ export function VoiceLogDrawer({
       )}
       {aiConsent.sheet}
     </LoggingDrawer>
-    {/* Mounted after the sheet, so it sits on top until it fades into "Saved". */}
-    {celebration && <CelebrationOverlay celebration={celebration} onDone={() => setCelebration(undefined)} />}
-    </>
   );
 }
