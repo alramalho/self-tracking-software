@@ -51,9 +51,15 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 278 — voice notes start with one tap, November 20, 2026
+
+**Build 278 is the latest TestFlight build**: everything on main up to `1b5328bf` (build 277 plus this). The Add tab's "Log voice note" card is gone; a round mic in the bottom-right corner (like Better Groceries) opens the voice note already recording. Recording shows a timer, a big round red stop and Discard; the privacy box and explainer copy are removed. A red dot on the mic means a note is waiting, and the tap opens its review. The mic sits at `insets.bottom + 48` because the iOS 26 glass tab bar takes touches in a ~40pt strip above itself.
+
+- **Built** with `pnpm build:testflight .release/testflight-main-1b5328bf/tracking.so.ipa` in worktree `tracking-voice-mic`. IPA SHA-256 `be62b00b62a1dea67accb1c969efe8b960fed54b15866fcac76155f2dcaef0a7`; bundle has "Record voice note", no e2e token. Uploaded (altool crashed after upload, as before); VALID, internal + Friends & Family, beta review submitted, external state IN_BETA_TESTING.
+
 ## TestFlight build 277 — new plans read your history, November 19, 2026
 
-**Build 277 is the latest TestFlight build**: everything on main up to `4d54fe20` (build 276 plus this). The "Did we get that right?" dictation banner in plan creation only shows while the answer box has text, so it never sits under the next, empty question. The history half is server-side and reaches every build: the classify step finds the logged activity the goal is about (name rule, then Jev on the goal's own words in any language, `plan-design/relevantActivity.ts`, main `3118b463`), reuses it, and asks "Your logs say about N a week. Still right?" (backend `plan-history-jev-20261119`).
+Build 277 was the latest TestFlight build: everything on main up to `4d54fe20` (build 276 plus this). The "Did we get that right?" dictation banner in plan creation only shows while the answer box has text, so it never sits under the next, empty question. The history half is server-side and reaches every build: the classify step finds the logged activity the goal is about (name rule, then Jev on the goal's own words in any language, `plan-design/relevantActivity.ts`, main `3118b463`), reuses it, and asks "Your logs say about N a week. Still right?" (backend `plan-history-jev-20261119`).
 
 - **Built** with `pnpm build:testflight .release/testflight-main-4d54fe20/tracking.so.ipa` in worktree `tracking-plan-polish`. IPA SHA-256 `974338289326e8d0bb0d67d82358eaf53845d53b6705e75a71fa184b42285fee`. Validated; uploaded (altool crashed after "UPLOAD SUCCEEDED", as before); VALID, internal + Friends & Family, beta review submitted, external state IN_BETA_TESTING.
 
