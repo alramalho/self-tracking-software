@@ -43,6 +43,7 @@ import type {
   VoiceLogDraft,
   VoiceLogDrawerProps,
   VoiceLogPhase,
+  VoiceLogRoundButtonProps,
   VoiceLogPreview,
   VoiceLogRecordingKind,
   VoiceLogSelectionGroupProps,
@@ -156,6 +157,30 @@ function SelectionGroup({ children }: VoiceLogSelectionGroupProps) {
   );
 }
 
+function RoundButton({ label, color, disabled, onPress, children }: VoiceLogRoundButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: color,
+        opacity: disabled ? 0.55 : 1,
+        transform: [{ scale: pressed ? 0.94 : 1 }],
+      })}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 function TextAction({
   icon: Icon,
   label,
@@ -196,6 +221,7 @@ export function VoiceLogDrawer({
   initialDraft,
   onPendingChange,
   followUp: initialFollowUp,
+  autoStart,
 }: VoiceLogDrawerProps) {
   const c = useColors();
   const client = useQueryClient();
@@ -399,11 +425,12 @@ export function VoiceLogDrawer({
     await recorder.start();
   }
 
-  // Opened from "Share more" after a log: start listening straight away, like the watch.
-  const startedFollowUp = useRef(false);
+  // Opened from the round mic or "Share more": start listening straight away, like the watch.
+  const startedOnOpen = useRef(false);
   useEffect(() => {
-    if (!initialFollowUp || startedFollowUp.current) return;
-    startedFollowUp.current = true;
+    if (startedOnOpen.current) return;
+    if (!initialFollowUp && !(autoStart && !initialDraft)) return;
+    startedOnOpen.current = true;
     void startRecording("initial");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -564,8 +591,8 @@ export function VoiceLogDrawer({
           : phase === "committed"
             ? "Saved"
             : phase === "recording"
-              ? "Recording"
-              : "Log voice note";
+              ? recorder.isWorking ? "Finishing…" : "Listening…"
+              : "Voice note";
 
   return (
     <LoggingDrawer
@@ -576,70 +603,21 @@ export function VoiceLogDrawer({
       onClose={close}
     >
       {phase === "ready" && (
-        <View testID="voice-log-ready" style={{ gap: 18 }}>
-          <View style={{ alignItems: "center", gap: 10 }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 20,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: c.accent + "18",
-              }}
-            >
-              <Mic size={30} color={c.accent} strokeWidth={1.8} />
-            </View>
-            <Copy>
-              Say what you did, how you felt, or what you want to remember.
-              tracking.so will turn it into suggestions for you to review.
-            </Copy>
-          </View>
-          <View
-            style={{
-              gap: 5,
-              padding: 14,
-              borderRadius: 14,
-              backgroundColor: c.soft,
-              borderWidth: 1,
-              borderColor: c.inputBorder,
-            }}
+        <View testID="voice-log-ready" style={{ alignItems: "center", gap: 14, paddingVertical: 8 }}>
+          <RoundButton
+            label="Start recording"
+            color={c.accent}
+            onPress={() => void startRecording()}
           >
-            <Text style={{ color: c.text, fontSize: 14, fontWeight: "600" }}>
-              Private until you save
-            </Text>
-            <Text style={{ color: c.muted, fontSize: 13, lineHeight: 19 }}>
-              Nothing is logged automatically. You can remove any suggestion
-              before confirming.
-            </Text>
-          </View>
-          <Button onPress={() => void startRecording()}>
-            Start recording
-          </Button>
-          <Text style={{ color: c.muted, textAlign: "center", fontSize: 12 }}>
-            Up to 90 seconds · You can start over and record again anytime
-          </Text>
+            <Mic size={34} color="white" strokeWidth={2.2} />
+          </RoundButton>
+          <Text style={{ color: c.muted, fontSize: 14 }}>Tap to record</Text>
           <Status error={error} />
         </View>
       )}
 
       {phase === "recording" && (
-        <View testID="voice-log-recording" style={{ alignItems: "center", gap: 16 }}>
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#ef44441a",
-            }}
-          >
-            <Mic size={30} color="#ef4444" strokeWidth={1.8} />
-          </View>
-          <Text style={{ color: c.text, fontSize: 18, fontWeight: "600" }}>
-            {recorder.isWorking ? "Finishing recording…" : "Listening…"}
-          </Text>
+        <View testID="voice-log-recording" style={{ alignItems: "center", gap: 18, paddingVertical: 8 }}>
           {followUp && !recorder.isWorking && <FollowUpGuide learning={learning} />}
           <Text
             accessibilityLabel="Voice note duration"
@@ -652,38 +630,18 @@ export function VoiceLogDrawer({
           >
             {durationLabel(recorder.durationMillis)}
           </Text>
-          <Copy muted>
-            {recorder.isWorking
-              ? "Preparing your note…"
-              : "Tap stop when you’re done. The maximum is 90 seconds."}
-          </Copy>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Stop recording"
-            accessibilityState={{ disabled: recorder.isWorking }}
+          <RoundButton
+            label="Stop recording"
+            color="#ef4444"
             disabled={recorder.isWorking}
             onPress={() => void recorder.stop()}
-            style={({ pressed }) => ({
-              minHeight: 48,
-              width: "100%",
-              borderRadius: 16,
-              backgroundColor: "#ef4444",
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              opacity: recorder.isWorking ? 0.55 : pressed ? 0.75 : 1,
-            })}
           >
             {recorder.isWorking ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Square size={15} color="white" fill="white" />
+              <Square size={26} color="white" fill="white" />
             )}
-            <Text style={{ color: "white", fontWeight: "600" }}>
-              {recorder.isWorking ? "Finishing…" : "Stop recording"}
-            </Text>
-          </Pressable>
+          </RoundButton>
           <TextAction icon={Trash2} label="Discard" onPress={() => void discard()} />
           <Status error={error} />
         </View>

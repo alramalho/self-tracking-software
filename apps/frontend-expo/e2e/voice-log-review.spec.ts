@@ -76,9 +76,8 @@ for (const theme of ["DARK", "LIGHT"]) {
   });
   await page.goto("/add");
 
-  await page.getByTestId("log-voice-note-card").click();
+  await page.getByTestId("voice-mic").click();
   const drawer = page.getByTestId("voice-log-drawer");
-  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-recording")).toBeVisible();
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
@@ -119,9 +118,8 @@ test("start over clears the current voice note and keeps recording ready", async
   });
   await page.goto("/add");
 
-  await page.getByTestId("log-voice-note-card").click();
+  await page.getByTestId("voice-mic").click();
   const drawer = page.getByTestId("voice-log-drawer");
-  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
 
@@ -158,9 +156,8 @@ for (const theme of ["LIGHT", "DARK"]) {
       await route.fulfill({ json: { success: true } });
     });
     await page.goto("/add");
-    await page.getByTestId("log-voice-note-card").click();
+    await page.getByTestId("voice-mic").click();
     const drawer = page.getByTestId("voice-log-drawer");
-    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
     await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
     const banner = drawer.getByTestId("transcription-feedback");
@@ -184,8 +181,7 @@ test("discard throws the voice note away from review and while processing", asyn
   await page.goto("/add");
 
   const drawer = page.getByTestId("voice-log-drawer");
-  await page.getByTestId("log-voice-note-card").click();
-  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await page.getByTestId("voice-mic").click();
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
   await drawer.getByRole("button", { name: "Discard", exact: true }).click();
@@ -199,8 +195,7 @@ test("discard throws the voice note away from review and while processing", asyn
     await route.continue();
   });
   await page.goto("/add");
-  await page.getByTestId("log-voice-note-card").click();
-  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
+  await page.getByTestId("voice-mic").click();
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-processing")).toBeVisible();
   await drawer.getByRole("button", { name: "Discard", exact: true }).click();
@@ -251,9 +246,8 @@ for (const theme of ["LIGHT", "DARK"]) {
       });
     });
     await page.goto("/add");
-    await page.getByTestId("log-voice-note-card").click();
+    await page.getByTestId("voice-mic").click();
     const drawer = page.getByTestId("voice-log-drawer");
-    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
     await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
     await expect(drawer.getByText("≈ 21 pages (from half an hour)", { exact: false })).toBeVisible();
@@ -291,9 +285,8 @@ for (const theme of ["DARK", "LIGHT"])
       await route.continue();
     });
     await page.goto("/add");
-    await page.getByTestId("log-voice-note-card").click();
+    await page.getByTestId("voice-mic").click();
     const drawer = page.getByTestId("voice-log-drawer");
-    await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
     await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-processing")).toBeVisible();
     await expect(drawer.getByText("Transcribing and finding suggestions…")).toHaveCount(0);

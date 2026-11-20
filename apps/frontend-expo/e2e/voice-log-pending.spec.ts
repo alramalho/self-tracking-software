@@ -55,9 +55,8 @@ test("voice note survives navigation into plan onboarding and can be dismissed f
   await page.goto("/add");
   await page.evaluate(() => localStorage.clear());
 
-  await page.getByTestId("log-voice-note-card").click();
+  await page.getByTestId("voice-mic").click();
   const drawer = page.getByTestId("voice-log-drawer");
-  await drawer.getByRole("button", { name: "Start recording", exact: true }).click();
   await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
   await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
   await drawer.getByRole("button", { name: "Close", exact: true }).click();

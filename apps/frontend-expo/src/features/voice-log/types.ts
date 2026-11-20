@@ -176,6 +176,14 @@ export interface VoiceLogDrawerProps {
   onPendingChange?: (draft: VoiceLogDraft | null) => void;
   /** Opens straight into "Share more" for these just-saved sessions. */
   followUp?: VoiceLogFollowUp;
+  /** Start listening as soon as it opens (the round mic), unless a note is waiting for review. */
+  autoStart?: boolean;
+}
+
+export interface VoiceMicButtonProps {
+  /** A note is waiting for review: the mic opens it instead of recording. */
+  pending: boolean;
+  onPress: () => void;
 }
 
 export interface VoiceLogSelectionGroupProps {
@@ -185,4 +193,12 @@ export interface VoiceLogSelectionGroupProps {
 export interface VoiceLogRecorderOptions {
   onRecordingReady: (uri: string) => void;
   onError: (error: unknown) => void;
+}
+
+export interface VoiceLogRoundButtonProps {
+  label: string;
+  color: string;
+  disabled?: boolean;
+  onPress: () => void;
+  children: ReactNode;
 }
