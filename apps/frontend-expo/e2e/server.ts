@@ -450,7 +450,7 @@ const server = http.createServer(async (req, res) => {
       send({ ok: true });
       return;
     }
-    const a = { ...state.entries[0], id: "joint-a", description: "A shared morning outdoors", imageUrls: body.photos === false ? [] : [image, `${image}?2`] };
+    const a = { ...state.entries[0], id: "joint-a", description: "A shared morning outdoors", ...(body.mineFirst ? { datetime: new Date(Date.parse(state.entries[0].datetime) + 60_000).toISOString() } : {}), imageUrls: body.photos === false ? [] : [image, `${image}?2`] };
     const b = { ...state.entries[1], id: "joint-b", userId: friend.id, description: "Sam's chapter after the run", imageUrls: body.photos === false ? [] : [image, `${image}?3`] };
     const deleted = { ...state.entries[0], id: "joint-deleted", deletedAt: now(), imageUrls: [`${image}?deleted`] };
     const members = [
@@ -810,7 +810,8 @@ const server = http.createServer(async (req, res) => {
     if (suffix === "/modify-reactions") {
       for (const r of body.reactions) {
         entry.reactions = entry.reactions.filter(
-          (v: any) => v.emoji !== r.emoji,
+          (v: any) =>
+            v.emoji !== r.emoji || (v.user?.id ?? v.userId) !== state.user.id,
         );
         if (r.operation === "add")
           entry.reactions.push({ emoji: r.emoji, user: state.user });

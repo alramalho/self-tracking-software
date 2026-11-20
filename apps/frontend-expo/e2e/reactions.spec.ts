@@ -75,14 +75,14 @@ for (const theme of ["DARK", "LIGHT"]) {
     await picker.getByRole("button", { name: "🔥", exact: true }).click();
     await expect(picker).not.toBeVisible();
     await expect(
-      card.getByRole("button", { name: "🔥 1", exact: true }),
+      card.getByRole("button", { name: "🔥 2", exact: true }),
     ).toBeVisible();
     await trigger.click();
     await picker.getByRole("button", { name: "🔥", exact: true }).click();
     await expect(picker).not.toBeVisible();
     await expect(
       card.getByRole("button", { name: "🔥 1", exact: true }),
-    ).not.toBeVisible();
+    ).toBeVisible();
     state = await (await request.get(`${API}/__state`)).json();
     const mutations = state.requests.filter((r: any) =>
       r.path.endsWith("modify-reactions"),
@@ -165,3 +165,44 @@ test("custom reactions save and appear in the next reaction tray", async ({ page
   const state = await (await request.get(`${API}/__state`)).json();
   expect(state.user.reactionEmojis).toEqual(["🚀", "♥️", "😂", "😮‍💨", "🍑", "👍🏽"]);
 });
+
+for (const theme of ["DARK", "LIGHT"]) {
+  test(`people in a joint activity can react to each other on a photo card in ${theme}`, async ({
+    page,
+    request,
+  }) => {
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme },
+    });
+    await request.post(`${API}/__timeline-design`, { data: { mineFirst: true } });
+    await page.goto("/?activityEntryId=joint-a");
+    const card = page.getByTestId("feed-card");
+    await expect(card.getByText("JOINT ACTIVITY", { exact: true })).toBeVisible();
+    const trigger = card.getByRole("button", { name: "React", exact: true });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    await page
+      .getByTestId("reaction-picker")
+      .getByRole("button", { name: "🍑", exact: true })
+      .click();
+    await expect(card.getByRole("button", { name: "🍑 1", exact: true })).toBeVisible();
+    await page.screenshot({ path: `test-results/joint-reaction-${theme.toLowerCase()}.png` });
+    await trigger.click();
+    await page
+      .getByTestId("reaction-picker")
+      .getByRole("button", { name: "🍑", exact: true })
+      .click();
+    await expect(card.getByRole("button", { name: "🍑 1", exact: true })).toHaveCount(0);
+    const state = await (await request.get(`${API}/__state`)).json();
+    expect(
+      state.requests
+        .filter((r: any) => r.path.endsWith("modify-reactions"))
+        .map((r: any) => [r.path, r.body.reactions[0].operation]),
+    ).toEqual([
+      ["/activities/activity-entries/joint-b/modify-reactions", "add"],
+      ["/activities/activity-entries/joint-b/modify-reactions", "remove"],
+    ]);
+  });
+}

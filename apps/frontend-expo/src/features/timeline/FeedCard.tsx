@@ -19,6 +19,7 @@ import { FeedCaption } from "./FeedCaption";
 import { CommentsSheet } from "./comments/CommentsSheet";
 import { ReactionBadges } from "./reactions/ReactionBadges";
 import { ReactionPicker } from "./reactions/ReactionPicker";
+import { entryReactions } from "./reactions/target";
 import { PhotoGrid } from "./PhotoGrid";
 import { router } from "expo-router";
 import {
@@ -82,7 +83,9 @@ export function FeedCard({
     (plan) => plan.progress?.habitAchievement?.isAchieved,
   );
   const own = (entry?.userId ?? user?.id) === me.data?.id;
-  const reactions = entry?.reactions ?? post?.reactions ?? [];
+  const entryReacts = entry ? entryReactions(item, me.data?.id) : undefined;
+  const reactions = entryReacts?.reactions ?? post?.reactions ?? [];
+  const canReact = !entry || entryReacts?.target?.userId !== me.data?.id;
 
   const base = entry
     ? `/activities/activity-entries/${entry.id}`
@@ -98,21 +101,29 @@ export function FeedCard({
     fullComments.data ?? entry?.comments ?? post?.comments ?? [];
   const commentCount =
     fullComments.data?.length ?? entry?._count?.comments ?? commentList.length;
-  const react = useAction(async (emoji: string) =>
-    api.post(`${base}/modify-reactions`, {
-      reactions: [
-        {
-          emoji,
-          operation: reactions.some(
-            (r) =>
-              r.emoji === emoji && (r.user?.id ?? r.userId) === me.data?.id,
-          )
-            ? "remove"
-            : "add",
-        },
-      ],
-    }),
-  );
+  const react = useAction(async (emoji: string) => {
+    if (!entryReacts) {
+      const operation = reactions.some(
+        (r) => r.emoji === emoji && (r.user?.id ?? r.userId) === me.data?.id,
+      )
+        ? "remove"
+        : "add";
+      return api.post(`${base}/modify-reactions`, {
+        reactions: [{ emoji, operation }],
+      });
+    }
+    const mine = entryReacts.mine(emoji);
+    const targets = mine.length ? mine : [entryReacts.target!];
+    const operation = mine.length ? "remove" : "add";
+    await Promise.all(
+      targets.map((target) =>
+        api.post(
+          `/activities/activity-entries/${target.id}/modify-reactions`,
+          { reactions: [{ emoji, operation }] },
+        ),
+      ),
+    );
+  });
   const photos = feedPhotos(item);
   const ownRows = [item, ...(item.sharedEntries ?? [])].filter(
     (row) => row.entry?.userId === me.data?.id,
@@ -225,7 +236,7 @@ export function FeedCard({
               photos={photos}
               title={item.activity?.title ?? post?.title ?? "Activity"}
             />
-            {(!entry || !own) && (
+            {canReact && (
               <View
                 style={{
                   position: "absolute",
