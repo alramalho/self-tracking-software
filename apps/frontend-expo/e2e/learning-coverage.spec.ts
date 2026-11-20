@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { waitForCelebration } from "./celebration";
 import { enterWelcomeAge } from "./onboarding-welcome";
 
 // "What did you cover?" on learning plans (18 Nov 2026): the course question in onboarding, the full-width
@@ -113,13 +114,14 @@ for (const theme of ["LIGHT", "DARK"]) {
     await page.getByLabel("Quantity", { exact: true }).fill("20");
     await page.getByRole("button", { name: "Log Activity", exact: true }).click();
     await page.getByRole("button", { name: "Log without photo", exact: true }).click();
-    const button = page.getByTestId("log-celebration-share-more");
-    await expect(button).toBeVisible({ timeout: 8000 });
+    await waitForCelebration(page);
+    const button = page.getByTestId("saved-share-more");
+    await expect(button).toBeVisible();
     await expect(button).toHaveText(/What did you cover\?/);
     const box = (await button.boundingBox())!;
     expect(box.width).toBeGreaterThan((page.viewportSize()!.width - 40) * 0.95);
-    await page.waitForTimeout(2000);
-    await shot(page, `coverage-celebration-${theme}`);
+    await page.waitForTimeout(500);
+    await shot(page, `coverage-saved-${theme}`);
     await button.click();
     const drawer = page.getByTestId("voice-log-drawer");
     await expect(drawer.getByTestId("voice-log-follow-up-guide")).toContainText("What you covered");

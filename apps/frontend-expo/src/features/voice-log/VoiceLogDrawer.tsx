@@ -27,6 +27,9 @@ import { Text } from "@/components/typography/Text";
 import { Button, Copy, Status, useColors } from "@/components/ui";
 import { ReviewRow } from "@/features/health/review/controls";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
+import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
+import { SavedActions } from "@/features/celebration/SavedActions";
+import { celebrationFor, type Celebration } from "@/features/celebration/model";
 import { useCurrentUser, useEntries, usePlans } from "@/data/queries";
 import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { CoachNote } from "@/features/messages/adaptation/CoachNote";
@@ -37,7 +40,9 @@ import { enrichVoiceLogPreview } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
 import { useVoiceLogRecorder } from "./useVoiceLogRecorder";
 import { voiceLogActivityKey, voiceLogMetricKey } from "./types";
+import type { ActivityEntry, Plan } from "@/core/types";
 import type {
+  VoiceLogActivity,
   VoiceLogCoverage,
   VoiceLogFollowUp,
   VoiceLogDraft,
@@ -216,6 +221,27 @@ function TextAction({
   );
 }
 
+/**
+ * The celebration for a voice note: the plan stepper follows the first activity that moves a plan (else the
+ * first one), and the line lists everything the note logged.
+ */
+function voiceCelebration(logged: VoiceLogActivity[], plans: Plan[], earlier: ActivityEntry[]): Celebration {
+  const all = logged.map((activity) => {
+    const [y, m, d] = activity.date.split("-").map(Number);
+    const [hh, mm] = (activity.time ?? "12:00").split(":").map(Number);
+    return celebrationFor({
+      activity: { id: activity.activityId, title: activity.title, emoji: activity.emoji, measure: activity.measure },
+      quantity: activity.quantity,
+      datetime: new Date(y, m - 1, d, hh || 0, mm || 0),
+      plans,
+      entries: earlier,
+    });
+  });
+  const main = all.find((one) => one.plan && one.plan.after > one.plan.before) ?? all.find((one) => one.plan) ?? all[0];
+  const lines = all.map((one) => one.line);
+  return { ...main, line: lines.length > 3 ? `${lines.slice(0, 2).join("\n")}\n+${lines.length - 2} more` : lines.join("\n") };
+}
+
 export function VoiceLogDrawer({
   onClose,
   initialDraft,
@@ -268,6 +294,8 @@ export function VoiceLogDrawer({
     (plans.data ?? []).some((p) => !p.archivedAt && isLearningPlan(p) && p.activities.some((a) => a.id === l.activityId)),
   );
   const [coverage, setCoverage] = useState<VoiceLogCoverage | "checking" | null>(null);
+  // "Nice work!" after a voice note that logged something, fading into the Saved view, like a manual log.
+  const [celebration, setCelebration] = useState<Celebration>();
 
   useEffect(() => {
     if (
@@ -529,6 +557,8 @@ export function VoiceLogDrawer({
     if (!preview || busy) return;
     setPhase("committing");
     setError(undefined);
+    // Earlier logs, before this note's land in the cache: the plan stepper counts from them.
+    const earlier = entries.data ?? [];
     try {
       const selectedPlanMatch = preview.planMatches?.find(
         (match) => match.planId === selectedPlanId,
@@ -561,6 +591,10 @@ export function VoiceLogDrawer({
               .map(({ activityId, date, quantity }) => ({ activityId, date, quantity })),
       );
       setPhase("committed");
+      const logged = followUp
+        ? []
+        : preview.activities.filter((activity) => selectedActivityIDs.has(voiceLogActivityKey(activity)) && !activity.detailsOnly);
+      if (logged.length) setCelebration(voiceCelebration(logged, plans.data ?? [], earlier));
       if (followUp && learning) {
         setCoverage("checking");
         checkCoverage({ logged: followUp.logged.map(({ activityId, date }) => ({ activityId, date })), said: preview.transcript })
@@ -595,6 +629,7 @@ export function VoiceLogDrawer({
               : "Voice note";
 
   return (
+    <>
     <LoggingDrawer
       title={title}
       titleAlign={phase === "review" ? "left" : "center"}
@@ -1102,13 +1137,10 @@ export function VoiceLogDrawer({
         </View>
       )}
 
-      {phase === "committed" && (
+      {phase === "committed" && suggestion && (
         <View testID="voice-log-committed" style={{ alignItems: "center", gap: 14, paddingVertical: 16 }}>
           <CheckCircle2 size={56} color="#10b981" strokeWidth={1.8} accessibilityLabel="Voice note saved" />
-          {coverage === "checking" && (
-            <ActivityIndicator testID="voice-log-coverage-checking" color={c.muted} accessibilityLabel="Your coach is reading your note" />
-          )}
-          {suggestion && coverage !== "checking" && coverage && (
+          {coverage !== "checking" && coverage && (
             <View testID="voice-log-coverage" style={{ alignSelf: "stretch", gap: 14 }}>
               <CoachNote strategist={user.data?.coachPersonality === "STRATEGIST"} mood={coverage.pace === "BEHIND" ? "sad" : "smiling"}>
                 <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>{suggestion.message}</Text>
@@ -1118,21 +1150,24 @@ export function VoiceLogDrawer({
               </Button>
             </View>
           )}
-          {suggestion ? (
-            <TextAction icon={CheckCircle2} label="Not now" onPress={onClose} />
-          ) : lastSaved.length ? (
-            <>
-              <Button onPress={shareMore} testID="voice-log-share-more">
-                Share more
-              </Button>
-              <TextAction icon={CheckCircle2} label="Done" onPress={onClose} />
-            </>
-          ) : (
-            <Button onPress={onClose}>Done</Button>
-          )}
+          <TextAction icon={CheckCircle2} label="Not now" onPress={onClose} />
         </View>
+      )}
+      {phase === "committed" && !suggestion && (
+        <SavedActions
+          testID="voice-log-committed"
+          onShareMore={lastSaved.length ? shareMore : undefined}
+          onDone={onClose}
+        >
+          {coverage === "checking" && (
+            <ActivityIndicator testID="voice-log-coverage-checking" color={c.muted} accessibilityLabel="Your coach is reading your note" />
+          )}
+        </SavedActions>
       )}
       {aiConsent.sheet}
     </LoggingDrawer>
+    {/* Mounted after the sheet, so it sits on top until it fades into "Saved". */}
+    {celebration && <CelebrationOverlay celebration={celebration} onDone={() => setCelebration(undefined)} />}
+    </>
   );
 }

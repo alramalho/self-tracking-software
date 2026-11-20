@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { waitForCelebration } from "./celebration";
 
 const API = `http://127.0.0.1:${process.env.E2E_API_PORT || "4317"}`;
 const headers = { Authorization: "Bearer local-e2e-token" };
@@ -56,10 +57,14 @@ for (const theme of ["DARK", "LIGHT"]) {
     await page.getByRole("button", { name: "Log Activity", exact: true }).click();
     await page.getByRole("button", { name: "Log without photo", exact: true }).click();
 
-    const shareMore = page.getByTestId("log-celebration-share-more");
-    await expect(shareMore).toBeVisible({ timeout: 8000 });
-    await page.waitForTimeout(2500);
-    await page.screenshot({ path: `test-results/share-more-celebration-${theme}.png` });
+    // The celebration closes by itself and fades into the Saved sheet, where "Share more" is the one big button.
+    await waitForCelebration(page);
+    const shareMore = page.getByTestId("saved-share-more");
+    await expect(shareMore).toBeVisible();
+    const box = (await shareMore.boundingBox())!;
+    expect(box.width).toBeGreaterThan((page.viewportSize()!.width - 48) * 0.9);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `test-results/share-more-saved-${theme}.png` });
     await shareMore.click();
 
     const drawer = page.getByTestId("voice-log-drawer");
@@ -79,7 +84,9 @@ for (const theme of ["DARK", "LIGHT"]) {
     await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
     await expect(drawer.getByTestId("voice-log-committed")).toBeVisible();
     // One follow-up per log.
-    await expect(drawer.getByTestId("voice-log-share-more")).toHaveCount(0);
+    await expect(drawer.getByTestId("saved-share-more")).toHaveCount(0);
+    // A follow-up adds details to a log already celebrated: no second "Nice work!".
+    await expect(page.getByTestId("log-celebration")).toHaveCount(0);
 
     const state = await (await request.get(`${API}/__state`)).json();
     const preview = state.requests.find((entry: any) => entry.path === "/voice-logs/preview");
@@ -89,5 +96,30 @@ for (const theme of ["DARK", "LIGHT"]) {
       expect.objectContaining({ activityId: "run", quantity: 5, detailsOnly: true, difficulty: "hard" }),
     ]);
     expect(commit.body.metrics).toEqual([expect.objectContaining({ metricId: "energy", rating: 5 })]);
+  });
+}
+
+for (const theme of ["DARK", "LIGHT"]) {
+  test(`a voice note that logs something plays "Nice work!", then fades into Saved in ${theme}`, async ({ page, request }) => {
+    test.setTimeout(60000);
+    await installFakeMicrophone(page);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
+    await page.goto("/add");
+    await page.getByTestId("voice-mic").click();
+    const drawer = page.getByTestId("voice-log-drawer");
+    await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+    await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
+
+    await expect(page.getByTestId("log-celebration")).toBeVisible({ timeout: 8000 });
+    await expect(page.getByTestId("log-celebration-line")).toContainText("Guitar");
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `test-results/voice-celebration-${theme}.png` });
+    // No tap: it closes by itself.
+    await expect(page.getByTestId("log-celebration")).toHaveCount(0, { timeout: 15000 });
+    await expect(drawer.getByTestId("saved-share-more")).toBeVisible();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `test-results/voice-saved-${theme}.png` });
   });
 }

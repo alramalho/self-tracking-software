@@ -13,6 +13,7 @@ export type LogStep =
   | "difficulty"
   | "metrics"
   | "queued"
+  | "saved"
   | "done";
 export interface FriendResult {
   userId: string;

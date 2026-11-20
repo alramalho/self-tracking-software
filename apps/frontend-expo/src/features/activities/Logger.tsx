@@ -20,6 +20,7 @@ import { api } from "@/data/api";
 import { pickPhotos } from "@/native/photos";
 import type { ActivityEntry, LogActivityResult, Photo } from "@/core/types";
 import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
+import { SavedActions } from "@/features/celebration/SavedActions";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
 import type { VoiceLogFollowUp } from "@/features/voice-log/types";
 import { dayKey } from "@/core/dates";
@@ -51,9 +52,9 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const [error, setError] = useState<unknown>();
   const [result, setResult] = useState<LogActivityResult>();
   const [queuedError, setQueuedError] = useState<string>();
-  // The "Nice work!" moment plays first; the usual next step (shared, difficulty, metrics) waits for it.
-  const [celebration, setCelebration] = useState<{ value: Celebration; then: () => void }>();
-  // "Share more" from the celebration: a voice note about this session (how it felt, what it was about, anything else).
+  // The "Nice work!" moment plays over the "Saved" sheet, then fades into it by itself.
+  const [celebration, setCelebration] = useState<Celebration>();
+  // "Share more" from the Saved sheet: a voice note about this session (how it felt, what it was about, anything else).
   const [shareMore, setShareMore] = useState<VoiceLogFollowUp>();
   const [location, setLocation] = useState<{
     latitude: number;
@@ -102,13 +103,15 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       setResult(data);
       onLogged?.(data.entry);
       void client.invalidateQueries();
-      const then = () => {
-        if (data.sharedActivityCandidates?.length) setStep("shared");
-        else afterShared();
-      };
-      setCelebration({ value, then });
+      setStep("saved");
+      setCelebration(value);
     },
   });
+  // Done on the Saved sheet: the usual next step (shared, difficulty, metrics), or close.
+  function afterSaved() {
+    if (result?.sharedActivityCandidates?.length) setStep("shared");
+    else afterShared();
+  }
   function afterShared() {
     const isPaid = user.data?.planType && user.data.planType !== "FREE";
     const inPlan = plans.data?.some(
@@ -189,30 +192,6 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   const learning = (plans.data ?? []).some(
     (p) => !p.archivedAt && isLearningPlan(p) && p.activities.some((a) => a.id === activity.id),
   );
-  if (celebration)
-    return (
-      <CelebrationOverlay
-        celebration={celebration.value}
-        shareMoreLabel={learning ? "What did you cover?" : "Share more"}
-        onDone={() => {
-          const { then } = celebration;
-          setCelebration(undefined);
-          then();
-        }}
-        onShareMore={
-          result
-            ? () => {
-                setCelebration(undefined);
-                setShareMore({
-                  logged: [
-                    { activityId: activity.id, date: dayKey(result.entry.datetime), quantity: result.entry.quantity },
-                  ],
-                });
-              }
-            : undefined
-        }
-      />
-    );
   // Share more replaces the follow-up questions (difficulty, metrics): the note covers them.
   if (shareMore) return <VoiceLogDrawer followUp={shareMore} onClose={onClose} />;
   if (step === "difficulty" && result)
@@ -235,6 +214,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
   if (step === "metrics")
     return <MetricLogger onClose={() => setStep("done")} />;
   return (
+    <>
     <LoggingDrawer
       titleAlign={step === "photos" ? "left" : "center"}
       title={
@@ -242,6 +222,8 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           ? `Log ${activity.title}`
           : step === "photos"
             ? "📸 Add a proof!"
+            : step === "saved"
+              ? "Saved"
             : step === "queued"
               ? queuedError ? "Saved with a sync issue" : "Saved for sync"
             : step === "shared"
@@ -323,6 +305,18 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           </Button>
         </>
       )}
+      {step === "saved" && result && (
+        <SavedActions
+          testID="log-saved"
+          shareMoreLabel={learning ? "What did you cover?" : "Share more"}
+          onShareMore={() =>
+            setShareMore({
+              logged: [{ activityId: activity.id, date: dayKey(result.entry.datetime), quantity: result.entry.quantity }],
+            })
+          }
+          onDone={afterSaved}
+        />
+      )}
       {step === "done" && (
         <>
           <Copy>
@@ -341,5 +335,8 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       )}
       <Status error={error ?? save.error ?? link.error} />
     </LoggingDrawer>
+    {/* Mounted after the sheet, so it sits on top until it fades. */}
+    {celebration && <CelebrationOverlay celebration={celebration} onDone={() => setCelebration(undefined)} />}
+    </>
   );
 }

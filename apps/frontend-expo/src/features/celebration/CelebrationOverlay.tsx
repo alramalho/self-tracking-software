@@ -4,8 +4,8 @@
  * thick ribbons drawn in, and "Nice work!", the activity and the plan card come in one after another. The
  * plan's stepper fills the new step with a pop, a tiny tilt, a sound and a haptic. When that step completes
  * the week, the bar fuses and flashes, confetti bursts and rains, the flame wakes, the ribbons turn warm,
- * "Nice work!" blurs into "Week done" with a chord, and the streak goes up. Tap anywhere to close.
- * "Share more" (17 Nov 2026) at the bottom records how it felt, what it was about and anything else.
+ * "Nice work!" blurs into "Week done" with a chord, and the streak goes up. It closes by itself (a tap closes
+ * it sooner) and fades into the "Saved" sheet already open underneath, which holds "Share more" (20 Nov 2026).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -22,8 +22,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { Check, Circle, Flame, Mic, Plus } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Check, Circle, Flame, Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { Text } from "@/components/typography/Text";
@@ -76,21 +75,8 @@ function haptic(kind: "step" | "week") {
   ).catch(() => {});
 }
 
-export function CelebrationOverlay({
-  celebration,
-  onDone,
-  onShareMore,
-  shareMoreLabel = "Share more",
-}: {
-  celebration: Celebration;
-  onDone: () => void;
-  /** Shows "Share more"; called instead of onDone when tapped. */
-  onShareMore?: () => void;
-  /** "What did you cover?" on learning plans. */
-  shareMoreLabel?: string;
-}) {
+export function CelebrationOverlay({ celebration, onDone }: { celebration: Celebration; onDone: () => void }) {
   const c = useColors();
-  const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const sx = width / W;
@@ -121,14 +107,13 @@ export function CelebrationOverlay({
   const weekBurst = useSharedValue(0);
   const rain = useSharedValue(0);
 
-  const finish = (next: () => void = onDone) => {
+  // A slow fade, so the "Saved" sheet underneath shows through rather than popping in.
+  const finish = () => {
     if (closed.current) return;
     closed.current = true;
-    fade.value = withTiming(0, { duration: 260 }, () => {});
-    setTimeout(next, 280);
+    fade.value = withTiming(0, { duration: 420, easing: Easing.out(Easing.quad) });
+    setTimeout(onDone, 440);
   };
-  // With "Share more" on screen, stay a few seconds longer so there's time to reach it.
-  const linger = onShareMore ? 4000 : 0;
 
   useEffect(() => {
     try {
@@ -160,7 +145,7 @@ export function CelebrationOverlay({
           haptic("week");
         }
       });
-      at(2600 + linger, () => finish());
+      at(2400, () => finish());
       return () => timers.forEach(clearTimeout);
     }
 
@@ -202,7 +187,7 @@ export function CelebrationOverlay({
       at(tBoom + ms(300), () => setStreak(plan!.streakAfter));
       end = tBoom + ms(2200);
     }
-    at(end + 1400 + linger, () => finish());
+    at(end + 1100, () => finish());
     return () => {
       timers.forEach(clearTimeout);
       for (const p of Object.values(players.current)) {
@@ -344,21 +329,6 @@ export function CelebrationOverlay({
             )}
           </View>
 
-          {onShareMore && (
-            <Animated.View style={[styles.shareMore, { bottom: insets.bottom + 32 }, cardEnter]}>
-              <Pressable
-                testID="log-celebration-share-more"
-                accessibilityRole="button"
-                accessibilityLabel={shareMoreLabel}
-                accessibilityHint="Say how it went and anything else"
-                onPress={() => finish(onShareMore)}
-                style={({ pressed }) => [styles.shareMoreButton, { backgroundColor: c.accent, opacity: pressed ? 0.8 : 1 }]}
-              >
-                <Mic size={20} color="white" strokeWidth={2.2} />
-                <Text style={styles.shareMoreText}>{shareMoreLabel}</Text>
-              </Pressable>
-            </Animated.View>
-          )}
 
           {celebration.weekDone && !reduced && (
             <>
@@ -534,7 +504,7 @@ const styles = StyleSheet.create({
   headlineText: { fontSize: 40, lineHeight: 52, height: 52, fontWeight: "900", letterSpacing: -1, textAlign: "center" },
   center: { position: "absolute", left: 0, right: 0, alignItems: "center", gap: 14 },
   emoji: { fontSize: 76, lineHeight: 90 },
-  line: { fontSize: 24, fontWeight: "800", letterSpacing: -0.5 },
+  line: { fontSize: 24, lineHeight: 30, fontWeight: "800", letterSpacing: -0.5, textAlign: "center" },
   card: { marginTop: 26, width: 300, paddingVertical: 18, paddingHorizontal: 20, borderRadius: 22, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 10 } },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   planEmoji: { fontSize: 24 },
@@ -546,8 +516,4 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, fontWeight: "600" },
   countNum: { fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] },
   particle: { position: "absolute", left: 0, top: 0 },
-  // Full width, like the app's main buttons, so it reads as the next step rather than an extra.
-  shareMore: { position: "absolute", left: 20, right: 20 },
-  shareMoreButton: { minHeight: 56, borderRadius: 28, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
-  shareMoreText: { color: "white", fontSize: 17, fontWeight: "700" },
 });
