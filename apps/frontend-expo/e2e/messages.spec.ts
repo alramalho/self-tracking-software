@@ -90,6 +90,11 @@ test("coach proposal, feedback, failed send and direct chat", async ({
   await expect(page.getByText("See you then", { exact: true })).toBeVisible();
   const state = await (await request.get(`${API}/__state`)).json();
   expect(
+    state.requests
+      .filter((r: any) => r.path === "/rough-edges")
+      .map((r: any) => r.body.kind),
+  ).toEqual(["chat_failed"]);
+  expect(
     state.requests.some(
       (r: any) =>
         r.path === "/ai/messages/coach-welcome/accept-activity-log-proposal" &&

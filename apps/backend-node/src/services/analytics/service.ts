@@ -1,6 +1,7 @@
 import { DAY_MS } from "./people";
 import { dailySeries, topUsers } from "./activity";
 import { onboardingFunnel } from "./funnel";
+import { roughEdgesSummary } from "./roughEdges";
 import type { AnalyticsOverview } from "./types";
 import { readVoiceSamples, recentVoiceNotes, summarizeVoice } from "./voiceNotes";
 
@@ -10,11 +11,12 @@ export async function analyticsOverview(days: number): Promise<AnalyticsOverview
   const monthAgo = new Date(Date.now() - 30 * DAY_MS).toISOString();
   const voiceByUser = new Map<string, number>();
   for (const note of voice.notes) if (note.at >= monthAgo) voiceByUser.set(note.userId, (voiceByUser.get(note.userId) ?? 0) + 1);
-  const [funnel, series, voiceNotes, top] = await Promise.all([
+  const [funnel, series, voiceNotes, top, roughEdges] = await Promise.all([
     onboardingFunnel(span),
     dailySeries(span, voice.perDay),
     recentVoiceNotes(voice),
     topUsers(voiceByUser),
+    roughEdgesSummary(),
   ]);
-  return { generatedAt: new Date().toISOString(), funnel, series, voiceNotes, topUsers: top };
+  return { generatedAt: new Date().toISOString(), funnel, series, voiceNotes, topUsers: top, roughEdges };
 }

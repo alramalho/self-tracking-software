@@ -16,6 +16,7 @@ import { deriveCoachAttentionItems } from "../services/coachAttentionService";
 import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
+import { settleOpenPlanChanges } from "../services/planChangeStatusService";
 import {
   AUTONOMOUS_COACH_PROMPT_TAG,
   concludeResolvedAutonomousCoachNotifications,
@@ -371,6 +372,14 @@ async function runCoachV2MessagePipeline(params: {
       savedMessages.map((message) => message.id)
     );
   }
+  await settleOpenPlanChanges(
+    chatId,
+    {
+      replaced: v2Response.draftMessages.flatMap((d) => d.planProposals?.map((p) => p.planId) ?? []),
+      withdrawn: v2Response.withdrawnPlanChanges,
+    },
+    savedMessages.map((message) => message.id)
+  );
 
   await prisma.chat.update({
     where: { id: chatId },

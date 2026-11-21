@@ -100,7 +100,8 @@ export interface Message {
     description: string;
     patch?: unknown;
     operations?: unknown[];
-    status: "accepted" | "rejected" | null;
+    /** replaced: the coach suggested a newer change for this plan; withdrawn: it took the change back. */
+    status: "accepted" | "rejected" | "replaced" | "withdrawn" | null;
   }>;
   planCreationProposals?: Array<{
     goal: string;

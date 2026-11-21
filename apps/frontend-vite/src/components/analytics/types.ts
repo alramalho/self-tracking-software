@@ -69,10 +69,18 @@ export type TopUser = {
   lastActiveAt: string | null;
 };
 
+export type RoughEdges = {
+  days: number;
+  kinds: { kind: string; label: string; count: number; people: number }[];
+  recent: { at: string; kind: string; label: string; username: string | null; detail: string | null }[];
+};
+
 export type AnalyticsOverview = {
   generatedAt: string;
   funnel: Funnel;
   series: DayStats[];
   voiceNotes: VoiceNote[];
   topUsers: TopUser[];
+  /** Missing from backends older than 21 Nov 2026. */
+  roughEdges?: RoughEdges;
 };

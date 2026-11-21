@@ -188,6 +188,8 @@ export type CoachDraftMessage = {
 
 export type CoachAgentResponse = {
   draftMessages: CoachDraftMessage[];
+  /** Plans whose open suggested change the coach took back (withdrawPlanChange). */
+  withdrawnPlanChanges?: string[];
   healthDataAccess?: CoachHealthAccess[];
   skipped?: boolean;
   skipReason?: string;

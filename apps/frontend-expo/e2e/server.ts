@@ -514,6 +514,7 @@ const server = http.createServer(async (req, res) => {
   if (health !== undefined) { send(health); return; }
   const followThrough = followThroughFixture(path, req.method!, body, state);
   if (followThrough !== undefined) { send(followThrough); return; }
+  if (path === "/rough-edges" && req.method === "POST") { send({ ok: true }); return; }
   if (path === "/ai/transcribe" && req.method === "POST") {
     send({ text: "I will practise three times a week.", success: true });
     return;

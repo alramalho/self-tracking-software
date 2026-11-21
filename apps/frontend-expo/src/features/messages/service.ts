@@ -1,5 +1,6 @@
 import { fetch } from "expo/fetch";
 import { api, backendUrl, getAuthToken } from "@/data/api";
+import { reportingFailures } from "@/data/roughEdges";
 import type { Chat, Message, SendPayload, ResponseState } from "./types";
 
 export const getChats = async () =>
@@ -30,8 +31,22 @@ export const chatTitle = (chat: Chat, userId?: string) =>
     .join(", ") ||
   "Conversation";
 
+export const sendMessage = (
+  input: SendPayload,
+  onStatus: (status: ResponseState["status"]) => void,
+) =>
+  reportingFailures(
+    (error) =>
+      // fetch throws a TypeError when the connection drops; a server error is a plain Error.
+      error instanceof TypeError ||
+      (error instanceof Error && /interrupted|abort/i.test(error.message))
+        ? "chat_interrupted"
+        : "chat_failed",
+    () => send(input, onStatus),
+  );
+
 // Expo's native fetch streams SSE without buffering the coach's status updates.
-export async function sendMessage(
+async function send(
   input: SendPayload,
   onStatus: (status: ResponseState["status"]) => void,
 ): Promise<Message[]> {

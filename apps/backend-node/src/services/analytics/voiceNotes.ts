@@ -1,13 +1,12 @@
-import { open, stat } from "node:fs/promises";
 import { prisma } from "../../utils/prisma";
 import { voiceLogSamplesFile } from "../voice-log/samples";
+import { readJsonlTail } from "./jsonl";
 import { dayKey } from "./people";
 import type { VoiceNote } from "./types";
 
 // Voice notes come from the voice-log samples file on the host (services/voice-log/samples.ts): one line per
 // preview and one per commit. A note is "kept" when a commit with the same clientRequestId followed.
 
-const TAIL_BYTES = 8 * 1024 * 1024;
 const RECENT = 60;
 
 type Sample = {
@@ -22,30 +21,8 @@ type Sample = {
 };
 
 /** The last few MB of the samples file, parsed. Empty when the file is off or missing. */
-export async function readVoiceSamples(file = voiceLogSamplesFile()): Promise<Sample[]> {
-  if (!file) return [];
-  try {
-    const { size } = await stat(file);
-    const start = Math.max(0, size - TAIL_BYTES);
-    const handle = await open(file, "r");
-    try {
-      const buffer = Buffer.alloc(size - start);
-      await handle.read(buffer, 0, buffer.length, start);
-      const lines = buffer.toString("utf8").split("\n");
-      if (start > 0) lines.shift(); // probably cut mid-line
-      return lines.flatMap((line) => {
-        try {
-          return line ? [JSON.parse(line) as Sample] : [];
-        } catch {
-          return [];
-        }
-      });
-    } finally {
-      await handle.close();
-    }
-  } catch {
-    return [];
-  }
+export function readVoiceSamples(file = voiceLogSamplesFile()): Promise<Sample[]> {
+  return readJsonlTail<Sample>(file);
 }
 
 export function summarizeVoice(samples: Sample[]) {

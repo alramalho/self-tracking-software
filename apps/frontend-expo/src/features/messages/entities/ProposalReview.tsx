@@ -67,6 +67,11 @@ export function ProposalReview({
                 <ChevronRight size={14} color={c.muted} />
               )}
             </View>
+            {(status === "replaced" || status === "withdrawn") && (
+              <Text style={{ fontSize: 12, color: c.muted }}>
+                {status === "replaced" ? "Replaced by a newer suggestion" : "No longer needed"}
+              </Text>
+            )}
             {!status && description && (
               <Text style={{ fontSize: 12, color: c.muted }}>
                 {description}

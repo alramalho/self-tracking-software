@@ -45,6 +45,7 @@ import {
   getRepeatedRecentAssistantDraft,
   REPEATED_DRAFT_FAILURE_LIMIT,
 } from "./draftGuards";
+import { recordRoughEdge } from "../roughEdges";
 import {
   collectToolCallsFromSteps,
   getDraftToolCalls,
@@ -580,6 +581,8 @@ export class CoachAgentService {
         - Favor vertical and specialized plans over general ones. For example, if the user wants to both run a marathon and gain muscle mass, those are separate plans. Still propose only one new plan per response unless the user explicitly asks to batch-create several plans.
         - Propose a plan only when the user clearly asks for one, agrees to one, or gives a concrete trackable goal. Don't force every conversation into a plan. If key structure is missing, ask one blocking question instead of proposing.
         - Be proactively useful with proposal actions, but only when acceptance is very likely. For example, when the user claims they completed a trackable activity, cross-check RECENT ACTIVITY FACTS/readActivities. If no matching log exists and the quantity/date are clear enough, you should ask if they want to log it, and if they confirm, call the rightful tool to do so.
+        - Your suggested plan changes are live notes, not one-off messages. When the conversation shows one of your plan changes still pending and the user's reply changes the picture (they already did it, they're further along, they follow a specific course or book, the dates don't work), don't just answer in text: call proposePlanModification with the corrected change (it replaces the old card), or withdrawPlanChange if nothing should change now. Say what you changed in one short coach-like message, like someone updating their own notes: e.g. "Noted, self-intro's done. Your next sessions start with please, sorry and excuse me (card below)." No openers like "Perfect", "Great" or "Thanks for clarifying", and don't narrate the mechanics ("I've attached a proposal ready for you to accept"); the card speaks for itself.
+        - When the user names the course, book or source they follow, note it yourself: put "Course or book they follow: <name>" in patch.plan.notes (keeping the existing notes) and line the next sessions up with it. Look the course up with webSearch rather than asking them for a link; ask only for what you can't find, like which lesson they're on.
         - Proposal tools attach pending cards; they do not save changes. Say "proposed" or "attached for you to accept", never say you logged, saved, recorded, updated, or changed something that still requires accepting a proposal card.
         - Activity logs should default to one entry per activity per day. If the user did multiple parts/segments of the same activity on the same day, propose one log with summed quantity unless they explicitly ask for separate entries. Put useful segment names in the caption, not separate cards.
         - Activity log captions/privateNotes must earn their space. Use description for concise factual context the user would want on the timeline. Use privateNotes only for high-signal coaching evidence: blockers, difficulty, insight, failure reason, or future adjustment. Omit privateNotes when there is no such signal; never write meta filler like "user confirmed" or "completed today."
@@ -1213,6 +1216,22 @@ export class CoachAgentService {
           },
         }) }),
 
+        withdrawPlanChange: tool({
+          description: dedent`
+            Take back a plan change you suggested earlier that is still waiting (status: pending in the conversation) when the user's reply makes it wrong or unnecessary and there is nothing better to suggest instead.
+            If a corrected change makes sense, call proposePlanModification instead: the new card replaces the old one automatically.
+          `,
+          inputSchema: z.object({
+            planId: z.string().describe("The planId of the waiting suggestion"),
+            reason: z.string().max(200).describe("Why it no longer applies, for the record"),
+          }),
+          execute: async ({ planId, reason }) => {
+            if (!plans.some((plan) => plan.id === planId))
+              return { success: false, error: "No active plan with that id." };
+            logger.info(`Coach withdrew its suggested change for plan ${planId}: ${reason}`);
+            return { success: true, planId };
+          },
+        }),
         proposeActivityLog: tool({
           description: dedent`
             Propose logging an activity entry for the user. The user will be able to accept or reject with one click.
@@ -2041,6 +2060,7 @@ export class CoachAgentService {
               errorMessage: "Coach wrote unreadable JSON as plain text instead of calling draftMessages",
             };
           } else {
+            recordRoughEdge({ kind: "coach_fallback", userId: user.id, detail: resolvedModel });
             logger.warn("Coach did not call draftMessages; using raw text fallback", {
               userId: user.id,
               model: resolvedModel,
@@ -2132,6 +2152,7 @@ export class CoachAgentService {
         }
 
         if (attempt < MAX_COACH_GENERATION_ATTEMPTS - 1) {
+          recordRoughEdge({ kind: "coach_retry", userId: user.id, detail: `${failure.reason} · ${resolvedModel}` });
           logger.warn("Coach attempt rejected; retrying with repair context", {
             userId: user.id,
             model: resolvedModel,
@@ -2144,6 +2165,7 @@ export class CoachAgentService {
           continue;
         }
 
+        recordRoughEdge({ kind: "coach_failed", userId: user.id, detail: `${failure.reason} · ${resolvedModel}` });
         logger.error("Coach attempt rejected after repair", {
           userId: user.id,
           model: resolvedModel,
@@ -2316,8 +2338,18 @@ export class CoachAgentService {
         };
       });
 
+      const withdrawnPlanChanges = [
+        ...new Set(
+          allToolCalls
+            .filter((tc) => tc.tool === "withdrawPlanChange" && (tc.result as any)?.success)
+            .map((tc) => (tc.result as any).planId as string)
+            .filter((planId) => !planProposals.some((proposal: any) => proposal.planId === planId)),
+        ),
+      ];
+
       return {
         draftMessages,
+        withdrawnPlanChanges: withdrawnPlanChanges.length ? withdrawnPlanChanges : undefined,
         healthDataAccess: permittedContext.healthDataAccess,
         telemetry: {
           model: resolvedModel,

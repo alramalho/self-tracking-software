@@ -27,6 +27,7 @@ import { getCoachPersonalityConfig } from "../services/coachPersonalityService";
 import { notificationService } from "../services/notificationService";
 import { updateActivityWithMeasureConversion } from "../services/activityUpdateService";
 import { cancelPendingPlanCreationProposals } from "../services/planCreationProposalStatusService";
+import { settleOpenPlanChanges } from "../services/planChangeStatusService";
 import {
   executePlanProposalPatch,
   getProposalPatch,
@@ -2290,6 +2291,14 @@ router.post(
           savedMessages.map(({ coachMsg }) => coachMsg.id),
         );
       }
+      await settleOpenPlanChanges(
+        message.chatId,
+        {
+          replaced: aiResponse.draftMessages.flatMap((d) => d.planProposals?.map((p) => p.planId) ?? []),
+          withdrawn: aiResponse.withdrawnPlanChanges,
+        },
+        savedMessages.map(({ coachMsg }) => coachMsg.id),
+      );
 
       await prisma.chat.update({
         where: { id: message.chatId },
@@ -3186,6 +3195,14 @@ router.post(
           savedMessages.map(({ coachMsg }) => coachMsg.id),
         );
       }
+      await settleOpenPlanChanges(
+        chat.id,
+        {
+          replaced: aiResponse.draftMessages.flatMap((d) => d.planProposals?.map((p) => p.planId) ?? []),
+          withdrawn: aiResponse.withdrawnPlanChanges,
+        },
+        savedMessages.map(({ coachMsg }) => coachMsg.id),
+      );
 
       // Update chat timestamp
       await prisma.chat.update({

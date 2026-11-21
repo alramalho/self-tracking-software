@@ -4,6 +4,7 @@ import { Loader2, Play } from "lucide-react";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { BarChart, Legend, Segmented } from "./BarChart";
 import { FunnelCard } from "./FunnelCard";
+import { RoughEdgesCard } from "./RoughEdgesCard";
 import type { AnalyticsOverview, VoiceNote } from "./types";
 
 const RANGES = [7, 30, 90, 180] as const;
@@ -118,6 +119,8 @@ export function AnalyticsDashboard() {
             </Note>
           </Card>
         </section>
+
+        {data.roughEdges && <RoughEdgesCard edges={data.roughEdges} when={when} />}
 
         <Card title="Latest voice notes" aside={<span className="text-xs text-muted-foreground">{data.voiceNotes.length} most recent</span>}>
           {data.voiceNotes.length === 0 ? (

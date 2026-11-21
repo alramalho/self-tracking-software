@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { api } from "@/data/api";
+import { reportingFailures } from "@/data/roughEdges";
 import type {
   VoiceLogCoverage,
   VoiceLogCoverageRequest,
@@ -46,16 +47,17 @@ export async function previewVoiceLog(
     form.append("follow_up_context", JSON.stringify(options.followUpContext));
   }
 
-  return (
-    await api.post<VoiceLogPreview>("/voice-logs/preview", form)
-  ).data;
+  return reportingFailures("voice_note_failed", async () =>
+    (await api.post<VoiceLogPreview>("/voice-logs/preview", form)).data,
+  );
 }
 
 export async function commitVoiceLog(
   payload: VoiceLogCommitRequest,
 ): Promise<VoiceLogCommitResponse> {
-  return (await api.post<VoiceLogCommitResponse>("/voice-logs/commit", payload))
-    .data;
+  return reportingFailures("voice_note_failed", async () =>
+    (await api.post<VoiceLogCommitResponse>("/voice-logs/commit", payload)).data,
+  );
 }
 
 /** After a "What did you cover?" note on a learning plan: the coach's read, and a suggested change when there is one. */

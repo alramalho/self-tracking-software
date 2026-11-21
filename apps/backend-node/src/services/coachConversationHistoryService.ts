@@ -50,6 +50,7 @@ function getCoachProposalStateLines(metadata: unknown): string[] {
       lines.push(
         [
           "- type: plan_modification",
+          `planId: ${formatMetadataValue(proposal?.planId)}`,
           `label: ${formatMetadataValue(label)}`,
           `status: ${formatStatus(proposal?.status)}`,
         ].join("; "),
