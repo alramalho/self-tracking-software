@@ -40,6 +40,7 @@ import { containsNotificationTarget, timelineRows } from "./layout";
 import { ProfileGlow } from "@/components/ProfileGlow";
 import { PendingVoiceLogCard } from "@/features/voice-log/PendingVoiceLogCard";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
+import { MilestoneRecap } from "@/features/celebration/MilestoneRecap";
 import { usePendingVoiceLog } from "@/features/voice-log/usePendingVoiceLog";
 import { OfflineStatus } from "@/features/offline/OfflineStatus";
 import { Text } from "@/components/typography/Text";
@@ -326,6 +327,7 @@ export default function HomeScreen() {
           }
         />
         <ProfileGlow />
+        <MilestoneRecap blocked={voiceLogOpen} />
         {voiceLogOpen && (
           <VoiceLogDrawer
             initialDraft={pendingVoice.draft}

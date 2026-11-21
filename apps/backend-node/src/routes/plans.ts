@@ -879,6 +879,55 @@ router.post(
   }
 );
 
+// The app showed the Habit or Lifestyle moment: remember it, so the "earned while away" recap doesn't repeat it.
+// Progress is brought up to date first, so a badge the log just earned has its achievedAt before it's marked seen.
+router.post(
+  "/:planId/milestone-celebrated",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const key =
+        req.body?.kind === "lifestyle" ? "lifestyleAchievement" : "habitAchievement";
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: { activities: true },
+      });
+      if (!plan || plan.userId !== req.user!.id) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+      await plansService.computePlanProgress(plan, user);
+      const fresh = await prisma.plan.findUnique({
+        where: { id: planId },
+        select: { progressState: true },
+      });
+      const state = fresh?.progressState as any;
+      if (!state?.[key]?.achievedAt) {
+        res.json({ celebrated: false });
+        return;
+      }
+      state[key].celebratedAt = new Date().toISOString();
+      await prisma.plan.update({
+        where: { id: planId },
+        data: { progressState: state },
+      });
+      res.json({ celebrated: true });
+    } catch (error) {
+      logger.error("Error marking milestone celebrated:", error);
+      res.status(500).json({ error: "Failed to mark milestone celebrated" });
+    }
+  }
+);
+
 // Get plan group progress comparison for all members
 router.get(
   "/:planId/group-progress",

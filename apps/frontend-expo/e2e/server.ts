@@ -831,6 +831,26 @@ const server = http.createServer(async (req, res) => {
     send(entry);
     return;
   }
+  // Test hooks for the Habit / Lifestyle moment: merge progress into a plan, and see which badges were marked shown.
+  if (path === "/__plan-progress" && req.method === "POST") {
+    const plan = state.plans.find((p: any) => p.id === body.planId);
+    if (plan) plan.progress = { ...(plan.progress ?? {}), ...body.progress };
+    send({ ok: !!plan });
+    return;
+  }
+  if (path === "/__milestones-celebrated") {
+    send((state as any).milestonesCelebrated ?? []);
+    return;
+  }
+  const badgeShown = path.match(/^\/plans\/([^/]+)\/milestone-celebrated$/);
+  if (badgeShown && req.method === "POST") {
+    const plan: any = state.plans.find((p: any) => p.id === badgeShown[1]);
+    const key = body.kind === "lifestyle" ? "lifestyleAchievement" : "habitAchievement";
+    ((state as any).milestonesCelebrated ??= []).push({ planId: badgeShown[1], kind: body.kind });
+    if (plan?.progress?.[key]?.achievedAt) plan.progress[key].celebratedAt = new Date().toISOString();
+    send({ celebrated: !!plan?.progress?.[key]?.achievedAt });
+    return;
+  }
   if (path === "/plans") {
     send(state.plans);
     return;

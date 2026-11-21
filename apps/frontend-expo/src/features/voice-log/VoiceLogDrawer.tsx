@@ -30,6 +30,7 @@ import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { CelebrationOverlay } from "@/features/celebration/CelebrationOverlay";
 import { SavedActions } from "@/features/celebration/SavedActions";
 import { celebrationFor, type Celebration } from "@/features/celebration/model";
+import { markMilestoneCelebrated } from "@/features/celebration/milestones";
 import { useCurrentUser, useEntries, usePlans } from "@/data/queries";
 import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { CoachNote } from "@/features/messages/adaptation/CoachNote";
@@ -237,7 +238,13 @@ function voiceCelebration(logged: VoiceLogActivity[], plans: Plan[], earlier: Ac
       entries: earlier,
     });
   });
-  const main = all.find((one) => one.plan && one.plan.after > one.plan.before) ?? all.find((one) => one.plan) ?? all[0];
+  // The most to celebrate wins: a new badge, then a finished week, then a step up.
+  const main =
+    all.find((one) => one.milestone) ??
+    all.find((one) => one.weekDone) ??
+    all.find((one) => one.plan && one.plan.after > one.plan.before) ??
+    all.find((one) => one.plan) ??
+    all[0];
   const lines = all.map((one) => one.line);
   return { ...main, line: lines.length > 3 ? `${lines.slice(0, 2).join("\n")}\n+${lines.length - 2} more` : lines.join("\n") };
 }
@@ -594,7 +601,11 @@ export function VoiceLogDrawer({
       const logged = followUp
         ? []
         : preview.activities.filter((activity) => selectedActivityIDs.has(voiceLogActivityKey(activity)) && !activity.detailsOnly);
-      if (logged.length) setCelebration(voiceCelebration(logged, plans.data ?? [], earlier));
+      if (logged.length) {
+        const value = voiceCelebration(logged, plans.data ?? [], earlier);
+        setCelebration(value);
+        if (value.milestone && value.plan) void markMilestoneCelebrated(value.plan.id, value.milestone);
+      }
       if (followUp && learning) {
         setCoverage("checking");
         checkCoverage({ logged: followUp.logged.map(({ activityId, date }) => ({ activityId, date })), said: preview.transcript })

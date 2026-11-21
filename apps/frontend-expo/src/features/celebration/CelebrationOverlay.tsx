@@ -6,6 +6,12 @@
  * the week, the bar fuses and flashes, confetti bursts and rains, the flame wakes, the ribbons turn warm,
  * "Nice work!" blurs into "Week done" with a chord, and the streak goes up. It closes by itself (a tap closes
  * it sooner) and fades into the "Saved" sheet already open underneath, which holds "Share more" (20 Nov 2026).
+ *
+ * When that week takes the streak to 4 weeks (Habit) or 9 (Lifestyle), a third act follows with no pause
+ * (21 Nov 2026): the card sinks away, "Week done" gives way to "Habit formed!" or "It's a lifestyle!", the
+ * profile badge's seed (or rocket) grows in a glowing disc, the ribbons turn green (or gold), a chime plays
+ * and a second confetti burst rains. The same act plays alone ("recap") on opening the app when a badge was
+ * earned somewhere the log moment couldn't tell.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -22,12 +28,13 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
+import LottieView from "lottie-react-native";
 import { Check, Circle, Flame, Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { Text } from "@/components/typography/Text";
 import { useColors } from "@/components/ui";
-import type { Celebration } from "./model";
+import { MILESTONE_WEEKS, type Celebration, type Milestone } from "./model";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const W = 390;
@@ -46,6 +53,24 @@ const STEP_SOUNDS = [
   require("../../../assets/sounds/step-5.wav"),
 ];
 const WEEK_SOUND = require("../../../assets/sounds/week-done.wav");
+const MILESTONE_SOUND = require("../../../assets/sounds/milestone.wav");
+const GOLD = "#f5b70a";
+export const MILESTONE_LOOK: Record<Milestone, { title: string; color: string; glow: string; animation: any; confetti: string[] }> = {
+  habit: {
+    title: "Habit formed!",
+    color: GREEN,
+    glow: "rgba(34,197,94,0.22)",
+    animation: require("../../../assets/animations/seed.json"),
+    confetti: ["#22c55e", "#4ade80", "#a3e635", "#bbf7d0", "#ffffff", "#facc15"],
+  },
+  lifestyle: {
+    title: "It's a lifestyle!",
+    color: GOLD,
+    glow: "rgba(245,183,10,0.24)",
+    animation: require("../../../assets/animations/rocket.json"),
+    confetti: ["#f5b70a", "#fde047", "#f97316", "#ffffff", "#a855f7", "#fef3c7"],
+  },
+};
 
 const RIBBON_TOP = "M 470 -40 C 380 120, 260 160, 150 210 S -40 330, -80 380";
 const RIBBON_BOTTOM = "M -80 760 C 40 700, 140 690, 230 720 S 380 800, 480 740";
@@ -67,8 +92,14 @@ function playSound(player: AudioPlayer | undefined) {
     player.play();
   } catch {}
 }
-function haptic(kind: "step" | "week") {
+function haptic(kind: "step" | "week" | "milestone") {
   if (Platform.OS === "web") return;
+  if (kind === "milestone") {
+    // A success, then a heavy thump as the badge lands.
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 220);
+    return;
+  }
   void (kind === "step"
     ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -79,11 +110,14 @@ export function CelebrationOverlay({
   celebration,
   onDone,
   embedded,
+  onShow,
 }: {
   celebration: Celebration;
   onDone: () => void;
   /** Drawn inside another modal (the Saved sheet's, via LoggingDrawer's overlay) instead of opening its own. */
   embedded?: boolean;
+  /** Its own modal is on screen (iOS refuses one while another sheet is up, and then this never fires). */
+  onShow?: () => void;
 }) {
   const c = useColors();
   const reduced = useReducedMotion();
@@ -93,9 +127,13 @@ export function CelebrationOverlay({
   const plan = celebration.plan;
   const steps = plan ? Math.max(1, plan.target) : 0;
   const moves = !!plan && plan.after > plan.before;
+  const recap = !!celebration.recap;
+  const milestone: Milestone | null = celebration.milestone && (recap || (moves && celebration.weekDone)) ? celebration.milestone : null;
+  const look = milestone ? MILESTONE_LOOK[milestone] : null;
   const [done, setDone] = useState(plan?.before ?? 0);
   const [streak, setStreak] = useState(plan?.streakBefore ?? 0);
-  const players = useRef<{ step?: AudioPlayer; week?: AudioPlayer }>({});
+  const players = useRef<{ step?: AudioPlayer; week?: AudioPlayer; milestone?: AudioPlayer }>({});
+  const lottie = useRef<LottieView>(null);
   const closed = useRef(false);
 
   const wave = useSharedValue(0);
@@ -115,6 +153,10 @@ export function CelebrationOverlay({
   const stepBurst = useSharedValue(0);
   const weekBurst = useSharedValue(0);
   const rain = useSharedValue(0);
+  const mile = useSharedValue(0);
+  const badge = useSharedValue(0);
+  const mileBurst = useSharedValue(0);
+  const mileRain = useSharedValue(0);
 
   // A slow fade, so the "Saved" sheet underneath shows through rather than popping in.
   const finish = () => {
@@ -127,11 +169,17 @@ export function CelebrationOverlay({
   useEffect(() => {
     try {
       if (moves) players.current.step = createAudioPlayer(STEP_SOUNDS[Math.min(plan!.before, STEP_SOUNDS.length - 1)]);
-      if (celebration.weekDone) players.current.week = createAudioPlayer(WEEK_SOUND);
+      if (celebration.weekDone && !recap) players.current.week = createAudioPlayer(WEEK_SOUND);
+      if (milestone) players.current.milestone = createAudioPlayer(MILESTONE_SOUND);
     } catch {}
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (t: number, fn: () => void) => timers.push(setTimeout(fn, t));
     const spring = { damping: 12, stiffness: 180, mass: 0.8 };
+    const landMilestone = () => {
+      playSound(players.current.milestone);
+      haptic("milestone");
+      lottie.current?.play();
+    };
 
     if (reduced) {
       settle.value = 1;
@@ -154,7 +202,14 @@ export function CelebrationOverlay({
           haptic("week");
         }
       });
-      at(2400, () => finish());
+      if (milestone) {
+        at(recap ? 300 : 1500, () => {
+          mile.value = 1;
+          badge.value = 1;
+          landMilestone();
+        });
+      }
+      at(milestone ? 4200 : 2400, () => finish());
       return () => timers.forEach(clearTimeout);
     }
 
@@ -163,6 +218,23 @@ export function CelebrationOverlay({
     settle.value = withDelay(T_SETTLE, withTiming(1, { duration: ms(380), easing: out }));
     ribbons.value = withDelay(T_SETTLE, withTiming(1, { duration: ms(900) * 1.15, easing: out }));
     ribbons2.value = withDelay(T_SETTLE + ms(220), withTiming(1, { duration: ms(900) * 1.15, easing: out }));
+    if (recap) {
+      // Only the badge act, straight after the wave settles.
+      const tMile = T_ENTER;
+      enter[0].value = withDelay(tMile, withSpring(1, spring));
+      mile.value = withDelay(tMile, withTiming(1, { duration: ms(420), easing: out }));
+      badge.value = withDelay(tMile + ms(120), withSpring(1, { damping: 9, stiffness: 110 }));
+      mileBurst.value = withDelay(tMile + ms(260), withTiming(1, { duration: 2000, easing: Easing.linear }));
+      mileRain.value = withDelay(tMile + ms(260), withTiming(1, { duration: 4200, easing: Easing.linear }));
+      at(tMile + ms(260), landMilestone);
+      at(tMile + ms(3400), () => finish());
+      return () => {
+        timers.forEach(clearTimeout);
+        try {
+          players.current.milestone?.remove();
+        } catch {}
+      };
+    }
     enter.forEach((v, i) => (v.value = withDelay(T_ENTER + i * STAGGER, withSpring(1, spring))));
     const partCount = 3 + steps;
     parts.slice(0, partCount).forEach((v, i) => (v.value = withDelay(T_CARD_PARTS + i * PART_STAGGER, withSpring(1, spring))));
@@ -195,6 +267,16 @@ export function CelebrationOverlay({
       });
       at(tBoom + ms(300), () => setStreak(plan!.streakAfter));
       end = tBoom + ms(2200);
+      if (milestone) {
+        // Straight on from "Week done": just long enough to read the streak tick up, then the badge.
+        const tMile = tBoom + ms(1300);
+        mile.value = withDelay(tMile, withTiming(1, { duration: ms(520), easing: out }));
+        badge.value = withDelay(tMile + ms(150), withSpring(1, { damping: 9, stiffness: 110 }));
+        mileBurst.value = withDelay(tMile + ms(300), withTiming(1, { duration: 2000, easing: Easing.linear }));
+        mileRain.value = withDelay(tMile + ms(300), withTiming(1, { duration: 4200, easing: Easing.linear }));
+        at(tMile + ms(300), landMilestone);
+        end = tMile + ms(2700);
+      }
     }
     at(end + 1100, () => finish());
     return () => {
@@ -235,6 +317,19 @@ export function CelebrationOverlay({
   // didn't repaint on web; an opacity fade looks the same and works everywhere).
   const warmStyle = useAnimatedStyle(() => ({ opacity: warm.value }));
   const rootStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  // The badge act: what was there sinks and fades, the badge headline and disc come up in its place.
+  const mileStyle = useAnimatedStyle(() => ({ opacity: mile.value }));
+  const leaveStyle = useAnimatedStyle(() => ({
+    opacity: 1 - mile.value,
+    transform: [{ translateY: mile.value * 40 }, { scale: 1 - mile.value * 0.08 }],
+  }));
+  const headLeave = useAnimatedStyle(() => ({ opacity: 1 - mile.value, transform: [{ translateY: -mile.value * 16 }] }));
+  const headCome = useAnimatedStyle(() => ({ opacity: mile.value, transform: [{ translateY: (1 - mile.value) * 16 }, { scale: 0.85 + 0.15 * mile.value }] }));
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, badge.value * 2),
+    transform: [{ scale: 0.3 + 0.7 * badge.value }, { rotate: `${(1 - badge.value) * -14}deg` }],
+  }));
+  const badgeText = useAnimatedStyle(() => ({ opacity: Math.max(0, badge.value * 1.6 - 0.6), transform: [{ translateY: (1 - badge.value) * 12 }] }));
 
   const enterStyle = (v: SharedValue<number>, dy: number, from = 0.96) =>
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -265,11 +360,11 @@ export function CelebrationOverlay({
             </Svg>
           )}
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: finalBg }, reduced ? null : settleStyle]} />
-          {[c.accent, WARM].map((color, layer) => (
-            <Animated.View key={color} pointerEvents="none" style={[StyleSheet.absoluteFill, layer ? warmStyle : null]}>
+          {[c.accent, WARM, ...(look ? [look.color] : [])].map((color, layer) => (
+            <Animated.View key={`${layer}-${color}`} pointerEvents="none" style={[StyleSheet.absoluteFill, layer === 1 ? warmStyle : layer === 2 ? mileStyle : null]}>
               <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-                <AnimatedPath d={RIBBON_TOP} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[layer][0]} />
-                <AnimatedPath d={RIBBON_BOTTOM} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[layer][1]} />
+                <AnimatedPath d={RIBBON_TOP} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[Math.min(layer, 1)][0]} />
+                <AnimatedPath d={RIBBON_BOTTOM} fill="none" stroke={color} strokeWidth={58} strokeLinecap="round" strokeDasharray={`${RIBBON_LENGTH} ${RIBBON_LENGTH}`} animatedProps={ribbonLayers[Math.min(layer, 1)][1]} />
               </Svg>
             </Animated.View>
           ))}
@@ -279,13 +374,54 @@ export function CelebrationOverlay({
           <View style={[styles.headline, { top: 190 * sy }]}>
             <Animated.View style={headlineStyle}>
               <View style={styles.rollWindow}>
-                <BlurText text="Nice work!" progress={roll} out color={c.text} />
-                <BlurText text="Week done" progress={roll} color={c.text} />
+                {!recap && (
+                  <Animated.View style={[StyleSheet.absoluteFill, headLeave]}>
+                    <BlurText text="Nice work!" progress={roll} out color={c.text} />
+                    <BlurText text="Week done" progress={roll} color={c.text} />
+                  </Animated.View>
+                )}
+                {look && (
+                  <Animated.View style={[StyleSheet.absoluteFill, headCome]}>
+                    <Text testID="log-celebration-milestone" style={[styles.headlineText, styles.headlineAbs, { color: c.text }]}>
+                      {look.title}
+                    </Text>
+                  </Animated.View>
+                )}
               </View>
             </Animated.View>
           </View>
 
-          <View style={[styles.center, { top: 290 * sy }]}>
+          {look && milestone && (
+            <View pointerEvents="none" style={[styles.center, { top: 285 * sy }]}>
+              <Animated.View style={[styles.disc, { backgroundColor: look.glow, borderColor: look.color }, badgeStyle]}>
+                <View style={[styles.discInner, { backgroundColor: c.dark ? "#18181b" : "#ffffff" }]}>
+                  <LottieView
+                    ref={lottie}
+                    source={look.animation}
+                    autoPlay={reduced}
+                    loop
+                    progress={reduced && Platform.OS !== "web" ? 0.5 : undefined}
+                    resizeMode="cover"
+                    style={{ width: 150, height: 150 }}
+                    webStyle={{ width: 150, height: 150 }}
+                  />
+                </View>
+              </Animated.View>
+              <Animated.View style={[{ alignItems: "center", gap: 6 }, badgeText]}>
+                <Text style={[styles.line, { color: look.color }]} testID="log-celebration-milestone-weeks">
+                  {MILESTONE_WEEKS[milestone]} weeks in a row
+                </Text>
+                {celebration.plan && (
+                  <Text style={[styles.mileGoal, { color: c.muted }]} numberOfLines={2}>
+                    {celebration.plan.emoji} {celebration.plan.goal}
+                  </Text>
+                )}
+              </Animated.View>
+            </View>
+          )}
+
+          {!recap && (
+          <Animated.View style={[styles.center, { top: 290 * sy }, leaveStyle]}>
             <Animated.Text style={[styles.emoji, emojiStyle]}>{celebration.emoji}</Animated.Text>
             <Animated.View style={lineStyle}>
               <Text style={[styles.line, { color: c.text }]} testID="log-celebration-line">
@@ -335,13 +471,19 @@ export function CelebrationOverlay({
                 </Animated.View>
               </Animated.View>
             )}
-          </View>
+          </Animated.View>
+          )}
 
-
-          {celebration.weekDone && !reduced && (
+          {celebration.weekDone && !recap && !reduced && (
             <>
               <ConfettiBurst progress={weekBurst} x={195 * sx} y={(290 + 200) * sy} />
               <Rain progress={rain} width={width} height={height} />
+            </>
+          )}
+          {look && !reduced && (
+            <>
+              <ConfettiBurst progress={mileBurst} x={195 * sx} y={(285 + 100) * sy} colors={look.confetti} seed={57} />
+              <Rain progress={mileRain} width={width} height={height} colors={look.confetti} seed={83} />
             </>
           )}
         </Pressable>
@@ -349,7 +491,7 @@ export function CelebrationOverlay({
   );
   if (embedded) return body;
   return (
-    <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={() => finish()}>
+    <Modal transparent visible animationType="none" statusBarTranslucent onShow={onShow} onRequestClose={() => finish()}>
       {body}
     </Modal>
   );
@@ -473,8 +615,8 @@ function StepBurst({ progress, index, steps }: { progress: SharedValue<number>; 
   );
 }
 const CONFETTI = ["#22c55e", "#a3e635", "#f97316", "#facc15", "#3b82f6", "#ffffff", "#f43f5e"];
-function ConfettiBurst({ progress, x, y }: { progress: SharedValue<number>; x: number; y: number }) {
-  const list = useMemo(() => particles(110, 23, 11, CONFETTI), []);
+function ConfettiBurst({ progress, x, y, colors = CONFETTI, seed = 23 }: { progress: SharedValue<number>; x: number; y: number; colors?: string[]; seed?: number }) {
+  const list = useMemo(() => particles(110, seed, 11, colors), [colors, seed]);
   return (
     <>
       {list.map((p, i) => (
@@ -483,11 +625,11 @@ function ConfettiBurst({ progress, x, y }: { progress: SharedValue<number>; x: n
     </>
   );
 }
-function Rain({ progress, width, height }: { progress: SharedValue<number>; width: number; height: number }) {
+function Rain({ progress, width, height, colors = CONFETTI, seed = 41 }: { progress: SharedValue<number>; width: number; height: number; colors?: string[]; seed?: number }) {
   const list = useMemo(() => {
-    const r = rand(41);
-    return Array.from({ length: 110 }, (_, i) => ({ x: r() * width, vx: (r() - 0.5) * 2, vy: 2 + r() * 3, rot: r() * 6, vr: (r() - 0.5) * 0.3, w: 6 + r() * 7, h: 3 + r() * 4, color: CONFETTI[i % CONFETTI.length], delay: i * 0.84 }));
-  }, [width]);
+    const r = rand(seed);
+    return Array.from({ length: 110 }, (_, i) => ({ x: r() * width, vx: (r() - 0.5) * 2, vy: 2 + r() * 3, rot: r() * 6, vr: (r() - 0.5) * 0.3, w: 6 + r() * 7, h: 3 + r() * 4, color: colors[i % colors.length], delay: i * 0.84 }));
+  }, [width, colors, seed]);
   return (
     <>
       {list.map((p, i) => (
@@ -529,4 +671,7 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, fontWeight: "600" },
   countNum: { fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] },
   particle: { position: "absolute", left: 0, top: 0 },
+  disc: { width: 210, height: 210, borderRadius: 105, borderWidth: 3, alignItems: "center", justifyContent: "center" },
+  discInner: { width: 172, height: 172, borderRadius: 86, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  mileGoal: { fontSize: 16, lineHeight: 22, fontWeight: "600", textAlign: "center", maxWidth: 300 },
 });

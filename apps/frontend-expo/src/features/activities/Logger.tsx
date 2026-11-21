@@ -26,6 +26,7 @@ import type { VoiceLogFollowUp } from "@/features/voice-log/types";
 import { dayKey } from "@/core/dates";
 import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { celebrationFor, type Celebration } from "@/features/celebration/model";
+import { markMilestoneCelebrated } from "@/features/celebration/milestones";
 import { useOfflineLogs } from "@/features/offline/provider";
 import { FriendPicker } from "./FriendPicker";
 import { MetricLogger } from "../metrics/MetricLogger";
@@ -105,6 +106,7 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
       void client.invalidateQueries();
       setStep("saved");
       setCelebration(value);
+      if (value.milestone && value.plan) void markMilestoneCelebrated(value.plan.id, value.milestone);
     },
   });
   // Done on the Saved sheet: the usual next step (shared, difficulty, metrics), or close.
