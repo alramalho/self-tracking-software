@@ -38,3 +38,31 @@ export function getRepeatedRecentAssistantDraft(params: {
 
   return repeatedDraft?.content ?? null;
 }
+
+/**
+ * When the model skips the draftMessages tool, it sometimes writes the tool's arguments as plain
+ * text, e.g. `{"messages":[{"content":"…"}]} ꦏꦺ` with stray tokens after it. Read the messages out
+ * of that instead of sending raw JSON to the user. Returns null for JSON that can't be read, so the
+ * caller retries rather than showing it.
+ */
+export function draftsFromRawText(
+  text: string
+): Array<{ content: string; requiresReply?: boolean }> | null {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "");
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return [{ content: text }];
+  const start = trimmed.search(/[[{]/);
+  const end = Math.max(trimmed.lastIndexOf("}"), trimmed.lastIndexOf("]"));
+  try {
+    const parsed = JSON.parse(trimmed.slice(start, end + 1));
+    const list = Array.isArray(parsed) ? parsed : parsed?.messages;
+    const drafts = (Array.isArray(list) ? list : [])
+      .filter((item: any) => typeof item?.content === "string" && item.content.trim())
+      .map((item: any) => ({
+        content: item.content as string,
+        requiresReply: item.requiresReply === true,
+      }));
+    return drafts.length ? drafts : null;
+  } catch {
+    return null;
+  }
+}

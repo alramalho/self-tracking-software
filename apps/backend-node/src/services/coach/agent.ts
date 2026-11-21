@@ -41,6 +41,7 @@ import {
 } from "../coachAgentModelConfig";
 import {
   containsInternalStateLeak,
+  draftsFromRawText,
   getRepeatedRecentAssistantDraft,
   REPEATED_DRAFT_FAILURE_LIMIT,
 } from "./draftGuards";
@@ -75,7 +76,8 @@ type CoachRepairFailure = {
     | "repeated_text"
     | "internal_state_leak"
     | "duplicate_activity_log"
-    | "premature_activity_log_claim";
+    | "premature_activity_log_claim"
+    | "raw_json_text";
   source: "draftMessages" | "rawText" | "toolLoop";
   usedDraftTool: boolean;
   toolsUsed: string[];
@@ -2029,6 +2031,15 @@ export class CoachAgentService {
               toolsUsed,
               errorMessage: "Coach did not produce draftMessages or raw text",
             };
+          } else if (!draftsFromRawText(result.text)) {
+            failure = {
+              reason: "raw_json_text",
+              source: "rawText",
+              usedDraftTool: false,
+              toolsUsed,
+              rejectedText: result.text,
+              errorMessage: "Coach wrote unreadable JSON as plain text instead of calling draftMessages",
+            };
           } else {
             logger.warn("Coach did not call draftMessages; using raw text fallback", {
               userId: user.id,
@@ -2043,7 +2054,7 @@ export class CoachAgentService {
           ? []
           : successfulDraftCall
             ? (successfulDraftCall.args as any).messages
-            : [{ content: result.text }];
+            : draftsFromRawText(result.text)!;
 
         if (!failure) {
           const repeatedRawDraft = getRepeatedRecentAssistantDraft({
