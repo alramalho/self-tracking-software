@@ -51,9 +51,16 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 284 — voice notes show Saved at once, November 23, 2026
+
+**Build 284 is the latest TestFlight build**: everything on main up to `914758ab` (build 283 plus this). A voice note now shows "Saved" as soon as the save lands and refreshes the other screens in the background. Before, it waited for every query to reload (plans 4.1 s, timeline 4.6 s on 23 Nov) after a 48 ms save.
+
+- **Checks:** Playwright `share-more`, `voice-log`, `voice-log-pending`, `voice-log-review` (the "explicit before saving" case and `voice-feedback` dictation fail with or without this change).
+- **Built** with `pnpm build:testflight .release/testflight-main-914758ab/tracking.so.ipa` in worktree `tracking-celebration-saved`. IPA SHA-256 `525433e852339cd802e1d8b3dc8793b3ddd753059e59ee169f6ee9fea47d153e`, build 284, no e2e token, production API. Delivery `4f26e8d2-f301-4a68-8e2b-5ab2d0e5025f`. VALID, What to Test set, Friends & Family, beta review submitted; internal and external IN_BETA_TESTING. Not tried on a phone.
+
 ## TestFlight build 283 — Habit and Lifestyle moments, November 23, 2026
 
-**Build 283 is the latest TestFlight build**: everything on main up to `8c21239d` (build 282 plus this). When the log that finishes a week takes a plan's streak to 4 weeks (Habit) or 9 (Lifestyle), "Week done" goes straight on to "Habit formed!" (seed) or "It's a lifestyle!" (rocket). Badges earned where the log moment couldn't tell play once on Home when the app opens. The server half (`POST /plans/:id/milestone-celebrated`) is in backend image `milestone-celebration-20261121`, live since 21 Nov. It does not have the voice-note "Saving…" fix that follows it on main.
+**Build 283 was the latest TestFlight build**: everything on main up to `8c21239d` (build 282 plus this). When the log that finishes a week takes a plan's streak to 4 weeks (Habit) or 9 (Lifestyle), "Week done" goes straight on to "Habit formed!" (seed) or "It's a lifestyle!" (rocket). Badges earned where the log moment couldn't tell play once on Home when the app opens. The server half (`POST /plans/:id/milestone-celebrated`) is in backend image `milestone-celebration-20261121`, live since 21 Nov.
 
 - **Checks:** Playwright `milestone-celebration` (new, 7 tests, light and dark), `log-celebration`, `share-more`, `learning-coverage`, `follow-ups`, `logger`. Fixture iOS simulator: Habit formed! after the log that finished the 4th week; the Lifestyle recap on opening the app. `home-circle-faces` fails with or without this change.
 - **Built** with `pnpm build:testflight .release/testflight-main-8c21239d/tracking.so.ipa` in worktree `tracking-celebration-saved`. IPA SHA-256 `41f02d5c33a7ac992754fa78756d28727825474607a274e55b68483b107a7408`, build 283, no e2e token, production API. The first upload stalled for a day after the Mac lost Wi-Fi; the second went through (delivery `e991b013-173d-44af-8c9e-9dd0037caade`). VALID, What to Test set, Friends & Family, beta review submitted; internal and external IN_BETA_TESTING. Not tried on a phone.
