@@ -587,7 +587,8 @@ export function VoiceLogDrawer({
         planContextActivityId: selectedPlanMatch?.activityId ?? null,
         planContextText: selectedPlanMatch?.contextText ?? null,
       });
-      await client.invalidateQueries();
+      // Refresh everything in the background: waiting for it held "Saving…" ~5 s after a 50 ms save (23 Nov 2026).
+      void client.invalidateQueries();
       await clearPendingVoiceLog();
       onPendingChange?.(null);
       setLastSaved(
