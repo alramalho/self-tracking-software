@@ -73,6 +73,20 @@ export type RoughEdges = {
   recent: { at: string; kind: string; label: string; username: string | null; detail: string | null }[];
 };
 
+export type CoachCostPart = "chat" | "search" | "checkins" | "talk";
+
+export type CoachCosts = {
+  days: number;
+  totalUsd: number;
+  /** Chat cost (with its web searches) per chat reply. */
+  perReplyUsd: number | null;
+  perDay: ({ day: string } & Record<CoachCostPart, number>)[];
+  parts: { part: CoachCostPart; label: string; usd: number; calls: number }[];
+  models: { model: string; usd: number; calls: number }[];
+  /** Top 5 by cost; only calls logged since 24 Nov 2026 carry a person. */
+  people: { username: string | null; usd: number; calls: number }[];
+};
+
 export type AnalyticsOverview = {
   generatedAt: string;
   funnel: Funnel;
@@ -80,4 +94,5 @@ export type AnalyticsOverview = {
   voiceNotes: VoiceNote[];
   topUsers: TopUser[];
   roughEdges: RoughEdges;
+  coachCosts: CoachCosts;
 };

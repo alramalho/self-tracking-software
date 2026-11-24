@@ -62,6 +62,7 @@ async function generate<T extends z.ZodType>(
     // "low" is what the model comparison ran with.
     reasoning: resolveCoachAgentReasoning() ?? "low",
     providerOptions: buildCoachAgentProviderOptions(input.user as User, model),
+    experimental_telemetry: { isEnabled: false, functionId: "coach_scheduled" },
     output: Output.object({ schema, name }),
     // The scheduled model (DeepSeek) has no structured outputs, so it never saw the schema and guessed the
     // shape ({"messages": […]} for a nudge, no lists on a quiet review); every such run failed and retried.

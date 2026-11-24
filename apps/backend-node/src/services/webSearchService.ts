@@ -167,6 +167,7 @@ class WebSearchService {
           }) as any,
         },
         toolChoice: "auto",
+        experimental_telemetry: { isEnabled: false, functionId: "coach_web_search" },
       });
 
       const outputText = result.text || "";

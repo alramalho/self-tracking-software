@@ -83,4 +83,17 @@ export type AnalyticsOverview = {
   topUsers: TopUser[];
   /** Missing from backends older than 21 Nov 2026. */
   roughEdges?: RoughEdges;
+  coachCosts?: CoachCosts;
+};
+
+export type CoachCostPart = "chat" | "search" | "checkins" | "talk";
+
+export type CoachCosts = {
+  days: number;
+  totalUsd: number;
+  perReplyUsd: number | null;
+  perDay: ({ day: string } & Record<CoachCostPart, number>)[];
+  parts: { part: CoachCostPart; label: string; usd: number; calls: number }[];
+  models: { model: string; usd: number; calls: number }[];
+  people: { username: string | null; usd: number; calls: number }[];
 };

@@ -526,6 +526,8 @@ export class CoachAgentService {
       allowSystemInMessages: true,
       ...(temperature === undefined ? {} : { temperature }),
       providerOptions: buildCoachAgentProviderOptions(user, modelConfig),
+      // Names the coach's calls in the AI usage log (analytics: Coach costs). Tracing stays off.
+      experimental_telemetry: { isEnabled: false, functionId: "coach" },
       stopWhen: shouldStopAfterStep,
       instructions: {
         role: "system",

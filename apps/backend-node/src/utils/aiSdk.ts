@@ -4,6 +4,7 @@ import { appendFile } from "node:fs/promises";
 import * as ai from "ai";
 import { assertAiConsent } from "./aiConsent";
 import { logger } from "./logger";
+import { getCurrentUser } from "./requestContext";
 
 // Every call below first checks the signed-in person's AI consent
 // (see utils/aiConsent.ts). Outside a request (cron jobs) it does nothing;
@@ -29,6 +30,8 @@ function recordUsage(kind: string, options: any, result: any) {
       at: new Date().toISOString(),
       kind,
       name: options?.schemaName ?? options?.experimental_telemetry?.functionId ?? null,
+      // Whose call it was: the gateway user tag the coach sets, else the signed-in person.
+      userId: options?.providerOptions?.gateway?.user ?? getCurrentUser()?.id ?? null,
       model: options?.model?.modelId ?? (typeof options?.model === "string" ? options.model : null),
       costUsd: Math.round(cost * 1e6) / 1e6,
       inputTokens: usage.inputTokens ?? null,
@@ -60,11 +63,21 @@ export const Output = ai.Output;
 export const NoObjectGeneratedError = ai.NoObjectGeneratedError;
 // Loosely typed: some tool schemas don't match the SDK's zod typings yet.
 export const tool = ai.tool as any;
+/** What the usage line needs from an agent's own settings (its model, name and user). */
+function agentUsageOptions(agent: any) {
+  const settings = agent?.settings ?? {};
+  return {
+    model: settings.model,
+    experimental_telemetry: settings.experimental_telemetry,
+    providerOptions: settings.providerOptions,
+  };
+}
+
 export const ToolLoopAgent = class extends ai.ToolLoopAgent<any, any, any, any> {
   override async generate(options: any) {
     assertAiConsent();
     const result = await super.generate(options);
-    recordUsage("agent.generate", { model: (this as any).settings?.model, ...options }, result);
+    recordUsage("agent.generate", { ...agentUsageOptions(this), ...options }, result);
     return result;
   }
   override stream(options: any) {
@@ -72,7 +85,7 @@ export const ToolLoopAgent = class extends ai.ToolLoopAgent<any, any, any, any> 
     const result = super.stream(options);
     // The totals arrive when the stream ends.
     void Promise.resolve(result)
-      .then(async (r: any) => recordUsage("agent.stream", { model: (this as any).settings?.model, ...options }, { steps: await r.steps, totalUsage: await r.totalUsage }))
+      .then(async (r: any) => recordUsage("agent.stream", { ...agentUsageOptions(this), ...options }, { steps: await r.steps, totalUsage: await r.totalUsage }))
       .catch(() => {});
     return result;
   }
