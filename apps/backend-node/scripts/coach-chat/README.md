@@ -59,5 +59,10 @@ at most **two** searches per reply (the owner's call: one is too tight). First l
 one-word answer pass; `course-said-twice` asked for the course again once (24 s), so the 3/3 from the
 one-search run isn't confirmed at two.
 
+`hsk-deadline` rewritten the same day with the owner: the coach shouldn't be agreeable, so pushing back
+with a reason is fine; it still has to move forward on the course the person follows. Live gpt-6-luna, 3 runs
+(report not kept): 0/3. Every reply gives a fair reality check, then only asks (exam or word target? which
+module?) with no plan change; one run even picked the wrong course ("Chinese for Beginners").
+
 Not covered: Talk to coach and proactive messages (`scripts/coach-journeys`), plan creation
 (`scripts/plan-design-bench`).
