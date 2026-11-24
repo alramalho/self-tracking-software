@@ -497,6 +497,9 @@ export class CoachAgentService {
     const thisWeekEnd = endOfWeek(today, { weekStartsOn: 0 });
 
     let nextCitationIndex = 1;
+    // At most two web searches per reply: each costs ~15 s and a few cents (scripts/coach-chat, 24 Nov 2026).
+    const MAX_SEARCHES_PER_REPLY = 2;
+    let searchesThisReply = 0;
 
     const userFirstName =
       (user.name || "").trim().split(/\s+/)[0] || user.username;
@@ -668,7 +671,7 @@ export class CoachAgentService {
 
         webSearch: tool({
           description:
-            "Search the web for current or specialized information. You can pass one query or several alternate queries. Use repeated searches when exact URLs, playlists, titles, modules, durations, or completion-time facts are not available in the first result set.",
+            "Search the web for current or specialized information. You get at most two searches per reply, so put every alternate query you need (up to 4) in one call, and search again only if the first results missed something essential.",
           inputSchema: z.object({
             query: z
               .string()
@@ -706,6 +709,14 @@ export class CoachAgentService {
               };
             }
 
+            if (searchesThisReply >= MAX_SEARCHES_PER_REPLY) {
+              return {
+                success: false as const,
+                error: "No searches left for this reply. Answer from the results you have; say plainly what you couldn't find.",
+                results: [] as Array<{ title: string; snippet: string; url: string }>,
+              };
+            }
+            searchesThisReply++;
             await onStatus?.("searching");
 
             let searchResult = await webSearchService.searchWithOpenAI({

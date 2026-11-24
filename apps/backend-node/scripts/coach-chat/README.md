@@ -54,5 +54,10 @@ change tried with `--agent`): `course-said-twice` passes 3/3 on both models (gpt
 attaches a card each time). `hsk-deadline` still fails on both, and DeepSeek still takes 66–79 s there with a
 single search, so its slowness is reasoning over the search results, not the number of searches.
 
+Shipped 24 Nov 2026 (image `coach-gpt6-20261124`): the chat coach on gpt-6-luna (`COACH_AGENT_MODEL`) with
+at most **two** searches per reply (the owner's call: one is too tight). First live smoke run: quiz and
+one-word answer pass; `course-said-twice` asked for the course again once (24 s), so the 3/3 from the
+one-search run isn't confirmed at two.
+
 Not covered: Talk to coach and proactive messages (`scripts/coach-journeys`), plan creation
 (`scripts/plan-design-bench`).
