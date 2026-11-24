@@ -51,9 +51,15 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 285 — fair use of AI features, November 24, 2026
+
+**Build 285 is the latest TestFlight build**: everything on main up to `6dde68f5` (build 284 plus this). Every AI request (coach replies, voice logs, dictation, plan setup) counts towards a monthly allowance, 150 free and 600 with Plus, plus 20 a minute (`apps/backend-node/src/utils/fairUse.ts`). Privacy & safety shows "Used this month: X of N"; at the limit the app shows the server's message and tap logging keeps working. Paywalls say what is charged after the free week. The server half is in backend image `fair-use-20261124` (migration `20261124120000_ai_usage`), live since 24 Nov 12:59 UTC.
+
+- **Built** with `pnpm build:testflight .release/testflight-main-6dde68f5/tracking.so.ipa` in worktree `tracking-fair-use`. IPA SHA-256 `989c4ba076fdf9bcb59350efe9ac99eb3581baa932ac72f0329142c4d4627c24`, build 285, no e2e token, production API. Delivery `6d26db92-b490-455a-9e22-82fbdb22b9d3` (altool crashed after "UPLOAD SUCCEEDED", as before). VALID, What to Test set, Friends & Family, beta review submitted; internal and external IN_BETA_TESTING. Not tried on a phone.
+
 ## TestFlight build 284 — voice notes show Saved at once, November 23, 2026
 
-**Build 284 is the latest TestFlight build**: everything on main up to `914758ab` (build 283 plus this). A voice note now shows "Saved" as soon as the save lands and refreshes the other screens in the background. Before, it waited for every query to reload (plans 4.1 s, timeline 4.6 s on 23 Nov) after a 48 ms save.
+**Build 284 was the latest TestFlight build**: everything on main up to `914758ab` (build 283 plus this). A voice note now shows "Saved" as soon as the save lands and refreshes the other screens in the background. Before, it waited for every query to reload (plans 4.1 s, timeline 4.6 s on 23 Nov) after a 48 ms save.
 
 - **Checks:** Playwright `share-more`, `voice-log`, `voice-log-pending`, `voice-log-review` (the "explicit before saving" case and `voice-feedback` dictation fail with or without this change).
 - **Built** with `pnpm build:testflight .release/testflight-main-914758ab/tracking.so.ipa` in worktree `tracking-celebration-saved`. IPA SHA-256 `525433e852339cd802e1d8b3dc8793b3ddd753059e59ee169f6ee9fea47d153e`, build 284, no e2e token, production API. Delivery `4f26e8d2-f301-4a68-8e2b-5ab2d0e5025f`. VALID, What to Test set, Friends & Family, beta review submitted; internal and external IN_BETA_TESTING. Not tried on a phone.
