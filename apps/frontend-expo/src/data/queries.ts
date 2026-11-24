@@ -13,6 +13,7 @@ import type {
   Plan,
   TimelinePage,
   User,
+  AiUsage,
 } from "@/core/types";
 export const useCurrentUser = (enabled = true) =>
   useQuery({
@@ -21,6 +22,13 @@ export const useCurrentUser = (enabled = true) =>
     refetchOnWindowFocus: "always",
     refetchOnReconnect: "always",
     queryFn: async () => (await api.get<User>("/users/user")).data,
+  });
+/** This month's fair-use allowance for AI features (Terms of Service, "Fair use"). */
+export const useAiUsage = (enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ["ai-usage"],
+    queryFn: async () => (await api.get<AiUsage>("/ai/usage")).data,
   });
 export const useActivities = (enabled = true) =>
   useQuery({

@@ -6,7 +6,7 @@ import multer from "multer";
 import { subDays } from "date-fns";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
-import { requireAiConsent } from "../utils/aiConsent";
+import { aiUsage, requireAiAllowance } from "../utils/fairUse";
 import { aiService } from "../services/aiService";
 import {
   CoachAssessmentRetryError,
@@ -42,6 +42,11 @@ import type { CoachAttentionItem } from "../services/coachAttentionService";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// This month's fair-use allowance, shown in Settings (Terms of Service, "Fair use").
+router.get("/usage", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  res.json(await aiUsage(req.user!));
+});
 
 // Plans past their finishingDate stay included so attention items can drive
 // them to a decision (renew or archive).
@@ -295,7 +300,7 @@ router.post(
 router.post(
   "/coach/run-assessment",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -324,7 +329,7 @@ router.post(
 router.post(
   "/coach/messages/:messageId/retry",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -938,7 +943,7 @@ router.post(
 router.post(
   "/coach/chat",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -1162,7 +1167,7 @@ router.post(
 router.post(
   "/transcribe",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   upload.single("audio_file"),
   async (
     req: AuthenticatedRequest,
@@ -1277,7 +1282,7 @@ router.post(
 router.post(
   "/rewrite-testimonial",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -1338,7 +1343,7 @@ Make it more polished and compelling while keeping the user's authentic voice an
 router.post(
   "/messages/:messageId/accept-metric",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -1545,7 +1550,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-proposal",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -1756,7 +1761,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-plan-creation-proposal",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2099,7 +2104,7 @@ router.post(
 router.post(
   "/messages/:messageId/propose-plan-creation-changes",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2387,7 +2392,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-activity-log-proposal",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2621,7 +2626,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-activity-edit-proposal",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -2797,7 +2802,7 @@ router.post(
 router.post(
   "/messages/:messageId/accept-user-context-event-proposal",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
@@ -3000,7 +3005,7 @@ router.post(
 router.post(
   "/classify-coaching-need",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -3026,7 +3031,7 @@ router.post(
 router.post(
   "/recommend-activities",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -3063,7 +3068,7 @@ router.post(
 router.post(
   "/coach/trigger-notification",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response,

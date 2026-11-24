@@ -57,6 +57,10 @@ const period = (plan: CoachingPlan) =>
       ? `${plan.intervalCount} ${plan.interval}s`
       : plan.interval;
 
+/** What happens after the trial, in the billed amount (App Store Guideline 3.1.2). */
+export const renewalLine = (plan: CoachingPlan) =>
+  `${plan.trialDays ? `${plan.trialDays} days free, then ` : ""}${price(plan)} every ${period(plan)}. Cancel anytime.`;
+
 /** Button text for the chosen plan: the trial is the promise, otherwise the start. */
 export const paywallCta = (plan?: CoachingPlan) =>
   plan?.trialDays ? `Start my ${plan.trialDays} free days` : "Start coaching";

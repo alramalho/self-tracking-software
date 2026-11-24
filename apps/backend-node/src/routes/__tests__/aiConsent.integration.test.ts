@@ -153,3 +153,46 @@ describe("AI consent", () => {
     expect(external.runMonitoring).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("AI fair use", () => {
+  const allow = () => prisma.user.update({ where: { id: currentId }, data: { aiConsentGrantedAt: new Date() } });
+  const usage = async () => (await fetch(`${baseUrl}/ai/usage`)).json();
+
+  it("counts each AI use and shows it in /ai/usage", async () => {
+    await allow();
+    expect(await usage()).toMatchObject({ used: 0, limit: 150 });
+    expect((await transcribe()).status).toBe(200);
+    expect((await transcribe()).status).toBe(200);
+    expect(await usage()).toMatchObject({ used: 2, limit: 150 });
+  });
+
+  it("stops AI before the provider is called once the month's allowance is used", async () => {
+    await allow();
+    const { monthKey } = await import("../../utils/fairUse");
+    await prisma.aiUsage.create({ data: { userId: currentId, month: monthKey(), count: 150 } });
+    const response = await transcribe();
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ code: "AI_FAIR_USE_MONTHLY", used: 150, limit: 150 });
+    expect(external.transcribe).not.toHaveBeenCalled();
+    // The coach chat counts too.
+    const coach = await post("/chats/missing-chat/messages", { message: "hi" });
+    expect(coach.status).toBe(404); // no such chat: refused before any count
+  });
+
+  it("gives Plus a larger allowance", async () => {
+    await prisma.user.update({ where: { id: currentId }, data: { aiConsentGrantedAt: new Date(), planType: "PLUS" } });
+    const { monthKey } = await import("../../utils/fairUse");
+    await prisma.aiUsage.create({ data: { userId: currentId, month: monthKey(), count: 150 } });
+    expect((await transcribe()).status).toBe(200);
+    expect(await usage()).toMatchObject({ used: 151, limit: 600 });
+  });
+
+  it("limits bursts to 20 AI requests a minute", async () => {
+    await allow();
+    const statuses = [];
+    for (let i = 0; i < 21; i++) statuses.push((await transcribe()).status);
+    expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true);
+    expect(statuses[20]).toBe(429);
+  });
+});
+

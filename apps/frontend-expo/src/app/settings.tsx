@@ -20,6 +20,7 @@ import {
   Play,
   ShieldCheck,
   Sparkles,
+  Gauge,
   Users,
   UserX,
 } from "lucide-react-native";
@@ -32,7 +33,7 @@ import {
 import { Button, Copy, Status, useColors } from "@/components/ui";
 import { Text } from "@/components/typography/Text";
 import { useSession } from "@/auth/provider";
-import { useAction, useCurrentUser } from "@/data/queries";
+import { useAction, useAiUsage, useCurrentUser } from "@/data/queries";
 import { api } from "@/data/api";
 import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
 import { SettingsRow } from "@/features/settings/SettingsRow";
@@ -105,6 +106,7 @@ export default function Settings() {
       : disableIosNotifications(auth.userId ?? undefined),
   );
   const aiConsent = useAiConsent();
+  const aiUsage = useAiUsage(view === "privacy" && aiConsent.allowed);
   const aiOff = useAction(async () =>
     api.put("/users/ai-consent", { granted: false }),
   );
@@ -384,7 +386,13 @@ export default function Settings() {
         {view === "coach" && <CoachProfile />}
         {view === "privacy" && (
           <>
-            <SettingsGroup footer="Coach, plan setup, voice logs and dictation send your data to AI providers.">
+            <SettingsGroup
+              footer={
+                aiConsent.allowed && aiUsage.data
+                  ? `Coach, plan setup, voice logs and dictation send your data to AI providers. They're free within a fair-use allowance of ${aiUsage.data.limit} uses a month, back on the 1st.`
+                  : "Coach, plan setup, voice logs and dictation send your data to AI providers."
+              }
+            >
               <SettingsRow
                 icon={Sparkles}
                 title="AI features"
@@ -400,6 +408,14 @@ export default function Settings() {
                   />
                 }
               />
+              {aiConsent.allowed && aiUsage.data && (
+                <SettingsRow
+                  testID="ai-usage"
+                  icon={Gauge}
+                  title="Used this month"
+                  value={`${aiUsage.data.used} of ${aiUsage.data.limit}`}
+                />
+              )}
             </SettingsGroup>
             <Status error={aiOff.error} />
             {aiConsent.sheet}

@@ -98,6 +98,8 @@ for (const theme of ["LIGHT", "DARK"])
     await expect(page.getByTestId("coaching-paywall")).toBeVisible();
     // The paywall follows the route they ended on.
     await expect(page.getByTestId("paywall-compare")).toContainText("With Helly");
+    // What happens after the free week, in the billed amount (Guideline 3.1.2).
+    await expect(page.getByTestId("paywall-renewal")).toHaveText(/^7 days free, then .+ every (week|3 months)\. Cancel anytime\.$/);
     await capture(page, `07-paywall-after-${theme}`);
   });
 

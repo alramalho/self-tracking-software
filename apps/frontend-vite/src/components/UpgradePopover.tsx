@@ -7,7 +7,7 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser } from "@/contexts/users";
 import { Capacitor } from "@capacitor/core";
 import { coachingPlans } from "@/components/onboarding/api";
-import { LABELS, money, paywallCta, period, savingVsWeekly, weeksIn } from "@/components/onboarding/paywall/plans";
+import { LABELS, money, paywallCta, period, renewalLine, savingVsWeekly, weeksIn } from "@/components/onboarding/paywall/plans";
 import { useQuery } from "@tanstack/react-query";
 import { Check, CheckCircle } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -244,6 +244,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   Continue
                 </Button>
               ) : (
+                <>
+                <p className="mb-2 text-center text-[13px] text-muted-foreground">{renewalLine(currentPlan)}</p>
                 <a
                   href={currentPlan.url}
                   target="_blank"
@@ -254,6 +256,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                     {paywallCta(currentPlan)}
                   </Button>
                 </a>
+                </>
               )}
             </div>
           </Card>
@@ -269,6 +272,14 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
             >
               Terms of Service
+            </a> ·{" "}
+            <a
+              href="https://tracking.so/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
+            >
+              Privacy Policy
             </a>
           </div>
         </div>

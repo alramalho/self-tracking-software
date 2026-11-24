@@ -8,9 +8,9 @@ import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { askAiConsent, useApiWithAuth } from "@/lib/api";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { aiAllowed } from "@/components/ai-consent/AiConsentDialog";
-import type { AiConsentFields } from "@/components/ai-consent/types";
+import type { AiConsentFields, AiUsage } from "@/components/ai-consent/types";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
@@ -36,6 +36,7 @@ import {
   SquareArrowUp,
   Trash2,
   Sparkles,
+  Gauge,
   UserPlus,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
@@ -133,6 +134,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const { setDemoAchievementType } = useDemoAchievement();
   const api = useApiWithAuth();
   const queryClient = useQueryClient();
+  // This month's fair-use allowance for AI features, shown under the AI switch.
+  const aiOn = aiAllowed(currentUser as AiConsentFields | undefined);
+  const aiUsage = useQuery({
+    queryKey: ["ai-usage"],
+    enabled: activeView === "privacy" && aiOn,
+    queryFn: async () => (await api.get<AiUsage>("/ai/usage")).data,
+  });
   const [triggeringNotification, setTriggeringNotification] = useState<
     string | null
   >(null);
@@ -533,14 +541,20 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     </Button>
                     <h2 className="text-lg font-semibold mb-6">Privacy & safety</h2>
                     <div className="flex flex-col gap-6">
-                      <SettingsGroup footer="Coach, plan setup, voice logs and dictation send your data to AI providers.">
+                      <SettingsGroup
+                        footer={
+                          aiOn && aiUsage.data
+                            ? `Coach, plan setup, voice logs and dictation send your data to AI providers. They're free within a fair-use allowance of ${aiUsage.data.limit} uses a month, back on the 1st.`
+                            : "Coach, plan setup, voice logs and dictation send your data to AI providers."
+                        }
+                      >
                         <SettingsRow
                           icon={Sparkles}
                           title="AI features"
                           trailing={
                             <Switch
                               aria-label="AI features"
-                              checked={aiAllowed(currentUser as AiConsentFields | undefined)}
+                              checked={aiOn}
                               onCheckedChange={async (on) => {
                                 // Turning on shows what is shared and with whom first.
                                 if (on) return askAiConsent();
@@ -550,6 +564,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                             />
                           }
                         />
+                        {aiOn && aiUsage.data && (
+                          <SettingsRow
+                            icon={Gauge}
+                            title="Used this month"
+                            value={`${aiUsage.data.used} of ${aiUsage.data.limit}`}
+                          />
+                        )}
                       </SettingsGroup>
                       <SettingsGroup>
                         <SettingsRow

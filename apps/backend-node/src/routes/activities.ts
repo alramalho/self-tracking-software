@@ -1,6 +1,6 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 import { loadHiddenActivityIds } from "../services/plan-visibility/visibility";
-import { requireAiConsent } from "../utils/aiConsent";
+import { requireAiAllowance } from "../utils/fairUse";
 import { listActivitiesByUsage } from "@/services/activities/list";
 import { findDuplicateActivity } from "@/services/activities/duplicates";
 import { ActivityMergeError, mergeActivities } from "@/services/activities/merge";
@@ -1102,7 +1102,7 @@ router.put(
 router.post(
   "/activity-entries/:activityEntryId/reflection-reasons",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response

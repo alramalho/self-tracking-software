@@ -60,7 +60,7 @@ const tourProgress = (step: number) => Math.floor((step * 3) / TOUR_STEPS);
 import { PlanConclusion } from "./PlanConclusion";
 import { PlanVisibilityChoices } from "@/features/plans/visibility/PlanVisibility";
 import type { PlanVisibilityChoice } from "@/features/plans/visibility/types";
-import { Paywall, paywallCta, price } from "./Paywall";
+import { Paywall, paywallCta, price, renewalLine } from "./Paywall";
 import { appleBilling, buyApplePlan, loadApplePlans, restoreApplePurchases } from "@/features/billing/apple";
 import { initialCoaching } from "@/features/plans/coaching/CoachingFields";
 import { CoachSuggestion } from "./interview/CoachSuggestion";
@@ -1067,12 +1067,19 @@ export default function Onboarding({
             />
           </>
         ) : (
+          <>
+          {selectedPlan && (
+            <Text testID="paywall-renewal" style={{ color: c.muted, fontSize: 12, lineHeight: 16, textAlign: "center" }}>
+              {renewalLine(selectedPlan)}
+            </Text>
+          )}
           <EditorButton
             label={paywallCta(selectedPlan)}
             busy={checkout.isPending}
             disabled={!selectedPlan}
             onPress={() => checkout.mutate()}
           />
+          </>
         ))}
       {coachPaywall ? (
         // Free stays available, but quietly: the paywall is about the coach.

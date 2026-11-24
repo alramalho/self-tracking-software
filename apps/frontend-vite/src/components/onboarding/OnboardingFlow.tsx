@@ -55,7 +55,7 @@ import {
   wantsCircle,
 } from "./model";
 import { Paywall } from "./paywall/Paywall";
-import { paywallCta } from "./paywall/plans";
+import { paywallCta, renewalLine } from "./paywall/plans";
 import { QuestionStep } from "./questions/QuestionStep";
 import type { AiConsentFields, CoachingPlan, OnboardingFlowProps, QuestionStage } from "./types";
 import { AiConsentStep } from "./welcome/AiConsentStep";
@@ -615,6 +615,7 @@ export function OnboardingFlow({ initialGoal, flow = "onboarding" }: OnboardingF
           </>
         ) : coachPaywall ? (
           <>
+            {selectedPlan && <p className="text-center text-[13px] text-muted-foreground">{renewalLine(selectedPlan)}</p>}
             <OnboardingButton label={paywallCta(selectedPlan)} busy={busy} disabled={!selectedPlan} onClick={checkout} />
             {/* Free stays available, but quietly: the paywall is about the coach. */}
             <QuietButton label={`Continue without ${coach}`} variant="link" disabled={busy} onClick={free} />

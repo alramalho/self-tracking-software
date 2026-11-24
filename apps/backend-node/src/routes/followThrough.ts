@@ -33,7 +33,7 @@ import { Router, type Response } from "express";
 import { skipCoverage } from "@tsw/prisma/follow-through/coverage";
 import { z } from "zod/v4";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
-import { requireAiConsent } from "../utils/aiConsent";
+import { requireAiAllowance } from "../utils/fairUse";
 import {
   snapshot,
   configure,
@@ -127,7 +127,7 @@ router.post("/plans/:planId/coverage/skip", handle(async (req, res) => {
 // Talk to coach: one screen per call. The coach writes it; nothing is sent in the person's name.
 router.post(
   "/plans/:planId/talk",
-  requireAiConsent,
+  requireAiAllowance,
   rateLimit({
     windowMs: 60000,
     max: 12,
@@ -154,7 +154,7 @@ router.get(
 );
 router.post(
   "/onboarding/next",
-  requireAiConsent,
+  requireAiAllowance,
   rateLimit({
     windowMs: 60000,
     max: 10,
@@ -176,7 +176,7 @@ const designLimit = rateLimit({
 });
 router.post(
   "/onboarding/design/classify",
-  requireAiConsent,
+  requireAiAllowance,
   designLimit,
   handle(async (req, res) => {
     const input = classifyRequestSchema.parse(req.body);
@@ -231,7 +231,7 @@ router.post(
 );
 router.post(
   "/onboarding/design/subgoal",
-  requireAiConsent,
+  requireAiAllowance,
   designLimit,
   handle(async (req, res) => {
     const { question } = await nextSubgoalQuestion(subgoalRequestSchema.parse(req.body));
@@ -240,7 +240,7 @@ router.post(
 );
 router.post(
   "/onboarding/design/options",
-  requireAiConsent,
+  requireAiAllowance,
   designLimit,
   handle(async (req, res) => {
     const { timezone, progressId, ...input } = optionsRequestSchema.parse(req.body);
@@ -261,7 +261,7 @@ router.get(
 );
 router.post(
   "/onboarding/interview",
-  requireAiConsent,
+  requireAiAllowance,
   rateLimit({
     windowMs: 60000,
     max: 20,
@@ -277,7 +277,7 @@ router.post(
 );
 router.post(
   "/onboarding/goal-guidance",
-  requireAiConsent,
+  requireAiAllowance,
   rateLimit({
     windowMs: 60000,
     max: 60,

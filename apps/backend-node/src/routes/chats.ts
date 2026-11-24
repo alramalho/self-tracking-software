@@ -5,7 +5,8 @@ import { hasPermittedHealthContext } from "../services/coach/monitoring/context"
 import type { CoachConversationMessage } from "../services/coach/types";
 import type { User } from "@tsw/prisma";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
-import { AI_CONSENT_REQUIRED, hasAiConsent, requireAiConsent } from "../utils/aiConsent";
+import { AI_CONSENT_REQUIRED, hasAiConsent } from "../utils/aiConsent";
+import { requireAiAllowance, useAiAllowance } from "../utils/fairUse";
 import { aiService } from "../services/aiService";
 import {
   COACH_GENERATION_ERROR_MESSAGE,
@@ -734,7 +735,7 @@ router.get(
 router.post(
   "/coach/attention/start",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1158,7 +1159,7 @@ router.get(
 router.post(
   "/:chatId/messages/stream",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1350,6 +1351,11 @@ router.post(
       // Coach replies are AI; messages between people are not.
       if (chat.type === "COACH" && !hasAiConsent(user)) {
         return res.status(403).json(AI_CONSENT_REQUIRED);
+      }
+      // A coach reply counts towards the fair-use allowance.
+      if (chat.type === "COACH") {
+        const blocked = await useAiAllowance(user);
+        if (blocked) return res.status(429).json(blocked);
       }
       const otherParticipant = chat.participants.find((p) => p.userId !== user.id);
       if (
@@ -1698,7 +1704,7 @@ router.post(
 router.post(
   "/:chatId/messages/:messageId/rewrite/stream",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response
@@ -1813,7 +1819,7 @@ router.post(
 router.post(
   "/:chatId/messages/:messageId/rewrite",
   requireAuth,
-  requireAiConsent,
+  requireAiAllowance,
   async (
     req: AuthenticatedRequest,
     res: Response

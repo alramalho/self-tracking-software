@@ -623,6 +623,10 @@ const server = http.createServer(async (req, res) => {
     send(state.user);
     return;
   }
+  if (path === "/ai/usage") {
+    send(state.aiUsage ?? { used: 37, limit: 150, resetsAt: "2026-12-01T00:00:00.000Z" });
+    return;
+  }
   if (path === "/users/ai-consent") {
     const now = new Date().toISOString();
     if (body.granted) state.user.aiConsentGrantedAt = now;

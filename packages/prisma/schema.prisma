@@ -159,6 +159,7 @@ model User {
   reportsReceived ContentReport[] @relation("ContentReportsReceived")
   blocksMade      UserBlock[]     @relation("BlocksMade")
   blocksReceived  UserBlock[]     @relation("BlocksReceived")
+  aiUsage         AiUsage[]
 
   @@map("users")
   @@schema("public")
@@ -1684,5 +1685,18 @@ enum ContentReportStatus {
   ACTIONED
   DISMISSED
 
+  @@schema("public")
+}
+
+// AI uses per person per calendar month ("2026-11"), for the fair-use allowance (utils/fairUse.ts).
+model AiUsage {
+  userId    String
+  month     String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, month])
+  @@map("ai_usage")
   @@schema("public")
 }
