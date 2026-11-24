@@ -1,0 +1,378 @@
+{
+  "arms": [
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "passed": 3,
+      "total": 6,
+      "medianSeconds": 65.955,
+      "slowestSeconds": 79.094,
+      "coachUsd": 0.347763,
+      "judgeUsd": 0.027776
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "passed": 3,
+      "total": 6,
+      "medianSeconds": 30.831,
+      "slowestSeconds": 56.657,
+      "coachUsd": 0.28516199999999997,
+      "judgeUsd": 0.033201999999999995
+    }
+  ],
+  "results": [
+    {
+      "case": "course-said-twice",
+      "run": 0,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": true,
+      "seconds": 23.97,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply doesn't ask for the link or title again. It identifies the Peking University 'Chinese for Beginners' course on Coursera itself and moves on."
+          },
+          {
+            "pass": true,
+            "why": "It aligns the plan with the course by naming Module 2 (When Do You Go To School?) as the next step, with concrete topics, and attaches a plan change card to accept. This replaces the improvised phrase order."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves because they were frustrated at being asked for a link again. The reply resolves this by finding the course, skipping the finished Module 1 material, and offering a card to accept. It is short and moves them forward. The card text is cut off at the end, but the visible content is accurate and useful."
+      },
+      "text": "Found it: Peking University's \"Chinese for Beginners\" on Coursera, 7 modules [1]. Since Module 1 (Who Are You?) is behind you, your next sessions now run through Module 2 (When Do You Go To School?): counting, time, morning or afternoon, and busy life.\n\nThe course is saved in your Chinese notes, so future sessions keep following its order. Card below to accept.",
+      "card": "[Plan change card for \"Conversational Chinese\": Align Chinese sessions with Peking University Coursera course | {\"plan\":{\"notes\":\"Course or book they follow: Coursera \\\"Chinese for Beginners\\\" (Peking University) — https://www.coursera.org/learn/learn-chinese\\n\\nStarting level: Absolute beginner. Can say hello and their name only. Already covered greetings, goodbyes, and a basic self-introduction (Module 1 \\\"Who Are You?\\\").\\n\\nCourse structure (7 modules):\\n1. Who Are You? — Welcome; What is Your Name?; Where Are You From?; Are You a Student?; Who is He/She?\\n2. When Do You Go To School? — Can You Count?; What Time is it Now?; Morning or Afternoon?; Do You Have a Busy Life?\\n3. What Do You Like to Eat?\\n4. I Like Shopping!\\n5. Do You Live in a Big City?\\n6. How About the Weather?\\n7. What is Your Hob]",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 1,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": true,
+      "seconds": 35.086,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply doesn't ask for the link or title again. It identifies the course itself as Chinese for Beginners from Peking University on Coursera and moves on."
+          },
+          {
+            "pass": true,
+            "why": "It attaches a plan change card that aligns the plan to the course, with the module list and a next step of Module 2, replacing the improvised phrase order. The card's JSON looks truncated at the end (\"sessions\"]), but the visible content is clearly the plan alignment."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves out of frustration at being asked for a link. The reply resolves that by finding the course, confirming Module 1 is done (matching what Alex said about greetings and self-introduction), and offering to shift ahead if Alex is further along. It is short and moves things forward."
+      },
+      "text": "Noted, your Chinese now follows Peking University's Chinese for Beginners on Coursera, and your next sessions pick up at Module 2, When Do You Go To School? [1]\nIf you're already further along than Module 2, say the word and I'll shift the sessions up.",
+      "card": "[Plan change card for \"Conversational Chinese\": Align Chinese plan to Peking University Coursera course | {\"plan\":{\"notes\":\"What can you say in Chinese now? Greetings, goodbyes, thank you, and a basic self-introduction (name, where I'm from).\\n\\nStarting level: Absolute beginner. No prior study beyond hello, goodbye and giving their name.\\n\\nCourse or book they follow: Chinese for Beginners, Peking University (Coursera) — https://www.coursera.org/learn/learn-chinese\\nCourse structure (7 modules, in order):\\n1. Who Are You?\\n2. When Do You Go To School?\\n3. What Do You Like to Eat?\\n4. I Like Shopping!\\n5. Do You Live in a Big City?\\n6. How About the Weather?\\n7. What is Your Hobby?\\n\\nProgress: Module 1 (Who Are You?) covered — greetings, goodbyes, self-introduction. Next: Module 2.\"},\"sessions\"]",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 2,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": false,
+      "seconds": 65.955,
+      "searched": true,
+      "rules": [
+        "123 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "It acknowledges the 12 words/day math but then reopens the target, arguing HSK4 by March 1 is unrealistic and steering Alex toward HSK2 or HSK3 instead of building around their own figure."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card and no statement of what will change toward the 12-words/day target. It only asks for a daily time number and promises to adjust the plan afterward."
+          }
+        ],
+        "glad": false,
+        "why": "Alex just set a clear goal after researching it. The reply pushes back, lowers the target, and asks another question instead of moving forward. The realism may be accurate, but Alex would likely feel dismissed and get no progress on the plan."
+      },
+      "text": "Love the ambition, Alex, and your math checks out for the classic HSK4 list: 1,200 words across the ~97 days to March 1 is about 12 a day [1]. But HSK4 is vocab plus grammar, listening and reading, and the official standard was built for roughly two years of study, not three months [1].\nFrom greetings and a self-intro today, 12 words a day alone won't carry you to HSK4 by March 1. How much time can you realistically give daily? At ~25 minutes, HSK2 by March 1 is a genuine win; at 1-2 hours, HSK3 is in reach and HSK4 becomes a stretch goal. Tell me your daily number and I'll aim your Chinese plan at a target you can actually hit.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 0,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": false,
+      "seconds": 67.185,
+      "searched": true,
+      "rules": [
+        "2 questions",
+        "103 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "It confirms the 12-a-day math but then reopens the target, saying the plan lands nearer HSK 2, and asks whether the level or the date is fixed. It does not simply go with Alex's figure."
+          },
+          {
+            "pass": false,
+            "why": "There is no plan change card and no statement of what will change. It ends with two questions."
+          }
+        ],
+        "glad": false,
+        "why": "Alex came with a researched target and gets a long, discouraging reply with stray citation marks [1][4]. It asks two questions instead of moving the plan forward, so Alex would likely feel second-guessed rather than helped."
+      },
+      "text": "The 12-a-day math checks out for vocabulary alone: HSK 4 is 1,200 words cumulative and March 1 is about 97 days out. But words aren't the bottleneck. Peking University's HSK 1-3 courses are roughly 147 hours of material, and HSK 4 is a separate course with 424 new words plus 96 grammar points [1][4].\nAt 25-30 min a day you'd have about 45 hours by March 1, which lands nearer HSK 2 than HSK 4. Which one is fixed for you, the HSK 4 level or the March 1 date? And how many minutes a day can you realistically give your Chinese plan?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 1,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": false,
+      "seconds": 79.094,
+      "searched": true,
+      "rules": [
+        "129 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "The reply reopens Alex's target rather than going with it. It argues the math leaves zero buffer, says the pace is one 'almost nobody holds', and suggests making March 1 a lower checkpoint or pushing HSK4 later. It never accepts 12 words a day until March 1 as the plan."
+          },
+          {
+            "pass": false,
+            "why": "No plan change is made and no card is offered. It only proposes alternatives and asks which course Alex is on and how much time they have per day, then says it will rebuild the plan later. It does not say exactly what will change now."
+          }
+        ],
+        "glad": false,
+        "why": "Alex stated a clear goal and had already been asked for course details twice. The reply pushes back on the goal, suggests lowering it, and asks the same course question again without moving the plan forward. It is long and discouraging, so Alex would likely be frustrated."
+      },
+      "text": "Love the ambition, Alex. Here's the honest math: HSK4 is 1,200 words cumulative, and today to March 1 is about 97 days, so 12/day lands you right on the count with zero buffer. The catch is HSK4 also tests listening, reading, writing and grammar, and Peking University's HSK4 course alone is 10 weeks and assumes HSK1 to 3 are already done [1]. Zero to HSK4 in three months is a pace almost nobody holds.\nI'd keep HSK4 as the north star but make March 1 a checkpoint you can actually win (solid HSK2, maybe HSK3 if you go hard), or push HSK4 later. Which Peking University course are you on right now, and how much time can you give per day? Then I'll rebuild your Chinese plan around it.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 2,
+      "model": "deepseek/deepseek-v4.1-flash",
+      "pass": true,
+      "seconds": 20.533,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply doesn't ask for the link or title again. It identifies Peking University's Chinese for Beginners on Coursera on its own and includes the link in the card."
+          },
+          {
+            "pass": true,
+            "why": "It aligns the plan with the course through a plan change card and names concrete lessons: close out Module 1 today, then start Module 2 with numbers on Thursday. The improvised phrase order is dropped."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves out of frustration, and this reply stops the loop. It acknowledges the self-intro, finds the course, and gives a concrete plan in a card Alex can accept. It also offers to shift the sequence if Alex is already past Module 1. The reply is short and moves Alex forward, though it assumes Alex's current position in the course."
+      },
+      "text": "Noted, self-intro's done. Your Conversational Chinese sessions now run off Peking University's Chinese for Beginners on Coursera [1], so today closes out Module 1 (\"Are You a Student?\" and \"Who is He/She?\" plus the phonetics) and Thursday opens Module 2 with numbers.\n\nIf you're already past Module 1, say the word and I'll shift the whole sequence up.",
+      "card": "[Plan change card for \"Conversational Chinese\": Align Conversational Chinese with Peking University Coursera course | {\"plan\":{\"notes\":\"Starting level: complete beginner at plan start (could only say nihao and their name). By Nov 2026: greetings, goodbyes and a 4-sentence self-introduction are done.\\n\\nCourse or book they follow: Chinese for Beginners, Peking University on Coursera — https://www.coursera.org/learn/learn-chinese\\nStructure: 7 numbered modules (Coursera estimates ~2 weeks at 10h/week; there is no official week-by-week mapping).\\n- Module 1 \\\"Who Are You?\\\": lectures \\\"What is Your Name?\\\", \\\"Where Are You From?\\\", \\\"Are You a Student?\\\", \\\"Who is He/She?\\\" plus Mandarin phonetics\\n- Module 2 \\\"When Do You Go To School?\\\": \\\"Can You Count?\\\", \\\"What Time is it Now?\\\", \\\"Morning or Afternoon?\\\"]",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 23.768,
+      "searched": true,
+      "rules": [
+        "85 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "The reply doesn't go with Alex's figure. It questions the target, says the course isn't an HSK 4 syllabus, compares the 12 words a day against two HSK standards, and ends by asking which HSK version they mean, which reopens the target."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card is offered and the reply doesn't say what will change. It only says it will 'reshape' the plan, then asks a question, so nothing moves forward."
+          }
+        ],
+        "glad": false,
+        "why": "Alex gave a clear target, 12 words a day until March 1, after researching it. The reply is long, lectures about the course versus HSK, and asks a clarifying question instead of updating the plan. It also uses citation markers and no card. Alex would likely find it frustrating after already having to repeat themselves."
+      },
+      "text": "That’s a bold target, Alex, and the daily 12-word rhythm gives us a clear backbone for Conversational Chinese. One important distinction before I reshape it: Coursera’s Peking University course, *Chinese for Beginners*, is a seven-module speaking course, not an HSK 4 syllabus [1]. From now through March 1, 12 new words a day is about 1,176 words; that’s near the old HSK 4 total of 1,200, but far below the 2021 standard’s 3,245 cumulative words [1]. Which HSK version or vocabulary list are you targeting?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 26.393,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply does not ask for the link or title again. It identifies the course itself as Chinese for Beginners from Peking University."
+          },
+          {
+            "pass": true,
+            "why": "It attaches a plan change card that anchors the Conversational Chinese plan to the Peking University course, with the module sequence and Alex's completed basics noted, replacing the improvised phrase order."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves because the coach kept asking for a link. This reply stops asking, finds the course, and offers a card to accept. The one question at the end, about which module Alex is on, is easy to answer and moves things forward. The reply is a bit long and has a stray citation marker [1], but these are minor."
+      },
+      "text": "I found the course, *Chinese for Beginners* from Peking University. It moves from “Who Are You?” to “When Do You Go To School?” (numbers, time, and daily schedules), then through five more everyday topics [1]. I’ve proposed anchoring your Chinese plan to that course instead of my made-up phrase sequence. Which module and lesson are you on now?",
+      "card": "[Plan change card for \"Conversational Chinese\": Anchor Chinese practice to Peking University's Coursera course | {\"plan\":{\"notes\":\"Starting level: Can say nihao and my name; has completed greetings, goodbyes, and a self-introduction.\\n\\nCourse they follow: Coursera's *Chinese for Beginners* by Peking University (https://www.coursera.org/learn/learn-chinese).\\n\\nCourse module sequence:\\n1. “Who Are You?” — introductions and Mandarin phonetics\\n2. “When Do You Go To School?” — numbers, time, and daily schedules\\n3. “What Do You Like to Eat?” — food and drinks\\n4. “I Like Shopping!” — colors, sizes, prices, and bargaining\\n5. “Do You Live in a Big City?” — transportation, places, and directions\\n6. “How About the Weather?” — temperature, seasons, and health\\n7. “What is Your Hobby?” — pastimes, sports, TV]",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 22.961,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The coach identifies the course itself (Chinese for Beginners, Peking University) and never asks for the link or title again. Asking which module Alex is on is a different question."
+          },
+          {
+            "pass": true,
+            "why": "A plan change card anchors Conversational Chinese to the Coursera course and lists its module sequence, replacing the improvised phrase order."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves because they felt unheard. The coach now stops asking for a link, finds the course, and offers an acceptable plan card. The single follow-up question about their current module is easy to answer. The stray citation marker and markdown asterisks are minor flaws."
+      },
+      "text": "Found it: Coursera’s *Chinese for Beginners* by Peking University, with modules from “Who Are You?” through “What is Your Hobby?” [1] I’ve proposed anchoring your Chinese plan to that course; which module or lesson are you on now?",
+      "card": "[Plan change card for \"Conversational Chinese\": Anchor Chinese practice to Peking University's Coursera course | {\"plan\":{\"notes\":\"Starting level: Could say only basic “nihao” and their name. User reports they have already covered greetings, goodbyes, and a self-introduction.\\n\\nCourse they follow: Coursera's *Chinese for Beginners* by Peking University (https://www.coursera.org/learn/learn-chinese). Follow the course sequence rather than inventing a separate phrase curriculum. Coursera lists these modules: 1. Who Are You? (introductions, nationality, identity, family, Mandarin phonetics); 2. When Do You Go To School? (numbers, time, daily schedules); 3. What Do You Like to Eat? (food and drinks); 4. I Like Shopping! (colors, sizes, prices, bargaining); 5. Do You Live in a Big City? (transportation, lo]",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 2,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 54.725,
+      "searched": true,
+      "rules": [
+        "80 words"
+      ],
+      "failedChecks": [
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It accepts 12 words a day until March 1 and builds on it (about 1,164 words) without asking which HSK version. It does add a caveat that review, grammar, listening and reading also matter, but it doesn't reopen the figure."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card is shown and it doesn't say exactly what will change. It only offers to reshape Conversational Chinese into a dated daily roadmap and asks a question, so the plan itself is unchanged."
+          }
+        ],
+        "glad": false,
+        "why": "Alex gave a clear target and wants the plan built around it. The reply calls it 'bold', adds caveats and a citation, then asks two questions instead of delivering a card. Alex has to answer again to get anything, so this is likely to feel like a stall. The 1,164 figure and the course detail are slightly useful, but the reply is long and doesn't move Alex forward."
+      },
+      "text": "That’s a bold target, Alex. Starting tomorrow, 12 new words a day gives you about 1,164 by March 1, but reaching HSK 4 from your current basics will also take steady review, grammar, listening, and reading. Coursera’s Peking University course lists 424 new HSK 4 words across its vocabulary-and-grammar modules, followed by exercises and test strategies [1]. Would you like me to reshape Conversational Chinese into a dated daily roadmap, and which course module or lesson are you on now?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 56.657,
+      "searched": true,
+      "rules": [
+        "103 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "It reopens the target: calls it bold, questions whether it is enough, and asks which HSK 4 standard Alex means and how much time they have, rather than accepting 12 words a day until March 1."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card and no specific change stated. It only says it can reshape Conversational Chinese after Alex answers its questions, so the plan is unchanged."
+          }
+        ],
+        "glad": false,
+        "why": "Alex gave a clear target and wanted it built into the plan. The reply is long, hedges and doubts the goal, adds a citation-style tangent, and asks two questions before doing anything. Alex would likely find it frustrating after already repeating themselves."
+      },
+      "text": "That’s a bold target, Alex. From now to March 1, 12 new words a day gets you roughly 1,160 words, but you’ll also need daily review, grammar, listening, and reading; HSK 4’s vocabulary total depends on which standard you mean. The Coursera course is *Chinese for Beginners* from Peking University, a 7-module beginner course, so it can be one part of the path, not the whole HSK4 prep [1].\n\nDo you mean the older HSK 4 standard (about 1,200 words) or the newer standard, and how much time can you realistically study each day? Then I can reshape Conversational Chinese around March 1.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 2,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 30.831,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply does not ask for the link or title again. It identifies the course itself as Peking University's \"Chinese for Beginners\" on Coursera."
+          },
+          {
+            "pass": true,
+            "why": "It attaches a plan change card that aligns the Chinese sessions to the Coursera course sequence and drops the improvised phrase order. The card notes the course as the source of truth and records Alex's progress past introductions."
+          }
+        ],
+        "glad": true,
+        "why": "Alex repeated themselves because they didn't give a link, and the coach resolved it without making Alex do more work. The reply is concise, identifies the likely course, and offers an acceptable plan change card that respects the progress Alex reported. Alex would probably be glad, though the guess could be wrong and the card text is cut off."
+      },
+      "text": "Found it: you mean Peking University's “Chinese for Beginners” on Coursera. It goes from “Who Are You?” to “When Do You Go to School?”, covering numbers, time, and daily schedules, so I aligned your upcoming Chinese plan with that sequence and noted your progress past introductions. [1]",
+      "card": "[Plan change card for \"Conversational Chinese\": Align Chinese sessions to Peking University's Coursera course | {\"plan\":{\"notes\":\"Starting level: Could only say basic nǐ hǎo and their name before beginning. User reports greetings, goodbyes, and self-introduction are now covered.\\n\\nCourse or book they follow: Chinese for Beginners by Peking University on Coursera, taught by Xiaoyu Liu: https://www.coursera.org/learn/learn-chinese\\n\\nUse the Coursera course as the source of truth and follow its module sequence. The course introduces Mandarin phonetics and everyday expressions for basic conversation; it emphasizes speaking and does not require learning Chinese characters. The course guide lists Module 1, “Who Are You?” (introductions and phonetics); Module 2, “When Do You Go to School?” (numbers, time, ]",
+      "wouldWrite": []
+    }
+  ]
+}

@@ -45,5 +45,14 @@ Two runs each (`runs/2026-11-24-12-42.json`), web search on gpt-6-luna for both.
 - Luna lectures on "I lost motivation." (74–76 words); DeepSeek once offers a lighter week nobody asked for.
 - Both: "Was hast du gestern gemacht?" / "Wie viele Tage hat eine Woche?" with no English.
 
+Same day, `openai/gpt-6-luna` (`runs/2026-11-24-12-53.json`): **13/18**, median 6 s, slowest 43 s, $0.15.
+It misses only `hsk-deadline` (both runs), `course-said-twice` (asks again or no plan change) and one long
+`lost-motivation`.
+
+One web search per reply (`runs/2026-11-24-12-58-search-cap.json`, the two searching cases × 3, coach
+change tried with `--agent`): `course-said-twice` passes 3/3 on both models (gpt-6-luna was 0/2 before, now
+attaches a card each time). `hsk-deadline` still fails on both, and DeepSeek still takes 66–79 s there with a
+single search, so its slowness is reasoning over the search results, not the number of searches.
+
 Not covered: Talk to coach and proactive messages (`scripts/coach-journeys`), plan creation
 (`scripts/plan-design-bench`).

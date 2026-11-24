@@ -213,7 +213,8 @@ async function main() {
   process.env.AI_USAGE_LOG = usageFile;
 
   const aiSdk = await import("../../src/utils/aiSdk");
-  const { coachAgentService } = await import("../../src/services/coach/agent");
+  // --agent <file in src/services/coach> tries a changed coach without deploying it.
+  const { coachAgentService } = await import(`../../src/services/coach/${arg("--agent") ?? "agent"}`);
 
   const report: any[] = [];
   const arms: any[] = [];
