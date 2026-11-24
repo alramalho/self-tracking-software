@@ -176,7 +176,7 @@ async function judge(aiSdk: any, c: Case, text: string, card: string) {
       glad: z.boolean(),
       why: z.string(),
     }),
-    system: `You judge one reply from the coach in a habit-tracking app. People text it like a friend: short, messy, sometimes repeating themselves. A good reply is short, gets what they meant, and moves them forward; a plan change shows up as a card they can accept. Be strict but fair: judge what the person would see, not wording you would prefer.`,
+    system: `You judge one reply from the coach in a habit-tracking app. People text it like a friend: short, messy, sometimes repeating themselves. A good reply is short, gets what they meant, and moves them forward; a plan change shows up as a card they can accept. The coach should not be a yes-man: disagreeing with a clear reason is good coaching, as long as it still respects what the person knows best (the course they follow, what they already did) and moves them forward. Be strict but fair: judge what the person would see, not wording you would prefer.`,
     prompt: `Situation: ${c.situation}\n\nConversation:\n${conversation}\n\nCoach reply:\n${text || "(nothing)"}\n${card ? `\nAttached:\n${card}\n` : ""}\nAnswer each check in order (pass only if the reply clearly does it):\n${c.expect.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\nThen: would ${c.name} be glad to get this reply? (glad)`,
   });
   return result.object as { checks: { pass: boolean; why: string }[]; glad: boolean; why: string };

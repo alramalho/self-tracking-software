@@ -1,5 +1,7 @@
 /**
- * Chat coach cases. Every message below was really sent to the coach (Oct–Nov 2026); the conversation
+ * Chat coach cases. The coach should not be agreeable: it says what a good coach would, and defers to the
+ * person where they know better (the course or book they follow, what they already did).
+ * Every message below was really sent to the coach (Oct–Nov 2026); the conversation
  * before it is what the coach had at that moment, shortened. Expectations say what the person would
  * notice, never how the coach should do it.
  */
@@ -93,9 +95,10 @@ export const cases: Case[] = [
     entries: chineseLogs,
     history: coachAskedForLink,
     message: "was investigating, and i want to reach hsk4 till march 1, which means 12 new words per day!",
+    // Pushing back is fine: a good coach says what it thinks. It still has to move things forward.
     expect: [
-      "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
-      "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question.",
+      "Gives its honest view of the target (agreeing or pushing back with a reason); not empty praise.",
+      "Moves forward on the course they follow: a plan change card or exactly what changes, not only a question back.",
     ],
   },
   {
