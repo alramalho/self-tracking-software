@@ -51,6 +51,11 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 286 — say it on the log sheet, session as a coach sheet, November 24, 2026
+
+- Main `cc98d2e7`: "Say it instead" on the log sheet fills amount, day/time and what the session was about from one voice note (`/voice-logs/preview` with `focus_activity_id`); planned sessions open as a sheet with the coach's guide. Backend image `voice-fill-20261124` (FROM fair-use-20261124b, context deployment/tracking-voice-fill-20261124, rollback.sh).
+- **Built** with `pnpm build:testflight .release/testflight-main-cc98d2e7/tracking.so.ipa` in worktree `tracking-voice-addition`. IPA SHA-256 `eeed0439f7221088a534dfaf018124fb12b32d9162696a586af27352f18cc2bb`, build 286, no e2e token, production API. Delivery `0cdea412-4ff0-4210-a068-15076dd910a6` (altool crashed after "UPLOAD SUCCEEDED", as before). VALID, What to Test set, Friends & Family, beta review submitted; internal READY_FOR_BETA_TESTING, external IN_BETA_TESTING. Not tried on a phone.
+
 ## TestFlight build 285 — fair use of AI features, November 24, 2026
 
 **Build 285 is the latest TestFlight build**: everything on main up to `6dde68f5` (build 284 plus this). Every AI request (coach replies, voice logs, dictation, plan setup) counts towards a monthly allowance, 150 free and 600 with Plus, plus 20 a minute (`apps/backend-node/src/utils/fairUse.ts`). Privacy & safety shows "Used this month: X of N"; at the limit the app shows the server's message and tap logging keeps working. Paywalls say what is charged after the free week. The server half is in backend image `fair-use-20261124` (migration `20261124120000_ai_usage`), live since 24 Nov 12:59 UTC.
