@@ -242,8 +242,18 @@ export function Logger({ activity, initialDate, initialQuantity, onLogged, onClo
           activity={activity}
           date={date}
           quantity={quantity}
+          description={description}
           onDateChange={setDate}
           onQuantityChange={setQuantity}
+          onVoiceFill={(fill) => {
+            setError(undefined);
+            setQuantity(String(fill.quantity));
+            const when = parseLocalDate(date);
+            const [hours, minutes] = (fill.time ?? `${when.getHours()}:${when.getMinutes()}`).split(":").map(Number);
+            const [year, month, day] = fill.date.split("-").map(Number);
+            setDate(localDateTime(new Date(year, month - 1, day, hours, minutes)));
+            if (fill.description) setDescription(fill.description);
+          }}
           onNext={next}
         />
       )}

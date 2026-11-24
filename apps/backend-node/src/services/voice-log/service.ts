@@ -68,6 +68,8 @@ export async function previewVoiceLog(input: {
   clientRequestId: string;
   refinement?: VoiceLogRefinementContext;
   followUp?: VoiceLogFollowUp;
+  /** The log screen's mic: read the note as this one activity's log. */
+  focusActivityId?: string;
   now?: Date;
 }): Promise<VoiceLogPreview> {
   const previewStartedAt = Date.now();
@@ -119,20 +121,25 @@ export async function previewVoiceLog(input: {
   const sttDurationMs = Date.now() - sttStartedAt;
   if (!transcript) throw new Error("The recording did not contain speech.");
 
+  if (input.focusActivityId && !activities.some((activity) => activity.id === input.focusActivityId))
+    throw new Error("Invalid activity: no longer available");
+
   const lastLogged = new Map(
     latestEntries
       .filter((entry) => entry.activityId && entry._max.datetime)
       .map((entry) => [entry.activityId!, localDate(entry._max.datetime!, timezone)]),
   );
 
-  const activityContext = activities.map((activity) => ({
+  const activityContext = activities
+    .filter((activity) => !input.focusActivityId || activity.id === input.focusActivityId)
+    .map((activity) => ({
     activityId: activity.id,
     title: activity.title,
     emoji: activity.emoji,
     measure: activity.measure,
     lastLoggedOn: lastLogged.get(activity.id) ?? null,
   }));
-  const metricContext = metrics.map((metric) => ({
+  const metricContext = (input.focusActivityId ? [] : metrics).map((metric) => ({
     metricId: metric.id,
     title: metric.title,
     emoji: metric.emoji,
@@ -146,6 +153,7 @@ export async function previewVoiceLog(input: {
     metrics: metricContext,
     refinement: input.refinement,
     followUp: input.followUp,
+    fillingOneLog: Boolean(input.focusActivityId),
   });
   const { extraction, model, reasoningEffort } = generated;
   const modelDurationMs = generated.durationMs;
@@ -166,7 +174,7 @@ export async function previewVoiceLog(input: {
   logger.info("voice_log_preview_timing", {
     event: "voice_log_preview_timing",
     userId: input.userId,
-    mode: input.refinement ? "refinement" : input.followUp ? "follow-up" : "initial",
+    mode: input.refinement ? "refinement" : input.followUp ? "follow-up" : input.focusActivityId ? "fill-log" : "initial",
     audioBytes: input.audioBytes.length,
     transcriptCharacters: transcript.length,
     sttDurationMs,

@@ -521,6 +521,21 @@ const server = http.createServer(async (req, res) => {
   }
   if (path === "/voice-logs/preview" && req.method === "POST") {
     const date = new Date().toISOString().slice(0, 10);
+    if (body.focus_activity_id) {
+      // The log screen's mic: "I read for half an hour yesterday, chapter four of Dune" fills that one log.
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      send({
+        clientRequestId: body.client_request_id,
+        transcript: "I read for about 25 pages yesterday at nine, chapter four of Dune.",
+        activities: [
+          { activityId: body.focus_activity_id, title: "Reading", emoji: "📚", measure: "pages", quantity: 25, date: yesterday, time: "21:00", description: "Chapter four of Dune", privateNotes: null, difficulty: null, estimatedFrom: null, confidence: 0.9 },
+        ],
+        metrics: [],
+        note: { title: "Reading", text: "", date: yesterday, confidence: 0.9 },
+        unresolved: [],
+      });
+      return;
+    }
     if (body.follow_up_context) {
       // "Share more" after a log: details for the session just saved, a feeling, and the rest in the note.
       const logged = JSON.parse(body.follow_up_context).logged[0];

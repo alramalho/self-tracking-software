@@ -2,13 +2,12 @@ import { sessionDay, sessionLogDate } from "./dates";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
-import { format } from "date-fns";
+import { CalendarClock, Check, CircleDashed, Pause, Play, Sparkles, Square, Timer, Undo2 } from "lucide-react-native";
+import { addDays, format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ActivityEntry } from "@/core/types";
 import type { PracticeSession } from "@tsw/prisma/follow-through";
 import {
-  Screen,
   Button,
   Copy,
   Field,
@@ -16,11 +15,17 @@ import {
   IconButton,
   Panel,
   Status,
+  useColors,
 } from "@/components/ui";
+import { Text } from "@/components/typography/Text";
 import { goBack } from "@/core/navigation";
-import { useAction, useEntries, usePlans, usePlan } from "@/data/queries";
+import { useAction, useCurrentUser, useEntries, usePlans, usePlan } from "@/data/queries";
 import { api } from "@/data/api";
 import { Logger } from "@/features/activities/Logger";
+import { LoggingDrawer } from "@/features/activities/logging/LoggingDrawer";
+import { CoachNote } from "@/features/messages/adaptation/CoachNote";
+import { SettingsGroup } from "@/features/settings/SettingsGroup";
+import { SettingsRow } from "@/features/settings/SettingsRow";
 import { sessionPath, useFollowThrough } from "./api";
 import {
   defaultSupport,
@@ -40,7 +45,9 @@ export default function SessionScreen() {
   const query = useFollowThrough(),
     plans = usePlans(),
     entries = useEntries(),
-    client = useQueryClient();
+    client = useQueryClient(),
+    user = useCurrentUser(),
+    c = useColors();
   const session = query.data?.state.sessions[id];
   const currentPlan = usePlan(session?.planId || planId);
   const plan =
@@ -111,10 +118,35 @@ export default function SessionScreen() {
     : [];
   if (plan && query.data && isFlexiblePlan(plan, support))
     return <Redirect href={planLogPath(plan) as never} />;
+  // Logging replaces the sheet (iOS shows one modal at a time); once it closes after a save, so does this.
+  if (logging && activity && session)
+    return (
+      <Logger
+        activity={activity}
+        initialDate={sessionLogDate(session.date, session.timezone)}
+        initialQuantity={
+          /minutes?/i.test(activity.measure)
+            ? Math.floor(seconds / 60)
+            : undefined
+        }
+        onLogged={(entry) => {
+          setLog(entry);
+          complete.mutate(entry);
+        }}
+        onClose={() => (log ? goBack() : setLogging(false))}
+      />
+    );
+  const existing = plan?.sessions.find((s) => `existing:${s.id}` === id);
+  // The coach's words for today: this session's guide, else the plan's next step.
+  const guide = existing?.descriptiveGuide || support?.nextStep;
+  const notYet =
+    !activity || !session || session.date > sessionDay(new Date(), session.timezone);
   return (
-    <Screen
+    <LoggingDrawer
+      testID="session-sheet"
+      dismissLabel="Close session"
       title={plan ? `${plan.emoji} ${plan.goal}` : "Session"}
-      leading={<IconButton label="Back" icon={ArrowLeft} onPress={goBack} />}
+      onClose={goBack}
     >
       <Status
         loading={query.isLoading || plans.isLoading || currentPlan.isLoading}
@@ -129,7 +161,6 @@ export default function SessionScreen() {
       )}
       {id === "new" && plan && (
         <>
-          <Heading>Choose a slot</Heading>
           <Copy muted>
             A slot is a plan for this session. Your weekly target stays the
             same.
@@ -159,239 +190,173 @@ export default function SessionScreen() {
       )}
       {session && support && (
         <>
-          <Copy
-            muted
-          >{`${format(new Date(`${session.date}T12:00:00`), "EEEE, MMM d")} · ${session.time || "Any time"} · ${session.timezone}`}</Copy>
-          {!!support.nextStep && (
+          <Text style={{ color: c.muted, fontSize: 14, textAlign: "center", marginTop: -12 }}>
+            {sessionWhen(session)}
+          </Text>
+          {!!guide && (
+            <CoachNote strategist={user.data?.coachPersonality === "STRATEGIST"} mood="smiling">
+              <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>{guide}</Text>
+            </CoachNote>
+          )}
+          {session.source === "EXISTING" && !!existing?.targets && (
             <Panel>
-              <Copy>{support.nextStep}</Copy>
+              <SessionTargetRows targets={existing.targets} />
             </Panel>
           )}
-          {session.source === "EXISTING" &&
-            !!plan?.sessions.find((s) => `existing:${s.id}` === id)?.targets && (
-              <Panel>
-                <SessionTargetRows
-                  targets={plan!.sessions.find((s) => `existing:${s.id}` === id)!.targets!}
-                />
-              </Panel>
-            )}
-          {session.source === "EXISTING" &&
-            !!plan?.sessions.find((s) => `existing:${s.id}` === id)
-              ?.descriptiveGuide && (
-              <Panel>
-                <Copy>
-                  {
-                    plan.sessions.find((s) => `existing:${s.id}` === id)!
-                      .descriptiveGuide!
-                  }
-                </Copy>
-              </Panel>
-            )}
           {session.outcome === "UNCONFIRMED" ? (
             <>
               {support.format === "RESOURCE" && support.resourceUrl && (
-                <>
-                  <Button
-                    onPress={() => {
-                      if (/^https:\/\//i.test(support.resourceUrl!))
-                        void Linking.openURL(support.resourceUrl!).catch(
-                          setError,
-                        );
-                    }}
-                  >{`Open ${support.resourceName || "resource"}`}</Button>
-                  <Copy muted>
-                    Continue in your course, then return to log what you did.
-                  </Copy>
-                </>
+                <Button
+                  secondary
+                  onPress={() => {
+                    if (/^https:\/\//i.test(support.resourceUrl!))
+                      void Linking.openURL(support.resourceUrl!).catch(setError);
+                  }}
+                >{`Open ${support.resourceName || "resource"}`}</Button>
               )}
               {(support.format === "TIMER" ||
                 session.elapsedSeconds > 0 ||
                 session.timerRunning) && (
                 <Panel>
-                  <Heading>{clockLabel(seconds)}</Heading>
-                  <Copy
-                    muted
-                  >{`${session.durationMinutes} minutes planned`}</Copy>
-                  <Button
-                    busy={action.isPending}
-                    onPress={() =>
-                      action.mutate(session.timerRunning ? "PAUSE" : "START")
-                    }
-                  >
-                    {session.timerRunning
-                      ? "Pause timer"
-                      : seconds
-                        ? "Resume timer"
-                        : "Start timer"}
-                  </Button>
-                  {seconds > 0 && (
-                    <Button
-                      secondary
-                      busy={action.isPending}
-                      onPress={() => action.mutate("FINISH")}
-                    >
-                      Finish timer
-                    </Button>
-                  )}
-                  <Copy muted>
-                    The timer measures time. Log the activity when you are done.
-                  </Copy>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: c.text, fontSize: 24, fontFamily: "Inter-Bold" }}>{clockLabel(seconds)}</Text>
+                      <Text style={{ color: c.muted, fontSize: 13 }}>{`${session.durationMinutes} min planned`}</Text>
+                    </View>
+                    {seconds > 0 && !session.timerRunning && (
+                      <IconButton label="Finish timer" icon={Square} onPress={() => action.mutate("FINISH")} />
+                    )}
+                    <IconButton
+                      label={session.timerRunning ? "Pause timer" : seconds ? "Resume timer" : "Start timer"}
+                      icon={session.timerRunning ? Pause : Play}
+                      onPress={() => action.mutate(session.timerRunning ? "PAUSE" : "START")}
+                    />
+                  </View>
                 </Panel>
               )}
-              <Button
-                disabled={
-                  !activity ||
-                  session.date > sessionDay(new Date(), session.timezone)
-                }
-                onPress={() => {
-                  setPartial(false);
-                  setLogging(true);
-                }}
-              >
-                Log activity
-              </Button>
+              {log && complete.isError ? (
+                <>
+                  <Copy>Your activity is saved. Retry linking it to this session.</Copy>
+                  <Button busy={complete.isPending} onPress={() => complete.mutate(log)}>
+                    Link saved activity
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  disabled={notYet}
+                  onPress={() => {
+                    setPartial(false);
+                    setLogging(true);
+                  }}
+                >
+                  Log activity
+                </Button>
+              )}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="More session options"
                 accessibilityState={{ expanded: more }}
                 onPress={() => setMore(!more)}
-                style={{
-                  minHeight: 44,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
+                style={{ minHeight: 44, justifyContent: "center", alignItems: "center" }}
               >
                 <Copy muted>{more ? "Fewer options" : "More options"}</Copy>
               </Pressable>
-              {more && (
-                <Button
-                  secondary
-                  disabled={
-                    !activity ||
-                    session.date > sessionDay(new Date(), session.timezone)
-                  }
-                  onPress={() => {
-                    setPartial(true);
-                    setLogging(true);
-                  }}
-                >
-                  Partly done
-                </Button>
-              )}
               {more && matching.length > 0 && (
-                <>
-                  <Copy muted>Already logged?</Copy>
+                <SettingsGroup title="Already logged?">
                   {matching.map((entry) => (
-                    <Button
+                    <SettingsRow
                       key={entry.id}
-                      secondary
-                      busy={complete.isPending}
+                      icon={Check}
+                      title={`Use ${entry.quantity} ${activity?.measure || ""} at ${format(new Date(entry.datetime), "HH:mm")}`}
+                      disabled={complete.isPending}
                       onPress={() => {
                         setPartial(false);
                         complete.mutate(entry);
                       }}
-                    >{`Use ${entry.quantity} ${activity?.measure || ""} at ${format(new Date(entry.datetime), "HH:mm")}`}</Button>
+                    />
                   ))}
-                </>
-              )}
-              {log && complete.isError && (
-                <>
-                  <Copy>
-                    Your activity is saved. Retry linking it to this session.
-                  </Copy>
-                  <Button
-                    busy={complete.isPending}
-                    onPress={() => complete.mutate(log)}
-                  >
-                    Link saved activity
-                  </Button>
-                </>
+                </SettingsGroup>
               )}
               {more && (
-                <>
-                  <Button
-                    secondary
-                    busy={skip.isPending}
-                    onPress={() => skip.mutate()}
-                  >
-                    Not this time
-                  </Button>
-                  <Button
-                    secondary
+                <SettingsGroup>
+                  <SettingsRow
+                    icon={CircleDashed}
+                    title="Partly done"
+                    disabled={notYet}
+                    chevron
+                    onPress={() => {
+                      setPartial(true);
+                      setLogging(true);
+                    }}
+                  />
+                  <SettingsRow
+                    icon={CalendarClock}
+                    title="Move this session"
                     disabled={session.timerRunning}
+                    chevron
                     onPress={() => {
                       setDate(session.date);
                       setTime(session.time || "");
                       setEditing(!editing);
                     }}
-                  >
-                    Move this session
+                  />
+                  <SettingsRow
+                    icon={Undo2}
+                    title="Not this time"
+                    disabled={skip.isPending}
+                    onPress={() => skip.mutate()}
+                  />
+                </SettingsGroup>
+              )}
+              {more && editing && (
+                <Panel>
+                  <Field label="Day" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+                  <Field label="Time, optional" value={time} onChangeText={setTime} placeholder="18:00" />
+                  <Button busy={move.isPending} onPress={() => move.mutate()}>
+                    Save new slot
                   </Button>
-                  {editing && (
-                    <Panel>
-                      <Field
-                        label="Day"
-                        value={date}
-                        onChangeText={setDate}
-                        placeholder="YYYY-MM-DD"
-                      />
-                      <Field
-                        label="Time, optional"
-                        value={time}
-                        onChangeText={setTime}
-                        placeholder="18:00"
-                      />
-                      <Button
-                        busy={move.isPending}
-                        onPress={() => move.mutate()}
-                      >
-                        Save new slot
-                      </Button>
-                      <Button secondary onPress={() => setEditing(false)}>
-                        Cancel
-                      </Button>
-                    </Panel>
-                  )}
-                </>
+                  <Button secondary onPress={() => setEditing(false)}>
+                    Cancel
+                  </Button>
+                </Panel>
               )}
             </>
           ) : (
-            <Panel>
-              <Heading>
-                {session.outcome === "SKIPPED"
-                  ? "Not this time"
-                  : session.outcome === "PARTLY"
-                    ? "Partly done"
-                    : "Logged"}
-              </Heading>
-              <Copy>
-                {session.outcome === "SKIPPED"
-                  ? "Your next session is still there. No catching-up debt."
-                  : "Your activity is saved in your timeline and plan."}
-              </Copy>
-            </Panel>
-          )}
-          {more && (
             <>
-              <Button
-                secondary
-                onPress={() =>
-                  router.push(`/plan-support/${session.planId}` as never)
-                }
-              >
-                Plan assistance
-              </Button>
-              <Button
-                secondary
-                onPress={() =>
-                  router.push(
-                    `/plan-support/${session.planId}?tools=1` as never,
-                  )
-                }
-              >
-                Session tools
+              <Panel>
+                <Heading>
+                  {session.outcome === "SKIPPED"
+                    ? "Not this time"
+                    : session.outcome === "PARTLY"
+                      ? "Partly done"
+                      : "Logged"}
+                </Heading>
+                <Copy>
+                  {session.outcome === "SKIPPED"
+                    ? "Your next session is still there. No catching-up debt."
+                    : "Your activity is saved in your timeline and plan."}
+                </Copy>
+              </Panel>
+              <Button secondary onPress={goBack}>
+                Done
               </Button>
             </>
+          )}
+          {more && (
+            <SettingsGroup>
+              <SettingsRow
+                icon={Sparkles}
+                title="Plan assistance"
+                chevron
+                onPress={() => router.push(`/plan-support/${session.planId}` as never)}
+              />
+              <SettingsRow
+                icon={Timer}
+                title="Session tools"
+                chevron
+                onPress={() => router.push(`/plan-support/${session.planId}?tools=1` as never)}
+              />
+            </SettingsGroup>
           )}
         </>
       )}
@@ -405,30 +370,24 @@ export default function SessionScreen() {
           error
         }
       />
-      {session && session.outcome !== "UNCONFIRMED" && (
-        <Button
-          secondary
-          onPress={() => router.replace("/(tabs)/plans?view=week" as never)}
-        >
-          Back to this week
-        </Button>
-      )}
-      {logging && activity && session && (
-        <Logger
-          activity={activity}
-          initialDate={sessionLogDate(session.date, session.timezone)}
-          initialQuantity={
-            /minutes?/i.test(activity.measure)
-              ? Math.floor(seconds / 60)
-              : undefined
-          }
-          onLogged={(entry) => {
-            setLog(entry);
-            complete.mutate(entry);
-          }}
-          onClose={() => setLogging(false)}
-        />
-      )}
-    </Screen>
+    </LoggingDrawer>
   );
+}
+
+/** "Today · Any time", with the session's time zone only when it isn't this phone's. */
+function sessionWhen(session: PracticeSession) {
+  const today = sessionDay(new Date(), session.timezone);
+  const day = new Date(`${session.date}T12:00:00`);
+  const label =
+    session.date === today
+      ? "Today"
+      : session.date === format(addDays(new Date(`${today}T12:00:00`), -1), "yyyy-MM-dd")
+        ? "Yesterday"
+        : session.date === format(addDays(new Date(`${today}T12:00:00`), 1), "yyyy-MM-dd")
+          ? "Tomorrow"
+          : format(day, "EEEE, MMM d");
+  const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return [label, session.time || "Any time", session.timezone !== here ? session.timezone : null]
+    .filter(Boolean)
+    .join(" · ");
 }

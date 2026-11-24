@@ -121,6 +121,8 @@ export interface PreviewVoiceLogOptions {
   clientRequestId: string;
   refinementContext?: VoiceLogRefinementContext;
   followUpContext?: VoiceLogFollowUp;
+  /** The log screen's mic: read the note as this activity's log only. */
+  focusActivityId?: string;
 }
 
 export interface VoiceLogCommitActivity {

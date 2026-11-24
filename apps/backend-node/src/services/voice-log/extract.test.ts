@@ -4,7 +4,7 @@ vi.mock("../../utils/aiSdk", () => ({ generateObject: vi.fn() }));
 vi.mock("../../utils/prisma", () => ({ prisma: {} }));
 vi.mock("../sttService", () => ({ sttService: {} }));
 
-import { normalizeExtraction, roundQuantity, VOICE_LOG_PROMPT } from "./extract";
+import { extractionPrompt, normalizeExtraction, roundQuantity, VOICE_LOG_PROMPT } from "./extract";
 import { voiceLogSamplesFile } from "./samples";
 import { entryDescription } from "./service";
 import type { VoiceLogModelOutput } from "./types";
@@ -169,5 +169,21 @@ describe("voice-log benchmark scoring", () => {
   it("passes the right answer and flags a wrong amount", () => {
     expect(score(decimal, extraction(5.4))).toEqual([]);
     expect(score(decimal, extraction(7))).toEqual(["running quantity 7 ≠ 5"]);
+  });
+});
+
+describe("filling one log from the log screen's mic", () => {
+  it("tells the model which activity the note is about", () => {
+    const prompt = JSON.parse(
+      extractionPrompt("studied for an hour, HSK 3 vocab", new Date("2026-11-24T12:00:00Z"), "Europe/Lisbon", [activities[1]], [], undefined, true),
+    );
+    expect(prompt.fillingOneLog).toEqual({ activityId: "side" });
+    expect(prompt.activities).toHaveLength(1);
+    expect(VOICE_LOG_PROMPT).toContain("fillingOneLog");
+  });
+
+  it("leaves ordinary notes unchanged", () => {
+    const prompt = JSON.parse(extractionPrompt("ran 5k", new Date("2026-11-24T12:00:00Z"), "UTC", activities, metrics));
+    expect(prompt.fillingOneLog).toBeUndefined();
   });
 });

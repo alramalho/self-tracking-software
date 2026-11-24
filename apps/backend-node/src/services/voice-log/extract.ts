@@ -57,6 +57,10 @@ Follow-up notes ("Share more"):
 - Feelings and energy go to metrics only when a catalog metric fits and they rate or clearly describe it; how it felt also goes in the note.
 - Log a different activity only when they clearly say they also did it.
 
+Filling one log (fillingOneLog):
+- When fillingOneLog is present, the person is on that activity's log screen and is saying what they did instead of typing it. The catalog holds only that activity, and everything said is about it: return exactly one activity entry for it whenever they say they did it, even if they name it differently ("studied", "practised", "did my lesson").
+- description is what the session was about (topics, exercises, pieces, pages, route) in their words and language; how it felt goes in difficulty and the note, not in description.
+
 Return only the requested structured object.`;
 
 export const VOICE_LOG_REFINEMENT_PROMPT = `You update a tracking.so voice-log draft using a short spoken correction.
@@ -110,6 +114,7 @@ export function extractionPrompt(
   activities: VoiceLogActivityContext[],
   metrics: VoiceLogMetricContext[],
   followUp?: VoiceLogFollowUp,
+  fillingOneLog?: boolean,
 ) {
   return JSON.stringify({
     transcript,
@@ -120,6 +125,7 @@ export function extractionPrompt(
     activities,
     metrics,
     ...(followUp ? { alreadyLogged: followUp.logged } : {}),
+    ...(fillingOneLog ? { fillingOneLog: { activityId: activities[0]?.activityId } } : {}),
   });
 }
 
@@ -308,6 +314,8 @@ export async function extractVoiceLog(input: {
   metrics: VoiceLogMetricContext[];
   refinement?: VoiceLogRefinementContext;
   followUp?: VoiceLogFollowUp;
+  /** The log screen's mic: the catalog is that one activity, and the note fills its log. */
+  fillingOneLog?: boolean;
   model?: string;
   reasoningEffort?: string;
   /** Benchmark only: compare against an earlier prompt. */
@@ -343,6 +351,7 @@ export async function extractVoiceLog(input: {
           input.activities,
           input.metrics,
           input.followUp,
+          input.fillingOneLog,
         ),
   });
   const extraction = normalizeExtraction(

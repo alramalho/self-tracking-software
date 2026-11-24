@@ -6,14 +6,17 @@ import { Text } from "@/components/typography/Text";
 import { Button, IconButton, useColors } from "@/components/ui";
 import { localDateTime, parseLocalDate } from "@/core/dates";
 import { LoggingCalendar } from "./LoggingCalendar";
+import { VoiceFillButton } from "./VoiceFillButton";
 import type { QuantityStepProps } from "./types";
 
 export function QuantityStep({
   activity,
   date,
   quantity,
+  description,
   onDateChange,
   onQuantityChange,
+  onVoiceFill,
   onNext,
 }: QuantityStepProps) {
   const c = useColors();
@@ -195,6 +198,18 @@ export function QuantityStep({
             </Pressable>
           ))}
         </View>
+      </View>
+      <View style={{ gap: 10 }}>
+        <VoiceFillButton activity={activity} onFill={onVoiceFill} />
+        {!!description && (
+          <Text
+            testID="voice-fill-description"
+            numberOfLines={3}
+            style={{ color: c.muted, fontSize: 14, fontStyle: "italic", textAlign: "center" }}
+          >
+            “{description}”
+          </Text>
+        )}
       </View>
       <Button disabled={!Number(quantity)} onPress={onNext}>
         Log Activity

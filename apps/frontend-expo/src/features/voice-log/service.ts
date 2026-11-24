@@ -43,6 +43,9 @@ export async function previewVoiceLog(
       JSON.stringify(options.refinementContext),
     );
   }
+  if (options.focusActivityId) {
+    form.append("focus_activity_id", options.focusActivityId);
+  }
   if (options.followUpContext) {
     form.append("follow_up_context", JSON.stringify(options.followUpContext));
   }

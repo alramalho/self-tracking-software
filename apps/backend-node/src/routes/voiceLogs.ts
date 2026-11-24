@@ -77,6 +77,11 @@ router.post(
         followUp = parsedFollowUp.data;
       }
 
+      const focusActivityId =
+        typeof req.body.focus_activity_id === "string" && req.body.focus_activity_id.trim()
+          ? req.body.focus_activity_id.trim()
+          : undefined;
+
       const preview = await previewVoiceLog({
         userId: req.user!.id,
         audioBytes: req.file.buffer,
@@ -85,10 +90,16 @@ router.post(
         clientRequestId: clientRequestId.data,
         refinement,
         followUp,
+        focusActivityId,
       });
       res.json(preview);
     } catch (error) {
       logger.error("Error creating voice log preview:", error);
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("no longer available")) {
+        res.status(400).json({ error: message });
+        return;
+      }
       res.status(500).json({ error: "Voice log processing failed" });
     }
   },

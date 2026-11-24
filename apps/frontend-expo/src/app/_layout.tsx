@@ -38,7 +38,7 @@ function Routes() {
             <Stack.Screen name="create-plan" />
             <Stack.Screen name="onboarding" options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="create-plan-advanced" />
-            <Stack.Screen name="session/[id]" />
+            <Stack.Screen name="session/[id]" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="plan-support/[id]" />
             <Stack.Screen name="circle/[id]" />
             <Stack.Screen name="circle-match" options={{ presentation: "fullScreenModal" }} />

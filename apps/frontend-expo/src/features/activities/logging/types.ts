@@ -25,9 +25,26 @@ export interface QuantityStepProps {
   activity: Activity;
   date: string;
   quantity: string;
+  /** What the session was about, when the mic filled it in. */
+  description?: string;
   onDateChange: (value: string) => void;
   onQuantityChange: (value: string) => void;
+  onVoiceFill: (fill: VoiceFill) => void;
   onNext: () => void;
+}
+
+/** What a spoken note filled in on the log screen. */
+export interface VoiceFill {
+  quantity: number;
+  /** YYYY-MM-DD, and HH:mm when they said a time. */
+  date: string;
+  time?: string | null;
+  description: string;
+}
+
+export interface VoiceFillButtonProps {
+  activity: Activity;
+  onFill: (fill: VoiceFill) => void;
 }
 
 export interface PhotoStepProps {
