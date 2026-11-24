@@ -7,8 +7,8 @@ const weekday = (day: string) =>
   new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
 
 /** Daily bars, stacked by segment; Sundays shaded so weeks are easy to read. */
-export function BarChart({ bars, maxLabel }: { bars: Bar[]; maxLabel?: (max: number) => string }) {
-  const max = Math.max(1, ...bars.map((b) => b.segments.reduce((n, s) => n + s.value, 0)));
+export function BarChart({ bars, maxLabel, floor = 1 }: { bars: Bar[]; maxLabel?: (max: number) => string; floor?: number }) {
+  const max = Math.max(floor, ...bars.map((b) => b.segments.reduce((n, s) => n + s.value, 0)));
   return (
     <div>
       <span className="text-xs text-muted-foreground">{maxLabel ? maxLabel(max) : Math.round(max)}</span>

@@ -29,6 +29,7 @@ export function CoachCostsCard({ costs }: { costs: CoachCosts }) {
       </div>
       <BarChart
         maxLabel={usd}
+        floor={0.01}
         bars={costs.perDay.map((d) => ({
           key: d.day,
           title: `${short(d.day)}: ${usd(parts.reduce((n, p) => n + d[p], 0))}`,
@@ -67,7 +68,7 @@ function Rows({ title, rows, empty }: { title: string; rows: { key: string; labe
         )}
         {rows.map((r) => (
           <tr key={r.key} className="border-t border-foreground/5">
-            <td className="max-w-0 truncate py-1.5 pr-3">{r.label}</td>
+            <td className="py-1.5 pr-3 break-words">{r.label}</td>
             <td className="py-1.5 pr-3 text-right tabular-nums text-muted-foreground">{r.calls}</td>
             <td className="py-1.5 text-right tabular-nums">{usd(r.usd)}</td>
           </tr>
