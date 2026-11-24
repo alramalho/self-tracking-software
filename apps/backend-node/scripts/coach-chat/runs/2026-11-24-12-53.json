@@ -1,0 +1,525 @@
+{
+  "arms": [
+    {
+      "model": "openai/gpt-6-luna",
+      "passed": 13,
+      "total": 18,
+      "medianSeconds": 5.738,
+      "slowestSeconds": 43.423,
+      "coachUsd": 0.153066,
+      "judgeUsd": 0.081056
+    }
+  ],
+  "results": [
+    {
+      "case": "course-said-twice",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 18.808,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [
+        "Lines their plan up with that course (a plan change card or the course's next concrete lesson), not the improvised phrase order."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply doesn't ask for the link or title again. It says it found the course itself, 'Chinese for Beginners' from Peking University."
+          },
+          {
+            "pass": false,
+            "why": "It says it will use the course as the roadmap but gives no plan change card and no concrete next lesson. It only names the first module and asks which module Alex is on, so the plan isn't actually lined up yet."
+          }
+        ],
+        "glad": false,
+        "why": "Alex is repeating themselves and wants the coach to move on. The reply avoids asking for the link again, which helps. But it then asks another question about the current module and shows no card. The citation marker [1] and the claim of 'found' a course are also unverified and might not match Alex's course. Alex would probably feel only partly helped."
+      },
+      "text": "I found Peking University’s Coursera course *Chinese for Beginners*. It has seven modules, starting with “Who Are You?” [1] I’ll use that as the roadmap for Conversational Chinese rather than my own phrase sequence. Which module or lesson are you on now?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "course-said-twice",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 20.351,
+      "searched": true,
+      "rules": [],
+      "failedChecks": [
+        "Does not ask for the link or the course title again; finds the course itself.",
+        "Lines their plan up with that course (a plan change card or the course's next concrete lesson), not the improvised phrase order."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "It tries to find the course itself, but it then asks Alex which course they are following and which lesson they are on. That is the same information the coach already requested, so it is effectively asking for the title again."
+          },
+          {
+            "pass": false,
+            "why": "It offers no plan change card and no concrete next lesson from the course. It only promises to anchor the plan once Alex answers, so nothing is lined up yet. The \"[1]\" citation is also stray, unexplained clutter."
+          }
+        ],
+        "glad": false,
+        "why": "Alex repeated the sentence twice and hoped the coach would take it from there. This reply asks a clarifying question and delivers nothing new, so it feels like another round of homework. Naming two candidate courses is slightly helpful, but Alex would likely be mildly annoyed rather than glad."
+      },
+      "text": "I found Peking University’s *Chinese for Beginners* on Coursera, as well as its separate *Chinese for HSK 1* course [1]. Which one are you following, and what lesson or module are you on? I’ll anchor Conversational Chinese to that course instead of guessing the next topics.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 21.941,
+      "searched": true,
+      "rules": [
+        "2 questions",
+        "99 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "The reply doubts Alex's target, calls it a steep stretch, and asks whether they mean passing the exam or working through the material. That reopens the goal instead of going with 12 words a day until March 1."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card is shown and the reply doesn't say what will change. It only asks two questions about how to shape the plan, so nothing moves forward."
+          }
+        ],
+        "glad": false,
+        "why": "Alex gave a clear target and wanted it set up. The reply pushes back, adds a '[1]' citation with no source, and asks two more questions, so it's longer than needed and ends with no card to accept."
+      },
+      "text": "That’s a bold target, Alex. I found the course, Peking University’s *Chinese for HSK 4*, listed as 10 modules [1]. From your beginner starting point, reaching HSK 4 by March 1 is a steep stretch: 12 new words daily is roughly 1,150 words by then, but vocabulary alone won’t build the listening, reading, and grammar you’ll need.\n\nWhen you say “reach HSK 4,” do you mean pass the exam by March 1 or work through the HSK 4 material? And should I shape Conversational Chinese into a structured daily course-and-review sprint, or keep it as a flexible 12-words-a-day target?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "already-did-that",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 5.738,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply opens with \"You're right\" and accepts that greetings, goodbyes and the self-introduction are done. It does not suggest any of them again."
+          },
+          {
+            "pass": true,
+            "why": "It names a concrete next step: today's set of please, sorry, excuse me, no problem and \"I don't understand.\""
+          }
+        ],
+        "glad": true,
+        "why": "Alex's correction is accepted without argument, and the reply goes straight to new material. It is short and useful, so Alex would likely be glad to get it."
+      },
+      "text": "You're right, you've already covered greetings, goodbyes, and your self-introduction. The next step in Conversational Chinese is today's set: please, sorry, excuse me, no problem, and “I don't understand.”",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "already-did-that",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 5.591,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply accepts Alex's statement ('Got it, greetings and your self-introduction are already covered') and does not suggest redoing greetings, goodbyes, or the self-introduction."
+          },
+          {
+            "pass": true,
+            "why": "It gives a clear next step: today's polite phrases (please, sorry, excuse me, no problem, 'I don't understand'), which moves Alex forward."
+          }
+        ],
+        "glad": true,
+        "why": "The reply is short, acknowledges the correction without arguing, and gives a concrete next lesson. Alex would likely feel heard and ready to continue. A minor risk is the claim that practice is 'logged', but it is not likely to bother Alex."
+      },
+      "text": "Got it, greetings and your self-introduction are already covered, and your recent practice is logged. Your next step in Conversational Chinese is today’s polite phrases: please, sorry, excuse me, no problem, and “I don’t understand.”",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "lost-motivation",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 3.643,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "Two short, warm sentences plus one question. No list and no lecture, and it reads like a friend texting."
+          },
+          {
+            "pass": true,
+            "why": "It suggests shrinking the next step to 10 minutes of movement and asks a clarifying question about whether the dip is training-specific or general. That moves Alex toward a small action."
+          },
+          {
+            "pass": true,
+            "why": "It only proposes a smaller session today (10 minutes) and does not touch the weekly target or the plan."
+          }
+        ],
+        "glad": true,
+        "why": "Alex gets empathy, a doable next step and an easy question to answer. It is a bit advice-heavy for such a short message, but it is warm and low-pressure, so Alex would likely be glad."
+      },
+      "text": "I’m sorry, Alex. You don’t have to solve the whole motivation dip today; shrink the next step until it feels doable, even 10 minutes of movement, then count showing up as a win.\nIs this mostly about training, or are you feeling drained more generally?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "lost-motivation",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 3.604,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "Two short, conversational sentences with no lecture and no list of tips."
+          },
+          {
+            "pass": true,
+            "why": "It offers one tiny step: put on your gear and do 10 easy minutes."
+          },
+          {
+            "pass": true,
+            "why": "It keeps the weekly target as is. 'Continue with your training plan' reads as carrying on past the 10 minutes, not changing the plan."
+          }
+        ],
+        "glad": false,
+        "why": "The tiny-step idea fits, but the reply claims Alex 'got to the gym yesterday and ran Friday'. Yesterday is Friday, and only one session was logged, so this reads as an invented or doubled detail. That undercuts the encouragement and could feel like the coach isn't paying attention."
+      },
+      "text": "That dip is real, but it doesn’t erase the fact you got to the gym yesterday and ran Friday. Don’t wait to feel fired up; make the next step tiny, like putting on your gear and doing 10 easy minutes, then decide if you want to continue with your training plan.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "one-word-answer",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 4.417,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply does not echo 'today'; it builds on it by shrinking the session into a small, concrete first step."
+          },
+          {
+            "pass": true,
+            "why": "It offers the smallest version of the session (get changed, do 10 easy minutes, permission to stop) in two short sentences."
+          }
+        ],
+        "glad": true,
+        "why": "Alex feels flat and the session is today, so a low-pressure 10-minute start with permission to stop is easy to say yes to. It's short, friendly and moves them forward. A check-in or time would be a bonus but isn't needed."
+      },
+      "text": "Then let’s make today’s win small: get changed and start with 10 easy minutes. You can stop there if you still feel flat, but give yourself the chance to find a little momentum once you’re moving.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "one-word-answer",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 2.132,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It doesn't echo 'today'; it reframes the goal as just showing up and starting."
+          },
+          {
+            "pass": true,
+            "why": "It offers the smallest version: show up, keep it easy and short, and make starting the goal. It's concise, though it names no time or check-in."
+          }
+        ],
+        "glad": true,
+        "why": "It's short, accepts their low motivation, and gives a clear, doable goal for today's session. One small flaw: it says 'yesterday's gym session', which wasn't stated (the coach said 'yesterday's session'), and the 'momentum' line is a bit of a stretch. Overall it still moves Alex forward and feels supportive."
+      },
+      "text": "Then make today’s win just showing up. Keep it easy and short, and let starting—not feeling motivated—be the goal; you’ve already got momentum from yesterday’s gym session.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "hsk-deadline",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": false,
+      "seconds": 43.423,
+      "searched": true,
+      "rules": [
+        "88 words"
+      ],
+      "failedChecks": [
+        "Goes with their own figure (about 12 new words a day until 1 March) instead of reopening it or asking which HSK version they mean.",
+        "Changes the plan toward that target (a plan change card), or says exactly what will change; not only praise or a question."
+      ],
+      "verdict": {
+        "checks": [
+          {
+            "pass": false,
+            "why": "The reply doesn't just go with Alex's 12 words a day. It questions the figure by calling it demanding with almost no room for review, and it adds its own HSK 4 totals (1,200 words, 424 course words). It also offers a flexible daily target as an alternative to 12, which reopens the number."
+          },
+          {
+            "pass": false,
+            "why": "No plan change card appears. The reply only asks whether Alex wants it reshaped into a dated plan or kept flexible, and it doesn't say exactly what will change. A question alone doesn't count."
+          }
+        ],
+        "glad": false,
+        "why": "Alex gave a clear target and wants the plan built around it. The reply adds unrequested statistics, hints the pace is too hard, includes a stray citation marker [1], and asks another question instead of delivering the plan change. Alex would likely find this slow and mildly discouraging."
+      },
+      "text": "That’s a bold, clear target. For the classic HSK framework used by Peking University’s Coursera “Chinese for HSK 4,” HSK 4 is about 1,200 words total, and the course teaches 424 new HSK 4 words; 12 a day until March 1 would be roughly 1,160 words, so it’s a demanding pace with almost no room for review. [1]\nWant me to reshape Conversational Chinese into a structured, dated plan around that Coursera course and 12 new words a day, or keep it flexible with a daily word target?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "back-but-busy",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 7.109,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply says to handle work today and not to cram in a catch-up, so it puts no pressure on Alex to train and puts work first."
+          },
+          {
+            "pass": true,
+            "why": "It makes no plan change and proposes no new target. It mentions room in the plan this week and easing back in next week, but only as options, with no card or explicit change."
+          }
+        ],
+        "glad": true,
+        "why": "Alex is back from travel and busy with work. The reply is short, warm and takes pressure off, and it leaves the door open without pushing. It is a little long and a bit vague about next steps, but Alex would likely feel understood."
+      },
+      "text": "Welcome back. Handle the work today, no need to cram a catch-up in; there’s still room in your training plan this week if time opens up, and otherwise you can ease back in next week.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "back-but-busy",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 7.396,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply says to let work lead today and that there's no need to cram in a workout, so it accepts work comes first and applies no pressure."
+          },
+          {
+            "pass": true,
+            "why": "It proposes no plan change or new weekly target. It only notes that four days remain to get back into the existing rhythm, and no card is offered."
+          }
+        ],
+        "glad": true,
+        "why": "The reply is short and warm. It takes the pressure off for today and gives a calm picture of getting back on track. One small risk: 'four days after today' could read as a mild nudge, but overall Alex would likely feel understood."
+      },
+      "text": "Welcome back. Let work take the lead today, no need to cram in a workout; there are still four days after today to get back into your rhythm with your training plan.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "quiz-in-german",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 2.68,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply is a single new German question, 'Was machst du gern am Wochenende?', with no English translation, which is what Mia asked for."
+          },
+          {
+            "pass": true,
+            "why": "It stays in the quiz and says nothing about plans, streaks or schedules."
+          }
+        ],
+        "glad": true,
+        "why": "Mia gets a short, fresh question in German with no translation, and she can answer it right away. It is a natural, level-appropriate question that keeps the quiz going."
+      },
+      "text": "Was machst du gern am Wochenende?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "quiz-in-german",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 1.969,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "The reply is a single new German question, 'Was machst du gern am Wochenende?', with no English translation, as Mia asked."
+          },
+          {
+            "pass": true,
+            "why": "It stays in the quiz and contains no plan, streak, or schedule talk, so it doesn't drift into habit-tracking."
+          }
+        ],
+        "glad": true,
+        "why": "Mia asked for another question with no English translation, and this delivers exactly that. It's short and at a reasonable level, and she can answer it right away."
+      },
+      "text": "Was machst du gern am Wochenende?",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "missed-week-again",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 6.376,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It names specific days and activities (Tue gym, Wed yoga, Fri running, Sat bouldering) and says four different days is the win, so Alex knows what counts."
+          },
+          {
+            "pass": true,
+            "why": "It stays at four sessions, adds nothing extra, and tells Alex to keep them comfortable rather than make up for last week."
+          }
+        ],
+        "glad": true,
+        "why": "Alex asked twice, and the first answer was only general advice. This reply is short and gives a ready-to-use plan with a clear target. The 'five days left' assumption is a small risk, but Alex would likely be glad to get it."
+      },
+      "text": "Yes, Alex. You’ve got five days left for four training days, so try Tue gym, Wed Yoga, Thu rest, Fri running, Sat bouldering. Keep the sessions comfortable rather than trying to make up for last week; four different days is the win.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "first-walk",
+      "run": 0,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 3.995,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It gives one concrete next step: an easy 20-minute walk, with a timeframe of two more walk days by Saturday. That is sized for a beginner. 'Whenever it fits' is a little loose on timing, but the Saturday deadline and the 20-minute amount make it clear enough."
+          },
+          {
+            "pass": true,
+            "why": "It stays within the existing walking goal and adds only a small target of two more walks by Saturday. It doesn't restructure the plan or give a multi-week programme, and no plan-change card is needed."
+          }
+        ],
+        "glad": true,
+        "why": "Sam asked for a next step and gets a short, friendly reply that acknowledges the first walk and gives a clear, doable, beginner-sized target. It is easy to act on and not overwhelming."
+      },
+      "text": "Nice start, your first 20-minute walk is in. For your walking goal, aim for two more walk days by Saturday; make the next one an easy 20 minutes whenever it fits.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "missed-week-again",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 8.801,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It gives a day-by-day schedule (today yoga, Wed gym, Fri run, Sat bouldering, Thu rest) that adds up to 4 sessions, so Alex knows exactly what to do."
+          },
+          {
+            "pass": true,
+            "why": "It stays at the normal 4 sessions and keeps the intensity easy to moderate. It explicitly says this is not punishment for travelling, so nothing extra or harder is added."
+          }
+        ],
+        "glad": true,
+        "why": "Alex asked twice for help and the earlier answer was only general advice. This reply finally gives a concrete, gentle week that restarts with easy yoga. The \"buffer\" wording is slightly muddled, since Thursday is a rest day rather than a spare session, but that is minor. Alex would likely be glad to get it."
+      },
+      "text": "Yes. You need 4 separate training days by Saturday, with one day as a buffer: today, easy Yoga; Wednesday, gym; Thursday, rest; Friday, easy running; Saturday, bouldering. Keep the run relaxed and the gym session moderate, so this is a steady catch-up week, not punishment for travelling.",
+      "card": "",
+      "wouldWrite": []
+    },
+    {
+      "case": "first-walk",
+      "run": 1,
+      "model": "openai/gpt-6-luna",
+      "pass": true,
+      "seconds": 4.011,
+      "searched": false,
+      "rules": [],
+      "failedChecks": [],
+      "verdict": {
+        "checks": [
+          {
+            "pass": true,
+            "why": "It gives one clear next step: one more comfortable walk by Thursday. That is a beginner-sized amount with a deadline."
+          },
+          {
+            "pass": true,
+            "why": "It stays inside the existing plan and weekly goal, with no new programme or plan change."
+          }
+        ],
+        "glad": true,
+        "why": "The reply is short, celebrates the first walk, and gives one doable next step with a deadline. The mention of one more walk after that shows how the week adds up."
+      },
+      "text": "Nice start, your first 20-minute walk is in the books. Next step: fit in another comfortable walk by Thursday, then you’ll have one more to reach this week’s goal in your walking plan.",
+      "card": "",
+      "wouldWrite": []
+    }
+  ]
+}
