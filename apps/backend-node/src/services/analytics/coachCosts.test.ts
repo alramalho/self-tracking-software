@@ -1,7 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../utils/prisma", () => ({
-  prisma: { user: { findMany: async () => [{ id: "u1", username: "alex" }] } },
+  prisma: {
+    user: { findMany: async () => [{ id: "u1", username: "alex" }, { id: "u2", username: "grace" }] },
+    chat: { findMany: async () => [{ id: "c1", userId: "u1" }, { id: "c2", userId: "u2" }] },
+    message: {
+      groupBy: async ({ where }: any) =>
+        where.metadata
+          ? [{ chatId: "c1", _count: { _all: 2 } }]
+          : [
+              { chatId: "c2", _count: { _all: 1 }, _max: { createdAt: new Date("2026-11-20T10:00:00Z") } },
+              { chatId: "c1", _count: { _all: 5 }, _max: { createdAt: new Date("2026-11-24T12:00:00Z") } },
+            ],
+    },
+  },
 }));
 
 import { coachCosts } from "./coachCosts";
@@ -23,8 +35,8 @@ describe("coachCosts", () => {
     expect(costs.perReplyUsd).toBeCloseTo(0.03);
     expect(costs.models[0]).toMatchObject({ model: "openai/gpt-6-luna", calls: 1 });
     expect(costs.people).toEqual([
-      { username: "alex", usd: 0.04, calls: 2 },
-      { username: null, usd: 0.001, calls: 1 },
+      { username: "alex", messages: 5, talk: 2, lastAt: "2026-11-24T12:00:00.000Z", usd: 0.04 },
+      { username: "grace", messages: 1, talk: 0, lastAt: "2026-11-20T10:00:00.000Z", usd: 0.001 },
     ]);
     expect(costs.perDay).toHaveLength(30);
   });

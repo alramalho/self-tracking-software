@@ -1,6 +1,6 @@
 import { prisma } from "../../utils/prisma";
 import { readJsonlTail } from "./jsonl";
-import { DAY_MS } from "./people";
+import { DAY_MS, realPeople } from "./people";
 import type { CoachCostPart, CoachCosts } from "./types";
 
 /** One line of AI_USAGE_LOG (utils/aiSdk.ts). */
@@ -58,9 +58,9 @@ export async function coachCosts(days: number, lines?: UsageLine[]): Promise<Coa
     if (line.userId) add(people, line.userId, usd);
   }
 
-  const topPeople = [...people.entries()].sort((a, b) => b[1].usd - a[1].usd).slice(0, 5);
+  const senders = await coachSenders(new Date(`${since}T00:00:00Z`));
   const users = await prisma.user.findMany({
-    where: { id: { in: topPeople.map(([id]) => id) } },
+    where: { id: { in: senders.map((s) => s.userId) } },
     select: { id: true, username: true },
   });
   const names = new Map(users.map((u) => [u.id, u.username]));
@@ -75,6 +75,36 @@ export async function coachCosts(days: number, lines?: UsageLine[]): Promise<Coa
       .filter((part) => parts.has(part))
       .map((part) => ({ part, label: COACH_PART_LABELS[part], ...parts.get(part)! })),
     models: [...models.entries()].sort((a, b) => b[1].usd - a[1].usd).map(([model, row]) => ({ model, ...row })),
-    people: topPeople.map(([id, row]) => ({ username: names.get(id) ?? null, ...row })),
+    people: senders.map((s) => ({
+      username: names.get(s.userId) ?? null,
+      messages: s.messages,
+      talk: s.talk,
+      lastAt: s.lastAt,
+      usd: people.get(s.userId)?.usd ?? null,
+    })),
   };
+}
+
+/** Who writes to the coach most: their own messages in the coach chat (Talk to coach answers land there too). */
+async function coachSenders(since: Date) {
+  const where = { role: "USER" as const, createdAt: { gte: since }, chat: { type: "COACH" as const, user: realPeople } };
+  const [all, talk] = await Promise.all([
+    prisma.message.groupBy({ by: ["chatId"], where, _count: { _all: true }, _max: { createdAt: true } }),
+    prisma.message.groupBy({ by: ["chatId"], where: { ...where, metadata: { path: ["source"], equals: "talk_to_coach" } }, _count: { _all: true } }),
+  ]);
+  const chats = await prisma.chat.findMany({ where: { id: { in: all.map((g) => g.chatId) } }, select: { id: true, userId: true } });
+  const owner = new Map(chats.map((c) => [c.id, c.userId]));
+  const talkByChat = new Map(talk.map((g) => [g.chatId, g._count._all]));
+  const byUser = new Map<string, { userId: string; messages: number; talk: number; lastAt: string | null }>();
+  for (const g of all) {
+    const userId = owner.get(g.chatId);
+    if (!userId) continue;
+    const row = byUser.get(userId) ?? { userId, messages: 0, talk: 0, lastAt: null };
+    row.messages += g._count._all;
+    row.talk += talkByChat.get(g.chatId) ?? 0;
+    const last = g._max.createdAt?.toISOString() ?? null;
+    if (last && (!row.lastAt || last > row.lastAt)) row.lastAt = last;
+    byUser.set(userId, row);
+  }
+  return [...byUser.values()].sort((a, b) => b.messages - a.messages).slice(0, 8);
 }

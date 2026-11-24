@@ -36,16 +36,42 @@ export function CoachCostsCard({ costs }: { costs: CoachCosts }) {
           segments: parts.map((p) => ({ value: d[p], color: PART_COLORS[p] })),
         }))}
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Rows title="Part" rows={costs.parts.map((p) => ({ key: p.part, label: p.label, usd: p.usd, calls: p.calls }))} />
         <Rows title="Model" rows={costs.models.map((m) => ({ key: m.model, label: m.model.replace(/^[^/]+\//, ""), usd: m.usd, calls: m.calls }))} />
-        <Rows
-          title="Who"
-          empty="Counted from 24 Nov"
-          rows={costs.people.map((p, i) => ({ key: `${p.username}-${i}`, label: p.username ?? "–", usd: p.usd, calls: p.calls }))}
-        />
       </div>
-      <p className="text-xs text-muted-foreground">Web search, check-ins and who are counted from 24 Nov 2026; chat replies from 2 Nov.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th className="pb-1.5 pr-3 font-normal">Who writes to the coach</th>
+              <th className="pb-1.5 pr-3 text-right font-normal">Messages</th>
+              <th className="pb-1.5 pr-3 text-right font-normal">Talk to coach</th>
+              <th className="pb-1.5 pr-3 font-normal">Last</th>
+              <th className="pb-1.5 text-right font-normal">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {costs.people.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-1.5 text-xs text-muted-foreground">Nobody wrote to the coach in {costs.days} days.</td>
+              </tr>
+            )}
+            {costs.people.map((p, i) => (
+              <tr key={`${p.username}-${i}`} className="border-t border-foreground/5">
+                <td className="py-1.5 pr-3">{p.username ?? "–"}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{p.messages}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-muted-foreground">{p.talk}</td>
+                <td className="py-1.5 pr-3 whitespace-nowrap text-muted-foreground">{p.lastAt ? short(p.lastAt.slice(0, 10)) : "–"}</td>
+                <td className="py-1.5 text-right tabular-nums">{p.usd === null ? "–" : usd(p.usd)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Messages are what they sent (Talk to coach answers included). Web search, check-ins and cost per person are counted from 24 Nov 2026; chat replies from 2 Nov.
+      </p>
     </section>
   );
 }

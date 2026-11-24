@@ -83,8 +83,8 @@ export type CoachCosts = {
   perDay: ({ day: string } & Record<CoachCostPart, number>)[];
   parts: { part: CoachCostPart; label: string; usd: number; calls: number }[];
   models: { model: string; usd: number; calls: number }[];
-  /** Top 5 by cost; only calls logged since 24 Nov 2026 carry a person. */
-  people: { username: string | null; usd: number; calls: number }[];
+  /** Who writes to the coach most in the window, with their coach cost (logged per person since 24 Nov 2026). */
+  people: { username: string | null; messages: number; talk: number; lastAt: string | null; usd: number | null }[];
 };
 
 export type AnalyticsOverview = {

@@ -95,5 +95,5 @@ export type CoachCosts = {
   perDay: ({ day: string } & Record<CoachCostPart, number>)[];
   parts: { part: CoachCostPart; label: string; usd: number; calls: number }[];
   models: { model: string; usd: number; calls: number }[];
-  people: { username: string | null; usd: number; calls: number }[];
+  people: { username: string | null; messages: number; talk: number; lastAt: string | null; usd: number | null }[];
 };
