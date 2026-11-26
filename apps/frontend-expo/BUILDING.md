@@ -51,6 +51,11 @@ EAS uses `.easignore` when present and otherwise falls back to `.gitignore`. `ap
 The same file lists each shared `packages/prisma` module the app imports. When the app starts importing a new `@tsw/prisma/<module>`, add `!/packages/prisma/<module>` there, or the EAS bundle step fails with "Unable to resolve module". Build 216 failed this way on `activity-duplicates.ts`, and a build 220 attempt on `home-todo`. Hand-built releases (218–220) compile the worktree directly and do not catch it.
 
 
+## TestFlight build 287 — "Done some, just not logged?", November 26, 2026
+
+- Main `fc719aeb`: a gone-quiet alert asks "Done some, just not logged?" → Yes, log it opens the voice note in catch-up mode (one card per day, then the coach's week-standing line, alert answered via `POST /follow-through/plans/:id/caught-up`); "Not lately" shows the reasons. Talk to coach ends in "Log it" when they say they did it (talk action `log`). Backend image `coach-catchup-20261126` (FROM voice-fill-20261124, context deployment/tracking-coach-catchup-20261126, rollback.sh). Coach journeys: when 13/13, live (2 journeys) 4/4.
+- **Built** with `pnpm build:testflight .release/testflight-main-fc719aeb/tracking.so.ipa` in worktree `tracking-coach-catchup`. IPA SHA-256 `9d40d891cdd3ee3487e837727c12fcd6fd2729db56e472c08fa01312748cad09`, build 287, no e2e token, production API. Delivery `60528692-a86d-458c-b2e5-f07e9ee895b1`. VALID, What to Test set, Friends & Family, beta review submitted; internal and external IN_BETA_TESTING. Not tried on a phone.
+
 ## TestFlight build 286 — say it on the log sheet, session as a coach sheet, November 24, 2026
 
 - Main `cc98d2e7`: "Say it instead" on the log sheet fills amount, day/time and what the session was about from one voice note (`/voice-logs/preview` with `focus_activity_id`); planned sessions open as a sheet with the coach's guide. Backend image `voice-fill-20261124` (FROM fair-use-20261124b, context deployment/tracking-voice-fill-20261124, rollback.sh).
