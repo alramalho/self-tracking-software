@@ -89,6 +89,8 @@ export type BenchCase = {
   metrics?: VoiceLogMetricContext[];
   /** A spoken correction of an existing draft: transcript is the correction. */
   refinement?: VoiceLogRefinementContext;
+  /** The log screen / coach catch-up mic: the catalog is that one activity. */
+  fillingOneLog?: boolean;
   expect: {
     activities: ExpectedActivity[];
     metrics?: { id: string; rating: number | number[] }[];
@@ -99,7 +101,93 @@ export type BenchCase = {
   };
 };
 
+// Filling in missed days (26 Nov 2026): the catalog with what was logged and planned over the last weeks.
+// Today is Thursday 12 Nov; Chinese was last logged on Sunday 8 Nov.
+const withHistory: VoiceLogActivityContext[] = [
+  ...ownerActivities.map((activity) =>
+    activity.activityId === "meditate"
+      ? { ...activity, loggedDays: [{ date: "2026-11-09", quantity: 20 }, { date: "2026-11-11", quantity: 25 }] }
+      : activity.activityId === "gym"
+        ? {
+            ...activity,
+            loggedDays: [{ date: "2026-11-09", quantity: 1 }],
+            plan: { goal: "💪 Get stronger", timesPerWeek: 2, plannedDays: ["2026-11-09", "2026-11-11"] },
+          }
+        : activity,
+  ),
+  {
+    activityId: "chinese",
+    title: "Chinese practice",
+    emoji: "",
+    measure: "minutes",
+    lastLoggedOn: "2026-11-08",
+    loggedDays: [
+      { date: "2026-11-06", quantity: 60 },
+      { date: "2026-11-08", quantity: 45 },
+    ],
+    plan: { goal: "🇨🇳 Learn Chinese", timesPerWeek: 7, plannedDays: [] },
+  },
+];
+const chineseSinceLastLog = [9, 10, 11].map((day) => ({ id: "chinese", quantity: 90, date: `2026-11-${String(day).padStart(2, "0")}` }));
+
 export const cases: BenchCase[] = [
+  // Filling in missed days. The first is the owner's 26 Nov note as Whisper heard it (gpt-4o-transcribe lost
+  // its second half); the second is what the owner meant to say.
+  {
+    id: "real-backfill-since-last-log",
+    source: "real",
+    transcript: "I've been doing Chinese daily for like 90 minutes the one or the ones that i did not fill in fill it into",
+    activities: withHistory,
+    expect: { activities: chineseSinceLastLog },
+  },
+  {
+    id: "backfill-every-missed-day",
+    source: "written",
+    transcript: "Log 90 Chinese minutes for every last day that I didn't log it, as I've been doing it daily.",
+    activities: withHistory,
+    expect: { activities: chineseSinceLastLog },
+  },
+  {
+    id: "backfill-this-week-skips-logged",
+    source: "written",
+    transcript: "Fill in 30 minutes of meditation for the days this week I didn't log.",
+    activities: withHistory,
+    expect: { activities: [{ id: "meditate", quantity: 30, date: "2026-11-10" }] },
+  },
+  {
+    id: "backfill-planned-sessions",
+    source: "written",
+    transcript: "Log the gym sessions I missed logging this week, I did them all.",
+    activities: withHistory,
+    expect: { activities: [{ id: "gym", quantity: 1, date: "2026-11-11" }] },
+  },
+  // The coach's "Done some, just not logged?" catch-up (fillingOneLog: the catalog is that one activity).
+  {
+    id: "catch-up-named-days",
+    source: "written",
+    transcript: "Monday and Tuesday, about an hour each.",
+    activities: withHistory.filter((activity) => activity.activityId === "chinese"),
+    metrics: [],
+    fillingOneLog: true,
+    expect: { activities: [{ id: "chinese", quantity: 60, date: "2026-11-09" }, { id: "chinese", quantity: 60, date: "2026-11-10" }] },
+  },
+  {
+    id: "catch-up-every-missed-day",
+    source: "written",
+    transcript: "I did it every day since the last one I logged, 90 minutes.",
+    activities: withHistory.filter((activity) => activity.activityId === "chinese"),
+    metrics: [],
+    fillingOneLog: true,
+    expect: { activities: chineseSinceLastLog },
+  },
+  {
+    id: "no-backfill-for-one-day",
+    source: "written",
+    transcript: "Did 90 minutes of Chinese today.",
+    activities: withHistory,
+    expect: { activities: [{ id: "chinese", quantity: 90 }] },
+  },
+
   // Saved in production (8 and 10 Nov).
   { id: "real-meditation-lock", source: "real", transcript: "Lock 22 minutes of meditation.", expect: { activities: [{ id: "meditate", quantity: 22 }] } },
   {

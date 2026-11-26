@@ -78,7 +78,9 @@ for (const theme of ["DARK", "LIGHT"]) {
 
     const mic = page.getByTestId("voice-mic");
     await expect(mic).toBeVisible();
-    await expect(mic).toHaveAccessibleName("Record voice note");
+    // The coach's face sits on the mic: the note goes to the coach.
+    await expect(mic).toHaveAccessibleName(/^Talk to (Helly|Oli), your coach$/);
+    await expect(page.getByTestId("voice-mic-coach")).toBeVisible();
     await expect(page.getByText("Say what you did", { exact: false })).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Log Running", exact: true }),
@@ -88,6 +90,8 @@ for (const theme of ["DARK", "LIGHT"]) {
     await mic.click();
     const drawer = page.getByTestId("voice-log-drawer");
     await expect(drawer.getByTestId("voice-log-recording")).toBeVisible();
+    await expect(drawer.getByTestId("voice-log-coach")).toBeVisible();
+    await expect(drawer.getByText(/^(Helly|Oli) is listening…$/)).toBeVisible();
     await expect(drawer.getByText("Private until you save", { exact: true })).toHaveCount(0);
     await expect(
       drawer.getByRole("button", { name: "Stop recording", exact: true }),

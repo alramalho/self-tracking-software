@@ -34,7 +34,11 @@ import {
 } from "../services/planProposalPatchService";
 import { getNextPlanSortOrder, plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
-import { parseTranscriptionFeedback } from "../services/stt/feedback";
+import {
+  parseTranscriptionFeedback,
+  transcriptionFeedbackAlert,
+} from "../services/stt/feedback";
+import { TelegramService } from "../services/telegramService";
 import { supermemoryService } from "../services/supermemoryService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -1225,6 +1229,11 @@ router.post(
           metadata: { ...details, spokenLanguages: req.user!.spokenLanguages },
         },
       });
+      if (!feedback.helpful) {
+        void new TelegramService()
+          .sendPlainAlert(transcriptionFeedbackAlert(feedback, req.user!.username || req.user!.id))
+          .catch((error) => logger.error("Could not send the transcription feedback alert", error));
+      }
       res.json({ success: true });
     } catch (error) {
       logger.error("Error saving transcription feedback:", error);

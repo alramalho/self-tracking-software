@@ -30,3 +30,22 @@ export function parseTranscriptionFeedback(
     transcript: text(body.transcript, 5000),
   };
 }
+
+const REASON_LABEL: Record<TranscriptionFeedbackReason, string> = {
+  WRONG_LANGUAGE: "wrong language",
+  WRONG_WORDS: "wrong words",
+  OTHER: "other",
+};
+
+/** The Telegram alert for a thumbs down, so a misheard voice note is looked at the same day. */
+export function transcriptionFeedbackAlert(feedback: TranscriptionFeedback, who: string): string {
+  const reason = feedback.reason ? ` (${REASON_LABEL[feedback.reason]})` : "";
+  return [
+    `👎 Voice note misheard${reason} · ${who}`,
+    feedback.transcript ? `Heard: "${feedback.transcript.slice(0, 600)}"` : null,
+    feedback.comment ? `They said: ${feedback.comment.slice(0, 600)}` : null,
+    feedback.model ? `Model: ${feedback.model}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}

@@ -34,6 +34,7 @@ import { markMilestoneCelebrated } from "@/features/celebration/milestones";
 import { useCurrentUser, useEntries, usePlans } from "@/data/queries";
 import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { CoachNote } from "@/features/messages/adaptation/CoachNote";
+import { coachAvatar } from "@/features/coach/avatar";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
 import { checkCoverage, commitVoiceLog, markCaughtUp, previewVoiceLog } from "./service";
@@ -657,8 +658,8 @@ export function VoiceLogDrawer({
           : phase === "committed"
             ? "Saved"
             : phase === "recording"
-              ? recorder.isWorking ? "Finishing…" : "Listening…"
-              : "Voice note";
+              ? recorder.isWorking ? "Finishing…" : `${coachName} is listening…`
+              : `Talk to ${coachName}`;
 
   return (
     <LoggingDrawer
@@ -679,20 +680,29 @@ export function VoiceLogDrawer({
           >
             <Mic size={34} color="white" strokeWidth={2.2} />
           </RoundButton>
-          <Text style={{ color: c.muted, fontSize: 14 }}>Tap to record</Text>
+          <Text style={{ color: c.muted, fontSize: 14 }}>Tap and tell {coachName} what you did</Text>
           <Status error={error} />
         </View>
       )}
 
       {phase === "recording" && (
         <View testID="voice-log-recording" style={{ alignItems: "center", gap: 18, paddingVertical: 8 }}>
-          {followUp && !recorder.isWorking && <FollowUpGuide learning={learning} />}
-          {catchUp && (
+          {followUp && !recorder.isWorking ? (
+            <FollowUpGuide learning={learning} />
+          ) : catchUp ? (
             <View testID="voice-log-catch-up" style={{ alignSelf: "stretch" }}>
               <CoachNote strategist={strategist} mood="smiling" size="small">
                 <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>Say what you did, and which days.</Text>
               </CoachNote>
             </View>
+          ) : (
+            <Image
+              testID="voice-log-coach"
+              accessibilityLabel={`${coachName}, your coach`}
+              source={coachAvatar(strategist)}
+              style={{ width: 64, height: 64 }}
+              resizeMode="contain"
+            />
           )}
           <Text
             accessibilityLabel="Voice note duration"
@@ -747,11 +757,7 @@ export function VoiceLogDrawer({
               >
                 <Image
                   accessibilityLabel={`${coachName}, your coach`}
-                  source={
-                    strategist
-                      ? require("../../../assets/coaches/oli-3d.png")
-                      : require("../../../assets/coaches/helly-3d.png")
-                  }
+                  source={coachAvatar(strategist)}
                   style={{ width: 34, height: 34 }}
                   resizeMode="contain"
                 />

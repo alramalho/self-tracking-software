@@ -3,7 +3,7 @@ import { prisma } from "../../utils/prisma";
 import { sttService } from "../sttService";
 import type { ActivityEntry, MetricEntry } from "@tsw/prisma";
 import { logger } from "../../utils/logger";
-import { extractVoiceLog, localDate } from "./extract";
+import { extractVoiceLog, localDate, RECENT_DAYS } from "./extract";
 import { recordVoiceLogSample, storeVoiceRecording } from "./samples";
 import { isVoiceNotePromptEcho, voiceNotePrompt } from "../stt/voiceNotePrompt";
 import {
@@ -60,6 +60,50 @@ function metricDate(date: string) {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
+/** Per activity: the local days it was logged (summed per day) and its plan's schedule over the same window. */
+export function recentActivity(
+  entries: { activityId: string | null; datetime: Date; quantity: number }[],
+  plans: {
+    goal: string;
+    emoji: string | null;
+    timesPerWeek: number | null;
+    activities: { id: string }[];
+    sessions: { activityId: string; date: Date }[];
+  }[],
+  timezone: string,
+) {
+  const byActivity = new Map<string, Map<string, number>>();
+  for (const entry of entries) {
+    if (!entry.activityId) continue;
+    const days = byActivity.get(entry.activityId) ?? new Map<string, number>();
+    const day = localDate(entry.datetime, timezone);
+    days.set(day, (days.get(day) ?? 0) + entry.quantity);
+    byActivity.set(entry.activityId, days);
+  }
+  return {
+    loggedDays: (activityId: string) =>
+      [...(byActivity.get(activityId) ?? new Map<string, number>())]
+        .map(([date, quantity]) => ({ date, quantity }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    plan: (activityId: string) => {
+      const plan = plans.find((candidate) => candidate.activities.some((activity) => activity.id === activityId));
+      if (!plan) return null;
+      return {
+        goal: [plan.emoji, plan.goal].filter(Boolean).join(" "),
+        timesPerWeek: plan.timesPerWeek,
+        // Session dates are calendar days (@db.Date), stored at UTC midnight.
+        plannedDays: [
+          ...new Set(
+            plan.sessions
+              .filter((session) => session.activityId === activityId)
+              .map((session) => session.date.toISOString().slice(0, 10)),
+          ),
+        ].sort(),
+      };
+    },
+  };
+}
+
 export async function previewVoiceLog(input: {
   userId: string;
   audioBytes: Buffer;
@@ -81,7 +125,8 @@ export async function previewVoiceLog(input: {
   const timezone = resolveTimezone(input.timezone, user?.timezone || "UTC");
 
   // The catalog comes first: its titles prime speech-to-text (stt/voiceNotePrompt.ts) and then the extraction.
-  const [activities, metrics, latestEntries] = await Promise.all([
+  const recentSince = new Date(now.getTime() - (RECENT_DAYS + 1) * 24 * 60 * 60 * 1000);
+  const [activities, metrics, latestEntries, recentEntries, plans] = await Promise.all([
     prisma.activity.findMany({
       where: { userId: input.userId, deletedAt: null },
       select: { id: true, title: true, emoji: true, measure: true },
@@ -96,6 +141,21 @@ export async function previewVoiceLog(input: {
       by: ["activityId"],
       where: { userId: input.userId, deletedAt: null },
       _max: { datetime: true },
+    }),
+    // What was logged and planned lately, so "log it for every day I missed" knows which days those are.
+    prisma.activityEntry.findMany({
+      where: { userId: input.userId, deletedAt: null, datetime: { gte: recentSince } },
+      select: { activityId: true, datetime: true, quantity: true },
+    }),
+    prisma.plan.findMany({
+      where: { userId: input.userId, deletedAt: null, archivedAt: null },
+      select: {
+        goal: true,
+        emoji: true,
+        timesPerWeek: true,
+        activities: { select: { id: true } },
+        sessions: { where: { date: { gte: recentSince, lte: now } }, select: { activityId: true, date: true } },
+      },
     }),
   ]);
   const mostRecent = (id: string) =>
@@ -130,6 +190,7 @@ export async function previewVoiceLog(input: {
       .map((entry) => [entry.activityId!, localDate(entry._max.datetime!, timezone)]),
   );
 
+  const recent = recentActivity(recentEntries, plans, timezone);
   const activityContext = activities
     .filter((activity) => !input.focusActivityId || activity.id === input.focusActivityId)
     .map((activity) => ({
@@ -138,6 +199,8 @@ export async function previewVoiceLog(input: {
     emoji: activity.emoji,
     measure: activity.measure,
     lastLoggedOn: lastLogged.get(activity.id) ?? null,
+    loggedDays: recent.loggedDays(activity.id),
+    plan: recent.plan(activity.id),
   }));
   const metricContext = (input.focusActivityId ? [] : metrics).map((metric) => ({
     metricId: metric.id,

@@ -28,7 +28,9 @@ export function score(c: BenchCase, x: VoiceLogExtraction) {
   const remaining = [...x.activities];
   for (const e of c.expect.activities) {
     const ids = [e.id].flat();
-    const i = remaining.findIndex((a) => ids.includes(a.activityId));
+    // Several entries of one activity (missed days filled in) are matched by day first.
+    const sameDay = remaining.findIndex((a) => ids.includes(a.activityId) && a.date === (e.date ?? TODAY));
+    const i = sameDay >= 0 ? sameDay : remaining.findIndex((a) => ids.includes(a.activityId));
     if (i < 0) {
       problems.push(`missing ${ids[0]}`);
       continue;
@@ -61,7 +63,7 @@ export function score(c: BenchCase, x: VoiceLogExtraction) {
   return problems;
 }
 
-const hash = (c: BenchCase) => crypto.createHash("sha1").update(JSON.stringify([c.transcript, c.activities ?? null, c.metrics ?? null, c.refinement ?? null, c.expect])).digest("hex").slice(0, 10);
+const hash = (c: BenchCase) => crypto.createHash("sha1").update(JSON.stringify([c.transcript, c.activities ?? null, c.metrics ?? null, c.refinement ?? null, c.expect, c.fillingOneLog ?? null])).digest("hex").slice(0, 10);
 
 async function runConfig(config: string, only: string[] | null) {
   const [promptName, model, effort = "low"] = config.split(":");
@@ -85,6 +87,7 @@ async function runConfig(config: string, only: string[] | null) {
             activities: c.activities ?? ownerActivities,
             metrics: c.metrics ?? ownerMetrics,
             refinement: c.refinement,
+            fillingOneLog: c.fillingOneLog,
             model,
             reasoningEffort: effort,
             instructions: c.refinement ? undefined : instructions,

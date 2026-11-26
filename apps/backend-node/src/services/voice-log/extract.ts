@@ -44,6 +44,11 @@ Quantities:
 - If the user gives the amount in a different kind of unit from the saved measure (a duration for an activity tracked in pages or kilometers, a distance for one tracked in minutes), still log the activity: estimate the quantity in the saved measure at a typical rate for an average adult, using any pace the user stated (reading about 0.7 pages a minute, so 30 minutes ≈ 20 pages; running about 6 minutes per kilometer; walking about 12 minutes per kilometer; cycling about 3 minutes per kilometer; swimming about 2.5 minutes per 100 meters). Set estimatedFrom to the amount the user actually said, in their words ("30 minutes"), and use a confidence of at most 0.6. Only use estimatedFrom for these estimates; it is null otherwise.
 - If the user says they did an activity but gives no amount and the measure is not a count, put it in unresolved with a reason naming the measure. Never guess an amount.
 
+Filling in missed days:
+- Each activity may carry loggedDays (local days that already have an entry, last 3 weeks), missedSinceLastLog (the days from the last entry up to yesterday, already worked out) and plan (sessions a week and plannedDays, the days its plan scheduled).
+- When the person asks to log an amount for every day they missed, didn't log, didn't fill in, or "since" a day ("log 90 minutes of Chinese for every day I didn't log, I've been doing it daily", "fill in the days I missed"), return one entry per such day with that amount. When they name no first day, those days are exactly missedSinceLastLog. When they name one ("since Monday", "this week"), use every day from it up to yesterday, skipping days in loggedDays. missedSinceLastLog ends yesterday on purpose: add today only when they say "today" ("every day since" or "daily" alone does not include today). This also holds in fillingOneLog. When they speak of planned sessions ("the sessions I missed this week"), use the plannedDays without an entry instead of every day.
+- Never fill more than 14 days; if they ask for more, return the 14 most recent and put the rest in unresolved. Never return two entries for the same activity and day.
+
 Details:
 - description: a short factual summary of that session in the user's words and language (route, exercises, pace, time, how it went). Leave it null when the user said nothing beyond the activity and amount.
 - difficulty only when the user says how hard it felt.
@@ -87,7 +92,14 @@ export type VoiceLogActivityContext = {
   measure: string;
   /** Local date of the latest entry, so near-duplicate activities resolve to the one in use. */
   lastLoggedOn?: string | null;
+  /** Local days with an entry in the last RECENT_DAYS days, so "every day I missed" knows which days those are. */
+  loggedDays?: { date: string; quantity: number }[];
+  /** The plan this activity belongs to: sessions a week and the days it was planned for in the same window. */
+  plan?: { goal: string; timesPerWeek: number | null; plannedDays: string[] } | null;
 };
+
+/** How far back a voice note can fill in missed days ("log 90 minutes for every day I didn't log"). */
+export const RECENT_DAYS = 21;
 
 export type VoiceLogMetricContext = {
   metricId: string;
@@ -107,6 +119,23 @@ function localWeekday(now: Date, timezone: string) {
   return formatInTimeZone(now, timezone, "EEEE");
 }
 
+function addDays(date: string, days: number) {
+  const next = new Date(`${date}T12:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+/**
+ * The days after the last entry up to yesterday, at most 14 (most recent kept): what "every day I didn't log"
+ * means. Worked out here because the model sometimes skipped a day when counting dates itself.
+ */
+export function missedSinceLastLog(lastLoggedOn: string | null | undefined, today: string): string[] {
+  if (!lastLoggedOn || lastLoggedOn >= today || lastLoggedOn < addDays(today, -RECENT_DAYS)) return [];
+  const days: string[] = [];
+  for (let day = addDays(lastLoggedOn, 1); day < today; day = addDays(day, 1)) days.push(day);
+  return days.slice(-14);
+}
+
 export function extractionPrompt(
   transcript: string,
   now: Date,
@@ -122,7 +151,10 @@ export function extractionPrompt(
     localWeekday: localWeekday(now, timezone),
     localTime: localTime(now, timezone),
     timezone,
-    activities,
+    activities: activities.map((activity) => {
+      const missed = missedSinceLastLog(activity.lastLoggedOn, localDate(now, timezone));
+      return missed.length ? { ...activity, missedSinceLastLog: missed } : activity;
+    }),
     metrics,
     ...(followUp ? { alreadyLogged: followUp.logged } : {}),
     ...(fillingOneLog ? { fillingOneLog: { activityId: activities[0]?.activityId } } : {}),

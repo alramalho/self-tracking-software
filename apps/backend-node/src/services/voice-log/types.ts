@@ -42,7 +42,7 @@ export const voiceLogUnresolvedSchema = z.object({
 });
 
 export const voiceLogExtractionSchema = z.object({
-  activities: z.array(voiceLogActivitySchema).max(10),
+  activities: z.array(voiceLogActivitySchema).max(14),
   metrics: z.array(voiceLogMetricSchema).max(10),
   note: voiceLogNoteSchema.nullable(),
   unresolved: z.array(voiceLogUnresolvedSchema).max(10),
@@ -70,7 +70,7 @@ export const voiceLogModelOutputSchema = z.object({
         confidence: z.number(),
       }),
     )
-    .max(10),
+    .max(14),
   metrics: z
     .array(
       z.object({
@@ -92,7 +92,7 @@ export const voiceLogCommitSchema = z.object({
   clientRequestId: z.string().uuid(),
   transcript: z.string().trim().min(1).max(4_000),
   timezone: z.string().trim().min(1).max(100),
-  activities: z.array(voiceLogActivitySchema.omit({ confidence: true })).max(10),
+  activities: z.array(voiceLogActivitySchema.omit({ confidence: true })).max(14),
   metrics: z.array(voiceLogMetricSchema.omit({ confidence: true })).max(10),
   note: voiceLogNoteSchema,
 });

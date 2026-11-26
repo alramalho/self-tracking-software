@@ -10,12 +10,17 @@ import {
   languageToRequest,
   languageToRetry,
 } from "./stt/languages";
+import { fullerTranscript } from "./stt/coverage";
 import type { TimestampedTranscript, Transcript } from "./stt/types";
+
+/** How long the Whisper check may take before the gpt-4o-transcribe text goes out alone (it took up to 7.8 s). */
+const COVERAGE_TIMEOUT_MS = 8_000;
 
 export class STTService {
   private openai: OpenAI;
   private model: string;
   private timestampModel: string;
+  private coverageModel?: string;
 
   constructor() {
     const config = resolveSTTConfig();
@@ -25,6 +30,7 @@ export class STTService {
     });
     this.model = config.model;
     this.timestampModel = config.timestampModel;
+    this.coverageModel = config.coverageModel;
     logger.info(
       `Speech-to-text configured with ${config.provider} (${config.model})`,
     );
@@ -103,6 +109,7 @@ export class STTService {
         type: mimeType,
       });
 
+      const check = this.checkCoverage(audioFile, spoken);
       let heard = await this.listen(audioFile, languageToRequest(spoken), spoken, prompt);
       const retry = languageToRetry(spoken, heard.language);
       if (retry) {
@@ -110,6 +117,19 @@ export class STTService {
           `Heard "${heard.language}", which this person doesn't speak. Transcribing again in "${retry}"`,
         );
         heard = await this.listen(audioFile, retry, spoken, prompt);
+      }
+
+      const checked = await check;
+      if (checked) {
+        const kept = fullerTranscript(heard.text, checked);
+        if (kept.usedCheck) {
+          logger.info("stt_coverage_used_whisper", {
+            event: "stt_coverage_used_whisper",
+            primary: heard.text.length,
+            whisper: kept.text.length,
+          });
+          return { text: kept.text, language: heard.language, model: this.coverageModel! };
+        }
       }
 
       logger.info(
@@ -120,6 +140,32 @@ export class STTService {
       logger.error("Error in speech-to-text:", error);
       throw new Error(`Speech-to-text failed: ${error}`);
     }
+  }
+
+  /**
+   * Whisper's hearing of the same audio, to catch parts the main model dropped (stt/coverage.ts). Null when off,
+   * slow, failed, or when Whisper heard a language the person doesn't speak (then its words can't be compared).
+   */
+  private async checkCoverage(audioFile: File, spoken: string[]): Promise<string | null> {
+    if (!this.coverageModel) return null;
+    const language = languageToRequest(spoken);
+    const listening = this.openai.audio.transcriptions
+      .create({
+        file: audioFile,
+        model: this.coverageModel,
+        response_format: "verbose_json",
+        ...(language ? { language } : {}),
+      })
+      .then((heard) => {
+        const code = languageCode(heard.language);
+        return spoken.length && code && !spoken.includes(code) ? null : heard.text;
+      })
+      .catch((error) => {
+        logger.warn(`Whisper coverage check failed: ${error}`);
+        return null;
+      });
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), COVERAGE_TIMEOUT_MS));
+    return Promise.race([listening, timeout]);
   }
 
   // One request to the model. Whisper: verbose_json reports the language heard.
@@ -143,10 +189,12 @@ export class STTService {
       };
     }
     const prompt = givenPrompt ?? languagePrompt(spoken);
+    // Temperature 0: on replays it was the steadiest (the same text 3 times out of 3 on notes that varied).
     const transcription = await this.openai.audio.transcriptions.create({
       file: audioFile,
       model: this.model,
       response_format: "json",
+      temperature: 0,
       ...(language ? { language } : {}),
       ...(prompt ? { prompt } : {}),
     });

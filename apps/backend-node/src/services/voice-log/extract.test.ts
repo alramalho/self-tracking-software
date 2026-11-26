@@ -4,7 +4,7 @@ vi.mock("../../utils/aiSdk", () => ({ generateObject: vi.fn() }));
 vi.mock("../../utils/prisma", () => ({ prisma: {} }));
 vi.mock("../sttService", () => ({ sttService: {} }));
 
-import { extractionPrompt, normalizeExtraction, roundQuantity, VOICE_LOG_PROMPT } from "./extract";
+import { extractionPrompt, missedSinceLastLog, normalizeExtraction, roundQuantity, VOICE_LOG_PROMPT } from "./extract";
 import { voiceLogSamplesFile } from "./samples";
 import { entryDescription } from "./service";
 import type { VoiceLogModelOutput } from "./types";
@@ -185,5 +185,25 @@ describe("filling one log from the log screen's mic", () => {
   it("leaves ordinary notes unchanged", () => {
     const prompt = JSON.parse(extractionPrompt("ran 5k", new Date("2026-11-24T12:00:00Z"), "UTC", activities, metrics));
     expect(prompt.fillingOneLog).toBeUndefined();
+  });
+});
+
+describe("missedSinceLastLog", () => {
+  it("lists the days after the last entry up to yesterday", () => {
+    expect(missedSinceLastLog("2026-11-22", "2026-11-26")).toEqual(["2026-11-23", "2026-11-24", "2026-11-25"]);
+  });
+
+  it("is empty when the activity was logged yesterday, today, never, or long ago", () => {
+    expect(missedSinceLastLog("2026-11-25", "2026-11-26")).toEqual([]);
+    expect(missedSinceLastLog("2026-11-26", "2026-11-26")).toEqual([]);
+    expect(missedSinceLastLog(null, "2026-11-26")).toEqual([]);
+    expect(missedSinceLastLog("2026-09-01", "2026-11-26")).toEqual([]);
+  });
+
+  it("keeps the 14 most recent days", () => {
+    const days = missedSinceLastLog("2026-11-06", "2026-11-26");
+    expect(days).toHaveLength(14);
+    expect(days[0]).toBe("2026-11-12");
+    expect(days.at(-1)).toBe("2026-11-25");
   });
 });

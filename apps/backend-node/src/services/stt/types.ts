@@ -4,6 +4,8 @@ export interface STTConfig {
   model: string;
   /** Model for segment timestamps (Whisper; gpt-4o-transcribe has none). */
   timestampModel: string;
+  /** Whisper, run alongside to catch the parts gpt-4o-transcribe drops (stt/coverage.ts). */
+  coverageModel?: string;
   provider: "OpenAI" | "OpenRouter";
 }
 

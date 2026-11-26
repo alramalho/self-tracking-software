@@ -304,3 +304,58 @@ for (const theme of ["DARK", "LIGHT"])
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}/voice-saved-${theme}.png` });
   });
+
+// "Log 20 pages of reading for every day I missed, I've been doing it daily" (26 Nov 2026): one row per missed
+// day, all saved, and "daily" here fills in past days rather than offering a new plan.
+for (const theme of ["LIGHT", "DARK"]) {
+  test(`voice note fills in every missed day in ${theme}`, async ({ page, request }) => {
+    await installFakeMicrophone(page);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, {
+      headers: { Authorization: "Bearer local-e2e-token" },
+      data: { themeMode: theme },
+    });
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+    const missed = [3, 2, 1].map(daysAgo);
+    await page.route("**/voice-logs/preview", async (route) => {
+      const clientRequestId = /name="client_request_id"\r\n\r\n([^\r]+)/.exec(route.request().postData() ?? "")?.[1];
+      await route.fulfill({
+        json: {
+          clientRequestId,
+          transcript: "Log 20 pages of reading for every day I didn't log it, I've been doing it daily.",
+          activities: missed.map((date) => ({
+            activityId: "reading",
+            title: "reading",
+            emoji: "📚",
+            measure: "pages",
+            quantity: 20,
+            date,
+            time: null,
+            description: null,
+            privateNotes: null,
+            difficulty: null,
+            estimatedFrom: null,
+            confidence: 0.9,
+          })),
+          metrics: [],
+          note: { title: "Voice note", text: "Logged reading: 20 pages.", date: daysAgo(0), confidence: 0.9 },
+          unresolved: [],
+        },
+      });
+    });
+    await page.goto("/add");
+    await page.getByTestId("voice-mic").click();
+    const drawer = page.getByTestId("voice-log-drawer");
+    await drawer.getByRole("button", { name: "Stop recording", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-review")).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "Remove reading", exact: true })).toHaveCount(3);
+    await expect(drawer.getByTestId("voice-log-plan-suggestion")).toHaveCount(0);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `test-results/voice-log-missed-days-${theme}.png`, fullPage: true });
+    await drawer.getByRole("button", { name: "Save voice note", exact: true }).click();
+    await expect(drawer.getByTestId("voice-log-committed")).toBeVisible();
+    const state = await (await request.get(`${API}/__state`)).json();
+    const commit = state.requests.find((entry: any) => entry.path === "/voice-logs/commit");
+    expect(commit.body.activities.map((activity: any) => activity.date)).toEqual(missed);
+  });
+}

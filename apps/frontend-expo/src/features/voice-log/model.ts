@@ -72,6 +72,11 @@ export function deriveVoiceLogPlanSuggestions(
       .reverse()
       .find((item) => activityIsNamed(contextBeforeIntention, item.title));
   if (!activity) return [];
+  // "Log 90 minutes for every day I missed, I've been doing it daily" fills in past days; it isn't a new plan.
+  const daysLogged = new Set(
+    preview.activities.filter((item) => item.activityId === activity.activityId).map((item) => item.date),
+  );
+  if (daysLogged.size > 1) return [];
   return [
     {
       activityId: activity.activityId,

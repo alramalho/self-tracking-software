@@ -117,6 +117,11 @@ export class TelegramService {
     );
   }
 
+  /** An alert whose text comes from users (transcripts, comments): no Markdown, so nothing breaks it. */
+  async sendPlainAlert(message: string): Promise<TelegramDeliveryReport> {
+    return this.sendToChannel(this.alertMessage(message), "alerts");
+  }
+
   async sendPlainMessage(message: string): Promise<TelegramDeliveryReport> {
     return this.sendToChannel(message, "activity");
   }

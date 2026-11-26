@@ -10,6 +10,14 @@ const OPENAI_DEFAULT_MODEL = "gpt-4o-transcribe";
 const OPENROUTER_TIMESTAMP_MODEL = "openai/whisper-large-v3";
 const OPENAI_TIMESTAMP_MODEL = "whisper-1";
 
+// Whisper listens alongside gpt-4o-transcribe to catch the parts it drops (stt/coverage.ts).
+// STT_COVERAGE_CHECK=off turns it off; a Whisper main model needs no check.
+function coverageModel(environment: NodeJS.ProcessEnv, whisper: string): string | undefined {
+  if (environment.STT_COVERAGE_CHECK === "off") return undefined;
+  if (/whisper/i.test(environment.STT_MODEL || "")) return undefined;
+  return whisper;
+}
+
 export function resolveSTTConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): STTConfig {
@@ -19,6 +27,7 @@ export function resolveSTTConfig(
       baseURL: OPENROUTER_BASE_URL,
       model: environment.STT_MODEL || OPENROUTER_DEFAULT_MODEL,
       timestampModel: OPENROUTER_TIMESTAMP_MODEL,
+      coverageModel: coverageModel(environment, OPENROUTER_TIMESTAMP_MODEL),
       provider: "OpenRouter",
     };
   }
@@ -27,6 +36,7 @@ export function resolveSTTConfig(
     apiKey: environment.OPENAI_API_KEY,
     model: environment.STT_MODEL || OPENAI_DEFAULT_MODEL,
     timestampModel: OPENAI_TIMESTAMP_MODEL,
+    coverageModel: coverageModel(environment, OPENAI_TIMESTAMP_MODEL),
     provider: "OpenAI",
   };
 }
