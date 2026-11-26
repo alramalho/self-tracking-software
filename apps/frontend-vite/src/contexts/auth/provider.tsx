@@ -4,8 +4,8 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
   useAuth as useClerkAuth,
   useClerk,
-  useSignIn,
-} from "@clerk/clerk-react";
+} from "@clerk/react";
+import { useSignIn } from "@clerk/react/legacy";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { AuthContextType, NativeAuthTokens, WatchAuthPlugin } from "./types";
 
