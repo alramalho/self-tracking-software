@@ -126,3 +126,34 @@ export function enrichVoiceLogPreview(
     planSuggestions,
   };
 }
+
+/**
+ * After "Yes, log it" on a gone-quiet alert: where the week stands now, in the coach's words. Weeks run
+ * Sunday to Saturday and count days with a log, like the plan's own progress.
+ */
+export function weekStanding(
+  plan: { timesPerWeek?: number | null; activities: { id: string }[] },
+  entries: { activityId?: string | null; datetime: string | Date }[],
+  logged: { activityId: string; date: string }[],
+  today: Date = new Date(),
+): string {
+  const start = new Date(today);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  const from = dayKey(start);
+  const to = dayKey(today);
+  const ids = new Set(plan.activities.map((a) => a.id));
+  const days = new Set(
+    [
+      ...entries.filter((e) => e.activityId && ids.has(e.activityId)).map((e) => dayKey(e.datetime)),
+      ...logged.filter((l) => ids.has(l.activityId)).map((l) => l.date),
+    ].filter((day) => day >= from && day <= to),
+  );
+  const done = days.size;
+  const target = plan.timesPerWeek ?? 0;
+  if (!target) return `That's ${done} this week.`;
+  if (done > target) return `That's ${done} this week, ahead of your ${target}.`;
+  if (done === target) return `That's ${done} of ${target} this week. Right on track.`;
+  const left = target - done;
+  return `That's ${done} of ${target} this week. ${left} to go.`;
+}

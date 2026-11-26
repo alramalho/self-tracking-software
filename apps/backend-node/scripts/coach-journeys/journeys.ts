@@ -46,6 +46,22 @@ export const journeys: Journey[] = [
     },
   },
   {
+    id: "owner-did-it-not-logged",
+    title: "Chinese 'gone quiet', but they've been practising without logging",
+    why: "The owner (24 Nov): answered the gone-quiet drawer with \"I've been doing it\" and got \"When's your next Chinese session?\". Believe them and get it logged: no question.",
+    source: "real",
+    days: 7,
+    plan: { goal: "Conversational Chinese", timesPerWeek: 3, createdDaysBefore: 30, coached: true },
+    pastLogs: [6, 8, 10],
+    events: [{ day: 3, at: "20:00", answerAlert: { reason: "other", answers: ["I've been doing it"] } }],
+    expect: {
+      maxPushes: 1,
+      alertOn: [3],
+      alertOff: [4, 5, 6],
+      talks: [{ firstAsks: "never", neverAsks: [/\?/], ends: "logging" }],
+    },
+  },
+  {
     id: "owner-sunday-review",
     title: "Sunday after a thin week, four days after 'just got back'",
     why: "The owner (16 Nov): the 15 Nov weekly review was a chat message nobody asked for. There is no weekly review now: Sunday evening sends nothing.",

@@ -36,8 +36,8 @@ import { isLearningPlan } from "@tsw/prisma/follow-through/coverage";
 import { CoachNote } from "@/features/messages/adaptation/CoachNote";
 import { useAiConsent } from "@/features/ai-consent/AiConsent";
 import { useTranscriptionFeedback } from "@/features/dictation/TranscriptionFeedback";
-import { checkCoverage, commitVoiceLog, previewVoiceLog } from "./service";
-import { enrichVoiceLogPreview } from "./model";
+import { checkCoverage, commitVoiceLog, markCaughtUp, previewVoiceLog } from "./service";
+import { enrichVoiceLogPreview, weekStanding } from "./model";
 import { clearPendingVoiceLog, writePendingVoiceLog } from "./storage";
 import { useVoiceLogRecorder } from "./useVoiceLogRecorder";
 import { voiceLogActivityKey, voiceLogMetricKey } from "./types";
@@ -255,6 +255,7 @@ export function VoiceLogDrawer({
   onPendingChange,
   followUp: initialFollowUp,
   autoStart,
+  catchUp,
 }: VoiceLogDrawerProps) {
   const c = useColors();
   const client = useQueryClient();
@@ -300,6 +301,9 @@ export function VoiceLogDrawer({
   const learning = !!followUp?.logged.some((l) =>
     (plans.data ?? []).some((p) => !p.archivedAt && isLearningPlan(p) && p.activities.some((a) => a.id === l.activityId)),
   );
+  const catchUpPlan = catchUp ? plans.data?.find((p) => p.id === catchUp.planId) : undefined;
+  // After catching up: the coach's one line on where the week stands.
+  const [standing, setStanding] = useState<string>();
   const [coverage, setCoverage] = useState<VoiceLogCoverage | "checking" | null>(null);
   // "Nice work!" after a voice note that logged something, fading into the Saved view, like a manual log.
   const [celebration, setCelebration] = useState<Celebration>();
@@ -373,6 +377,7 @@ export function VoiceLogDrawer({
           clientRequestId,
           refinementContext,
           followUpContext: followUp,
+          focusActivityId: catchUp?.activityId,
         });
         if (run !== runRef.current) return;
         const enriched = enrichVoiceLogPreview(result, entries.data ?? []);
@@ -399,6 +404,7 @@ export function VoiceLogDrawer({
     [
       clientRequestId,
       followUp,
+      catchUp?.activityId,
       preview,
       entries.data,
       selectedActivityIDs,
@@ -464,7 +470,7 @@ export function VoiceLogDrawer({
   const startedOnOpen = useRef(false);
   useEffect(() => {
     if (startedOnOpen.current) return;
-    if (!initialFollowUp && !(autoStart && !initialDraft)) return;
+    if (!initialFollowUp && !catchUp && !(autoStart && !initialDraft)) return;
     startedOnOpen.current = true;
     void startRecording("initial");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -607,6 +613,18 @@ export function VoiceLogDrawer({
         setCelebration(value);
         if (value.milestone && value.plan) void markMilestoneCelebrated(value.plan.id, value.milestone);
       }
+      if (catchUp && catchUpPlan) {
+        const saved = logged.map(({ activityId, date }) => ({ activityId, date }));
+        void markCaughtUp(catchUp.planId).catch(() => {});
+        setStanding(weekStanding(catchUpPlan, earlier, saved));
+        // A learning plan: the coach reads what they covered, and suggests a change only when it's needed.
+        if (saved.length && isLearningPlan(catchUpPlan)) {
+          setCoverage("checking");
+          checkCoverage({ logged: saved, said: preview.transcript })
+            .then(setCoverage)
+            .catch(() => setCoverage(null));
+        }
+      }
       if (followUp && learning) {
         setCoverage("checking");
         checkCoverage({ logged: followUp.logged.map(({ activityId, date }) => ({ activityId, date })), said: preview.transcript })
@@ -626,7 +644,9 @@ export function VoiceLogDrawer({
   const suggestion = coverage && coverage !== "checking" ? coverage.suggestion : null;
 
   const title =
-    followUp && (phase === "ready" || phase === "recording")
+    catchUp && (phase === "ready" || phase === "recording")
+      ? "What did you do?"
+      : followUp && (phase === "ready" || phase === "recording")
       ? learning ? "What did you cover?" : "Share more"
       : phase === "review"
       ? "Review voice note"
@@ -667,6 +687,13 @@ export function VoiceLogDrawer({
       {phase === "recording" && (
         <View testID="voice-log-recording" style={{ alignItems: "center", gap: 18, paddingVertical: 8 }}>
           {followUp && !recorder.isWorking && <FollowUpGuide learning={learning} />}
+          {catchUp && (
+            <View testID="voice-log-catch-up" style={{ alignSelf: "stretch" }}>
+              <CoachNote strategist={strategist} mood="smiling" size="small">
+                <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>Say what you did, and which days.</Text>
+              </CoachNote>
+            </View>
+          )}
           <Text
             accessibilityLabel="Voice note duration"
             style={{
@@ -1169,9 +1196,16 @@ export function VoiceLogDrawer({
       {phase === "committed" && !suggestion && (
         <SavedActions
           testID="voice-log-committed"
-          onShareMore={lastSaved.length ? shareMore : undefined}
+          onShareMore={lastSaved.length && !catchUp ? shareMore : undefined}
           onDone={onClose}
         >
+          {!!standing && (
+            <View testID="voice-log-standing" style={{ alignSelf: "stretch" }}>
+              <CoachNote strategist={strategist} mood="smiling" size="small">
+                <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }}>{standing}</Text>
+              </CoachNote>
+            </View>
+          )}
           {coverage === "checking" && (
             <ActivityIndicator testID="voice-log-coverage-checking" color={c.muted} accessibilityLabel="Your coach is reading your note" />
           )}

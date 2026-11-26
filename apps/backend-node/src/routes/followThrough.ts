@@ -52,7 +52,7 @@ import { logger } from "../utils/logger";
 import { startPlanMonitoring } from "../services/coach/monitoring/service";
 import { monitoringState } from "../services/coach/monitoring/model";
 import { answerNudge } from "../services/coach/monitoring/requests";
-import { endQuiet, talkTurn } from "../services/coach/talk/service";
+import { caughtUp, endQuiet, talkTurn } from "../services/coach/talk/service";
 import { talkRequestSchema } from "../services/coach/talk/schema";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
 
@@ -139,6 +139,11 @@ router.post(
     res.json(await talkTurn(req.user!.id, String(req.params.planId), talkRequestSchema.parse(req.body))),
   ),
 );
+// "Yes, log it" on a gone-quiet alert: they logged what they'd done, so the alert is answered for the week.
+router.post("/plans/:planId/caught-up", handle(async (req, res) => {
+  await caughtUp(req.user!.id, String(req.params.planId));
+  res.json({ ok: true });
+}));
 // "Keep nudging me" after the coach went quiet on a plan.
 router.delete("/plans/:planId/quiet", handle(async (req, res) => {
   await endQuiet(req.user!.id, String(req.params.planId));

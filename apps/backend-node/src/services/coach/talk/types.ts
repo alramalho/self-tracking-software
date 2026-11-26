@@ -17,6 +17,8 @@ export interface TalkTurn {
   quietUntil: string | null;
   /** Set when they named the day of their next session: the coach checks on it then (null when too late today). */
   commitment: { day: string; checkAt: string | null } | null;
+  /** They said they did it but didn't log it: the app offers "Log it" straight away. */
+  logIt: boolean;
 }
 
 /** Everything the coach knows when it writes a turn. */

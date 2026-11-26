@@ -62,7 +62,12 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachSearch) {
       busy={busy}
       onClose={close}
       actions={
-        !turn ? null : done ? (
+        !turn ? null : done && turn.logIt ? (
+          <>
+            <OnboardingButton label="Log it" onClick={() => navigate({ to: "/add" })} disabled={busy} />
+            <QuietButton label="Later" variant="link" disabled={busy} onClick={close} />
+          </>
+        ) : done ? (
           <>
             <OnboardingButton label="Continue" onClick={close} disabled={busy} />
             {turn.quietUntil && <QuietButton label="Keep nudging me" variant="link" disabled={busy} onClick={() => undo.mutate()} />}

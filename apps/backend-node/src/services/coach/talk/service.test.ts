@@ -26,6 +26,19 @@ describe("endOfWeek", () => {
 });
 
 describe("settleTurn", () => {
+  it("did it but didn't log: no question, the app opens logging, the alert is answered for the week", () => {
+    const said = [{ say: "What got in the way?", answer: "I've been doing it" }];
+    const { shown, quiet, over } = settleTurn(
+      turn({ say: "Then let's get it on the board. When's next?", ask: "text", action: "log" }),
+      request({ reason: "other", turns: said }),
+      TODAY,
+    );
+    expect(over).toBe(true);
+    expect(shown).toMatchObject({ ask: "none", logIt: true, commitment: null, quietUntil: null });
+    expect(shown.say).not.toContain("?");
+    expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
+  });
+
   it("lets the coach ask its first question", () => {
     const { shown, quiet } = settleTurn(turn(), request(), TODAY);
     expect(shown).toMatchObject({ ask: "text", placeholder: "Sunday night", quietUntil: null });

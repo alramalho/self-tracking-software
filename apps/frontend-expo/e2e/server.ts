@@ -521,6 +521,21 @@ const server = http.createServer(async (req, res) => {
   }
   if (path === "/voice-logs/preview" && req.method === "POST") {
     const date = new Date().toISOString().slice(0, 10);
+    if (body.focus_activity_id && body.focus_activity_id !== "read") {
+      // "Yes, log it" on a quiet plan: "Monday 20 minutes of chords, yesterday half an hour of scales."
+      const a = state.activities.find((x: any) => x.id === body.focus_activity_id) ?? { title: "Practice", emoji: "✅", measure: "minutes" };
+      const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+      const session = (n: number, quantity: number, description: string) => ({ activityId: body.focus_activity_id, title: a.title, emoji: a.emoji, measure: a.measure, quantity, date: day(n), time: null, description, privateNotes: null, difficulty: null, estimatedFrom: null, confidence: 0.9 });
+      send({
+        clientRequestId: body.client_request_id,
+        transcript: "Two days ago twenty minutes of chords, and yesterday half an hour of scales.",
+        activities: [session(2, 20, "Chords"), session(1, 30, "Scales")],
+        metrics: [],
+        note: { title: a.title, text: "", date: day(1), confidence: 0.9 },
+        unresolved: [],
+      });
+      return;
+    }
     if (body.focus_activity_id) {
       // The log screen's mic: "I read for half an hour yesterday, chapter four of Dune" fills that one log.
       const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);

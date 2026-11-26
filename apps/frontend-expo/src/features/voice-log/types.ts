@@ -172,6 +172,13 @@ export type VoiceLogPhase =
   | "review"
   | "committed";
 
+/** "Yes, log it" on a gone-quiet alert: they did it but didn't log it. */
+export interface VoiceLogCatchUp {
+  planId: string;
+  /** The plan's one activity, when it has one: everything said is read as that activity. */
+  activityId?: string;
+}
+
 export interface VoiceLogDrawerProps {
   onClose: () => void;
   initialDraft?: VoiceLogDraft | null;
@@ -180,6 +187,8 @@ export interface VoiceLogDrawerProps {
   followUp?: VoiceLogFollowUp;
   /** Start listening as soon as it opens (the round mic), unless a note is waiting for review. */
   autoStart?: boolean;
+  /** Catching up on a quiet plan: the coach asks what they did, and says where the week stands after. */
+  catchUp?: VoiceLogCatchUp;
 }
 
 export interface VoiceMicButtonProps {

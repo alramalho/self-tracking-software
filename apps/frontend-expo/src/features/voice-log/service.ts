@@ -63,6 +63,11 @@ export async function commitVoiceLog(
   );
 }
 
+/** "Yes, log it" on a gone-quiet alert, once the logs are saved: the alert is answered for the week. */
+export async function markCaughtUp(planId: string) {
+  await api.post(`/follow-through/plans/${encodeURIComponent(planId)}/caught-up`, {});
+}
+
 /** After a "What did you cover?" note on a learning plan: the coach's read, and a suggested change when there is one. */
 export async function checkCoverage(payload: VoiceLogCoverageRequest): Promise<VoiceLogCoverage | null> {
   return (await api.post<{ coverage: VoiceLogCoverage | null }>("/voice-logs/coverage", payload, { timeout: 60000 })).data.coverage;

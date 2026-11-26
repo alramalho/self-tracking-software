@@ -74,7 +74,7 @@ export interface TalkExpectation {
   /** Things the coach should refer to (history or the answer). */
   mentions?: RegExp[];
   /** How the conversation must end. */
-  ends?: "committed" | "away" | "not_sure" | "answered";
+  ends?: "committed" | "away" | "not_sure" | "answered" | "logging";
 }
 
 export interface MessageExpectation {
@@ -123,6 +123,7 @@ export const scriptedTalk: TalkModel = async ({ reason, turns, notSure, today })
   const answer = turns.at(-1)?.answer ?? "";
   const named = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.exec(answer);
   if (notSure) return turn({ say: "Okay.", action: "ask_again" });
+  if (/been doing it|didn'?t log|forgot to log|did it/i.test(answer)) return turn({ say: "Then let's get it on the board.", action: "log" });
   if (reason === "travel" && /back/i.test(answer) && named?.[1].toLowerCase() === "today") return turn({ say: "Welcome back. I'll be looking for your next log." });
   if (named && /back/i.test(answer) && reason === "travel")
     return turn({ say: "Safe travels.", action: "quiet", until: dayNamed(named[1], today) });
@@ -263,24 +264,29 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
         if (!alert) continue;
         const today = ymd(now);
         const record: TalkRecord = { day, reason: e.answerAlert.reason, turns: [], ended: "" };
-        const asked: { question: string; answer: string }[] = [];
-        for (let i = 0; i <= e.answerAlert.answers.length + 1; i++) {
+        // Like the app: "Something else" and "Talk to …" open with the person's own words, asked on the phone.
+        const opens = (e.answerAlert.reason === "other" || e.answerAlert.reason === "talk") && e.answerAlert.answers.length > 0;
+        const asked: { question: string; answer: string }[] = opens
+          ? [{ question: e.answerAlert.reason === "other" ? "What got in the way?" : "What's on your mind?", answer: e.answerAlert.answers[0] }]
+          : [];
+        const answers = opens ? e.answerAlert.answers.slice(1) : e.answerAlert.answers;
+        for (let i = 0; i <= answers.length + 1; i++) {
           // "Not sure yet" is tapped on the coach's question after the scripted answers run out.
-          const notSure = !!e.answerAlert.notSure && i === e.answerAlert.answers.length + 1;
+          const notSure = !!e.answerAlert.notSure && i === answers.length + 1;
           const request = talkRequestSchema.parse({ reason: e.answerAlert.reason, turns: asked.map((a) => ({ say: a.question, answer: a.answer })), notSure, missed: alert.status === "missed" });
           const out = await talkModel({ journey, reason: e.answerAlert.reason, turns: asked, notSure, today, weekday: formatInTimeZone(now, TZ, "EEEE"), history: historyFor(now) });
           const settled = settleTurn(out, request, today);
-          const said = notSure ? "Not sure yet." : i === 0 ? reasonWords(e.answerAlert.reason) : (asked.at(-1)?.answer ?? "");
+          const said = notSure ? "Not sure yet." : i === 0 && !opens ? reasonWords(e.answerAlert.reason) : (asked.at(-1)?.answer ?? "");
           if (said) addMessage("USER", said, now, { source: "talk_to_coach" });
           addMessage("COACH", [settled.shown.say, settled.shown.detail].filter(Boolean).join(" "), now, { source: "talk_to_coach" });
           record.turns.push({ said, shown: settled.shown });
           if (settled.over) {
             finishTalk(state, settled, today, now);
-            record.ended = settled.quiet?.why ?? "none";
+            record.ended = settled.shown.logIt ? "logging" : (settled.quiet?.why ?? "none");
             break;
           }
-          const answer = e.answerAlert.answers[i];
-          if (answer === undefined && e.answerAlert.notSure && i === e.answerAlert.answers.length) continue;
+          const answer = answers[i];
+          if (answer === undefined && e.answerAlert.notSure && i === answers.length) continue;
           if (answer === undefined) {
             // The person closes the drawer without answering: nothing is settled.
             record.ended = "left";

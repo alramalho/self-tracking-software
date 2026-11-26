@@ -180,6 +180,7 @@ The app's rules, which you must not penalise:
 - The weekly review opener knocks first: one short line that invites a reply.
 - "Not sure yet" ends the conversation with when the coach will ask again (three days later). That is the design.
 - Asking whether a session they planned actually happened is accountability too.
+- When they say they did it but didn't log it, one short line and the app's "Log it" button (no question, no next-session talk) is the design.
 - A lapse message (weeks without logs or replies) asks honestly whether the plan still fits; an archive button is attached.
 - The situation lists what happened before in order with days; only what they said in the same conversation or since counts as "already told".
 Judge the content. worthIt is true only if a busy person would be glad to get this text now: it matches the facts, it is short, it asks at most one thing and that thing matters (their next session, a decision, or something concrete they reported such as pain), it doesn't ask what they already said, doesn't offer changes nobody asked for, and has no filler. A weekly review for a week that went fully to plan, with nothing to decide, is not worth a push unless it is very short and specific. A message that asks nothing is fine when nothing needs asking.

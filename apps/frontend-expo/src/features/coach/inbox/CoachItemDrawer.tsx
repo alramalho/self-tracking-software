@@ -10,7 +10,7 @@ import { coachIdentity } from "@/features/messages/coach";
 import { latestCoachChat } from "@/features/messages/service";
 import { dayKey } from "@/core/dates";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
-import type { VoiceLogFollowUp } from "@/features/voice-log/types";
+import type { VoiceLogCatchUp, VoiceLogFollowUp } from "@/features/voice-log/types";
 import { MISS_REASONS } from "@/features/timeline/home-cards/miss-reasons";
 import type { TalkReason } from "../talk/types";
 import { alertFact } from "../model";
@@ -54,7 +54,11 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
   };
   // "What did you cover?" is answered with the Share more voice note, opened here.
   const [voice, setVoice] = useState<VoiceLogFollowUp>();
+  // "Yes, log it": they did it but didn't log it. "Not lately" shows what got in the way.
+  const [catchUp, setCatchUp] = useState<VoiceLogCatchUp>();
+  const [notLately, setNotLately] = useState(false);
   if (voice) return <VoiceLogDrawer followUp={voice} onClose={onClose} />;
+  if (catchUp) return <VoiceLogDrawer catchUp={catchUp} onClose={() => void done()} />;
   if (!item) return null;
   const busy = talk.isPending || post.isPending;
   return (
@@ -78,20 +82,28 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
         return (
           <>
             <DrawerHeader emoji={activity?.emoji ?? plan.emoji} title={it.title} subtitle={alertFact(alert)} />
-            <DrawerOptions label="What got in the way?" options={reasons} />
+            {notLately ? (
+              <DrawerOptions label="What got in the way?" options={reasons} />
+            ) : (
+              <DrawerOptions
+                label="Done some, just not logged?"
+                options={[
+                  {
+                    testID: "coach-item-log",
+                    label: "Yes, log it",
+                    emoji: "✅",
+                    onPress: () =>
+                      setCatchUp({ planId: plan.id, activityId: plan.activities.length === 1 ? activity?.id : undefined }),
+                  },
+                  { testID: "coach-item-not-lately", label: "Not lately", emoji: "🙈", onPress: () => setNotLately(true) },
+                ]}
+              />
+            )}
             <DrawerOptions
               options={[
                 { label: `Talk to ${coach.name}`, onPress: () => void talkAbout(plan.id, "talk", missed) },
                 { label: "Open plan", onPress: () => openPlan(plan.id) },
               ]}
-            />
-            <DrawerButton
-              testID="coach-item-log"
-              label={`Log ${activity?.title.toLowerCase() ?? "a session"}`}
-              onPress={() => {
-                onClose();
-                router.push({ pathname: "/(tabs)/add", params: activity ? { activityId: activity.id } : {} });
-              }}
             />
           </>
         );

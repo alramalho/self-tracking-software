@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { alertFact } from "@tsw/prisma/follow-through/coach-inbox";
@@ -56,6 +57,12 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
     onClose();
     navigate({ to: "/plans", search: { selectedPlan: planId } });
   };
+  // "Done some, just not logged?": yes opens logging (the alert is answered for the week), "Not lately" asks why.
+  const [notLately, setNotLately] = useState(false);
+  const catchUp = (planId: string, activityId?: string) => {
+    void api.post(`/follow-through/plans/${encodeURIComponent(planId)}/caught-up`, {}).catch(() => {});
+    logActivity(activityId);
+  };
   const logActivity = (activityId?: string) => {
     onClose();
     navigate({ to: "/add", search: activityId ? { activityId } : {} });
@@ -84,17 +91,22 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
         return (
           <>
             <DrawerHeader emoji={activity?.emoji ?? plan.emoji} title={it.title} subtitle={alertFact(alert)} />
-            <DrawerOptions label="What got in the way?" options={reasons} />
+            {notLately ? (
+              <DrawerOptions label="What got in the way?" options={reasons} />
+            ) : (
+              <DrawerOptions
+                label="Done some, just not logged?"
+                options={[
+                  { label: "Yes, log it", emoji: "✅", onClick: () => catchUp(plan.id, activity?.id) },
+                  { label: "Not lately", emoji: "🙈", onClick: () => setNotLately(true) },
+                ]}
+              />
+            )}
             <DrawerOptions
               options={[
                 { label: `Talk to ${coach.name}`, onClick: () => talkAbout(plan.id, "talk", missed) },
                 { label: "Open plan", onClick: () => openPlan(plan.id) },
               ]}
-            />
-            <DrawerButton
-              testId="coach-item-log"
-              label={`Log ${activity?.title.toLowerCase() ?? "a session"}`}
-              onClick={() => logActivity(activity?.id)}
             />
           </>
         );

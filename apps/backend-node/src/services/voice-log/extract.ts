@@ -58,7 +58,7 @@ Follow-up notes ("Share more"):
 - Log a different activity only when they clearly say they also did it.
 
 Filling one log (fillingOneLog):
-- When fillingOneLog is present, the person is on that activity's log screen and is saying what they did instead of typing it. The catalog holds only that activity, and everything said is about it: return exactly one activity entry for it whenever they say they did it, even if they name it differently ("studied", "practised", "did my lesson").
+- When fillingOneLog is present, the person is on that activity's log screen and is saying what they did instead of typing it. The catalog holds only that activity, and everything said is about it, even if they name it differently ("studied", "practised", "did my lesson"). Return one activity entry for each day they say they did it (usually one), each with its own amount, date and description.
 - description is what the session was about (topics, exercises, pieces, pages, route) in their words and language; how it felt goes in difficulty and the note, not in description.
 
 Return only the requested structured object.`;

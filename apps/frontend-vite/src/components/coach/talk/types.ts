@@ -12,6 +12,8 @@ export interface TalkTurn {
   quietUntil: string | null;
   /** Set when they named the day of their next session; checkAt is null when it's too late today. */
   commitment?: { day: string; checkAt: string | null } | null;
+  /** They said they did it but didn't log it: "Log it" opens logging. */
+  logIt?: boolean;
 }
 
 /** A screen already answered, sent back so the coach knows the conversation so far. */

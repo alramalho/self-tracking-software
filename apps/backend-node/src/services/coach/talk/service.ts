@@ -55,11 +55,14 @@ const ANY_TIME: CheckInTimes = { earliestToday: "00:00", latest: "22:00", usual:
 export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string, times: CheckInTimes = ANY_TIME) {
   const answered = request.turns.length;
   let action = request.notSure ? "ask_again" : turn.action;
+  // Did it, didn't log: no question and no date, the app opens logging. The alert counts as answered.
+  const logIt = action === "log";
+  if (logIt) action = "none";
   const limit = action === "commit" ? MAX_COMMIT_DAYS : MAX_QUIET_DAYS;
   let until = dayWithin(turn.until, today, limit) ? turn.until : "";
   if (action === "ask_again" && !until) until = format(addDays(parseISO(today), ASK_AGAIN_DAYS), "yyyy-MM-dd");
   if (action !== "none" && !until) action = "none";
-  const asks = turn.ask === "text" && answered < MAX_QUESTIONS && !request.notSure && action !== "commit";
+  const asks = turn.ask === "text" && answered < MAX_QUESTIONS && !request.notSure && action !== "commit" && !logIt;
   const ask = asks ? "text" : "none";
   const commitDay = action === "commit" ? until : null;
   const checkAt = commitDay ? resolveCheckTime(commitDay, today, turn.checkAt, times) : null;
@@ -78,6 +81,7 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string,
     placeholder: ask === "text" ? words(turn.placeholder, 5) : "",
     quietUntil: action === "quiet" ? until : null,
     commitment: commitDay ? { day: commitDay, checkAt } : null,
+    logIt,
   };
   const why: Record<string, PlanQuiet["why"]> = { quiet: "away", ask_again: "not_sure", commit: "committed" };
   const quiet: Omit<PlanQuiet, "at"> | null =
@@ -222,6 +226,25 @@ async function finish(
       const reason: MissReasonId = request.reason === "talk" ? "other" : request.reason;
       state.missedWeeks = { ...state.missedWeeks, [planId]: { week, reason, days: [], answeredAt: now.toISOString() } };
     }
+  });
+}
+
+/**
+ * "Yes, log it" on a gone-quiet alert, after the logs are saved: like a talk that ended in logging, the
+ * alert is answered for the rest of the week and any open nudge about the plan is resolved.
+ */
+export async function caughtUp(userId: string, planId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { timezone: true } });
+  const now = new Date();
+  await changeState(userId, async (state) => {
+    if (!state.supports[planId]) throw new FollowThroughInputError("Plan not found");
+    const timezone = state.supports[planId]?.timezone || user.timezone || "Europe/Berlin";
+    const monitoring = (state.monitoring ??= monitoringState());
+    const until = endOfWeek(formatInTimeZone(now, timezone, "yyyy-MM-dd"));
+    monitoring.quiet = { ...monitoring.quiet, [planId]: { until, why: "answered", at: now.toISOString() } };
+    for (const nudge of monitoring.requests)
+      if (nudge.kind === "nudge" && nudge.planIds.includes(planId) && !nudge.resolvedAt && !nudge.closedAt)
+        nudge.resolvedAt = now.toISOString();
   });
 }
 

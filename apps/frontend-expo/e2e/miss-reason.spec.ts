@@ -18,10 +18,12 @@ for (const theme of ["DARK", "LIGHT"])
     await page.goto("/coach");
 
     await page.getByRole("button", { name: readingRow }).click();
-    await expect(page.getByText("What got in the way?", { exact: true })).toBeVisible();
+    await expect(page.getByText("Done some, just not logged?", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Talk to Helly", exact: true })).toBeVisible();
     await page.waitForTimeout(400);
     await page.screenshot({ path: `test-results/talk-drawer-${theme}.png` });
+
+    await page.getByTestId("coach-item-not-lately").click();
 
     await page.getByRole("button", { name: "Travelling", exact: true }).click();
     await expect(page.getByTestId("talk-say")).toHaveText("When are you back?");
@@ -55,6 +57,7 @@ test("lost motivation: the coach asks for the next session, holds you to it, and
   await page.goto("/coach");
   await page.getByRole("button", { name: readingRow }).click();
   // Leaving the drawer for the conversation doesn't answer anything yet.
+  await page.getByTestId("coach-item-not-lately").click();
   await page.getByRole("button", { name: "Lost motivation", exact: true }).click();
   await expect(page.getByTestId("talk-say")).toHaveText("Motivation dips. It happens.");
   await expect(page.getByTestId("talk-detail")).toHaveText("What's the smallest session you'd still do, and when?");
@@ -81,6 +84,7 @@ test("backing out of the conversation leaves the alert waiting", async ({ page, 
   await request.post(`${API}/__plan-nudges`, { headers, data: {} });
   await page.goto("/coach");
   await page.getByRole("button", { name: readingRow }).click();
+  await page.getByTestId("coach-item-not-lately").click();
   await page.getByRole("button", { name: "Lost motivation", exact: true }).click();
   await expect(page.getByTestId("talk-say")).toHaveText("Motivation dips. It happens.");
   await page.goto("/coach");
@@ -92,6 +96,7 @@ test("not sure yet ends the conversation and asks again later", async ({ page, r
   await request.post(`${API}/__plan-nudges`, { headers, data: {} });
   await page.goto("/coach");
   await page.getByRole("button", { name: readingRow }).click();
+  await page.getByTestId("coach-item-not-lately").click();
   await page.getByRole("button", { name: "Travelling", exact: true }).click();
   await expect(page.getByTestId("talk-say")).toHaveText("When are you back?");
   await page.getByRole("button", { name: "Not sure yet", exact: true }).click();
@@ -104,6 +109,7 @@ test("something else starts with the person's own words, and nothing is sent in 
   await request.post(`${API}/__plan-nudges`, { headers, data: {} });
   await page.goto("/coach");
   await page.getByRole("button", { name: readingRow }).click();
+  await page.getByTestId("coach-item-not-lately").click();
   await page.getByRole("button", { name: "Something else", exact: true }).click();
   await expect(page.getByTestId("talk-say")).toHaveText("What got in the way?");
   await page.getByTestId("talk-answer").fill("Exams all week");
@@ -118,6 +124,8 @@ test("a plan that went quiet also asks what got in the way", async ({ page, requ
   await request.post(`${API}/__plan-nudges`, { headers, data: {} });
   await page.goto("/coach");
   await page.getByRole("button", { name: /^Practice guitar has gone quiet\./ }).click();
+  await expect(page.getByText("Done some, just not logged?", { exact: true })).toBeVisible();
+  await page.getByTestId("coach-item-not-lately").click();
   await expect(page.getByText("What got in the way?", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open plan", exact: true })).toBeVisible();
 });
@@ -147,7 +155,7 @@ for (const theme of ["DARK", "LIGHT"])
     await page.getByRole("button", { name: /^train 4 times a week missed last week\./ }).click();
     await expect(page.getByRole("heading", { name: "train 4 times a week missed last week", exact: true })).toBeVisible();
     await expect(page.getByText("Streak 8 → 7", { exact: true }).last()).toBeVisible();
-    await expect(page.getByText("What got in the way?", { exact: true })).toBeVisible();
+    await expect(page.getByText("Done some, just not logged?", { exact: true })).toBeVisible();
     await page.waitForTimeout(400);
     await page.screenshot({ path: `test-results/missed-week-${theme}.png` });
   });

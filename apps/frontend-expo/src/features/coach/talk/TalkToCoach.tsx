@@ -14,6 +14,8 @@ import { StepSequence } from "@/features/onboarding/interview/StepReveal";
 import { coachIdentity } from "@/features/messages/coach";
 import { hellyThumbsUp } from "@/features/coach/avatar";
 import { dismissPlanNotifications } from "@/native/notifications/dismiss";
+import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
+import { usePlan } from "@/data/queries";
 import { endQuiet, nextTurn, openingQuestion } from "./service";
 import type { TalkAnswered, TalkToCoachProps, TalkTurn } from "./types";
 
@@ -32,6 +34,9 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
   const [answered, setAnswered] = useState<TalkAnswered[]>([]);
   const [turn, setTurn] = useState<TalkTurn | null>(() => openingQuestion(reason));
   const [answer, setAnswer] = useState("");
+  // "Log it": they did it but didn't log it, so the voice note opens over the coach.
+  const [logging, setLogging] = useState(false);
+  const plan = usePlan(planId).data;
   const ask = useMutation({
     mutationFn: async ({ text, notSure }: { text: string; notSure: boolean }) => {
       const turns = turn ? [...answered, { say: turn.say, answer: notSure ? "Not sure yet" : text }] : answered;
@@ -69,7 +74,14 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
       busy={busy}
       onClose={close}
       actions={
-        !turn ? null : done ? (
+        !turn ? null : done && turn.logIt ? (
+          <>
+            <OnboardingButton label="Log it" onPress={() => setLogging(true)} disabled={busy} />
+            <Pressable accessibilityRole="button" disabled={busy} onPress={close} style={{ alignItems: "center", paddingVertical: 6 }}>
+              <Text style={{ color: c.muted, fontSize: 15 }}>Later</Text>
+            </Pressable>
+          </>
+        ) : done ? (
           <>
             <OnboardingButton label="Continue" onPress={close} disabled={busy} />
             {turn.quietUntil && (
@@ -130,6 +142,12 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
           </Pressable>
         )}
       </StepSequence>
+      {logging && (
+        <VoiceLogDrawer
+          catchUp={{ planId, activityId: plan?.activities.length === 1 ? plan.activities[0].id : undefined }}
+          onClose={close}
+        />
+      )}
     </InterviewFrame>
   );
 }

@@ -197,6 +197,9 @@ export function followThroughFixture(
     };
     const ask = (say: string, detail: string, placeholder: string) => ({ say, detail, ask: "text", placeholder, quietUntil: null });
     if (body.notSure) return end({ say: "No problem.", detail: "I'll ask again in three days." }, "not_sure", away);
+    // Did it, didn't log: one line and "Log it", no question.
+    if (/been doing it|didn't log/i.test(body.turns.at(-1)?.answer ?? ""))
+      return end({ say: "Good, let's get it logged.", detail: "", logIt: true }, "answered");
     if (body.reason === "travel" && !body.turns.length) return ask("When are you back?", "", "Sunday night");
     if (body.reason === "travel")
       return end({ say: "Quiet until you're back.", detail: "No nudges while you're away. The week still counts.", quietUntil: away }, "away", away);
@@ -213,6 +216,15 @@ export function followThroughFixture(
       );
     }
     return end({ say: "Got it.", detail: "Next session is the one that counts." }, "answered");
+  }
+  // "Yes, log it" once the logs are saved: the alert is answered for the week.
+  const caughtUp = path.match(/^\/follow-through\/plans\/([^/]+)\/caught-up$/);
+  if (caughtUp && method === "POST") {
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring } as typeof support.monitoring;
+    const end = new Date();
+    end.setDate(end.getDate() + (6 - end.getDay()));
+    support.monitoring!.quiet = { ...support.monitoring!.quiet, [caughtUp[1]]: { until: end.toISOString().slice(0, 10), why: "answered", at: new Date().toISOString() } };
+    return { ok: true };
   }
   const quietPlan = path.match(/^\/follow-through\/plans\/([^/]+)\/quiet$/);
   if (quietPlan && method === "DELETE") {
