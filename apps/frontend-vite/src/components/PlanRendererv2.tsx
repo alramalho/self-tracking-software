@@ -58,6 +58,12 @@ const PlanProgressStrip = ({ plan }: PlanProgressStripProps) => {
 
 // The plan page reads top to bottom, as on iPhone: header, progress stepper, this week and next,
 // history, circle. Everything else lives in the plan's settings drawer or the Coach tab.
+/** "paused until Mon, Nov 30" for a pause the coach set, else "paused" (same as the iPhone app). */
+const pausedLabel = (history?: { until?: string }[] | null) => {
+  const until = history?.at(-1)?.until;
+  return until ? `paused until ${format(new Date(`${until}T12:00:00`), "EEE, MMM d")}` : "paused";
+};
+
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { activities, activityEntries } = useActivities();
   const [settings, setSettings] = useState(false);
@@ -67,7 +73,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const cadence = [
     plan.outlineType === "TIMES_PER_WEEK" ? `${plan.timesPerWeek} times per week` : "Custom plan",
     plan.finishingDate ? `until ${format(new Date(plan.finishingDate), "MMM d, yyyy")}` : null,
-    plan.isPaused ? "paused" : null,
+    plan.isPaused ? pausedLabel((plan as { pauseHistory?: { until?: string }[] | null }).pauseHistory) : null,
   ]
     .filter(Boolean)
     .join(" · ");

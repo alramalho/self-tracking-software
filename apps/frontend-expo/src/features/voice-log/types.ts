@@ -189,6 +189,8 @@ export interface VoiceLogDrawerProps {
   autoStart?: boolean;
   /** Catching up on a quiet plan: the coach asks what they did, and says where the week stands after. */
   catchUp?: VoiceLogCatchUp;
+  /** Save initialDraft as soon as it opens: they already said yes on the coach's "Log it" card. */
+  saveOnOpen?: boolean;
 }
 
 export interface VoiceMicButtonProps {

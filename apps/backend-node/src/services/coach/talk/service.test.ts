@@ -39,6 +39,26 @@ describe("settleTurn", () => {
     expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
   });
 
+  it("a pause is only offered: nothing changes until they accept, and the alert is answered for the week", () => {
+    const said = [{ say: "What got in the way?", answer: "Fresh tattoo yesterday, I can't sweat for a few days." }];
+    const { shown, quiet, over } = settleTurn(
+      turn({ say: "Let the tattoo heal.", detail: "Want me to pause it until Monday?", ask: "text", action: "pause", until: "2026-11-09" }),
+      request({ reason: "other", turns: said }),
+      TODAY,
+    );
+    expect(over).toBe(true);
+    expect(shown).toMatchObject({ ask: "none", pauseUntil: "2026-11-09", quietUntil: null, commitment: null, logIt: false });
+    expect(shown.detail).not.toContain("?");
+    expect(quiet).toEqual({ until: WEEK_END, why: "answered" });
+  });
+
+  it("no pause offer for today only, in the past, or beyond two weeks", () => {
+    for (const until of [TODAY, "2026-11-01", "2026-11-20", "monday"]) {
+      const { shown } = settleTurn(turn({ ask: "none", action: "pause", until }), request({ reason: "sick" }), TODAY);
+      expect(shown.pauseUntil).toBeNull();
+    }
+  });
+
   it("lets the coach ask its first question", () => {
     const { shown, quiet } = settleTurn(turn(), request(), TODAY);
     expect(shown).toMatchObject({ ask: "text", placeholder: "Sunday night", quietUntil: null });

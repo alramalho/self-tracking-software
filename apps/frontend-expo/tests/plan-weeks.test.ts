@@ -45,3 +45,19 @@ test("a times-per-week plan offers open days instead of fixed sessions", () => {
   assert.ok(kinds.includes("flexible"));
   assert.ok(!kinds.includes("scheduled"));
 });
+
+test("a plan paused through Saturday plans nothing until then, and picks up the week after", () => {
+  const plan = {
+    id: "p",
+    goal: "train 4 times a week",
+    outlineType: "TIMES_PER_WEEK",
+    timesPerWeek: 4,
+    activities: [run],
+    isPaused: true,
+    pauseHistory: [{ pausedAt: "2026-10-21T08:00:00Z", resumedAt: null, until: "2026-10-24" }],
+  };
+  const projection = buildPlanWeekProjection({ plans: [plan], entries: [], now, weekCount: 2 });
+  const planned = projection.flexibleCells.map((cell) => cell.dateKey);
+  assert.equal(planned.filter((key) => key <= "2026-10-24").length, 0);
+  assert.ok(planned.some((key) => key >= "2026-10-25"));
+});

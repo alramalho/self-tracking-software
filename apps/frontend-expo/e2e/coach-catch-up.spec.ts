@@ -106,3 +106,60 @@ for (const theme of ["DARK", "LIGHT"]) {
     await expect(page.getByTestId("voice-log-drawer").getByRole("heading", { name: "What did you do?" })).toBeVisible();
   });
 }
+
+for (const theme of ["DARK", "LIGHT"]) {
+  test(`"An hour today" in Talk to coach shows the session as a card, and Log it saves it in one tap, in ${theme}`, async ({ page, request }) => {
+    test.setTimeout(60000);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
+    await request.post(`${API}/__plan-nudges`, { headers, data: {} });
+    await page.goto("/coach");
+    await page.getByRole("button", { name: quietGuitar }).click();
+    await page.getByTestId("coach-item-not-lately").click();
+    await page.getByRole("button", { name: "Something else", exact: true }).click();
+    await page.getByTestId("talk-answer").fill("I've been practising, I did an hour today");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    const card = page.getByTestId("talk-log-draft");
+    await expect(card).toContainText("Guitar");
+    await expect(card).toContainText("60 minutes · Today");
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `test-results/talk-log-card-${theme}.png` });
+    await page.getByRole("button", { name: "Log it", exact: true }).click();
+    // Straight to saving: no recorder, no review.
+    await waitForCelebration(page);
+    await expect(page.getByTestId("voice-log-standing")).toContainText(/this week/);
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `test-results/talk-log-saved-${theme}.png` });
+    const requests = (await (await request.get(`${API}/__state`)).json()).requests as any[];
+    expect(requests.some((r) => r.path === "/voice-logs/preview")).toBe(false);
+    const commit = requests.find((r) => r.path === "/voice-logs/commit").body;
+    expect(commit.activities).toEqual([expect.objectContaining({ activityId: "guitar", quantity: 60 })]);
+  });
+
+  test(`a fresh tattoo: the coach offers a pause, one tap pauses the plan and the screen says until when, in ${theme}`, async ({ page, request }) => {
+    test.setTimeout(60000);
+    await request.post(`${API}/__reset`);
+    await request.patch(`${API}/users/user`, { headers, data: { themeMode: theme, themeBaseColor: "AMBER" } });
+    await request.post(`${API}/__plan-nudges`, { headers, data: {} });
+    await page.goto("/coach");
+    await page.getByRole("button", { name: quietGuitar }).click();
+    await page.getByTestId("coach-item-not-lately").click();
+    await page.getByRole("button", { name: "Something else", exact: true }).click();
+    await page.getByTestId("talk-answer").fill("I got a tattoo yesterday and I can't sweat for a few days.");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(page.getByTestId("talk-detail")).toHaveText("I can pause the plan until Monday.");
+    await expect(page.getByRole("button", { name: "Keep it running", exact: true })).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `test-results/talk-pause-offer-${theme}.png` });
+    await page.getByRole("button", { name: /^Pause until / }).click();
+    await expect(page.getByTestId("talk-paused")).toContainText("Paused through");
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `test-results/talk-paused-${theme}.png` });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.goto("/plans");
+    await page.getByRole("button", { name: /Practice guitar/ }).first().click();
+    await expect(page.getByText(/paused until /).first()).toBeVisible();
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `test-results/plan-paused-${theme}.png` });
+  });
+}

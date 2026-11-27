@@ -14,6 +14,30 @@ export interface TalkTurn {
   commitment?: { day: string; checkAt: string | null } | null;
   /** They said they did it but didn't log it: "Log it" opens logging. */
   logIt?: boolean;
+  /** With logIt: the sessions their words already said, sure enough to save in one tap. Null: "Log it" opens logging. */
+  logDraft?: TalkLogDraft | null;
+  /** The coach offers to pause the plan through this day; nothing changes until they tap it. */
+  pauseUntil?: string | null;
+}
+
+/** Sessions read from what they told the coach, in the voice note's shape (the same save call takes them). */
+export interface TalkLogDraft {
+  clientRequestId: string;
+  transcript: string;
+  activities: {
+    activityId: string;
+    title: string;
+    emoji: string;
+    measure: string;
+    quantity: number;
+    date: string;
+    time?: string | null;
+    description?: string | null;
+    difficulty?: string | null;
+    estimatedFrom?: string | null;
+    confidence: number;
+  }[];
+  note: { title: string; text: string; date: string; confidence: number };
 }
 
 /** A screen already answered, sent back so the coach knows the conversation so far. */

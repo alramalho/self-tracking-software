@@ -1,3 +1,5 @@
+import type { VoiceLogPreview } from "@/features/voice-log/types";
+
 /** Why the plan slipped, from the drawer; "other" and "talk" start with the person's own words. */
 export type TalkReason = "busy" | "sick" | "travel" | "motivation" | "other" | "talk";
 
@@ -14,6 +16,10 @@ export interface TalkTurn {
   commitment?: { day: string; checkAt: string | null } | null;
   /** They said they did it but didn't log it: "Log it" opens the voice note straight away. */
   logIt?: boolean;
+  /** With logIt: the sessions their words already said, sure enough to save in one tap. Null: the voice note asks. */
+  logDraft?: VoiceLogPreview | null;
+  /** The coach offers to pause the plan through this day; nothing changes until they tap it. */
+  pauseUntil?: string | null;
 }
 
 /** A screen already answered, sent back so the coach knows the conversation so far. */

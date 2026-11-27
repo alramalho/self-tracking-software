@@ -257,6 +257,7 @@ export function VoiceLogDrawer({
   followUp: initialFollowUp,
   autoStart,
   catchUp,
+  saveOnOpen,
 }: VoiceLogDrawerProps) {
   const c = useColors();
   const client = useQueryClient();
@@ -468,9 +469,15 @@ export function VoiceLogDrawer({
   }
 
   // Opened from the round mic or "Share more": start listening straight away, like the watch.
+  // Opened from the coach's "Log it" card: save what they already said yes to.
   const startedOnOpen = useRef(false);
   useEffect(() => {
     if (startedOnOpen.current) return;
+    if (saveOnOpen && initialDraft) {
+      startedOnOpen.current = true;
+      void commit();
+      return;
+    }
     if (!initialFollowUp && !catchUp && !(autoStart && !initialDraft)) return;
     startedOnOpen.current = true;
     void startRecording("initial");

@@ -93,8 +93,10 @@ export interface ActivityEntry {
 }
 export interface PausePeriod {
   pausedAt: string;
-  resumedAt?: string;
-  reason?: string;
+  resumedAt?: string | null;
+  reason?: string | null;
+  /** A pause the coach offered: the last paused day (yyyy-MM-dd); it picks up again the day after. */
+  until?: string;
 }
 export interface PlanSession {
   id: string;

@@ -10,6 +10,14 @@ import {
 import { asDate, dayKey } from "@/core/dates";
 import type { ActivityEntry } from "@/core/types";
 import type { HeatmapInput, HeatmapModel } from "./grid-types";
+import type { PausePeriod } from "@/core/types";
+
+/** The last hatched day of a pause: its end day when the coach set one (unless resumed earlier), else the resume day or today. */
+export function lastPausedDay(pause: PausePeriod, now: Date) {
+  const resumed = pause.resumedAt ? dayKey(pause.resumedAt) : null;
+  if (pause.until && (!resumed || resumed > pause.until)) return pause.until;
+  return resumed ?? dayKey(now);
+}
 export function buildHeatmap({
   activities,
   entries,
@@ -74,9 +82,7 @@ export function buildHeatmap({
         key,
         entries: dayEntries,
         today: key === dayKey(now),
-        paused: !!plan?.pauseHistory?.some(
-          (p) => key >= dayKey(p.pausedAt) && key <= dayKey(p.resumedAt ?? now),
-        ),
+        paused: !!plan?.pauseHistory?.some((p) => key >= dayKey(p.pausedAt) && key <= lastPausedDay(p, now)),
         segments: dayEntries.map((entry) => {
           const range = ranges.get(entry.activityId!)!;
           return {

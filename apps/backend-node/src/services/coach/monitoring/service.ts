@@ -17,6 +17,7 @@ import type { MonitoringDecision } from "./types";
 import { planProposalBasis } from "./proposal-basis";
 import { fingerprintValue } from "./fingerprint";
 import { unansweredOutreaches } from "./silence";
+import { resumeDuePauses } from "../talk/pause";
 
 async function readInput(
   tx: Prisma.TransactionClient,
@@ -442,6 +443,8 @@ export async function sendDueReminders(user: User, now = new Date()) {
 }
 
 export async function deliverPlanMonitoring() {
+  // Pauses the coach offered end by themselves, before anyone is checked on.
+  await resumeDuePauses().catch((error) => logger.error("Resuming paused plans failed", { error }));
   const accounts = await prisma.coachingState.findMany({
     where: {
       data: { path: ["enabled"], equals: true },

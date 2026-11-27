@@ -11,6 +11,7 @@ import { FollowThroughInputError } from "../../follow-through/errors";
 import { monitoringState } from "../monitoring/model";
 import type { FollowThroughState, MissReasonId, PlanQuiet } from "@tsw/prisma/follow-through";
 import { checkInTimes, resolveCheckTime, zoned } from "./commitment";
+import { logFromWords } from "./logFromWords";
 import { talkPrompt } from "./prompt";
 import { turnSchema } from "./schema";
 import type { CheckInClock, CheckInTimes, CoachTurn, TalkContext, TalkRequest, TalkTurn } from "./types";
@@ -18,6 +19,8 @@ import type { CheckInClock, CheckInTimes, CoachTurn, TalkContext, TalkRequest, T
 const MAX_QUESTIONS = 2;
 const MAX_QUIET_DAYS = 30;
 const MAX_COMMIT_DAYS = 7;
+/** The longest pause the coach may offer: longer than this is a conversation, not a tap. */
+export const MAX_PAUSE_DAYS = 14;
 const ASK_AGAIN_DAYS = 3;
 const REASON_WORDS: Record<TalkRequest["reason"], string> = {
   busy: "I was busy.",
@@ -58,11 +61,14 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string,
   // Did it, didn't log: no question and no date, the app opens logging. The alert counts as answered.
   const logIt = action === "log";
   if (logIt) action = "none";
-  const limit = action === "commit" ? MAX_COMMIT_DAYS : MAX_QUIET_DAYS;
+  const limit = action === "commit" ? MAX_COMMIT_DAYS : action === "pause" ? MAX_PAUSE_DAYS : MAX_QUIET_DAYS;
   let until = dayWithin(turn.until, today, limit) ? turn.until : "";
+  // A pause is only an offer, and only for a day after today (pausing just today changes nothing).
+  const pauseUntil = action === "pause" && until > today ? until : null;
+  if (action === "pause") action = "none";
   if (action === "ask_again" && !until) until = format(addDays(parseISO(today), ASK_AGAIN_DAYS), "yyyy-MM-dd");
   if (action !== "none" && !until) action = "none";
-  const asks = turn.ask === "text" && answered < MAX_QUESTIONS && !request.notSure && action !== "commit" && !logIt;
+  const asks = turn.ask === "text" && answered < MAX_QUESTIONS && !request.notSure && action !== "commit" && !logIt && !pauseUntil;
   const ask = asks ? "text" : "none";
   const commitDay = action === "commit" ? until : null;
   const checkAt = commitDay ? resolveCheckTime(commitDay, today, turn.checkAt, times) : null;
@@ -82,6 +88,8 @@ export function settleTurn(turn: CoachTurn, request: TalkRequest, today: string,
     quietUntil: action === "quiet" ? until : null,
     commitment: commitDay ? { day: commitDay, checkAt } : null,
     logIt,
+    logDraft: null,
+    pauseUntil,
   };
   const why: Record<string, PlanQuiet["why"]> = { quiet: "away", ask_again: "not_sure", commit: "committed" };
   const quiet: Omit<PlanQuiet, "at"> | null =
@@ -186,6 +194,8 @@ export async function talkTurn(userId: string, planId: string, request: TalkRequ
   const settled = settleTurn(object, request, context.today, context.checkIn);
   if (settled.over) await finish(userId, planId, request, settled, context);
   const { shown } = settled;
+  // Did it, didn't log: what they already said becomes the log, when it's sure enough.
+  if (shown.logIt) shown.logDraft = await logFromWords(userId, planId, request.turns.map((t) => t.answer).join("\n"));
   const latest = request.turns.at(-1);
   const said = request.notSure ? "Not sure yet." : latest ? latest.answer : REASON_WORDS[request.reason];
   await remember(userId, planId, said, shown).catch((error) => logger.warn("Talk to coach: chat copy failed", { error }));

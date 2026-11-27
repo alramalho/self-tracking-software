@@ -230,6 +230,9 @@ export function buildPlanWeekProjection(
     const activity = plan.activities?.[0];
     if (!activity || !plan.timesPerWeek) continue;
 
+    // Paused days hold no planned session: the plan said it can't happen then.
+    const lastPause = Array.isArray(plan.pauseHistory) ? (plan.pauseHistory.at(-1) as { until?: unknown } | undefined) : undefined;
+    const pausedThrough = plan.isPaused ? (typeof lastPause?.until === "string" ? lastPause.until : windowEndKey) : null;
     const planActivityIds = new Set(plan.activities?.map((item) => item.id) ?? []);
     const entryDateKeys = input.entries
       .filter((entry) => entry.activityId && planActivityIds.has(entry.activityId))
@@ -259,7 +262,7 @@ export function buildPlanWeekProjection(
       const target = getTimesPerWeekTargetForDays(plan, days);
       const openDays = days.filter((day) => {
         const dateKey = day.toISOString().slice(0, 10);
-        return dateKey >= todayKey && !completedDateKeys.includes(dateKey);
+        return dateKey >= todayKey && !completedDateKeys.includes(dateKey) && !(pausedThrough && dateKey <= pausedThrough);
       });
       const remaining = Math.max(0, target - completedDateKeys.length);
 

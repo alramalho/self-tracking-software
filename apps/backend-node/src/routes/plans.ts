@@ -22,6 +22,7 @@ import {
 } from "../services/planCurriculumService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { endPauseQuiet } from "../services/coach/talk/pause";
 
 const router = Router();
 const AUTONOMOUS_COACH_PROMPT_TAG = "autonomous_coach";
@@ -2289,6 +2290,7 @@ router.post(
         },
       });
 
+      await endPauseQuiet(req.user!.id, planId);
       logger.info(`User ${req.user!.id} resumed plan ${planId}`);
       res.json({ success: true, plan: updatedPlan });
     } catch (error) {

@@ -1,5 +1,6 @@
 import type { z } from "zod/v4";
 import type { talkRequestSchema, turnSchema } from "./schema";
+import type { VoiceLogActivity, VoiceLogNote } from "../../voice-log/types";
 
 /** What the app sends: why the plan slipped, the screens so far, and the person's latest answer. */
 export type TalkRequest = z.infer<typeof talkRequestSchema>;
@@ -19,6 +20,24 @@ export interface TalkTurn {
   commitment: { day: string; checkAt: string | null } | null;
   /** They said they did it but didn't log it: the app offers "Log it" straight away. */
   logIt: boolean;
+  /**
+   * With logIt: the sessions their own words already say, each double-checked (see logFromWords.ts), shown
+   * as cards that "Log it" saves in one tap. Null when nothing was sure enough: "Log it" opens the voice note.
+   */
+  logDraft: LogDraft | null;
+  /** The coach offers to pause the plan through this day (inclusive). Nothing changes until they accept. */
+  pauseUntil: string | null;
+}
+
+/** Sessions read from what they told the coach, in the voice note's shape so the same save path takes them. */
+export interface LogDraft {
+  clientRequestId: string;
+  transcript: string;
+  activities: (VoiceLogActivity & { title: string; emoji: string; measure: string })[];
+  metrics: [];
+  planMatches: [];
+  note: VoiceLogNote;
+  unresolved: { text: string; reason: string }[];
 }
 
 /** Everything the coach knows when it writes a turn. */

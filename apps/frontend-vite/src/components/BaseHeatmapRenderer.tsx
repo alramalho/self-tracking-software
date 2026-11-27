@@ -19,8 +19,10 @@ export interface HeatmapData {
 
 export interface PauseHistoryEntry {
   pausedAt: string;
-  resumedAt?: string;
-  reason?: string;
+  resumedAt?: string | null;
+  reason?: string | null;
+  /** A pause the coach offered: the last paused day (yyyy-MM-dd). */
+  until?: string;
 }
 
 export interface BaseHeatmapRendererProps {
@@ -119,7 +121,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
     return pauseHistory.some((pause) => {
       const pausedAt = new Date(pause.pausedAt).getTime();
       const resumedAt = pause.resumedAt ? new Date(pause.resumedAt).getTime() : Date.now();
-      return dateTime >= pausedAt && dateTime <= resumedAt;
+      // A coach pause is hatched through its last day (or until they resumed it earlier).
+      const endsAt = pause.until ? Math.min(new Date(`${pause.until}T23:59:59`).getTime(), pause.resumedAt ? resumedAt : Infinity) : resumedAt;
+      return dateTime >= pausedAt && dateTime <= endsAt;
     });
   };
 

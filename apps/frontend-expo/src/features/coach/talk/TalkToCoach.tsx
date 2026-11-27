@@ -15,8 +15,10 @@ import { coachIdentity } from "@/features/messages/coach";
 import { hellyThumbsUp } from "@/features/coach/avatar";
 import { dismissPlanNotifications } from "@/native/notifications/dismiss";
 import { VoiceLogDrawer } from "@/features/voice-log/VoiceLogDrawer";
+import { voiceLogActivityKey } from "@/features/voice-log/types";
 import { usePlan } from "@/data/queries";
-import { endQuiet, nextTurn, openingQuestion } from "./service";
+import { dayLabel, endQuiet, nextTurn, openingQuestion, pausePlan } from "./service";
+import { LogDraftCard } from "./LogDraftCard";
 import type { TalkAnswered, TalkToCoachProps, TalkTurn } from "./types";
 
 /** Screens in a conversation: at most two questions, then the coach's last word. */
@@ -34,8 +36,10 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
   const [answered, setAnswered] = useState<TalkAnswered[]>([]);
   const [turn, setTurn] = useState<TalkTurn | null>(() => openingQuestion(reason));
   const [answer, setAnswer] = useState("");
-  // "Log it": they did it but didn't log it, so the voice note opens over the coach.
-  const [logging, setLogging] = useState(false);
+  // "Log it": the sessions they already said are saved ("card"), or the voice note asks what they did ("voice").
+  const [logging, setLogging] = useState<"card" | "voice" | null>(null);
+  // "Pause until …" tapped: the plan is paused through this day.
+  const [paused, setPaused] = useState<string | null>(null);
   const plan = usePlan(planId).data;
   const ask = useMutation({
     mutationFn: async ({ text, notSure }: { text: string; notSure: boolean }) => {
@@ -51,6 +55,14 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
     },
   });
   const undo = useMutation({ mutationFn: () => endQuiet(planId), onSuccess: () => close() });
+  const pause = useMutation({
+    mutationFn: (until: string) => pausePlan(planId, until),
+    onSuccess: ({ until }) => {
+      setPaused(until);
+      // The plan card and calendar show the pause straight away.
+      void client.invalidateQueries();
+    },
+  });
   // A picked reason goes straight to the coach; "Something else" waits for the person's words.
   useEffect(() => {
     if (!turn) ask.mutate({ text: "", notSure: false });
@@ -60,7 +72,8 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
     void client.invalidateQueries({ queryKey: ["follow-through"] });
     router.back();
   };
-  const busy = ask.isPending || undo.isPending;
+  const busy = ask.isPending || undo.isPending || pause.isPending;
+  const draft = turn?.logIt ? turn.logDraft : null;
   const done = turn?.ask === "none";
   const reduced = useReducedMotion();
   const approving = !!turn?.commitment && personality !== "STRATEGIST" && !reduced;
@@ -74,11 +87,30 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
       busy={busy}
       onClose={close}
       actions={
-        !turn ? null : done && turn.logIt ? (
+        !turn ? null : done && turn.logIt && draft ? (
           <>
-            <OnboardingButton label="Log it" onPress={() => setLogging(true)} disabled={busy} />
+            <OnboardingButton label="Log it" onPress={() => setLogging("card")} disabled={busy} />
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => setLogging("voice")} style={{ alignItems: "center", paddingVertical: 6 }}>
+              <Text style={{ color: c.muted, fontSize: 15 }}>Not quite, I'll say it</Text>
+            </Pressable>
+          </>
+        ) : done && turn.logIt ? (
+          <>
+            <OnboardingButton label="Log it" onPress={() => setLogging("voice")} disabled={busy} />
             <Pressable accessibilityRole="button" disabled={busy} onPress={close} style={{ alignItems: "center", paddingVertical: 6 }}>
               <Text style={{ color: c.muted, fontSize: 15 }}>Later</Text>
+            </Pressable>
+          </>
+        ) : done && turn.pauseUntil && !paused ? (
+          <>
+            <OnboardingButton
+              label={`Pause until ${dayLabel(turn.pauseUntil)}`}
+              busy={pause.isPending}
+              onPress={() => pause.mutate(turn.pauseUntil!)}
+              disabled={busy}
+            />
+            <Pressable accessibilityRole="button" disabled={busy} onPress={close} style={{ alignItems: "center", paddingVertical: 6 }}>
+              <Text style={{ color: c.muted, fontSize: 15 }}>Keep it running</Text>
             </Pressable>
           </>
         ) : done ? (
@@ -121,7 +153,13 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
         ) : (
           <ActivityIndicator color={c.muted} accessibilityLabel={`${coach.name} is thinking`} />
         )}
-        {!!turn?.detail && <Text testID="talk-detail" style={{ color: c.muted, fontSize: 17, lineHeight: 25, textAlign: "center" }}>{turn.detail}</Text>}
+        {!!turn?.detail && !paused && <Text testID="talk-detail" style={{ color: c.muted, fontSize: 17, lineHeight: 25, textAlign: "center" }}>{turn.detail}</Text>}
+        {paused && (
+          <Text testID="talk-paused" style={{ color: c.muted, fontSize: 17, lineHeight: 25, textAlign: "center" }}>
+            Paused through {dayLabel(paused)}. It picks up again the day after, and I'll check in that morning.
+          </Text>
+        )}
+        {draft && <LogDraftCard draft={draft} />}
         {turn?.ask === "text" && (
           <VoiceTextArea
             testID="talk-answer"
@@ -135,7 +173,7 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
             style={{ minHeight: 120, borderRadius: 16, borderWidth: 1, borderColor: c.inputBorder, backgroundColor: c.card, padding: 18, fontSize: 17, lineHeight: 24, color: c.text }}
           />
         )}
-        <Status error={ask.error ?? undo.error} />
+        <Status error={ask.error ?? undo.error ?? pause.error} />
         {ask.isError && !turn && (
           <Pressable accessibilityRole="button" onPress={() => ask.mutate({ text: "", notSure: false })} style={{ paddingVertical: 6 }}>
             <Text style={{ color: c.accent, fontSize: 15, fontWeight: "600" }}>Try again</Text>
@@ -145,6 +183,12 @@ export function TalkToCoach({ planId, reason, missed }: TalkToCoachProps) {
       {logging && (
         <VoiceLogDrawer
           catchUp={{ planId, activityId: plan?.activities.length === 1 ? plan.activities[0].id : undefined }}
+          initialDraft={
+            logging === "card" && draft
+              ? { preview: draft, selectedActivityKeys: draft.activities.map(voiceLogActivityKey), selectedMetricKeys: [], selectedPlanId: null, savedAt: new Date().toISOString() }
+              : undefined
+          }
+          saveOnOpen={logging === "card"}
           onClose={close}
         />
       )}

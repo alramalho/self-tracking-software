@@ -28,7 +28,7 @@ export type Reason = "busy" | "sick" | "travel" | "motivation" | "other" | "talk
 export type JourneyEvent =
   | { day: number; at: string; log: true; difficulty?: "hard" | "very_hard"; note?: string }
   /** Opens the app at that time; if the drawer is up, answers it with these words, one per coach question. */
-  | { day: number; at: string; answerAlert: { reason: Reason; answers: string[]; notSure?: boolean } }
+  | { day: number; at: string; answerAlert: { reason: Reason; answers: string[]; notSure?: boolean; acceptPause?: boolean } }
   /** Writes to the coach in chat (answers any open outreach). */
   | { day: number; at: string; writes: string };
 
@@ -73,8 +73,10 @@ export interface TalkExpectation {
   neverAsks?: RegExp[];
   /** Things the coach should refer to (history or the answer). */
   mentions?: RegExp[];
-  /** How the conversation must end. */
-  ends?: "committed" | "away" | "not_sure" | "answered" | "logging";
+  /** How the conversation must end. "pause": the coach offered to pause the plan. */
+  ends?: "committed" | "away" | "not_sure" | "answered" | "logging" | "pause";
+  /** With ends "pause": how many days from today the offered pause may last (inclusive). */
+  pauseDays?: [number, number];
 }
 
 export interface MessageExpectation {
@@ -97,6 +99,8 @@ export interface TalkRecord {
   reason: Reason;
   turns: { said: string; shown: TalkTurn }[];
   ended: string;
+  /** The day an offered pause would last through. */
+  pauseUntil?: string;
 }
 
 export interface SimResult {
@@ -124,6 +128,8 @@ export const scriptedTalk: TalkModel = async ({ reason, turns, notSure, today })
   const named = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.exec(answer);
   if (notSure) return turn({ say: "Okay.", action: "ask_again" });
   if (/been doing it|didn'?t log|forgot to log|did it/i.test(answer)) return turn({ say: "Then let's get it on the board.", action: "log" });
+  if (/tattoo|sprain|injur|surgery|doctor/i.test(answer))
+    return turn({ say: "Let it heal.", detail: "I can pause the plan for a few days.", action: "pause", until: format(addDays(parseISO(today), 3), "yyyy-MM-dd") });
   if (reason === "travel" && /back/i.test(answer) && named?.[1].toLowerCase() === "today") return turn({ say: "Welcome back. I'll be looking for your next log." });
   if (named && /back/i.test(answer) && reason === "travel")
     return turn({ say: "Safe travels.", action: "quiet", until: dayNamed(named[1], today) });
@@ -205,6 +211,9 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
     content: m.text,
   }));
   const state: CoachMonitoringState = monitoringState();
+  // The last day of a pause they accepted: the plan is paused (isPaused) through it, like pausePlanUntil.
+  let pausedThrough = "";
+  const pausedOn = (now: Date) => !!pausedThrough && ymd(now) <= pausedThrough;
   const supports = { plan: support(journey) };
   const touches: Touch[] = [];
   const alertDays: number[] = [];
@@ -220,6 +229,7 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
       timesPerWeek: plan.timesPerWeek,
       createdAt,
       activities: [{ id: "act" }],
+      isPaused: pausedOn(now),
       progress: { achievement: { missedLastWeek: missedLastWeek(now) } },
     };
     return planAlert({
@@ -282,7 +292,12 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
           record.turns.push({ said, shown: settled.shown });
           if (settled.over) {
             finishTalk(state, settled, today, now);
-            record.ended = settled.shown.logIt ? "logging" : (settled.quiet?.why ?? "none");
+            record.ended = settled.shown.logIt ? "logging" : settled.shown.pauseUntil ? "pause" : (settled.quiet?.why ?? "none");
+            record.pauseUntil = settled.shown.pauseUntil ?? undefined;
+            if (settled.shown.pauseUntil && e.answerAlert.acceptPause) {
+              pausedThrough = settled.shown.pauseUntil;
+              acceptPause(state, pausedThrough, now);
+            }
             break;
           }
           const answer = answers[i];
@@ -312,7 +327,7 @@ export async function simulate(journey: Journey, talkModel: TalkModel = scripted
     const input: MonitoringInput = {
       now,
       entitled: true,
-      plans: [{ ...plan, isPaused: false, archivedAt: null, deletedAt: null, finishingDate: null }],
+      plans: [{ ...plan, isPaused: pausedOn(now), archivedAt: null, deletedAt: null, finishingDate: null }],
       supports,
       entries: entries.filter((e) => e.datetime <= now),
       messages: messages.filter((m) => m.createdAt <= now),
@@ -355,6 +370,14 @@ function finishTalk(state: CoachMonitoringState, settled: ReturnType<typeof sett
   void today;
 }
 
+/** What `pausePlanUntil` in talk/pause.ts writes besides pausing the plan: quiet through the day, one check-in the morning after. */
+function acceptPause(state: CoachMonitoringState, until: string, now: Date) {
+  state.quiet = { ...state.quiet, plan: { until, why: "paused", at: now.toISOString() } };
+  state.reminders = (state.reminders ?? []).filter((r) => r.planId !== "plan" || r.sentAt);
+  const backOn = format(addDays(parseISO(until), 1), "yyyy-MM-dd");
+  state.reminders.push({ planId: "plan", dueAt: new Date(`${backOn}T09:00:00Z`).toISOString(), kind: "return", bookedAt: now.toISOString() } as never);
+}
+
 /** What the monitoring commit writes when a message goes out (service.ts), without the database. */
 function commitDecision(state: CoachMonitoringState, decision: ReturnType<typeof decideMonitoring> & object, now: Date, messages: (MonitoringMessage & { content: string })[]) {
   if (decision.kind === "reminder") {
@@ -395,6 +418,13 @@ export function checkJourney(journey: Journey, result: SimResult): string[] {
   result.talks.forEach((talk, i) => {
     const want = ends[i];
     if (want && talk.ended !== want && !(want === "answered" && talk.ended === "answered")) problems.push(`talk ${i + 1} ended "${talk.ended}", expected "${want}"`);
+    // Pausing is a schedule change: offered only where the journey says their words asked for it.
+    if (talk.ended === "pause" && want !== "pause") problems.push(`talk ${i + 1} offered a pause nobody hinted at (until ${talk.pauseUntil})`);
+    const range = x.talks?.[i]?.pauseDays;
+    if (range && talk.pauseUntil) {
+      const days = Math.round((Date.parse(talk.pauseUntil) - START.getTime()) / DAY) - talk.day;
+      if (days < range[0] || days > range[1]) problems.push(`talk ${i + 1} offered a ${days}-day pause, expected ${range[0]}–${range[1]}`);
+    }
   });
   if ((x.talks?.length ?? 0) > result.talks.length) problems.push(`${result.talks.length} talks happened, expected ${x.talks!.length}`);
   return problems;

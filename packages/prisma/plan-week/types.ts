@@ -26,6 +26,10 @@ export type PlanWeekPlan = {
   currentWeekState?: string | null;
   activities?: PlanWeekActivity[];
   sessions?: PlanWeekSession[];
+  /** A paused plan plans nothing while paused: through its last pause's `until`, or for good without one. */
+  isPaused?: boolean | null;
+  /** The stored JSON list ({ until? }[]); read loosely, it comes straight from the database too. */
+  pauseHistory?: unknown;
 };
 
 export type PlanWeekEntry = {

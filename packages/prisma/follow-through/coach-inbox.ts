@@ -22,6 +22,7 @@ export interface CoachPlan {
   finishingDate?: DateValue | null;
   archivedAt?: DateValue | null;
   deletedAt?: DateValue | null;
+  isPaused?: boolean | null;
   activities: { id: string }[];
   progress?: {
     weeks?: { startDate: DateValue; plannedActivities?: unknown }[];
@@ -161,14 +162,14 @@ export function supportFor(state: FollowThroughState | undefined, plan: CoachPla
 // ---------- plan alerts ----------
 
 /**
- * After a trip the coach checks in the morning after the return day; nothing else asks for two more days,
- * so coming home isn't met by a check-in, a nudge and the drawer at once.
+ * After a trip (or a pause they accepted) the coach checks in the morning after the return day; nothing else
+ * asks for two more days, so coming back isn't met by a check-in, a nudge and the drawer at once.
  */
 export const AWAY_TAIL_DAYS = 2;
 
 /** The last day (inclusive) a quiet keeps the coach from asking: its day, plus the tail after a trip. */
 export const quietThrough = (quiet: { until: string; why: string }) =>
-  quiet.why === "away" ? addDaysToDateKey(quiet.until, AWAY_TAIL_DAYS) : quiet.until;
+  quiet.why === "away" || quiet.why === "paused" ? addDaysToDateKey(quiet.until, AWAY_TAIL_DAYS) : quiet.until;
 
 /** The coach was asked to stay quiet on this plan until a day (inclusive), in the person's local days. */
 export function quietFor(state: FollowThroughState | undefined, planId: string, now = new Date()) {
@@ -184,7 +185,8 @@ export function planAlert<P extends CoachPlan>(input: {
   now?: Date;
 }): PlanAlert<P> | null {
   const { plan, state, now = new Date() } = input;
-  if (quietFor(state, plan.id, now)) return null;
+  // A paused plan asks nothing: they already said they can't do it for now.
+  if (plan.isPaused || quietFor(state, plan.id, now)) return null;
   const logs = input.entries.filter((e) => !e.deletedAt && plan.activities.some((a) => a.id === e.activityId));
   const role = state?.supports[plan.id]?.coaching?.role;
   const coached = !!role && role !== "tracking";

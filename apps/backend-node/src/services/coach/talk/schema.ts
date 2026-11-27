@@ -22,8 +22,8 @@ export const turnSchema = z.object({
   ask: z.enum(["text", "none"]).describe("text: ask one question answered in the person's own words. none: end here."),
   placeholder: z.string().describe("Example answer for the text field, 2 to 4 words. Empty when ask is none."),
   action: z
-    .enum(["none", "quiet", "ask_again", "commit", "log"])
-    .describe("commit: they named the day of their next session. quiet: away until a day. ask_again: not sure yet. log: they say they did it but didn't log it."),
-  until: z.string().describe("yyyy-MM-dd for commit, quiet or ask_again, else empty."),
+    .enum(["none", "quiet", "ask_again", "commit", "log", "pause"])
+    .describe("commit: they named the day of their next session. quiet: away until a day. ask_again: not sure yet. log: they say they did it but didn't log it. pause: their body keeps them from it for some days; offer to pause the plan until a day."),
+  until: z.string().describe("yyyy-MM-dd for commit, quiet, ask_again or pause, else empty."),
   checkAt: z.string().describe("For commit: HH:mm when you'll check the session happened. Else empty."),
 });

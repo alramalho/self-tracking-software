@@ -54,6 +54,7 @@ import { monitoringState } from "../services/coach/monitoring/model";
 import { answerNudge } from "../services/coach/monitoring/requests";
 import { caughtUp, endQuiet, talkTurn } from "../services/coach/talk/service";
 import { talkRequestSchema } from "../services/coach/talk/schema";
+import { pausePlanUntil } from "../services/coach/talk/pause";
 import { onboardingNotificationService } from "../services/onboardingNotificationService";
 
 const router = Router();
@@ -143,6 +144,11 @@ router.post(
 router.post("/plans/:planId/caught-up", handle(async (req, res) => {
   await caughtUp(req.user!.id, String(req.params.planId));
   res.json({ ok: true });
+}));
+// "Pause until …" after the coach offered it in Talk to coach: the plan pauses through that day.
+router.post("/plans/:planId/pause", handle(async (req, res) => {
+  const until = typeof req.body?.until === "string" ? req.body.until : "";
+  res.json(await pausePlanUntil(req.user!.id, String(req.params.planId), until));
 }));
 // "Keep nudging me" after the coach went quiet on a plan.
 router.delete("/plans/:planId/quiet", handle(async (req, res) => {

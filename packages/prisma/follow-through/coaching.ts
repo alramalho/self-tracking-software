@@ -66,8 +66,20 @@ export interface CoachMonitoringState {
 
 export interface PlanQuiet {
   until: string;
-  why: "away" | "not_sure" | "committed" | "answered";
+  /** "paused": they accepted the coach's offer to pause the plan until that day (healing, injury). */
+  why: "away" | "paused" | "not_sure" | "committed" | "answered";
   at: string;
+}
+
+/** One entry of a plan's pauseHistory. A pause the coach offered has an end: through `until`, back at `resumeAt`. */
+export interface PlanPause {
+  pausedAt: string;
+  resumedAt: string | null;
+  reason?: string | null;
+  /** The last paused day (inclusive, local). */
+  until?: string;
+  /** When the hourly job picks the plan up again: the start of the day after `until`. */
+  resumeAt?: string;
 }
 
 /** Stored on a silent nudge message; the app shows two buttons until one is used. */

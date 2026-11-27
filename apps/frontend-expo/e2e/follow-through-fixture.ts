@@ -197,8 +197,27 @@ export function followThroughFixture(
     };
     const ask = (say: string, detail: string, placeholder: string) => ({ say, detail, ask: "text", placeholder, quietUntil: null });
     if (body.notSure) return end({ say: "No problem.", detail: "I'll ask again in three days." }, "not_sure", away);
+    const said = body.turns.at(-1)?.answer ?? "";
+    // Did it and said how much: the card holds what their words already said, "Log it" saves it.
+    if (/hour today/i.test(said)) {
+      const plan = state.plans.find((p: any) => p.id === talk[1]);
+      const activity = plan?.activities[0];
+      const logDraft = {
+        clientRequestId: "00000000-0000-4000-8000-000000000001",
+        transcript: said,
+        activities: [{ activityId: activity.id, title: activity.title, emoji: activity.emoji, measure: activity.measure, quantity: 60, date: today, time: null, description: null, difficulty: null, estimatedFrom: null, confidence: 0.95 }],
+        metrics: [],
+        planMatches: [],
+        note: { title: "Told the coach", text: said, date: today, confidence: 1 },
+        unresolved: [],
+      };
+      return end({ say: "That's real practice. Let's get it logged.", detail: "", logIt: true, logDraft }, "answered");
+    }
+    // Their body keeps them from it for a few days: one warm line and the offer to pause.
+    if (/tattoo|sprain/i.test(said))
+      return end({ say: "Let the tattoo heal.", detail: "I can pause the plan until Monday.", pauseUntil: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) }, "answered");
     // Did it, didn't log: one line and "Log it", no question.
-    if (/been doing it|didn't log/i.test(body.turns.at(-1)?.answer ?? ""))
+    if (/been doing it|didn't log/i.test(said))
       return end({ say: "Good, let's get it logged.", detail: "", logIt: true }, "answered");
     if (body.reason === "travel" && !body.turns.length) return ask("When are you back?", "", "Sunday night");
     if (body.reason === "travel")
@@ -216,6 +235,16 @@ export function followThroughFixture(
       );
     }
     return end({ say: "Got it.", detail: "Next session is the one that counts." }, "answered");
+  }
+  // "Pause until …" after the coach offered it: the plan pauses through that day, like talk/pause.ts.
+  const pausePlan = path.match(/^\/follow-through\/plans\/([^/]+)\/pause$/);
+  if (pausePlan && method === "POST") {
+    const plan = state.plans.find((p: any) => p.id === pausePlan[1]);
+    plan.isPaused = true;
+    plan.pauseHistory = [...(plan.pauseHistory ?? []), { pausedAt: new Date().toISOString(), resumedAt: null, reason: "coach", until: body.until }];
+    support.monitoring = { reviewed: {}, consideredEntries: {}, pausedPlanIds: [], requests: [], ...support.monitoring } as typeof support.monitoring;
+    support.monitoring!.quiet = { ...support.monitoring!.quiet, [pausePlan[1]]: { until: body.until, why: "paused", at: new Date().toISOString() } };
+    return { until: body.until, backOn: body.until };
   }
   // "Yes, log it" once the logs are saved: the alert is answered for the week.
   const caughtUp = path.match(/^\/follow-through\/plans\/([^/]+)\/caught-up$/);

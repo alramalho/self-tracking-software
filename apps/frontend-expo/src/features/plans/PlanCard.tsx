@@ -11,6 +11,7 @@ import { Heading, IconButton, useColors, Copy, Panel, s } from "@/components/ui"
 import type { Activity, ActivityEntry, Plan } from "@/core/types";
 import { dateLabel } from "@/core/dates";
 import { Heatmap } from "./Heatmap";
+import { pausedLabel } from "./pause";
 import { PlanWeeks } from "./weeks/PlanWeeks";
 import { PlanDrawer } from "./PlanDrawer";
 import { EntryEditor } from "../activities/EntryEditor";
@@ -52,7 +53,7 @@ export function PlanCard({
   const cadence = [
     plan.outlineType === "TIMES_PER_WEEK" ? `${plan.timesPerWeek} times per week` : "Custom plan",
     detail && plan.finishingDate ? `until ${dateLabel(plan.finishingDate)}` : null,
-    plan.isPaused ? "paused" : null,
+    plan.isPaused ? pausedLabel(plan) : null,
   ]
     .filter(Boolean)
     .join(" · ");
