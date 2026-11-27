@@ -97,8 +97,8 @@ export function CoachItemDrawer({ item, onClose, onCheckIn }: CoachItemDrawerPro
               <DrawerOptions
                 label="Done some, just not logged?"
                 options={[
-                  { label: "Yes, log it", emoji: "✅", onClick: () => catchUp(plan.id, activity?.id) },
-                  { label: "Not lately", emoji: "🙈", onClick: () => setNotLately(true) },
+                  { label: "Yes, log it", onClick: () => catchUp(plan.id, activity?.id) },
+                  { label: "Not lately", onClick: () => setNotLately(true) },
                 ]}
               />
             )}

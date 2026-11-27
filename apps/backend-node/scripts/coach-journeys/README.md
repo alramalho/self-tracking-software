@@ -21,6 +21,37 @@ TZ=UTC node --import tsx scripts/coach-journeys/run.ts           # when
 TZ=UTC node --import tsx scripts/coach-journeys/run.ts --live    # when + what (~$0.02)
 ```
 
+## 27 Nov 2026
+
+The owner, Friday 27 Nov, two Talk to coach answers on the phone:
+- "I did a tattoo yesterday and I do not want to sweat…" → "Let the tattoo heal." and nothing changed: no pause, and the
+  drawer would have come back Sunday, Monday and Tuesday while it healed.
+- "I've been doing my Chinese almost daily, today maybe an hour…" → "Let's get it logged." → Log it → a recorder asking
+  "What did you do?", the same thing again.
+
+What changed:
+- **Talk action `pause`**: only when their words say their body keeps them from it for days (injury, healing, a doctor's
+  order). It is an offer ("Pause until Mon, Nov 30" / "Keep it running"); one tap pauses the plan through that day
+  (`talk/pause.ts`), the card says "paused until …", paused days plan nothing, the coach is quiet and checks in the
+  morning it resumes. Soreness, tiredness, busy, travel and motivation never get one.
+- **Log from their words** (`talk/logFromWords.ts`): when they did it, the voice-log extractor reads their answer with
+  the plan's activities and Jev checks the whole list ("is this exactly what they said?"). All or nothing; "Log it"
+  then saves in one tap. Otherwise the recorder, as before.
+
+| | Before (live voice-backfill-20261126) | After |
+| --- | --- | --- |
+| When | 14/16 (owner-tattoo, injury-says-no fail) | 16/16 |
+| What (live texts) | 27/27 | 25/27 → 12/12 on the affected journeys once the judge knew the pause rule |
+
+`log-from-words.ts` (11 cases, live, ~$0.002): no case may put a wrong session on the card. Per-session Jev questions
+scored correct sessions 0.46–0.72 and left partial cards (Mon + Thu of "every day since Monday"); one question on the
+whole list scored right lists 0.77–0.97 and a range 0.10. Result 11/11 with no wrong card, recall 10/12. The extractor
+alone was also never wrong here, so Jev is a safety net, not yet a proven catch.
+
+```
+TZ=UTC node --import tsx scripts/coach-journeys/log-from-words.ts
+```
+
 ## 16 Nov 2026
 
 The owner, Monday 16 Nov: "Your weekly review" on Home opened the chat at "Saw today's run came in short. Now
