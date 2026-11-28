@@ -8,5 +8,6 @@ export interface AppNotification {
   type: string;
   relatedId?: string;
   relatedData?: Record<string, unknown> | null;
+  createdAt?: string;
 }
 export type { Chat, Message } from "@/features/messages/types";

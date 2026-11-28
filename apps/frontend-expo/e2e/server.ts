@@ -274,6 +274,21 @@ const server = http.createServer(async (req, res) => {
     send({ ok: true });
     return;
   }
+  // A realistic inbox: two unread (reaction, photo), three seen (coach, comment, older reaction).
+  if (path === "/__notifications" && req.method === "POST") {
+    const ago = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString();
+    const face = `http://127.0.0.1:${port}/__background.png`;
+    state.notifications = [
+      { id: "n-reaction", title: "", message: "@liocas reacted to your activity with 🚀", type: "INFO", status: "PROCESSED", createdAt: ago(4), relatedData: { activityEntryId: "friend-entry", reactorPicture: face, reactorName: "Lia Borges", reactorUsername: "liocas" } },
+      { id: "n-photo", title: "hey Alex 👋", message: "@liocas added photos to 🏋️ gym strength training 📸", type: "INFO", status: "PROCESSED", createdAt: ago(95), relatedData: { activityEntryId: "friend-entry", userPicture: face, userName: "Lia Borges", userUsername: "liocas", category: "ACTIVITY_PHOTO" } },
+      { id: "n-coach", title: "", message: "Two runs left this week — Thursday still works?", type: "COACH", status: "OPENED", createdAt: ago(60 * 20), relatedId: "coach-main" },
+      { id: "n-comment", title: "", message: "@sam commented on your 🏃 Running: \"Great pace!\"", type: "INFO", status: "OPENED", createdAt: ago(60 * 50), relatedData: { activityEntryId: "friend-entry", commenterName: "Sam", commenterUsername: "sam" } },
+      { id: "n-old", title: "", message: "@liocas reacted to your activity with 🔥", type: "INFO", status: "OPENED", createdAt: ago(60 * 24 * 9), relatedData: { activityEntryId: "friend-entry", reactorPicture: face, reactorName: "Lia Borges", reactorUsername: "liocas" } },
+      { id: "n-dismissed", title: "", message: "Dismissed notice", type: "INFO", status: "CONCLUDED", createdAt: ago(10) },
+    ];
+    send({ ok: true });
+    return;
+  }
   if (path === "/__polish") {
     Object.assign(state.plans[0], { notes: "## Training roadmap\nBuild **consistency** first.\n- Three sessions each week\n- Keep a `steady` pace\n[Training guide](https://example.com/guide)" });
     state.user.themeMode = body.theme ?? "DARK";
@@ -1040,6 +1055,12 @@ const server = http.createServer(async (req, res) => {
   }
   if (path === "/notifications") {
     send(state.notifications);
+    return;
+  }
+  if (path === "/notifications/mark-notifications-opened" && req.method === "POST") {
+    const ids: string[] = body.notification_ids ?? [];
+    for (const notification of state.notifications) if (ids.includes(notification.id)) notification.status = "OPENED";
+    send({ count: ids.length });
     return;
   }
   if (path === "/notifications/mark-notification-opened" && req.method === "POST") {
